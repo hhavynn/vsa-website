@@ -1,13 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { usePointsContext } from '../../context/PointsContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 export function Header() {
   const { user, signOut } = useAuth();
-  const { points, loading: pointsLoading } = usePointsContext();
   const { isAdmin } = useAdmin();
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,21 +87,12 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                <span className="text-sm font-medium text-gray-100">
-                  {userName || 'Loading...'}
-                </span>
-                <div className="flex items-center">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-600 text-white">
-                    {pointsLoading ? (
-                      <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      `${points} points`
-                    )}
-                  </span>
-                </div>
+                <Link
+                  to="/profile"
+                  className="text-gray-300 hover:text-white transition-colors duration-200"
+                >
+                  Profile
+                </Link>
                 <button
                   onClick={() => signOut()}
                   className="text-gray-300 hover:text-white transition-colors duration-200"
@@ -156,23 +145,13 @@ export function Header() {
               )}
               {user ? (
                 <>
-                  <div className="px-3 py-2">
-                    <span className="text-sm font-medium text-gray-100">
-                      {userName || 'Loading...'}
-                    </span>
-                  </div>
-                  <div className="px-3 py-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-600 text-white">
-                      {pointsLoading ? (
-                        <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      ) : (
-                        `${points} points`
-                      )}
-                    </span>
-                  </div>
+                  <Link
+                    to="/profile"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
                   <button
                     onClick={() => {
                       signOut();
