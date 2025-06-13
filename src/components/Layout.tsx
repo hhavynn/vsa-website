@@ -11,7 +11,7 @@ export function Layout() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300`}>
       <div className="sticky top-0 z-50">
         <Navigation />
       </div>

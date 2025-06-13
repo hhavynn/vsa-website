@@ -79,8 +79,8 @@ export function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-70"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-center md:justify-between text-center md:text-left">
                   <div>
-                    <p className="text-gray-300 text-lg mb-2 text-center md:text-left">{currentDate}</p>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4">
+                    <p className="text-gray-500 dark:text-gray-300 text-lg mb-2 text-center md:text-left">{currentDate}</p>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4">
                       Welcome to VSA, {userName || 'there'}!
                     </h1>
                   </div>
@@ -103,7 +103,9 @@ export function Home() {
                 <RevealOnScrollWrapper>
                   <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
                     <h2 className="text-2xl font-bold mb-4">Event Check-in</h2>
-                    <CheckInCodeInput />
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white">
+                      <CheckInCodeInput />
+                    </div>
                   </div>
                 </RevealOnScrollWrapper>
 
@@ -157,13 +159,16 @@ export function Home() {
                       );
                     }
                     return (
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {upcomingEvents.map(event => (
-                          <EventCard
-                            key={event.id}
-                            event={event}
-                            onCheckIn={() => {}}
-                          />
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {upcomingEvents.map((event) => (
+                          <div key={event.id} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white flex flex-col">
+                            <img src={event.image_url || '/images/events/default.jpg'} alt={event.name} className="w-full h-40 object-cover rounded-md mb-4" />
+                            <h3 className="text-lg font-bold mb-2">{event.name}</h3>
+                            <p className="text-gray-700 dark:text-gray-300 mb-2">{event.description}</p>
+                            <span className="text-sm text-gray-500 dark:text-gray-400 mb-2">{new Date(event.date).toLocaleDateString()}</span>
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">{event.event_type.replace(/_/g, ' ').toUpperCase()}</span>
+                            <a href={event.check_in_form_url} className="mt-auto inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200 text-center">Check In</a>
+                          </div>
                         ))}
                       </div>
                     );
