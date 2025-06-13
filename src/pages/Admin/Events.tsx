@@ -17,7 +17,9 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 };
 
 export default function AdminEvents() {
+  console.log('AdminEvents component mounting...');
   const { events, refreshEvents } = useEvents();
+  console.log('Events data:', events);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<Event>>({
     name: '',
