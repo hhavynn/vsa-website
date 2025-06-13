@@ -22,6 +22,7 @@ export function SignUpForm() {
         email,
         password,
         options: {
+          emailRedirectTo: 'https://vsaatucsd.com',
           data: {
             first_name: firstName,
             last_name: lastName
