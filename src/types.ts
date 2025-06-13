@@ -5,7 +5,7 @@ export interface Event {
   date: string;
   location: string;
   points: number;
-  event_type: 'general_event' | 'wildn_culture' | 'vcn_dance_practice' | 'vcn_attendance';
+  event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
   check_in_form_url: string;
   image_url?: string;
   check_in_code?: string;
@@ -25,7 +25,8 @@ export interface EventAttendance {
 export interface User {
   id: string;
   email: string;
+  name: string;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
-  is_admin: boolean;
 } 

@@ -7,13 +7,15 @@ import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/PageTitle';
 import { ManualCheckIn } from '../../components/Admin/ManualCheckIn';
 
-type EventType = 'general_event' | 'wildn_culture' | 'vcn_dance_practice' | 'vcn_attendance';
-
-const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  general_event: 'General Event',
+// Define event type labels
+const EVENT_TYPE_LABELS: Record<Event['event_type'], string> = {
+  other: 'General Events',
+  gbm: 'General Body Meeting',
+  mixer: 'Mixer',
+  winter_retreat: 'Winter Retreat',
+  vcn: 'VCN',
   wildn_culture: 'Wild n\' Culture',
-  vcn_dance_practice: 'VCN Dance Practice',
-  vcn_attendance: 'VCN Attendance'
+  external_event: 'External Event'
 };
 
 export default function AdminEvents() {
@@ -26,7 +28,7 @@ export default function AdminEvents() {
     description: '',
     date: '',
     location: '',
-    event_type: 'general_event',
+    event_type: 'other',
     check_in_form_url: '',
     points: 0
   });
@@ -36,6 +38,16 @@ export default function AdminEvents() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
+
+  // Split events into upcoming and past
+  const now = new Date();
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const upcomingEvents = events
+    .filter(event => new Date(event.date) >= oneDayAgo)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const pastEvents = events
+    .filter(event => new Date(event.date) < oneDayAgo)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -114,7 +126,7 @@ export default function AdminEvents() {
         description: '',
         date: '',
         location: '',
-        event_type: 'general_event',
+        event_type: 'other',
         check_in_form_url: '',
         points: 0
       });
@@ -240,7 +252,7 @@ export default function AdminEvents() {
                   <label className="block text-sm font-medium text-gray-300">Event Type</label>
                   <select
                     value={newEvent.event_type}
-                    onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value as EventType })}
+                    onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value as Event['event_type'] })}
                     className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   >
@@ -306,47 +318,103 @@ export default function AdminEvents() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h2 className="text-2xl font-bold mb-4 text-white">Events List</h2>
-            <div className="space-y-4">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  onClick={() => setSelectedEvent(event)}
-                  className={`bg-gray-800 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
-                    selectedEvent?.id === event.id
-                      ? 'ring-2 ring-indigo-500'
-                      : 'hover:bg-gray-700'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-bold mb-2 text-white">{event.name}</h3>
-                      <p className="text-gray-300 mb-4">{event.description}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-400">
-                          {new Date(event.date).toLocaleDateString()}
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-900 text-indigo-200">
-                          {EVENT_TYPE_LABELS[event.event_type as EventType]}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(event.id);
-                      }}
-                      className="text-red-400 hover:text-red-500"
+            <div className="space-y-8">
+              {/* Upcoming Events Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-white">Upcoming Events ({upcomingEvents.length})</h3>
+                <div className="space-y-4">
+                  {upcomingEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className={`bg-gray-800 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
+                        selectedEvent?.id === event.id
+                          ? 'ring-2 ring-indigo-500'
+                          : 'hover:bg-gray-700'
+                      }`}
                     >
-                      Delete
-                    </button>
-                  </div>
-                  {event.image_url && (
-                    <div className="mt-4">
-                      <img src={event.image_url} alt="Event Image" className="w-full h-48 object-cover rounded-md" />
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold mb-2 text-white">{event.name}</h3>
+                          <p className="text-gray-300 mb-4">{event.description}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">
+                              {new Date(event.date).toLocaleDateString()}
+                            </span>
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-900 text-indigo-200">
+                              {EVENT_TYPE_LABELS[event.event_type]}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(event.id);
+                          }}
+                          className="text-red-400 hover:text-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      {event.image_url && (
+                        <div className="mt-4">
+                          <img src={event.image_url} alt="Event Image" className="w-full h-48 object-cover rounded-md" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-700 my-8"></div>
+
+              {/* Past Events Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-white">Past Events ({pastEvents.length})</h3>
+                <div className="space-y-4">
+                  {pastEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => setSelectedEvent(event)}
+                      className={`bg-gray-800 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
+                        selectedEvent?.id === event.id
+                          ? 'ring-2 ring-indigo-500'
+                          : 'hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold mb-2 text-white">{event.name}</h3>
+                          <p className="text-gray-300 mb-4">{event.description}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">
+                              {new Date(event.date).toLocaleDateString()}
+                            </span>
+                            <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-900 text-indigo-200">
+                              {EVENT_TYPE_LABELS[event.event_type]}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(event.id);
+                          }}
+                          className="text-red-400 hover:text-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      {event.image_url && (
+                        <div className="mt-4">
+                          <img src={event.image_url} alt="Event Image" className="w-full h-48 object-cover rounded-md" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -425,7 +493,7 @@ export default function AdminEvents() {
                   <label className="block text-sm font-medium text-gray-300">Event Type</label>
                   <select
                     value={selectedEvent.event_type}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as EventType })}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as Event['event_type'] })}
                     className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   >
