@@ -14,6 +14,7 @@ export function Home() {
   const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { events, loading: eventsLoading, error: eventsError } = useEvents();
+  const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -45,6 +46,10 @@ export function Home() {
     };
 
     fetchUserName();
+
+    const date = new Date();
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    setCurrentDate(date.toLocaleDateString(undefined, options));
   }, [user]);
 
   if (loading) return (
@@ -56,7 +61,7 @@ export function Home() {
   return (
     <>
       <PageTitle title="Home" />
-      <div className="min-h-screen bg-gray-950 text-white pb-12">
+      <div className="min-h-screen bg-gray-950 text-white pb-12 overflow-x-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           {user ? (
             <div className="space-y-8">
@@ -72,7 +77,7 @@ export function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-70"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-center md:justify-between text-center md:text-left">
                   <div>
-                    <p className="text-gray-300 text-lg mb-2 text-center md:text-left">June 11, 2025</p>
+                    <p className="text-gray-300 text-lg mb-2 text-center md:text-left">{currentDate}</p>
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4">
                       Welcome to VSA, {userName || 'there'}!
                     </h1>
