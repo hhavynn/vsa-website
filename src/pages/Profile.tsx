@@ -1,14 +1,18 @@
 import { useAuth } from '../hooks/useAuth';
+import { PageTitle } from '../components/PageTitle';
 
 export function Profile() {
   const { user } = useAuth();
 
   if (!user) {
     return (
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-6">Profile</h1>
-        <p className="text-gray-600">Please sign in to view your profile.</p>
-      </div>
+      <>
+        <PageTitle title="Profile" />
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-6">Profile</h1>
+          <p className="text-gray-600">Please sign in to view your profile.</p>
+        </div>
+      </>
     );
   }
 
