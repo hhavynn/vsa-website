@@ -240,13 +240,6 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden bg-gray-800 py-2">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link
-                to="/events"
-                className={`${getNavLinkClass('/events')} block px-3 py-2 rounded-md text-base font-medium`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Events
-              </Link>
               {/* Mobile Events Dropdown */}
               <div className="relative">
                 <button
