@@ -8,11 +8,18 @@ interface AdminRouteProps {
 export function AdminRoute({ children }: AdminRouteProps) {
   const { isAdmin, loading } = useAdmin();
 
-  if (loading) return null; // or a loading spinner
+  console.log('AdminRoute - Current state:', { isAdmin, loading });
+
+  if (loading) {
+    console.log('AdminRoute - Still loading...');
+    return null;
+  }
 
   if (!isAdmin) {
+    console.log('AdminRoute - Not admin, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
+  console.log('AdminRoute - Admin access granted');
   return children ? <>{children}</> : <Outlet />;
 } 
