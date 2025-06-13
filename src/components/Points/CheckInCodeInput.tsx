@@ -70,11 +70,11 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">Check In</h2>
+    <div className="bg-gray-800 rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold mb-4 text-white">Check In</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="code" className="block text-sm font-medium text-gray-300 mb-1">
             Enter Check-in Code
           </label>
           <input
@@ -83,7 +83,7 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Enter code"
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             disabled={isLoading}
           />
         </div>
@@ -97,13 +97,13 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
         </button>
 
         {error && (
-          <div className="p-4 rounded-lg bg-red-50 text-red-700 text-sm">
+          <div className="p-4 rounded-lg bg-red-900/20 text-red-400 text-sm">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="p-4 rounded-lg bg-green-50 text-green-700 text-sm">
+          <div className="p-4 rounded-lg bg-green-900/20 text-green-400 text-sm">
             {success}
           </div>
         )}
