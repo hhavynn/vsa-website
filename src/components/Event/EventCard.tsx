@@ -34,12 +34,6 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
           </p>
           <p className="text-sm text-gray-400">{event.location}</p>
         </div>
-        <button
-          onClick={handleCheckIn}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          Sign Up
-        </button>
       </div>
     </div>
   );
