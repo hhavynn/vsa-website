@@ -22,7 +22,7 @@ export function useEvents() {
       // Transform the data to match our Event type
       const transformedEvents: Event[] = (data || []).map(event => ({
         id: event.id,
-        title: event.name,
+        name: event.name,
         description: event.description || '',
         date: event.date,
         location: event.location || '',
@@ -31,7 +31,9 @@ export function useEvents() {
         updated_at: event.updated_at,
         check_in_form_url: event.check_in_form_url || '',
         event_type: event.event_type || 'general_event',
-        image_url: event.image_url || undefined
+        image_url: event.image_url || undefined,
+        check_in_code: event.check_in_code,
+        is_code_expired: event.is_code_expired || false
       }));
 
       setEvents(transformedEvents);
