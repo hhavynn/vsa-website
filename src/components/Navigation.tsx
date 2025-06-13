@@ -51,7 +51,7 @@ export function Navigation() {
   ];
 
   return (
-    <nav className={`shadow-lg ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
+    <nav className={`shadow-lg bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-20">
           {/* Logo and nav */}
