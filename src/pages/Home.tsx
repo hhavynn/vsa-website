@@ -70,14 +70,14 @@ export function Home() {
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-70"></div>
-                <div className="relative z-10 flex items-center justify-between">
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-center md:justify-between text-center md:text-left">
                   <div>
-                    <p className="text-gray-300 text-lg mb-2">June 11, 2025</p>
-                    <h1 className="text-5xl font-extrabold text-white mb-4">
+                    <p className="text-gray-300 text-lg mb-2 text-center md:text-left">June 11, 2025</p>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4">
                       Welcome to VSA, {userName || 'there'}!
                     </h1>
                   </div>
-                  <img src="/images/vsa-logo.png" alt="VSALogo" className="h-40 w-auto" />
+                  <img src="/images/vsa-logo.png" alt="VSALogo" className="h-24 md:h-40 w-auto mt-4 md:mt-0" />
                 </div>
               </div>
 
