@@ -1,14 +1,16 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../hooks/useAdmin';
 
 interface AdminRouteProps {
   children?: React.ReactNode; // Make children optional if not always used directly
 }
 
 export function AdminRoute({ children }: AdminRouteProps) {
-  const { user } = useAuth();
+  const { isAdmin, loading } = useAdmin();
 
-  if (!user || !user.user_metadata?.isAdmin) {
+  if (loading) return null; // or a loading spinner
+
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
