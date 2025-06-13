@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -7,53 +7,52 @@ export function usePoints() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchPoints = useCallback(async () => {
     if (!user) {
       setPoints(0);
       setLoading(false);
       return;
     }
 
-    async function fetchPoints() {
-      if (!user) return; // Extra check for TypeScript
+    try {
+      setLoading(true);
+      // First try to get existing points
+      const { data, error } = await supabase
+        .from('user_points')
+        .select('points')
+        .eq('user_id', user.id)
+        .single();
 
-      try {
-        // First try to get existing points
-        const { data, error } = await supabase
-          .from('user_points')
-          .select('points')
-          .eq('user_id', user.id)
-          .single();
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No points record exists, create one
+          const { data: newData, error: insertError } = await supabase
+            .from('user_points')
+            .insert({
+              user_id: user.id,
+              points: 0
+            })
+            .select()
+            .single();
 
-        if (error) {
-          if (error.code === 'PGRST116') {
-            // No points record exists, create one
-            const { data: newData, error: insertError } = await supabase
-              .from('user_points')
-              .insert({
-                user_id: user.id,
-                points: 0
-              })
-              .select()
-              .single();
-
-            if (insertError) throw insertError;
-            setPoints(newData.points);
-          } else {
-            throw error;
-          }
+          if (insertError) throw insertError;
+          setPoints(newData.points);
         } else {
-          setPoints(data.points);
+          throw error;
         }
-      } catch (error) {
-        console.error('Error fetching points:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        setPoints(data.points);
       }
+    } catch (error) {
+      console.error('Error fetching points:', error);
+    } finally {
+      setLoading(false);
     }
-
-    fetchPoints();
   }, [user]);
+
+  useEffect(() => {
+    fetchPoints();
+  }, [fetchPoints]);
 
   const addPoints = async (amount: number) => {
     if (!user) return;
@@ -63,8 +62,7 @@ export function usePoints() {
         .from('user_points')
         .upsert({
           user_id: user.id,
-          points: points + amount,
-          updated_at: new Date().toISOString(),
+          points: points + amount
         })
         .select()
         .single();
@@ -76,5 +74,5 @@ export function usePoints() {
     }
   };
 
-  return { points, loading, addPoints };
+  return { points, loading, addPoints, refreshPoints: fetchPoints };
 } 

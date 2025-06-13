@@ -68,6 +68,19 @@ CREATE POLICY "Admins can delete attendance"
         )
     );
 
+CREATE POLICY "Users can insert their own attendance with valid code"
+    ON event_attendance FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM events
+            WHERE events.id = event_id
+            AND events.check_in_code IS NOT NULL
+            AND events.is_code_expired = false
+        )
+        AND auth.uid() = user_id
+    );
+
 -- Function to generate a random check-in code
 CREATE OR REPLACE FUNCTION generate_check_in_code()
 RETURNS TEXT AS $$
