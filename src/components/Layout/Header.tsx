@@ -289,6 +289,62 @@ export function Header() {
                   </div>
                 )}
               </div>
+              {/* Mobile Get Involved Dropdown */}
+              <div className="relative">
+                <Link
+                  to="/get-involved"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center justify-between"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span>Get Involved</span>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsGetInvolvedDropdownOpen(!isGetInvolvedDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-600 focus:outline-none"
+                  >
+                    <svg
+                      className={`h-4 w-4 transform ${isGetInvolvedDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
+                {isGetInvolvedDropdownOpen && (
+                  <div className="pl-4 pr-2 py-1 space-y-1 bg-gray-700 rounded-md shadow-inner">
+                    <Link
+                      to="/ace"
+                      className={`${getNavLinkClass('/ace')} block px-3 py-2 rounded-md text-base font-medium`}
+                      onClick={() => { setIsMenuOpen(false); setIsGetInvolvedDropdownOpen(false); }}
+                    >
+                      ACE Program
+                    </Link>
+                    <Link
+                      to="/house-system"
+                      className={`${getNavLinkClass('/house-system')} block px-3 py-2 rounded-md text-base font-medium`}
+                      onClick={() => { setIsMenuOpen(false); setIsGetInvolvedDropdownOpen(false); }}
+                    >
+                      House System
+                    </Link>
+                    <Link
+                      to="/intern-program"
+                      className={`${getNavLinkClass('/intern-program')} block px-3 py-2 rounded-md text-base font-medium`}
+                      onClick={() => { setIsMenuOpen(false); setIsGetInvolvedDropdownOpen(false); }}
+                    >
+                      Internship Program
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Link
                 to="/leaderboard"
                 className={`${getNavLinkClass('/leaderboard')} block px-3 py-2 rounded-md text-base font-medium`}
@@ -303,61 +359,6 @@ export function Header() {
               >
                 Cabinet
               </Link>
-              {/* Mobile Get Involved Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsGetInvolvedDropdownOpen(!isGetInvolvedDropdownOpen)}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center justify-between"
-                >
-                  <span>Get Involved</span>
-                  <svg
-                    className={`h-5 w-5 transform ${isGetInvolvedDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-                {isGetInvolvedDropdownOpen && (
-                  <div className="pl-4 space-y-1">
-                    <Link
-                      to="/ace"
-                      className={`${getNavLinkClass('/ace')} block px-3 py-2 rounded-md text-base font-medium`}
-                      onClick={() => {
-                        setIsGetInvolvedDropdownOpen(false);
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      ACE Program
-                    </Link>
-                    <Link
-                      to="/house-system"
-                      className={`${getNavLinkClass('/house-system')} block px-3 py-2 rounded-md text-base font-medium`}
-                      onClick={() => {
-                        setIsGetInvolvedDropdownOpen(false);
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      House System
-                    </Link>
-                    <Link
-                      to="/intern-program"
-                      className={`${getNavLinkClass('/intern-program')} block px-3 py-2 rounded-md text-base font-medium`}
-                      onClick={() => {
-                        setIsGetInvolvedDropdownOpen(false);
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      Internship Program
-                    </Link>
-                  </div>
-                )}
-              </div>
               <Link
                 to="/gallery"
                 className={`${getNavLinkClass('/gallery')} block px-3 py-2 rounded-md text-base font-medium`}
