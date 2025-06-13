@@ -25,9 +25,9 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   return (
     <div className="bg-gray-800 rounded-lg shadow-xl p-6">
       {event.image_url && (
-        <img src={event.image_url} alt={event.title} className="w-full h-48 object-cover rounded-md mb-4" />
+        <img src={event.image_url} alt={event.name} className="w-full h-48 object-cover rounded-md mb-4" />
       )}
-      <h3 className="text-xl font-semibold mb-2 text-white">{event.title}</h3>
+      <h3 className="text-xl font-semibold mb-2 text-white">{event.name}</h3>
       <p className="text-gray-300 mb-4">{event.description}</p>
       <div className="flex justify-between items-center">
         <div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePointsContext } from '../../context/PointsContext';
+import { useEventAttendance } from '../../hooks/useEventAttendance';
 
 interface CheckInCodeInputProps {
   onPointsAdded?: () => void;
@@ -11,7 +12,7 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { addPoints } = usePointsContext();
+  const { checkInWithCode } = useEventAttendance();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,65 +23,44 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
       setError(null);
       setSuccess(null);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) throw new Error('User not authenticated');
-
-      // Get the check-in code
-      const { data: codeData, error: codeError } = await supabase
-        .from('check_in_codes')
+      // Find the event with this check-in code
+      const { data: event, error: eventError } = await supabase
+        .from('events')
         .select('*')
-        .eq('code', code.toUpperCase())
+        .eq('check_in_code', code.toUpperCase())
         .single();
 
-      if (codeError) throw codeError;
-      if (!codeData) {
+      if (eventError) throw eventError;
+      if (!event) {
         setError('Invalid code. Please try again.');
         return;
       }
 
       // Check if code has expired
-      if (new Date(codeData.expires_at) < new Date()) {
+      if (event.is_code_expired) {
         setError('This code has expired.');
         return;
       }
 
-      // Check if user has already used this code
-      const { data: usageData, error: usageError } = await supabase
-        .from('check_in_code_usage')
-        .select('*')
-        .eq('code_id', codeData.id)
-        .eq('used_by', user.id)
-        .single();
-
-      if (usageError && usageError.code !== 'PGRST116') throw usageError;
-      if (usageData) {
-        setError('You have already used this code.');
+      // Check if event is within 24 hours
+      const eventDate = new Date(event.date);
+      const now = new Date();
+      const hoursSinceEvent = (now.getTime() - eventDate.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceEvent > 24) {
+        setError('This event check-in period has ended.');
         return;
       }
 
-      // Record code usage
-      const { error: usageInsertError } = await supabase
-        .from('check_in_code_usage')
-        .insert({
-          code_id: codeData.id,
-          used_by: user.id
-        });
-
-      if (usageInsertError) throw usageInsertError;
-
-      // Add points using the context
-      await addPoints(codeData.points);
-
-      setSuccess(`Successfully added ${codeData.points} points!`);
-      setCode('');
-      
-      // Call the callback to refresh points
-      onPointsAdded?.();
+      // Attempt to check in
+      const success = await checkInWithCode(event.id, code.toUpperCase());
+      if (success) {
+        setSuccess(`Successfully checked in to ${event.name}!`);
+        setCode('');
+        onPointsAdded?.();
+      }
     } catch (err) {
       console.error('Error submitting code:', err);
-      setError('Failed to submit code. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to submit code. Please try again.');
     } finally {
       setIsLoading(false);
     }

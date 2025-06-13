@@ -190,6 +190,9 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
+                {userName && (
+                  <span className="text-gray-300">Hello, {userName}!</span>
+                )}
                 <Link
                   to="/profile"
                   className="text-gray-300 hover:text-white transition-colors duration-200"

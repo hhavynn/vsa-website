@@ -3,7 +3,7 @@ import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Events } from './pages/Events';
 import { Leaderboard } from './pages/Leaderboard';
-import { AdminEvents } from './pages/Admin/Events';
+import AdminEvents from './pages/Admin/Events';
 import { Profile } from './pages/Profile';
 import { Cabinet } from './pages/Cabinet';
 import { GetInvolved } from './pages/GetInvolved';
@@ -15,6 +15,8 @@ import { Vcn } from './pages/Vcn';
 import { WildNCulture } from './pages/WildNCulture';
 import { AuthProvider } from './context/AuthContext';
 import { PointsProvider } from './context/PointsContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 import './App.css';
 
 function App() {
@@ -26,9 +28,13 @@ function App() {
             <Route index element={<Home />} />
             <Route path="events" element={<Events />} />
             <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="admin/events" element={<AdminEvents />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="cabinet" element={<Cabinet />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="profile" element={<Profile />} />
+              <Route path="cabinet" element={<Cabinet />} />
+            </Route>
+            <Route element={<AdminRoute />}>
+              <Route path="admin/events" element={<AdminEvents />} />
+            </Route>
             <Route path="get-involved" element={<GetInvolved />} />
             <Route path="gallery" element={<Gallery />} />
             <Route path="ace" element={<Ace />} />
