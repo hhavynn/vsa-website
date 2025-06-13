@@ -35,6 +35,7 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -174,7 +175,22 @@ export default function AdminEvents() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-white">Event Management</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="flex space-x-4 mb-8">
+        <button
+          onClick={() => setActiveTab('create')}
+          className={`px-4 py-2 rounded ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+        >
+          Event Creation
+        </button>
+        <button
+          onClick={() => setActiveTab('manage')}
+          className={`px-4 py-2 rounded ${activeTab === 'manage' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+        >
+          Event Management
+        </button>
+      </div>
+
+      {activeTab === 'create' && (
         <div className="space-y-8">
           <div>
             <h2 className="text-2xl font-bold mb-4 text-white">Create Event</h2>
@@ -283,7 +299,11 @@ export default function AdminEvents() {
               </div>
             </form>
           </div>
+        </div>
+      )}
 
+      {activeTab === 'manage' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h2 className="text-2xl font-bold mb-4 text-white">Events List</h2>
             <div className="space-y-4">
@@ -329,51 +349,149 @@ export default function AdminEvents() {
               ))}
             </div>
           </div>
-        </div>
 
-        {selectedEvent && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Event Details</h2>
-            <div className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8">
-              <h3 className="text-xl font-bold mb-2 text-white">{selectedEvent.name}</h3>
-              <p className="text-gray-300 mb-4">{selectedEvent.description}</p>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-white">Check-in Code</h4>
-                  <div className="flex items-center space-x-4">
-                    <code className="px-4 py-2 bg-gray-900 rounded-lg text-white font-mono">
-                      {selectedEvent.check_in_code}
-                    </code>
-                    {!selectedEvent.is_code_expired && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleExpireCode(selectedEvent.id);
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                      >
-                        Expire Code
-                      </button>
-                    )}
-                  </div>
-                  {selectedEvent.is_code_expired && (
-                    <p className="mt-2 text-red-400">This code has expired</p>
-                  )}
-                </div>
-
-                <ManualCheckIn
-                  eventId={selectedEvent.id}
-                  onSuccess={() => {
-                    // Refresh event data after successful check-in
+          {selectedEvent && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4 text-white">Edit Event</h2>
+              <form
+                className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8 space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  // Update event in database
+                  const { data, error } = await supabase
+                    .from('events')
+                    .update({
+                      name: selectedEvent.name,
+                      description: selectedEvent.description,
+                      date: selectedEvent.date,
+                      location: selectedEvent.location,
+                      event_type: selectedEvent.event_type,
+                      points: selectedEvent.points,
+                      image_url: selectedEvent.image_url,
+                      check_in_code: selectedEvent.check_in_code,
+                      is_code_expired: selectedEvent.is_code_expired,
+                      check_in_form_url: '', // Remove check-in form link
+                    })
+                    .eq('id', selectedEvent.id);
+                  if (error) {
+                    console.error('Error updating event:', error);
+                  } else {
+                    console.log('Event updated successfully:', data);
                     refreshEvents();
-                  }}
-                />
-              </div>
+                  }
+                }}
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Event Title</label>
+                  <input
+                    type="text"
+                    value={selectedEvent.name}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, name: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Description</label>
+                  <textarea
+                    value={selectedEvent.description}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, description: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    rows={3}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Date</label>
+                  <input
+                    type="datetime-local"
+                    value={selectedEvent.date}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Location</label>
+                  <input
+                    type="text"
+                    value={selectedEvent.location}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, location: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Event Type</label>
+                  <select
+                    value={selectedEvent.event_type}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as EventType })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  >
+                    {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Points</label>
+                  <input
+                    type="number"
+                    value={selectedEvent.points}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, points: Number(e.target.value) })}
+                    min="0"
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Event Image URL</label>
+                  <input
+                    type="url"
+                    value={selectedEvent.image_url || ''}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, image_url: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Check-in Code</label>
+                  <input
+                    type="text"
+                    value={selectedEvent.check_in_code || ''}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, check_in_code: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Code Expired</label>
+                  <input
+                    type="checkbox"
+                    checked={selectedEvent.is_code_expired}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, is_code_expired: e.target.checked })}
+                    className="ml-2"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4"
+                >
+                  Save
+                </button>
+              </form>
+              <ManualCheckIn
+                eventId={selectedEvent.id}
+                onSuccess={() => {
+                  // Refresh event data after successful check-in
+                  refreshEvents();
+                }}
+              />
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
