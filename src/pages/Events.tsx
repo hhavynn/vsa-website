@@ -1,16 +1,20 @@
 import React from 'react';
 import { EventCard } from '../components/EventCard';
 import { useEvents } from '../hooks/useEvents';
+import { PageTitle } from '../components/PageTitle';
 
 export function Events() {
   const { events, loading, error } = useEvents();
 
   if (loading) {
     return (
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-6">Events</h1>
-        <p className="text-gray-600">Loading events...</p>
-      </div>
+      <>
+        <PageTitle title="Events" />
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-6">Events</h1>
+          <p className="text-gray-600">Loading events...</p>
+        </div>
+      </>
     );
   }
 
