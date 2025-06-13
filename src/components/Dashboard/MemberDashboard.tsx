@@ -183,7 +183,7 @@ export function MemberDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gray-800 rounded-lg shadow-xl p-6 lg:col-span-3"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 lg:col-span-3 text-gray-900 dark:text-white"
         >
           <h2 className="text-2xl font-bold text-white mb-4">Achievements</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -192,8 +192,8 @@ export function MemberDashboard() {
                 key={achievement.id}
                 className={`p-4 rounded-lg ${
                   achievement.unlocked
-                    ? 'bg-indigo-900/50 border border-indigo-500'
-                    : 'bg-gray-700/50 border border-gray-600'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-500 text-gray-900 dark:text-white'
+                    : 'bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 <div className="flex items-center space-x-3">

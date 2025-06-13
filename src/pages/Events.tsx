@@ -39,10 +39,10 @@ export function Events() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 text-white">
+    <div className="container mx-auto px-4 py-8 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300">
       {/* Upcoming Events Section */}
-      <div className="mb-12">
-        <h1 className="text-3xl font-bold mb-2">Upcoming Events</h1>
+      <div className="mb-12 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold mb-4">Upcoming Events ({upcomingEvents.length})</h2>
         <p className="mb-6 text-gray-400">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''} coming up</p>
         {upcomingEvents.length === 0 ? (
           <RevealOnScrollWrapper>
@@ -70,8 +70,8 @@ export function Events() {
       {/* Divider */}
       <div className="border-t border-gray-700 my-12"></div>
       {/* Past Events Section */}
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Past Events</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold mb-4">Past Events ({pastEvents.length})</h2>
         <p className="mb-6 text-gray-400">{pastEvents.length} event{pastEvents.length !== 1 ? 's' : ''} in the past</p>
         {pastEvents.length === 0 ? (
           <RevealOnScrollWrapper>

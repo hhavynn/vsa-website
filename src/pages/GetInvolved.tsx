@@ -37,7 +37,7 @@ export function GetInvolved() {
       <RevealOnScrollWrapper>
         <div className="space-y-12">
           {programs.map((program, index) => (
-            <div key={index} className="bg-gray-800 shadow rounded-lg p-6">
+            <div key={index} className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-gray-900 dark:text-white">
               <div className={`flex flex-col md:flex-row ${index % 2 === 1 ? 'md:flex-row-reverse' : ''} items-center md:items-start space-y-6 md:space-y-0 md:space-x-8`}>
                 <div className="w-full md:w-1/2 flex justify-center items-center">
                   <img src={program.image} alt={program.title} className="rounded-lg shadow-md object-cover w-full h-64 md:h-auto" />

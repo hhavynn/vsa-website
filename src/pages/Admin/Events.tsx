@@ -184,10 +184,10 @@ export default function AdminEvents() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300">
       <h1 className="text-3xl font-bold mb-8 text-white">Event Management</h1>
       
-      <div className="flex space-x-4 mb-8">
+      <div className="flex space-x-4 mb-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
         <button
           onClick={() => setActiveTab('create')}
           className={`px-4 py-2 rounded ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
@@ -203,10 +203,10 @@ export default function AdminEvents() {
       </div>
 
       {activeTab === 'create' && (
-        <div className="space-y-8">
+        <div className="space-y-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
           <div>
             <h2 className="text-2xl font-bold mb-4 text-white">Create Event</h2>
-            <form onSubmit={handleCreateEvent} className="bg-gray-800 rounded-lg shadow-xl p-6">
+            <form onSubmit={handleCreateEvent} className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 text-gray-900 dark:text-white">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Event Title</label>
@@ -327,7 +327,7 @@ export default function AdminEvents() {
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`bg-gray-800 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
+                      className={`bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
                         selectedEvent?.id === event.id
                           ? 'ring-2 ring-indigo-500'
                           : 'hover:bg-gray-700'
@@ -377,7 +377,7 @@ export default function AdminEvents() {
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`bg-gray-800 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
+                      className={`bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 cursor-pointer transition-colors ${
                         selectedEvent?.id === event.id
                           ? 'ring-2 ring-indigo-500'
                           : 'hover:bg-gray-700'
@@ -422,7 +422,7 @@ export default function AdminEvents() {
             <div>
               <h2 className="text-2xl font-bold mb-4 text-white">Edit Event</h2>
               <form
-                className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8 space-y-4"
+                className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 mb-8 space-y-4 text-gray-900 dark:text-white"
                 onSubmit={async (e) => {
                   e.preventDefault();
                   // Update event in database
