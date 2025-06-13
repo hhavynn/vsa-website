@@ -5,6 +5,7 @@ interface PointsContextType {
   points: number;
   loading: boolean;
   addPoints: (amount: number) => Promise<void>;
+  refreshPoints: () => Promise<void>;
 }
 
 const PointsContext = createContext<PointsContextType | undefined>(undefined);

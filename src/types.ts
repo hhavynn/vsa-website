@@ -5,10 +5,8 @@ export interface Event {
   date: string;
   location: string;
   points: number;
-  created_at: string;
-  updated_at: string;
-  check_in_form_url: string; // URL to the Google Form for check-in
   event_type: 'general_event' | 'wildn_culture' | 'vcn_dance_practice' | 'vcn_attendance';
+  check_in_form_url: string;
   image_url?: string;
   check_in_code?: string;
   is_code_expired: boolean;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/PageTitle';
+import { usePointsContext } from '../context/PointsContext';
 
 interface LeaderboardEntry {
   id: string;
@@ -30,71 +31,88 @@ export function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
+  const { refreshPoints } = usePointsContext();
+
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('user_points')
+        .select(`
+          user_id,
+          points,
+          user_profiles!inner (
+            first_name,
+            last_name,
+            is_admin
+          )
+        `)
+        .order('points', { ascending: false });
+
+      if (error) throw error;
+
+      // Get events attended count for each user
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('event_attendance')
+        .select('user_id, event_id')
+        .not('user_id', 'is', null);
+
+      if (attendanceError) throw attendanceError;
+
+      // Count events per user
+      const eventsCount = attendanceData.reduce((acc: { [key: string]: number }, curr) => {
+        acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const leaderboardEntries = (data as unknown as LeaderboardResponse[])
+        .filter(entry => !entry.user_profiles.is_admin)
+        .map((entry, index) => ({
+          id: entry.user_id,
+          first_name: entry.user_profiles.first_name,
+          last_name: entry.user_profiles.last_name,
+          points: entry.points,
+          eventsAttended: eventsCount[entry.user_id] || 0,
+          rank: index + 1
+        }));
+
+      setPointsEntries(leaderboardEntries);
+
+      // Create events leaderboard by sorting the same entries by events attended
+      const eventsLeaderboard = [...leaderboardEntries]
+        .sort((a, b) => b.eventsAttended - a.eventsAttended)
+        .map((entry, index) => ({
+          ...entry,
+          rank: index + 1
+        }));
+
+      setEventsEntries(eventsLeaderboard);
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError('Failed to fetch leaderboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('user_points')
-          .select(`
-            user_id,
-            points,
-            user_profiles!inner (
-              first_name,
-              last_name,
-              is_admin
-            )
-          `)
-          .order('points', { ascending: false });
-
-        if (error) throw error;
-
-        // Get events attended count for each user
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from('event_attendance')
-          .select('user_id, event_id')
-          .not('user_id', 'is', null);
-
-        if (attendanceError) throw attendanceError;
-
-        // Count events per user
-        const eventsCount = attendanceData.reduce((acc: { [key: string]: number }, curr) => {
-          acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
-          return acc;
-        }, {});
-
-        const leaderboardEntries = (data as unknown as LeaderboardResponse[])
-          .filter(entry => !entry.user_profiles.is_admin)
-          .map((entry, index) => ({
-            id: entry.user_id,
-            first_name: entry.user_profiles.first_name,
-            last_name: entry.user_profiles.last_name,
-            points: entry.points,
-            eventsAttended: eventsCount[entry.user_id] || 0,
-            rank: index + 1
-          }));
-
-        setPointsEntries(leaderboardEntries);
-
-        // Create events leaderboard by sorting the same entries by events attended
-        const eventsLeaderboard = [...leaderboardEntries]
-          .sort((a, b) => b.eventsAttended - a.eventsAttended)
-          .map((entry, index) => ({
-            ...entry,
-            rank: index + 1
-          }));
-
-        setEventsEntries(eventsLeaderboard);
-      } catch (err) {
-        console.error('Error fetching leaderboard:', err);
-        setError('Failed to fetch leaderboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLeaderboard();
-  }, []);
+    // Set up real-time subscription for points changes
+    const pointsSubscription = supabase
+      .channel('points_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'user_points' },
+        () => {
+          fetchLeaderboard();
+          refreshPoints();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      pointsSubscription.unsubscribe();
+    };
+  }, [refreshPoints]);
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
