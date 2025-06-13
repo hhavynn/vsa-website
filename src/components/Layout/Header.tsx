@@ -59,6 +59,12 @@ export function Header() {
               <Link to="/leaderboard" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Leaderboard
               </Link>
+              <Link to="/cabinet" className="text-gray-300 hover:text-white transition-colors duration-200">
+                Cabinet
+              </Link>
+              <Link to="/get-involved" className="text-gray-300 hover:text-white transition-colors duration-200">
+                Get Involved
+              </Link>
               {isAdmin && (
                 <Link to="/admin/events" className="text-gray-300 hover:text-white transition-colors duration-200">
                   Admin
@@ -133,6 +139,20 @@ export function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Leaderboard
+              </Link>
+              <Link
+                to="/cabinet"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Cabinet
+              </Link>
+              <Link
+                to="/get-involved"
+                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Get Involved
               </Link>
               {isAdmin && (
                 <Link

@@ -5,6 +5,8 @@ import { Events } from './pages/Events';
 import { Leaderboard } from './pages/Leaderboard';
 import { AdminEvents } from './pages/Admin/Events';
 import { Profile } from './pages/Profile';
+import { Cabinet } from './pages/Cabinet';
+import { GetInvolved } from './pages/GetInvolved';
 import { AuthProvider } from './context/AuthContext';
 import { PointsProvider } from './context/PointsContext';
 import './App.css';
@@ -20,6 +22,8 @@ function App() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="admin/events" element={<AdminEvents />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="cabinet" element={<Cabinet />} />
+            <Route path="get-involved" element={<GetInvolved />} />
           </Route>
         </Routes>
       </PointsProvider>
