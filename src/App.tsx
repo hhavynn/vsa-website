@@ -7,6 +7,12 @@ import { AdminEvents } from './pages/Admin/Events';
 import { Profile } from './pages/Profile';
 import { Cabinet } from './pages/Cabinet';
 import { GetInvolved } from './pages/GetInvolved';
+import { Gallery } from './pages/Gallery';
+import { Ace } from './pages/Ace';
+import { House } from './pages/House';
+import { Internship } from './pages/Internship';
+import { Vcn } from './pages/Vcn';
+import { WildNCulture } from './pages/WildNCulture';
 import { AuthProvider } from './context/AuthContext';
 import { PointsProvider } from './context/PointsContext';
 import './App.css';
@@ -24,6 +30,12 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="cabinet" element={<Cabinet />} />
             <Route path="get-involved" element={<GetInvolved />} />
+            <Route path="gallery" element={<Gallery />} />
+            <Route path="ace" element={<Ace />} />
+            <Route path="house-system" element={<House />} />
+            <Route path="intern-program" element={<Internship />} />
+            <Route path="vcn" element={<Vcn />} />
+            <Route path="wild-n-culture" element={<WildNCulture />} />
           </Route>
         </Routes>
       </PointsProvider>

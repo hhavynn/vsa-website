@@ -9,6 +9,8 @@ export function Header() {
   const { isAdmin } = useAdmin();
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGetInvolvedDropdownOpen, setIsGetInvolvedDropdownOpen] = useState(false);
+  const [isEventsDropdownOpen, setIsEventsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -53,17 +55,112 @@ export function Header() {
               <span className="hidden sm:inline">VSA</span>
             </Link>
             <nav className="hidden md:flex items-center space-x-6 ml-6">
-              <Link to="/events" className="text-gray-300 hover:text-white transition-colors duration-200">
-                Events
-              </Link>
+              {/* Events Dropdown for Desktop */}
+              <div className="relative group">
+                <Link to="/events" className="text-gray-300 hover:text-white transition-colors duration-200 flex items-center group-hover:text-white">
+                  Events
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent link navigation when clicking dropdown toggle
+                      setIsEventsDropdownOpen(!isEventsDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-700 focus:outline-none"
+                  >
+                    <svg
+                      className={`h-4 w-4 transform ${isEventsDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
+                {isEventsDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20">
+                    <Link
+                      to="/vcn"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+                      onClick={() => setIsEventsDropdownOpen(false)}
+                    >
+                      VCN
+                    </Link>
+                    <Link
+                      to="/wild-n-culture"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+                      onClick={() => setIsEventsDropdownOpen(false)}
+                    >
+                      Wild n' Culture
+                    </Link>
+                  </div>
+                )}
+              </div>
+              
               <Link to="/leaderboard" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Leaderboard
               </Link>
               <Link to="/cabinet" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Cabinet
               </Link>
-              <Link to="/get-involved" className="text-gray-300 hover:text-white transition-colors duration-200">
-                Get Involved
+              
+              {/* Get Involved Dropdown for Desktop */}
+              <div className="relative group">
+                <Link to="/get-involved" className="text-gray-300 hover:text-white transition-colors duration-200 flex items-center group-hover:text-white">
+                  Get Involved
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent link navigation when clicking dropdown toggle
+                      setIsGetInvolvedDropdownOpen(!isGetInvolvedDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-700 focus:outline-none"
+                  >
+                    <svg
+                      className={`h-4 w-4 transform ${isGetInvolvedDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
+                {isGetInvolvedDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-20">
+                    <Link
+                      to="/ace"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+                      onClick={() => setIsGetInvolvedDropdownOpen(false)}
+                    >
+                      ACE Program
+                    </Link>
+                    <Link
+                      to="/house-system"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+                      onClick={() => setIsGetInvolvedDropdownOpen(false)}
+                    >
+                      House System
+                    </Link>
+                    <Link
+                      to="/intern-program"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white"
+                      onClick={() => setIsGetInvolvedDropdownOpen(false)}
+                    >
+                      Internship Program
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <Link to="/gallery" className="text-gray-300 hover:text-white transition-colors duration-200">
+                Gallery
               </Link>
               {isAdmin && (
                 <Link to="/admin/events" className="text-gray-300 hover:text-white transition-colors duration-200">
@@ -126,13 +223,61 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link
-                to="/events"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Events
-              </Link>
+              {/* Events Dropdown for Mobile */}
+              <div className="relative">
+                <Link
+                  to="/events"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 flex items-center justify-between"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Events
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent link navigation when clicking dropdown toggle
+                      setIsEventsDropdownOpen(!isEventsDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-700 focus:outline-none"
+                  >
+                    <svg
+                      className={`h-4 w-4 transform ${isEventsDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
+                {isEventsDropdownOpen && (
+                  <div className="pl-4 pr-2 py-1 space-y-1">
+                    <Link
+                      to="/vcn"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                      onClick={() => {
+                        setIsEventsDropdownOpen(false);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      VCN
+                    </Link>
+                    <Link
+                      to="/wild-n-culture"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                      onClick={() => {
+                        setIsEventsDropdownOpen(false);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Wild n' Culture
+                    </Link>
+                  </div>
+                )}
+              </div>
+              
               <Link
                 to="/leaderboard"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
@@ -147,12 +292,78 @@ export function Header() {
               >
                 Cabinet
               </Link>
+              
+              {/* Get Involved Dropdown for Mobile */}
+              <div className="relative">
+                <Link
+                  to="/get-involved"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 flex items-center justify-between"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Get Involved
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent link navigation when clicking dropdown toggle
+                      setIsGetInvolvedDropdownOpen(!isGetInvolvedDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-700 focus:outline-none"
+                  >
+                    <svg
+                      className={`h-4 w-4 transform ${isGetInvolvedDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
+                {isGetInvolvedDropdownOpen && (
+                  <div className="pl-4 pr-2 py-1 space-y-1">
+                    <Link
+                      to="/ace"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                      onClick={() => {
+                        setIsGetInvolvedDropdownOpen(false);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      ACE Program
+                    </Link>
+                    <Link
+                      to="/house-system"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                      onClick={() => {
+                        setIsGetInvolvedDropdownOpen(false);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      House System
+                    </Link>
+                    <Link
+                      to="/intern-program"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
+                      onClick={() => {
+                        setIsGetInvolvedDropdownOpen(false);
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Internship Program
+                    </Link>
+                  </div>
+                )}
+              </div>
+
               <Link
-                to="/get-involved"
+                to="/gallery"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Get Involved
+                Gallery
               </Link>
               {isAdmin && (
                 <Link
