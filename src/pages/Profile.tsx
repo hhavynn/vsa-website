@@ -55,8 +55,8 @@ export function Profile() {
   if (error) return <div>Error: {error.message}</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-white">Profile</h1>
+    <div className="container mx-auto px-4 py-8 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300">
+      <h1 className="text-3xl font-bold mb-8 text-white dark:text-gray-900">Profile</h1>
       
       {/* Member Dashboard */}
       <MemberDashboard />
@@ -64,8 +64,8 @@ export function Profile() {
       {/* Rest of the profile content */}
       <RevealOnScrollWrapper>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-white">Event Attendance History</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 mb-8 text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold mb-4">Event Attendance History</h2>
             {attendance.length === 0 ? (
               <p className="text-gray-400">No events attended yet.</p>
             ) : (

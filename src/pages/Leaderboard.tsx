@@ -121,9 +121,9 @@ export function Leaderboard() {
   return (
     <>
       <PageTitle title="Leaderboard" />
-      <div className="flex justify-center items-start bg-gray-950">
+      <div className="flex justify-center items-start bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
         <div className="w-full max-w-6xl px-4 py-4">
-          <h1 className="text-4xl font-bold text-white mb-6 text-center">Leaderboard</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-6 text-center">Leaderboard</h1>
           
           {/* Tab Navigation */}
           <RevealOnScrollWrapper>
