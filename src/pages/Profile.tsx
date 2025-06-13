@@ -1,12 +1,19 @@
 import { useAuth } from '../hooks/useAuth';
 import { useEventAttendance } from '../hooks/useEventAttendance';
+import { usePoints } from '../hooks/usePoints';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 
 export function Profile() {
   const { user } = useAuth();
   const { getUserAttendance, loading, error } = useEventAttendance();
+  const { points } = usePoints();
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    eventsThisMonth: 0,
+    badgesEarned: 0
+  });
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -14,6 +21,20 @@ export function Profile() {
         const data = await getUserAttendance(user.id);
         if (data) {
           setAttendance(data);
+          
+          // Calculate statistics
+          const now = new Date();
+          const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          
+          const eventsThisMonth = data.filter(record => 
+            new Date(record.event.date) >= firstDayOfMonth
+          ).length;
+          
+          setStats({
+            totalEvents: data.length,
+            eventsThisMonth,
+            badgesEarned: 0 // Placeholder for future badges system
+          });
         }
       }
     };
@@ -27,6 +48,26 @@ export function Profile() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-white">Profile</h1>
+      
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">Total Points</h3>
+          <p className="text-3xl font-bold text-yellow-400">{points}</p>
+        </div>
+        <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">Total Events</h3>
+          <p className="text-3xl font-bold text-white">{stats.totalEvents}</p>
+        </div>
+        <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">Events This Month</h3>
+          <p className="text-3xl font-bold text-white">{stats.eventsThisMonth}</p>
+        </div>
+        <div className="bg-gray-800 rounded-lg shadow-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">Badges Earned</h3>
+          <p className="text-3xl font-bold text-white">{stats.badgesEarned}</p>
+        </div>
+      </div>
       
       <div className="bg-gray-800 rounded-lg shadow-xl p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4 text-white">Event Attendance History</h2>
