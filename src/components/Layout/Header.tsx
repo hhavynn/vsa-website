@@ -242,43 +242,47 @@ export function Header() {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               {/* Mobile Events Dropdown */}
               <div className="relative">
-                <button
-                  onClick={() => setIsEventsDropdownOpen(!isEventsDropdownOpen)}
+                <Link
+                  to="/events"
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center justify-between"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   <span>Events</span>
-                  <svg
-                    className={`h-5 w-5 transform ${isEventsDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsEventsDropdownOpen(!isEventsDropdownOpen);
+                    }}
+                    className="ml-1 p-1 rounded-full hover:bg-gray-600 focus:outline-none"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className={`h-4 w-4 transform ${isEventsDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </Link>
                 {isEventsDropdownOpen && (
-                  <div className="pl-4 space-y-1">
+                  <div className="pl-4 pr-2 py-1 space-y-1 bg-gray-700 rounded-md shadow-inner">
                     <Link
                       to="/vcn"
                       className={`${getNavLinkClass('/vcn')} block px-3 py-2 rounded-md text-base font-medium`}
-                      onClick={() => {
-                        setIsEventsDropdownOpen(false);
-                        setIsMenuOpen(false);
-                      }}
+                      onClick={() => { setIsMenuOpen(false); setIsEventsDropdownOpen(false); }}
                     >
                       VCN
                     </Link>
                     <Link
                       to="/wild-n-culture"
                       className={`${getNavLinkClass('/wild-n-culture')} block px-3 py-2 rounded-md text-base font-medium`}
-                      onClick={() => {
-                        setIsEventsDropdownOpen(false);
-                        setIsMenuOpen(false);
-                      }}
+                      onClick={() => { setIsMenuOpen(false); setIsEventsDropdownOpen(false); }}
                     >
                       Wild n' Culture
                     </Link>
