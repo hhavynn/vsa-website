@@ -142,20 +142,20 @@ export function Cabinet() {
       <div className="space-y-12">
         {/* Executive Board Section */}
         <RevealOnScrollWrapper>
-          <div className="bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-8 text-center">Executive Board</h2>
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-purple-600 dark:text-purple-400 text-center mb-8">Executive Board</h2>
             <div className="space-y-12">
               {executiveBoard.map((position, index) => (
                 <div key={index} className="space-y-6">
-                  <h3 className="text-xl font-bold text-purple-400 text-center">{position.title}</h3>
+                  <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400 text-center">{position.title}</h3>
                   {position.description && (
-                    <p className="text-gray-300 text-center max-w-2xl mx-auto">{position.description}</p>
+                    <p className="text-gray-700 dark:text-gray-300 text-center max-w-2xl mx-auto">{position.description}</p>
                   )}
                   <div className={`grid ${position.count === 1 ? 'grid-cols-1 max-w-md mx-auto' : 'grid-cols-1 md:grid-cols-2'} gap-8`}>
                     {position.members.map((member, memberIndex) => (
-                      <div key={memberIndex} className="bg-gray-700 rounded-lg p-6">
+                      <div key={memberIndex} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                         <div className="flex flex-col items-center space-y-4">
-                          <div className="w-32 h-32 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                          <div className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {member.image ? (
                               <img src={member.image} alt={member.name} className="object-cover w-full h-full" loading="lazy" />
                             ) : (
@@ -165,14 +165,14 @@ export function Cabinet() {
                             )}
                           </div>
                           <div className="text-center">
-                            <p className="text-lg font-medium text-white">{member.name}</p>
-                            {member.year && <p className="text-sm text-gray-300">Year: {member.year}</p>}
-                            {member.college && <p className="text-sm text-gray-300">College: {member.college}</p>}
-                            {member.major && <p className="text-sm text-gray-300">Major: {member.major}</p>}
-                            {member.minor && <p className="text-sm text-gray-300">Minor: {member.minor}</p>}
-                            {member.pronouns && <p className="text-sm text-gray-300">Pronouns: {member.pronouns}</p>}
-                            {member.favoriteSnack && <p className="text-sm text-gray-300">Favorite Snack: {member.favoriteSnack}</p>}
-                            {member.funFact && <p className="text-sm text-gray-300">Fun Fact: {member.funFact}</p>}
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{member.name}</p>
+                            {member.year && <p className="text-sm text-gray-600 dark:text-gray-300">Year: {member.year}</p>}
+                            {member.college && <p className="text-sm text-gray-600 dark:text-gray-300">College: {member.college}</p>}
+                            {member.major && <p className="text-sm text-gray-600 dark:text-gray-300">Major: {member.major}</p>}
+                            {member.minor && <p className="text-sm text-gray-600 dark:text-gray-300">Minor: {member.minor}</p>}
+                            {member.pronouns && <p className="text-sm text-gray-600 dark:text-gray-300">Pronouns: {member.pronouns}</p>}
+                            {member.favoriteSnack && <p className="text-sm text-gray-600 dark:text-gray-300">Favorite Snack: {member.favoriteSnack}</p>}
+                            {member.funFact && <p className="text-sm text-gray-600 dark:text-gray-300">Fun Fact: {member.funFact}</p>}
                           </div>
                         </div>
                       </div>
@@ -186,20 +186,20 @@ export function Cabinet() {
 
         {/* General Board Section */}
         <RevealOnScrollWrapper>
-          <div className="bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-8 text-center">General Board</h2>
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-purple-600 dark:text-purple-400 text-center mb-8">General Board</h2>
             <div className="space-y-12">
               {generalBoard.map((position, index) => (
                 <div key={index} className="space-y-6">
-                  <h3 className="text-xl font-bold text-purple-400 text-center">{position.title}</h3>
+                  <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400 text-center">{position.title}</h3>
                   {position.description && (
-                    <p className="text-gray-300 text-center max-w-2xl mx-auto">{position.description}</p>
+                    <p className="text-gray-700 dark:text-gray-300 text-center max-w-2xl mx-auto">{position.description}</p>
                   )}
                   <div className={`grid ${position.count === 1 ? 'grid-cols-1 max-w-md mx-auto' : 'grid-cols-1 md:grid-cols-2'} gap-8`}>
                     {position.members.map((member, memberIndex) => (
-                      <div key={memberIndex} className="bg-gray-700 rounded-lg p-6">
+                      <div key={memberIndex} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                         <div className="flex flex-col items-center space-y-4">
-                          <div className="w-32 h-32 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                          <div className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {member.image ? (
                               <img src={member.image} alt={member.name} className="object-cover w-full h-full" loading="lazy" />
                             ) : (
@@ -209,14 +209,14 @@ export function Cabinet() {
                             )}
                           </div>
                           <div className="text-center">
-                            <p className="text-lg font-medium text-white">{member.name}</p>
-                            {member.year && <p className="text-sm text-gray-300">Year: {member.year}</p>}
-                            {member.college && <p className="text-sm text-gray-300">College: {member.college}</p>}
-                            {member.major && <p className="text-sm text-gray-300">Major: {member.major}</p>}
-                            {member.minor && <p className="text-sm text-gray-300">Minor: {member.minor}</p>}
-                            {member.pronouns && <p className="text-sm text-gray-300">Pronouns: {member.pronouns}</p>}
-                            {member.favoriteSnack && <p className="text-sm text-gray-300">Favorite Snack: {member.favoriteSnack}</p>}
-                            {member.funFact && <p className="text-sm text-gray-300">Fun Fact: {member.funFact}</p>}
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{member.name}</p>
+                            {member.year && <p className="text-sm text-gray-600 dark:text-gray-300">Year: {member.year}</p>}
+                            {member.college && <p className="text-sm text-gray-600 dark:text-gray-300">College: {member.college}</p>}
+                            {member.major && <p className="text-sm text-gray-600 dark:text-gray-300">Major: {member.major}</p>}
+                            {member.minor && <p className="text-sm text-gray-600 dark:text-gray-300">Minor: {member.minor}</p>}
+                            {member.pronouns && <p className="text-sm text-gray-600 dark:text-gray-300">Pronouns: {member.pronouns}</p>}
+                            {member.favoriteSnack && <p className="text-sm text-gray-600 dark:text-gray-300">Favorite Snack: {member.favoriteSnack}</p>}
+                            {member.funFact && <p className="text-sm text-gray-600 dark:text-gray-300">Fun Fact: {member.funFact}</p>}
                           </div>
                         </div>
                       </div>

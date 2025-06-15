@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/PageTitle';
 import { usePointsContext } from '../context/PointsContext';
 import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { Avatar } from '../components/Avatar/Avatar';
 
 interface LeaderboardEntry {
   id: string;
@@ -11,12 +12,14 @@ interface LeaderboardEntry {
   points: number;
   eventsAttended: number;
   rank: number;
+  avatar_url: string | null;
 }
 
 interface UserProfile {
   first_name: string;
   last_name: string;
   is_admin: boolean;
+  avatar_url: string | null;
 }
 
 interface LeaderboardResponse {
@@ -45,7 +48,8 @@ export function Leaderboard() {
           user_profiles!inner (
             first_name,
             last_name,
-            is_admin
+            is_admin,
+            avatar_url
           )
         `)
         .order('points', { ascending: false });
@@ -74,7 +78,8 @@ export function Leaderboard() {
           last_name: entry.user_profiles.last_name,
           points: entry.points,
           eventsAttended: eventsCount[entry.user_id] || 0,
-          rank: index + 1
+          rank: index + 1,
+          avatar_url: entry.user_profiles.avatar_url
         }));
 
       setPointsEntries(leaderboardEntries);
@@ -128,23 +133,23 @@ export function Leaderboard() {
           {/* Tab Navigation */}
           <RevealOnScrollWrapper>
             <div className="flex justify-center mb-8">
-              <div className="inline-flex rounded-lg border border-gray-700 p-1 bg-gray-800">
+              <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-white dark:bg-gray-800">
                 <button
                   onClick={() => setActiveTab('points')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                     activeTab === 'points'
-                      ? 'bg-gray-700 text-white'
-                      : 'text-gray-300 hover:text-white'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   Points
                 </button>
                 <button
                   onClick={() => setActiveTab('events')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                     activeTab === 'events'
-                      ? 'bg-gray-700 text-white'
-                      : 'text-gray-300 hover:text-white'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   Events Attended
@@ -154,41 +159,40 @@ export function Leaderboard() {
           </RevealOnScrollWrapper>
           
           <RevealOnScrollWrapper>
-            <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr className="bg-gray-700">
-                      <th
-                        scope="col"
-                        className="w-20 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                      >
-                        RANK
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th scope="col" className="w-20 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Rank
                       </th>
-                      <th 
-                        scope="col"
-                        className="w-1/2 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                      >
+                      <th scope="col" className="w-20 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Avatar
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Name
                       </th>
-                      <th 
-                        scope="col"
-                        className="w-1/3 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                      >
+                      <th scope="col" className="w-32 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {activeTab === 'points' ? 'Points' : 'Events Attended'}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-gray-900 divide-y divide-gray-700">
-                    {(activeTab === 'points' ? pointsEntries : eventsEntries).map((entry) => (
-                      <tr key={entry.id} className="hover:bg-gray-800">
-                        <td className="w-20 px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                          #{entry.rank}
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {(activeTab === 'points' ? pointsEntries : eventsEntries).map((entry, index) => (
+                      <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
+                          {index + 1}
                         </td>
-                        <td className="w-1/2 px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
+                          <div className="flex justify-center">
+                            <Avatar size="sm" userId={entry.id} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {entry.first_name} {entry.last_name}
                         </td>
-                        <td className="w-1/3 px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
                           {activeTab === 'points' ? entry.points : entry.eventsAttended}
                         </td>
                       </tr>

@@ -43,11 +43,11 @@ export default function AdminEvents() {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const upcomingEvents = events
-    .filter(event => new Date(event.date) >= oneDayAgo)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((event: Event) => new Date(event.date) >= oneDayAgo)
+    .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const pastEvents = events
-    .filter(event => new Date(event.date) < oneDayAgo)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter((event: Event) => new Date(event.date) < oneDayAgo)
+    .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -184,28 +184,36 @@ export default function AdminEvents() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300">
-      <h1 className="text-3xl font-bold mb-8 text-white">Event Management</h1>
+    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Event Management</h1>
       
-      <div className="flex space-x-4 mb-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
+      <div className="flex space-x-4 mb-8">
         <button
           onClick={() => setActiveTab('create')}
-          className={`px-4 py-2 rounded ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'create'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          } transition-colors duration-200`}
         >
           Event Creation
         </button>
         <button
           onClick={() => setActiveTab('manage')}
-          className={`px-4 py-2 rounded ${activeTab === 'manage' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'manage'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          } transition-colors duration-200`}
         >
           Event Management
         </button>
       </div>
 
-      {activeTab === 'create' && (
-        <div className="space-y-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Create Event</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        {activeTab === 'create' ? (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create New Event</h2>
             <form onSubmit={handleCreateEvent} className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 text-gray-900 dark:text-white">
               <div className="space-y-4">
                 <div>
@@ -311,19 +319,14 @@ export default function AdminEvents() {
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {activeTab === 'manage' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Events List</h2>
-            <div className="space-y-8">
-              {/* Upcoming Events Section */}
+        ) : (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Manage Events</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-white">Upcoming Events ({upcomingEvents.length})</h3>
                 <div className="space-y-4">
-                  {upcomingEvents.map((event) => (
+                  {upcomingEvents.map((event: Event) => (
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
@@ -373,7 +376,7 @@ export default function AdminEvents() {
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-white">Past Events ({pastEvents.length})</h3>
                 <div className="space-y-4">
-                  {pastEvents.map((event) => (
+                  {pastEvents.map((event: Event) => (
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
@@ -417,147 +420,147 @@ export default function AdminEvents() {
               </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {selectedEvent && (
+      {selectedEvent && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4 text-white">Edit Event</h2>
+          <form
+            className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 mb-8 space-y-4 text-gray-900 dark:text-white"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              // Update event in database
+              const { data, error } = await supabase
+                .from('events')
+                .update({
+                  name: selectedEvent.name,
+                  description: selectedEvent.description,
+                  date: selectedEvent.date,
+                  location: selectedEvent.location,
+                  event_type: selectedEvent.event_type,
+                  points: selectedEvent.points,
+                  image_url: selectedEvent.image_url,
+                  check_in_code: selectedEvent.check_in_code,
+                  is_code_expired: selectedEvent.is_code_expired,
+                  check_in_form_url: '', // Remove check-in form link
+                })
+                .eq('id', selectedEvent.id);
+              if (error) {
+                console.error('Error updating event:', error);
+              } else {
+                console.log('Event updated successfully:', data);
+                refreshEvents();
+              }
+            }}
+          >
             <div>
-              <h2 className="text-2xl font-bold mb-4 text-white">Edit Event</h2>
-              <form
-                className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 mb-8 space-y-4 text-gray-900 dark:text-white"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  // Update event in database
-                  const { data, error } = await supabase
-                    .from('events')
-                    .update({
-                      name: selectedEvent.name,
-                      description: selectedEvent.description,
-                      date: selectedEvent.date,
-                      location: selectedEvent.location,
-                      event_type: selectedEvent.event_type,
-                      points: selectedEvent.points,
-                      image_url: selectedEvent.image_url,
-                      check_in_code: selectedEvent.check_in_code,
-                      is_code_expired: selectedEvent.is_code_expired,
-                      check_in_form_url: '', // Remove check-in form link
-                    })
-                    .eq('id', selectedEvent.id);
-                  if (error) {
-                    console.error('Error updating event:', error);
-                  } else {
-                    console.log('Event updated successfully:', data);
-                    refreshEvents();
-                  }
-                }}
-              >
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Event Title</label>
-                  <input
-                    type="text"
-                    value={selectedEvent.name}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Description</label>
-                  <textarea
-                    value={selectedEvent.description}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, description: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Date</label>
-                  <input
-                    type="datetime-local"
-                    value={selectedEvent.date}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Location</label>
-                  <input
-                    type="text"
-                    value={selectedEvent.location}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, location: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Event Type</label>
-                  <select
-                    value={selectedEvent.event_type}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as Event['event_type'] })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  >
-                    {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Points</label>
-                  <input
-                    type="number"
-                    value={selectedEvent.points}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, points: Number(e.target.value) })}
-                    min="0"
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Event Image URL</label>
-                  <input
-                    type="url"
-                    value={selectedEvent.image_url || ''}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, image_url: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Check-in Code</label>
-                  <input
-                    type="text"
-                    value={selectedEvent.check_in_code || ''}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, check_in_code: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Code Expired</label>
-                  <input
-                    type="checkbox"
-                    checked={selectedEvent.is_code_expired}
-                    onChange={e => setSelectedEvent({ ...selectedEvent, is_code_expired: e.target.checked })}
-                    className="ml-2"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4"
-                >
-                  Save
-                </button>
-              </form>
-              <ManualCheckIn
-                eventId={selectedEvent.id}
-                onSuccess={() => {
-                  // Refresh event data after successful check-in
-                  refreshEvents();
-                }}
+              <label className="block text-sm font-medium text-gray-300">Event Title</label>
+              <input
+                type="text"
+                value={selectedEvent.name}
+                onChange={e => setSelectedEvent({ ...selectedEvent, name: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
               />
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Description</label>
+              <textarea
+                value={selectedEvent.description}
+                onChange={e => setSelectedEvent({ ...selectedEvent, description: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                rows={3}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Date</label>
+              <input
+                type="datetime-local"
+                value={selectedEvent.date}
+                onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Location</label>
+              <input
+                type="text"
+                value={selectedEvent.location}
+                onChange={e => setSelectedEvent({ ...selectedEvent, location: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Event Type</label>
+              <select
+                value={selectedEvent.event_type}
+                onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as Event['event_type'] })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              >
+                {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Points</label>
+              <input
+                type="number"
+                value={selectedEvent.points}
+                onChange={e => setSelectedEvent({ ...selectedEvent, points: Number(e.target.value) })}
+                min="0"
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Event Image URL</label>
+              <input
+                type="url"
+                value={selectedEvent.image_url || ''}
+                onChange={e => setSelectedEvent({ ...selectedEvent, image_url: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Check-in Code</label>
+              <input
+                type="text"
+                value={selectedEvent.check_in_code || ''}
+                onChange={e => setSelectedEvent({ ...selectedEvent, check_in_code: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300">Code Expired</label>
+              <input
+                type="checkbox"
+                checked={selectedEvent.is_code_expired}
+                onChange={e => setSelectedEvent({ ...selectedEvent, is_code_expired: e.target.checked })}
+                className="ml-2"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4"
+            >
+              Save
+            </button>
+          </form>
+          <ManualCheckIn
+            eventId={selectedEvent.id}
+            onSuccess={() => {
+              // Refresh event data after successful check-in
+              refreshEvents();
+            }}
+          />
         </div>
       )}
 

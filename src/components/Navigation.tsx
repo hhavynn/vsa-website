@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAdmin } from '../hooks/useAdmin';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { Avatar } from './Avatar/Avatar';
 
 interface NavItem {
   path: string;
@@ -36,6 +37,7 @@ export function Navigation() {
         { path: '/wild-n-culture', label: 'Wild n\' Culture' }
       ]
     },
+    { path: '/cabinet', label: 'Cabinet' },
     { path: '/leaderboard', label: 'Leaderboard' },
     { 
       path: '/get-involved',
@@ -75,7 +77,7 @@ export function Navigation() {
                       }}
                       className={`inline-flex items-center font-bold text-lg px-2 py-1 transition-colors duration-150 rounded-md ${
                         (item.label === 'Events' && isEventsOpen) || (item.label === 'Get Involved' && isGetInvolvedOpen)
-                          ? 'text-indigo-500 bg-indigo-100 dark:bg-indigo-900' :
+                          ? 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/50' :
                           theme === 'dark' ? 'text-gray-100 hover:text-indigo-400 hover:bg-gray-800' : 'text-gray-800 hover:text-indigo-600 hover:bg-gray-100'
                       }`}
                     >
@@ -99,7 +101,7 @@ export function Navigation() {
                             <Link
                               key={subItem.path}
                               to={subItem.path}
-                              className="block px-5 py-2 text-base font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md transition-colors"
+                              className="block px-5 py-2 text-base font-semibold text-gray-800 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md transition-colors"
                               onClick={() => {
                                 setIsEventsOpen(false);
                                 setIsGetInvolvedOpen(false);
@@ -118,7 +120,7 @@ export function Navigation() {
                     to={item.path}
                     className={`inline-flex items-center font-bold text-lg px-2 py-1 rounded-md transition-colors duration-150 ${
                       location.pathname === item.path
-                        ? 'text-indigo-500 underline underline-offset-8 decoration-2 bg-indigo-100 dark:bg-indigo-900' :
+                        ? 'text-indigo-600 underline underline-offset-8 decoration-2 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/50' :
                         theme === 'dark' ? 'text-gray-100 hover:text-indigo-400 hover:bg-gray-800' : 'text-gray-800 hover:text-indigo-600 hover:bg-gray-100'
                     }`}
                   >
@@ -155,19 +157,22 @@ export function Navigation() {
           <div className="hidden sm:flex sm:items-center">
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link
-                  to="/profile"
-                  className={`text-lg font-bold ${
-                    theme === 'dark' ? 'text-gray-200 hover:text-white' : 'text-gray-700 hover:text-gray-900'
-                  }`}
-                >
-                  Profile
-                </Link>
+                <div className="flex items-center space-x-2">
+                  <Avatar size="sm" />
+                  <Link
+                    to="/profile"
+                    className={`text-lg font-bold ${
+                      theme === 'dark' ? 'text-gray-100 hover:text-white' : 'text-gray-800 hover:text-gray-900'
+                    }`}
+                  >
+                    Profile
+                  </Link>
+                </div>
                 {isAdmin && (
                   <Link
                     to="/admin/events"
                     className={`text-lg font-bold ${
-                      theme === 'dark' ? 'text-gray-200 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                      theme === 'dark' ? 'text-gray-100 hover:text-white' : 'text-gray-800 hover:text-gray-900'
                     }`}
                   >
                     Admin

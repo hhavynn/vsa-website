@@ -1,5 +1,9 @@
 import { format } from 'date-fns';
 import { Event } from '../../types';
+import { Modal } from '../Modal';
+import { useState } from 'react';
+import { CountdownTimer } from '../CountdownTimer';
+import { OptimizedImage } from '../OptimizedImage';
 
 export interface EventCardProps {
   event: Event;
@@ -7,6 +11,8 @@ export interface EventCardProps {
 }
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
+  const [showModal, setShowModal] = useState(false);
+
   const handleCheckIn = () => {
     window.open(event.check_in_form_url, '_blank');
     onCheckIn();
@@ -21,20 +27,22 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-      {event.image_url && (
-        <img src={event.image_url} alt={event.name} className="w-full h-48 object-cover rounded-md mb-4" />
-      )}
-      <h3 className="text-xl font-semibold text-white mb-2">{event.name}</h3>
-      <p className="text-gray-300 mb-4">{event.description}</p>
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-sm text-gray-400">
-            {dateString || 'Date TBD'}
-          </p>
-          <p className="text-sm text-gray-400">{event.location}</p>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white flex flex-col">
+      <OptimizedImage
+        src={event.image_url || '/images/events/default.jpg'}
+        alt={event.name}
+        className="w-full h-40 object-cover rounded-md mb-4"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+      <h3 className="text-lg font-bold mb-2">{event.name}</h3>
+      <p className="text-gray-700 dark:text-gray-300 mb-2">{event.description}</p>
+      <span className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        {dateString || 'Date TBD'}
+      </span>
+      <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">
+        {event.event_type.replace(/_/g, ' ').toUpperCase()}
+      </span>
+      <CountdownTimer targetDate={new Date(event.date)} />
     </div>
   );
 }
