@@ -6,8 +6,24 @@ export function House() {
     <RevealOnScrollWrapper>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageTitle title="House System" />
-        <h1 className="text-3xl font-bold text-white mb-6">House System</h1>
-        <p className="text-gray-300">The House system was created to provide members a smaller sub-group within VSA to easily meet new people, attend more close-knit events, and create memories with newfound friends. House can be compared to UCSD's colleges or the Hogwarts houses but unlike the fams established within the ACE program, the Houses are changed every year allowing members to consistently meet new people and experience different events every time. Each House is guided by two House Parents who look over all the members within the House, as well as plan, communicate, and execute several quarterly events for the House members to attend. There are also opportunities for Houses to "collab" and host events with each other in order to create bonds with other Houses as well. Each House is also able to earn points by participating in VSA events such as attending GBMS, external events, etc. in order to claim the grand prize at the end of the year. House is an amazing opportunity for members to create lasting friendships and comfortably meet new people through smaller events, and we hope you all come out and join us for a year of fun and new memories! </p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">House System</h1>
+        <p className="text-gray-700 dark:text-gray-300 mb-6">
+          The House System is a way to foster friendly competition and camaraderie among VSA members. Members are sorted into one of four houses at the beginning of each semester, and houses compete for points through various activities and events.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">House Points</h2>
+            <p className="text-gray-700 dark:text-gray-300">
+              Points are awarded for participation in events, winning competitions, and contributing to the VSA community. The house with the most points at the end of the semester wins the House Cup!
+            </p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">House Events</h2>
+            <p className="text-gray-700 dark:text-gray-300">
+              Each house hosts special events throughout the semester, including social gatherings, community service projects, and friendly competitions with other houses.
+            </p>
+          </div>
+        </div>
       </div>
     </RevealOnScrollWrapper>
   );

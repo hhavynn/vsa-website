@@ -149,11 +149,11 @@ export function MemberDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-800 rounded-lg shadow-xl p-6"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6"
         >
-          <h2 className="text-2xl font-bold text-white mb-4">Points Earned</h2>
-          <div className="text-4xl font-bold text-indigo-400">{points}</div>
-          <p className="text-gray-400 mt-2">Keep attending events to earn more points!</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Points Earned</h2>
+          <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">{points}</div>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Keep attending events to earn more points!</p>
         </motion.div>
 
         {/* Events Attended Card */}
@@ -161,15 +161,15 @@ export function MemberDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gray-800 rounded-lg shadow-xl p-6"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6"
         >
-          <h2 className="text-2xl font-bold text-white mb-4">Events Attended</h2>
-          <div className="text-4xl font-bold text-indigo-400">{eventsAttended.length}</div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Events Attended</h2>
+          <div className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">{eventsAttended.length}</div>
           <div className="mt-4 space-y-2">
             {Object.entries(EVENT_TYPE_LABELS).map(([type, label]) => {
               const count = eventsAttended.filter(e => e.event_type === type).length;
               return (
-                <div key={type} className="flex justify-between text-gray-300">
+                <div key={type} className="flex justify-between text-gray-700 dark:text-gray-300">
                   <span>{label}</span>
                   <span>{count}</span>
                 </div>
@@ -183,39 +183,70 @@ export function MemberDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 lg:col-span-3 text-gray-900 dark:text-white"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6"
         >
-          <h2 className="text-2xl font-bold text-white mb-4">Achievements</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Achievements</h2>
+          <div className="space-y-4">
             {achievements.map((achievement) => (
               <div
                 key={achievement.id}
                 className={`p-4 rounded-lg ${
                   achievement.unlocked
-                    ? 'bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-500 text-gray-900 dark:text-white'
-                    : 'bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                    ? 'bg-indigo-50 dark:bg-indigo-900/50'
+                    : 'bg-gray-50 dark:bg-gray-700/50'
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{achievement.icon}</span>
+                  <div className={`p-2 rounded-full ${
+                    achievement.unlocked
+                      ? 'bg-indigo-100 dark:bg-indigo-800'
+                      : 'bg-gray-200 dark:bg-gray-600'
+                  }`}>
+                    <svg
+                      className={`w-6 h-6 ${
+                        achievement.unlocked
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-gray-400 dark:text-gray-500'
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
                   <div>
-                    <h3 className="font-semibold text-white">{achievement.name}</h3>
-                    <p className="text-sm text-gray-400">{achievement.description}</p>
-                    {achievement.progress !== undefined && achievement.total && (
+                    <h3 className={`font-semibold ${
+                      achievement.unlocked
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {achievement.name}
+                    </h3>
+                    <p className={`text-sm ${
+                      achievement.unlocked
+                        ? 'text-gray-600 dark:text-gray-300'
+                        : 'text-gray-500 dark:text-gray-500'
+                    }`}>
+                      {achievement.description}
+                    </p>
+                    {achievement.progress !== undefined && (
                       <div className="mt-2">
-                        <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
                           <div
-                            className="bg-indigo-500 h-2 rounded-full"
+                            className="h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full"
                             style={{
-                              width: `${Math.min(
-                                (achievement.progress / achievement.total) * 100,
-                                100
-                              )}%`,
+                              width: `${(achievement.progress / (achievement.total || 1)) * 100}%`
                             }}
-                          ></div>
+                          />
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {achievement.progress}/{achievement.total}
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {achievement.progress} / {achievement.total}
                         </p>
                       </div>
                     )}

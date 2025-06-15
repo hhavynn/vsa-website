@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { SignInForm } from '../components/Auth/SignInForm';
 import { SignUpForm } from '../components/Auth/SignUpForm';
@@ -9,6 +9,7 @@ import { useEvents } from '../hooks/useEvents';
 import { PageTitle } from '../components/PageTitle';
 import { motion } from 'framer-motion';
 import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { Event } from '../types';
 
 export function Home() {
   const { user } = useAuth();
@@ -68,19 +69,12 @@ export function Home() {
           {user ? (
             <div className="space-y-8">
               {/* Welcome Section */}
-              <div className="relative rounded-2xl p-8 overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)',
-                  backgroundImage: 'url(/images/waves-bg.svg)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
+              <div className="relative rounded-2xl p-8 overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-600">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-70"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-center md:justify-between text-center md:text-left">
                   <div>
-                    <p className="text-gray-500 dark:text-gray-300 text-lg mb-2 text-center md:text-left">{currentDate}</p>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4">
+                    <p className="text-white/80 text-lg mb-2 text-center md:text-left">{currentDate}</p>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4">
                       Welcome to VSA, {userName || 'there'}!
                     </h1>
                   </div>
@@ -101,9 +95,9 @@ export function Home() {
 
                 {/* Event Check-in Section (Middle) */}
                 <RevealOnScrollWrapper>
-                  <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
-                    <h2 className="text-2xl font-bold mb-4">Event Check-in</h2>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Event Check-in</h2>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl shadow p-4">
                       <CheckInCodeInput />
                     </div>
                   </div>
@@ -141,33 +135,32 @@ export function Home() {
                     </div>
                   ) : eventsError ? (
                     <div className="text-center text-red-400 bg-red-900/20 p-4 rounded-lg">
-                      Error loading events: {eventsError.message}
+                      Error loading events: {eventsError instanceof Error ? eventsError.message : 'Unknown error'}
                     </div>
                   ) : (() => {
                     // Only show upcoming events (today or in the future, with 1-day grace period)
                     const now = new Date();
                     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
                     const upcomingEvents = events
-                      .filter(event => new Date(event.date) >= oneDayAgo)
-                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                      .filter((event: Event) => new Date(event.date) >= oneDayAgo)
+                      .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
                     if (upcomingEvents.length === 0) {
                       return (
                         <div className="bg-gray-800 shadow-xl rounded-lg p-6">
-                          <p className="text-gray-300">No events scheduled at this time.</p>
-                          <p className="text-gray-300 mt-2">Check back soon for upcoming events!</p>
+                          <h2 className="text-2xl font-bold text-white mb-4">Upcoming Events</h2>
+                          <p className="text-gray-300">No upcoming events at the moment.</p>
                         </div>
                       );
                     }
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {upcomingEvents.map((event) => (
+                        {upcomingEvents.map((event: Event) => (
                           <div key={event.id} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white flex flex-col">
                             <img src={event.image_url || '/images/events/default.jpg'} alt={event.name} className="w-full h-40 object-cover rounded-md mb-4" />
                             <h3 className="text-lg font-bold mb-2">{event.name}</h3>
                             <p className="text-gray-700 dark:text-gray-300 mb-2">{event.description}</p>
                             <span className="text-sm text-gray-500 dark:text-gray-400 mb-2">{new Date(event.date).toLocaleDateString()}</span>
                             <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">{event.event_type.replace(/_/g, ' ').toUpperCase()}</span>
-                            <a href={event.check_in_form_url} className="mt-auto inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200 text-center">Check In</a>
                           </div>
                         ))}
                       </div>
@@ -179,10 +172,10 @@ export function Home() {
           ) : (
             <div className="max-w-2xl mx-auto py-12">
               <div className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-white mb-4">
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
                   Welcome to VSA
                 </h1>
-                <p className="text-xl text-gray-300">
+                <p className="text-xl text-gray-700 dark:text-gray-300">
                   Sign in or create an account to start earning points and participating in events.
                 </p>
               </div>

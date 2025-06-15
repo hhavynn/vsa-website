@@ -5,18 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BackToTop } from './BackToTop';
 import { Suspense } from 'react';
 import { EventCardSkeleton } from './LoadingSkeleton';
+import Footer from './Footer';
 
 export function Layout() {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className={`min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300`}>
+    <div className={`min-h-screen bg-white text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300 flex flex-col`}>
       <div className="sticky top-0 z-50">
         <Navigation />
       </div>
       
-      <main id="main-content" className="min-h-[calc(100vh-4rem)]">
+      <main id="main-content" className="flex-grow">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -29,10 +30,10 @@ export function Layout() {
             <Suspense fallback={
               <div className="container mx-auto px-4 py-8">
                 <div className="animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-8"></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="bg-gray-200 rounded-lg p-6 h-64"></div>
+                      <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-lg p-6 h-64"></div>
                     ))}
                   </div>
                 </div>
@@ -44,12 +45,13 @@ export function Layout() {
         </AnimatePresence>
       </main>
 
+      <Footer />
       <BackToTop />
 
       {/* Theme Toggle Button */}
       <button
         onClick={toggleTheme}
-        className="fixed bottom-8 left-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+        className="fixed bottom-8 left-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900"
         aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       >
         {theme === 'dark' ? (
