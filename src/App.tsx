@@ -4,6 +4,7 @@ import { AppRoutes } from './routes';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { PointsProvider } from './context/PointsContext';
+import { Toaster } from 'react-hot-toast';
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ function App() {
           <AuthProvider>
             <PointsProvider>
               <AppRoutes />
+              <Toaster position="top-right" />
             </PointsProvider>
           </AuthProvider>
         </ThemeProvider>
