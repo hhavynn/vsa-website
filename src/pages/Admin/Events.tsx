@@ -6,6 +6,7 @@ import { GenerateCheckInCode } from '../../components/Admin/GenerateCheckInCode'
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/PageTitle';
 import { ManualCheckIn } from '../../components/Admin/ManualCheckIn';
+import { AdminNav } from '../../components/Admin/AdminNav';
 
 // Define event type labels
 const EVENT_TYPE_LABELS: Record<Event['event_type'], string> = {
@@ -185,7 +186,8 @@ export default function AdminEvents() {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Event Management</h1>
+      <PageTitle title="Event Management" />
+      <AdminNav />
       
       <div className="flex space-x-4 mb-8">
         <button

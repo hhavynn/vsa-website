@@ -300,10 +300,9 @@ export function Navigation() {
                   {isAdmin && (
                     <Link
                       to="/admin/events"
-                      className={`block px-3 py-2 text-base font-medium ${
-                        theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                      className={`text-lg font-bold ${
+                        theme === 'dark' ? 'text-gray-100 hover:text-white' : 'text-gray-800 hover:text-gray-900'
                       }`}
-                      onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Admin
                     </Link>
