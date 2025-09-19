@@ -3,7 +3,8 @@ import { Routes as RouterRoutes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
-import { LoadingSpinner } from './components/LoadingSpinner';
+import { PageLoader } from './components/common/PageLoader';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PointsProvider } from './context/PointsContext';
 import AdminLayout from './components/Admin/AdminLayout';
 
@@ -27,16 +28,17 @@ const NotFound = lazy(() => import('./pages/NotFound').then(module => ({ default
 
 export function AppRoutes() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      {/* Skip to content link for accessibility */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:bg-white focus:text-gray-900 focus:p-4 focus:rounded-br-lg"
-      >
-        Skip to main content
-      </a>
-      <PointsProvider>
-        <RouterRoutes>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader message="Loading page..." />}>
+        {/* Skip to content link for accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:bg-white focus:text-gray-900 focus:p-4 focus:rounded-br-lg"
+        >
+          Skip to main content
+        </a>
+        <PointsProvider>
+          <RouterRoutes>
           <Route element={<Layout />}>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
@@ -84,8 +86,9 @@ export function AppRoutes() {
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Route>
-        </RouterRoutes>
-      </PointsProvider>
-    </Suspense>
+          </RouterRoutes>
+        </PointsProvider>
+      </Suspense>
+    </ErrorBoundary>
   );
 } 

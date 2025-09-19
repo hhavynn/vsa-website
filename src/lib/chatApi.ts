@@ -1,54 +1,7 @@
-import OpenAI from 'openai';
+import { supabase } from './supabase';
 import { ChatMessage } from '../context/ChatContext';
 
-// Initialize OpenAI client only if API key is available
-const getOpenAIClient = () => {
-  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
-  if (!apiKey || apiKey === 'your_openai_api_key_here') {
-    return null;
-  }
-  return new OpenAI({
-    apiKey,
-    dangerouslyAllowBrowser: true, // Only for client-side usage
-  });
-};
-
-// VSA-specific system prompt with knowledge about the organization
-const VSA_SYSTEM_PROMPT = `You are a helpful AI assistant for the Vietnamese Student Association (VSA) at UCSD. You help members with questions about events, points, and general VSA information.
-
-VSA Mission Statement:
-The Vietnamese Student Association of UCSD strives to promote and preserve the Vietnamese culture. We are dedicated to providing resources and a safe space for students to unite as a Vietnamese-American community. This organization is for nonprofit.
-
-VSA's 4 Pillars:
-1. Social: meeting new people and building bonds with one another such as the ACE Program and House System
-2. Cultural: stay in touch with cultural roots through our events such as Vietnamese Culture Night and Black April
-3. Community: continue to strive to create a supportive and cooperative community for those of Vietnamese and non-Vietnamese descent
-4. Academic: main priority of obtaining good grades and graduating within a reasonable amount of time
-
-Event Types:
-- GBM (General Body Meeting): Regular meetings for all members
-- Mixer: Social events for members to meet and interact
-- Winter Retreat: Annual retreat event
-- VCN (Vietnamese Culture Night): Cultural performance event
-- Wild N Culture: Cultural celebration event
-- External Event: Events hosted by other organizations
-- Other: Miscellaneous events
-
-Points System:
-- Members earn points by attending events
-- Different events have different point values
-- Points are tracked and displayed on a leaderboard
-- Members can check in to events using codes or manual check-in
-
-Common Questions You Can Help With:
-- Event information and details
-- Points system and how to earn points
-- VSA mission and values
-- How to check in to events
-- General VSA policies and procedures
-- Cultural events and traditions
-
-Always be friendly, helpful, and accurate. If you don't know something specific about VSA, say so and suggest they contact the VSA board or check the website for more information.`;
+// Note: VSA_SYSTEM_PROMPT is now handled in the Supabase Edge Function
 
 export interface ChatRequest {
   message: string;
@@ -112,72 +65,44 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
       };
     }
 
-    // Get OpenAI client
-    const openai = getOpenAIClient();
+    // Get current session for authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    // Check if API key is configured
-    if (!openai) {
+    if (sessionError || !session) {
+      return {
+        message: 'Please sign in to use the chat assistant.'
+      };
+    }
+
+    // Call secure Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('secure-ai', {
+      body: {
+        message: request.message,
+        conversationHistory: request.conversationHistory,
+      },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (error) {
+      console.error('Edge function error:', error);
       return {
         message: getFallbackResponse(request.message, false)
       };
     }
 
-    // Prepare conversation history for OpenAI
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      {
-        role: 'system',
-        content: VSA_SYSTEM_PROMPT,
-      },
-    ];
-
-    // Add conversation history (last 10 messages)
-    request.conversationHistory.forEach((msg) => {
-      messages.push({
-        role: msg.role,
-        content: msg.content,
-      });
-    });
-
-    // Add the current user message
-    messages.push({
-      role: 'user',
-      content: request.message,
-    });
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages,
-      max_tokens: 500,
-      temperature: 0.7,
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
     return {
-      message: response,
+      message: data.message || getFallbackResponse(request.message, false),
     };
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
+    console.error('Error calling chat API:', error);
     
     if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        throw new Error('OpenAI API key not configured. Please contact the administrator.');
-      } else if (error.message.includes('401')) {
-        throw new Error('Invalid OpenAI API key. Please contact the administrator.');
-      } else if (error.message.includes('429') || error.message.includes('rate limit')) {
-        // Set rate limit state
-        isRateLimited = true;
-        rateLimitResetTime = Date.now() + (60 * 1000); // Reset in 1 minute
-        
-        // Try to get fallback response
-        const fallbackResponse = getFallbackResponse(request.message, true);
-        return { message: fallbackResponse };
-      } else if (error.message.includes('network') || error.message.includes('fetch')) {
-        throw new Error('Network error. Please check your internet connection.');
+      if (error.message.includes('network') || error.message.includes('fetch')) {
+        return { 
+          message: 'Network error. Please check your internet connection and try again.' 
+        };
       }
     }
     
@@ -187,57 +112,3 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
   }
 };
 
-// For server-side usage (if you implement a backend API)
-export const sendChatMessageServer = async (request: ChatRequest): Promise<ChatResponse> => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return {
-      message: getFallbackResponse(request.message, false)
-    };
-  }
-  
-  const openaiServer = new OpenAI({
-    apiKey,
-  });
-
-  try {
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      {
-        role: 'system',
-        content: VSA_SYSTEM_PROMPT,
-      },
-    ];
-
-    request.conversationHistory.forEach((msg) => {
-      messages.push({
-        role: msg.role,
-        content: msg.content,
-      });
-    });
-
-    messages.push({
-      role: 'user',
-      content: request.message,
-    });
-
-    const completion = await openaiServer.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages,
-      max_tokens: 500,
-      temperature: 0.7,
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
-    return {
-      message: response,
-    };
-  } catch (error) {
-    console.error('Error calling OpenAI API:', error);
-    throw new Error('Failed to get response from chat assistant');
-  }
-};

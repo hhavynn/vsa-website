@@ -1,7 +1,10 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { PageError } from './common/PageError';
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
@@ -20,25 +23,36 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    
+    // Call custom error handler if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+
+    // Log to external service in production
+    if (process.env.NODE_ENV === 'production') {
+      // You could send to Sentry, LogRocket, etc.
+      console.error('Production error:', { error, errorInfo });
+    }
   }
+
+  private handleReset = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <div className="max-w-md w-full mx-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            <h1 className="text-2xl font-bold text-red-600 dark:text-red-500 mb-4">Something went wrong</h1>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition-colors duration-200"
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
+        <PageError
+          error={this.state.error}
+          resetError={this.handleReset}
+          title="Application Error"
+          message="Something went wrong. Please try refreshing the page or contact support if the problem persists."
+        />
       );
     }
 
