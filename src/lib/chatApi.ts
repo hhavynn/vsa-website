@@ -1,11 +1,17 @@
 import OpenAI from 'openai';
 import { ChatMessage } from '../context/ChatContext';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // Only for client-side usage
-});
+// Initialize OpenAI client only if API key is available
+const getOpenAIClient = () => {
+  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+  if (!apiKey || apiKey === 'your_openai_api_key_here') {
+    return null;
+  }
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true, // Only for client-side usage
+  });
+};
 
 // VSA-specific system prompt with knowledge about the organization
 const VSA_SYSTEM_PROMPT = `You are a helpful AI assistant for the Vietnamese Student Association (VSA) at UCSD. You help members with questions about events, points, and general VSA information.
@@ -106,8 +112,11 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
       };
     }
 
+    // Get OpenAI client
+    const openai = getOpenAIClient();
+    
     // Check if API key is configured
-    if (!process.env.REACT_APP_OPENAI_API_KEY || process.env.REACT_APP_OPENAI_API_KEY === 'your_openai_api_key_here') {
+    if (!openai) {
       return {
         message: getFallbackResponse(request.message, false)
       };
@@ -180,8 +189,15 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
 
 // For server-side usage (if you implement a backend API)
 export const sendChatMessageServer = async (request: ChatRequest): Promise<ChatResponse> => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return {
+      message: getFallbackResponse(request.message, false)
+    };
+  }
+  
   const openaiServer = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey,
   });
 
   try {
