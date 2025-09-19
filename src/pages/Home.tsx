@@ -10,6 +10,7 @@ import { PageTitle } from '../components/PageTitle';
 import { motion } from 'framer-motion';
 import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
 import { Event } from '../types';
+import { ChatTest } from '../components/Chat/ChatTest';
 
 export function Home() {
   const { user } = useAuth();
@@ -114,6 +115,13 @@ export function Home() {
                   </ul>
                 </div>
               </div>
+
+              {/* Chat Test Section - Remove this in production */}
+              <RevealOnScrollWrapper>
+                <div className="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
+                  <ChatTest />
+                </div>
+              </RevealOnScrollWrapper>
 
               {/* Upcoming Events Section */}
               <RevealOnScrollWrapper>
