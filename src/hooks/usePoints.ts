@@ -1,78 +1,112 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { pointsRepository, PointsStats, PointsHistoryEntry, PointsLeaderboardEntry } from '../data/repos/points';
 import { useAuth } from './useAuth';
 
-export function usePoints() {
-  const [points, setPoints] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+export function useUserPoints() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['user-points', user?.id],
+    queryFn: () => pointsRepository.getUserPoints(user!.id),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function usePointsStats() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['points-stats', user?.id],
+    queryFn: () => pointsRepository.getPointsStats(user!.id),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePointsHistory(limit: number = 20) {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['points-history', user?.id, limit],
+    queryFn: () => pointsRepository.getPointsHistory(user!.id, limit),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useLeaderboard(limit: number = 10, offset: number = 0) {
+  return useQuery({
+    queryKey: ['leaderboard', limit, offset],
+    queryFn: () => pointsRepository.getLeaderboard(limit, offset),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+export function useTopUsers(limit: number = 5) {
+  return useQuery({
+    queryKey: ['top-users', limit],
+    queryFn: () => pointsRepository.getTopUsers(limit),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUserRank() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['user-rank', user?.id],
+    queryFn: () => pointsRepository.getUserRank(user!.id),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePointsDistribution() {
+  return useQuery({
+    queryKey: 'points-distribution',
+    queryFn: () => pointsRepository.getPointsDistribution(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+export function useAddPoints() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const fetchPoints = useCallback(async () => {
-    if (!user) {
-      setPoints(0);
-      setLoading(false);
-      return;
+  return useMutation({
+    mutationFn: ({ points, eventId }: { points: number; eventId: string }) =>
+      pointsRepository.addPoints(user!.id, points, eventId),
+    onSuccess: () => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['user-points', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-stats', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-history', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['user-rank', user?.id] });
+    },
+  });
+}
+
+// Legacy hook for backward compatibility
+export function usePoints() {
+  const { data: userPoints, isLoading: loading, error, refetch } = useUserPoints();
+  
+  const addPointsMutation = useAddPoints();
+  
+  const addPoints = async (amount: number, eventId?: string) => {
+    if (!eventId) {
+      throw new Error('Event ID is required for adding points');
     }
-
-    try {
-      setLoading(true);
-      // First try to get existing points
-      const { data, error } = await supabase
-        .from('user_points')
-        .select('points')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No points record exists, create one
-          const { data: newData, error: insertError } = await supabase
-            .from('user_points')
-            .insert({
-              user_id: user.id,
-              points: 0
-            })
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-          setPoints(newData.points);
-        } else {
-          throw error;
-        }
-      } else {
-        setPoints(data.points);
-      }
-    } catch (error) {
-      console.error('Error fetching points:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchPoints();
-  }, [fetchPoints]);
-
-  const addPoints = async (amount: number) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_points')
-        .upsert({
-          user_id: user.id,
-          points: points + amount
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setPoints(data.points);
-    } catch (error) {
-      console.error('Error adding points:', error);
-    }
+    
+    return addPointsMutation.mutateAsync({ points: amount, eventId });
   };
 
-  return { points, loading, addPoints, refreshPoints: fetchPoints };
+  return { 
+    points: userPoints?.total_points || 0, 
+    loading, 
+    error, 
+    addPoints, 
+    refreshPoints: refetch 
+  };
 } 
