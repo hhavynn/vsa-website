@@ -1,5 +1,5 @@
-import { supabase } from '../clients/supabase';
-import { withErrorHandling, NotFoundError, ValidationError } from '../errors';
+import { supabase } from '../../lib/supabase';
+import { withErrorHandling, ValidationError } from '../errors';
 
 export interface UserPoints {
   id: string;
@@ -134,9 +134,9 @@ export class PointsRepository {
 
       return data.map((entry, index) => ({
         user_id: entry.user_id,
-        first_name: entry.user_profiles.first_name,
-        last_name: entry.user_profiles.last_name,
-        avatar_url: entry.user_profiles.avatar_url,
+        first_name: (entry.user_profiles as any).first_name,
+        last_name: (entry.user_profiles as any).last_name,
+        avatar_url: (entry.user_profiles as any).avatar_url,
         total_points: entry.total_points,
         rank: offset + index + 1,
       }));
@@ -170,7 +170,7 @@ export class PointsRepository {
       return data.map(entry => ({
         id: entry.id,
         event_id: entry.event_id,
-        event_name: entry.events.name,
+        event_name: (entry.events as any).name,
         points_earned: entry.points_earned,
         check_in_type: entry.check_in_type,
         checked_in_at: entry.checked_in_at,

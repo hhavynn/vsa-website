@@ -4,8 +4,8 @@ import { usePoints } from '../hooks/usePoints';
 interface PointsContextType {
   points: number;
   loading: boolean;
-  addPoints: (amount: number) => Promise<void>;
-  refreshPoints: () => Promise<void>;
+  addPoints: (amount: number, eventId?: string) => Promise<void>;
+  refreshPoints: () => Promise<any>;
 }
 
 const PointsContext = createContext<PointsContextType | undefined>(undefined);

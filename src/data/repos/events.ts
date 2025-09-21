@@ -1,6 +1,7 @@
-import { supabase } from '../clients/supabase';
+import { supabase } from '../../lib/supabase';
 import { withErrorHandling, DatabaseError, NotFoundError, ValidationError } from '../errors';
-import { Event, CreateEventFormData, UpdateEventFormData } from '../../schemas';
+import { Event } from '../../types';
+import { CreateEventFormData, UpdateEventFormData } from '../../schemas';
 
 export interface EventWithAttendance extends Event {
   attendance_count: number;

@@ -8,6 +8,7 @@ import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
 import { MemberDashboard } from '../components/Dashboard/MemberDashboard';
 import { Avatar } from '../components/Avatar/Avatar';
 import { supabase } from '../lib/supabase';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 
 interface AttendanceRecord extends EventAttendance {
   event: Event;
@@ -154,7 +155,7 @@ export function Profile() {
                           {format(new Date(record.event.date), 'MMM d, yyyy')}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                          Type: {record.event.event_type.replace(/_/g, ' ').toUpperCase()}
+                          Type: {EVENT_TYPE_LABELS[record.event.event_type]}
                         </p>
                         <p className="text-sm text-green-600 dark:text-green-400">
                           Points Earned: {record.points_earned}

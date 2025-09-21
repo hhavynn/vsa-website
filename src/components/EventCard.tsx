@@ -12,12 +12,6 @@ export interface EventCardProps {
 export function EventCard({ event, onCheckIn }: EventCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleCheckIn = () => {
-    // Open the Google Form in a new tab
-    window.open(event.check_in_form_url, '_blank');
-    // Call the onCheckIn callback for any additional logic
-    onCheckIn();
-  };
 
   const handleSaveToCalendar = () => {
     if (!event.date) return;

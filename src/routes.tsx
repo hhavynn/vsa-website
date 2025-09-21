@@ -24,6 +24,8 @@ const WildNCulture = lazy(() => import('./pages/WildNCulture').then(module => ({
 const Feedback = lazy(() => import('./pages/Feedback').then(module => ({ default: module.FeedbackPage })));
 const AdminEvents = lazy(() => import('./pages/Admin/Events'));
 const AdminGallery = lazy(() => import('./pages/Admin/Gallery'));
+const AdminFeedback = lazy(() => import('./pages/Admin/Feedback'));
+const AdminChat = lazy(() => import('./pages/Admin/Chat'));
 const NotFound = lazy(() => import('./pages/NotFound').then(module => ({ default: module.NotFound })));
 
 export function AppRoutes() {
@@ -79,7 +81,12 @@ export function AppRoutes() {
             } />
             <Route path="/admin/feedback" element={
               <AdminRoute>
-                <AdminLayout />
+                <AdminFeedback />
+              </AdminRoute>
+            } />
+            <Route path="/admin/chat" element={
+              <AdminRoute>
+                <AdminChat />
               </AdminRoute>
             } />
 

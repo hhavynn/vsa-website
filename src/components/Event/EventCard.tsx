@@ -3,6 +3,7 @@ import { Event } from '../../types';
 import { Modal } from '../Modal';
 import { useState } from 'react';
 import { CountdownTimer } from '../CountdownTimer';
+import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { OptimizedImage } from '../OptimizedImage';
 
 export interface EventCardProps {
@@ -40,7 +41,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
         {dateString || 'Date TBD'}
       </span>
       <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">
-        {event.event_type.replace(/_/g, ' ').toUpperCase()}
+        {EVENT_TYPE_LABELS[event.event_type]}
       </span>
       <CountdownTimer targetDate={new Date(event.date)} />
     </div>

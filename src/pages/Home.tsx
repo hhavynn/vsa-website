@@ -4,13 +4,12 @@ import { SignInForm } from '../components/Auth/SignInForm';
 import { SignUpForm } from '../components/Auth/SignUpForm';
 import { CheckInCodeInput } from '../components/Points/CheckInCodeInput';
 import { supabase } from '../lib/supabase';
-import { EventCard } from '../components/Event/EventCard';
 import { useEvents } from '../hooks/useEvents';
 import { PageTitle } from '../components/PageTitle';
 import { motion } from 'framer-motion';
 import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
 import { Event } from '../types';
-import { ChatTest } from '../components/Chat/ChatTest';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 
 export function Home() {
   const { user } = useAuth();
@@ -117,11 +116,6 @@ export function Home() {
               </div>
 
               {/* Chat Test Section - Remove this in production */}
-              <RevealOnScrollWrapper>
-                <div className="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
-                  <ChatTest />
-                </div>
-              </RevealOnScrollWrapper>
 
               {/* Upcoming Events Section */}
               <RevealOnScrollWrapper>
@@ -168,7 +162,7 @@ export function Home() {
                             <h3 className="text-lg font-bold mb-2">{event.name}</h3>
                             <p className="text-gray-700 dark:text-gray-300 mb-2">{event.description}</p>
                             <span className="text-sm text-gray-500 dark:text-gray-400 mb-2">{new Date(event.date).toLocaleDateString()}</span>
-                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">{event.event_type.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-200 self-start mb-2">{EVENT_TYPE_LABELS[event.event_type]}</span>
                           </div>
                         ))}
                       </div>

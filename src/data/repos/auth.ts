@@ -1,4 +1,4 @@
-import { supabase } from '../clients/supabase';
+import { supabase } from '../../lib/supabase';
 import { withErrorHandling, AuthenticationError, ValidationError } from '../errors';
 import { UserProfileFormData, SignInFormData, SignUpFormData } from '../../schemas';
 import { AuthUser } from '@supabase/supabase-js';

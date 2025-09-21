@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Event schemas
 export const EventSchema = z.object({
+  id: z.string().uuid('Invalid event ID'),
   name: z.string().min(1, 'Event name is required').max(100, 'Event name must be less than 100 characters'),
   description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
   date: z.string().datetime('Invalid date format'),
@@ -46,7 +47,7 @@ export const FeedbackSchema = z.object({
   type: z.enum(['bug', 'feature', 'improvement', 'event', 'other']),
   title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
   description: z.string().min(1, 'Description is required').max(1000, 'Description must be less than 1000 characters'),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  priority: z.enum(['low', 'medium', 'high']),
 });
 
 // Event attendance schemas
@@ -75,6 +76,7 @@ export const AdminEventUpdateSchema = z.object({
 });
 
 // Type exports for TypeScript
+export type Event = z.infer<typeof EventSchema>;
 export type EventFormData = z.infer<typeof EventSchema>;
 export type CreateEventFormData = z.infer<typeof CreateEventSchema>;
 export type UpdateEventFormData = z.infer<typeof UpdateEventSchema>;

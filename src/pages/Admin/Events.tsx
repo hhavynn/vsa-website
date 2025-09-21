@@ -1,23 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useEvents } from '../../hooks/useEvents';
 import { supabase } from '../../lib/supabase';
 import { Event } from '../../types';
-import { GenerateCheckInCode } from '../../components/Admin/GenerateCheckInCode';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/PageTitle';
 import { ManualCheckIn } from '../../components/Admin/ManualCheckIn';
 import { AdminNav } from '../../components/Admin/AdminNav';
-
-// Define event type labels
-const EVENT_TYPE_LABELS: Record<Event['event_type'], string> = {
-  other: 'General Events',
-  gbm: 'General Body Meeting',
-  mixer: 'Mixer',
-  winter_retreat: 'Winter Retreat',
-  vcn: 'VCN',
-  wildn_culture: 'Wild n\' Culture',
-  external_event: 'External Event'
-};
+import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 
 export default function AdminEvents() {
   console.log('AdminEvents component mounting...');
@@ -39,6 +28,26 @@ export default function AdminEvents() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
+  
+  // Edit form file upload states
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editUploading, setEditUploading] = useState(false);
+
+  // Helper function to format date for datetime-local input
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return '';
+    // Format as YYYY-MM-DDTHH:MM for datetime-local input
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   // Split events into upcoming and past
   const now = new Date();
@@ -64,6 +73,27 @@ export default function AdminEvents() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif']
+    },
+    maxFiles: 1
+  });
+
+  // Edit form dropzone handlers
+  const onEditDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setEditImageFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setEditImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
+    onDrop: onEditDrop,
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.gif']
     },
@@ -170,19 +200,6 @@ export default function AdminEvents() {
     }
   };
 
-  const handleExpireCode = async (eventId: string) => {
-    try {
-      const { error } = await supabase
-        .from('events')
-        .update({ is_code_expired: true })
-        .eq('id', eventId);
-
-      if (error) throw error;
-      refreshEvents();
-    } catch (error) {
-      console.error('Error expiring code:', error);
-    }
-  };
 
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
@@ -432,27 +449,59 @@ export default function AdminEvents() {
             className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 mb-8 space-y-4 text-gray-900 dark:text-white"
             onSubmit={async (e) => {
               e.preventDefault();
-              // Update event in database
-              const { data, error } = await supabase
-                .from('events')
-                .update({
-                  name: selectedEvent.name,
-                  description: selectedEvent.description,
-                  date: selectedEvent.date,
-                  location: selectedEvent.location,
-                  event_type: selectedEvent.event_type,
-                  points: selectedEvent.points,
-                  image_url: selectedEvent.image_url,
-                  check_in_code: selectedEvent.check_in_code,
-                  is_code_expired: selectedEvent.is_code_expired,
-                  check_in_form_url: '', // Remove check-in form link
-                })
-                .eq('id', selectedEvent.id);
-              if (error) {
+              
+              try {
+                setEditUploading(true);
+                
+                // Handle image upload if a new file is selected
+                let imageUrl = selectedEvent.image_url; // Keep existing URL by default
+                if (editImageFile) {
+                  const fileExt = editImageFile.name.split('.').pop();
+                  const fileName = `${Math.random()}.${fileExt}`;
+                  const { error: uploadError } = await supabase.storage
+                    .from('event_images')
+                    .upload(fileName, editImageFile);
+
+                  if (uploadError) throw uploadError;
+                  
+                  // Get the public URL of the uploaded image
+                  const { data: publicUrlData } = supabase.storage
+                    .from('event_images')
+                    .getPublicUrl(fileName);
+
+                  imageUrl = publicUrlData?.publicUrl;
+                }
+
+                // Update event in database
+                const { data, error } = await supabase
+                  .from('events')
+                  .update({
+                    name: selectedEvent.name,
+                    description: selectedEvent.description,
+                    date: selectedEvent.date,
+                    location: selectedEvent.location,
+                    event_type: selectedEvent.event_type,
+                    points: selectedEvent.points,
+                    image_url: imageUrl,
+                    check_in_code: selectedEvent.check_in_code,
+                    is_code_expired: selectedEvent.is_code_expired,
+                    check_in_form_url: '', // Remove check-in form link
+                  })
+                  .eq('id', selectedEvent.id);
+                  
+                if (error) {
+                  console.error('Error updating event:', error);
+                } else {
+                  console.log('Event updated successfully:', data);
+                  refreshEvents();
+                  // Reset edit form file upload states
+                  setEditImageFile(null);
+                  setEditImagePreview(null);
+                }
+              } catch (error) {
                 console.error('Error updating event:', error);
-              } else {
-                console.log('Event updated successfully:', data);
-                refreshEvents();
+              } finally {
+                setEditUploading(false);
               }
             }}
           >
@@ -480,7 +529,7 @@ export default function AdminEvents() {
               <label className="block text-sm font-medium text-gray-300">Date</label>
               <input
                 type="datetime-local"
-                value={selectedEvent.date}
+                value={formatDateForInput(selectedEvent.date)}
                 onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 required
@@ -523,13 +572,55 @@ export default function AdminEvents() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300">Event Image URL</label>
-              <input
-                type="url"
-                value={selectedEvent.image_url || ''}
-                onChange={e => setSelectedEvent({ ...selectedEvent, image_url: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
+              <label className="block text-sm font-medium text-gray-300">Event Image</label>
+              <div className="mt-1 space-y-2">
+                {/* Current image display */}
+                {selectedEvent.image_url && !editImagePreview && (
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-400 mb-2">Current image:</p>
+                    <img 
+                      src={selectedEvent.image_url} 
+                      alt="Current event image" 
+                      className="w-full h-48 object-cover rounded-md border border-gray-600" 
+                    />
+                  </div>
+                )}
+                
+                {/* File upload dropzone */}
+                <div {...getEditRootProps()} className={`flex items-center justify-center border-2 border-dashed rounded-md p-4 cursor-pointer ${isEditDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-600 bg-gray-700'}`}>
+                  <input {...getEditInputProps()} />
+                  {editImagePreview ? (
+                    <img src={editImagePreview} alt="New event image" className="max-h-48 rounded-md object-cover" />
+                  ) : (
+                    <span className="text-gray-400">Drag & drop or click to select a new image</span>
+                  )}
+                </div>
+                
+                {/* Remove image button */}
+                {editImageFile && (
+                  <button 
+                    type="button" 
+                    className="text-red-400 hover:underline text-sm" 
+                    onClick={() => { 
+                      setEditImageFile(null); 
+                      setEditImagePreview(null); 
+                    }}
+                  >
+                    Remove New Image
+                  </button>
+                )}
+                
+                {/* Keep existing image option */}
+                {selectedEvent.image_url && !editImageFile && (
+                  <button 
+                    type="button" 
+                    className="text-blue-400 hover:underline text-sm" 
+                    onClick={() => setSelectedEvent({ ...selectedEvent, image_url: '' })}
+                  >
+                    Remove Current Image
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300">Check-in Code</label>
@@ -551,9 +642,10 @@ export default function AdminEvents() {
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4"
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={editUploading}
             >
-              Save
+              {editUploading ? 'Saving...' : 'Save'}
             </button>
           </form>
           <ManualCheckIn
