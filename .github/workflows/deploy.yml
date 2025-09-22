@@ -116,12 +116,24 @@ jobs:
   deploy-vercel:
     runs-on: ubuntu-latest
     needs: [test, security]
-    if: github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != ''
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for Vercel secrets
+        id: check-vercel
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "vercel-available=false" >> $GITHUB_OUTPUT
+            echo "Vercel token not found, skipping deployment"
+          else
+            echo "vercel-available=true" >> $GITHUB_OUTPUT
+            echo "Vercel token found, proceeding with deployment"
+          fi
+
       - name: Deploy to Vercel
+        if: steps.check-vercel.outputs.vercel-available == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -134,9 +146,21 @@ jobs:
   deploy-aws:
     runs-on: ubuntu-latest
     needs: [build]
-    if: github.ref == 'refs/heads/main' && secrets.AWS_ACCESS_KEY_ID != ''
+    if: github.ref == 'refs/heads/main'
     steps:
+      - name: Check for AWS secrets
+        id: check-aws
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "aws-available=false" >> $GITHUB_OUTPUT
+            echo "AWS credentials not found, skipping deployment"
+          else
+            echo "aws-available=true" >> $GITHUB_OUTPUT
+            echo "AWS credentials found, proceeding with deployment"
+          fi
+
       - name: Configure AWS credentials
+        if: steps.check-aws.outputs.aws-available == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -144,6 +168,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Update ECS service
+        if: steps.check-aws.outputs.aws-available == 'true'
         run: |
           aws ecs update-service \
             --cluster vsa-website-cluster \
@@ -154,7 +179,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     needs: [deploy-vercel, deploy-aws]
-    if: always() && (needs.deploy-vercel.result != 'skipped' || needs.deploy-aws.result != 'skipped')
+    if: always()
     steps:
       - name: Notify deployment status
         uses: 8398a7/action-slack@v3
