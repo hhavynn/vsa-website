@@ -44,9 +44,17 @@ jobs:
   security:
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      security-events: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
