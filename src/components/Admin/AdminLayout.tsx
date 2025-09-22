@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
 import FeedbackTab from './FeedbackTab';
 
 const AdminLayout: React.FC = () => {
