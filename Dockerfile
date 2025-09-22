@@ -18,7 +18,9 @@ ARG REACT_APP_SUPABASE_URL
 ARG REACT_APP_SUPABASE_ANON_KEY
 ENV REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL
 ENV REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY
-RUN npm run build
+
+# Fix permissions and build
+RUN chmod +x node_modules/.bin/* && npm run build
 
 # Production stage
 FROM nginx:alpine
