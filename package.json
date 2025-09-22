@@ -36,8 +36,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "build:production": "set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
+    "build": "chmod +x node_modules/.bin/* && react-scripts build",
+    "build:production": "chmod +x node_modules/.bin/* && set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
