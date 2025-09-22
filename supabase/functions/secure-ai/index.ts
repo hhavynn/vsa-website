@@ -4,9 +4,10 @@ import { z } from 'https://esm.sh/zod@3.22.4'
 
 // CORS headers for browser requests
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://www.vsaatucsd.com,https://vsa-website-ee2odt0xc-havyn-nguyens-projects.vercel.app,http://localhost:3000',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Credentials': 'true',
 }
 
 // Validation schema for chat requests
