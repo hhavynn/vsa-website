@@ -28,11 +28,37 @@ const FALLBACK_RESPONSES: { [key: string]: string } = {
 // Rate limit tracking
 let rateLimitResetTime = 0;
 let isRateLimited = false;
+let requestCount = 0;
+let lastRequestTime = 0;
+const MAX_REQUESTS_PER_MINUTE = 3; // Limit to 3 requests per minute
+const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
 
 // Function to reset rate limit (can be called externally)
 export const resetRateLimit = () => {
   isRateLimited = false;
   rateLimitResetTime = 0;
+  requestCount = 0;
+  lastRequestTime = 0;
+};
+
+// Check if we should rate limit
+const shouldRateLimit = (): boolean => {
+  const now = Date.now();
+  
+  // Reset counter if it's been more than a minute
+  if (now - lastRequestTime > RATE_LIMIT_WINDOW) {
+    requestCount = 0;
+    lastRequestTime = now;
+  }
+  
+  // Check if we've exceeded the rate limit
+  if (requestCount >= MAX_REQUESTS_PER_MINUTE) {
+    return true;
+  }
+  
+  requestCount++;
+  lastRequestTime = now;
+  return false;
 };
 
 // Function to get fallback response
@@ -62,6 +88,15 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
       const waitTime = Math.ceil((rateLimitResetTime - Date.now()) / 1000 / 60);
       return {
         message: `I'm currently rate limited. Please wait ${waitTime} minute(s) before trying again, or ask about VSA mission, 4 pillars, points, events, or check-in process for basic information.`
+      };
+    }
+
+    // Check our custom rate limiting
+    if (shouldRateLimit()) {
+      isRateLimited = true;
+      rateLimitResetTime = Date.now() + RATE_LIMIT_WINDOW;
+      return {
+        message: `I'm getting a lot of requests right now. Please wait a moment before trying again, or ask about VSA mission, 4 pillars, points, events, or check-in process for basic information.`
       };
     }
 
@@ -138,7 +173,30 @@ Always be friendly, helpful, and accurate. If you don't know something specific 
     });
 
     if (!openaiResponse.ok) {
-      console.error('OpenAI API error:', await openaiResponse.text());
+      const errorData = await openaiResponse.json();
+      console.error('OpenAI API error:', errorData);
+      
+      // Handle specific error types
+      if (openaiResponse.status === 429) {
+        // Rate limit exceeded
+        isRateLimited = true;
+        rateLimitResetTime = Date.now() + RATE_LIMIT_WINDOW;
+        return {
+          message: `I'm getting too many requests right now. Please wait a moment before trying again, or ask about VSA mission, 4 pillars, points, events, or check-in process for basic information.`
+        };
+      } else if (openaiResponse.status === 401) {
+        // Invalid API key
+        return {
+          message: 'Chat service is temporarily unavailable. Please ask about VSA mission, 4 pillars, points, events, or check-in process for basic information.'
+        };
+      } else if (openaiResponse.status === 402 || errorData.error?.code === 'insufficient_quota') {
+        // Quota exceeded
+        return {
+          message: 'Chat service is temporarily unavailable due to usage limits. Please ask about VSA mission, 4 pillars, points, events, or check-in process for basic information.'
+        };
+      }
+      
+      // For other errors, use fallback
       return {
         message: getFallbackResponse(request.message, false)
       };
