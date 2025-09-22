@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { pointsRepository, PointsStats, PointsHistoryEntry, PointsLeaderboardEntry } from '../data/repos/points';
+import { pointsRepository } from '../data/repos/points';
 import { useAuth } from './useAuth';
 
 export function useUserPoints() {

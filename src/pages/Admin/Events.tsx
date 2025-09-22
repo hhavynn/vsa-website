@@ -380,7 +380,7 @@ export default function AdminEvents() {
                       </div>
                       {event.image_url && (
                         <div className="mt-4">
-                          <img src={event.image_url} alt="Event Image" className="w-full h-48 object-cover rounded-md" />
+                          <img src={event.image_url} alt={event.name} className="w-full h-48 object-cover rounded-md" />
                         </div>
                       )}
                     </div>
@@ -430,7 +430,7 @@ export default function AdminEvents() {
                       </div>
                       {event.image_url && (
                         <div className="mt-4">
-                          <img src={event.image_url} alt="Event Image" className="w-full h-48 object-cover rounded-md" />
+                          <img src={event.image_url} alt={event.name} className="w-full h-48 object-cover rounded-md" />
                         </div>
                       )}
                     </div>
@@ -580,7 +580,7 @@ export default function AdminEvents() {
                     <p className="text-sm text-gray-400 mb-2">Current image:</p>
                     <img 
                       src={selectedEvent.image_url} 
-                      alt="Current event image" 
+                      alt={selectedEvent.name} 
                       className="w-full h-48 object-cover rounded-md border border-gray-600" 
                     />
                   </div>
@@ -590,7 +590,7 @@ export default function AdminEvents() {
                 <div {...getEditRootProps()} className={`flex items-center justify-center border-2 border-dashed rounded-md p-4 cursor-pointer ${isEditDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-600 bg-gray-700'}`}>
                   <input {...getEditInputProps()} />
                   {editImagePreview ? (
-                    <img src={editImagePreview} alt="New event image" className="max-h-48 rounded-md object-cover" />
+                    <img src={editImagePreview} alt="Event preview" className="max-h-48 rounded-md object-cover" />
                   ) : (
                     <span className="text-gray-400">Drag & drop or click to select a new image</span>
                   )}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { motion } from 'framer-motion';
@@ -22,7 +22,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchAvatar = async () => {
+  const fetchAvatar = useCallback(async () => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
@@ -40,7 +40,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
     } catch (error) {
       console.error('Error fetching avatar:', error);
     }
-  };
+  }, [userId, user?.id]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;

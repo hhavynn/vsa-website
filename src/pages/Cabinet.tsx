@@ -1,6 +1,5 @@
 import { PageTitle } from '../components/PageTitle';
 import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
-import { useEffect, useState } from 'react';
 
 interface Position {
   title: string;

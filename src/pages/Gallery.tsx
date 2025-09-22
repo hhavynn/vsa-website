@@ -132,7 +132,7 @@ export default function Gallery() {
                   <div key={index} className="aspect-w-16 aspect-h-9">
                     <img
                       src={image}
-                      alt={`${selectedGallery.title} - Image ${index + 1}`}
+                      alt={`${selectedGallery.title} - ${index + 1}`}
                       className="w-full h-full object-cover rounded-lg shadow-sm"
                     />
                   </div>

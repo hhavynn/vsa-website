@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { EventAttendance } from '../types';
 
 export function useEventAttendance() {
   const [loading, setLoading] = useState(false);

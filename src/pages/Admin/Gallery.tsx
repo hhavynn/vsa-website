@@ -1,6 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/PageTitle';
 import { AdminNav } from '../../components/Admin/AdminNav';
 
@@ -24,7 +23,6 @@ export default function AdminGallery() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [galleries, setGalleries] = useState<GalleryEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,8 +108,6 @@ export default function AdminGallery() {
       setGalleries(data || []);
     } catch (error) {
       console.error('Error fetching galleries:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -253,7 +249,7 @@ export default function AdminGallery() {
                   <div key={index} className="relative aspect-w-16 aspect-h-9">
                     <img
                       src={image}
-                      alt={`${gallery.title} - Image ${index + 1}`}
+                      alt={`${gallery.title} - ${index + 1}`}
                       className="w-full h-full object-cover rounded"
                     />
                   </div>
