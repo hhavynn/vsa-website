@@ -26,6 +26,7 @@ const AdminEvents = lazy(() => import('./pages/Admin/Events'));
 const AdminGallery = lazy(() => import('./pages/Admin/Gallery'));
 const AdminFeedback = lazy(() => import('./pages/Admin/Feedback'));
 const AdminChat = lazy(() => import('./pages/Admin/Chat'));
+const SignIn = lazy(() => import('./pages/SignIn').then(module => ({ default: module.default })));
 const NotFound = lazy(() => import('./pages/NotFound').then(module => ({ default: module.NotFound })));
 
 export function AppRoutes() {
@@ -55,6 +56,7 @@ export function AppRoutes() {
             <Route path="/vcn" element={<VCN />} />
             <Route path="/wild-n-culture" element={<WildNCulture />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/signin" element={<SignIn />} />
             
             {/* Protected Routes */}
             <Route path="/profile" element={
