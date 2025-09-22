@@ -74,26 +74,87 @@ export const sendChatMessage = async (request: ChatRequest): Promise<ChatRespons
       };
     }
 
-    // Call secure Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('secure-ai', {
-      body: {
-        message: request.message,
-        conversationHistory: request.conversationHistory,
-      },
+    // Check if OpenAI API key is available in the frontend
+    const openaiApiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    
+    if (!openaiApiKey) {
+      return {
+        message: getFallbackResponse(request.message, false)
+      };
+    }
+
+    // Call OpenAI API directly from frontend
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful AI assistant for the Vietnamese Student Association (VSA) at UCSD. You help members with questions about events, points, and general VSA information.
+
+VSA Mission Statement:
+The Vietnamese Student Association of UCSD strives to promote and preserve the Vietnamese culture. We are dedicated to providing resources and a safe space for students to unite as a Vietnamese-American community. This organization is for nonprofit.
+
+VSA's 4 Pillars:
+1. Social: meeting new people and building bonds with one another such as the ACE Program and House System
+2. Cultural: stay in touch with cultural roots through our events such as Vietnamese Culture Night and Black April
+3. Community: continue to strive to create a supportive and cooperative community for those of Vietnamese and non-Vietnamese descent
+4. Academic: main priority of obtaining good grades and graduating within a reasonable amount of time
+
+Event Types:
+- GBM (General Body Meeting): Regular meetings for all members
+- Mixer: Social events for members to meet and interact
+- Winter Retreat: Annual retreat event
+- VCN (Vietnamese Culture Night): Cultural performance event
+- Wild N Culture: Cultural celebration event
+- External Event: Events hosted by other organizations
+- Other: Miscellaneous events
+
+Points System:
+- Members earn points by attending events
+- Different events have different point values
+- Points are tracked and displayed on a leaderboard
+- Members can check in to events using codes or manual check-in
+
+Always be friendly, helpful, and accurate. If you don't know something specific about VSA, say so and suggest they contact the VSA board or check the website for more information.`
+          },
+          ...request.conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          {
+            role: 'user',
+            content: request.message,
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
     });
 
-    if (error) {
-      console.error('Edge function error:', error);
+    if (!openaiResponse.ok) {
+      console.error('OpenAI API error:', await openaiResponse.text());
+      return {
+        message: getFallbackResponse(request.message, false)
+      };
+    }
+
+    const aiData = await openaiResponse.json();
+    const aiMessage = aiData.choices?.[0]?.message?.content;
+
+    if (!aiMessage) {
       return {
         message: getFallbackResponse(request.message, false)
       };
     }
 
     return {
-      message: data.message || getFallbackResponse(request.message, false),
+      message: aiMessage
     };
   } catch (error) {
     console.error('Error calling chat API:', error);
