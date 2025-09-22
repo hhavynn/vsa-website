@@ -5,7 +5,6 @@ import FeedbackTab from './FeedbackTab';
 
 const AdminLayout: React.FC = () => {
   const location = useLocation();
-  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('events');
 
   const tabs = [

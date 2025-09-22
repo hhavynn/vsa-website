@@ -132,7 +132,7 @@ export function MemberDashboard() {
     };
 
     fetchUserData();
-  }, [user, eventsAttended]);
+  }, [user, eventsAttended, points]);
 
   if (loading) {
     return (

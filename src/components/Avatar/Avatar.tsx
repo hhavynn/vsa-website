@@ -94,7 +94,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
   // Fetch avatar on component mount and when user changes
   useEffect(() => {
     fetchAvatar();
-  }, [user, userId]);
+  }, [user, userId, fetchAvatar]);
 
   const handleClick = () => {
     console.log('Avatar clicked, showUploadButton:', showUploadButton);

@@ -8,12 +8,9 @@ import { Avatar } from '../Avatar/Avatar';
 
 export function Header() {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
   const { points } = usePoints();
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isGetInvolvedDropdownOpen, setIsGetInvolvedDropdownOpen] = useState(false);
-  const [isEventsDropdownOpen, setIsEventsDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const location = useLocation();

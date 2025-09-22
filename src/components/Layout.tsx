@@ -4,7 +4,6 @@ import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BackToTop } from './BackToTop';
 import { Suspense } from 'react';
-import { EventCardSkeleton } from './LoadingSkeleton';
 import Footer from './Footer';
 
 export function Layout() {

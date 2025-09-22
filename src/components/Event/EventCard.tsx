@@ -1,7 +1,5 @@
 import { format } from 'date-fns';
 import { Event } from '../../types';
-import { Modal } from '../Modal';
-import { useState } from 'react';
 import { CountdownTimer } from '../CountdownTimer';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { OptimizedImage } from '../OptimizedImage';
@@ -12,8 +10,6 @@ export interface EventCardProps {
 }
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
-  const [showModal, setShowModal] = useState(false);
-
   const handleCheckIn = () => {
     window.open(event.check_in_form_url, '_blank');
     onCheckIn();
