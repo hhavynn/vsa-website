@@ -7,34 +7,30 @@ interface NavLogoProps {
 
 export const NavLogo = memo(function NavLogo({ className = '' }: NavLogoProps) {
   const [imageError, setImageError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentSrc, setCurrentSrc] = useState('/images/vsa-logo.svg');
 
   const handleImageError = () => {
-    setImageError(true);
-    setIsLoading(false);
-  };
-
-  const handleImageLoad = () => {
-    setIsLoading(false);
+    if (currentSrc === '/images/vsa-logo.svg') {
+      setCurrentSrc('/images/vsa-logo.jpg');
+    } else if (currentSrc === '/images/vsa-logo.jpg') {
+      setCurrentSrc('/images/vsa-logo.png');
+    } else {
+      setImageError(true);
+    }
   };
 
   return (
     <Link to="/" className={`flex items-center ${className}`}>
-      {isLoading && (
-        <div className="h-12 w-12 bg-gray-200 rounded-md animate-pulse flex items-center justify-center">
-          <span className="text-xs text-gray-500">VSA</span>
-        </div>
-      )}
       {!imageError ? (
         <img
-          src="/images/vsa-logo.jpg"
+          src={currentSrc}
           alt="VSA Logo"
-          className={`h-12 w-12 object-contain rounded-md shadow-md border-2 border-indigo-600 bg-white ${isLoading ? 'hidden' : ''}`}
+          className="h-12 w-12 object-contain rounded-md shadow-md border-2 border-indigo-600 bg-white"
           onError={handleImageError}
-          onLoad={handleImageLoad}
+          loading="lazy"
         />
       ) : (
-        <div className="h-12 w-12 bg-indigo-600 rounded-md flex items-center justify-center text-white font-bold text-lg">
+        <div className="h-12 w-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-md flex items-center justify-center text-white font-bold text-lg shadow-md">
           VSA
         </div>
       )}
