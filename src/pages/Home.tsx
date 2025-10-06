@@ -4,7 +4,6 @@ import { useEvents } from "../hooks/useEvents";
 import { PageTitle } from "../components/PageTitle";
 import { motion } from "framer-motion";
 import { RevealOnScrollWrapper } from "../components/RevealOnScrollWrapper";
-import { Event } from "../types";
 import { EVENT_TYPE_LABELS } from "../constants/eventTypes";
 
 export function Home() {
