@@ -33,7 +33,7 @@ export class EventsRepository {
         .from('events')
         .select(`
           *,
-          event_attendance:event_attendance!event_id (count)
+          event_attendance:event_attendance(count)
         `);
 
       // Apply filters
