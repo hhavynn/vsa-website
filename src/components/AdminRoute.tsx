@@ -16,8 +16,8 @@ export function AdminRoute({ children }: AdminRouteProps) {
   }
 
   if (!isAdmin) {
-    console.log('AdminRoute - Not admin, redirecting to sign in');
-    return <Navigate to="/signin" replace />;
+    console.log('AdminRoute - Not admin, redirecting to home');
+    return <Navigate to="/" replace />;
   }
 
   console.log('AdminRoute - Admin access granted');

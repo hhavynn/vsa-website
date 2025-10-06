@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes as RouterRoutes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import { PageLoader } from './components/common/PageLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -57,8 +58,12 @@ export function AppRoutes() {
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/signin" element={<SignIn />} />
             
-            {/* Public Profile Route - No authentication required */}
-            <Route path="/profile" element={<Profile />} />
+            {/* Protected Routes */}
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
 
             {/* Admin Routes */}
             <Route path="/admin" element={
