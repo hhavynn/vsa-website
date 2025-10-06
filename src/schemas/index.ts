@@ -55,10 +55,6 @@ export const CheckInCodeSchema = z.object({
   code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters'),
 });
 
-// Chat schemas
-export const ChatMessageSchema = z.object({
-  message: z.string().min(1, 'Message is required').max(1000, 'Message must be less than 1000 characters'),
-});
 
 // Admin schemas
 export const AdminEventUpdateSchema = z.object({
@@ -85,5 +81,4 @@ export type SignInFormData = z.infer<typeof SignInSchema>;
 export type SignUpFormData = z.infer<typeof SignUpSchema>;
 export type FeedbackFormData = z.infer<typeof FeedbackSchema>;
 export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
-export type ChatMessageFormData = z.infer<typeof ChatMessageSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;

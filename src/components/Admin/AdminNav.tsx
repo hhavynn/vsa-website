@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 
 export function AdminNav() {
   const location = useLocation();
@@ -13,9 +13,9 @@ export function AdminNav() {
         <Link
           to="/admin/events"
           className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive('/admin/events')
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            isActive("/admin/events")
+              ? "bg-indigo-600 text-white"
+              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
         >
           Events
@@ -23,9 +23,9 @@ export function AdminNav() {
         <Link
           to="/admin/gallery"
           className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive('/admin/gallery')
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            isActive("/admin/gallery")
+              ? "bg-indigo-600 text-white"
+              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
         >
           Gallery
@@ -33,24 +33,14 @@ export function AdminNav() {
         <Link
           to="/admin/feedback"
           className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive('/admin/feedback')
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            isActive("/admin/feedback")
+              ? "bg-indigo-600 text-white"
+              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
         >
           Feedback
         </Link>
-        <Link
-          to="/admin/chat"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive('/admin/chat')
-              ? 'bg-indigo-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-        >
-          Chat Assistant
-        </Link>
       </div>
     </nav>
   );
-} 
+}

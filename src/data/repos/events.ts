@@ -31,10 +31,7 @@ export class EventsRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('events')
-        .select(`
-          *,
-          event_attendance!inner(count)
-        `);
+        .select('*, event_attendance(count)');
 
       // Apply filters
       if (filters.event_type) {
@@ -80,14 +77,7 @@ export class EventsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('events')
-        .select(`
-          *,
-          event_attendance!inner(count),
-          event_attendance!left(
-            user_id,
-            checked_in_at
-          )
-        `)
+        .select('*, event_attendance(count), event_attendance(user_id, checked_in_at)')
         .eq('id', id)
         .single();
 
