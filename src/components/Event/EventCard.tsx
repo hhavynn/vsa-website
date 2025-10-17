@@ -26,9 +26,10 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white flex flex-col">
       <OptimizedImage
-        src={event.image_url || '/images/events/default.jpg'}
+        src={event.image_url || '/images/events/default.svg'}
+        fallbackSrc="/images/events/default.svg"
         alt={event.name}
-        className="w-full h-40 object-cover rounded-md mb-4"
+        className="w-full h-40 rounded-md mb-4 overflow-hidden"
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       />
       <h3 className="text-lg font-bold mb-2">{event.name}</h3>

@@ -18,6 +18,8 @@ interface Position {
   }>;
 }
 
+const MEMBER_PLACEHOLDER = '/images/defaults/member-placeholder.svg';
+
 const executiveBoard: Position[] = [
   {
     title: 'Co-President',
@@ -161,7 +163,16 @@ export function Cabinet() {
                         <div className="flex flex-col items-center space-y-4">
                           <div className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {member.image ? (
-                              <img src={member.image} alt={member.name} className="object-cover w-full h-full" loading="lazy" />
+                              <img
+                                src={member.image}
+                                alt={member.name}
+                                className="object-cover w-full h-full"
+                                loading="lazy"
+                                onError={(event) => {
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = MEMBER_PLACEHOLDER;
+                                }}
+                              />
                             ) : (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -205,7 +216,16 @@ export function Cabinet() {
                         <div className="flex flex-col items-center space-y-4">
                           <div className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {member.image ? (
-                              <img src={member.image} alt={member.name} className="object-cover w-full h-full" loading="lazy" />
+                              <img
+                                src={member.image}
+                                alt={member.name}
+                                className="object-cover w-full h-full"
+                                loading="lazy"
+                                onError={(event) => {
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = MEMBER_PLACEHOLDER;
+                                }}
+                              />
                             ) : (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />

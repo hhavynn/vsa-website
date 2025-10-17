@@ -1,0 +1,15 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aceGradient" x1="0" y1="0" x2="400" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" rx="24" fill="url(#aceGradient)"/>
+  <g fill="white" fill-opacity="0.85">
+    <path d="M130 150L200 60L270 150H130Z"/>
+    <circle cx="200" cy="105" r="18"/>
+    <rect x="170" y="150" width="60" height="40" rx="12"/>
+  </g>
+  <text x="200" y="210" text-anchor="middle" fill="white" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600">Anh Chị Em</text>
+</svg>

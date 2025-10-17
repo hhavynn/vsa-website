@@ -12,19 +12,19 @@ const programs: Program[] = [
   {
     title: 'ANH CHỊ EM',
     description: 'ACE stands for our Anh Chi Em program and it\'s VSA\'s big-little program! Each year, prospective "littos" meet and match up with their future bigs.',
-    image: '/images/get-involved/ace.jpg',
+    image: '/images/get-involved/ace.svg',
     link: '/ace',
   },
   {
     title: 'HOUSE PROGRAM',
     description: 'The House system was created to provide members a smaller sub-group within VSA to easily meet new people, attend more close-knit events, and create memories with newfound friends.',
-    image: '/images/get-involved/house.jpg',
+    image: '/images/get-involved/house.svg',
     link: '/house-system',
   },
   {
     title: 'INTERN PROGRAM',
     description: 'Our internship program is designed for those with an interest in learning how VSA is run and the behind-the-scenes work that board members do.',
-    image: '/images/get-involved/intern.jpg',
+    image: '/images/get-involved/intern.svg',
     link: '/intern-program',
   },
 ];

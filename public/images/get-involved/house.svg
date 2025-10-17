@@ -1,0 +1,15 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="houseGradient" x1="0" y1="0" x2="400" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" rx="24" fill="url(#houseGradient)"/>
+  <g fill="white" fill-opacity="0.9">
+    <path d="M200 70L110 140H140V190H190V150H210V190H260V140H290L200 70Z"/>
+    <rect x="170" y="150" width="30" height="40" rx="6"/>
+    <rect x="220" y="150" width="30" height="25" rx="6"/>
+  </g>
+  <text x="200" y="215" text-anchor="middle" fill="white" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600">House Cup</text>
+</svg>

@@ -5,6 +5,7 @@ import { PageTitle } from "../components/PageTitle";
 import { motion } from "framer-motion";
 import { RevealOnScrollWrapper } from "../components/RevealOnScrollWrapper";
 import { EVENT_TYPE_LABELS } from "../constants/eventTypes";
+import { OptimizedImage } from "../components/OptimizedImage";
 
 export function Home() {
   const { user } = useAuth();
@@ -182,12 +183,11 @@ export function Home() {
                             key={event.id}
                             className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 text-gray-900 dark:text-white flex flex-col"
                           >
-                            <img
-                              src={
-                                event.image_url || "/images/events/default.jpg"
-                              }
+                            <OptimizedImage
+                              src={event.image_url || "/images/events/default.svg"}
+                              fallbackSrc="/images/events/default.svg"
                               alt={event.name}
-                              className="w-full h-40 object-cover rounded-md mb-4"
+                              className="w-full h-40 rounded-md mb-4 overflow-hidden"
                             />
                             <h3 className="text-lg font-bold mb-2">
                               {event.name}

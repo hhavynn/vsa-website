@@ -1,0 +1,14 @@
+<svg width="400" height="250" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="eventGradient" x1="0" y1="0" x2="400" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" rx="24" fill="url(#eventGradient)"/>
+  <g fill="white" fill-opacity="0.85">
+    <circle cx="200" cy="115" r="70"/>
+    <path d="M170 110L196 140L230 85" stroke="#6366F1" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="200" y="210" text-anchor="middle" fill="white" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="600">VSA Event</text>
+</svg>

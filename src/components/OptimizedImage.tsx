@@ -1,29 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface OptimizedImageProps {
   src: string;
   alt: string;
   className?: string;
+  imgClassName?: string;
   sizes?: string;
   loading?: 'lazy' | 'eager';
+  fallbackSrc?: string;
 }
 
 export function OptimizedImage({
   src,
   alt,
   className = '',
+  imgClassName = '',
   sizes = '100vw',
-  loading = 'lazy'
+  loading = 'lazy',
+  fallbackSrc
 }: OptimizedImageProps) {
+  const [currentSrc, setCurrentSrc] = useState(() => src || fallbackSrc || '');
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    setCurrentSrc(src || fallbackSrc || '');
+  }, [src, fallbackSrc]);
+
+  const resolvedSrcSet = useMemo(() => {
+    if (!currentSrc) {
+      return undefined;
+    }
+
+    const separator = currentSrc.includes('?') ? '&' : '?';
+    const widths = [400, 800, 1200];
+
+    return widths
+      .map((width) => `${currentSrc}${separator}w=${width} ${width}w`)
+      .join(', ');
+  }, [currentSrc]);
+
+  useEffect(() => {
+    if (!currentSrc) {
+      setError(true);
+      return;
+    }
+
+    setIsLoaded(false);
+    setError(false);
+
     const img = new Image();
-    img.src = src;
     img.onload = () => setIsLoaded(true);
-    img.onerror = () => setError(true);
-  }, [src]);
+    img.onerror = () => {
+      if (fallbackSrc && currentSrc !== fallbackSrc) {
+        setCurrentSrc(fallbackSrc);
+      } else {
+        setError(true);
+      }
+    };
+    img.src = currentSrc;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [currentSrc, fallbackSrc]);
 
   if (error) {
     return (
@@ -39,19 +80,15 @@ export function OptimizedImage({
         <div className="absolute inset-0 bg-gray-800 animate-pulse" />
       )}
       <img
-        src={src}
+        src={currentSrc}
         alt={alt}
         loading={loading}
         className={`w-full h-full object-cover transition-opacity duration-300 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
-        } ${className}`}
+        } ${imgClassName}`}
         sizes={sizes}
-        srcSet={`
-          ${src}?w=400 400w,
-          ${src}?w=800 800w,
-          ${src}?w=1200 1200w
-        `}
+        srcSet={resolvedSrcSet}
       />
     </div>
   );
-} 
+}
