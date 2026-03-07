@@ -29,46 +29,45 @@ export class EventsRepository {
    */
   async getEvents(filters: EventFilters = {}): Promise<EventWithAttendance[]> {
     return withErrorHandling(async () => {
-      let query = supabase
-        .from('events')
-        .select(`
-          *,
-          event_attendance:event_attendance(count)
-        `);
+      // Step 1: fetch events (simple select). Avoid embedded aggregates which can cause 400s.
+      let eventsQuery = supabase.from('events').select('*');
 
       // Apply filters
-      if (filters.event_type) {
-        query = query.eq('event_type', filters.event_type);
-      }
-
-      if (filters.date_from) {
-        query = query.gte('date', filters.date_from);
-      }
-
-      if (filters.date_to) {
-        query = query.lte('date', filters.date_to);
-      }
+      if (filters.event_type) eventsQuery = eventsQuery.eq('event_type', filters.event_type);
+      if (filters.date_from) eventsQuery = eventsQuery.gte('date', filters.date_from);
+      if (filters.date_to) eventsQuery = eventsQuery.lte('date', filters.date_to);
 
       // Order by date
-      query = query.order('date', { ascending: true });
+      eventsQuery = eventsQuery.order('date', { ascending: true });
 
       // Apply pagination
-      if (filters.limit) {
-        query = query.limit(filters.limit);
+      if (filters.limit) eventsQuery = eventsQuery.limit(filters.limit);
+      if (filters.offset) eventsQuery = eventsQuery.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+
+      const { data: events, error: eventsError } = await eventsQuery;
+      if (eventsError) throw eventsError;
+      if (!events) throw new NotFoundError('No events found');
+
+      // Step 2: fetch attendance rows for the returned events and compute counts client-side.
+      const eventIds = events.map((e: any) => e.id).filter(Boolean);
+      let attendanceRows: Array<{ event_id: string }> = [];
+      if (eventIds.length) {
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('event_attendance')
+          .select('event_id')
+          .in('event_id', eventIds as unknown as string[]);
+        if (attendanceError) throw attendanceError;
+        attendanceRows = attendanceData || [];
       }
 
-      if (filters.offset) {
-        query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+      const countsMap: Record<string, number> = {};
+      for (const row of attendanceRows) {
+        countsMap[row.event_id] = (countsMap[row.event_id] || 0) + 1;
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      if (!data) throw new NotFoundError('No events found');
-
-      return data.map(event => ({
+      return events.map((event: any) => ({
         ...event,
-        attendance_count: event.event_attendance?.[0]?.count || 0,
+        attendance_count: countsMap[event.id] || 0,
       }));
     }, 'Failed to fetch events');
   }
@@ -78,27 +77,31 @@ export class EventsRepository {
    */
   async getEventById(id: string, userId?: string): Promise<EventWithAttendance> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
+      // Fetch event
+      const { data: event, error: eventError } = await supabase
         .from('events')
-        .select(`
-          *,
-          event_attendance:event_attendance!event_id (count),
-          event_attendance:event_attendance!event_id (user_id, checked_in_at)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      if (!data) throw new NotFoundError('Event not found', 'event', id);
+      if (eventError) throw eventError;
+      if (!event) throw new NotFoundError('Event not found', 'event', id);
 
-      // Check if user attended this event
-      const userAttended = userId && data.event_attendance?.some(
-        (attendance: any) => attendance.user_id === userId
-      );
+      // Fetch attendance rows for this event (we'll count and check user attendance client-side)
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('event_attendance')
+        .select('user_id, checked_in_at')
+        .eq('event_id', id);
+
+      if (attendanceError) throw attendanceError;
+
+      const attendanceRows = attendanceData || [];
+      const attendanceCount = attendanceRows.length;
+      const userAttended = userId ? attendanceRows.some((r: any) => r.user_id === userId) : false;
 
       return {
-        ...data,
-        attendance_count: data.event_attendance?.[0]?.count || 0,
+        ...event,
+        attendance_count: attendanceCount,
         user_attended: !!userAttended,
       };
     }, 'Failed to fetch event');

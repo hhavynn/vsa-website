@@ -1,7 +1,6 @@
-import React from "react";
-import { SignInForm } from "../components/Auth/SignInForm";
+import { SignInForm } from "../components/features/auth/SignInForm";
 
-export default function SignIn() {
+export function SignIn() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">

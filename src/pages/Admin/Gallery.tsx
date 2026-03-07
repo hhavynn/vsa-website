@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { PageTitle } from '../../components/PageTitle';
-import { AdminNav } from '../../components/Admin/AdminNav';
+import { PageTitle } from '../../components/common/PageTitle';
+import { AdminNav } from '../../components/features/admin/AdminNav';
 
 interface GalleryEvent {
   id: string;

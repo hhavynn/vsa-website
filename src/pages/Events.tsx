@@ -1,12 +1,12 @@
-import React from 'react';
-import { EventCard } from '../components/EventCard';
+import { PageTitle } from '../components/common/PageTitle';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { useEvents } from '../hooks/useEvents';
-import { PageTitle } from '../components/PageTitle';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { EventCard } from '../components/features/events/EventCard';
 import { Event } from '../types';
 
 export function Events() {
   const { events, loading, error } = useEvents();
+
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
@@ -58,10 +58,7 @@ export function Events() {
               <RevealOnScrollWrapper key={event.id}>
                 <EventCard
                   event={event}
-                  onCheckIn={() => {
-                    // TODO: Implement check-in functionality
-                    console.log('Checking in to event:', event.id);
-                  }}
+                  onCheckIn={() => {}}
                 />
               </RevealOnScrollWrapper>
             ))}
@@ -88,10 +85,7 @@ export function Events() {
               <RevealOnScrollWrapper key={event.id}>
                 <EventCard
                   event={event}
-                  onCheckIn={() => {
-                    // TODO: Implement check-in functionality
-                    console.log('Checking in to event:', event.id);
-                  }}
+                  onCheckIn={() => {}}
                 />
               </RevealOnScrollWrapper>
             ))}
@@ -100,4 +94,4 @@ export function Events() {
       </div>
     </div>
   );
-} 
+}

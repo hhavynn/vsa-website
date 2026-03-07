@@ -4,9 +4,9 @@ import { usePoints } from '../hooks/usePoints';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Event, EventAttendance } from '../types';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
-import { MemberDashboard } from '../components/Dashboard/MemberDashboard';
-import { Avatar } from '../components/Avatar/Avatar';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { MemberDashboard } from '../components/features/dashboard/MemberDashboard';
+import { Avatar } from '../components/features/avatar/Avatar';
 import { supabase } from '../lib/supabase';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 

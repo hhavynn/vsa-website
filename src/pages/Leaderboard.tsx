@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { PageTitle } from '../components/PageTitle';
+import { PageTitle } from '../components/common/PageTitle';
 import { usePointsContext } from '../context/PointsContext';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
-import { Avatar } from '../components/Avatar/Avatar';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { Avatar } from '../components/features/avatar/Avatar';
 
 interface LeaderboardEntry {
   id: string;

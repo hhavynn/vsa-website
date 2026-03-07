@@ -1,6 +1,6 @@
-import { PageTitle } from '../../components/PageTitle';
-import { AdminNav } from '../../components/Admin/AdminNav';
-import FeedbackTab from '../../components/Admin/FeedbackTab';
+import { PageTitle } from '../../components/common/PageTitle';
+import { AdminNav } from '../../components/features/admin/AdminNav';
+import FeedbackTab from '../../components/features/admin/FeedbackTab';
 
 export default function AdminFeedback() {
   return (

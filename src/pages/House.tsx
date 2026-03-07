@@ -1,5 +1,5 @@
-import { PageTitle } from '../components/PageTitle';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { PageTitle } from '../components/common/PageTitle';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 
 export function House() {
   return (

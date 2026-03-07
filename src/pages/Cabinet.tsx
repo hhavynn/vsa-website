@@ -1,10 +1,10 @@
-import { PageTitle } from '../components/PageTitle';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { PageTitle } from '../components/common/PageTitle';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 
 interface Position {
   title: string;
   count: number;
-  description?: string;
+  description: string;
   members: Array<{
     name: string;
     image: string;
@@ -138,11 +138,11 @@ export function Cabinet() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <PageTitle title="Cabinet" />
-      
+
       <div className="w-full bg-purple-600 text-white text-center py-6 rounded-lg shadow-lg mb-8 transform transition-transform duration-1000 ease-out animate-slideUp">
         <h1 className="text-4xl font-bold">Introducing: Mi Xao Moggers</h1>
       </div>
-      
+
       <div className="space-y-12">
         {/* Executive Board Section */}
         <RevealOnScrollWrapper>
@@ -234,4 +234,4 @@ export function Cabinet() {
       </div>
     </div>
   );
-} 
+}

@@ -1,6 +1,6 @@
 import React from 'react';
-import { FeedbackForm } from '../components/Feedback/FeedbackForm';
-import { PageTitle } from '../components/PageTitle';
+import { FeedbackForm } from '../components/features/feedback/FeedbackForm';
+import { PageTitle } from '../components/common/PageTitle';
 
 export const FeedbackPage: React.FC = () => {
   return (

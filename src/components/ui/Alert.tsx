@@ -106,13 +106,8 @@ Alert.displayName = 'Alert';
 
 export const AlertTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => {
-    return (
-      <h3
-        ref={ref}
-        className={cn('text-sm font-medium', className)}
-        {...props}
-      />
-    );
+    // eslint-disable-next-line jsx-a11y/heading-has-content
+    return <h3 ref={ref} className={cn('text-sm font-medium', className)} {...props} />;
   }
 );
 

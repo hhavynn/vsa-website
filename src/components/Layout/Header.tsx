@@ -1,10 +1,9 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useAdmin } from '../../hooks/useAdmin';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePoints } from '../../hooks/usePoints';
-import { Avatar } from '../Avatar/Avatar';
+import { useAuth } from '../../hooks/useAuth';
+import { Avatar } from '../features/avatar/Avatar';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -12,8 +11,6 @@ export function Header() {
   const [userName, setUserName] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -60,10 +57,6 @@ export function Header() {
 
     fetchUserName();
   }, [user]);
-
-  const getNavLinkClass = (path: string) => (
-    `text-gray-300 hover:text-white transition-colors duration-200 ${location.pathname === path ? 'text-white font-semibold' : ''}`
-  );
 
   return (
     <header className={`fixed w-full z-50 transition-all duration-300 ${

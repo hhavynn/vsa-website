@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 
 export function NotFound() {
   return (

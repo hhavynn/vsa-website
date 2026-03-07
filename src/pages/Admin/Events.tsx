@@ -3,15 +3,13 @@ import { useEvents } from '../../hooks/useEvents';
 import { supabase } from '../../lib/supabase';
 import { Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
-import { PageTitle } from '../../components/PageTitle';
-import { ManualCheckIn } from '../../components/Admin/ManualCheckIn';
-import { AdminNav } from '../../components/Admin/AdminNav';
+import { PageTitle } from '../../components/common/PageTitle';
+import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
+import { AdminNav } from '../../components/features/admin/AdminNav';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 
 export default function AdminEvents() {
-  console.log('AdminEvents component mounting...');
   const { events, refreshEvents } = useEvents();
-  console.log('Events data:', events);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<Event>>({
     name: '',
@@ -473,7 +471,7 @@ export default function AdminEvents() {
                 }
 
                 // Update event in database
-                const { data, error } = await supabase
+                const { error } = await supabase
                   .from('events')
                   .update({
                     name: selectedEvent.name,
@@ -492,7 +490,6 @@ export default function AdminEvents() {
                 if (error) {
                   console.error('Error updating event:', error);
                 } else {
-                  console.log('Event updated successfully:', data);
                   refreshEvents();
                   // Reset edit form file upload states
                   setEditImageFile(null);

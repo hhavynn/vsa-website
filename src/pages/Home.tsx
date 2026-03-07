@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../hooks/useAuth";
-import { useEvents } from "../hooks/useEvents";
-import { PageTitle } from "../components/PageTitle";
-import { motion } from "framer-motion";
-import { RevealOnScrollWrapper } from "../components/RevealOnScrollWrapper";
-import { EVENT_TYPE_LABELS } from "../constants/eventTypes";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { PageTitle } from '../components/common/PageTitle';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { useAuth } from '../hooks/useAuth';
+import { useEvents } from '../hooks/useEvents';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 
 export function Home() {
   const { user } = useAuth();
@@ -52,14 +52,24 @@ export function Home() {
               {/* Mission Statement Box (Left) */}
               <RevealOnScrollWrapper>
                 <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
-                  <h2 className="text-2xl font-bold mb-4">Mission Statement</h2>
-                  <p className="text-gray-700 dark:text-gray-300">
-                    The Vietnamese Student Association of UCSD strives to
-                    promote and preserve the Vietnamese culture. We are
-                    dedicated to providing resources and a safe space for
-                    students to unite as a Vietnamese-American community. This
-                    organization is for nonprofit.
-                  </p>
+                  <h2 className="text-2xl font-bold mb-4">Our Mission & History</h2>
+                  <div className="text-gray-700 dark:text-gray-300 space-y-4">
+                    <p>
+                      The Vietnamese Student Association at UC San Diego strives to
+                      promote and preserve the Vietnamese culture. We are
+                      dedicated to providing resources and a safe space for
+                      students to unite as a Vietnamese-American community. This
+                      organization is for nonprofit.
+                    </p>
+                    <p>
+                      The Vietnamese Student Association at UC San Diego, established in 1977,
+                      has grown and progressed into an organization that exposes the
+                      Vietnamese culture through academics, social, cultural, and community
+                      events. Each year VSA at UC San Diego strives to educate and help its
+                      members find an interest in the Vietnamese culture and encourage them to
+                      get involved with the community.
+                    </p>
+                  </div>
                 </div>
               </RevealOnScrollWrapper>
 
@@ -91,35 +101,35 @@ export function Home() {
 
               {/* Our 4 Pillars Box (Right) */}
               <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-white">
-                <h2 className="text-2xl font-bold mb-4">Our 4 Pillars</h2>
+                <h2 className="text-2xl font-bold mb-4">Our Four Pillars</h2>
                 <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
                   <li>
                     <span className="font-semibold text-gray-900 dark:text-white">
                       Social:
                     </span>{" "}
-                    meeting new people and building bonds with one another such
+                    Meeting new people and building bonds with one another such
                     as the ACE Program and House System
-                  </li>
-                  <li>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      Cultural:
-                    </span>{" "}
-                    stay in touch with cultural roots through our events such as
-                    Vietnamese Culture Night and Black April
                   </li>
                   <li>
                     <span className="font-semibold text-gray-900 dark:text-white">
                       Community:
                     </span>{" "}
-                    continue to strive to create a supportive and cooperative
-                    community for those of Vietnamese and non-Vietnamese descent
+                    Strive to create a supportive and cooperative community
+                    for those of Vietnamese and non-Vietnamese descent
                   </li>
                   <li>
                     <span className="font-semibold text-gray-900 dark:text-white">
                       Academic:
                     </span>{" "}
-                    main priority of obtaining good grades and graduating within
+                    Main priority of obtaining good grades and graduating within
                     a reasonable amount of time
+                  </li>
+                  <li>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      Cultural:
+                    </span>{" "}
+                    Stay in touch with cultural roots through our events such as
+                    Vietnamese Culture Night and Black April
                   </li>
                 </ul>
               </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckInCodeInput } from '../components/Points/CheckInCodeInput';
-import { RevealOnScrollWrapper } from '../components/RevealOnScrollWrapper';
+import { CheckInCodeInput } from '../components/features/points/CheckInCodeInput';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 
-export function Points() {
+export default function Points() {
   const [points, setPoints] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
