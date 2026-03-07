@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes as RouterRoutes, Route } from "react-router-dom";
-import { Layout } from "../components/layout/Layout";
+import { Layout } from "../components/Layout/Layout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
