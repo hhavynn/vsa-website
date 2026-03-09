@@ -4,6 +4,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { usePointsContext } from '../context/PointsContext';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { Avatar } from '../components/features/avatar/Avatar';
+import { PageLoader } from '../components/common/PageLoader';
 
 interface LeaderboardEntry {
   id: string;
@@ -28,6 +29,13 @@ interface LeaderboardResponse {
   events_attended: number;
   user_profiles: UserProfile;
 }
+
+const rankMedal = (i: number) => {
+  if (i === 0) return '🥇';
+  if (i === 1) return '🥈';
+  if (i === 2) return '🥉';
+  return String(i + 1);
+};
 
 export function Leaderboard() {
   const [pointsEntries, setPointsEntries] = useState<LeaderboardEntry[]>([]);
@@ -56,7 +64,6 @@ export function Leaderboard() {
 
       if (error) throw error;
 
-      // Get events attended count for each user
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('event_attendance')
         .select('user_id, event_id')
@@ -64,7 +71,6 @@ export function Leaderboard() {
 
       if (attendanceError) throw attendanceError;
 
-      // Count events per user
       const eventsCount = attendanceData.reduce((acc: { [key: string]: number }, curr) => {
         acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
         return acc;
@@ -79,20 +85,15 @@ export function Leaderboard() {
           points: entry.points,
           eventsAttended: eventsCount[entry.user_id] || 0,
           rank: index + 1,
-          avatar_url: entry.user_profiles.avatar_url
+          avatar_url: entry.user_profiles.avatar_url,
         }));
 
       setPointsEntries(leaderboardEntries);
-
-      // Create events leaderboard by sorting the same entries by events attended
-      const eventsLeaderboard = [...leaderboardEntries]
-        .sort((a, b) => b.eventsAttended - a.eventsAttended)
-        .map((entry, index) => ({
-          ...entry,
-          rank: index + 1
-        }));
-
-      setEventsEntries(eventsLeaderboard);
+      setEventsEntries(
+        [...leaderboardEntries]
+          .sort((a, b) => b.eventsAttended - a.eventsAttended)
+          .map((e, i) => ({ ...e, rank: i + 1 }))
+      );
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       setError('Failed to fetch leaderboard data');
@@ -103,106 +104,129 @@ export function Leaderboard() {
 
   useEffect(() => {
     fetchLeaderboard();
-    // Set up real-time subscription for points changes
     const pointsSubscription = supabase
       .channel('points_changes')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'user_points' },
-        () => {
-          fetchLeaderboard();
-          refreshPoints();
-        }
+        () => { fetchLeaderboard(); refreshPoints(); }
       )
       .subscribe();
-
-    return () => {
-      pointsSubscription.unsubscribe();
-    };
+    return () => { pointsSubscription.unsubscribe(); };
   }, [refreshPoints]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <PageLoader message="Loading leaderboard..." />;
+  if (error) return (
+    <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+      <p className="text-red-400">{error}</p>
+    </div>
+  );
+
+  const entries = activeTab === 'points' ? pointsEntries : eventsEntries;
 
   return (
     <>
       <PageTitle title="Leaderboard" />
-      <div className="flex justify-center items-start bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
-        <div className="w-full max-w-6xl px-4 py-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-6 text-center">Leaderboard</h1>
-          
-          {/* Tab Navigation */}
+      <div className="max-w-3xl mx-auto px-4 py-12">
+
+        <RevealOnScrollWrapper>
+          <div className="text-center mb-10">
+            <h1 className="font-heading font-bold text-4xl text-white mb-2">Leaderboard</h1>
+            <p className="text-slate-400 text-sm">{pointsEntries.length} members ranked</p>
+          </div>
+        </RevealOnScrollWrapper>
+
+        {/* Tab toggle */}
+        <RevealOnScrollWrapper>
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800/80 gap-1">
+              {(['points', 'events'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    activeTab === tab
+                      ? 'bg-indigo-600 text-white shadow-glow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  {tab === 'points' ? '⭐ Points' : '🎫 Events'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </RevealOnScrollWrapper>
+
+        {/* Top 3 podium */}
+        {entries.length >= 3 && (
           <RevealOnScrollWrapper>
-            <div className="flex justify-center mb-8">
-              <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-white dark:bg-gray-800">
-                <button
-                  onClick={() => setActiveTab('points')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    activeTab === 'points'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  Points
-                </button>
-                <button
-                  onClick={() => setActiveTab('events')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    activeTab === 'events'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  Events Attended
-                </button>
-              </div>
+            <div className="flex items-end justify-center gap-3 mb-8">
+              {[1, 0, 2].map(i => {
+                const e = entries[i];
+                const heights = ['h-24', 'h-32', 'h-20'];
+                return (
+                  <div key={e.id} className="flex flex-col items-center gap-2 flex-1 max-w-[120px]">
+                    <Avatar size="sm" userId={e.id} />
+                    <p className="text-white text-xs font-semibold text-center truncate w-full px-1">
+                      {e.first_name} {e.last_name}
+                    </p>
+                    <p className="text-indigo-400 text-xs font-bold">
+                      {activeTab === 'points' ? `${e.points} pts` : `${e.eventsAttended} events`}
+                    </p>
+                    <div className={`w-full ${heights[i]} rounded-t-xl flex items-center justify-center text-2xl ${
+                      i === 0 ? 'bg-amber-500/20 border border-amber-500/30' :
+                      i === 1 ? 'bg-slate-400/10 border border-slate-500/30' :
+                      'bg-orange-800/20 border border-orange-700/30'
+                    }`}>
+                      {rankMedal(i)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </RevealOnScrollWrapper>
-          
-          <RevealOnScrollWrapper>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th scope="col" className="w-20 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Rank
-                      </th>
-                      <th scope="col" className="w-20 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Avatar
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="w-32 px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        {activeTab === 'points' ? 'Points' : 'Events Attended'}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {(activeTab === 'points' ? pointsEntries : eventsEntries).map((entry, index) => (
-                      <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
-                          {index + 1}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
-                          <div className="flex justify-center">
-                            <Avatar size="sm" userId={entry.id} />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+        )}
+
+        {/* Full table */}
+        <RevealOnScrollWrapper>
+          <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-800/80">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-16">Rank</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Member</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    {activeTab === 'points' ? 'Points' : 'Events'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/40">
+                {entries.map((entry, index) => (
+                  <tr
+                    key={entry.id}
+                    className={`transition-colors duration-100 hover:bg-slate-800/30 ${index < 3 ? 'bg-indigo-500/5' : ''}`}
+                  >
+                    <td className="px-4 py-3.5 text-center text-sm font-medium text-slate-400">
+                      {rankMedal(index)}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar size="sm" userId={entry.id} />
+                        <span className="text-white text-sm font-medium">
                           {entry.first_name} {entry.last_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
-                          {activeTab === 'points' ? entry.points : entry.eventsAttended}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </RevealOnScrollWrapper>
-        </div>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <span className={`text-sm font-semibold ${index < 3 ? 'text-indigo-400' : 'text-slate-300'}`}>
+                        {activeTab === 'points' ? entry.points : entry.eventsAttended}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </RevealOnScrollWrapper>
       </div>
     </>
   );

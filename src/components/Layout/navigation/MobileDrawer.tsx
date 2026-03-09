@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../../../context/ThemeContext';
 import { NavLinks } from './NavLinks';
 import { UserMenu } from './UserMenu';
 
@@ -10,9 +9,11 @@ interface MobileDrawerProps {
   className?: string;
 }
 
-export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose, className = '' }: MobileDrawerProps) {
-  const { theme } = useTheme();
-
+export const MobileDrawer = memo(function MobileDrawer({
+  isOpen,
+  onClose,
+  className = '',
+}: MobileDrawerProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -20,16 +21,14 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose, classN
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.2 }}
-          className={`sm:hidden ${className}`}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className={`sm:hidden overflow-hidden border-t border-white/5 ${className}`}
         >
-          <div className={`pt-2 pb-3 space-y-1 ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-            <NavLinks isMobile={true} onLinkClick={onClose} />
-          </div>
-
-          {/* Mobile User Menu */}
-          <div className={`pt-4 pb-3 border-t ${theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
-            <UserMenu isMobile={true} onLinkClick={onClose} />
+          <div className="bg-slate-950/95 backdrop-blur-xl px-4 py-3">
+            <NavLinks isMobile onLinkClick={onClose} />
+            <div className="mt-3 pt-3 border-t border-slate-800/60">
+              <UserMenu isMobile onLinkClick={onClose} />
+            </div>
           </div>
         </motion.div>
       )}
