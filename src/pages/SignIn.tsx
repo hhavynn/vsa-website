@@ -1,49 +1,43 @@
-import { SignInForm } from "../components/features/auth/SignInForm";
+import { motion } from 'framer-motion';
+import { SignInForm } from '../components/features/auth/SignInForm';
 
 export function SignIn() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-center text-3xl font-extrabold text-white">
+    <div className="min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 hero-gradient" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_0%,rgba(99,102,241,0.3),transparent)]" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative z-10 w-full max-w-md"
+      >
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="font-heading font-extrabold text-3xl text-white mb-2">
             Welcome to VSA
           </h1>
-          <p className="mt-2 text-center text-sm text-gray-300">
-            Sign in to access member features
-          </p>
+          <p className="text-slate-400 text-sm">Sign in to access member features</p>
         </div>
 
-        <div className="bg-gray-800 rounded-lg shadow-xl p-8">
+        {/* Card */}
+        <div className="rounded-2xl bg-slate-900/80 border border-slate-700/60 backdrop-blur-sm p-8 shadow-card">
           <SignInForm />
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-800 text-gray-300">
-                  Membership Information
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center text-sm text-gray-400">
-              <p>VSA membership is by invitation only.</p>
-              <p className="mt-2">If you're interested in becoming a member,</p>
-              <p className="mt-2">
-                please connect with our cabinet members at one of our events!
-              </p>
-            </div>
+          <div className="mt-6 pt-6 border-t border-slate-800/60">
+            <p className="text-slate-400 text-xs text-center leading-relaxed">
+              VSA membership is by invitation only. If you're interested in becoming a member,
+              connect with our cabinet at one of our events!
+            </p>
           </div>
         </div>
 
-        <div className="text-center">
-          <p className="text-xs text-gray-400">
-            By signing in, you agree to our Terms of Service and Privacy Policy
-          </p>
-        </div>
-      </div>
+        <p className="mt-6 text-center text-xs text-slate-600">
+          By signing in, you agree to our Terms of Service and Privacy Policy
+        </p>
+      </motion.div>
     </div>
   );
 }

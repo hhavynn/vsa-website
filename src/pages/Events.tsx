@@ -3,6 +3,7 @@ import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrappe
 import { useEvents } from '../hooks/useEvents';
 import { EventCard } from '../components/features/events/EventCard';
 import { Event } from '../types';
+import { PageLoader } from '../components/common/PageLoader';
 
 export function Events() {
   const { events, loading, error } = useEvents();
@@ -22,76 +23,99 @@ export function Events() {
     return (
       <>
         <PageTitle title="Events" />
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-6 text-white">Events</h1>
-          <p className="text-gray-400">Loading events...</p>
-        </div>
+        <PageLoader message="Loading events..." />
       </>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-6 text-white">Events</h1>
-        <p className="text-red-400">Error loading events: {error instanceof Error ? error.message : 'Unknown error'}</p>
-      </div>
+      <>
+        <PageTitle title="Events" />
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <p className="text-red-400">
+            Error loading events: {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white transition-colors duration-300">
-      {/* Upcoming Events Section */}
-      <div className="mb-12 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Upcoming Events ({upcomingEvents.length})</h2>
-        <p className="mb-6 text-gray-600 dark:text-gray-400">{upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''} coming up</p>
-        {upcomingEvents.length === 0 ? (
+    <>
+      <PageTitle title="Events" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        {/* Header */}
+        <RevealOnScrollWrapper>
+          <div className="mb-12 text-center">
+            <h1 className="font-heading font-bold text-4xl text-white mb-3">Events</h1>
+            <p className="text-slate-400 text-sm">
+              {upcomingEvents.length} upcoming · {pastEvents.length} past
+            </p>
+          </div>
+        </RevealOnScrollWrapper>
+
+        {/* Upcoming */}
+        <section className="mb-16">
           <RevealOnScrollWrapper>
-            <div className="bg-gray-100 dark:bg-gray-700 shadow rounded-lg p-6">
-              <p className="text-gray-600 dark:text-gray-300">No upcoming events at this time.</p>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">Check back soon for new events!</p>
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="font-heading font-semibold text-xl text-white">Upcoming</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-600/20 text-emerald-400 border border-emerald-600/20">
+                {upcomingEvents.length}
+              </span>
             </div>
           </RevealOnScrollWrapper>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingEvents.map((event: Event) => (
-              <RevealOnScrollWrapper key={event.id}>
-                <EventCard
-                  event={event}
-                  onCheckIn={() => {}}
-                />
-              </RevealOnScrollWrapper>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Divider */}
-      <div className="border-t border-gray-200 dark:border-gray-700 my-12"></div>
+          {upcomingEvents.length === 0 ? (
+            <RevealOnScrollWrapper>
+              <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-10 text-center">
+                <p className="text-slate-400 mb-1">No upcoming events at this time.</p>
+                <p className="text-slate-500 text-sm">Check back soon for new events!</p>
+              </div>
+            </RevealOnScrollWrapper>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {upcomingEvents.map((event: Event, i: number) => (
+                <RevealOnScrollWrapper key={event.id} delay={i * 0.06}>
+                  <EventCard event={event} onCheckIn={() => {}} />
+                </RevealOnScrollWrapper>
+              ))}
+            </div>
+          )}
+        </section>
 
-      {/* Past Events Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Past Events ({pastEvents.length})</h2>
-        <p className="mb-6 text-gray-600 dark:text-gray-400">{pastEvents.length} event{pastEvents.length !== 1 ? 's' : ''} in the past</p>
-        {pastEvents.length === 0 ? (
+        {/* Divider */}
+        <div className="border-t border-slate-800/60 my-12" />
+
+        {/* Past */}
+        <section>
           <RevealOnScrollWrapper>
-            <div className="bg-gray-100 dark:bg-gray-700 shadow rounded-lg p-6">
-              <p className="text-gray-600 dark:text-gray-300">No past events yet.</p>
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="font-heading font-semibold text-xl text-slate-300">Past Events</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-700/50 text-slate-400 border border-slate-700/50">
+                {pastEvents.length}
+              </span>
             </div>
           </RevealOnScrollWrapper>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {pastEvents.map((event: Event) => (
-              <RevealOnScrollWrapper key={event.id}>
-                <EventCard
-                  event={event}
-                  onCheckIn={() => {}}
-                />
-              </RevealOnScrollWrapper>
-            ))}
-          </div>
-        )}
+
+          {pastEvents.length === 0 ? (
+            <RevealOnScrollWrapper>
+              <div className="rounded-2xl bg-slate-900/40 border border-slate-800/60 p-8 text-center">
+                <p className="text-slate-500">No past events yet.</p>
+              </div>
+            </RevealOnScrollWrapper>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 opacity-70">
+              {pastEvents.map((event: Event, i: number) => (
+                <RevealOnScrollWrapper key={event.id} delay={i * 0.04}>
+                  <EventCard event={event} onCheckIn={() => {}} />
+                </RevealOnScrollWrapper>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </>
   );
 }

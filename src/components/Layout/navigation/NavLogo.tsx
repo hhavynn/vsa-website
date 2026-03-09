@@ -20,20 +20,23 @@ export const NavLogo = memo(function NavLogo({ className = '' }: NavLogoProps) {
   };
 
   return (
-    <Link to="/" className={`flex items-center ${className}`}>
+    <Link to="/" className={`flex items-center gap-2.5 group ${className}`}>
       {!imageError ? (
         <img
           src={currentSrc}
           alt="VSA Logo"
-          className="h-12 w-12 object-contain rounded-md shadow-md border-2 border-indigo-600 bg-white"
+          className="h-9 w-9 object-contain rounded-lg border border-indigo-500/30 bg-slate-900 shadow-glow-sm group-hover:border-indigo-400/60 transition-all duration-200"
           onError={handleImageError}
-          loading="lazy"
+          loading="eager"
         />
       ) : (
-        <div className="h-12 w-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-md flex items-center justify-center text-white font-bold text-lg shadow-md">
+        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-glow-sm">
           VSA
         </div>
       )}
+      <span className="font-heading font-bold text-white text-base hidden lg:block">
+        VSA at UCSD
+      </span>
     </Link>
   );
 });

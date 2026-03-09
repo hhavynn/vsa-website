@@ -3,6 +3,8 @@ import { Event } from '../../../types';
 import { Modal } from '../../common/Modal';
 import { useState } from 'react';
 import { CountdownTimer } from '../../common/CountdownTimer';
+import { motion } from 'framer-motion';
+import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 
 export interface EventCardProps {
   event: Event;
@@ -12,29 +14,18 @@ export interface EventCardProps {
 export function EventCard({ event, onCheckIn }: EventCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-
   const handleSaveToCalendar = () => {
     if (!event.date) return;
-
     const startDate = new Date(event.date);
-    // Set end time to 2 hours after start time by default
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-
-    // Format dates for Google Calendar URL
-    const formatDate = (date: Date) => {
-      return date.toISOString().replace(/-|:|\.\d+/g, '');
-    };
-
-    // Create Google Calendar URL
-    const googleCalendarUrl = new URL('https://calendar.google.com/calendar/render');
-    googleCalendarUrl.searchParams.append('action', 'TEMPLATE');
-    googleCalendarUrl.searchParams.append('text', event.name);
-    googleCalendarUrl.searchParams.append('dates', `${formatDate(startDate)}/${formatDate(endDate)}`);
-    googleCalendarUrl.searchParams.append('details', event.description);
-    googleCalendarUrl.searchParams.append('location', event.location || '');
-
-    // Open Google Calendar in a new tab
-    window.open(googleCalendarUrl.toString(), '_blank');
+    const fmt = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
+    const url = new URL('https://calendar.google.com/calendar/render');
+    url.searchParams.append('action', 'TEMPLATE');
+    url.searchParams.append('text', event.name);
+    url.searchParams.append('dates', `${fmt(startDate)}/${fmt(endDate)}`);
+    url.searchParams.append('details', event.description);
+    url.searchParams.append('location', event.location || '');
+    window.open(url.toString(), '_blank');
   };
 
   let dateString = '';
@@ -42,52 +33,91 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   if (event.date) {
     const dateObj = new Date(event.date);
     if (!isNaN(dateObj.getTime())) {
-      dateString = format(dateObj, 'MMMM d, yyyy');
+      dateString = format(dateObj, 'MMM d, yyyy');
       isUpcoming = dateObj > new Date();
     }
   }
 
   return (
     <>
-      <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-        {event.image_url && (
-          <img src={event.image_url} alt={event.name} className="w-full h-48 object-cover rounded-md mb-4" />
-        )}
-        <h3 className="text-xl font-semibold mb-2 text-white">{event.name}</h3>
-        <p className="text-gray-300 mb-4">{event.description}</p>
-        <div className="flex flex-col space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-400">
-                {dateString || 'Date TBD'}
-              </p>
-              <p className="text-sm text-gray-400">{event.location}</p>
-            </div>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
-              disabled={!event.date}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+      <motion.div
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2 }}
+        className="rounded-2xl bg-slate-900 border border-slate-800/80 overflow-hidden shadow-card flex flex-col h-full hover:border-indigo-500/30 transition-colors duration-200"
+      >
+        {/* Image */}
+        <div className="relative h-44 bg-slate-800 overflow-hidden">
+          {event.image_url ? (
+            <img
+              src={event.image_url}
+              alt={event.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-indigo-900/50 to-violet-900/50 flex items-center justify-center">
+              <svg className="w-10 h-10 text-indigo-400/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span>Save to Calendar</span>
-            </button>
-          </div>
-          {isUpcoming && event.date && (
-            <div className="mt-2">
-              <p className="text-sm text-gray-400 mb-2">Event starts in:</p>
-              <CountdownTimer
-                targetDate={new Date(event.date)}
-                onComplete={() => {
-                  // You could add any logic here when the countdown completes
-                  console.log('Event has started!');
-                }}
-              />
             </div>
           )}
+          {/* Event type badge */}
+          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-600/90 text-white backdrop-blur-sm">
+            {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+          </span>
+          {isUpcoming && (
+            <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-600/90 text-white backdrop-blur-sm">
+              Upcoming
+            </span>
+          )}
         </div>
-      </div>
+
+        {/* Content */}
+        <div className="p-5 flex flex-col flex-grow">
+          <h3 className="font-heading font-semibold text-white text-base mb-1.5 line-clamp-2">{event.name}</h3>
+          <p className="text-slate-400 text-sm leading-relaxed mb-4 line-clamp-2 flex-grow">{event.description}</p>
+
+          {/* Meta */}
+          <div className="space-y-1.5 mb-4">
+            {dateString && (
+              <div className="flex items-center gap-2 text-slate-400 text-xs">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{dateString}</span>
+              </div>
+            )}
+            {event.location && (
+              <div className="flex items-center gap-2 text-slate-400 text-xs">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="truncate">{event.location}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Countdown */}
+          {isUpcoming && event.date && (
+            <div className="mb-4 p-3 rounded-xl bg-slate-800/60 border border-slate-700/50">
+              <p className="text-xs text-slate-500 mb-1.5">Starts in</p>
+              <CountdownTimer targetDate={new Date(event.date)} onComplete={() => {}} />
+            </div>
+          )}
+
+          {/* Action */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            disabled={!event.date}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Add to Calendar
+          </button>
+        </div>
+      </motion.div>
 
       <Modal
         isOpen={isModalOpen}
@@ -100,4 +130,4 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
       />
     </>
   );
-} 
+}
