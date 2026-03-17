@@ -129,12 +129,20 @@ export function Leaderboard() {
         {/* Top 3 podium */}
         {entries.length >= 3 && (
           <RevealOnScrollWrapper>
-            <div className="flex items-end justify-center gap-3 mb-8">
+            {/* items-end bottom-aligns all three columns so podiums share a ground line.
+                On mobile (flex-wrap) order classes show 1st → 2nd → 3rd top-to-bottom;
+                on sm+ the classic podium layout is restored (2nd left, 1st center, 3rd right). */}
+            <div className="flex flex-wrap sm:flex-nowrap items-end justify-center gap-3 mb-8">
               {[1, 0, 2].map(i => {
                 const e = entries[i];
-                const heights = ['h-24', 'h-32', 'h-20'];
+                // Heights keyed by rank index: 1st = tallest, 2nd = medium, 3rd = shortest
+                const podiumHeight = i === 0 ? 'h-36' : i === 1 ? 'h-24' : 'h-16';
+                // Mobile: display in rank order (1st, 2nd, 3rd); desktop: classic podium (2nd, 1st, 3rd)
+                const orderClass  = i === 0 ? 'order-1 sm:order-2'
+                                  : i === 1 ? 'order-2 sm:order-1'
+                                  :           'order-3 sm:order-3';
                 return (
-                  <div key={e.id} className="flex flex-col items-center gap-2 flex-1 max-w-[120px]">
+                  <div key={e.id} className={`flex flex-col items-center gap-2 flex-1 max-w-[120px] ${orderClass}`}>
                     {e.user_id
                       ? <Avatar size="sm" userId={e.user_id} />
                       : <InitialsAvatar name={`${e.first_name} ${e.last_name}`} />}
@@ -149,7 +157,7 @@ export function Leaderboard() {
                     <p className="text-indigo-400 text-xs font-bold">
                       {activeTab === 'points' ? `${e.points} pts` : `${e.events_attended} events`}
                     </p>
-                    <div className={`w-full ${heights[i]} rounded-t-xl flex items-center justify-center text-2xl ${
+                    <div className={`w-full ${podiumHeight} rounded-t-xl flex items-center justify-center text-2xl ${
                       i === 0 ? 'bg-amber-500/20 border border-amber-500/30' :
                       i === 1 ? 'bg-slate-400/10 border border-slate-500/30' :
                                 'bg-orange-800/20 border border-orange-700/30'
