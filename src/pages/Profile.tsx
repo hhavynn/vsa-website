@@ -10,6 +10,7 @@ import { Avatar } from '../components/features/avatar/Avatar';
 import { PageLoader } from '../components/common/PageLoader';
 import { supabase } from '../lib/supabase';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface AttendanceRecord extends EventAttendance {
   event: Event;
@@ -18,7 +19,30 @@ interface AttendanceRecord extends EventAttendance {
 interface UserProfile {
   first_name: string | null;
   last_name: string | null;
+  college: string | null;
+  year: string | null;
 }
+
+const UCSD_COLLEGES = [
+  'Revelle College',
+  'Muir College',
+  'Marshall College',
+  'Eleanor Roosevelt College',
+  'Roosevelt College',
+  'Sixth College',
+  'Seventh College',
+  'Eighth College',
+];
+
+const YEARS = [
+  '1st Year',
+  '2nd Year',
+  '3rd Year',
+  '4th Year',
+  '5th Year+',
+  '1st Year Transfer',
+  '2nd Year Transfer',
+];
 
 export function Profile() {
   const { user } = useAuth();
@@ -32,17 +56,28 @@ export function Profile() {
     badgesEarned: 0
   });
 
+  // Edit profile state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '' });
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user) return;
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('first_name, last_name')
+          .select('first_name, last_name, college, year')
           .eq('id', user.id)
           .single();
         if (error) throw error;
         setUserProfile(data);
+        setEditForm({
+          first_name: data.first_name ?? '',
+          last_name: data.last_name ?? '',
+          college: data.college ?? '',
+          year: data.year ?? '',
+        });
       } catch (error) {
         console.error('Error fetching user profile:', error);
       }
@@ -73,6 +108,37 @@ export function Profile() {
     fetchAttendance();
   }, [user, getUserAttendance]);
 
+  async function handleSaveProfile() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          first_name: editForm.first_name.trim(),
+          last_name: editForm.last_name.trim(),
+          college: editForm.college || null,
+          year: editForm.year || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (error) throw error;
+      setUserProfile({
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        college: editForm.college || null,
+        year: editForm.year || null,
+      });
+      setEditOpen(false);
+      toast.success('Profile updated!');
+    } catch (err) {
+      toast.error('Failed to save profile.');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!user) return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <p className="text-slate-400">Please sign in to view your profile.</p>
@@ -91,6 +157,8 @@ export function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      <Toaster position="top-right" />
+
       {/* Profile Header */}
       <RevealOnScrollWrapper>
         <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 mb-8">
@@ -98,10 +166,15 @@ export function Profile() {
             <div onClick={(e) => e.stopPropagation()}>
               <Avatar size="lg" showUploadButton={true} />
             </div>
-            <div className="text-center sm:text-left">
+            <div className="flex-1 text-center sm:text-left">
               <h1 className="font-heading font-bold text-2xl text-white mb-1">{displayName}</h1>
-              <p className="text-slate-500 text-sm mb-4">{user.email}</p>
-              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+              <p className="text-slate-500 text-sm mb-1">{user.email}</p>
+              {(userProfile?.college || userProfile?.year) && (
+                <p className="text-slate-400 text-sm mb-3">
+                  {[userProfile.year, userProfile.college].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-3 justify-center sm:justify-start mb-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <svg className="w-4 h-4 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -121,6 +194,15 @@ export function Profile() {
                   <span className="text-emerald-400 text-sm font-semibold">{stats.eventsThisMonth} this month</span>
                 </div>
               </div>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit Profile
+              </button>
             </div>
           </div>
         </div>
@@ -165,6 +247,89 @@ export function Profile() {
           )}
         </div>
       </RevealOnScrollWrapper>
+
+      {/* Edit Profile Modal */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-white">Edit Profile</h2>
+              <button onClick={() => setEditOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">College</label>
+                <select
+                  value={editForm.college}
+                  onChange={(e) => setEditForm(f => ({ ...f, college: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">— Select college —</option>
+                  {UCSD_COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Year</label>
+                <select
+                  value={editForm.year}
+                  onChange={(e) => setEditForm(f => ({ ...f, year: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">— Select year —</option>
+                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                Your college and year are used to accurately match your attendance from event sign-in sheets.
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+              >
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => setEditOpen(false)}
+                className="px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

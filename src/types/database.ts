@@ -91,6 +91,8 @@ export interface Database {
           last_name: string;
           is_admin: boolean;
           avatar_url?: string;
+          college?: string;
+          year?: string;
           created_at: string;
           updated_at: string;
         };
@@ -101,6 +103,8 @@ export interface Database {
           last_name: string;
           is_admin?: boolean;
           avatar_url?: string;
+          college?: string;
+          year?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -111,6 +115,8 @@ export interface Database {
           last_name?: string;
           is_admin?: boolean;
           avatar_url?: string;
+          college?: string;
+          year?: string;
           created_at?: string;
           updated_at?: string;
         };
