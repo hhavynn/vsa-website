@@ -28,6 +28,10 @@ export default function AdminGallery() {
   const [uploading, setUploading] = useState(false);
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [albumToDelete, setAlbumToDelete] = useState<GalleryAlbum | null>(null);
+  const [albumToEdit, setAlbumToEdit] = useState<GalleryAlbum | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
 
   const fetchAlbums = async () => {
@@ -63,6 +67,69 @@ export default function AdminGallery() {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(null);
     setCoverPreview(null);
+  };
+
+  // Edit cover dropzone
+  const onEditDrop = useCallback((accepted: File[]) => {
+    const file = accepted[0];
+    if (!file) return;
+    if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
+    setEditCoverFile(file);
+    setEditCoverPreview(URL.createObjectURL(file));
+  }, [editCoverPreview]);
+
+  const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
+    onDrop: onEditDrop,
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+    maxFiles: 1,
+  });
+
+  const closeEditModal = () => {
+    if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
+    setAlbumToEdit(null);
+    setEditCoverFile(null);
+    setEditCoverPreview(null);
+  };
+
+  const handleEditCover = async () => {
+    if (!albumToEdit || !editCoverFile) return;
+    try {
+      setEditSaving(true);
+
+      // Upload new cover
+      const ext = editCoverFile.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('gallery_images')
+        .upload(fileName, editCoverFile);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
+      const newCoverUrl = urlData.publicUrl;
+
+      // Delete old cover from storage if it was one we uploaded
+      if (albumToEdit.cover_image_url?.includes('gallery_images')) {
+        const oldFile = albumToEdit.cover_image_url.split('/').pop();
+        if (oldFile) await supabase.storage.from('gallery_images').remove([oldFile]);
+      }
+
+      // Update the row
+      const { error: updateErr } = await supabase
+        .from('gallery_events')
+        .update({ cover_image_url: newCoverUrl })
+        .eq('id', albumToEdit.id);
+      if (updateErr) throw updateErr;
+
+      toast.success('Cover photo updated!');
+      setAlbums(prev =>
+        prev.map(a => a.id === albumToEdit.id ? { ...a, cover_image_url: newCoverUrl } : a)
+      );
+      closeEditModal();
+    } catch (err) {
+      console.error('Error updating cover:', err);
+      toast.error('Failed to update cover photo');
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,20 +388,28 @@ export default function AdminGallery() {
                         {new Date(album.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
 
-                      <div className="mt-auto pt-4 flex items-center gap-2">
-                        <a
-                          href={album.google_photos_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 text-center py-1.5 text-xs rounded-md bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-700/50 transition-colors"
-                        >
-                          Open Album ↗
-                        </a>
+                      <div className="mt-auto pt-4 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={album.google_photos_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 text-center py-1.5 text-xs rounded-md bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-700/50 transition-colors"
+                          >
+                            Open Album ↗
+                          </a>
+                          <button
+                            onClick={() => setAlbumToDelete(album)}
+                            className="py-1.5 px-3 text-xs rounded-md bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-700/40 hover:border-transparent transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                         <button
-                          onClick={() => setAlbumToDelete(album)}
-                          className="py-1.5 px-3 text-xs rounded-md bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-700/40 hover:border-transparent transition-colors"
+                          onClick={() => setAlbumToEdit(album)}
+                          className="w-full py-1.5 text-xs rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600 transition-colors"
                         >
-                          Delete
+                          Change Cover Photo
                         </button>
                       </div>
                     </div>
@@ -345,6 +420,95 @@ export default function AdminGallery() {
           </>
         )}
       </div>
+
+      {/* Edit Cover Photo Modal */}
+      {albumToEdit && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Change Cover Photo</h3>
+              <button onClick={closeEditModal} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            {/* Current cover */}
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Current cover</p>
+              {albumToEdit.cover_image_url ? (
+                <img
+                  src={albumToEdit.cover_image_url}
+                  alt={albumToEdit.title}
+                  className="w-full h-36 object-cover rounded-lg border border-gray-700"
+                />
+              ) : (
+                <div className="w-full h-36 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-600 text-sm">
+                  No cover photo set
+                </div>
+              )}
+            </div>
+
+            {/* New cover dropzone */}
+            <div className="mb-5">
+              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">New cover</p>
+              {editCoverPreview ? (
+                <div className="relative">
+                  <img
+                    src={editCoverPreview}
+                    alt="New cover preview"
+                    className="w-full h-36 object-cover rounded-lg border border-indigo-600/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { if (editCoverPreview) URL.revokeObjectURL(editCoverPreview); setEditCoverFile(null); setEditCoverPreview(null); }}
+                    className="absolute top-2 right-2 w-6 h-6 bg-black/70 hover:bg-red-600 text-white rounded-full text-sm flex items-center justify-center transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div
+                  {...getEditRootProps()}
+                  className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors ${
+                    isEditDragActive
+                      ? 'border-indigo-500 bg-indigo-900/20'
+                      : 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                  }`}
+                >
+                  <input {...getEditInputProps()} />
+                  <svg className="w-7 h-7 text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-gray-400 text-sm">{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to select'}</p>
+                  <p className="text-gray-600 text-xs mt-1">PNG, JPG, WebP</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeEditModal}
+                className="flex-1 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditCover}
+                disabled={!editCoverFile || editSaving}
+                className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {editSaving ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Saving...
+                  </>
+                ) : 'Save Cover'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {albumToDelete && (
