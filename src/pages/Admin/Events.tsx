@@ -107,7 +107,7 @@ export default function AdminEvents() {
       const { error } = await supabase.from('events').insert([{
         name: newEvent.name,
         description: newEvent.description,
-        date: newEvent.date,
+        date: new Date(newEvent.date!).toISOString(),
         location: newEvent.location,
         event_type: newEvent.event_type,
         check_in_form_url: newEvent.check_in_form_url || '',
@@ -163,7 +163,7 @@ export default function AdminEvents() {
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name,
         description: selectedEvent.description,
-        date: selectedEvent.date,
+        date: new Date(selectedEvent.date).toISOString(),
         location: selectedEvent.location,
         event_type: selectedEvent.event_type,
         points: selectedEvent.points,

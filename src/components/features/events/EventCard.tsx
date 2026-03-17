@@ -1,7 +1,5 @@
 import { format } from 'date-fns';
 import { Event } from '../../../types';
-import { Modal } from '../../common/Modal';
-import { useState } from 'react';
 import { CountdownTimer } from '../../common/CountdownTimer';
 import { motion } from 'framer-motion';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
@@ -12,13 +10,12 @@ export interface EventCardProps {
 }
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   const handleSaveToCalendar = () => {
     if (!event.date) return;
     const startDate = new Date(event.date);
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-    const fmt = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
+    // Format as YYYYMMDDTHHMMSSZ (UTC) for Google Calendar
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]|\.\d+/g, '');
     const url = new URL('https://calendar.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE');
     url.searchParams.append('text', event.name);
@@ -33,7 +30,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   if (event.date) {
     const dateObj = new Date(event.date);
     if (!isNaN(dateObj.getTime())) {
-      dateString = format(dateObj, 'MMM d, yyyy');
+      dateString = format(dateObj, 'MMM d, yyyy • h:mm a');
       isUpcoming = dateObj > new Date();
     }
   }
@@ -107,27 +104,17 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
 
           {/* Action */}
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleSaveToCalendar}
             disabled={!event.date}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Add to Calendar
+            Add to Google Calendar
           </button>
         </div>
       </motion.div>
-
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={handleSaveToCalendar}
-        title="Add to Calendar"
-        message={`Would you like to add "${event.name}" to your Google Calendar?`}
-        confirmText="Add to Calendar"
-        cancelText="Cancel"
-      />
     </>
   );
 }
