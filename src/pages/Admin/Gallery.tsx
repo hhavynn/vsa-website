@@ -29,6 +29,7 @@ export default function AdminGallery() {
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [albumToDelete, setAlbumToDelete] = useState<GalleryAlbum | null>(null);
   const [albumToEdit, setAlbumToEdit] = useState<GalleryAlbum | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', google_photos_url: '' });
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -84,6 +85,18 @@ export default function AdminGallery() {
     maxFiles: 1,
   });
 
+  const openEditModal = (album: GalleryAlbum) => {
+    setAlbumToEdit(album);
+    setEditForm({
+      title: album.title ?? '',
+      description: album.description ?? '',
+      date: album.date ?? '',
+      google_photos_url: album.google_photos_url ?? '',
+    });
+    setEditCoverFile(null);
+    setEditCoverPreview(null);
+  };
+
   const closeEditModal = () => {
     if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
     setAlbumToEdit(null);
@@ -91,42 +104,60 @@ export default function AdminGallery() {
     setEditCoverPreview(null);
   };
 
-  const handleEditCover = async () => {
-    if (!albumToEdit || !editCoverFile) return;
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!albumToEdit) return;
+    if (!editForm.title || !editForm.date || !editForm.google_photos_url) {
+      toast.error('Title, date, and Google Photos link are required');
+      return;
+    }
     try {
       setEditSaving(true);
 
-      // Upload new cover
-      const ext = editCoverFile.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from('gallery_images')
-        .upload(fileName, editCoverFile);
-      if (uploadErr) throw uploadErr;
-      const { data: urlData } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
-      const newCoverUrl = urlData.publicUrl;
+      // Upload new cover if one was selected
+      let coverImageUrl = albumToEdit.cover_image_url;
+      if (editCoverFile) {
+        const ext = editCoverFile.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('gallery_images')
+          .upload(fileName, editCoverFile);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
+        coverImageUrl = urlData.publicUrl;
 
-      // Delete old cover from storage if it was one we uploaded
-      if (albumToEdit.cover_image_url?.includes('gallery_images')) {
-        const oldFile = albumToEdit.cover_image_url.split('/').pop();
-        if (oldFile) await supabase.storage.from('gallery_images').remove([oldFile]);
+        // Delete old cover from storage if we uploaded it
+        if (albumToEdit.cover_image_url?.includes('gallery_images')) {
+          const oldFile = albumToEdit.cover_image_url.split('/').pop();
+          if (oldFile) await supabase.storage.from('gallery_images').remove([oldFile]);
+        }
       }
 
-      // Update the row
       const { error: updateErr } = await supabase
         .from('gallery_events')
-        .update({ cover_image_url: newCoverUrl })
+        .update({
+          title: editForm.title,
+          name: editForm.title,
+          description: editForm.description,
+          date: editForm.date,
+          google_photos_url: editForm.google_photos_url,
+          cover_image_url: coverImageUrl,
+        })
         .eq('id', albumToEdit.id);
       if (updateErr) throw updateErr;
 
-      toast.success('Cover photo updated!');
+      toast.success('Album updated!');
       setAlbums(prev =>
-        prev.map(a => a.id === albumToEdit.id ? { ...a, cover_image_url: newCoverUrl } : a)
+        prev.map(a =>
+          a.id === albumToEdit.id
+            ? { ...a, ...editForm, cover_image_url: coverImageUrl }
+            : a
+        )
       );
       closeEditModal();
     } catch (err) {
-      console.error('Error updating cover:', err);
-      toast.error('Failed to update cover photo');
+      console.error('Error updating album:', err);
+      toast.error('Failed to update album');
     } finally {
       setEditSaving(false);
     }
@@ -406,10 +437,10 @@ export default function AdminGallery() {
                           </button>
                         </div>
                         <button
-                          onClick={() => setAlbumToEdit(album)}
+                          onClick={() => openEditModal(album)}
                           className="w-full py-1.5 text-xs rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600 transition-colors"
                         >
-                          Change Cover Photo
+                          Edit Album
                         </button>
                       </div>
                     </div>
@@ -421,91 +452,143 @@ export default function AdminGallery() {
         )}
       </div>
 
-      {/* Edit Cover Photo Modal */}
+      {/* Edit Album Modal */}
       {albumToEdit && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-white">Change Cover Photo</h3>
+        <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full my-8 border border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+              <h3 className="text-lg font-bold text-white">Edit Album</h3>
               <button onClick={closeEditModal} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
 
-            {/* Current cover */}
-            <div className="mb-4">
-              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Current cover</p>
-              {albumToEdit.cover_image_url ? (
-                <img
-                  src={albumToEdit.cover_image_url}
-                  alt={albumToEdit.title}
-                  className="w-full h-36 object-cover rounded-lg border border-gray-700"
-                />
-              ) : (
-                <div className="w-full h-36 rounded-lg border border-gray-700 bg-gray-800 flex items-center justify-center text-gray-600 text-sm">
-                  No cover photo set
-                </div>
-              )}
-            </div>
-
-            {/* New cover dropzone */}
-            <div className="mb-5">
-              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">New cover</p>
-              {editCoverPreview ? (
-                <div className="relative">
-                  <img
-                    src={editCoverPreview}
-                    alt="New cover preview"
-                    className="w-full h-36 object-cover rounded-lg border border-indigo-600/50"
+            <form onSubmit={handleEditSave} className="p-6 space-y-5">
+              {/* Title + Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className={labelCls}>Album Title *</label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                    className={inputCls}
+                    required
                   />
-                  <button
-                    type="button"
-                    onClick={() => { if (editCoverPreview) URL.revokeObjectURL(editCoverPreview); setEditCoverFile(null); setEditCoverPreview(null); }}
-                    className="absolute top-2 right-2 w-6 h-6 bg-black/70 hover:bg-red-600 text-white rounded-full text-sm flex items-center justify-center transition-colors"
-                  >
-                    ×
-                  </button>
                 </div>
-              ) : (
-                <div
-                  {...getEditRootProps()}
-                  className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors ${
-                    isEditDragActive
-                      ? 'border-indigo-500 bg-indigo-900/20'
-                      : 'border-gray-600 bg-gray-800 hover:border-gray-500'
-                  }`}
-                >
-                  <input {...getEditInputProps()} />
-                  <svg className="w-7 h-7 text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-gray-400 text-sm">{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to select'}</p>
-                  <p className="text-gray-600 text-xs mt-1">PNG, JPG, WebP</p>
+                <div>
+                  <label className={labelCls}>Event Date *</label>
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                    className={inputCls}
+                    required
+                  />
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={closeEditModal}
-                className="flex-1 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditCover}
-                disabled={!editCoverFile || editSaving}
-                className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                {editSaving ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              {/* Description */}
+              <div>
+                <label className={labelCls}>Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                  className={inputCls}
+                  rows={2}
+                />
+              </div>
+
+              {/* Google Photos URL */}
+              <div>
+                <label className={labelCls}>Google Photos Album Link *</label>
+                <input
+                  type="url"
+                  value={editForm.google_photos_url}
+                  onChange={e => setEditForm({ ...editForm, google_photos_url: e.target.value })}
+                  className={inputCls}
+                  required
+                />
+              </div>
+
+              {/* Cover photo */}
+              <div>
+                <label className={labelCls}>
+                  Cover Photo
+                  <span className="text-gray-500 font-normal ml-1">(leave empty to keep current)</span>
+                </label>
+
+                {/* Show current cover if no new one staged */}
+                {!editCoverPreview && albumToEdit.cover_image_url && (
+                  <div className="mt-2 mb-3">
+                    <p className="text-xs text-gray-500 mb-1.5">Current</p>
+                    <img
+                      src={albumToEdit.cover_image_url}
+                      alt={albumToEdit.title}
+                      className="w-full h-36 object-cover rounded-lg border border-gray-700"
+                    />
+                  </div>
+                )}
+
+                {editCoverPreview ? (
+                  <div className="relative mt-2">
+                    <p className="text-xs text-gray-500 mb-1.5">New cover (staged)</p>
+                    <img
+                      src={editCoverPreview}
+                      alt="New cover preview"
+                      className="w-full h-36 object-cover rounded-lg border border-indigo-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (editCoverPreview) URL.revokeObjectURL(editCoverPreview); setEditCoverFile(null); setEditCoverPreview(null); }}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/70 hover:bg-red-600 text-white rounded-full text-sm flex items-center justify-center transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    {...getEditRootProps()}
+                    className={`mt-2 flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-5 cursor-pointer transition-colors ${
+                      isEditDragActive
+                        ? 'border-indigo-500 bg-indigo-900/20'
+                        : 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                    }`}
+                  >
+                    <input {...getEditInputProps()} />
+                    <svg className="w-6 h-6 text-gray-500 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Saving...
-                  </>
-                ) : 'Save Cover'}
-              </button>
-            </div>
+                    <p className="text-gray-400 text-sm">{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to replace cover'}</p>
+                    <p className="text-gray-600 text-xs mt-1">PNG, JPG, WebP</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="flex-1 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {editSaving ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Saving...
+                    </>
+                  ) : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
