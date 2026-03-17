@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Navigation } from './Navigation';
+import { NavigationShell } from './navigation/NavigationShell';
 import { useTheme } from '../../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BackToTop } from './BackToTop';
@@ -13,7 +13,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-      <Navigation />
+      <NavigationShell />
 
       <main id="main-content" className="flex-grow">
         <AnimatePresence mode="wait">

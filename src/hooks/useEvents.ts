@@ -23,7 +23,9 @@ export function useEvent(id: string, userId?: string) {
   });
 }
 
-export function useUpcomingEvents(limit: number = 5) {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// Dormant hooks — available for future use, backed by eventsRepository
+function useUpcomingEvents(limit: number = 5) {
   return useQuery({
     queryKey: ['events', 'upcoming', limit],
     queryFn: () => eventsRepository.getUpcomingEvents(limit),
@@ -31,7 +33,7 @@ export function useUpcomingEvents(limit: number = 5) {
   });
 }
 
-export function useEventsByType(eventType: string, limit?: number) {
+function useEventsByType(eventType: string, limit?: number) {
   return useQuery({
     queryKey: ['events', 'type', eventType, limit],
     queryFn: () => eventsRepository.getEventsByType(eventType as any, limit),
@@ -40,7 +42,7 @@ export function useEventsByType(eventType: string, limit?: number) {
   });
 }
 
-export function useEventStats() {
+function useEventStats() {
   return useQuery({
     queryKey: 'event-stats',
     queryFn: () => eventsRepository.getEventStats(),
@@ -48,7 +50,7 @@ export function useEventStats() {
   });
 }
 
-export function useCreateEvent() {
+function useCreateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -60,7 +62,7 @@ export function useCreateEvent() {
   });
 }
 
-export function useUpdateEvent() {
+function useUpdateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -74,7 +76,7 @@ export function useUpdateEvent() {
   });
 }
 
-export function useDeleteEvent() {
+function useDeleteEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -86,7 +88,7 @@ export function useDeleteEvent() {
   });
 }
 
-export function useCheckInEvent() {
+function useCheckInEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -104,4 +106,5 @@ export function useCheckInEvent() {
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
     },
   });
-} 
+}
+/* eslint-enable @typescript-eslint/no-unused-vars */

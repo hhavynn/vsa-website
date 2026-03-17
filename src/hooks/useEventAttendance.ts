@@ -10,16 +10,12 @@ export function useEventAttendance() {
       setLoading(true);
       setError(null);
 
-      console.log('Starting check-in process:', { eventId, code });
-
       // Get the event to verify the code and get points
       const { data: event, error: eventError } = await supabase
         .from('events')
         .select('*')
         .eq('id', eventId)
         .single();
-
-      console.log('Event fetch result:', { event, eventError });
 
       if (eventError) {
         console.error('Error fetching event:', eventError);
@@ -34,13 +30,12 @@ export function useEventAttendance() {
         throw new Error('Check-in code has expired');
       }
       if (event.check_in_code !== code) {
-        console.error('Invalid code:', { provided: code, expected: event.check_in_code });
+        console.error('Invalid code');
         throw new Error('Invalid check-in code');
       }
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('Current user:', { user, userError });
 
       if (userError) {
         console.error('Error getting user:', userError);
@@ -59,8 +54,6 @@ export function useEventAttendance() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('Existing check-in check:', { existingCheckIn, checkInError });
-
       if (checkInError) {
         console.error('Error checking existing check-in:', checkInError);
         throw checkInError;
@@ -69,8 +62,6 @@ export function useEventAttendance() {
         console.error('Already checked in');
         throw new Error('You have already checked in to this event');
       }
-
-      console.log('Recording attendance with points:', event.points);
 
       // Record the attendance
       const { data: insertData, error: insertError } = await supabase
@@ -84,8 +75,6 @@ export function useEventAttendance() {
         .select()
         .single();
 
-      console.log('Insert result:', { insertData, insertError });
-
       if (insertError) {
         console.error('Error inserting attendance:', insertError);
         throw insertError;
@@ -94,28 +83,24 @@ export function useEventAttendance() {
       // Get current points
       const { data: currentPoints, error: currentPointsError } = await supabase
         .from('user_points')
-        .select('points')
+        .select('total_points')
         .eq('user_id', user.id)
         .single();
-
-      console.log('Current points:', { currentPoints, currentPointsError });
 
       if (currentPointsError && currentPointsError.code !== 'PGRST116') {
         console.error('Error getting current points:', currentPointsError);
         throw currentPointsError;
       }
 
-      const currentTotal = currentPoints?.points || 0;
+      const currentTotal = currentPoints?.total_points || 0;
       const newTotal = currentTotal + event.points;
-
-      console.log('Updating points:', { currentTotal, newTotal, pointsToAdd: event.points });
 
       // Update user's total points
       const { data: pointsData, error: pointsError } = await supabase
         .from('user_points')
         .upsert({
           user_id: user.id,
-          points: newTotal
+          total_points: newTotal
         }, {
           onConflict: 'user_id',
           ignoreDuplicates: false
@@ -123,14 +108,15 @@ export function useEventAttendance() {
         .select()
         .single();
 
-      console.log('Points update result:', { pointsData, pointsError });
-
       if (pointsError) {
         console.error('Error updating points:', pointsError);
         throw pointsError;
       }
 
-      console.log('Successfully checked in');
+      // Suppress unused variable warning — pointsData returned for caller use
+      void insertData;
+      void pointsData;
+
       return true;
     } catch (err) {
       console.error('Error in checkInWithCode:', err);
@@ -184,7 +170,6 @@ export function useEventAttendance() {
       setLoading(true);
       setError(null);
 
-      // The Supabase client automatically sets the Accept header to 'application/json'
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
@@ -216,17 +201,6 @@ export function useEventAttendance() {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching attendance for user:', userId);
-
-      // First try a simple query to see if we can get any data
-      const { data: simpleData, error: simpleError } = await supabase
-        .from('event_attendance')
-        .select('*')
-        .eq('user_id', userId);
-
-      console.log('Simple query result:', { simpleData, simpleError });
-
-      // Then try the full query
       const { data, error } = await supabase
         .from('event_attendance')
         .select(`
@@ -253,8 +227,6 @@ export function useEventAttendance() {
         .eq('user_id', userId)
         .order('checked_in_at', { ascending: false });
 
-      console.log('Full query result:', { data, error });
-
       if (error) {
         console.error('Error fetching attendance:', error);
         throw error;
@@ -263,10 +235,8 @@ export function useEventAttendance() {
       // Transform the data to ensure event is a single object
       const transformedData = data?.map(record => ({
         ...record,
-        event: record.events[0] // Take the first event from the array
+        event: record.events[0]
       }));
-
-      console.log('Transformed data:', transformedData);
 
       return transformedData;
     } catch (err) {
@@ -286,4 +256,4 @@ export function useEventAttendance() {
     getEventAttendance,
     getUserAttendance
   };
-} 
+}

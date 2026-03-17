@@ -8,21 +8,20 @@ export function SignUpForm() {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
     try {
-      console.log('Starting sign up process...');
-      
-      // Sign up the user
       const { data: { user }, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: 'https://vsaatucsd.com',
+          emailRedirectTo: window.location.origin,
           data: {
             first_name: firstName,
             last_name: lastName
@@ -30,23 +29,11 @@ export function SignUpForm() {
         }
       });
 
-      console.log('Sign up response:', { user, signUpError });
+      if (signUpError) throw signUpError;
 
-      if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        throw signUpError;
-      }
-      
-      if (!user) {
-        console.error('No user returned from sign up');
-        throw new Error('No user returned from sign up');
-      }
+      if (!user) throw new Error('No user returned from sign up');
 
-      console.log('User created successfully');
-      
-      // Show success message
-      setError('Sign up successful! Please check your email to confirm your account.');
-
+      setSuccess('Sign up successful! Please check your email to confirm your account.');
     } catch (err) {
       console.error('Error in sign up process:', err);
       setError(err instanceof Error ? err.message : 'Failed to sign up');
@@ -58,7 +45,7 @@ export function SignUpForm() {
   return (
     <div className="max-w-md mx-auto mt-8 p-6 bg-gray-800 rounded-lg shadow-xl">
       <h2 className="text-2xl font-bold mb-6 text-center text-white">Sign Up</h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-300">
@@ -116,6 +103,12 @@ export function SignUpForm() {
           />
         </div>
 
+        {success && (
+          <div className="p-3 rounded-md bg-green-900 text-green-300">
+            {success}
+          </div>
+        )}
+
         {error && (
           <div className="p-3 rounded-md bg-red-900 text-red-300">
             {error}
@@ -132,4 +125,4 @@ export function SignUpForm() {
       </form>
     </div>
   );
-} 
+}
