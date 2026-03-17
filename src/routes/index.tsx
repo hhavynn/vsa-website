@@ -60,6 +60,7 @@ const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminGallery = lazy(() => import("../pages/Admin/Gallery"));
 const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
+const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -109,6 +110,7 @@ export default function AppRoutes() {
                 <Route path="/admin/gallery" element={<AdminGallery />} />
                 <Route path="/admin/feedback" element={<AdminFeedback />} />
                 <Route path="/admin/import" element={<AdminImport />} />
+                <Route path="/admin/members" element={<AdminMembers />} />
               </Route>
 
               {/* 404 Route */}
