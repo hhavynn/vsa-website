@@ -50,8 +50,8 @@ const executiveBoard: Position[] = [
     count: 2,
     description: '',
     members: [
-      { name: 'Gracie Nguyen', image: cabinetImage('gracie_nguyen.png'), year: 'Second Year', college: 'Marshall College', major: 'General Biology' },
-      { name: 'Phuong Le', image: cabinetImage('phuong_le.png'), year: 'Second Year', college: 'Muir College', major: 'Political Science - International Relations' },
+      { name: 'Gracie Nguyen', image: cabinetImage('gracie_nguyen.png'), year: 'Third Year', college: 'Marshall College', major: 'General Biology' },
+      { name: 'Phuong Le', image: cabinetImage('phuong_le.png'), year: 'Third Year', college: 'Muir College', major: 'Political Science - International Relations' },
     ],
   },
   {
@@ -60,7 +60,7 @@ const executiveBoard: Position[] = [
     description: '',
     members: [
       { name: 'Stephanie Nguyen', year: 'Second Year Transfer', college: 'ERC College', major: 'Applied Math' },
-      { name: 'Kirsten Ngo', image: cabinetImage('kirsten_ngo.png'), year: 'Second Year', college: 'Revelle College', major: 'Human Biology' },
+      { name: 'Kirsten Ngo', image: cabinetImage('kirsten_ngo.png'), year: 'Third Year', college: 'Revelle College', major: 'Human Biology' },
     ],
   },
   {
@@ -68,7 +68,7 @@ const executiveBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Mindy Tran', image: cabinetImage('mindy_tran.png'), year: 'Second Year', college: 'Muir College', major: 'General Biology' },
+      { name: 'Mindy Tran', image: cabinetImage('mindy_tran.png'), year: 'Third Year', college: 'Muir College', major: 'General Biology' },
     ],
   },
   {
@@ -76,7 +76,7 @@ const executiveBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Martin Dang', image: cabinetImage('martin_dang.png'), year: 'Second Year', college: 'Revelle College', major: 'Math-CS' },
+      { name: 'Martin Dang', image: cabinetImage('martin_dang.png'), year: 'Third Year', college: 'Revelle College', major: 'Math-CS' },
     ],
   },
   {
@@ -84,7 +84,7 @@ const executiveBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Brandon Thach', image: cabinetImage('brandon_thach.png'), year: 'First Year', college: 'Seventh College', major: 'Business Economics' },
+      { name: 'Brandon Thach', image: cabinetImage('brandon_thach.png'), year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
     ],
   },
 ];
@@ -96,7 +96,7 @@ const generalBoard: Position[] = [
     description: '',
     members: [
       { name: 'Asia Martin', year: 'Second Year Transfer', college: 'Sixth College', major: 'Human Biology' },
-      { name: 'Anne Fa', year: 'First Year', college: 'Seventh College', major: 'Business Economics' },
+      { name: 'Anne Fa', year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
     ],
   },
   {
@@ -104,8 +104,8 @@ const generalBoard: Position[] = [
     count: 2,
     description: '',
     members: [
-      { name: 'Amy Nguyen', image: cabinetImage('amy_nguyen.png'), year: 'First Year', college: 'Marshall College', major: 'Human Development' },
-      { name: 'Havyn Nguyen', image: cabinetImage('havyn_nguyen.png'), year: 'Second Year', college: 'Sixth College', major: 'Math-CS' },
+      { name: 'Amy Nguyen', image: cabinetImage('amy_nguyen.png'), year: 'Second Year', college: 'Marshall College', major: 'Human Development' },
+      { name: 'Havyn Nguyen', image: cabinetImage('havyn_nguyen.png'), year: 'Third Year', college: 'Sixth College', major: 'Math-CS' },
     ],
   },
   {
@@ -113,8 +113,8 @@ const generalBoard: Position[] = [
     count: 2,
     description: '',
     members: [
-      { name: 'Jonas Truong', image: cabinetImage('jonas_truong.png'), year: 'First Year', college: 'Seventh College', major: 'Political Science - Public Law' },
-      { name: 'Robert Le', image: cabinetImage('robert_le.png'), year: 'Second Year', college: 'Seventh College', major: 'Structural Engineering' },
+      { name: 'Jonas Truong', image: cabinetImage('jonas_truong.png'), year: 'Second Year', college: 'Seventh College', major: 'Political Science - Public Law' },
+      { name: 'Robert Le', image: cabinetImage('robert_le.png'), year: 'Third Year', college: 'Seventh College', major: 'Structural Engineering' },
     ],
   },
   {
@@ -122,7 +122,7 @@ const generalBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'April Pham', image: cabinetImage('april_pham.png'), year: 'Second Year', college: 'Eighth College', major: 'Molecular & Cell Biology' },
+      { name: 'April Pham', image: cabinetImage('april_pham.png'), year: 'Third Year', college: 'Eighth College', major: 'Molecular & Cell Biology' },
     ],
   },
   {
@@ -130,7 +130,7 @@ const generalBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Kayla Truong', year: 'First Year', college: 'Muir College', major: 'Cognitive Science' },
+      { name: 'Kayla Truong', year: 'Second Year', college: 'Muir College', major: 'Cognitive Science' },
     ],
   },
   {
@@ -138,7 +138,7 @@ const generalBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Ingyin Moh', image: cabinetImage('ingyin_moh.png'), year: 'Second Year', college: 'Muir College', major: 'Public Health' },
+      { name: 'Ingyin Moh', image: cabinetImage('ingyin_moh.png'), year: 'Third Year', college: 'Muir College', major: 'Public Health' },
     ],
   },
   {
@@ -146,7 +146,7 @@ const generalBoard: Position[] = [
     count: 1,
     description: '',
     members: [
-      { name: 'Abby Le', image: cabinetImage('abby_le.png'), year: 'First Year', college: 'Seventh College', major: 'Business Economics' },
+      { name: 'Abby Le', image: cabinetImage('abby_le.png'), year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
     ],
   },
   {
@@ -154,8 +154,8 @@ const generalBoard: Position[] = [
     count: 2,
     description: '',
     members: [
-      { name: 'Andy Tran', image: cabinetImage('andy_tran.png'), year: 'First Year', college: 'Seventh College', major: 'Human Biology' },
-      { name: 'Faith Nguyen', year: 'First Year', college: 'Seventh College', major: 'Business Psychology' },
+      { name: 'Andy Tran', image: cabinetImage('andy_tran.png'), year: 'Second Year', college: 'Seventh College', major: 'Human Biology' },
+      { name: 'Faith Nguyen', year: 'Second Year', college: 'Seventh College', major: 'Business Psychology' },
     ],
   },
 ];
