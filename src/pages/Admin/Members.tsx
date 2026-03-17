@@ -3,16 +3,28 @@ import { supabase } from '../../lib/supabase';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface Member {
   id: string;
   first_name: string;
   last_name: string;
   college: string | null;
   year: string | null;
+  email: string | null;
   points: number;
   events_attended: number;
   created_at: string;
 }
+
+interface AttendanceRecord {
+  event_id: string;
+  event_name: string;
+  event_date: string;
+  points_earned: number;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const YEAR_LABELS: Record<string, string> = {
   '1': '1st Year', '2': '2nd Year', '3': '3rd Year',
@@ -36,45 +48,44 @@ const COLLEGE_OPTIONS = [
   { value: 'eighth',   label: 'Eighth' },
 ];
 
-/** Map whatever the DB has stored → nearest year dropdown key */
 function toYearKey(s: string): string {
   const t = s.toLowerCase();
   if (/1st.*transfer|transfer.*1st|transfer.*fresh/.test(t)) return 'transfer-1';
   if (/2nd.*transfer|transfer.*2nd|transfer.*soph/.test(t))  return 'transfer-2';
-  if (/transfer/.test(t))                                     return 'transfer-1'; // legacy generic
+  if (/transfer/.test(t))   return 'transfer-1';
   if (/1st|first|fresh/.test(t))  return '1';
   if (/2nd|second|soph/.test(t))  return '2';
   if (/3rd|third|junior/.test(t)) return '3';
   if (/4th|fourth|senior/.test(t))return '4';
   if (/5th|fifth/.test(t))        return '5';
-  if (/^[12345]$/.test(t))        return t; // already a key
+  if (/^[12345]$/.test(t))        return t;
   return s;
 }
 
-/** Map whatever the DB has stored → nearest dropdown key, or return as-is */
 function toCollegeKey(s: string): string {
   const t = s.toLowerCase();
-  if (/revelle/.test(t))              return 'revelle';
-  if (/muir/.test(t))                 return 'muir';
-  if (/marshall|thurgood/.test(t))    return 'marshall';
-  if (/warren/.test(t))               return 'warren';
-  if (/eleanor|erc|roosevelt/.test(t))return 'erc';
-  if (/sixth|6th/.test(t))            return 'sixth';
-  if (/seventh|7th/.test(t))          return 'seventh';
-  if (/eighth|8th/.test(t))           return 'eighth';
-  return s; // unknown — keep as-is so it doesn't get silently cleared
+  if (/revelle/.test(t))               return 'revelle';
+  if (/muir/.test(t))                  return 'muir';
+  if (/marshall|thurgood/.test(t))     return 'marshall';
+  if (/warren/.test(t))                return 'warren';
+  if (/eleanor|erc|roosevelt/.test(t)) return 'erc';
+  if (/sixth|6th/.test(t))             return 'sixth';
+  if (/seventh|7th/.test(t))           return 'seventh';
+  if (/eighth|8th/.test(t))            return 'eighth';
+  return s;
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch]   = useState('');
 
-  // Multi-select
   // Sorting
   type SortKey = 'name' | 'points' | 'events_attended';
-  const [sortKey, setSortKey]   = useState<SortKey>('points');
-  const [sortAsc, setSortAsc]   = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('points');
+  const [sortAsc, setSortAsc] = useState(false);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(a => !a);
@@ -88,34 +99,49 @@ export default function AdminMembers() {
 
   // Edit modal
   const [editing, setEditing]   = useState<Member | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', points: 0, events_attended: 0 });
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '' });
   const [saving, setSaving]     = useState(false);
 
   // Single delete modal
   const [deleting, setDeleting]     = useState<Member | null>(null);
   const [confirming, setConfirming] = useState(false);
 
+  // History modal
+  const [historyMember, setHistoryMember]   = useState<Member | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<AttendanceRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Merge modal
+  const [mergingSource, setMergingSource]   = useState<Member | null>(null);
+  const [mergeTarget, setMergeTarget]       = useState<Member | null>(null);
+  const [mergeSearch, setMergeSearch]       = useState('');
+  const [mergeConfirming, setMergeConfirming] = useState(false);
+  const [mergeExecuting, setMergeExecuting] = useState(false);
+
+  // ── Load ─────────────────────────────────────────────────────────────────────
   async function load() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, first_name, last_name, college, year, points, events_attended, created_at')
+      .select('id, first_name, last_name, college, year, email, points, events_attended, created_at')
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
     setMembers((data ?? []) as Member[]);
-    setSelected(new Set()); // clear selection on reload
+    setSelected(new Set());
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
 
+  // ── Filtered + sorted ────────────────────────────────────────────────────────
   const filtered = members
     .filter(m => {
       const q = search.toLowerCase();
       return (
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
         (m.college ?? '').toLowerCase().includes(q) ||
-        (m.year ?? '').toLowerCase().includes(q)
+        (m.year ?? '').toLowerCase().includes(q) ||
+        (m.email ?? '').toLowerCase().includes(q)
       );
     })
     .sort((a, b) => {
@@ -130,14 +156,14 @@ export default function AdminMembers() {
       return sortAsc ? cmp : -cmp;
     });
 
-  // ── Selection helpers ─────────────────────────────────────────────────────────
+  // ── Selection ────────────────────────────────────────────────────────────────
   const allFilteredIds = filtered.map(m => m.id);
-  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
-  const someSelected = allFilteredIds.some(id => selected.has(id));
+  const allSelected    = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+  const someSelected   = allFilteredIds.some(id => selected.has(id));
 
   function toggleOne(id: string) {
     setSelected(prev => {
-      const next = new Set(prev);
+      const next = new Set(Array.from(prev));
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
@@ -146,7 +172,7 @@ export default function AdminMembers() {
   function toggleAll() {
     if (allSelected) {
       setSelected(prev => {
-        const next = new Set(prev);
+        const next = new Set(Array.from(prev));
         allFilteredIds.forEach(id => next.delete(id));
         return next;
       });
@@ -155,16 +181,15 @@ export default function AdminMembers() {
     }
   }
 
-  // ── Edit ──────────────────────────────────────────────────────────────────────
+  // ── Edit ─────────────────────────────────────────────────────────────────────
   function openEdit(m: Member) {
     setEditing(m);
     setEditForm({
-      first_name:      m.first_name,
-      last_name:       m.last_name,
-      college:         m.college ? toCollegeKey(m.college) : '',
-      year:            m.year ? toYearKey(m.year) : '',
-      points:          m.points,
-      events_attended: m.events_attended,
+      first_name: m.first_name,
+      last_name:  m.last_name,
+      college:    m.college ? toCollegeKey(m.college) : '',
+      year:       m.year    ? toYearKey(m.year)       : '',
+      email:      m.email   ?? '',
     });
   }
 
@@ -174,13 +199,12 @@ export default function AdminMembers() {
     const { error } = await supabase
       .from('members')
       .update({
-        first_name:      editForm.first_name.trim(),
-        last_name:       editForm.last_name.trim(),
-        college:         editForm.college.trim() || null,
-        year:            editForm.year.trim() || null,
-        points:          Number(editForm.points),
-        events_attended: Number(editForm.events_attended),
-        updated_at:      new Date().toISOString(),
+        first_name: editForm.first_name.trim(),
+        last_name:  editForm.last_name.trim(),
+        college:    editForm.college.trim() || null,
+        year:       editForm.year.trim()    || null,
+        email:      editForm.email.trim()   || null,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', editing.id);
     setSaving(false);
@@ -214,8 +238,55 @@ export default function AdminMembers() {
     load();
   }
 
+  // ── History ───────────────────────────────────────────────────────────────────
+  async function openHistory(m: Member) {
+    setHistoryMember(m);
+    setHistoryRecords([]);
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from('member_event_attendance')
+      .select('event_id, points_earned, events(name, date)')
+      .eq('member_id', m.id);
+    setHistoryLoading(false);
+    if (error) { toast.error('Failed to load history.'); return; }
+    const records = ((data ?? []) as any[])
+      .map(row => ({
+        event_id:      row.event_id as string,
+        event_name:    (row.events?.name  ?? '(unknown)') as string,
+        event_date:    (row.events?.date  ?? '') as string,
+        points_earned: row.points_earned as number,
+      }))
+      .sort((a, b) => b.event_date.localeCompare(a.event_date));
+    setHistoryRecords(records);
+  }
+
+  // ── Merge ─────────────────────────────────────────────────────────────────────
+  function openMerge(m: Member) {
+    setMergingSource(m);
+    setMergeTarget(null);
+    setMergeSearch('');
+    setMergeConfirming(false);
+  }
+
+  async function handleMergeConfirm() {
+    if (!mergingSource || !mergeTarget) return;
+    setMergeExecuting(true);
+    const { error } = await supabase.rpc('merge_members', {
+      p_source_id: mergingSource.id,
+      p_target_id: mergeTarget.id,
+    });
+    setMergeExecuting(false);
+    if (error) { toast.error(`Merge failed: ${error.message}`); return; }
+    toast.success(`Merged ${mergingSource.first_name} ${mergingSource.last_name} → ${mergeTarget.first_name} ${mergeTarget.last_name}.`);
+    setMergingSource(null);
+    setMergeTarget(null);
+    setMergeConfirming(false);
+    load();
+  }
+
   const selectedCount = selected.size;
 
+  // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
       <Toaster position="top-right" />
@@ -227,26 +298,20 @@ export default function AdminMembers() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Members</h1>
               <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                {members.length} total member{members.length !== 1 ? 's' : ''} — edit names, points, or remove bad entries.
+                {members.length} total member{members.length !== 1 ? 's' : ''} — edit, merge duplicates, or view attendance history.
               </p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               {selectedCount > 0 && (
-                <button
-                  onClick={() => setConfirmBulk(true)}
-                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                >
+                <button onClick={() => setConfirmBulk(true)}
+                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                   Delete {selectedCount} selected
                 </button>
               )}
-              <input
-                type="search"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, college, year…"
+              <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search name, college, year, email…"
                 className="w-64 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
-                  text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+                  text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
             </div>
           </div>
 
@@ -262,13 +327,10 @@ export default function AdminMembers() {
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50">
                     <th className="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
+                      <input type="checkbox" checked={allSelected}
                         ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
                         onChange={toggleAll}
-                        className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
+                        className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
                     <SortTh label="Name"   sk="name"            active={sortKey} asc={sortAsc} onSort={handleSort} />
@@ -283,45 +345,30 @@ export default function AdminMembers() {
                   {filtered.map((m, i) => {
                     const isChecked = selected.has(m.id);
                     return (
-                      <tr
-                        key={m.id}
-                        className={`transition-colors cursor-pointer ${
-                          isChecked
-                            ? 'bg-indigo-50/60 dark:bg-indigo-900/20'
-                            : 'hover:bg-gray-50/60 dark:hover:bg-gray-700/30'
-                        }`}
+                      <tr key={m.id}
                         onClick={() => toggleOne(m.id)}
-                      >
+                        className={`transition-colors cursor-pointer ${
+                          isChecked ? 'bg-indigo-50/60 dark:bg-indigo-900/20' : 'hover:bg-gray-50/60 dark:hover:bg-gray-700/30'
+                        }`}>
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleOne(m.id)}
-                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
+                          <input type="checkbox" checked={isChecked} onChange={() => toggleOne(m.id)}
+                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                         </td>
                         <td className="px-4 py-3 text-gray-400 text-xs font-mono">{i + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                          {m.first_name} {m.last_name}
+                          <div>{m.first_name} {m.last_name}</div>
+                          {m.email && <div className="text-xs text-gray-400 font-normal">{m.email}</div>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.college || '—'}</td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{yearLabel(m.year) || '—'}</td>
                         <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{m.points}</td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{m.events_attended}</td>
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openEdit(m)}
-                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setDeleting(m)}
-                              className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                            >
-                              Delete
-                            </button>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <ActionBtn color="indigo" onClick={() => openEdit(m)}>Edit</ActionBtn>
+                            <ActionBtn color="teal"   onClick={() => openHistory(m)}>History</ActionBtn>
+                            <ActionBtn color="amber"  onClick={() => openMerge(m)}>Merge</ActionBtn>
+                            <ActionBtn color="red"    onClick={() => setDeleting(m)}>Delete</ActionBtn>
                           </div>
                         </td>
                       </tr>
@@ -336,127 +383,260 @@ export default function AdminMembers() {
 
       {/* ── Bulk Delete Modal ── */}
       {confirmBulk && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-              Delete {selectedCount} member{selectedCount !== 1 ? 's' : ''}?
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
-              This will permanently remove {selectedCount} member{selectedCount !== 1 ? 's' : ''} and all their attendance records. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={handleBulkDelete} disabled={bulkDeleting}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
-                {bulkDeleting ? 'Deleting…' : `Yes, delete ${selectedCount}`}
-              </button>
-              <button onClick={() => setConfirmBulk(false)}
-                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
-                Cancel
-              </button>
-            </div>
+        <Modal onClose={() => setConfirmBulk(false)}>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            Delete {selectedCount} member{selectedCount !== 1 ? 's' : ''}?
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
+            This permanently removes {selectedCount} member{selectedCount !== 1 ? 's' : ''} and all their attendance records. Cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={handleBulkDelete} disabled={bulkDeleting}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+              {bulkDeleting ? 'Deleting…' : `Yes, delete ${selectedCount}`}
+            </button>
+            <BtnCancel onClick={() => setConfirmBulk(false)} />
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── Edit Modal ── */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit Member</h2>
-              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+        <Modal onClose={() => setEditing(null)} wide>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit Member</h2>
+            <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="First name">
+                <input value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))} className={inputCls} />
+              </Field>
+              <Field label="Last name">
+                <input value={editForm.last_name} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))} className={inputCls} />
+              </Field>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="First name">
-                  <input value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
-                    className={inputCls} />
-                </Field>
-                <Field label="Last name">
-                  <input value={editForm.last_name} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
-                    className={inputCls} />
-                </Field>
-              </div>
+            <Field label="Email">
+              <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="optional — helps identify duplicates" className={inputCls} />
+            </Field>
 
+            <div className="grid grid-cols-2 gap-3">
               <Field label="College">
-                <select value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))}
-                  className={inputCls}>
+                <select value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))} className={inputCls}>
                   <option value="">— select —</option>
                   {COLLEGE_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
               </Field>
-
               <Field label="Year">
-                <select value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))}
-                  className={inputCls}>
+                <select value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))} className={inputCls}>
                   <option value="">— select —</option>
                   {Object.entries(YEAR_LABELS).map(([v, label]) => (
                     <option key={v} value={v}>{label}</option>
                   ))}
                 </select>
               </Field>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Points">
-                  <input type="number" min={0} value={editForm.points}
-                    onChange={e => setEditForm(f => ({ ...f, points: Number(e.target.value) }))}
-                    className={inputCls} />
-                </Field>
-                <Field label="Events attended">
-                  <input type="number" min={0} value={editForm.events_attended}
-                    onChange={e => setEditForm(f => ({ ...f, events_attended: Number(e.target.value) }))}
-                    className={inputCls} />
-                </Field>
+            {/* Computed stats — read only */}
+            <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 px-4 py-3">
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Points (computed)</p>
+                <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{editing.points}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Events attended (computed)</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{editing.events_attended}</p>
               </div>
             </div>
-
-            <div className="flex gap-3 mt-6">
-              <button onClick={handleSaveEdit} disabled={saving}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
-                {saving ? 'Saving…' : 'Save changes'}
-              </button>
-              <button onClick={() => setEditing(null)}
-                className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg transition-colors">
-                Cancel
-              </button>
-            </div>
           </div>
-        </div>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={handleSaveEdit} disabled={saving}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+            <BtnCancel onClick={() => setEditing(null)} />
+          </div>
+        </Modal>
       )}
 
       {/* ── Single Delete Modal ── */}
       {deleting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete member?</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
-              Remove <strong className="text-gray-700 dark:text-gray-200">{deleting.first_name} {deleting.last_name}</strong> from
-              the leaderboard? This also deletes their attendance records. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={handleDelete} disabled={confirming}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
-                {confirming ? 'Deleting…' : 'Yes, delete'}
-              </button>
-              <button onClick={() => setDeleting(null)}
-                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
-                Cancel
-              </button>
-            </div>
+        <Modal onClose={() => setDeleting(null)}>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete member?</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
+            Remove <strong className="text-gray-700 dark:text-gray-200">{deleting.first_name} {deleting.last_name}</strong> and
+            all their attendance records? Cannot be undone.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={handleDelete} disabled={confirming}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+              {confirming ? 'Deleting…' : 'Yes, delete'}
+            </button>
+            <BtnCancel onClick={() => setDeleting(null)} />
           </div>
-        </div>
+        </Modal>
+      )}
+
+      {/* ── History Modal ── */}
+      {historyMember && (
+        <Modal onClose={() => setHistoryMember(null)} wide>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                {historyMember.first_name} {historyMember.last_name}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {historyMember.points} pts · {historyMember.events_attended} event{historyMember.events_attended !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <button onClick={() => setHistoryMember(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+          </div>
+
+          {historyLoading ? (
+            <div className="py-8 text-center text-gray-400 text-sm">Loading…</div>
+          ) : historyRecords.length === 0 ? (
+            <div className="py-8 text-center text-gray-400 text-sm">No attendance records found.</div>
+          ) : (
+            <div className="overflow-y-auto max-h-80 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+              {historyRecords.map(rec => (
+                <div key={rec.event_id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{rec.event_name}</p>
+                    <p className="text-xs text-gray-400">
+                      {rec.event_date
+                        ? new Date(rec.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : '—'}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">+{rec.points_earned} pts</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button onClick={() => setHistoryMember(null)}
+            className="mt-5 w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
+            Close
+          </button>
+        </Modal>
+      )}
+
+      {/* ── Merge Modal ── */}
+      {mergingSource && (
+        <Modal onClose={() => setMergingSource(null)} wide>
+          {!mergeConfirming ? (
+            /* Phase 1: pick target */
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Merge Member</h2>
+                <button onClick={() => setMergingSource(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Move all attendance records from{' '}
+                <strong className="text-red-600 dark:text-red-400">{mergingSource.first_name} {mergingSource.last_name}</strong>
+                {' '}into another member. The source will be deleted.
+              </p>
+              <input type="search" value={mergeSearch} onChange={e => setMergeSearch(e.target.value)}
+                placeholder="Search for the member to merge INTO…"
+                className={inputCls + ' mb-3'}
+                autoFocus />
+              <div className="overflow-y-auto max-h-64 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+                {members
+                  .filter(m =>
+                    m.id !== mergingSource.id &&
+                    `${m.first_name} ${m.last_name} ${m.email ?? ''}`.toLowerCase().includes(mergeSearch.toLowerCase())
+                  )
+                  .map(m => (
+                    <button key={m.id}
+                      onClick={() => { setMergeTarget(m); setMergeConfirming(true); }}
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-left transition-colors">
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {m.first_name} {m.last_name}
+                        </span>
+                        {m.email && <span className="ml-2 text-xs text-gray-400">{m.email}</span>}
+                      </div>
+                      <span className="text-xs text-gray-400 shrink-0 ml-3">
+                        {m.points} pts · {m.events_attended} events
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </>
+          ) : (
+            /* Phase 2: confirm */
+            <>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Confirm merge?</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                <strong className="text-red-600 dark:text-red-400">{mergingSource.first_name} {mergingSource.last_name}</strong>
+                {' '}({mergingSource.events_attended} record{mergingSource.events_attended !== 1 ? 's' : ''}) will be merged into{' '}
+                <strong className="text-indigo-600 dark:text-indigo-400">{mergeTarget!.first_name} {mergeTarget!.last_name}</strong>.
+              </p>
+              <p className="text-xs text-gray-400 mb-5">
+                Duplicate events are skipped. The source member is permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={handleMergeConfirm} disabled={mergeExecuting}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+                  {mergeExecuting ? 'Merging…' : 'Yes, merge'}
+                </button>
+                <BtnCancel onClick={() => setMergeConfirming(false)} label="Back" />
+              </div>
+            </>
+          )}
+        </Modal>
       )}
     </div>
   );
 }
 
-// ── Tiny helpers ──────────────────────────────────────────────────────────────
+// ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
 const inputCls = `w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
   text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent`;
+
+function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700 w-full ${wide ? 'max-w-lg' : 'max-w-sm'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?: string }) {
+  return (
+    <button onClick={onClick}
+      className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
+      {label}
+    </button>
+  );
+}
+
+function ActionBtn({ color, onClick, children }: { color: string; onClick: () => void; children: React.ReactNode }) {
+  const cls: Record<string, string> = {
+    indigo: 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
+    teal:   'text-teal-600   dark:text-teal-400   hover:bg-teal-50   dark:hover:bg-teal-900/30',
+    amber:  'text-amber-600  dark:text-amber-400  hover:bg-amber-50  dark:hover:bg-amber-900/30',
+    red:    'text-red-500    dark:text-red-400    hover:bg-red-50    dark:hover:bg-red-900/30',
+  };
+  return (
+    <button onClick={onClick}
+      className={`text-xs font-medium px-2 py-1 rounded transition-colors ${cls[color]}`}>
+      {children}
+    </button>
+  );
+}
 
 function SortTh({ label, sk, active, asc, onSort }: {
   label: string; sk: string; active: string; asc: boolean; onSort: (k: any) => void;
@@ -464,16 +644,12 @@ function SortTh({ label, sk, active, asc, onSort }: {
   const isActive = active === sk;
   return (
     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
-      <button
-        onClick={() => onSort(sk)}
+      <button onClick={() => onSort(sk)}
         className={`flex items-center gap-1 transition-colors ${
           isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-        }`}
-      >
+        }`}>
         {label}
-        <span className="text-[10px] leading-none">
-          {isActive ? (asc ? '▲' : '▼') : '⇅'}
-        </span>
+        <span className="text-[10px] leading-none">{isActive ? (asc ? '▲' : '▼') : '⇅'}</span>
       </button>
     </th>
   );

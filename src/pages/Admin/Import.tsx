@@ -300,19 +300,9 @@ export default function AdminImport() {
     setImporting(true);
     const event = events.find(e => e.id === selectedEventId);
     const pts = event?.points ?? 1;
-    const now = new Date().toISOString();
 
     try {
-      // 1. Update points on matched members
-      for (const r of toUpdate) {
-        const { error } = await supabase
-          .from('members')
-          .update({ points: r.matchedMember!.points + pts, events_attended: r.matchedMember!.events_attended + 1, updated_at: now })
-          .eq('id', r.matchedMember!.id);
-        if (error) throw error;
-      }
-
-      // 2. Create new member rows
+      // 1. Create new member rows (points/events_attended computed by DB trigger)
       const newNames = toCreate.map(r => {
         const parts = r.displayName.trim().split(/\s+/);
         const first = parts[0] ?? '';
@@ -322,8 +312,6 @@ export default function AdminImport() {
           last_name:  last,
           college:    r.csvCollege || null,
           year:       r.csvYear    || null,
-          points:     pts,
-          events_attended: 1,
         };
       });
 
@@ -337,7 +325,7 @@ export default function AdminImport() {
         newMemberIds = (inserted ?? []).map((m: { id: string }) => m.id);
       }
 
-      // 3. Insert attendance records for deduplication (ignore conflicts = re-import safe)
+      // 2. Insert attendance records — DB trigger recalculates member points automatically
       const attendanceRows = [
         ...toUpdate.map(r => ({ member_id: r.matchedMember!.id, event_id: selectedEventId, points_earned: pts })),
         ...newMemberIds.map(id => ({ member_id: id, event_id: selectedEventId, points_earned: pts })),
