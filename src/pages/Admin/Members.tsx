@@ -36,6 +36,21 @@ const COLLEGE_OPTIONS = [
   { value: 'eighth',   label: 'Eighth' },
 ];
 
+/** Map whatever the DB has stored → nearest year dropdown key */
+function toYearKey(s: string): string {
+  const t = s.toLowerCase();
+  if (/1st.*transfer|transfer.*1st|transfer.*fresh/.test(t)) return 'transfer-1';
+  if (/2nd.*transfer|transfer.*2nd|transfer.*soph/.test(t))  return 'transfer-2';
+  if (/transfer/.test(t))                                     return 'transfer-1'; // legacy generic
+  if (/1st|first|fresh/.test(t))  return '1';
+  if (/2nd|second|soph/.test(t))  return '2';
+  if (/3rd|third|junior/.test(t)) return '3';
+  if (/4th|fourth|senior/.test(t))return '4';
+  if (/5th|fifth/.test(t))        return '5';
+  if (/^[12345]$/.test(t))        return t; // already a key
+  return s;
+}
+
 /** Map whatever the DB has stored → nearest dropdown key, or return as-is */
 function toCollegeKey(s: string): string {
   const t = s.toLowerCase();
@@ -147,7 +162,7 @@ export default function AdminMembers() {
       first_name:      m.first_name,
       last_name:       m.last_name,
       college:         m.college ? toCollegeKey(m.college) : '',
-      year:            m.year ?? '',
+      year:            m.year ? toYearKey(m.year) : '',
       points:          m.points,
       events_attended: m.events_attended,
     });
