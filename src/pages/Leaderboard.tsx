@@ -136,7 +136,7 @@ export function Leaderboard() {
               {[1, 0, 2].map(i => {
                 const e = entries[i];
                 // Heights keyed by rank index: 1st = tallest, 2nd = medium, 3rd = shortest
-                const podiumHeight = i === 0 ? 'h-36' : i === 1 ? 'h-24' : 'h-16';
+                const podiumHeight = i === 0 ? 'h-44' : i === 1 ? 'h-28' : 'h-16';
                 // Mobile: display in rank order (1st, 2nd, 3rd); desktop: classic podium (2nd, 1st, 3rd)
                 const orderClass  = i === 0 ? 'order-1 sm:order-2'
                                   : i === 1 ? 'order-2 sm:order-1'

@@ -20,23 +20,30 @@ interface Member {
   year: string | null;
   points: number;
   events_attended: number;
+  email: string | null;
 }
 
-type RowStatus = 'match' | 'new' | 'already';
+type RowStatus = 'match' | 'new' | 'already' | 'conflict';
 
 interface RowResult {
   csvRow: Record<string, string>;
+  /** Original (capitalised) name from CSV — shown in the table */
   displayName: string;
+  /** Cleaned name used for matching (no middle initials, comma-reversed) */
+  matchName: string;
   csvCollege: string;
   csvYear: string;
-  /** Existing member if matched, null if new */
+  csvEmail: string;
+  /** Existing member if matched or conflicted, null if new */
   matchedMember: Member | null;
   status: RowStatus;
-  /** Composite score 0–100 (only set when status === 'match') */
+  /** Composite score 0–100 (set when status === 'match' or 'conflict') */
   score: number;
   nameScore: number;
   collegeMatch: boolean;
   yearMatch: boolean;
+  /** True when: status=match, csvEmail non-empty, member.email is null → will write email to DB */
+  emailWillEnrich: boolean;
 }
 
 // ─── Normalisation helpers ────────────────────────────────────────────────────
@@ -105,6 +112,29 @@ function capitalizeName(s: string): string {
   return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+/**
+ * Normalise a raw name string for matching purposes:
+ *  - "Nguyen, Kevin"     → "Kevin Nguyen"  (comma reversal)
+ *  - "Kevin J. Nguyen"  → "Kevin Nguyen"  (middle initial with period)
+ *  - "Kevin J Nguyen"   → "Kevin Nguyen"  (single-letter middle word)
+ * Returns a capitalised string. Does NOT mutate the display name.
+ */
+function cleanName(raw: string): string {
+  let s = raw.trim();
+  // Handle "Last, First [Middle]" → "First [Middle] Last"
+  const commaIdx = s.indexOf(',');
+  if (commaIdx > 0) {
+    const last = s.slice(0, commaIdx).trim();
+    const rest = s.slice(commaIdx + 1).trim();
+    s = `${rest} ${last}`;
+  }
+  // Remove middle initials followed by a period: "J." or "J. "
+  s = s.replace(/\b[A-Za-z]\.\s*/g, '');
+  // Remove lone single-letter middle words between two multi-letter words
+  s = s.replace(/(\b\w{2,})\s+\b[A-Za-z]\b\s+(\w{2,}\b)/g, '$1 $2');
+  return capitalizeName(s.replace(/\s+/g, ' ').trim());
+}
+
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
 
 function parseCSV(raw: string): Record<string, string>[] {
@@ -167,6 +197,7 @@ export default function AdminImport() {
   const [useFullName, setUseFullName] = useState(false);
   const [collegeCol, setCollegeCol] = useState('');
   const [yearCol, setYearCol] = useState('');
+  const [emailCol, setEmailCol] = useState('');
 
   // Preview
   const [rows, setRows] = useState<RowResult[]>([]);
@@ -203,12 +234,13 @@ export default function AdminImport() {
       const dFull    = detectCol(headers, ['full name', 'name', 'your name', 'student name', 'what is your name']);
       const dCollege = detectCol(headers, ['college', 'ucsd college', 'residential college']);
       const dYear    = detectCol(headers, ['year', 'student year', 'year in school', 'academic year', 'standing']);
+      const dEmail   = detectCol(headers, ['email', 'email address', 'e-mail', 'contact email', 'gmail']);
       const useFull  = !dFirst && !dLast && !!dFull;
 
       setFirstNameCol(dFirst); setLastNameCol(dLast); setFullNameCol(dFull);
-      setUseFullName(useFull); setCollegeCol(dCollege); setYearCol(dYear);
+      setUseFullName(useFull); setCollegeCol(dCollege); setYearCol(dYear); setEmailCol(dEmail);
 
-      await runMatching(parsed, dFirst, dLast, dFull, useFull, dCollege, dYear, selectedEventId);
+      await runMatching(parsed, dFirst, dLast, dFull, useFull, dCollege, dYear, dEmail, selectedEventId);
       setStep('preview');
     } catch (err: unknown) {
       setConfigError(`Failed to fetch CSV: ${err instanceof Error ? err.message : String(err)}`);
@@ -221,12 +253,12 @@ export default function AdminImport() {
   async function runMatching(
     parsed: Record<string, string>[],
     fCol: string, lCol: string, fullCol: string, useFull: boolean,
-    cCol: string, yCol: string, eventId: string,
+    cCol: string, yCol: string, eCol: string, eventId: string,
   ) {
     // Load all existing members
     const { data: membersData } = await supabase
       .from('members')
-      .select('id, first_name, last_name, college, year, points, events_attended');
+      .select('id, first_name, last_name, college, year, points, events_attended, email');
     const allMembers = (membersData ?? []) as Member[];
 
     // Load which members already have attendance for this event
@@ -237,7 +269,7 @@ export default function AdminImport() {
     const alreadySet = new Set((existingAtt ?? []).map((r: { member_id: string }) => r.member_id));
 
     const results: RowResult[] = parsed.map(row => {
-      // Build name
+      // Build display name (capitalised, shown in table)
       let displayName = '';
       if (useFull) {
         displayName = capitalizeName(fullCol ? row[fullCol] : '');
@@ -247,18 +279,23 @@ export default function AdminImport() {
         displayName = [fn, ln].filter(Boolean).join(' ');
       }
 
+      // Build match name (cleaned: no middle initials, comma-reversed)
+      const matchName = cleanName(displayName);
+
       const csvCollege    = (cCol ? row[cCol] : '').trim();
       const csvYear       = (yCol ? row[yCol] : '').trim();
+      const csvEmail      = (eCol ? row[eCol] : '').trim().toLowerCase();
       const normCsvCollege = normalizeCollege(csvCollege);
       const normCsvYear    = normalizeYear(csvYear);
 
-      // Score against every member
+      // Score against every member using the cleaned match name
       let best: Member | null = null;
       let bestScore = 0, bestNS = 0;
       let bestCM = false, bestYM = false;
 
       for (const m of allMembers) {
-        const ns = nameSimilarity(displayName, `${m.first_name} ${m.last_name}`);
+        const memberFullName = cleanName(`${m.first_name} ${m.last_name}`);
+        const ns = nameSimilarity(matchName, memberFullName);
         if (ns < 50) continue; // fast-reject
         const cm = !!(normCsvCollege && m.college && normalizeCollege(m.college) === normCsvCollege);
         const ym = !!(normCsvYear    && m.year    && normalizeYear(m.year)       === normCsvYear);
@@ -266,14 +303,33 @@ export default function AdminImport() {
         if (cs > bestScore) { bestScore = cs; best = m; bestNS = ns; bestCM = cm; bestYM = ym; }
       }
 
-      // Match threshold: composite >= 75
-      if (best && bestScore >= 75) {
-        const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
-        return { csvRow: row, displayName, csvCollege, csvYear, matchedMember: best, status, score: bestScore, nameScore: bestNS, collegeMatch: bestCM, yearMatch: bestYM };
+      // High name similarity but college/year mismatch → flag for manual review
+      if (best && bestNS >= 75 && bestScore < 75) {
+        return {
+          csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
+          matchedMember: best, status: 'conflict' as RowStatus,
+          score: bestScore, nameScore: bestNS, collegeMatch: bestCM, yearMatch: bestYM,
+          emailWillEnrich: false,
+        };
       }
 
-      // No match → will create new member
-      return { csvRow: row, displayName, csvCollege, csvYear, matchedMember: null, status: 'new', score: 0, nameScore: 0, collegeMatch: false, yearMatch: false };
+      // Full match threshold: composite >= 75
+      if (best && bestScore >= 75) {
+        const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
+        const emailWillEnrich = status === 'match' && !!csvEmail && !best.email;
+        return {
+          csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
+          matchedMember: best, status, score: bestScore, nameScore: bestNS,
+          collegeMatch: bestCM, yearMatch: bestYM, emailWillEnrich,
+        };
+      }
+
+      // No match → create new member
+      return {
+        csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
+        matchedMember: null, status: 'new', score: 0, nameScore: 0,
+        collegeMatch: false, yearMatch: false, emailWillEnrich: false,
+      };
     });
 
     setRows(results);
@@ -282,7 +338,7 @@ export default function AdminImport() {
   async function handleRematch() {
     setFetchingCsv(true);
     try {
-      await runMatching(cachedParsed, firstNameCol, lastNameCol, fullNameCol, useFullName, collegeCol, yearCol, selectedEventId);
+      await runMatching(cachedParsed, firstNameCol, lastNameCol, fullNameCol, useFullName, collegeCol, yearCol, emailCol, selectedEventId);
     } finally {
       setFetchingCsv(false);
     }
@@ -312,6 +368,7 @@ export default function AdminImport() {
           last_name:  last,
           college:    r.csvCollege || null,
           year:       r.csvYear    || null,
+          email:      r.csvEmail   || null,
         };
       });
 
@@ -338,7 +395,17 @@ export default function AdminImport() {
         if (error) throw error;
       }
 
-      toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new.`);
+      // 3. Enrich email for matched members who didn't have one
+      const toEnrich = toUpdate.filter(r => r.emailWillEnrich);
+      for (const r of toEnrich) {
+        await supabase
+          .from('members')
+          .update({ email: r.csvEmail, updated_at: new Date().toISOString() })
+          .eq('id', r.matchedMember!.id);
+      }
+
+      const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} email${toEnrich.length !== 1 ? 's' : ''}` : '';
+      toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new${enrichMsg}.`);
       setStep('done');
     } catch (err: unknown) {
       toast.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -349,9 +416,11 @@ export default function AdminImport() {
 
   // ── Counts ────────────────────────────────────────────────────────────────────
   const summary = {
-    match:   rows.filter(r => r.status === 'match').length,
-    new:     rows.filter(r => r.status === 'new').length,
-    already: rows.filter(r => r.status === 'already').length,
+    match:    rows.filter(r => r.status === 'match').length,
+    new:      rows.filter(r => r.status === 'new').length,
+    already:  rows.filter(r => r.status === 'already').length,
+    conflict: rows.filter(r => r.status === 'conflict').length,
+    enrich:   rows.filter(r => r.emailWillEnrich).length,
   };
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
@@ -453,6 +522,7 @@ export default function AdminImport() {
                         <ColSelect label="Last name"  value={lastNameCol}  onChange={setLastNameCol}  headers={csvHeaders} /></>}
                   <ColSelect label="College" value={collegeCol} onChange={setCollegeCol} headers={csvHeaders} />
                   <ColSelect label="Year"    value={yearCol}    onChange={setYearCol}    headers={csvHeaders} />
+                  <ColSelect label="Email"   value={emailCol}   onChange={setEmailCol}   headers={csvHeaders} />
                 </div>
                 <button onClick={handleRematch} disabled={fetchingCsv}
                   className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">
@@ -462,9 +532,13 @@ export default function AdminImport() {
 
               {/* Summary */}
               <div className="flex flex-wrap gap-3">
-                <SummaryBadge color="green"  count={summary.match}   label="will update existing member"    plural="will update existing members" />
-                <SummaryBadge color="blue"   count={summary.new}     label="will be added as a new member"  plural="will be added as new members" />
-                <SummaryBadge color="gray"   count={summary.already} label="already imported for this event" plural="already imported for this event" />
+                <SummaryBadge color="green"  count={summary.match}    label="will update existing member"    plural="will update existing members" />
+                <SummaryBadge color="blue"   count={summary.new}      label="will be added as a new member"  plural="will be added as new members" />
+                <SummaryBadge color="gray"   count={summary.already}  label="already imported for this event" plural="already imported for this event" />
+                <SummaryBadge color="amber"  count={summary.conflict} label="needs manual review"             plural="need manual review" />
+                {summary.enrich > 0 && (
+                  <SummaryBadge color="purple" count={summary.enrich} label="email will be added to profile" plural="emails will be added to profiles" />
+                )}
               </div>
 
               {selectedEvent && (
@@ -486,17 +560,29 @@ export default function AdminImport() {
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                     {rows.map((row, i) => (
                       <tr key={i} className={
-                        row.status === 'match'   ? 'bg-green-50/40 dark:bg-green-900/10' :
-                        row.status === 'new'     ? 'bg-blue-50/40 dark:bg-blue-900/10' :
-                                                   'bg-gray-50/60 dark:bg-gray-900/20'
+                        row.status === 'match'    ? 'bg-green-50/40 dark:bg-green-900/10' :
+                        row.status === 'new'      ? 'bg-blue-50/40 dark:bg-blue-900/10' :
+                        row.status === 'conflict' ? 'bg-amber-50/60 dark:bg-amber-900/10' :
+                                                    'bg-gray-50/60 dark:bg-gray-900/20'
                       }>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          {row.status === 'match'   && <ActionBadge color="green" label="Update" />}
-                          {row.status === 'new'     && <ActionBadge color="blue"  label="Create" />}
-                          {row.status === 'already' && <ActionBadge color="gray"  label="Skip" />}
+                          {row.status === 'match'    && (
+                            <span className="inline-flex items-center gap-1">
+                              <ActionBadge color="green" label="Update" />
+                              {row.emailWillEnrich && (
+                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Email will be added to this member's profile">✉</span>
+                              )}
+                            </span>
+                          )}
+                          {row.status === 'new'      && <ActionBadge color="blue"  label="Create" />}
+                          {row.status === 'already'  && <ActionBadge color="gray"  label="Skip" />}
+                          {row.status === 'conflict' && <ActionBadge color="amber" label="Review" />}
                         </td>
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
-                          {row.displayName || <span className="text-gray-400 italic">—</span>}
+                          <div>{row.displayName || <span className="text-gray-400 italic">—</span>}</div>
+                          {row.matchName !== row.displayName && (
+                            <div className="text-[10px] text-gray-400 mt-0.5">matched as: {row.matchName}</div>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{row.csvCollege || '—'}</td>
                         <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{row.csvYear || '—'}</td>
@@ -514,15 +600,20 @@ export default function AdminImport() {
                                   · {row.matchedMember.year}
                                 </span>
                               )}
+                              {row.status === 'conflict' && (
+                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">college/year mismatch — skipped</div>
+                              )}
                             </span>
                           ) : (
                             <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
                           )}
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          {row.status === 'match' ? (
+                          {(row.status === 'match' || row.status === 'conflict') ? (
                             <span className={`text-xs font-mono font-semibold ${
-                              row.score >= 88 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                              row.status === 'conflict'  ? 'text-amber-600 dark:text-amber-400' :
+                              row.score >= 88            ? 'text-green-600 dark:text-green-400' :
+                                                           'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : row.status === 'new' ? (
                             <span className="text-xs text-gray-400">—</span>
@@ -537,7 +628,7 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Score = name (60%) + college (25%) + year (15%). ≥75% → matched to existing member. Below 75% → new member created. "Skip" rows won't be touched.
+                Score = name (60%) + college (25%) + year (15%). ≥75% → matched. Below 75% → new member. High name similarity but college/year mismatch → flagged for review (skipped). "Skip" rows already imported.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
@@ -597,11 +688,16 @@ function ColSelect({ label, value, onChange, headers }: { label: string; value: 
 
 function SummaryBadge({ color, count, label, plural }: { color: string; count: number; label: string; plural: string }) {
   const cls: Record<string, string> = {
-    green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    blue:  'bg-blue-100  dark:bg-blue-900/30  text-blue-700  dark:text-blue-300',
-    gray:  'bg-gray-100  dark:bg-gray-700      text-gray-500  dark:text-gray-400',
+    green:  'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    blue:   'bg-blue-100  dark:bg-blue-900/30  text-blue-700  dark:text-blue-300',
+    gray:   'bg-gray-100  dark:bg-gray-700      text-gray-500  dark:text-gray-400',
+    amber:  'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
   };
-  const dot: Record<string, string> = { green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400' };
+  const dot: Record<string, string> = {
+    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400',
+    amber: 'bg-amber-500', purple: 'bg-purple-500',
+  };
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium ${cls[color]}`}>
       <span className={`w-2 h-2 rounded-full inline-block ${dot[color]}`} />
@@ -615,8 +711,11 @@ function ActionBadge({ color, label }: { color: string; label: string }) {
     green: 'text-green-700 dark:text-green-400',
     blue:  'text-blue-700  dark:text-blue-400',
     gray:  'text-gray-500  dark:text-gray-400',
+    amber: 'text-amber-700 dark:text-amber-400',
   };
-  const dot: Record<string, string> = { green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400' };
+  const dot: Record<string, string> = {
+    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400', amber: 'bg-amber-500',
+  };
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cls[color]}`}>
       <span className={`w-1.5 h-1.5 rounded-full inline-block ${dot[color]}`} />
