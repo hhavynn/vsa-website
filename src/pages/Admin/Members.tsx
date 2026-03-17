@@ -29,13 +29,18 @@ export default function AdminMembers() {
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
 
+  // Multi-select
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmBulk, setConfirmBulk]   = useState(false);
+
   // Edit modal
   const [editing, setEditing]   = useState<Member | null>(null);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', points: 0, events_attended: 0 });
   const [saving, setSaving]     = useState(false);
 
-  // Delete modal
-  const [deleting, setDeleting]   = useState<Member | null>(null);
+  // Single delete modal
+  const [deleting, setDeleting]     = useState<Member | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   async function load() {
@@ -46,6 +51,7 @@ export default function AdminMembers() {
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
     setMembers((data ?? []) as Member[]);
+    setSelected(new Set()); // clear selection on reload
     setLoading(false);
   }
 
@@ -59,6 +65,31 @@ export default function AdminMembers() {
       (m.year ?? '').toLowerCase().includes(q)
     );
   });
+
+  // ── Selection helpers ─────────────────────────────────────────────────────────
+  const allFilteredIds = filtered.map(m => m.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+  const someSelected = allFilteredIds.some(id => selected.has(id));
+
+  function toggleOne(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        allFilteredIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected(prev => new Set([...Array.from(prev), ...allFilteredIds]));
+    }
+  }
 
   // ── Edit ──────────────────────────────────────────────────────────────────────
   function openEdit(m: Member) {
@@ -95,7 +126,7 @@ export default function AdminMembers() {
     load();
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────────
+  // ── Single delete ─────────────────────────────────────────────────────────────
   async function handleDelete() {
     if (!deleting) return;
     setConfirming(true);
@@ -106,6 +137,20 @@ export default function AdminMembers() {
     setDeleting(null);
     load();
   }
+
+  // ── Bulk delete ───────────────────────────────────────────────────────────────
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('members').delete().in('id', ids);
+    setBulkDeleting(false);
+    if (error) { toast.error('Bulk delete failed.'); return; }
+    toast.success(`Removed ${ids.length} member${ids.length !== 1 ? 's' : ''}.`);
+    setConfirmBulk(false);
+    load();
+  }
+
+  const selectedCount = selected.size;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
@@ -121,14 +166,24 @@ export default function AdminMembers() {
                 {members.length} total member{members.length !== 1 ? 's' : ''} — edit names, points, or remove bad entries.
               </p>
             </div>
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name, college, year…"
-              className="w-64 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
-                text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+            <div className="flex items-center gap-3 flex-wrap">
+              {selectedCount > 0 && (
+                <button
+                  onClick={() => setConfirmBulk(true)}
+                  className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  Delete {selectedCount} selected
+                </button>
+              )}
+              <input
+                type="search"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, college, year…"
+                className="w-64 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
+                  text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
           </div>
 
           {loading ? (
@@ -142,6 +197,15 @@ export default function AdminMembers() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50">
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={toggleAll}
+                        className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
                     {['#', 'Name', 'College', 'Year', 'Points', 'Events', ''].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         {h}
@@ -150,40 +214,83 @@ export default function AdminMembers() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                  {filtered.map((m, i) => (
-                    <tr key={m.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-700/30 transition-colors">
-                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{i + 1}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                        {m.first_name} {m.last_name}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.college || '—'}</td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{yearLabel(m.year) || '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{m.points}</td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{m.events_attended}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEdit(m)}
-                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeleting(m)}
-                            className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((m, i) => {
+                    const isChecked = selected.has(m.id);
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`transition-colors cursor-pointer ${
+                          isChecked
+                            ? 'bg-indigo-50/60 dark:bg-indigo-900/20'
+                            : 'hover:bg-gray-50/60 dark:hover:bg-gray-700/30'
+                        }`}
+                        onClick={() => toggleOne(m.id)}
+                      >
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleOne(m.id)}
+                            className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 text-xs font-mono">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                          {m.first_name} {m.last_name}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.college || '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{yearLabel(m.year) || '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{m.points}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{m.events_attended}</td>
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openEdit(m)}
+                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setDeleting(m)}
+                              className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Bulk Delete Modal ── */}
+      {confirmBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Delete {selectedCount} member{selectedCount !== 1 ? 's' : ''}?
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-5">
+              This will permanently remove {selectedCount} member{selectedCount !== 1 ? 's' : ''} and all their attendance records. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+                {bulkDeleting ? 'Deleting…' : `Yes, delete ${selectedCount}`}
+              </button>
+              <button onClick={() => setConfirmBulk(false)}
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Edit Modal ── */}
       {editing && (
@@ -250,7 +357,7 @@ export default function AdminMembers() {
         </div>
       )}
 
-      {/* ── Delete Modal ── */}
+      {/* ── Single Delete Modal ── */}
       {deleting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-700">
