@@ -92,8 +92,14 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
+/** Lowercase + strip all punctuation + collapse whitespace for comparison only.
+ *  "Lynna, On" and "Lynna On" both → "lynna on" (distance 0, score 100) */
+function normalizeForMatch(s: string): string {
+  return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function nameSimilarity(a: string, b: string): number {
-  const na = a.toLowerCase().trim(), nb = b.toLowerCase().trim();
+  const na = normalizeForMatch(a), nb = normalizeForMatch(b);
   if (!na || !nb) return 0;
   if (na === nb) return 100;
   return Math.round((1 - levenshtein(na, nb) / Math.max(na.length, nb.length)) * 100);
@@ -114,20 +120,15 @@ function capitalizeName(s: string): string {
 
 /**
  * Normalise a raw name string for matching purposes:
- *  - "Nguyen, Kevin"     → "Kevin Nguyen"  (comma reversal)
+ *  - "Lynna, On"        → "Lynna On"      (comma stripped, order kept)
  *  - "Kevin J. Nguyen"  → "Kevin Nguyen"  (middle initial with period)
  *  - "Kevin J Nguyen"   → "Kevin Nguyen"  (single-letter middle word)
  * Returns a capitalised string. Does NOT mutate the display name.
  */
 function cleanName(raw: string): string {
   let s = raw.trim();
-  // Handle "Last, First [Middle]" → "First [Middle] Last"
-  const commaIdx = s.indexOf(',');
-  if (commaIdx > 0) {
-    const last = s.slice(0, commaIdx).trim();
-    const rest = s.slice(commaIdx + 1).trim();
-    s = `${rest} ${last}`;
-  }
+  // Strip ALL commas — treat as typos/separators, never as Last/First markers
+  s = s.replace(/,/g, ' ');
   // Remove middle initials followed by a period: "J." or "J. "
   s = s.replace(/\b[A-Za-z]\.\s*/g, '');
   // Remove lone single-letter middle words between two multi-letter words
