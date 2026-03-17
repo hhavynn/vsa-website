@@ -342,7 +342,6 @@ export default function AdminImport() {
         if (error) throw error;
       }
 
-      const total = toUpdate.length + toCreate.length;
       toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new.`);
       setStep('done');
     } catch (err: unknown) {
