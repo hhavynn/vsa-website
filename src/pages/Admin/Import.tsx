@@ -97,6 +97,14 @@ function compositeScore(ns: number, cm: boolean, ym: boolean) {
   return Math.round(ns * 0.6 + (cm ? 25 : 0) + (ym ? 15 : 0));
 }
 
+// ─── Name helpers ─────────────────────────────────────────────────────────────
+
+/** Capitalize the first letter of every word, lowercase the rest.
+ *  "john doe" → "John Doe", "MARY LOU" → "Mary Lou" */
+function capitalizeName(s: string): string {
+  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
 
 function parseCSV(raw: string): Record<string, string>[] {
@@ -232,10 +240,10 @@ export default function AdminImport() {
       // Build name
       let displayName = '';
       if (useFull) {
-        displayName = (fullCol ? row[fullCol] : '').trim();
+        displayName = capitalizeName(fullCol ? row[fullCol] : '');
       } else {
-        const fn = (fCol ? row[fCol] : '').trim();
-        const ln = (lCol ? row[lCol] : '').trim();
+        const fn = capitalizeName(fCol ? row[fCol] : '');
+        const ln = capitalizeName(lCol ? row[lCol] : '');
         displayName = [fn, ln].filter(Boolean).join(' ');
       }
 
