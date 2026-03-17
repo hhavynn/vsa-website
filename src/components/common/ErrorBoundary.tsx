@@ -23,16 +23,30 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // ChunkLoadError = browser cached old index.html after a new deploy.
+    // Auto-reload once to fetch the fresh bundle — clears itself silently.
+    const isChunkError =
+      error.name === 'ChunkLoadError' ||
+      error.message?.includes('Loading chunk') ||
+      error.message?.includes('Failed to fetch dynamically imported module');
+
+    if (isChunkError) {
+      // Guard against reload loops: only reload if we haven't just done so
+      const lastReload = Number(sessionStorage.getItem('chunkReloadAt') ?? 0);
+      if (Date.now() - lastReload > 10_000) {
+        sessionStorage.setItem('chunkReloadAt', String(Date.now()));
+        window.location.reload();
+        return;
+      }
+    }
+
     console.error('Uncaught error:', error, errorInfo);
 
-    // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // Log to external service in production
     if (process.env.NODE_ENV === 'production') {
-      // You could send to Sentry, LogRocket, etc.
       console.error('Production error:', { error, errorInfo });
     }
   }

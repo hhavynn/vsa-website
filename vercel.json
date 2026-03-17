@@ -12,13 +12,26 @@
   "routes": [
     {
       "src": "/static/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
       "dest": "/static/$1"
+    },
+    {
+      "src": "/index.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      },
+      "dest": "/index.html"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      },
       "dest": "/index.html"
     }
   ]
