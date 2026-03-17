@@ -15,13 +15,39 @@ interface Member {
 }
 
 const YEAR_LABELS: Record<string, string> = {
-  '1': '1st year', '2': '2nd year', '3': '3rd year',
-  '4': '4th year', '5': '5th year', 'transfer': 'Transfer',
+  '1': '1st Year', '2': '2nd Year', '3': '3rd Year',
+  '4': '4th Year', '5': '5th Year',
+  'transfer-1': '1st Year Transfer', 'transfer-2': '2nd Year Transfer',
 };
 
 function yearLabel(y: string | null) {
   if (!y) return '';
   return YEAR_LABELS[y] ?? y;
+}
+
+const COLLEGE_OPTIONS = [
+  { value: 'revelle',  label: 'Revelle' },
+  { value: 'muir',     label: 'Muir' },
+  { value: 'marshall', label: 'Marshall' },
+  { value: 'warren',   label: 'Warren' },
+  { value: 'erc',      label: 'ERC (Eleanor Roosevelt)' },
+  { value: 'sixth',    label: 'Sixth' },
+  { value: 'seventh',  label: 'Seventh' },
+  { value: 'eighth',   label: 'Eighth' },
+];
+
+/** Map whatever the DB has stored → nearest dropdown key, or return as-is */
+function toCollegeKey(s: string): string {
+  const t = s.toLowerCase();
+  if (/revelle/.test(t))              return 'revelle';
+  if (/muir/.test(t))                 return 'muir';
+  if (/marshall|thurgood/.test(t))    return 'marshall';
+  if (/warren/.test(t))               return 'warren';
+  if (/eleanor|erc|roosevelt/.test(t))return 'erc';
+  if (/sixth|6th/.test(t))            return 'sixth';
+  if (/seventh|7th/.test(t))          return 'seventh';
+  if (/eighth|8th/.test(t))           return 'eighth';
+  return s; // unknown — keep as-is so it doesn't get silently cleared
 }
 
 export default function AdminMembers() {
@@ -120,7 +146,7 @@ export default function AdminMembers() {
     setEditForm({
       first_name:      m.first_name,
       last_name:       m.last_name,
-      college:         m.college ?? '',
+      college:         m.college ? toCollegeKey(m.college) : '',
       year:            m.year ?? '',
       points:          m.points,
       events_attended: m.events_attended,
@@ -339,9 +365,13 @@ export default function AdminMembers() {
               </div>
 
               <Field label="College">
-                <input value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))}
-                  placeholder="e.g. Revelle, Muir, Marshall…"
-                  className={inputCls} />
+                <select value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))}
+                  className={inputCls}>
+                  <option value="">— select —</option>
+                  {COLLEGE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
               </Field>
 
               <Field label="Year">
