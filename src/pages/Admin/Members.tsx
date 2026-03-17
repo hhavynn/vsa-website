@@ -30,6 +30,17 @@ export default function AdminMembers() {
   const [search, setSearch]     = useState('');
 
   // Multi-select
+  // Sorting
+  type SortKey = 'name' | 'points' | 'events_attended';
+  const [sortKey, setSortKey]   = useState<SortKey>('points');
+  const [sortAsc, setSortAsc]   = useState(false);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortAsc(a => !a);
+    else { setSortKey(key); setSortAsc(key === 'name'); }
+  }
+
+  // Multi-select
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmBulk, setConfirmBulk]   = useState(false);
@@ -57,14 +68,26 @@ export default function AdminMembers() {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = members.filter(m => {
-    const q = search.toLowerCase();
-    return (
-      `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
-      (m.college ?? '').toLowerCase().includes(q) ||
-      (m.year ?? '').toLowerCase().includes(q)
-    );
-  });
+  const filtered = members
+    .filter(m => {
+      const q = search.toLowerCase();
+      return (
+        `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
+        (m.college ?? '').toLowerCase().includes(q) ||
+        (m.year ?? '').toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') {
+        cmp = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+      } else if (sortKey === 'points') {
+        cmp = a.points - b.points;
+      } else {
+        cmp = a.events_attended - b.events_attended;
+      }
+      return sortAsc ? cmp : -cmp;
+    });
 
   // ── Selection helpers ─────────────────────────────────────────────────────────
   const allFilteredIds = filtered.map(m => m.id);
@@ -206,11 +229,13 @@ export default function AdminMembers() {
                         className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
                     </th>
-                    {['#', 'Name', 'College', 'Year', 'Points', 'Events', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
+                    <SortTh label="Name"   sk="name"            active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">College</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Year</th>
+                    <SortTh label="Points" sk="points"          active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <SortTh label="Events" sk="events_attended" active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
@@ -387,6 +412,27 @@ export default function AdminMembers() {
 
 const inputCls = `w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
   text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent`;
+
+function SortTh({ label, sk, active, asc, onSort }: {
+  label: string; sk: string; active: string; asc: boolean; onSort: (k: any) => void;
+}) {
+  const isActive = active === sk;
+  return (
+    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+      <button
+        onClick={() => onSort(sk)}
+        className={`flex items-center gap-1 transition-colors ${
+          isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+        }`}
+      >
+        {label}
+        <span className="text-[10px] leading-none">
+          {isActive ? (asc ? '▲' : '▼') : '⇅'}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
