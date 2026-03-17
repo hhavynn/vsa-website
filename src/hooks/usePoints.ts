@@ -13,7 +13,9 @@ export function useUserPoints() {
   });
 }
 
-export function usePointsStats() {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// Dormant hooks — available for future use, backed by pointsRepository
+function usePointsStats() {
   const { user } = useAuth();
   
   return useQuery({
@@ -24,7 +26,7 @@ export function usePointsStats() {
   });
 }
 
-export function usePointsHistory(limit: number = 20) {
+function usePointsHistory(limit: number = 20) {
   const { user } = useAuth();
   
   return useQuery({
@@ -35,7 +37,7 @@ export function usePointsHistory(limit: number = 20) {
   });
 }
 
-export function useLeaderboard(limit: number = 10, offset: number = 0) {
+function useLeaderboard(limit: number = 10, offset: number = 0) {
   return useQuery({
     queryKey: ['leaderboard', limit, offset],
     queryFn: () => pointsRepository.getLeaderboard(limit, offset),
@@ -43,7 +45,7 @@ export function useLeaderboard(limit: number = 10, offset: number = 0) {
   });
 }
 
-export function useTopUsers(limit: number = 5) {
+function useTopUsers(limit: number = 5) {
   return useQuery({
     queryKey: ['top-users', limit],
     queryFn: () => pointsRepository.getTopUsers(limit),
@@ -51,7 +53,7 @@ export function useTopUsers(limit: number = 5) {
   });
 }
 
-export function useUserRank() {
+function useUserRank() {
   const { user } = useAuth();
   
   return useQuery({
@@ -62,7 +64,7 @@ export function useUserRank() {
   });
 }
 
-export function usePointsDistribution() {
+function usePointsDistribution() {
   return useQuery({
     queryKey: 'points-distribution',
     queryFn: () => pointsRepository.getPointsDistribution(),
@@ -70,7 +72,7 @@ export function usePointsDistribution() {
   });
 }
 
-export function useAddPoints() {
+function useAddPoints() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -87,6 +89,8 @@ export function useAddPoints() {
     },
   });
 }
+
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // Legacy hook for backward compatibility
 export function usePoints() {

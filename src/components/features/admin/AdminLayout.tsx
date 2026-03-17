@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import FeedbackTab from './FeedbackTab';
 
 const AdminLayout: React.FC = () => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('events');
 
   const tabs = [
     { id: 'events', label: 'Events', path: '/admin/events' },
@@ -23,16 +21,14 @@ const AdminLayout: React.FC = () => {
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
-            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </Link>
         ))}
       </div>
-      {activeTab === 'feedback' ? <FeedbackTab /> : <Outlet />}
-      {activeTab === 'events' && <FeedbackTab />}
+      <Outlet />
     </div>
   );
 };
 
-export default AdminLayout; 
+export default AdminLayout;

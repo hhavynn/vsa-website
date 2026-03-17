@@ -47,25 +47,21 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
     
     try {
       setUploading(true);
-      console.log('Upload started');
 
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
 
       const file = event.target.files[0];
-      console.log('File selected:', file.name);
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 
       // Upload image to Supabase Storage
-      console.log('Uploading to Supabase...');
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
-      console.log('Upload successful');
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -73,14 +69,12 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
         .getPublicUrl(filePath);
 
       // Update user profile with new avatar URL
-      console.log('Updating profile with new URL...');
       const { error: updateError } = await supabase
         .from('user_profiles')
         .update({ avatar_url: publicUrl })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
-      console.log('Profile updated successfully');
 
       setAvatarUrl(publicUrl);
     } catch (error) {
@@ -97,9 +91,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
   }, [user, userId, fetchAvatar]);
 
   const handleClick = () => {
-    console.log('Avatar clicked, showUploadButton:', showUploadButton);
     if (showUploadButton && fileInputRef.current) {
-      console.log('Triggering file input click');
       fileInputRef.current.click();
     }
   };

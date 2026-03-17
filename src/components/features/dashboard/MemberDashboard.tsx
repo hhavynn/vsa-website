@@ -3,17 +3,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { Event } from '../../../types';
 import { motion } from 'framer-motion';
-
-// Define event type labels
-const EVENT_TYPE_LABELS: Record<Event['event_type'], string> = {
-  other: 'General Events',
-  gbm: 'General Body Meeting',
-  mixer: 'Mixer',
-  winter_retreat: 'Winter Retreat',
-  vcn: 'VCN',
-  wildn_culture: 'Wild n\' Culture',
-  external_event: 'External Event'
-};
+import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 
 interface Achievement {
   id: string;
@@ -40,12 +30,13 @@ export function MemberDashboard() {
         // Fetch user points
         const { data: pointsData, error: pointsError } = await supabase
           .from('user_points')
-          .select('points')
+          .select('total_points')
           .eq('user_id', user.id)
           .single();
 
         if (pointsError) throw pointsError;
-        setPoints(pointsData?.points || 0);
+        const currentPoints = pointsData?.total_points || 0;
+        setPoints(currentPoints);
 
         // Fetch attended events
         const { data: attendanceData, error: attendanceError } = await supabase
@@ -55,22 +46,24 @@ export function MemberDashboard() {
 
         if (attendanceError) throw attendanceError;
 
-        if (attendanceData) {
+        let eventsData: Event[] = [];
+        if (attendanceData && attendanceData.length > 0) {
           const eventIds = attendanceData.map(a => a.event_id);
-          const { data: eventsData, error: eventsError } = await supabase
+          const { data: fetchedEvents, error: eventsError } = await supabase
             .from('events')
             .select('*')
             .in('id', eventIds);
 
           if (eventsError) throw eventsError;
-          setEventsAttended(eventsData || []);
+          eventsData = fetchedEvents || [];
+          setEventsAttended(eventsData);
         }
 
-        // Calculate achievements
-        const gbmCount = eventsAttended.filter(e => e.event_type === 'gbm').length;
-        const mixerCount = eventsAttended.filter(e => e.event_type === 'mixer').length;
-        const vcnCount = eventsAttended.filter(e => e.event_type === 'vcn').length;
-        const wildnCultureCount = eventsAttended.filter(e => e.event_type === 'wildn_culture').length;
+        // Calculate achievements from fresh data (not stale state)
+        const gbmCount = eventsData.filter(e => e.event_type === 'gbm').length;
+        const mixerCount = eventsData.filter(e => e.event_type === 'mixer').length;
+        const vcnCount = eventsData.filter(e => e.event_type === 'vcn').length;
+        const wildnCultureCount = eventsData.filter(e => e.event_type === 'wildn_culture').length;
 
         const newAchievements: Achievement[] = [
           {
@@ -117,8 +110,8 @@ export function MemberDashboard() {
             name: 'Point Collector',
             description: 'Earned 100 points',
             icon: '🏆',
-            unlocked: points >= 100,
-            progress: points,
+            unlocked: currentPoints >= 100,
+            progress: currentPoints,
             total: 100
           }
         ];
@@ -132,7 +125,7 @@ export function MemberDashboard() {
     };
 
     fetchUserData();
-  }, [user, eventsAttended, points]);
+  }, [user]);
 
   if (loading) {
     return (
@@ -259,4 +252,4 @@ export function MemberDashboard() {
       </div>
     </div>
   );
-} 
+}
