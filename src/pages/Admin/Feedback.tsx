@@ -4,9 +4,8 @@ import FeedbackTab from '../../components/features/admin/FeedbackTab';
 
 export default function AdminFeedback() {
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="py-6">
       <PageTitle title="Feedback Management" />
-      <AdminNav />
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">

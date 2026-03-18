@@ -237,9 +237,8 @@ export default function AdminEvents() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="py-6">
       <PageTitle title="Event Management" />
-      <AdminNav />
 
       {/* Tab switcher */}
       <div className="flex space-x-3 mb-6">

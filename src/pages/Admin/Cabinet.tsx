@@ -301,9 +301,8 @@ export default function AdminCabinet() {
   const labelCls = 'block text-sm font-medium text-gray-300';
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="py-6">
       <PageTitle title="Cabinet Management" />
-      <AdminNav />
 
       <div className="flex space-x-3 mb-6">
         <button onClick={() => setActiveTab('manage')} className={`px-5 py-2 rounded-lg font-medium text-sm ${activeTab === 'manage' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>

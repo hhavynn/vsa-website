@@ -558,10 +558,9 @@ export default function AdminImport() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
+    <div className="py-6">
       <Toaster position="top-right" />
-      <div className="max-w-5xl mx-auto">
-        <AdminNav />
+      <div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <div className="mb-8">
