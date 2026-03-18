@@ -25,7 +25,7 @@ const programs = [
     title: 'HOUSE PROGRAM',
     subtitle: 'Compete. Connect. Conquer.',
     description:
-      'Get sorted into one of four houses and compete for glory. Close-knit events, friendly rivalries, and a semester-long battle for the House Cup.',
+      'Join one of four houses for friendly rivalries, close-knit events, and a year-long battle for the ultimate prize.',
     image: '/images/get-involved/house.jpg',
     link: '/house-system',
     gradientFrom: 'from-emerald-950/80',
@@ -38,9 +38,9 @@ const programs = [
     id: 'intern',
     tag: 'LEADERSHIP',
     title: 'INTERN PROGRAM',
-    subtitle: 'Shape the Future of VSA',
+    subtitle: 'Step Behind the Scenes',
     description:
-      'Go behind the scenes. Learn how VSA operates, build real leadership skills, and leave your mark on the organization you love.',
+      'Shadow the cabinet, build actual leadership experience, and see exactly what it takes to run VSA from the inside out.',
     image: '/images/get-involved/intern.jpg',
     link: '/intern-program',
     gradientFrom: 'from-indigo-950/80',

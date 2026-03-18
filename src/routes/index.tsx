@@ -47,6 +47,12 @@ const Internship = lazy(() =>
 const Vcn = lazy(() =>
   import("../pages/Vcn").then((module) => ({ default: module.VCN }))
 );
+const VcnCurrent = lazy(() =>
+  import("../pages/VcnCurrent").then((module) => ({ default: module.VCNCurrent }))
+);
+const VcnArchive = lazy(() =>
+  import("../pages/VcnArchive").then((module) => ({ default: module.VCNArchive }))
+);
 const WildNCulture = lazy(() =>
   import("../pages/WildNCulture").then((module) => ({
     default: module.WildNCulture,
@@ -62,6 +68,7 @@ const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
+const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -94,6 +101,8 @@ export default function AppRoutes() {
               <Route path="/house-system" element={<House />} />
               <Route path="/intern-program" element={<Internship />} />
               <Route path="/vcn" element={<Vcn />} />
+              <Route path="/vcn/current" element={<VcnCurrent />} />
+              <Route path="/vcn/archive" element={<VcnArchive />} />
               <Route path="/wild-n-culture" element={<WildNCulture />} />
               <Route path="/signin" element={<SignIn />} />
 
@@ -113,6 +122,7 @@ export default function AppRoutes() {
                 <Route path="/admin/import" element={<AdminImport />} />
                 <Route path="/admin/members" element={<AdminMembers />} />
                 <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
+                <Route path="/admin/cabinet" element={<AdminCabinet />} />
               </Route>
 
               {/* 404 Route */}

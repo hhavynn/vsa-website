@@ -7,6 +7,7 @@ const AdminLayout: React.FC = () => {
   const tabs = [
     { id: 'events', label: 'Events', path: '/admin/events' },
     { id: 'feedback', label: 'Feedback', path: '/admin/feedback' },
+    { id: 'cabinet', label: 'Cabinet', path: '/admin/cabinet' },
   ];
 
   return (

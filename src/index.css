@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+/* Inter is loaded via <link> in index.html for zero-layout-shift font loading */
 
 @tailwind base;
 @tailwind components;
@@ -6,12 +6,20 @@
 
 @layer base {
   html {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    /* Inter variable font — editorial base typeface */
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-variation-settings: normal;
     scroll-behavior: smooth;
+    /* Zinc scale base colours — overridden by dark/light class on <html> */
+    background-color: theme('colors.zinc.50');
+    color: theme('colors.zinc.900');
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit', system-ui, sans-serif;
+  .dark html,
+  html.dark {
+    background-color: theme('colors.zinc.950');
+    color: theme('colors.zinc.50');
   }
 
   body {
@@ -23,29 +31,12 @@
 }
 
 @layer utilities {
-  .glass {
-    background: rgba(15, 15, 20, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .card {
-    background: rgba(30, 27, 75, 0.35);
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    border-radius: 1rem;
-  }
-
-  .card-hover {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-
-  .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 40px -8px rgba(99, 102, 241, 0.25);
-    border-color: rgba(99, 102, 241, 0.4);
-  }
-
+  /*
+   * Legacy gradient utilities — still referenced on public marketing pages
+   * (Home, SignIn, WildNCulture, NotFound).
+   * TODO: Replace with zinc-scale editorial backgrounds when those pages are
+   * redesigned. Do not add new usages of these classes.
+   */
   .text-gradient {
     background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #c4b5fd 100%);
     -webkit-background-clip: text;
