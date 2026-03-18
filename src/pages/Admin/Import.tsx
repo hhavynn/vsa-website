@@ -109,6 +109,7 @@ function compositeScore(ns: number, cm: boolean, ym: boolean) {
 }
 
 function getEffectiveStatus(row: RowResult): RowStatus {
+  if (row.status === 'match' && row.manualOverride === 'mark-new') return 'new';
   if (row.status !== 'review') return row.status;
   if (row.manualOverride === 'force-match') return 'match';
   if (row.manualOverride === 'mark-new') return 'new';
@@ -117,6 +118,12 @@ function getEffectiveStatus(row: RowResult): RowStatus {
 
 function canForceMatch(row: RowResult): boolean {
   return row.status === 'review' && !!row.matchedMember;
+}
+
+/** Returns true for any row that can be manually overridden to "Create New" —
+ *  both 75%+ confident matches AND 50–74% review rows. */
+function canMarkAsNew(row: RowResult): boolean {
+  return (row.status === 'match' || row.status === 'review') && !!row.matchedMember;
 }
 
 function buildMemberEnrichment(row: RowResult): MemberEnrichment {
@@ -285,7 +292,9 @@ export default function AdminImport() {
 
   function applyManualOverrideToSelected(override: Exclude<ManualOverride, null>) {
     setRows(current => current.map(row => {
-      if (!row.selected || !canForceMatch(row)) return row;
+      if (!row.selected) return row;
+      if (override === 'force-match' && !canForceMatch(row)) return row;
+      if (override === 'mark-new' && !canMarkAsNew(row)) return row;
       return { ...row, manualOverride: override };
     }));
   }
@@ -534,6 +543,7 @@ export default function AdminImport() {
   });
   const selectedRows = rows.filter(r => r.selected);
   const selectedReviewRows = selectedRows.filter(r => canForceMatch(r));
+  const selectedOverridableRows = selectedRows.filter(r => canMarkAsNew(r));
   const allRowsSelected = rows.length > 0 && rows.every(r => r.selected);
   const summary = {
     match:    rows.filter(r => getEffectiveStatus(r) === 'match').length,
@@ -682,7 +692,7 @@ export default function AdminImport() {
                   </button>
                   <button
                     onClick={() => applyManualOverrideToSelected('mark-new')}
-                    disabled={selectedReviewRows.length === 0}
+                    disabled={selectedOverridableRows.length === 0}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                   >
                     Mark Selected as New
@@ -728,9 +738,11 @@ export default function AdminImport() {
                       const effectiveStatus = getEffectiveStatus(row);
                       const forcedMatch = row.status === 'review' && row.manualOverride === 'force-match';
                       const forcedNew = row.status === 'review' && row.manualOverride === 'mark-new';
+                      const isHighConfidenceOverride = row.status === 'match' && row.manualOverride === 'mark-new';
 
                       return (
                       <tr key={row.rowId} className={
+                        isHighConfidenceOverride     ? 'border-l-4 border-orange-400 bg-orange-50/40 dark:bg-orange-900/10' :
                         forcedMatch                  ? 'bg-green-100/70 dark:bg-green-900/20' :
                         effectiveStatus === 'match' ? 'bg-green-50/40 dark:bg-green-900/10' :
                         effectiveStatus === 'new'   ? 'bg-blue-50/40 dark:bg-blue-900/10' :
@@ -755,7 +767,14 @@ export default function AdminImport() {
                               )}
                             </span>
                           )}
-                          {effectiveStatus === 'new' && <ActionBadge color="blue"  label={getActionLabel(row)} />}
+                          {effectiveStatus === 'new' && (
+                            <span className="inline-flex items-center gap-1">
+                              <ActionBadge color="blue" label={getActionLabel(row)} />
+                              {isHighConfidenceOverride && (
+                                <span className="text-[11px] text-orange-500" title="High-confidence match overridden — double-check before importing">⚠️</span>
+                              )}
+                            </span>
+                          )}
                           {effectiveStatus === 'already' && <ActionBadge color="gray"  label="Skip" />}
                           {effectiveStatus === 'review' && <ActionBadge color="amber" label="Review" />}
                           {canForceMatch(row) && (
@@ -789,6 +808,27 @@ export default function AdminImport() {
                               )}
                             </div>
                           )}
+                          {row.status === 'match' && (
+                            <div className="mt-2 flex flex-col gap-1">
+                              {row.manualOverride !== 'mark-new' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'mark-new' }))}
+                                  className="text-left text-[11px] font-medium text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300"
+                                >
+                                  Treat as New Member
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
+                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                >
+                                  Restore Match
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
                           <div>{row.displayName || <span className="text-gray-400 italic">—</span>}</div>
@@ -804,7 +844,7 @@ export default function AdminImport() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
-                          {row.matchedMember ? (
+                          {row.matchedMember && !isHighConfidenceOverride ? (
                             <span>
                               {row.matchedMember.first_name} {row.matchedMember.last_name}
                               {row.matchedMember.college && (
@@ -830,6 +870,8 @@ export default function AdminImport() {
                                 <div className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">Missing profile fields will be merged during import</div>
                               )}
                             </span>
+                          ) : isHighConfidenceOverride ? (
+                            <span className="text-orange-500 dark:text-orange-400 text-xs italic">match ignored — will create new member</span>
                           ) : (
                             <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
                           )}
