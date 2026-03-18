@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
@@ -35,54 +34,38 @@ export default function Gallery() {
   if (error) return <PageError message={error} />;
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Hero */}
-      <div className="bg-gradient-to-b from-indigo-950 to-gray-950 pt-20 pb-16 px-4">
-        <div className="container mx-auto text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-4"
-          >
-            Gallery
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-lg text-indigo-200/70 max-w-xl mx-auto"
-          >
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      {/* Header */}
+      <div className="border-b border-zinc-200 dark:border-zinc-800 pt-16 pb-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">Gallery</h1>
+          <p className="text-zinc-500 text-sm">
             Photos from our events — view full albums on Google Photos.
-          </motion.p>
+          </p>
         </div>
       </div>
 
       {/* Albums grid */}
-      <div className="container mx-auto px-4 pb-20">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         {albums.length === 0 ? (
-          <div className="text-center py-24 text-gray-500">
-            <svg className="w-14 h-14 mx-auto mb-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-24 text-zinc-500">
+            <svg className="w-14 h-14 mx-auto mb-4 text-zinc-300 dark:text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-lg">No albums yet — check back soon!</p>
+            <p className="text-base">No albums yet — check back soon!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {albums.map((album, i) => (
-              <motion.a
+            {albums.map((album) => (
+              <a
                 key={album.id}
                 href={album.google_photos_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                whileHover={{ y: -4 }}
-                className="group block rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-indigo-500/40 shadow-lg transition-colors duration-200"
+                className="group block rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150"
               >
                 {/* Cover image */}
-                <div className="relative h-52 bg-slate-800 overflow-hidden">
+                <div className="relative h-52 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                   {album.cover_image_url ? (
                     <img
                       src={album.cover_image_url}
@@ -90,8 +73,8 @@ export default function Gallery() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo-900/50 to-violet-900/50 flex items-center justify-center">
-                      <svg className="w-12 h-12 text-indigo-400/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-12 h-12 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -99,7 +82,7 @@ export default function Gallery() {
 
                   {/* "View on Google Photos" overlay on hover */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <span className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium px-4 py-2 rounded-full">
+                    <span className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium px-4 py-2 rounded">
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14H7.5C6.67 16 6 15.33 6 14.5v-5C6 8.67 6.67 8 7.5 8h9c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm-7-2l3-2-3-2v4z"/>
                       </svg>
@@ -110,28 +93,28 @@ export default function Gallery() {
 
                 {/* Info */}
                 <div className="p-5">
-                  <h3 className="font-semibold text-white text-base leading-snug group-hover:text-indigo-300 transition-colors">
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 text-base leading-snug group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                     {album.title}
                   </h3>
                   {album.description && (
-                    <p className="text-slate-400 text-sm mt-1.5 line-clamp-2 leading-relaxed">
+                    <p className="text-zinc-500 text-sm mt-1.5 line-clamp-2 leading-relaxed">
                       {album.description}
                     </p>
                   )}
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-zinc-400">
                       {new Date(album.date).toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric',
                       })}
                     </span>
-                    <span className="text-xs text-indigo-400 font-medium group-hover:underline">
+                    <span className="text-xs text-brand-600 dark:text-brand-400 font-medium">
                       Google Photos ↗
                     </span>
                   </div>
                 </div>
-              </motion.a>
+              </a>
             ))}
           </div>
         )}

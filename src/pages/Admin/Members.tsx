@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
@@ -503,7 +502,6 @@ export default function AdminMembers() {
             )}
           </div>
         )}
-      </div>
 
       {/* ── Bulk Delete Modal ── */}
       {confirmBulk && (

@@ -9,12 +9,12 @@ interface PageErrorProps {
   showRetry?: boolean;
 }
 
-export function PageError({ 
-  error, 
-  resetError, 
-  title = "Something went wrong", 
+export function PageError({
+  error,
+  resetError,
+  title = "Something went wrong",
   message = "We encountered an unexpected error. Please try again.",
-  showRetry = true 
+  showRetry = true
 }: PageErrorProps) {
   const handleRetry = () => {
     if (resetError) {
@@ -28,67 +28,62 @@ export function PageError({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
       className="min-h-[400px] flex items-center justify-center p-8"
     >
       <div className="max-w-md w-full text-center">
         <div className="mb-6">
-          <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-            <svg 
-              className="w-8 h-8 text-red-600 dark:text-red-400" 
-              fill="none" 
-              stroke="currentColor" 
+          <div className="mx-auto w-16 h-16 bg-red-950/20 border border-red-900/40 rounded flex items-center justify-center mb-4">
+            <svg
+              className="w-8 h-8 text-red-500"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
           </div>
-          
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">
             {title}
           </h2>
-          
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
+
+          <p className="text-zinc-500 mb-6">
             {message}
           </p>
-          
+
           {process.env.NODE_ENV === 'development' && error && (
             <details className="mb-6 text-left">
-              <summary className="cursor-pointer text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+              <summary className="cursor-pointer text-sm font-medium text-zinc-500 mb-2">
                 Error Details (Development)
               </summary>
-              <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-md overflow-auto">
+              <pre className="text-xs bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3 rounded overflow-auto">
                 {error.stack || error.message}
               </pre>
             </details>
           )}
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {showRetry && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               onClick={handleRetry}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors duration-200 font-medium"
+              className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium text-sm transition-colors duration-150"
             >
               Try Again
-            </motion.button>
+            </button>
           )}
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+
+          <button
             onClick={() => window.history.back()}
-            className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 font-medium"
+            className="px-6 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded font-medium text-sm transition-colors duration-150"
           >
             Go Back
-          </motion.button>
+          </button>
         </div>
       </div>
     </motion.div>

@@ -15,10 +15,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 const buttonVariants: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'bg-indigo-600 text-white border border-indigo-600 ' +
-    'hover:bg-indigo-700 hover:border-indigo-700 ' +
-    'dark:bg-indigo-600 dark:hover:bg-indigo-700 ' +
-    'focus-visible:ring-indigo-500',
+    'bg-brand-600 text-white border border-brand-600 ' +
+    'hover:bg-brand-700 hover:border-brand-700 ' +
+    'dark:bg-brand-600 dark:hover:bg-brand-700 ' +
+    'focus-visible:ring-brand-600',
   secondary:
     'bg-zinc-800 text-zinc-100 border border-zinc-700 ' +
     'hover:bg-zinc-700 ' +
@@ -61,7 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center rounded-md',
+          'inline-flex items-center justify-center rounded',
           'transition-colors duration-150',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
           'dark:focus-visible:ring-offset-zinc-950',

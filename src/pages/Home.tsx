@@ -10,22 +10,18 @@ import { format } from 'date-fns';
 
 const pillars = [
   {
-    icon: '🤝',
     label: 'Social',
     description: 'Build bonds through the ACE Program and House System',
   },
   {
-    icon: '🌏',
     label: 'Community',
     description: 'A supportive space for Vietnamese and non-Vietnamese students alike',
   },
   {
-    icon: '📚',
     label: 'Academic',
     description: 'Prioritize academic growth alongside cultural engagement',
   },
   {
-    icon: '🎭',
     label: 'Cultural',
     description: 'Celebrate heritage through VCN, Black April, and more',
   },
@@ -57,68 +53,52 @@ export function Home() {
       <PageTitle title="Home" />
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden">
-        {/* Background gradient mesh */}
-        <div className="absolute inset-0 hero-gradient" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(99,102,241,0.35),transparent)]" />
-
-        {/* Floating orbs */}
-        <motion.div
-          animate={{ y: [0, -20, 0], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none"
-        />
-        <motion.div
-          animate={{ y: [0, 20, 0], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-violet-600/10 blur-3xl pointer-events-none"
-        />
-
+      <section className="relative min-h-[72vh] flex items-center justify-center bg-zinc-950 border-b border-zinc-800 overflow-hidden">
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-slate-400 text-sm font-medium tracking-widest uppercase mb-4"
+            className="text-zinc-500 text-xs font-medium tracking-widest uppercase mb-5"
           >
             {currentDate}
           </motion.p>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="font-heading font-extrabold text-5xl sm:text-6xl md:text-7xl text-white mb-6 leading-tight"
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="font-bold text-5xl sm:text-6xl md:text-7xl text-zinc-50 mb-6 leading-tight tracking-tight"
           >
             Welcome to{' '}
-            <span className="text-gradient">VSA at UCSD</span>
+            <span className="text-brand-500">VSA at UCSD</span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="text-slate-300 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-zinc-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
           >
             Promoting and preserving Vietnamese culture since 1977 — a home
             for every student at UC San Diego.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             className="flex flex-wrap gap-3 justify-center"
           >
             <Link
               to="/events"
-              className="px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-glow transition-all duration-150"
+              className="px-7 py-3.5 rounded bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm transition-colors duration-150"
             >
               View Events
             </Link>
             <Link
               to="/get-involved"
-              className="px-7 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold text-sm transition-all duration-150"
+              className="px-7 py-3.5 rounded border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-zinc-100 font-semibold text-sm transition-colors duration-150"
             >
               Get Involved
             </Link>
@@ -129,7 +109,7 @@ export function Home() {
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.8, repeat: Infinity }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-slate-500"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-zinc-600"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -139,11 +119,11 @@ export function Home() {
 
       {/* ── Mission + Pillars ──────────────────────────────────── */}
       <section className="py-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16">
           <RevealOnScrollWrapper>
-            <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 h-full">
-              <h2 className="font-heading text-2xl font-bold text-white mb-4">Our Mission &amp; History</h2>
-              <div className="space-y-4 text-slate-300 leading-relaxed text-sm">
+            <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-8 h-full">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-4">Our Mission &amp; History</h2>
+              <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed text-sm">
                 <p>
                   The Vietnamese Student Association at UC San Diego strives to promote and preserve
                   Vietnamese culture. We provide resources and a safe space for students to unite
@@ -158,10 +138,10 @@ export function Home() {
           </RevealOnScrollWrapper>
 
           <RevealOnScrollWrapper delay={0.1}>
-            <div className="rounded-2xl bg-gradient-to-br from-indigo-900/40 to-violet-900/40 border border-indigo-700/30 p-8 h-full flex flex-col justify-between">
+            <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-8 h-full flex flex-col justify-between">
               <div>
-                <h2 className="font-heading text-2xl font-bold text-white mb-3">Get Involved</h2>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">Get Involved</h2>
+                <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mb-6">
                   Come to our events and immerse yourself in Vietnamese culture! Connect with our
                   community and meet cabinet members who are passionate about making you feel at home.
                 </p>
@@ -169,14 +149,14 @@ export function Home() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   to="/events"
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors duration-150"
+                  className="px-5 py-2.5 rounded bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors duration-150"
                 >
                   Upcoming Events
                 </Link>
                 {!user && (
                   <Link
                     to="/signin"
-                    className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-semibold transition-colors duration-150"
+                    className="px-5 py-2.5 rounded border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-semibold transition-colors duration-150"
                   >
                     Member Sign In
                   </Link>
@@ -188,15 +168,17 @@ export function Home() {
 
         {/* Four Pillars */}
         <RevealOnScrollWrapper>
-          <h2 className="font-heading text-2xl font-bold text-white text-center mb-8">Our Four Pillars</h2>
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Our Four Pillars</h2>
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+          </div>
         </RevealOnScrollWrapper>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {pillars.map((p, i) => (
             <RevealOnScrollWrapper key={p.label} delay={i * 0.08}>
-              <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-6 text-center hover:border-indigo-500/30 transition-colors duration-200">
-                <span className="text-3xl mb-3 block">{p.icon}</span>
-                <h3 className="font-heading font-semibold text-white mb-2">{p.label}</h3>
-                <p className="text-slate-400 text-xs leading-relaxed">{p.description}</p>
+              <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-6 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
+                <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-2 text-sm">{p.label}</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">{p.description}</p>
               </div>
             </RevealOnScrollWrapper>
           ))}
@@ -207,10 +189,10 @@ export function Home() {
       <section className="pb-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <RevealOnScrollWrapper>
           <div className="flex items-center justify-between mb-8">
-            <h2 className="font-heading text-2xl font-bold text-white">Upcoming Events</h2>
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Upcoming Events</h2>
             <Link
               to="/events"
-              className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors duration-150"
+              className="text-brand-600 hover:text-brand-700 dark:text-brand-400 text-sm font-medium transition-colors duration-150"
             >
               View all →
             </Link>
@@ -219,41 +201,37 @@ export function Home() {
 
         {eventsLoading ? (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 rounded-full border-2 border-slate-700 border-t-indigo-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-2 border-zinc-300 dark:border-zinc-700 border-t-brand-600 animate-spin" />
           </div>
         ) : eventsError ? (
-          <div className="rounded-xl bg-red-900/20 border border-red-800/40 p-6 text-red-400 text-sm text-center">
+          <div className="border border-red-900/40 bg-red-950/20 rounded p-6 text-red-400 text-sm text-center">
             Failed to load events — please try again later.
           </div>
         ) : upcomingEvents.length === 0 ? (
-          <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-10 text-center">
-            <p className="text-slate-400">No upcoming events at the moment. Check back soon!</p>
+          <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-10 text-center">
+            <p className="text-zinc-500">No upcoming events at the moment. Check back soon!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingEvents.map((event, i) => (
               <RevealOnScrollWrapper key={event.id} delay={i * 0.08}>
-                <motion.div
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  className="rounded-2xl bg-slate-900 border border-slate-800/80 overflow-hidden hover:border-indigo-500/30 transition-colors duration-200 shadow-card"
-                >
+                <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
                   {event.image_url && (
-                    <div className="h-40 overflow-hidden">
+                    <div className="h-40 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                       <img src={event.image_url} alt={event.name} className="w-full h-full object-cover" />
                     </div>
                   )}
                   <div className="p-5">
-                    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-600/20 text-indigo-400 mb-3">
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded mb-3">
                       {EVENT_TYPE_LABELS[event.event_type]}
                     </span>
-                    <h3 className="font-heading font-semibold text-white mb-1.5 line-clamp-1">{event.name}</h3>
-                    <p className="text-slate-400 text-xs line-clamp-2 mb-3">{event.description}</p>
-                    <p className="text-slate-500 text-xs">
+                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-1.5 line-clamp-1 text-base">{event.name}</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-xs line-clamp-2 mb-3">{event.description}</p>
+                    <p className="text-zinc-400 text-xs">
                       {format(new Date(event.date), 'MMM d, yyyy')}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               </RevealOnScrollWrapper>
             ))}
           </div>

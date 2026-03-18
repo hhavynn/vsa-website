@@ -17,28 +17,25 @@ export function Modal({
   title,
   message,
   confirmText = 'Confirm',
-  cancelText = 'Cancel'
+  cancelText = 'Cancel',
 }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{title}</h3>
-        <p className="text-gray-700 dark:text-gray-200 mb-6">{message}</p>
-        <div className="flex justify-end space-x-4">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-md p-6 max-w-sm w-full">
+        <h3 className="text-base font-semibold text-zinc-50 mb-2">{title}</h3>
+        <p className="text-sm text-zinc-400 mb-5">{message}</p>
+        <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
+            className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors"
           >
             {cancelText}
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200"
+            onClick={() => { onConfirm(); onClose(); }}
+            className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded transition-colors"
           >
             {confirmText}
           </button>
@@ -46,4 +43,4 @@ export function Modal({
       </div>
     </div>
   );
-} 
+}

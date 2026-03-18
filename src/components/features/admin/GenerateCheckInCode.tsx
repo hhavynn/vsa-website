@@ -4,10 +4,10 @@ import { supabase } from '../../../lib/supabase';
 type EventType = 'general_event' | 'wildn_culture' | 'vcn_dance_practice' | 'vcn_attendance';
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
-  { value: 'general_event', label: 'General Event' },
-  { value: 'wildn_culture', label: 'Wildn Culture' },
+  { value: 'general_event',      label: 'General Event' },
+  { value: 'wildn_culture',      label: 'Wild n Culture' },
   { value: 'vcn_dance_practice', label: 'VCN Dance Practice' },
-  { value: 'vcn_attendance', label: 'VCN Attendance' }
+  { value: 'vcn_attendance',     label: 'VCN Attendance' },
 ];
 
 export function GenerateCheckInCode() {
@@ -22,65 +22,50 @@ export function GenerateCheckInCode() {
       setError(null);
       setGeneratedCode(null);
 
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error('User not authenticated');
 
-      // Generate a random 6-character code
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // Get points for the event type
       const { data: pointsData, error: pointsError } = await supabase
         .rpc('get_event_points', { event_type: eventType });
-
       if (pointsError) throw pointsError;
 
-      // Calculate expiration time (6 hours from now)
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 6);
 
-      // Insert the code
       const { error: insertError } = await supabase
         .from('check_in_codes')
-        .insert({
-          code,
-          event_type: eventType,
-          points: pointsData,
-          created_by: user.id,
-          expires_at: expiresAt.toISOString()
-        });
-
+        .insert({ code, event_type: eventType, points: pointsData, created_by: user.id, expires_at: expiresAt.toISOString() });
       if (insertError) throw insertError;
 
       setGeneratedCode(code);
     } catch (err) {
       console.error('Error generating code:', err);
-      setError('Failed to generate code. Please try again.');
+      setError('Failed to generate code.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-4 text-white">Generate Check-in Code</h2>
-      
+    <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
+      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Generate Check-in Code</h2>
+
       <div className="space-y-4">
         <div>
-          <label htmlFor="eventType" className="block text-sm font-medium text-gray-700">
-            Event Type
+          <label htmlFor="eventType" className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">
+            Event type
           </label>
           <select
             id="eventType"
             value={eventType}
-            onChange={(e) => setEventType(e.target.value as EventType)}
-            className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            onChange={e => setEventType(e.target.value as EventType)}
+            className="block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
           >
-            {EVENT_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
+            {EVENT_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
         </div>
@@ -88,23 +73,23 @@ export function GenerateCheckInCode() {
         <button
           onClick={generateCode}
           disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+          className="w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-sm font-medium rounded transition-colors disabled:opacity-50"
         >
           {isLoading ? 'Generating...' : 'Generate Code'}
         </button>
 
         {error && (
-          <div className="text-red-600 text-sm">{error}</div>
+          <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">{error}</div>
         )}
 
         {generatedCode && (
-          <div className="mt-4 p-4 bg-gray-700 rounded-md">
-            <p className="text-sm text-gray-300">Generated Code:</p>
-            <p className="text-2xl font-mono font-bold text-indigo-400">{generatedCode}</p>
-            <p className="text-sm text-gray-400 mt-2">Expires in 6 hours</p>
+          <div className="mt-2 p-4 border border-zinc-200 dark:border-[#27272a] bg-zinc-50 dark:bg-zinc-900/60 rounded">
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-label mb-1">Generated code</p>
+            <p className="text-2xl font-mono font-bold text-zinc-900 dark:text-zinc-50 tracking-widest">{generatedCode}</p>
+            <p className="text-xs text-zinc-400 mt-2">Expires in 6 hours</p>
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

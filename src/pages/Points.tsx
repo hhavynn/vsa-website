@@ -46,13 +46,13 @@ export default function Points() {
 
   return (
     <RevealOnScrollWrapper>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Points</h1>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-8">Points</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">Your Points</h2>
-            <p className="text-4xl font-bold text-indigo-600">{points}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] rounded-md p-6">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">Your Points</h2>
+            <p className="text-4xl font-bold text-brand-600">{points}</p>
           </div>
 
           <div>

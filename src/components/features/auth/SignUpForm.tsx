@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 
+const inputCls = 'mt-1 block w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
+const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
+
 export function SignUpForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +33,6 @@ export function SignUpForm() {
       });
 
       if (signUpError) throw signUpError;
-
       if (!user) throw new Error('No user returned from sign up');
 
       setSuccess('Sign up successful! Please check your email to confirm your account.');
@@ -43,86 +45,74 @@ export function SignUpForm() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-gray-800 rounded-lg shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 text-center text-white">Sign Up</h2>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="firstName" className={labelCls}>First Name</label>
+        <input
+          type="text"
+          id="firstName"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className={inputCls}
+          required
+        />
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-300">
-            First Name
-          </label>
-          <input
-            type="text"
-            id="firstName"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          />
+      <div>
+        <label htmlFor="lastName" className={labelCls}>Last Name</label>
+        <input
+          type="text"
+          id="lastName"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className={inputCls}
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="email" className={labelCls}>Email</label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={inputCls}
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password" className={labelCls}>Password</label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className={inputCls}
+          required
+        />
+      </div>
+
+      {success && (
+        <div className="p-3 rounded border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 text-sm">
+          {success}
         </div>
+      )}
 
-        <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-300">
-            Last Name
-          </label>
-          <input
-            type="text"
-            id="lastName"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          />
+      {error && (
+        <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">
+          {error}
         </div>
+      )}
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-300">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          />
-        </div>
-
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-300">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          />
-        </div>
-
-        {success && (
-          <div className="p-3 rounded-md bg-green-900 text-green-300">
-            {success}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-3 rounded-md bg-red-900 text-red-300">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
-          {loading ? 'Signing up...' : 'Sign Up'}
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full flex justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
+      >
+        {loading ? 'Signing up...' : 'Sign Up'}
+      </button>
+    </form>
   );
 }

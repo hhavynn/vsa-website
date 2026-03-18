@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
-import { AdminNav } from '../../components/features/admin/AdminNav';
 
 interface CabinetMember {
   id: string;
@@ -46,7 +45,7 @@ const MIGRATION_DATA = [
   { name: 'Mindy Tran', role: 'Internal Vice President', category: 'Executive Board', image: 'mindy_tran.png', year: 'Third Year', college: 'Muir College', major: 'General Biology' },
   { name: 'Martin Dang', role: 'Secretary', category: 'Executive Board', image: 'martin_dang.png', year: 'Third Year', college: 'Revelle College', major: 'Math-CS' },
   { name: 'Brandon Thach', role: 'Treasurer', category: 'Executive Board', image: 'brandon_thach.png', year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
-  
+
   // General Board
   { name: 'Asia Martin', role: 'Co-Media Director', category: 'General Board', year: 'Second Year Transfer', college: 'Sixth College', major: 'Human Biology' },
   { name: 'Anne Fa', role: 'Co-Media Director', category: 'General Board', year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
@@ -60,32 +59,35 @@ const MIGRATION_DATA = [
   { name: 'Abby Le', role: 'Culture & Philanthropy Chair', category: 'General Board', image: 'abby_le.png', year: 'Second Year', college: 'Seventh College', major: 'Business Economics' },
   { name: 'Andy Tran', role: 'Co-Historian', category: 'General Board', image: 'andy_tran.png', year: 'Second Year', college: 'Seventh College', major: 'Human Biology' },
   { name: 'Faith Nguyen', role: 'Co-Historian', category: 'General Board', year: 'Second Year', college: 'Seventh College', major: 'Business Psychology' },
-  
+
   // Interns
   { name: 'Sofia Nguyen', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1MsoSQYzw0AVTn_U2nZ_7HvSiiPnfUNyd', year: '2nd Year', college: 'Marshall College', major: 'Business Economics', funFact: 'i can do a cartwheel' },
   { name: 'Darlene Le', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1mkNDkpliEzsAc5Ct3ObywW5xR7Ggsj30', year: '1st Year', college: 'Eighth College', major: 'Cognitive Science', funFact: 'i won a giveaway to get coldplay floor seats :33' },
   { name: 'Hanni Lam', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1nraJhLxquS0sQawYUXhV96qu0w8DXfaX', year: '2nd Year', college: 'Muir College', major: 'Public Health with Concentration in Medicine Sciences', funFact: 'I went to an Art High School, like Victorious' },
-  { name: 'Allyson Hong', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=14P1xdlZqq_dEj99opLaYllxdb8CwbN2Q', year: '1st Year', college: 'Eighth College', major: 'Human Biology', funFact: 'I can do the worm :P' },
+  { name: 'Allyson Hong', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=14P1xdlZqq_dEj99opLaYllxdb8CwbN2Q', year: '1st Year', college: 'Eighth College', major: 'Human Biology', funFact: 'I can do the worm' },
   { name: 'Matthew Cao', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1gCTg3o6nH11zUwAJpxApvmb2G2bEKLp_', year: '1st Year', college: 'ERC', major: 'Human Biology', funFact: 'I have a fear of spiders' },
-  { name: 'Tristan Vu', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1f9b4y5oVUglrGyXk2-pbxNfO95xYy4vW', year: '1st Year Transfer', college: 'Warren College', major: 'Bioengineering: Biotechnology', funFact: 'i LOVE McChickens' },
-  { name: 'Teresa Pham', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1ylqc3ijfu_AttzSk3ee0OxWN8TztC8S8', year: '1st Year Transfer', college: 'Marshall College', major: 'General Biology', funFact: 'i used to live in florida' },
-  { name: 'Hailie Cheng', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1trhJaQx_NUHJLdDUAop4KmgCO8vvWyI6', year: '2nd Year', college: 'Seventh College', major: 'Public Health with Concentration in Medicine Sciences', funFact: 'met daniela from katseye & met rice gum (at vsa aftersocial actually) last month' },
+  { name: 'Tristan Vu', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1f9b4y5oVUglrGyXk2-pbxNfO95xYy4vW', year: '1st Year Transfer', college: 'Warren College', major: 'Bioengineering: Biotechnology', funFact: 'I love McChickens' },
+  { name: 'Teresa Pham', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1ylqc3ijfu_AttzSk3ee0OxWN8TztC8S8', year: '1st Year Transfer', college: 'Marshall College', major: 'General Biology', funFact: 'I used to live in Florida' },
+  { name: 'Hailie Cheng', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1trhJaQx_NUHJLdDUAop4KmgCO8vvWyI6', year: '2nd Year', college: 'Seventh College', major: 'Public Health with Concentration in Medicine Sciences', funFact: 'Met Daniela from KATSEYE at a VSA event last month' },
 ];
+
+const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
+const labelCls = 'block text-xs font-medium text-zinc-400 uppercase tracking-label';
 
 export default function AdminCabinet() {
   const [members, setMembers] = useState<CabinetMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('manage');
-  
+
   const [selectedMember, setSelectedMember] = useState<CabinetMember | null>(null);
   const [newMember, setNewMember] = useState<Partial<CabinetMember>>(EMPTY_MEMBER);
-  
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
-  
+
   const [uploading, setUploading] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<CabinetMember | null>(null);
 
@@ -97,7 +99,7 @@ export default function AdminCabinet() {
         .select('*')
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: false });
-        
+
       if (error) throw error;
       setMembers(data as CabinetMember[]);
     } catch (err) {
@@ -184,7 +186,7 @@ export default function AdminCabinet() {
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMember.name || !newMember.role || !newMember.category) {
-      toast.error('Name, Role, and Category are required');
+      toast.error('Name, role, and category are required');
       return;
     }
 
@@ -199,7 +201,7 @@ export default function AdminCabinet() {
 
       if (error) throw error;
 
-      toast.success('Member added!');
+      toast.success('Member added');
       setNewMember(EMPTY_MEMBER);
       setImageFile(null);
       setImagePreview(null);
@@ -222,8 +224,6 @@ export default function AdminCabinet() {
       let imageUrl = selectedMember.image_url;
       if (editImageFile) {
         imageUrl = await uploadImage(editImageFile);
-      } else if (!selectedMember.image_url && editImagePreview === null && imageUrl) {
-        // Handled removal logic implicitly if image_url was cleared out manually
       }
 
       const { error } = await supabase.from('cabinet_members').update({
@@ -243,7 +243,7 @@ export default function AdminCabinet() {
 
       if (error) throw error;
 
-      toast.success('Member updated!');
+      toast.success('Member updated');
       setEditImageFile(null);
       setEditImagePreview(null);
       setSelectedMember(null);
@@ -259,8 +259,6 @@ export default function AdminCabinet() {
   const handleDeleteConfirm = async () => {
     if (!memberToDelete) return;
     try {
-      // Note: Ideal to delete the storage object as well if no longer used.
-      // But keeping it simple for now as it's an admin operation.
       const { error } = await supabase.from('cabinet_members').delete().eq('id', memberToDelete.id);
       if (error) throw error;
       toast.success(`${memberToDelete.name} removed`);
@@ -274,134 +272,140 @@ export default function AdminCabinet() {
   };
 
   const moveMember = async (member: CabinetMember, direction: 'up' | 'down') => {
-    // Basic sorting adjustment
     const categoryMembers = members.filter(m => m.category === member.category);
     const currentIndex = categoryMembers.findIndex(m => m.id === member.id);
-    
+
     if (direction === 'up' && currentIndex > 0) {
       const prevMember = categoryMembers[currentIndex - 1];
-      const newOrder1 = prevMember.display_order;
-      const newOrder2 = member.display_order;
-      
-      await supabase.from('cabinet_members').update({ display_order: newOrder2 }).eq('id', prevMember.id);
-      await supabase.from('cabinet_members').update({ display_order: newOrder1 }).eq('id', member.id);
+      await supabase.from('cabinet_members').update({ display_order: prevMember.display_order }).eq('id', member.id);
+      await supabase.from('cabinet_members').update({ display_order: member.display_order }).eq('id', prevMember.id);
       fetchMembers();
     } else if (direction === 'down' && currentIndex < categoryMembers.length - 1) {
       const nextMember = categoryMembers[currentIndex + 1];
-      const newOrder1 = nextMember.display_order;
-      const newOrder2 = member.display_order;
-      
-      await supabase.from('cabinet_members').update({ display_order: newOrder2 }).eq('id', nextMember.id);
-      await supabase.from('cabinet_members').update({ display_order: newOrder1 }).eq('id', member.id);
+      await supabase.from('cabinet_members').update({ display_order: nextMember.display_order }).eq('id', member.id);
+      await supabase.from('cabinet_members').update({ display_order: member.display_order }).eq('id', nextMember.id);
       fetchMembers();
     }
   };
-
-  const inputCls = 'mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 text-sm';
-  const labelCls = 'block text-sm font-medium text-gray-300';
 
   return (
     <div className="py-6">
       <PageTitle title="Cabinet Management" />
 
-      <div className="flex space-x-3 mb-6">
-        <button onClick={() => setActiveTab('manage')} className={`px-5 py-2 rounded-lg font-medium text-sm ${activeTab === 'manage' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
-          Manage Directory
-        </button>
-        <button onClick={() => setActiveTab('create')} className={`px-5 py-2 rounded-lg font-medium text-sm ${activeTab === 'create' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
-          Add New Member
-        </button>
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Cabinet Directory</h1>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 min-h-[500px]">
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-6">
+        {(['manage', 'create'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors duration-150 ${
+              activeTab === tab
+                ? 'bg-zinc-800 text-zinc-50 dark:bg-zinc-700'
+                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            }`}
+          >
+            {tab === 'manage' ? 'Manage Directory' : 'Add Member'}
+          </button>
+        ))}
+      </div>
+
+      <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6 min-h-[500px]">
         {activeTab === 'create' ? (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Add New Cabinet Member</h2>
-            <form onSubmit={handleCreateMember} className="space-y-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className={labelCls}>Name *</label><input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className={inputCls} required /></div>
-                  <div><label className={labelCls}>Role/Title *</label><input type="text" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className={inputCls} required /></div>
-                  <div>
-                    <label className={labelCls}>Category *</label>
-                    <select value={newMember.category} onChange={e => setNewMember({...newMember, category: e.target.value})} className={inputCls} required>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div><label className={labelCls}>Sort Order (Low numbers first)</label><input type="number" value={newMember.display_order} onChange={e => setNewMember({...newMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
-                  <div><label className={labelCls}>College</label><input type="text" value={newMember.college || ''} onChange={e => setNewMember({...newMember, college: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Year</label><input type="text" value={newMember.year || ''} onChange={e => setNewMember({...newMember, year: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Major</label><input type="text" value={newMember.major || ''} onChange={e => setNewMember({...newMember, major: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Minor</label><input type="text" value={newMember.minor || ''} onChange={e => setNewMember({...newMember, minor: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Pronouns</label><input type="text" value={newMember.pronouns || ''} onChange={e => setNewMember({...newMember, pronouns: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Favorite Snack</label><input type="text" value={newMember.favorite_snack || ''} onChange={e => setNewMember({...newMember, favorite_snack: e.target.value})} className={inputCls} /></div>
-                </div>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Add Cabinet Member</h2>
+            <form onSubmit={handleCreateMember} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Name *</label><input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Role / Title *</label><input type="text" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className={inputCls} required /></div>
                 <div>
-                  <label className={labelCls}>Fun Fact</label>
-                  <textarea value={newMember.fun_fact || ''} onChange={e => setNewMember({...newMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
+                  <label className={labelCls}>Category *</label>
+                  <select value={newMember.category} onChange={e => setNewMember({...newMember, category: e.target.value})} className={inputCls} required>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
-                <div>
-                  <label className={labelCls}>Profile Photo</label>
-                  <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${isDragActive ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-600 bg-gray-700/50'}`}>
-                    <input {...getInputProps()} />
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
-                    ) : (
-                      <p className="text-gray-400 text-xs">Drag & drop or click to upload</p>
-                    )}
-                  </div>
+                <div><label className={labelCls}>Sort Order</label><input type="number" value={newMember.display_order} onChange={e => setNewMember({...newMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
+                <div><label className={labelCls}>College</label><input type="text" value={newMember.college || ''} onChange={e => setNewMember({...newMember, college: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Year</label><input type="text" value={newMember.year || ''} onChange={e => setNewMember({...newMember, year: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Major</label><input type="text" value={newMember.major || ''} onChange={e => setNewMember({...newMember, major: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Minor</label><input type="text" value={newMember.minor || ''} onChange={e => setNewMember({...newMember, minor: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Pronouns</label><input type="text" value={newMember.pronouns || ''} onChange={e => setNewMember({...newMember, pronouns: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Favorite Snack</label><input type="text" value={newMember.favorite_snack || ''} onChange={e => setNewMember({...newMember, favorite_snack: e.target.value})} className={inputCls} /></div>
+              </div>
+              <div>
+                <label className={labelCls}>Fun Fact</label>
+                <textarea value={newMember.fun_fact || ''} onChange={e => setNewMember({...newMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
+              </div>
+              <div>
+                <label className={labelCls}>Profile Photo</label>
+                <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors ${isDragActive ? 'border-zinc-400 bg-zinc-800/30' : 'border-zinc-700 bg-zinc-900/30'}`}>
+                  <input {...getInputProps()} />
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
+                  ) : (
+                    <p className="text-zinc-500 text-xs">Drag and drop or click to upload</p>
+                  )}
                 </div>
               </div>
-              <button type="submit" disabled={uploading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg disabled:opacity-50">
+              <button type="submit" disabled={uploading} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
                 {uploading ? 'Adding...' : 'Add Member'}
               </button>
             </form>
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Directory</h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Directory</h2>
               {members.length === 0 && !loading && (
-                <button 
-                  onClick={handleBulkMigrate} 
+                <button
+                  onClick={handleBulkMigrate}
                   disabled={uploading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded transition-colors disabled:opacity-50"
                 >
                   {uploading ? 'Migrating...' : 'Run Initial Data Migration'}
                 </button>
               )}
             </div>
             {loading ? (
-              <p className="text-gray-400">Loading...</p>
+              <p className="text-zinc-500 text-sm">Loading...</p>
             ) : CATEGORIES.map(category => {
               const categoryMembers = members.filter(m => m.category === category);
               if (categoryMembers.length === 0) return null;
-              
+
               return (
                 <div key={category} className="mb-8">
-                  <h3 className="text-lg font-semibold text-indigo-400 border-b border-gray-700 pb-2 mb-4">{category}</h3>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-2 mb-3">
+                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-label">{category}</h3>
+                    <span className="text-xs text-zinc-600">{categoryMembers.length}</span>
+                  </div>
+                  <div className="space-y-2">
                     {categoryMembers.map((m, idx) => (
-                      <div key={m.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-700">
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col gap-1 items-center px-2">
-                            <button onClick={() => moveMember(m, 'up')} disabled={idx === 0} className="text-gray-500 hover:text-white disabled:opacity-30">▲</button>
-                            <span className="text-xs text-gray-500">{m.display_order}</span>
-                            <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-gray-500 hover:text-white disabled:opacity-30">▼</button>
+                      <div key={m.id} className="flex items-center justify-between p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 rounded">
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col gap-0.5 items-center px-1">
+                            <button onClick={() => moveMember(m, 'up')} disabled={idx === 0} className="text-zinc-500 hover:text-zinc-200 disabled:opacity-20 text-xs leading-none">▲</button>
+                            <span className="text-[10px] text-zinc-600 tabular-nums">{m.display_order}</span>
+                            <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-zinc-500 hover:text-zinc-200 disabled:opacity-20 text-xs leading-none">▼</button>
                           </div>
                           {m.image_url ? (
-                            <img src={m.image_url} alt={m.name} className="w-12 h-12 rounded-full object-cover" />
+                            <img src={m.image_url} alt={m.name} className="w-10 h-10 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 text-xs text-center border overflow-hidden">No Pic</div>
+                            <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 text-xs border border-zinc-300 dark:border-zinc-600">
+                              {m.name.charAt(0)}
+                            </div>
                           )}
                           <div>
-                            <p className="font-semibold text-white leading-tight">{m.name}</p>
-                            <p className="text-xs text-gray-400">{m.role}</p>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 leading-tight">{m.name}</p>
+                            <p className="text-xs text-zinc-500">{m.role}</p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => setSelectedMember(m)} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-md">Edit</button>
-                          <button onClick={() => setMemberToDelete(m)} className="px-3 py-1.5 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white text-xs rounded-md">Delete</button>
+                        <div className="flex gap-1.5">
+                          <button onClick={() => setSelectedMember(m)} className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors">Edit</button>
+                          <button onClick={() => setMemberToDelete(m)} className="px-3 py-1.5 border border-red-900/30 text-red-500 hover:bg-red-600 hover:text-white text-xs rounded transition-colors">Remove</button>
                         </div>
                       </div>
                     ))}
@@ -416,71 +420,68 @@ export default function AdminCabinet() {
       {/* Edit Modal */}
       {selectedMember && (
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-900 rounded-xl max-w-2xl w-full my-8 border border-gray-700">
-            <div className="p-6 border-b border-gray-700 flex justify-between">
-              <h2 className="text-xl font-bold text-white">Edit {selectedMember.name}</h2>
-              <button onClick={() => setSelectedMember(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+          <div className="bg-zinc-900 rounded-md max-w-2xl w-full my-8 border border-zinc-800">
+            <div className="p-5 border-b border-zinc-800 flex justify-between items-center">
+              <h2 className="text-base font-semibold text-zinc-50">Edit {selectedMember.name}</h2>
+              <button onClick={() => setSelectedMember(null)} className="text-zinc-500 hover:text-zinc-200 text-xl leading-none">&times;</button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className={labelCls}>Name *</label><input type="text" value={selectedMember.name} onChange={e => setSelectedMember({...selectedMember, name: e.target.value})} className={inputCls} required /></div>
-                  <div><label className={labelCls}>Role/Title *</label><input type="text" value={selectedMember.role} onChange={e => setSelectedMember({...selectedMember, role: e.target.value})} className={inputCls} required /></div>
-                  <div>
-                    <label className={labelCls}>Category *</label>
-                    <select value={selectedMember.category} onChange={e => setSelectedMember({...selectedMember, category: e.target.value})} className={inputCls} required>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+            <form onSubmit={handleEditSubmit} className="p-5 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Name *</label><input type="text" value={selectedMember.name} onChange={e => setSelectedMember({...selectedMember, name: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Role / Title *</label><input type="text" value={selectedMember.role} onChange={e => setSelectedMember({...selectedMember, role: e.target.value})} className={inputCls} required /></div>
+                <div>
+                  <label className={labelCls}>Category *</label>
+                  <select value={selectedMember.category} onChange={e => setSelectedMember({...selectedMember, category: e.target.value})} className={inputCls} required>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div><label className={labelCls}>Sort Order</label><input type="number" value={selectedMember.display_order} onChange={e => setSelectedMember({...selectedMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
+                <div><label className={labelCls}>College</label><input type="text" value={selectedMember.college || ''} onChange={e => setSelectedMember({...selectedMember, college: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Year</label><input type="text" value={selectedMember.year || ''} onChange={e => setSelectedMember({...selectedMember, year: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Major</label><input type="text" value={selectedMember.major || ''} onChange={e => setSelectedMember({...selectedMember, major: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Minor</label><input type="text" value={selectedMember.minor || ''} onChange={e => setSelectedMember({...selectedMember, minor: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Pronouns</label><input type="text" value={selectedMember.pronouns || ''} onChange={e => setSelectedMember({...selectedMember, pronouns: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Favorite Snack</label><input type="text" value={selectedMember.favorite_snack || ''} onChange={e => setSelectedMember({...selectedMember, favorite_snack: e.target.value})} className={inputCls} /></div>
+              </div>
+              <div>
+                <label className={labelCls}>Fun Fact</label>
+                <textarea value={selectedMember.fun_fact || ''} onChange={e => setSelectedMember({...selectedMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
+              </div>
+              <div>
+                <label className={labelCls}>Profile Photo</label>
+                {selectedMember.image_url && !editImagePreview && (
+                  <div className="mt-2 mb-3 flex items-center gap-3">
+                    <img src={selectedMember.image_url} alt="Current" className="w-16 h-16 object-cover rounded-full border border-zinc-700" />
+                    <button type="button" className="text-xs text-red-400 hover:text-red-300" onClick={() => setSelectedMember({...selectedMember, image_url: ''})}>Remove image</button>
                   </div>
-                  <div><label className={labelCls}>Sort Order (Low numbers first)</label><input type="number" value={selectedMember.display_order} onChange={e => setSelectedMember({...selectedMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
-                  <div><label className={labelCls}>College</label><input type="text" value={selectedMember.college || ''} onChange={e => setSelectedMember({...selectedMember, college: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Year</label><input type="text" value={selectedMember.year || ''} onChange={e => setSelectedMember({...selectedMember, year: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Major</label><input type="text" value={selectedMember.major || ''} onChange={e => setSelectedMember({...selectedMember, major: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Minor</label><input type="text" value={selectedMember.minor || ''} onChange={e => setSelectedMember({...selectedMember, minor: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Pronouns</label><input type="text" value={selectedMember.pronouns || ''} onChange={e => setSelectedMember({...selectedMember, pronouns: e.target.value})} className={inputCls} /></div>
-                  <div><label className={labelCls}>Favorite Snack</label><input type="text" value={selectedMember.favorite_snack || ''} onChange={e => setSelectedMember({...selectedMember, favorite_snack: e.target.value})} className={inputCls} /></div>
-                </div>
-                <div>
-                  <label className={labelCls}>Fun Fact</label>
-                  <textarea value={selectedMember.fun_fact || ''} onChange={e => setSelectedMember({...selectedMember, fun_fact: e.target.value})} className={inputCls} rows={2} />
-                </div>
-                
-                <div>
-                  <label className={labelCls}>Profile Photo</label>
-                  {selectedMember.image_url && !editImagePreview && (
-                    <div className="mt-2 mb-3">
-                      <img src={selectedMember.image_url} alt="Current" className="w-24 h-24 object-cover rounded-full border border-gray-600" />
-                      <button type="button" className="mt-2 text-xs text-red-400" onClick={() => setSelectedMember({...selectedMember, image_url: ''})}>Remove existing image</button>
-                    </div>
+                )}
+                <div {...getEditRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-5 cursor-pointer transition-colors ${isEditDragActive ? 'border-zinc-400 bg-zinc-800/30' : 'border-zinc-700'}`}>
+                  <input {...getEditInputProps()} />
+                  {editImagePreview ? (
+                    <img src={editImagePreview} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
+                  ) : (
+                    <p className="text-zinc-500 text-xs">Drag and drop or click to upload new photo</p>
                   )}
-                  <div {...getEditRootProps()} className={`mt-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors ${isEditDragActive ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-600 bg-gray-700/50'}`}>
-                    <input {...getEditInputProps()} />
-                    {editImagePreview ? (
-                      <img src={editImagePreview} alt="Preview" className="w-24 h-24 rounded-full object-cover" />
-                    ) : (
-                      <p className="text-gray-400 text-xs">Drag & drop or click to upload new photo</p>
-                    )}
-                  </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button type="submit" disabled={uploading} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg">Save Changes</button>
-                <button type="button" onClick={() => setSelectedMember(null)} className="px-6 py-2.5 bg-gray-700 text-white rounded-lg">Cancel</button>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={uploading} className="flex-1 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-100 py-2.5 rounded text-sm font-medium transition-colors disabled:opacity-50">Save Changes</button>
+                <button type="button" onClick={() => setSelectedMember(null)} className="px-5 py-2.5 border border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded text-sm transition-colors">Cancel</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* Delete Confirmation */}
       {memberToDelete && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 p-6 rounded-xl max-w-md w-full border border-gray-700">
-            <h3 className="text-xl font-bold text-white mb-2">Remove Member</h3>
-            <p className="text-gray-400 mb-6">Are you sure you want to remove {memberToDelete.name} from the directory?</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setMemberToDelete(null)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-              <button onClick={handleDeleteConfirm} className="px-5 py-2 bg-red-600 text-white rounded-lg">Remove</button>
+          <div className="bg-zinc-900 p-6 rounded-md max-w-sm w-full border border-zinc-800">
+            <h3 className="text-base font-semibold text-zinc-50 mb-2">Remove Member</h3>
+            <p className="text-zinc-400 text-sm mb-5">Remove <span className="text-zinc-200 font-medium">{memberToDelete.name}</span> from the directory? This cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setMemberToDelete(null)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors">Cancel</button>
+              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors">Remove</button>
             </div>
           </div>
         </div>

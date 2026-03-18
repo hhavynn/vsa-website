@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
 import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 
@@ -562,10 +561,10 @@ export default function AdminImport() {
       <Toaster position="top-right" />
       <div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+        <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Attendance</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
+            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Import Attendance</h1>
+            <p className="text-zinc-500 mt-1 text-sm">
               Paste a Google Sheets CSV link. Matched members get their points updated; unmatched people are added as new members.
             </p>
           </div>
@@ -578,14 +577,14 @@ export default function AdminImport() {
               return (
                 <div key={s} className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                    ${step === s ? 'bg-indigo-600 text-white' : past ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
+                    ${step === s ? 'bg-brand-600 text-white' : past ? 'bg-emerald-500 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'}`}>
                     {past ? '✓' : i + 1}
                   </div>
                   <span className={`text-sm font-medium capitalize
-                    ${step === s ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    ${step === s ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-400 dark:text-zinc-500'}`}>
                     {s === 'configure' ? 'Configure' : s === 'preview' ? 'Preview' : 'Done'}
                   </span>
-                  {i < 2 && <div className="w-8 h-px bg-gray-200 dark:bg-gray-700 mx-1" />}
+                  {i < 2 && <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />}
                 </div>
               );
             })}
@@ -595,10 +594,10 @@ export default function AdminImport() {
           {step === 'configure' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Event *</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">Event *</label>
                 <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
-                    text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                  className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
+                    text-zinc-900 dark:text-zinc-100 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
                   <option value="">— Select an event —</option>
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>
@@ -609,24 +608,24 @@ export default function AdminImport() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Google Sheets CSV URL *</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">Google Sheets CSV URL *</label>
                 <input type="url" value={csvUrl} onChange={e => setCsvUrl(e.target.value)}
                   placeholder="https://docs.google.com/spreadsheets/d/..."
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
-                    text-gray-900 dark:text-white px-3 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                  className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
+                    text-zinc-900 dark:text-zinc-100 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500" />
+                <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">
                   <strong>File → Share → Publish to web</strong> → sheet → CSV → Publish. Or paste the edit URL — we convert it automatically.
                 </p>
               </div>
 
               {configError && (
-                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                <div className="rounded border border-red-900/40 bg-red-950/20 px-4 py-3 text-sm text-red-400">
                   {configError}
                 </div>
               )}
 
               <button onClick={handleFetchCsv} disabled={fetchingCsv}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 {fetchingCsv
                   ? <><Spinner />Fetching…</>
                   : <><DownloadIcon />Fetch & Preview</>}
@@ -638,11 +637,11 @@ export default function AdminImport() {
           {step === 'preview' && (
             <div className="space-y-6">
               {/* Column mapping */}
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Column Mapping</h2>
+              <div className="bg-zinc-50 dark:bg-zinc-900/60 rounded-md p-5 border border-zinc-200 dark:border-zinc-800">
+                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-label mb-4">Column Mapping</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1 flex items-end">
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 cursor-pointer select-none">
                       <input type="checkbox" checked={useFullName} onChange={e => setUseFullName(e.target.checked)} className="rounded" />
                       Use single "full name" column
                     </label>
@@ -656,7 +655,7 @@ export default function AdminImport() {
                   <ColSelect label="Email"   value={emailCol}   onChange={setEmailCol}   headers={csvHeaders} />
                 </div>
                 <button onClick={handleRematch} disabled={fetchingCsv}
-                  className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">
+                  className="mt-3 text-xs text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-50">
                   {fetchingCsv ? 'Re-matching…' : '↻ Re-run matching with these columns'}
                 </button>
               </div>
@@ -675,8 +674,8 @@ export default function AdminImport() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+              <div className="flex flex-col gap-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-zinc-600 dark:text-zinc-300">
                   {selectedRows.length === 0
                     ? 'Select rows to apply manual match overrides.'
                     : `${selectedRows.length} row${selectedRows.length !== 1 ? 's' : ''} selected.`}
@@ -685,14 +684,14 @@ export default function AdminImport() {
                   <button
                     onClick={() => applyManualOverrideToSelected('force-match')}
                     disabled={selectedReviewRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 dark:disabled:bg-green-900"
+                    className="inline-flex items-center gap-2 rounded bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Force Match Selected
                   </button>
                   <button
                     onClick={() => applyManualOverrideToSelected('mark-new')}
                     disabled={selectedOverridableRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Mark Selected as New
                   </button>
@@ -700,17 +699,17 @@ export default function AdminImport() {
               </div>
 
               {selectedEvent && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Each matched or new member gets <strong className="text-gray-700 dark:text-gray-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-gray-700 dark:text-gray-200">{selectedEvent.name}</strong>.
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Each matched or new member gets <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.name}</strong>.
                 </p>
               )}
 
               {/* Preview table */}
-              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+              <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-700">
+                <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 text-sm">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <tr className="bg-zinc-50 dark:bg-zinc-900/60">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={allRowsSelected}
@@ -719,8 +718,8 @@ export default function AdminImport() {
                           aria-label="Select all rows"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">
+                        <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-200">
                           Action
                           <span className="text-[10px] normal-case">
                             {sortMode === 'review-first' ? 'Review first' : sortMode === 'review-last' ? 'Review last' : 'Default'}
@@ -728,11 +727,11 @@ export default function AdminImport() {
                         </button>
                       </th>
                       {['CSV Name', 'CSV College', 'CSV Year', 'Matched Member', 'Confidence'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                  <tbody className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-zinc-800">
                     {displayedRows.map((row) => {
                       const effectiveStatus = getEffectiveStatus(row);
                       const forcedMatch = row.status === 'review' && row.manualOverride === 'force-match';
@@ -746,7 +745,7 @@ export default function AdminImport() {
                         effectiveStatus === 'match' ? 'bg-green-50/40 dark:bg-green-900/10' :
                         effectiveStatus === 'new'   ? 'bg-blue-50/40 dark:bg-blue-900/10' :
                         effectiveStatus === 'review'? 'bg-amber-50/60 dark:bg-amber-900/10' :
-                                                      'bg-gray-50/60 dark:bg-gray-900/20'
+                                                      'bg-zinc-50/60 dark:bg-zinc-900/20'
                       }>
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <input
@@ -829,30 +828,30 @@ export default function AdminImport() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
-                          <div>{row.displayName || <span className="text-gray-400 italic">—</span>}</div>
+                        <td className="px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-50">
+                          <div>{row.displayName || <span className="text-zinc-400 italic">—</span>}</div>
                           {row.matchName !== row.displayName && (
-                            <div className="text-[10px] text-gray-400 mt-0.5">matched as: {row.matchName}</div>
+                            <div className="text-[10px] text-zinc-400 mt-0.5">matched as: {row.matchName}</div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{row.csvCollege || '—'}</td>
-                        <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">
+                        <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400 text-xs">{row.csvCollege || '—'}</td>
+                        <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400 text-xs">
                           {row.csvYear || '—'}
                           {row.invalidYear && (
-                            <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">⚠️</span>
+                            <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">!</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                        <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300">
                           {row.matchedMember && !isHighConfidenceOverride ? (
                             <span>
                               {row.matchedMember.first_name} {row.matchedMember.last_name}
                               {row.matchedMember.college && (
-                                <span className={`ml-1 text-xs ${row.collegeMatch ? 'text-green-500' : 'text-gray-400'}`}>
+                                <span className={`ml-1 text-xs ${row.collegeMatch ? 'text-emerald-500' : 'text-zinc-400'}`}>
                                   · {row.matchedMember.college}
                                 </span>
                               )}
                               {row.matchedMember.year && (
-                                <span className={`ml-1 text-xs ${row.yearMatch ? 'text-green-500' : 'text-gray-400'}`}>
+                                <span className={`ml-1 text-xs ${row.yearMatch ? 'text-emerald-500' : 'text-zinc-400'}`}>
                                   · {row.matchedMember.year}
                                 </span>
                               )}
@@ -860,13 +859,13 @@ export default function AdminImport() {
                                 <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Similarity {row.score}% — adding as new</div>
                               )}
                               {forcedMatch && (
-                                <div className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">Forced match — will update existing member</div>
+                                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Forced match — will update existing member</div>
                               )}
                               {forcedNew && (
                                 <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Manual override — will create a new member</div>
                               )}
                               {effectiveStatus === 'match' && hasMemberEnrichment(row) && (
-                                <div className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">Missing profile fields will be merged during import</div>
+                                <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Missing profile fields will be merged during import</div>
                               )}
                             </span>
                           ) : isHighConfidenceOverride ? (
@@ -879,13 +878,13 @@ export default function AdminImport() {
                           {(effectiveStatus === 'match' || effectiveStatus === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
                               effectiveStatus === 'review' ? 'text-amber-600 dark:text-amber-400' :
-                              row.score >= EXACT_MATCH_THRESHOLD ? 'text-green-600 dark:text-green-400' :
+                              row.score >= EXACT_MATCH_THRESHOLD ? 'text-emerald-600 dark:text-emerald-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : effectiveStatus === 'new' ? (
-                            <span className="text-xs text-gray-400">—</span>
+                            <span className="text-xs text-zinc-400">—</span>
                           ) : (
-                            <span className="text-xs text-gray-400">already done</span>
+                            <span className="text-xs text-zinc-400">already done</span>
                           )}
                         </td>
                       </tr>
@@ -894,22 +893,21 @@ export default function AdminImport() {
                 </table>
               </div>
 
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">
                 Score = name (60%) + college (25%) + year (15%). ≥75% → exact match. 50-74% → flagged as duplicate but added as new. &lt;50% → new member.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
                   disabled={importing || (summary.match + totalNewMembers) === 0}
-                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700
-                    disabled:bg-indigo-300 dark:disabled:bg-indigo-800
-                    text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+                  className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
+                    text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing
                     ? <><Spinner />Importing…</>
                     : <><CheckIcon />Import ({summary.match} update{summary.match !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
                 </button>
                 <button onClick={() => { setStep('configure'); setRows([]); }}
-                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2.5">
+                  className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
                   ← Back
                 </button>
               </div>
@@ -919,14 +917,14 @@ export default function AdminImport() {
           {/* ── Step 3 ── */}
           {step === 'done' && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
-                <CheckIcon className="w-8 h-8 text-green-500" />
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
+                <CheckIcon className="w-8 h-8 text-emerald-500" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Import complete!</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">Points and new members have been added to the leaderboard.</p>
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Import complete!</h2>
+              <p className="text-zinc-500 text-sm mb-8">Points and new members have been added to the leaderboard.</p>
               <button
                 onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setSelectedEventId(''); setCachedParsed([]); }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
+                className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 Import another sheet
               </button>
             </div>
@@ -942,10 +940,10 @@ export default function AdminImport() {
 function ColSelect({ label, value, onChange, headers }: { label: string; value: string; onChange: (v: string) => void; headers: string[] }) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
-          text-gray-900 dark:text-white text-xs px-2 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
+          text-zinc-900 dark:text-zinc-100 text-xs px-2 py-1.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
         <option value="">(none)</option>
         {headers.map(h => <option key={h} value={h}>{h}</option>)}
       </select>

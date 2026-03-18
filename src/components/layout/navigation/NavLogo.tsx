@@ -29,16 +29,16 @@ export const NavLogo = memo(function NavLogo({ className = '' }: NavLogoProps) {
         <img
           src={logoSources[currentSrcIndex]}
           alt="VSA Logo"
-          className="h-9 w-9 object-contain rounded-lg border border-indigo-500/30 bg-slate-900 shadow-glow-sm group-hover:border-indigo-400/60 transition-all duration-200"
+          className="h-8 w-8 object-contain rounded border border-zinc-700 bg-zinc-900 group-hover:border-zinc-600 transition-colors duration-150"
           onError={handleImageError}
           loading="eager"
         />
       ) : (
-        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-glow-sm">
+        <div className="h-8 w-8 rounded border border-zinc-700 bg-brand-600 flex items-center justify-center text-white font-bold text-xs">
           VSA
         </div>
       )}
-      <span className="font-heading font-bold text-white text-base hidden lg:block">
+      <span className="font-sans font-semibold text-white text-sm tracking-tight hidden lg:block">
         VSA at UCSD
       </span>
     </Link>

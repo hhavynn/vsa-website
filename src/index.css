@@ -8,7 +8,7 @@
   html {
     /* Inter variable font — editorial base typeface */
     font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
     font-variation-settings: normal;
     scroll-behavior: smooth;
     /* Zinc scale base colours — overridden by dark/light class on <html> */
@@ -27,6 +27,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+  }
+
+  /* Heading defaults — tight tracking, semibold weight */
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    line-height: 1.2;
   }
 }
 

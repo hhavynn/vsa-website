@@ -69,6 +69,7 @@ const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
 const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
+const AdminPoints = lazy(() => import("../pages/Admin/Points"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -113,16 +114,19 @@ export default function AppRoutes() {
                 <Route path="/feedback" element={<Feedback />} />
               </Route>
 
-              {/* Admin Routes - require admin privileges */}
+              {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}
               <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminLayout />} />
-                <Route path="/admin/events" element={<AdminEvents />} />
-                <Route path="/admin/gallery" element={<AdminGallery />} />
-                <Route path="/admin/feedback" element={<AdminFeedback />} />
-                <Route path="/admin/import" element={<AdminImport />} />
-                <Route path="/admin/members" element={<AdminMembers />} />
-                <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
-                <Route path="/admin/cabinet" element={<AdminCabinet />} />
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={null} />
+                  <Route path="/admin/events" element={<AdminEvents />} />
+                  <Route path="/admin/gallery" element={<AdminGallery />} />
+                  <Route path="/admin/feedback" element={<AdminFeedback />} />
+                  <Route path="/admin/import" element={<AdminImport />} />
+                  <Route path="/admin/members" element={<AdminMembers />} />
+                  <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
+                  <Route path="/admin/cabinet" element={<AdminCabinet />} />
+                  <Route path="/admin/points" element={<AdminPoints />} />
+                </Route>
               </Route>
 
               {/* 404 Route */}
