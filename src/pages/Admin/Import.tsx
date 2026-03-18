@@ -26,8 +26,12 @@ interface Member {
 }
 
 type RowStatus = 'match' | 'new' | 'already' | 'review';
+type ManualOverride = 'force-match' | 'mark-new' | null;
+type SortMode = 'default' | 'review-first' | 'review-last';
 
 interface RowResult {
+  rowId: string;
+  originalIndex: number;
   csvRow: Record<string, string>;
   /** Original (capitalised) name from CSV — shown in the table */
   displayName: string;
@@ -45,11 +49,13 @@ interface RowResult {
   collegeMatch: boolean;
   yearMatch: boolean;
   invalidYear: boolean;
-  /** True when: status=match, csvEmail non-empty, member.email is null → will write email to DB */
-  emailWillEnrich: boolean;
+  selected: boolean;
+  manualOverride: ManualOverride;
 }
 
 // ─── Normalisation helpers ────────────────────────────────────────────────────
+
+type MemberEnrichment = Partial<Pick<Member, 'college' | 'year' | 'email'>>;
 
 const COLLEGE_ALIASES: [RegExp, string][] = [
   [/revelle/i,                        'revelle'],
@@ -100,6 +106,62 @@ const REVIEW_THRESHOLD = 50;
 // Composite: name 60%, college 25%, year 15%
 function compositeScore(ns: number, cm: boolean, ym: boolean) {
   return Math.round(ns * 0.6 + (cm ? 25 : 0) + (ym ? 15 : 0));
+}
+
+function getEffectiveStatus(row: RowResult): RowStatus {
+  if (row.status !== 'review') return row.status;
+  if (row.manualOverride === 'force-match') return 'match';
+  if (row.manualOverride === 'mark-new') return 'new';
+  return 'review';
+}
+
+function canForceMatch(row: RowResult): boolean {
+  return row.status === 'review' && !!row.matchedMember;
+}
+
+function buildMemberEnrichment(row: RowResult): MemberEnrichment {
+  const member = row.matchedMember;
+  if (!member) return {};
+
+  const updates: MemberEnrichment = {};
+
+  if (!member.email && row.csvEmail) updates.email = row.csvEmail;
+  if (!member.college && row.csvCollege) updates.college = row.csvCollege;
+  if (!member.year && row.csvYear && !row.invalidYear) updates.year = row.csvYear;
+
+  return updates;
+}
+
+function hasMemberEnrichment(row: RowResult): boolean {
+  return Object.keys(buildMemberEnrichment(row)).length > 0;
+}
+
+function getActionLabel(row: RowResult): string {
+  const status = getEffectiveStatus(row);
+  if (status === 'match') return row.status === 'review' ? 'Forced Update' : 'Update';
+  if (status === 'new') return row.status === 'review' ? 'Create New' : 'Create';
+  if (status === 'review') return 'Review';
+  return 'Skip';
+}
+
+function getSortPriority(row: RowResult, sortMode: SortMode): number {
+  const status = getEffectiveStatus(row);
+  const reviewFirstOrder: Record<RowStatus, number> = {
+    review: 0,
+    match: 1,
+    new: 2,
+    already: 3,
+  };
+  const reviewLastOrder: Record<RowStatus, number> = {
+    already: 0,
+    new: 1,
+    match: 2,
+    review: 3,
+  };
+
+  if (sortMode === 'review-first') return reviewFirstOrder[status];
+  if (sortMode === 'review-last') return reviewLastOrder[status];
+  return row.originalIndex;
 }
 
 // ─── Name helpers ─────────────────────────────────────────────────────────────
@@ -196,6 +258,7 @@ export default function AdminImport() {
   const [rows, setRows] = useState<RowResult[]>([]);
   const [cachedParsed, setCachedParsed] = useState<Record<string, string>[]>([]);
   const [importing, setImporting] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('default');
 
   useEffect(() => {
     supabase
@@ -204,6 +267,36 @@ export default function AdminImport() {
       .order('date', { ascending: false })
       .then(({ data }) => setEvents((data ?? []) as Event[]));
   }, []);
+
+  function updateRow(rowId: string, updater: (row: RowResult) => RowResult) {
+    setRows(current => current.map(row => (row.rowId === rowId ? updater(row) : row)));
+  }
+
+  function toggleRowSelection(rowId: string) {
+    updateRow(rowId, row => ({ ...row, selected: !row.selected }));
+  }
+
+  function toggleSelectAllRows() {
+    setRows(current => {
+      const shouldSelectAll = current.some(row => !row.selected);
+      return current.map(row => ({ ...row, selected: shouldSelectAll }));
+    });
+  }
+
+  function applyManualOverrideToSelected(override: Exclude<ManualOverride, null>) {
+    setRows(current => current.map(row => {
+      if (!row.selected || !canForceMatch(row)) return row;
+      return { ...row, manualOverride: override };
+    }));
+  }
+
+  function toggleActionSort() {
+    setSortMode(current => {
+      if (current === 'default') return 'review-first';
+      if (current === 'review-first') return 'review-last';
+      return 'default';
+    });
+  }
 
   // ── Fetch CSV ────────────────────────────────────────────────────────────────
   async function handleFetchCsv() {
@@ -261,7 +354,7 @@ export default function AdminImport() {
       .eq('event_id', eventId);
     const alreadySet = new Set((existingAtt ?? []).map((r: { member_id: string }) => r.member_id));
 
-    const results: RowResult[] = parsed.map(row => {
+    const results: RowResult[] = parsed.map((row, index) => {
       // Build display name (capitalised, shown in table)
       let displayName = '';
       if (useFull) {
@@ -311,33 +404,39 @@ export default function AdminImport() {
       // Composite score 50-74% means probable duplicate; add as new and flag for review
       if (best && bestScore >= REVIEW_THRESHOLD && bestScore < EXACT_MATCH_THRESHOLD) {
         return {
+          rowId: `${index}-${displayName}-${csvEmail}`,
+          originalIndex: index,
           csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
           matchedMember: best, status: 'review' as RowStatus,
           score: bestScore, nameScore: bestNS, collegeMatch: bestCM, yearMatch: bestYM,
-          invalidYear, emailWillEnrich: false,
+          invalidYear, selected: false, manualOverride: null,
         };
       }
 
       // Composite score >= 75 counts as an exact match
       if (best && bestScore >= EXACT_MATCH_THRESHOLD) {
         const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
-        const emailWillEnrich = status === 'match' && !!csvEmail && !best.email;
         return {
+          rowId: `${index}-${displayName}-${csvEmail}`,
+          originalIndex: index,
           csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
           matchedMember: best, status, score: bestScore, nameScore: bestNS,
-          collegeMatch: bestCM, yearMatch: bestYM, invalidYear, emailWillEnrich,
+          collegeMatch: bestCM, yearMatch: bestYM, invalidYear, selected: false, manualOverride: null,
         };
       }
 
       // No match → create new member
       return {
+        rowId: `${index}-${displayName}-${csvEmail}`,
+        originalIndex: index,
         csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
         matchedMember: null, status: 'new', score: 0, nameScore: 0,
-        collegeMatch: false, yearMatch: false, invalidYear, emailWillEnrich: false,
+        collegeMatch: false, yearMatch: false, invalidYear, selected: false, manualOverride: null,
       };
     });
 
     setRows(results);
+    setSortMode('default');
   }
 
   async function handleRematch() {
@@ -351,8 +450,11 @@ export default function AdminImport() {
 
   // ── Confirm import ────────────────────────────────────────────────────────────
   async function handleImport() {
-    const toUpdate = rows.filter(r => r.status === 'match');
-    const toCreate = rows.filter(r => (r.status === 'new' || r.status === 'review') && r.displayName.trim());
+    const toUpdate = rows.filter(r => getEffectiveStatus(r) === 'match');
+    const toCreate = rows.filter(r => {
+      const effectiveStatus = getEffectiveStatus(r);
+      return (effectiveStatus === 'new' || effectiveStatus === 'review') && r.displayName.trim();
+    });
 
     if (!toUpdate.length && !toCreate.length) {
       toast.error('Nothing to import.'); return;
@@ -374,7 +476,7 @@ export default function AdminImport() {
           college:    r.csvCollege || null,
           year:       r.csvYear    || null,
           email:      r.csvEmail   || null,
-          needs_review: r.status === 'review',
+          needs_review: r.status === 'review' && r.manualOverride !== 'mark-new',
         };
       });
 
@@ -401,16 +503,21 @@ export default function AdminImport() {
         if (error) throw error;
       }
 
-      // 3. Enrich email for matched members who didn't have one
-      const toEnrich = toUpdate.filter(r => r.emailWillEnrich);
-      for (const r of toEnrich) {
+      // 3. Fill missing profile fields on matched members using import data
+      const toEnrich = toUpdate
+        .map(r => ({
+          memberId: r.matchedMember!.id,
+          updates: buildMemberEnrichment(r),
+        }))
+        .filter(item => Object.keys(item.updates).length > 0);
+      for (const { memberId, updates } of toEnrich) {
         await supabase
           .from('members')
-          .update({ email: r.csvEmail, updated_at: new Date().toISOString() })
-          .eq('id', r.matchedMember!.id);
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', memberId);
       }
 
-      const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} email${toEnrich.length !== 1 ? 's' : ''}` : '';
+      const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} profile${toEnrich.length !== 1 ? 's' : ''}` : '';
       toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new${enrichMsg}.`);
       setStep('done');
     } catch (err: unknown) {
@@ -421,13 +528,20 @@ export default function AdminImport() {
   }
 
   // ── Counts ────────────────────────────────────────────────────────────────────
+  const displayedRows = [...rows].sort((a, b) => {
+    const priorityDiff = getSortPriority(a, sortMode) - getSortPriority(b, sortMode);
+    return priorityDiff !== 0 ? priorityDiff : a.originalIndex - b.originalIndex;
+  });
+  const selectedRows = rows.filter(r => r.selected);
+  const selectedReviewRows = selectedRows.filter(r => canForceMatch(r));
+  const allRowsSelected = rows.length > 0 && rows.every(r => r.selected);
   const summary = {
-    match:    rows.filter(r => r.status === 'match').length,
-    new:      rows.filter(r => r.status === 'new').length,
-    already:  rows.filter(r => r.status === 'already').length,
-    review:   rows.filter(r => r.status === 'review').length,
+    match:    rows.filter(r => getEffectiveStatus(r) === 'match').length,
+    new:      rows.filter(r => getEffectiveStatus(r) === 'new').length,
+    already:  rows.filter(r => getEffectiveStatus(r) === 'already').length,
+    review:   rows.filter(r => getEffectiveStatus(r) === 'review').length,
     invalidYear: rows.filter(r => r.invalidYear).length,
-    enrich:   rows.filter(r => r.emailWillEnrich).length,
+    enrich:   rows.filter(r => getEffectiveStatus(r) === 'match' && hasMemberEnrichment(r)).length,
   };
   const totalNewMembers = summary.new + summary.review;
   const selectedEvent = events.find(e => e.id === selectedEventId);
@@ -548,8 +662,32 @@ export default function AdminImport() {
                   <SummaryBadge color="red" count={summary.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
                 )}
                 {summary.enrich > 0 && (
-                  <SummaryBadge color="purple" count={summary.enrich} label="email will be added to profile" plural="emails will be added to profiles" />
+                  <SummaryBadge color="purple" count={summary.enrich} label="profile will be enriched" plural="profiles will be enriched" />
                 )}
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  {selectedRows.length === 0
+                    ? 'Select rows to apply manual match overrides.'
+                    : `${selectedRows.length} row${selectedRows.length !== 1 ? 's' : ''} selected.`}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => applyManualOverrideToSelected('force-match')}
+                    disabled={selectedReviewRows.length === 0}
+                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300 dark:disabled:bg-green-900"
+                  >
+                    Force Match Selected
+                  </button>
+                  <button
+                    onClick={() => applyManualOverrideToSelected('mark-new')}
+                    disabled={selectedReviewRows.length === 0}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                  >
+                    Mark Selected as New
+                  </button>
+                </div>
               </div>
 
               {selectedEvent && (
@@ -563,31 +701,94 @@ export default function AdminImport() {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      {['Action', 'CSV Name', 'CSV College', 'CSV Year', 'Matched Member', 'Confidence'].map(h => (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={allRowsSelected}
+                          onChange={toggleSelectAllRows}
+                          className="rounded"
+                          aria-label="Select all rows"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200">
+                          Action
+                          <span className="text-[10px] normal-case">
+                            {sortMode === 'review-first' ? 'Review first' : sortMode === 'review-last' ? 'Review last' : 'Default'}
+                          </span>
+                        </button>
+                      </th>
+                      {['CSV Name', 'CSV College', 'CSV Year', 'Matched Member', 'Confidence'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                    {rows.map((row, i) => (
-                      <tr key={i} className={
-                        row.status === 'match'    ? 'bg-green-50/40 dark:bg-green-900/10' :
-                        row.status === 'new'      ? 'bg-blue-50/40 dark:bg-blue-900/10' :
-                        row.status === 'review'   ? 'bg-amber-50/60 dark:bg-amber-900/10' :
-                                                    'bg-gray-50/60 dark:bg-gray-900/20'
+                    {displayedRows.map((row) => {
+                      const effectiveStatus = getEffectiveStatus(row);
+                      const forcedMatch = row.status === 'review' && row.manualOverride === 'force-match';
+                      const forcedNew = row.status === 'review' && row.manualOverride === 'mark-new';
+
+                      return (
+                      <tr key={row.rowId} className={
+                        forcedMatch                  ? 'bg-green-100/70 dark:bg-green-900/20' :
+                        effectiveStatus === 'match' ? 'bg-green-50/40 dark:bg-green-900/10' :
+                        effectiveStatus === 'new'   ? 'bg-blue-50/40 dark:bg-blue-900/10' :
+                        effectiveStatus === 'review'? 'bg-amber-50/60 dark:bg-amber-900/10' :
+                                                      'bg-gray-50/60 dark:bg-gray-900/20'
                       }>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          {row.status === 'match'    && (
+                          <input
+                            type="checkbox"
+                            checked={row.selected}
+                            onChange={() => toggleRowSelection(row.rowId)}
+                            className="rounded"
+                            aria-label={`Select ${row.displayName || 'row'}`}
+                          />
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {effectiveStatus === 'match' && (
                             <span className="inline-flex items-center gap-1">
-                              <ActionBadge color="green" label="Update" />
-                              {row.emailWillEnrich && (
-                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Email will be added to this member's profile">✉</span>
+                              <ActionBadge color="green" label={getActionLabel(row)} />
+                              {hasMemberEnrichment(row) && (
+                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled during import">✉</span>
                               )}
                             </span>
                           )}
-                          {row.status === 'new'      && <ActionBadge color="blue"  label="Create" />}
-                          {row.status === 'already'  && <ActionBadge color="gray"  label="Skip" />}
-                          {row.status === 'review'   && <ActionBadge color="amber" label="Review" />}
+                          {effectiveStatus === 'new' && <ActionBadge color="blue"  label={getActionLabel(row)} />}
+                          {effectiveStatus === 'already' && <ActionBadge color="gray"  label="Skip" />}
+                          {effectiveStatus === 'review' && <ActionBadge color="amber" label="Review" />}
+                          {canForceMatch(row) && (
+                            <div className="mt-2 flex flex-col gap-1">
+                              {row.manualOverride !== 'force-match' && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'force-match' }))}
+                                  className="text-left text-[11px] font-medium text-green-700 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                >
+                                  Force Match
+                                </button>
+                              )}
+                              {row.manualOverride !== 'mark-new' && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'mark-new' }))}
+                                  className="text-left text-[11px] font-medium text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
+                                >
+                                  Mark as New
+                                </button>
+                              )}
+                              {row.manualOverride && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
+                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                >
+                                  Clear Override
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
                           <div>{row.displayName || <span className="text-gray-400 italic">—</span>}</div>
@@ -616,8 +817,17 @@ export default function AdminImport() {
                                   · {row.matchedMember.year}
                                 </span>
                               )}
-                              {row.status === 'review' && (
+                              {effectiveStatus === 'review' && (
                                 <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Similarity {row.score}% — adding as new</div>
+                              )}
+                              {forcedMatch && (
+                                <div className="text-[10px] text-green-700 dark:text-green-400 mt-0.5">Forced match — will update existing member</div>
+                              )}
+                              {forcedNew && (
+                                <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Manual override — will create a new member</div>
+                              )}
+                              {effectiveStatus === 'match' && hasMemberEnrichment(row) && (
+                                <div className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">Missing profile fields will be merged during import</div>
                               )}
                             </span>
                           ) : (
@@ -625,20 +835,20 @@ export default function AdminImport() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          {(row.status === 'match' || row.status === 'review') ? (
+                          {(effectiveStatus === 'match' || effectiveStatus === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
-                              row.status === 'review'    ? 'text-amber-600 dark:text-amber-400' :
+                              effectiveStatus === 'review' ? 'text-amber-600 dark:text-amber-400' :
                               row.score >= EXACT_MATCH_THRESHOLD ? 'text-green-600 dark:text-green-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
-                          ) : row.status === 'new' ? (
+                          ) : effectiveStatus === 'new' ? (
                             <span className="text-xs text-gray-400">—</span>
                           ) : (
                             <span className="text-xs text-gray-400">already done</span>
                           )}
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
