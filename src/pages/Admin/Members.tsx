@@ -258,7 +258,7 @@ export default function AdminMembers() {
   async function handleMergeConfirm() {
     if (!mergingSource || !mergeTarget) return;
     setMergeExecuting(true);
-    const { error } = await supabase.rpc('merge_members', {
+    const { error } = await supabase.rpc('smart_merge_members', {
       p_source_id: mergingSource.id,
       p_target_id: mergeTarget.id,
     });
@@ -328,7 +328,7 @@ export default function AdminMembers() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+              <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50">
                     <th className="px-4 py-3 w-10">
@@ -339,11 +339,11 @@ export default function AdminMembers() {
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
                     <SortTh label="Name"   sk="name"            active={sortKey} asc={sortAsc} onSort={handleSort} />
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">College</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Year</th>
+                    <th className="px-4 py-3 w-32 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">College</th>
+                    <th className="px-4 py-3 w-28 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Year</th>
                     <SortTh label="Points" sk="points"          active={sortKey} asc={sortAsc} onSort={handleSort} />
                     <SortTh label="Events" sk="events_attended" active={sortKey} asc={sortAsc} onSort={handleSort} />
-                    <th className="px-4 py-3" />
+                    <th className="px-4 py-3 w-56" />
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
@@ -360,16 +360,16 @@ export default function AdminMembers() {
                             className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                         </td>
                         <td className="px-4 py-3 text-gray-400 text-xs font-mono">{i + 1}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                          <div>{m.first_name} {m.last_name}</div>
-                          {m.email && <div className="text-xs text-gray-400 font-normal">{m.email}</div>}
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                          <div className="truncate">{m.first_name} {m.last_name}</div>
+                          {m.email && <div className="text-xs text-gray-400 font-normal truncate">{m.email}</div>}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.college || '—'}</td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.year || '—'}</td>
-                        <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{m.points}</td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{m.events_attended}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs truncate">{m.college || '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs truncate">{m.year || '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{m.points}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{m.events_attended}</td>
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             <ActionBtn color="indigo" onClick={() => openEdit(m)}>Edit</ActionBtn>
                             {m.needs_review && (
                               <ActionBtn color="green" onClick={() => handleUnflag(m)}>Review OK</ActionBtn>
