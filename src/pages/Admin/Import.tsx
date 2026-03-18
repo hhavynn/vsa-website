@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
+import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,10 @@ interface Member {
   points: number;
   events_attended: number;
   email: string | null;
+  needs_review?: boolean;
 }
 
-type RowStatus = 'match' | 'new' | 'already' | 'conflict';
+type RowStatus = 'match' | 'new' | 'already' | 'review';
 
 interface RowResult {
   csvRow: Record<string, string>;
@@ -34,14 +36,15 @@ interface RowResult {
   csvCollege: string;
   csvYear: string;
   csvEmail: string;
-  /** Existing member if matched or conflicted, null if new */
+  /** Existing member if matched or reviewed, null if new */
   matchedMember: Member | null;
   status: RowStatus;
-  /** Composite score 0–100 (set when status === 'match' or 'conflict') */
+  /** Composite score 0–100 (set when status === 'match' or 'review') */
   score: number;
   nameScore: number;
   collegeMatch: boolean;
   yearMatch: boolean;
+  invalidYear: boolean;
   /** True when: status=match, csvEmail non-empty, member.email is null → will write email to DB */
   emailWillEnrich: boolean;
 }
@@ -60,20 +63,6 @@ const COLLEGE_ALIASES: [RegExp, string][] = [
 
 function normalizeCollege(s: string): string {
   for (const [re, key] of COLLEGE_ALIASES) if (re.test(s)) return key;
-  return s.toLowerCase().trim();
-}
-
-const YEAR_ALIASES: [RegExp, string][] = [
-  [/1st|first|fresh/i,  '1'],
-  [/2nd|second|soph/i,  '2'],
-  [/3rd|third|junior/i, '3'],
-  [/4th|fourth|senior/i,'4'],
-  [/5th|fifth/i,        '5'],
-  [/transfer/i,         'transfer'],
-];
-
-function normalizeYear(s: string): string {
-  for (const [re, key] of YEAR_ALIASES) if (re.test(s)) return key;
   return s.toLowerCase().trim();
 }
 
@@ -284,10 +273,11 @@ export default function AdminImport() {
       const matchName = cleanName(displayName);
 
       const csvCollege    = (cCol ? row[cCol] : '').trim();
-      const csvYear       = (yCol ? row[yCol] : '').trim();
+      const csvYear       = normalizeYearInput(yCol ? row[yCol] : '');
       const csvEmail      = (eCol ? row[eCol] : '').trim().toLowerCase();
       const normCsvCollege = normalizeCollege(csvCollege);
-      const normCsvYear    = normalizeYear(csvYear);
+      
+      const invalidYear = csvYear !== '' && !OFFICIAL_YEARS.includes(csvYear);
 
       // Score against every member using the cleaned match name
       let best: Member | null = null;
@@ -299,29 +289,29 @@ export default function AdminImport() {
         const ns = nameSimilarity(matchName, memberFullName);
         if (ns < 50) continue; // fast-reject
         const cm = !!(normCsvCollege && m.college && normalizeCollege(m.college) === normCsvCollege);
-        const ym = !!(normCsvYear    && m.year    && normalizeYear(m.year)       === normCsvYear);
+        const ym = !!(csvYear && m.year && m.year === csvYear);
         const cs = compositeScore(ns, cm, ym);
         if (cs > bestScore) { bestScore = cs; best = m; bestNS = ns; bestCM = cm; bestYM = ym; }
       }
 
-      // High name similarity but college/year mismatch → flag for manual review
-      if (best && bestNS >= 75 && bestScore < 75) {
+      // Name similarity 50-94% OR composite score 50-94% → flag for manual review
+      if (best && bestScore >= 50 && bestScore < 95) {
         return {
           csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
-          matchedMember: best, status: 'conflict' as RowStatus,
+          matchedMember: best, status: 'review' as RowStatus,
           score: bestScore, nameScore: bestNS, collegeMatch: bestCM, yearMatch: bestYM,
-          emailWillEnrich: false,
+          invalidYear, emailWillEnrich: false,
         };
       }
 
-      // Full match threshold: composite >= 75
-      if (best && bestScore >= 75) {
+      // Full match threshold: composite >= 95
+      if (best && bestScore >= 95) {
         const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
         const emailWillEnrich = status === 'match' && !!csvEmail && !best.email;
         return {
           csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
           matchedMember: best, status, score: bestScore, nameScore: bestNS,
-          collegeMatch: bestCM, yearMatch: bestYM, emailWillEnrich,
+          collegeMatch: bestCM, yearMatch: bestYM, invalidYear, emailWillEnrich,
         };
       }
 
@@ -329,7 +319,7 @@ export default function AdminImport() {
       return {
         csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
         matchedMember: null, status: 'new', score: 0, nameScore: 0,
-        collegeMatch: false, yearMatch: false, emailWillEnrich: false,
+        collegeMatch: false, yearMatch: false, invalidYear, emailWillEnrich: false,
       };
     });
 
@@ -348,7 +338,7 @@ export default function AdminImport() {
   // ── Confirm import ────────────────────────────────────────────────────────────
   async function handleImport() {
     const toUpdate = rows.filter(r => r.status === 'match');
-    const toCreate = rows.filter(r => r.status === 'new' && r.displayName.trim());
+    const toCreate = rows.filter(r => (r.status === 'new' || r.status === 'review') && r.displayName.trim());
 
     if (!toUpdate.length && !toCreate.length) {
       toast.error('Nothing to import.'); return;
@@ -370,6 +360,7 @@ export default function AdminImport() {
           college:    r.csvCollege || null,
           year:       r.csvYear    || null,
           email:      r.csvEmail   || null,
+          needs_review: r.status === 'review',
         };
       });
 
@@ -420,7 +411,8 @@ export default function AdminImport() {
     match:    rows.filter(r => r.status === 'match').length,
     new:      rows.filter(r => r.status === 'new').length,
     already:  rows.filter(r => r.status === 'already').length,
-    conflict: rows.filter(r => r.status === 'conflict').length,
+    review:   rows.filter(r => r.status === 'review').length,
+    invalidYear: rows.filter(r => r.invalidYear).length,
     enrich:   rows.filter(r => r.emailWillEnrich).length,
   };
   const selectedEvent = events.find(e => e.id === selectedEventId);
@@ -535,8 +527,11 @@ export default function AdminImport() {
               <div className="flex flex-wrap gap-3">
                 <SummaryBadge color="green"  count={summary.match}    label="will update existing member"    plural="will update existing members" />
                 <SummaryBadge color="blue"   count={summary.new}      label="will be added as a new member"  plural="will be added as new members" />
+                <SummaryBadge color="amber"  count={summary.review}   label="added as new, flag as potential duplicate" plural="added as new, flag as potential duplicates" />
                 <SummaryBadge color="gray"   count={summary.already}  label="already imported for this event" plural="already imported for this event" />
-                <SummaryBadge color="amber"  count={summary.conflict} label="needs manual review"             plural="need manual review" />
+                {summary.invalidYear > 0 && (
+                  <SummaryBadge color="red" count={summary.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
+                )}
                 {summary.enrich > 0 && (
                   <SummaryBadge color="purple" count={summary.enrich} label="email will be added to profile" plural="emails will be added to profiles" />
                 )}
@@ -563,7 +558,7 @@ export default function AdminImport() {
                       <tr key={i} className={
                         row.status === 'match'    ? 'bg-green-50/40 dark:bg-green-900/10' :
                         row.status === 'new'      ? 'bg-blue-50/40 dark:bg-blue-900/10' :
-                        row.status === 'conflict' ? 'bg-amber-50/60 dark:bg-amber-900/10' :
+                        row.status === 'review'   ? 'bg-amber-50/60 dark:bg-amber-900/10' :
                                                     'bg-gray-50/60 dark:bg-gray-900/20'
                       }>
                         <td className="px-4 py-2.5 whitespace-nowrap">
@@ -577,7 +572,7 @@ export default function AdminImport() {
                           )}
                           {row.status === 'new'      && <ActionBadge color="blue"  label="Create" />}
                           {row.status === 'already'  && <ActionBadge color="gray"  label="Skip" />}
-                          {row.status === 'conflict' && <ActionBadge color="amber" label="Review" />}
+                          {row.status === 'review'   && <ActionBadge color="amber" label="Review" />}
                         </td>
                         <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
                           <div>{row.displayName || <span className="text-gray-400 italic">—</span>}</div>
@@ -586,7 +581,12 @@ export default function AdminImport() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{row.csvCollege || '—'}</td>
-                        <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{row.csvYear || '—'}</td>
+                        <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">
+                          {row.csvYear || '—'}
+                          {row.invalidYear && (
+                            <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">⚠️</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
                           {row.matchedMember ? (
                             <span>
@@ -601,8 +601,8 @@ export default function AdminImport() {
                                   · {row.matchedMember.year}
                                 </span>
                               )}
-                              {row.status === 'conflict' && (
-                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">college/year mismatch — skipped</div>
+                              {row.status === 'review' && (
+                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Similarity {row.score}% — adding as new</div>
                               )}
                             </span>
                           ) : (
@@ -610,10 +610,10 @@ export default function AdminImport() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          {(row.status === 'match' || row.status === 'conflict') ? (
+                          {(row.status === 'match' || row.status === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
-                              row.status === 'conflict'  ? 'text-amber-600 dark:text-amber-400' :
-                              row.score >= 88            ? 'text-green-600 dark:text-green-400' :
+                              row.status === 'review'    ? 'text-amber-600 dark:text-amber-400' :
+                              row.score >= 95            ? 'text-green-600 dark:text-green-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : row.status === 'new' ? (
@@ -629,7 +629,7 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Score = name (60%) + college (25%) + year (15%). ≥75% → matched. Below 75% → new member. High name similarity but college/year mismatch → flagged for review (skipped). "Skip" rows already imported.
+                Score = name (60%) + college (25%) + year (15%). ≥95% → exact match. 50-94% → flagged as duplicate but added as new. &lt;50% → new member.
               </p>
 
               <div className="flex items-center gap-3 pt-2">

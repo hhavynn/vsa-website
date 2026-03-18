@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
+import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ interface Member {
   points: number;
   events_attended: number;
   created_at: string;
+  needs_review?: boolean;
 }
 
 interface AttendanceRecord {
@@ -26,17 +28,6 @@ interface AttendanceRecord {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const YEAR_LABELS: Record<string, string> = {
-  '1': '1st Year', '2': '2nd Year', '3': '3rd Year',
-  '4': '4th Year', '5': '5th Year',
-  'transfer-1': '1st Year Transfer', 'transfer-2': '2nd Year Transfer',
-};
-
-function yearLabel(y: string | null) {
-  if (!y) return '';
-  return YEAR_LABELS[y] ?? y;
-}
-
 const COLLEGE_OPTIONS = [
   { value: 'revelle',  label: 'Revelle' },
   { value: 'muir',     label: 'Muir' },
@@ -47,20 +38,6 @@ const COLLEGE_OPTIONS = [
   { value: 'seventh',  label: 'Seventh' },
   { value: 'eighth',   label: 'Eighth' },
 ];
-
-function toYearKey(s: string): string {
-  const t = s.toLowerCase();
-  if (/1st.*transfer|transfer.*1st|transfer.*fresh/.test(t)) return 'transfer-1';
-  if (/2nd.*transfer|transfer.*2nd|transfer.*soph/.test(t))  return 'transfer-2';
-  if (/transfer/.test(t))   return 'transfer-1';
-  if (/1st|first|fresh/.test(t))  return '1';
-  if (/2nd|second|soph/.test(t))  return '2';
-  if (/3rd|third|junior/.test(t)) return '3';
-  if (/4th|fourth|senior/.test(t))return '4';
-  if (/5th|fifth/.test(t))        return '5';
-  if (/^[12345]$/.test(t))        return t;
-  return s;
-}
 
 function toCollegeKey(s: string): string {
   const t = s.toLowerCase();
@@ -81,6 +58,7 @@ export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
+  const [showReviewOnly, setShowReviewOnly] = useState(false);
 
   // Sorting
   type SortKey = 'name' | 'points' | 'events_attended';
@@ -123,7 +101,7 @@ export default function AdminMembers() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, first_name, last_name, college, year, email, points, events_attended, created_at')
+      .select('id, first_name, last_name, college, year, email, points, events_attended, created_at, needs_review')
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
     setMembers((data ?? []) as Member[]);
@@ -135,6 +113,7 @@ export default function AdminMembers() {
 
   // ── Filtered + sorted ────────────────────────────────────────────────────────
   const filtered = members
+    .filter(m => showReviewOnly ? m.needs_review : true)
     .filter(m => {
       const q = search.toLowerCase();
       return (
@@ -188,7 +167,7 @@ export default function AdminMembers() {
       first_name: m.first_name,
       last_name:  m.last_name,
       college:    m.college ? toCollegeKey(m.college) : '',
-      year:       m.year    ? toYearKey(m.year)       : '',
+      year:       m.year    ?? '',
       email:      m.email   ?? '',
     });
   }
@@ -223,6 +202,14 @@ export default function AdminMembers() {
     if (error) { toast.error('Failed to delete member.'); return; }
     toast.success(`${deleting.first_name} ${deleting.last_name} removed.`);
     setDeleting(null);
+    load();
+  }
+
+  // ── Unflag (Clear Review) ───────────────────────────────────────────────────
+  async function handleUnflag(m: Member) {
+    const { error } = await supabase.from('members').update({ needs_review: false }).eq('id', m.id);
+    if (error) { toast.error('Failed to clear review flag.'); return; }
+    toast.success(`Cleared review flag for ${m.first_name} ${m.last_name}.`);
     load();
   }
 
@@ -285,6 +272,7 @@ export default function AdminMembers() {
   }
 
   const selectedCount = selected.size;
+  const needsReviewCount = members.filter(m => m.needs_review).length;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -314,6 +302,23 @@ export default function AdminMembers() {
                   text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
             </div>
           </div>
+
+          {needsReviewCount > 0 && !loading && (
+            <div className={`mb-6 p-4 rounded-lg border ${showReviewOnly ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' : 'bg-amber-100 border-amber-300 dark:bg-amber-900/40 dark:border-amber-700'} flex items-center justify-between flex-wrap gap-4`}>
+              <div className="flex items-center gap-3">
+                <span className="text-amber-600 dark:text-amber-400">⚠️</span>
+                <p className="text-amber-800 dark:text-amber-200 text-sm font-medium">
+                  {needsReviewCount} new member{needsReviewCount !== 1 ? 's were' : ' was'} added but may be duplicate{needsReviewCount !== 1 ? 's' : ''} of existing members.
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowReviewOnly(!showReviewOnly)}
+                className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {showReviewOnly ? 'Show All Members' : 'Click here to review'}
+              </button>
+            </div>
+          )}
 
           {loading ? (
             <div className="py-16 text-center text-gray-400">Loading…</div>
@@ -360,12 +365,15 @@ export default function AdminMembers() {
                           {m.email && <div className="text-xs text-gray-400 font-normal">{m.email}</div>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.college || '—'}</td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{yearLabel(m.year) || '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{m.year || '—'}</td>
                         <td className="px-4 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{m.points}</td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{m.events_attended}</td>
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <ActionBtn color="indigo" onClick={() => openEdit(m)}>Edit</ActionBtn>
+                            {m.needs_review && (
+                              <ActionBtn color="green" onClick={() => handleUnflag(m)}>Review OK</ActionBtn>
+                            )}
                             <ActionBtn color="teal"   onClick={() => openHistory(m)}>History</ActionBtn>
                             <ActionBtn color="amber"  onClick={() => openMerge(m)}>Merge</ActionBtn>
                             <ActionBtn color="red"    onClick={() => setDeleting(m)}>Delete</ActionBtn>
@@ -435,8 +443,8 @@ export default function AdminMembers() {
               <Field label="Year">
                 <select value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))} className={inputCls}>
                   <option value="">— select —</option>
-                  {Object.entries(YEAR_LABELS).map(([v, label]) => (
-                    <option key={v} value={v}>{label}</option>
+                  {OFFICIAL_YEARS.map(y => (
+                    <option key={y} value={y}>{y}</option>
                   ))}
                 </select>
               </Field>
@@ -626,6 +634,7 @@ function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?:
 function ActionBtn({ color, onClick, children }: { color: string; onClick: () => void; children: React.ReactNode }) {
   const cls: Record<string, string> = {
     indigo: 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
+    green:  'text-green-600  dark:text-green-400  hover:bg-green-50  dark:hover:bg-green-900/30',
     teal:   'text-teal-600   dark:text-teal-400   hover:bg-teal-50   dark:hover:bg-teal-900/30',
     amber:  'text-amber-600  dark:text-amber-400  hover:bg-amber-50  dark:hover:bg-amber-900/30',
     red:    'text-red-500    dark:text-red-400    hover:bg-red-50    dark:hover:bg-red-900/30',
