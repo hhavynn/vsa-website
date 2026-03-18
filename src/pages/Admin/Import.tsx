@@ -94,6 +94,9 @@ function nameSimilarity(a: string, b: string): number {
   return Math.round((1 - levenshtein(na, nb) / Math.max(na.length, nb.length)) * 100);
 }
 
+const EXACT_MATCH_THRESHOLD = 75;
+const REVIEW_THRESHOLD = 50;
+
 // Composite: name 60%, college 25%, year 15%
 function compositeScore(ns: number, cm: boolean, ym: boolean) {
   return Math.round(ns * 0.6 + (cm ? 25 : 0) + (ym ? 15 : 0));
@@ -294,8 +297,8 @@ export default function AdminImport() {
         if (cs > bestScore) { bestScore = cs; best = m; bestNS = ns; bestCM = cm; bestYM = ym; }
       }
 
-      // Name similarity 50-94% OR composite score 50-94% → flag for manual review
-      if (best && bestScore >= 50 && bestScore < 95) {
+      // Composite score 50-74% means probable duplicate; add as new and flag for review
+      if (best && bestScore >= REVIEW_THRESHOLD && bestScore < EXACT_MATCH_THRESHOLD) {
         return {
           csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
           matchedMember: best, status: 'review' as RowStatus,
@@ -304,8 +307,8 @@ export default function AdminImport() {
         };
       }
 
-      // Full match threshold: composite >= 95
-      if (best && bestScore >= 95) {
+      // Composite score >= 75 counts as an exact match
+      if (best && bestScore >= EXACT_MATCH_THRESHOLD) {
         const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
         const emailWillEnrich = status === 'match' && !!csvEmail && !best.email;
         return {
@@ -415,6 +418,7 @@ export default function AdminImport() {
     invalidYear: rows.filter(r => r.invalidYear).length,
     enrich:   rows.filter(r => r.emailWillEnrich).length,
   };
+  const totalNewMembers = summary.new + summary.review;
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
@@ -613,7 +617,7 @@ export default function AdminImport() {
                           {(row.status === 'match' || row.status === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
                               row.status === 'review'    ? 'text-amber-600 dark:text-amber-400' :
-                              row.score >= 95            ? 'text-green-600 dark:text-green-400' :
+                              row.score >= EXACT_MATCH_THRESHOLD ? 'text-green-600 dark:text-green-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : row.status === 'new' ? (
@@ -629,18 +633,18 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Score = name (60%) + college (25%) + year (15%). ≥95% → exact match. 50-94% → flagged as duplicate but added as new. &lt;50% → new member.
+                Score = name (60%) + college (25%) + year (15%). ≥75% → exact match. 50-74% → flagged as duplicate but added as new. &lt;50% → new member.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || (summary.match + summary.new) === 0}
+                  disabled={importing || (summary.match + totalNewMembers) === 0}
                   className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700
                     disabled:bg-indigo-300 dark:disabled:bg-indigo-800
                     text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors">
                   {importing
                     ? <><Spinner />Importing…</>
-                    : <><CheckIcon />Import ({summary.match} update{summary.match !== 1 ? 's' : ''} + {summary.new} new)</>}
+                    : <><CheckIcon />Import ({summary.match} update{summary.match !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
                 </button>
                 <button onClick={() => { setStep('configure'); setRows([]); }}
                   className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2.5">
