@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
+import { usePagination } from '../../hooks/usePagination';
+import { PaginationControls } from '../../components/common/PaginationControls';
 
 interface Member {
   id: string;
@@ -102,6 +104,13 @@ export default function AdminMergeSuggestions() {
     return pairs;
   }, [members, exclusions]);
 
+  // ─── Pagination ───────────────────────────────────────────────────────────────
+  const {
+    page, totalPages, rowsPerPage, setRowsPerPage, setCurrentPage,
+    pageStartLabel, pageEndLabel,
+    paginatedData: paginatedMatches,
+  } = usePagination(potentialMatches, { defaultRowsPerPage: 10 });
+
   // ─── Actions ──────────────────────────────────────────────────────────────────
   async function handleMerge(pair: MergePair) {
     const pairId = `${pair.source.id}-${pair.target.id}`;
@@ -193,7 +202,7 @@ export default function AdminMergeSuggestions() {
             </div>
           ) : (
             <div className="space-y-6">
-              {potentialMatches.map((pair) => {
+              {paginatedMatches.map((pair) => {
                 const pairId = `${pair.source.id}-${pair.target.id}`;
                 const isWorking = executingRow === pairId;
                 
@@ -254,6 +263,12 @@ export default function AdminMergeSuggestions() {
                   </div>
                 );
               })}
+              <PaginationControls
+                page={page} totalPages={totalPages}
+                rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
+                pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={potentialMatches.length}
+                theme="gray"
+              />
             </div>
           )}
         </div>

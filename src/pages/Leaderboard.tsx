@@ -4,6 +4,8 @@ import { PageTitle } from '../components/common/PageTitle';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PageLoader } from '../components/common/PageLoader';
+import { usePagination } from '../hooks/usePagination';
+import { PaginationControls } from '../components/common/PaginationControls';
 
 interface Member {
   id: string;
@@ -19,10 +21,6 @@ interface Member {
 interface LeaderboardEntry extends Member {
   rank: number;
 }
-
-type RowsPerPageOption = 10 | 25 | 50 | 100 | 'all';
-
-const ROWS_PER_PAGE_OPTIONS: RowsPerPageOption[] = [10, 25, 50, 100, 'all'];
 
 const formatRank = (rank: number) => {
   if (rank === 1) return '🥇';
@@ -52,8 +50,6 @@ export function Leaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState<RowsPerPageOption>(25);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchLeaderboard = useCallback(async () => {
     try {
@@ -94,17 +90,6 @@ export function Leaderboard() {
     return () => { sub.unsubscribe(); };
   }, [fetchLeaderboard]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchQuery, rowsPerPage]);
-
-  if (loading) return <PageLoader message="Loading leaderboard..." />;
-  if (error) return (
-    <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-      <p className="text-red-400">{error}</p>
-    </div>
-  );
-
   const entries = activeTab === 'points' ? byPoints : byEvents;
   const searchTerm = searchQuery.trim().toLowerCase();
   const filteredEntries = entries.filter(entry => {
@@ -116,16 +101,20 @@ export function Leaderboard() {
 
     return fullName.includes(searchTerm) || college.includes(searchTerm) || year.includes(searchTerm);
   });
-  const totalPages = rowsPerPage === 'all' ? 1 : Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage));
-  const page = Math.min(currentPage, totalPages);
-  const pageStart = rowsPerPage === 'all' ? 0 : (page - 1) * rowsPerPage;
-  const paginatedEntries = rowsPerPage === 'all'
-    ? filteredEntries
-    : filteredEntries.slice(pageStart, pageStart + rowsPerPage);
-  const pageStartLabel = filteredEntries.length === 0 ? 0 : pageStart + 1;
-  const pageEndLabel = rowsPerPage === 'all'
-    ? filteredEntries.length
-    : Math.min(pageStart + rowsPerPage, filteredEntries.length);
+
+  const resetKey = `${activeTab}|${searchQuery}`;
+  const {
+    page, totalPages, rowsPerPage, setRowsPerPage, setCurrentPage,
+    pageStartLabel, pageEndLabel,
+    paginatedData: paginatedEntries,
+  } = usePagination(filteredEntries, { defaultRowsPerPage: 25, resetKey });
+
+  if (loading) return <PageLoader message="Loading leaderboard..." />;
+  if (error) return (
+    <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+      <p className="text-red-400">{error}</p>
+    </div>
+  );
 
   return (
     <>
@@ -199,35 +188,17 @@ export function Leaderboard() {
         <RevealOnScrollWrapper>
           <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 overflow-hidden">
             <div className="border-b border-slate-800/80 px-4 py-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1.5">
-                    Search Members
-                  </label>
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search by name, college, or year"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-                <div className="md:w-56">
-                  <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1.5">
-                    Rows Per Page
-                  </label>
-                  <select
-                    value={rowsPerPage}
-                    onChange={e => setRowsPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value) as RowsPerPageOption)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                  >
-                    {ROWS_PER_PAGE_OPTIONS.map(option => (
-                      <option key={option} value={option}>
-                        {option === 'all' ? 'Show All' : `Show ${option} per page`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1.5">
+                  Search Members
+                </label>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by name, college, or year"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+                />
               </div>
               <div className="mt-3 text-xs text-slate-500">
                 {filteredEntries.length === 0
@@ -289,25 +260,12 @@ export function Leaderboard() {
                   </tbody>
                 </table>
 
-                <div className="flex items-center justify-between border-t border-slate-800/80 px-4 py-4">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800/60 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Previous
-                  </button>
-                  <p className="text-sm text-slate-400">
-                    Page {page} of {totalPages}
-                  </p>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800/60 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
+                <PaginationControls
+                  page={page} totalPages={totalPages}
+                  rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
+                  pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={filteredEntries.length}
+                  theme="slate"
+                />
               </>
             )}
           </div>

@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
+import { usePagination } from '../../hooks/usePagination';
+import { PaginationControls } from '../../components/common/PaginationControls';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,6 +136,14 @@ export default function AdminMembers() {
       }
       return sortAsc ? cmp : -cmp;
     });
+
+  // ── Pagination ───────────────────────────────────────────────────────────────
+  const resetKey = `${search}|${showReviewOnly}|${sortKey}|${sortAsc}`;
+  const {
+    page, totalPages, rowsPerPage, setRowsPerPage, setCurrentPage,
+    pageStart, pageStartLabel, pageEndLabel,
+    paginatedData: paginatedFiltered,
+  } = usePagination(filtered, { defaultRowsPerPage: 25, resetKey });
 
   // ── Selection ────────────────────────────────────────────────────────────────
   const allFilteredIds = filtered.map(m => m.id);
@@ -347,7 +357,7 @@ export default function AdminMembers() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                  {filtered.map((m, i) => {
+                  {paginatedFiltered.map((m, i) => {
                     const isChecked = selected.has(m.id);
                     return (
                       <tr key={m.id}
@@ -359,7 +369,7 @@ export default function AdminMembers() {
                           <input type="checkbox" checked={isChecked} onChange={() => toggleOne(m.id)}
                             className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                         </td>
-                        <td className="px-4 py-3 text-gray-400 text-xs font-mono">{i + 1}</td>
+                        <td className="px-4 py-3 text-gray-400 text-xs font-mono">{pageStart + i + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                           <div className="truncate">{m.first_name} {m.last_name}</div>
                           {m.email && <div className="text-xs text-gray-400 font-normal truncate">{m.email}</div>}
@@ -384,6 +394,14 @@ export default function AdminMembers() {
                   })}
                 </tbody>
               </table>
+              {filtered.length > 0 && (
+                <PaginationControls
+                  page={page} totalPages={totalPages}
+                  rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
+                  pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={filtered.length}
+                  theme="gray"
+                />
+              )}
             </div>
           )}
         </div>
