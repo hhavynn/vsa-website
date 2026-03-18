@@ -23,7 +23,7 @@ const ANNOUNCEMENT = '';
  * Colors should be valid CSS hex values.
  * bg/border/glow use Tailwind utility strings — update to match the chosen color.
  */
-const HOUSES: House[] = [
+const HOUSES: HouseData[] = [
   {
     name: 'House Boo',
     meaning: 'Ghost',
@@ -84,7 +84,7 @@ const HOUSE_PARENTS: HouseParent[] = [
 // TYPE DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface House {
+interface HouseData {
   name: string;
   meaning: string;
   color: string;
