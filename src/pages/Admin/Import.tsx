@@ -282,17 +282,28 @@ export default function AdminImport() {
       
       const invalidYear = csvYear !== '' && !OFFICIAL_YEARS.includes(csvYear);
 
-      // Score against every member using the cleaned match name
+      // Score against every member using email first, then the cleaned match name
       let best: Member | null = null;
       let bestScore = 0, bestNS = 0;
       let bestCM = false, bestYM = false;
 
       for (const m of allMembers) {
+        const emailMatches = !!(csvEmail && m.email && m.email.trim().toLowerCase() === csvEmail);
+        const cm = !!(normCsvCollege && m.college && normalizeCollege(m.college) === normCsvCollege);
+        const ym = !!(csvYear && m.year && m.year === csvYear);
+
+        if (emailMatches) {
+          best = m;
+          bestScore = 100;
+          bestNS = 100;
+          bestCM = cm;
+          bestYM = ym;
+          break;
+        }
+
         const memberFullName = cleanName(`${m.first_name} ${m.last_name}`);
         const ns = nameSimilarity(matchName, memberFullName);
         if (ns < 50) continue; // fast-reject
-        const cm = !!(normCsvCollege && m.college && normalizeCollege(m.college) === normCsvCollege);
-        const ym = !!(csvYear && m.year && m.year === csvYear);
         const cs = compositeScore(ns, cm, ym);
         if (cs > bestScore) { bestScore = cs; best = m; bestNS = ns; bestCM = cm; bestYM = ym; }
       }
