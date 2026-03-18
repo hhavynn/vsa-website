@@ -22,12 +22,6 @@ interface LeaderboardEntry extends Member {
   rank: number;
 }
 
-const formatRank = (rank: number) => {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return String(rank);
-};
 
 /** Initials avatar for members without a linked account */
 function InitialsAvatar({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
@@ -37,7 +31,7 @@ function InitialsAvatar({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md
     : (parts[0]?.[0] ?? '?').toUpperCase();
   const dim = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
   return (
-    <div className={`${dim} rounded-full bg-indigo-800/60 border border-indigo-600/40 flex items-center justify-center font-semibold text-indigo-200 flex-shrink-0`}>
+    <div className={`${dim} rounded-full bg-zinc-700 border border-zinc-600 flex items-center justify-center font-semibold text-zinc-200 flex-shrink-0`}>
       {initials}
     </div>
   );
@@ -112,7 +106,7 @@ export function Leaderboard() {
   if (loading) return <PageLoader message="Loading leaderboard..." />;
   if (error) return (
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-      <p className="text-red-400">{error}</p>
+      <p className="text-brand-400">{error}</p>
     </div>
   );
 
@@ -123,22 +117,22 @@ export function Leaderboard() {
 
         <RevealOnScrollWrapper>
           <div className="text-center mb-10">
-            <h1 className="font-heading font-bold text-4xl text-white mb-2">Leaderboard</h1>
-            <p className="text-slate-400 text-sm">{byPoints.length} members ranked</p>
+            <h1 className="font-sans font-bold text-4xl text-white mb-2 tracking-tight">Leaderboard</h1>
+            <p className="text-zinc-500 text-sm">{byPoints.length} members ranked</p>
           </div>
         </RevealOnScrollWrapper>
 
         <RevealOnScrollWrapper>
           <div className="flex justify-center mb-8">
-            <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800/80 gap-1">
+            <div className="inline-flex p-1 rounded-md bg-zinc-900 border border-zinc-800 gap-1">
               {(['points', 'events'] as const).map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  className={`px-5 py-2 rounded text-sm font-medium transition-all duration-150 ${
                     activeTab === tab
-                      ? 'bg-indigo-600 text-white shadow-glow-sm'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'bg-zinc-700 text-white'
+                      : 'text-zinc-500 hover:text-white hover:bg-zinc-800'
                   }`}>
-                  {tab === 'points' ? '⭐ Points' : '🎫 Events'}
+                  {tab === 'points' ? 'Points' : 'Events'}
                 </button>
               ))}
             </div>
@@ -164,19 +158,19 @@ export function Leaderboard() {
                       {entry.first_name} {entry.last_name}
                     </p>
                     {entry.college && (
-                      <p className="text-slate-500 text-[10px] text-center truncate w-full px-1 -mt-1">
+                      <p className="text-zinc-500 text-[10px] text-center truncate w-full px-1 -mt-1">
                         {entry.college}
                       </p>
                     )}
-                    <p className="text-indigo-400 text-xs font-bold">
+                    <p className="text-brand-400 text-xs font-bold">
                       {activeTab === 'points' ? `${entry.points} pts` : `${entry.events_attended} events`}
                     </p>
-                    <div className={`w-full ${podiumHeight} rounded-t-xl flex items-center justify-center text-2xl ${
-                      i === 0 ? 'bg-amber-500/20 border border-amber-500/30' :
-                      i === 1 ? 'bg-slate-400/10 border border-slate-500/30' :
-                                'bg-orange-800/20 border border-orange-700/30'
+                    <div className={`w-full ${podiumHeight} rounded-t-md flex items-center justify-center text-sm font-bold text-zinc-400 ${
+                      i === 0 ? 'bg-accent-500/20 border border-accent-500/30 text-accent-400' :
+                      i === 1 ? 'bg-zinc-700/30 border border-zinc-600/30' :
+                                'bg-zinc-800/30 border border-zinc-700/30'
                     }`}>
-                      {formatRank(i + 1)}
+                      #{i + 1}
                     </div>
                   </div>
                 );
@@ -186,10 +180,10 @@ export function Leaderboard() {
         )}
 
         <RevealOnScrollWrapper>
-          <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 overflow-hidden">
-            <div className="border-b border-slate-800/80 px-4 py-4">
+          <div className="rounded-md bg-zinc-900 border border-zinc-800 overflow-hidden">
+            <div className="border-b border-zinc-800 px-4 py-4">
               <div>
-                <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1.5">
+                <label className="block text-xs font-medium uppercase tracking-label text-zinc-500 mb-1.5">
                   Search Members
                 </label>
                 <input
@@ -197,41 +191,47 @@ export function Leaderboard() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search by name, college, or year"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none"
                 />
               </div>
-              <div className="mt-3 text-xs text-slate-500">
+              <div className="mt-3 text-xs text-zinc-500">
                 {filteredEntries.length === 0
                   ? 'No matching members.'
-                  : `Showing ${pageStartLabel}-${pageEndLabel} of ${filteredEntries.length} result${filteredEntries.length !== 1 ? 's' : ''}`}
+                  : `Showing ${pageStartLabel}–${pageEndLabel} of ${filteredEntries.length} result${filteredEntries.length !== 1 ? 's' : ''}`}
               </div>
             </div>
 
             {filteredEntries.length === 0 ? (
-              <div className="py-16 text-center text-slate-500">
-                <p className="text-lg">{searchTerm ? 'No matching members.' : 'No members yet.'}</p>
+              <div className="py-16 text-center text-zinc-500">
+                <p className="text-base">{searchTerm ? 'No matching members.' : 'No members yet.'}</p>
                 <p className="text-sm mt-1">
-                  {searchTerm ? 'Try a different name, college, or year.' : 'Import a sign-in sheet to populate the leaderboard!'}
+                  {searchTerm ? 'Try a different name, college, or year.' : 'Import a sign-in sheet to populate the leaderboard.'}
                 </p>
               </div>
             ) : (
               <>
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-slate-800/80">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-16">Rank</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Member</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label w-16">Rank</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label">Member</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-zinc-500 uppercase tracking-label">
                         {activeTab === 'points' ? 'Points' : 'Events'}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/40">
+                  <tbody className="divide-y divide-zinc-800">
                     {paginatedEntries.map(entry => (
                       <tr key={entry.id}
-                        className={`transition-colors duration-100 hover:bg-slate-800/30 ${entry.rank <= 3 ? 'bg-indigo-500/5' : ''}`}>
-                        <td className="px-4 py-3.5 text-center text-sm font-medium text-slate-400">
-                          {formatRank(entry.rank)}
+                        className={`transition-colors duration-100 hover:bg-zinc-800/40 ${entry.rank <= 3 ? 'bg-zinc-800/20' : ''}`}>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`text-sm font-semibold ${
+                            entry.rank === 1 ? 'text-accent-400' :
+                            entry.rank <= 3 ? 'text-zinc-300' :
+                            'text-zinc-500'
+                          }`}>
+                            #{entry.rank}
+                          </span>
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3">
@@ -243,7 +243,7 @@ export function Leaderboard() {
                                 {entry.first_name} {entry.last_name}
                               </p>
                               {(entry.college || entry.year) && (
-                                <p className="text-slate-500 text-xs mt-0.5">
+                                <p className="text-zinc-500 text-xs mt-0.5">
                                   {[entry.year, entry.college].filter(Boolean).join(' · ')}
                                 </p>
                               )}
@@ -251,7 +251,7 @@ export function Leaderboard() {
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <span className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-indigo-400' : 'text-slate-300'}`}>
+                          <span className={`text-sm font-semibold ${entry.rank <= 3 ? 'text-brand-400' : 'text-zinc-300'}`}>
                             {activeTab === 'points' ? entry.points : entry.events_attended}
                           </span>
                         </td>
@@ -264,7 +264,7 @@ export function Leaderboard() {
                   page={page} totalPages={totalPages}
                   rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
                   pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={filteredEntries.length}
-                  theme="slate"
+                  theme="zinc"
                 />
               </>
             )}

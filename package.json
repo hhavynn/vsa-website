@@ -30,11 +30,11 @@
     "zod": "^3.25.76"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "chmod +x node_modules/.bin/* && react-scripts build",
-    "build:production": "chmod +x node_modules/.bin/* && set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "start": "node ./node_modules/react-scripts/bin/react-scripts.js start",
+    "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
+    "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
     "analyze:css": "npm run build && npx source-map-explorer 'build/static/css/*.css'",
     "analyze:all": "npm run build && npx source-map-explorer 'build/static/**/*.{js,css}'",

@@ -6,18 +6,15 @@ import { Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
-import { AdminNav } from '../../components/features/admin/AdminNav';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 
 const EMPTY_EVENT: Partial<Event> = {
-  name: '',
-  description: '',
-  date: '',
-  location: '',
-  event_type: 'other',
-  check_in_form_url: '',
-  points: 0,
+  name: '', description: '', date: '', location: '',
+  event_type: 'other', check_in_form_url: '', points: 0,
 };
+
+const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
+const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label';
 
 export default function AdminEvents() {
   const { events, refreshEvents } = useEvents();
@@ -29,8 +26,6 @@ export default function AdminEvents() {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
   const [copiedCode, setCopiedCode] = useState(false);
-
-  // Edit form file upload states
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
@@ -39,12 +34,12 @@ export default function AdminEvents() {
     if (!dateString) return '';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    const y = date.getFullYear();
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const mi = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${mo}-${d}T${h}:${mi}`;
   };
 
   const now = new Date();
@@ -66,9 +61,7 @@ export default function AdminEvents() {
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] },
-    maxFiles: 1,
+    onDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] }, maxFiles: 1,
   });
 
   const onEditDrop = useCallback((acceptedFiles: File[]) => {
@@ -81,9 +74,7 @@ export default function AdminEvents() {
   }, []);
 
   const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
-    onDrop: onEditDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] },
-    maxFiles: 1,
+    onDrop: onEditDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] }, maxFiles: 1,
   });
 
   async function uploadImage(file: File): Promise<string> {
@@ -98,39 +89,24 @@ export default function AdminEvents() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.name || !newEvent.description || !newEvent.date || !newEvent.location) return;
-
     try {
       setUploading(true);
       const imageUrl = imageFile ? await uploadImage(imageFile) : null;
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
       const { error } = await supabase.from('events').insert([{
-        name: newEvent.name,
-        description: newEvent.description,
-        date: new Date(newEvent.date!).toISOString(),
-        location: newEvent.location,
-        event_type: newEvent.event_type,
-        check_in_form_url: newEvent.check_in_form_url || '',
-        points: newEvent.points,
-        image_url: imageUrl,
-        check_in_code: checkInCode,
-        is_code_expired: false,
+        name: newEvent.name, description: newEvent.description,
+        date: new Date(newEvent.date!).toISOString(), location: newEvent.location,
+        event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
+        points: newEvent.points, image_url: imageUrl,
+        check_in_code: checkInCode, is_code_expired: false,
       }]);
-
       if (error) throw error;
-
-      toast.success('Event created!');
-      setNewEvent(EMPTY_EVENT);
-      setImageFile(null);
-      setImagePreview(null);
-      refreshEvents();
-      setActiveTab('manage');
+      toast.success('Event created');
+      setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null);
+      refreshEvents(); setActiveTab('manage');
     } catch (err) {
-      console.error('Error creating event:', err);
-      toast.error('Failed to create event');
-    } finally {
-      setUploading(false);
-    }
+      console.error(err); toast.error('Failed to create event');
+    } finally { setUploading(false); }
   };
 
   const handleDeleteConfirm = async () => {
@@ -142,204 +118,148 @@ export default function AdminEvents() {
       refreshEvents();
       if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
     } catch (err) {
-      console.error('Error deleting event:', err);
-      toast.error('Failed to delete event');
-    } finally {
-      setEventToDelete(null);
-    }
+      console.error(err); toast.error('Failed to delete event');
+    } finally { setEventToDelete(null); }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
-
     try {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
-      if (editImageFile) {
-        imageUrl = await uploadImage(editImageFile);
-      }
-
+      if (editImageFile) imageUrl = await uploadImage(editImageFile);
       const { error } = await supabase.from('events').update({
-        name: selectedEvent.name,
-        description: selectedEvent.description,
-        date: new Date(selectedEvent.date).toISOString(),
-        location: selectedEvent.location,
-        event_type: selectedEvent.event_type,
-        points: selectedEvent.points,
-        image_url: imageUrl,
-        check_in_code: selectedEvent.check_in_code,
+        name: selectedEvent.name, description: selectedEvent.description,
+        date: new Date(selectedEvent.date).toISOString(), location: selectedEvent.location,
+        event_type: selectedEvent.event_type, points: selectedEvent.points,
+        image_url: imageUrl, check_in_code: selectedEvent.check_in_code,
         is_code_expired: selectedEvent.is_code_expired,
         check_in_form_url: selectedEvent.check_in_form_url || '',
       }).eq('id', selectedEvent.id);
-
       if (error) throw error;
-
-      toast.success('Event updated!');
-      setEditImageFile(null);
-      setEditImagePreview(null);
-      setSelectedEvent(null);
+      toast.success('Event updated');
+      setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
       refreshEvents();
     } catch (err) {
-      console.error('Error updating event:', err);
-      toast.error('Failed to update event');
-    } finally {
-      setEditUploading(false);
-    }
+      console.error(err); toast.error('Failed to update event');
+    } finally { setEditUploading(false); }
   };
 
   const handleCopyCode = async () => {
     if (!selectedEvent?.check_in_code) return;
     await navigator.clipboard.writeText(selectedEvent.check_in_code);
     setCopiedCode(true);
-    toast.success('Check-in code copied!');
+    toast.success('Copied');
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const inputCls = 'mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2';
-  const labelCls = 'block text-sm font-medium text-gray-300';
-
-  const EventCard = ({ event }: { event: Event }) => (
-    <div className="bg-gray-900 rounded-lg shadow-xl p-5 border border-gray-700 hover:border-indigo-500 transition-colors">
+  const EventRow = ({ event }: { event: Event }) => (
+    <div className="flex items-start gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
       {event.image_url && (
-        <img src={event.image_url} alt={event.name} className="w-full h-36 object-cover rounded-md mb-4" />
+        <img src={event.image_url} alt={event.name} className="w-14 h-14 object-cover rounded shrink-0" />
       )}
-      <div className="flex justify-between items-start gap-2">
-        <div className="min-w-0">
-          <h3 className="font-bold text-white truncate">{event.name}</h3>
-          <p className="text-gray-400 text-sm mt-1 line-clamp-2">{event.description}</p>
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            <span className="text-xs text-gray-400">
-              {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
-              {EVENT_TYPE_LABELS[event.event_type]}
-            </span>
-            <span className="text-xs text-emerald-400 font-medium">{event.points} pts</span>
-          </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">{event.name}</p>
+        <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{event.description}</p>
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          <span className="text-xs text-zinc-400">
+            {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+          <span className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-500 rounded">
+            {EVENT_TYPE_LABELS[event.event_type]}
+          </span>
+          <span className="text-xs text-emerald-500 font-medium">{event.points} pts</span>
         </div>
-        <div className="flex flex-col gap-2 shrink-0">
-          <button
-            onClick={() => { setSelectedEvent(event); setEditImageFile(null); setEditImagePreview(null); }}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-md transition-colors"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => setEventToDelete(event)}
-            className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-sm rounded-md transition-colors border border-red-700/50 hover:border-transparent"
-          >
-            Delete
-          </button>
-        </div>
+      </div>
+      <div className="flex gap-1.5 shrink-0">
+        <button
+          onClick={() => { setSelectedEvent(event); setEditImageFile(null); setEditImagePreview(null); }}
+          className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => setEventToDelete(event)}
+          className="px-3 py-1.5 border border-red-900/30 text-red-500 hover:bg-red-600 hover:text-white text-xs rounded transition-colors"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
-      <PageTitle title="Event Management" />
-      <AdminNav />
+    <div className="py-6">
+      <PageTitle title="Events" />
 
-      {/* Tab switcher */}
-      <div className="flex space-x-3 mb-6">
-        {(['create', 'manage'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-lg font-medium text-sm transition-colors ${
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-6">
+        {(['create', 'manage'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
               activeTab === tab
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            {tab === 'create' ? 'Create Event' : `Manage Events (${events.length})`}
+                ? 'bg-zinc-800 text-zinc-50 dark:bg-zinc-700'
+                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            }`}>
+            {tab === 'create' ? 'Create Event' : `Manage (${events.length})`}
           </button>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
         {activeTab === 'create' ? (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Create New Event</h2>
-            <form onSubmit={handleCreateEvent} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className={labelCls}>Event Title *</label>
-                  <input type="text" value={newEvent.name} onChange={e => setNewEvent({ ...newEvent, name: e.target.value })} className={inputCls} required placeholder="Spring GBM" />
-                </div>
-                <div>
-                  <label className={labelCls}>Location *</label>
-                  <input type="text" value={newEvent.location} onChange={e => setNewEvent({ ...newEvent, location: e.target.value })} className={inputCls} required placeholder="Price Center Ballroom" />
-                </div>
-                <div>
-                  <label className={labelCls}>Date & Time *</label>
-                  <input type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} className={inputCls} required />
-                </div>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Create Event</h2>
+            <form onSubmit={handleCreateEvent} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
+                <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
+                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Event Type *</label>
-                  <select value={newEvent.event_type} onChange={e => setNewEvent({ ...newEvent, event_type: e.target.value as Event['event_type'] })} className={inputCls} required>
-                    {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
+                  <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                    {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className={labelCls}>Points *</label>
-                  <input type="number" value={newEvent.points} onChange={e => setNewEvent({ ...newEvent, points: Number(e.target.value) })} min="0" max="1000" className={inputCls} required />
-                </div>
-                <div>
-                  <label className={labelCls}>Check-in Form URL</label>
-                  <input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({ ...newEvent, check_in_form_url: e.target.value })} className={inputCls} placeholder="https://forms.google.com/..." />
-                </div>
+                <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({...newEvent, check_in_form_url: e.target.value})} className={inputCls} placeholder="https://forms.google.com/..." /></div>
               </div>
+              <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={3} required placeholder="Describe the event." /></div>
               <div>
-                <label className={labelCls}>Description *</label>
-                <textarea value={newEvent.description} onChange={e => setNewEvent({ ...newEvent, description: e.target.value })} className={inputCls} rows={3} required placeholder="What's this event about?" />
-              </div>
-              <div>
-                <label className={labelCls}>Event Image</label>
-                <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isDragActive ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'}`}>
+                <label className={labelCls}>Image</label>
+                <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors ${isDragActive ? 'border-zinc-400 bg-zinc-800/20' : 'border-zinc-700'}`}>
                   <input {...getInputProps()} />
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="max-h-48 rounded-md object-cover" />
-                  ) : (
-                    <div className="text-center">
-                      <p className="text-gray-400 text-sm">Drag & drop or click to select an image</p>
-                      <p className="text-gray-500 text-xs mt-1">PNG, JPG, GIF, WebP</p>
-                    </div>
-                  )}
+                  {imagePreview
+                    ? <img src={imagePreview} alt="Preview" className="max-h-40 rounded object-cover" />
+                    : <p className="text-zinc-500 text-xs">Drag and drop or click to upload</p>}
                 </div>
-                {imageFile && (
-                  <button type="button" className="mt-2 text-sm text-red-400 hover:text-red-300" onClick={() => { setImageFile(null); setImagePreview(null); }}>
-                    × Remove image
-                  </button>
-                )}
+                {imageFile && <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => { setImageFile(null); setImagePreview(null); }}>Remove image</button>}
               </div>
-              <button type="submit" disabled={uploading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors">
+              <button type="submit" disabled={uploading} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
                 {uploading ? 'Creating...' : 'Create Event'}
               </button>
             </form>
           </div>
         ) : (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Manage Events</h2>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Events</h2>
             {upcomingEvents.length === 0 && pastEvents.length === 0 && (
-              <p className="text-gray-400 text-center py-12">No events yet. Create one to get started.</p>
+              <p className="text-zinc-500 text-sm text-center py-10">No events yet.</p>
             )}
             {upcomingEvents.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">Upcoming ({upcomingEvents.length})</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {upcomingEvents.map((event: Event) => <EventCard key={event.id} event={event} />)}
+              <div className="mb-6">
+                <p className="text-xs font-semibold uppercase tracking-label text-zinc-500 mb-3">Upcoming ({upcomingEvents.length})</p>
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden">
+                  {upcomingEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
                 </div>
               </div>
             )}
             {pastEvents.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">Past ({pastEvents.length})</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {pastEvents.map((event: Event) => <EventCard key={event.id} event={event} />)}
+                <p className="text-xs font-semibold uppercase tracking-label text-zinc-500 mb-3">Past ({pastEvents.length})</p>
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden">
+                  {pastEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
                 </div>
               </div>
             )}
@@ -347,123 +267,84 @@ export default function AdminEvents() {
         )}
       </div>
 
-      {/* Edit Event Modal */}
+      {/* Edit Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl my-8 border border-gray-700">
-            <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-bold text-white">Edit Event</h2>
-              <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md w-full max-w-2xl my-8">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+              <h2 className="text-base font-semibold text-zinc-50">Edit Event</h2>
+              <button onClick={() => setSelectedEvent(null)} className="text-zinc-500 hover:text-zinc-200 text-xl leading-none">&times;</button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className={labelCls}>Event Title *</label>
-                  <input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({ ...selectedEvent, name: e.target.value })} className={inputCls} required />
-                </div>
-                <div>
-                  <label className={labelCls}>Location *</label>
-                  <input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({ ...selectedEvent, location: e.target.value })} className={inputCls} required />
-                </div>
-                <div>
-                  <label className={labelCls}>Date & Time *</label>
-                  <input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })} className={inputCls} required />
-                </div>
+            <form onSubmit={handleEditSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => setSelectedEvent({...selectedEvent, date: e.target.value})} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Event Type *</label>
-                  <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({ ...selectedEvent, event_type: e.target.value as Event['event_type'] })} className={inputCls} required>
-                    {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
+                  <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                    {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className={labelCls}>Points *</label>
-                  <input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({ ...selectedEvent, points: Number(e.target.value) })} min="0" max="1000" className={inputCls} required />
-                </div>
-                <div>
-                  <label className={labelCls}>Check-in Form URL</label>
-                  <input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({ ...selectedEvent, check_in_form_url: e.target.value })} className={inputCls} placeholder="https://forms.google.com/..." />
-                </div>
+                <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_form_url: e.target.value})} className={inputCls} /></div>
               </div>
-              <div>
-                <label className={labelCls}>Description *</label>
-                <textarea value={selectedEvent.description} onChange={e => setSelectedEvent({ ...selectedEvent, description: e.target.value })} className={inputCls} rows={3} required />
-              </div>
-
-              {/* Check-in code with copy button */}
+              <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={3} required /></div>
               <div>
                 <label className={labelCls}>Check-in Code</label>
                 <div className="mt-1 flex gap-2">
-                  <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({ ...selectedEvent, check_in_code: e.target.value })} className={`${inputCls} mt-0 font-mono tracking-widest`} />
-                  <button type="button" onClick={handleCopyCode} className={`shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-colors ${copiedCode ? 'bg-emerald-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
-                    {copiedCode ? '✓ Copied' : 'Copy'}
+                  <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_code: e.target.value})} className={`${inputCls} mt-0 font-mono tracking-widest`} />
+                  <button type="button" onClick={handleCopyCode} className={`shrink-0 px-3 py-2 rounded text-sm font-medium transition-colors border ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-400' : 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-300'}`}>
+                    {copiedCode ? 'Copied' : 'Copy'}
                   </button>
                 </div>
-                <label className="flex items-center gap-2 mt-2 text-sm text-gray-400 cursor-pointer">
-                  <input type="checkbox" checked={selectedEvent.is_code_expired} onChange={e => setSelectedEvent({ ...selectedEvent, is_code_expired: e.target.checked })} className="rounded" />
+                <label className="flex items-center gap-2 mt-2 text-xs text-zinc-500 cursor-pointer">
+                  <input type="checkbox" checked={selectedEvent.is_code_expired} onChange={e => setSelectedEvent({...selectedEvent, is_code_expired: e.target.checked})} className="rounded-sm" />
                   Mark code as expired
                 </label>
               </div>
-
-              {/* Image section */}
               <div>
-                <label className={labelCls}>Event Image</label>
+                <label className={labelCls}>Image</label>
                 {selectedEvent.image_url && !editImagePreview && (
                   <div className="mt-2 mb-3">
-                    <img src={selectedEvent.image_url} alt={selectedEvent.name} className="w-full h-40 object-cover rounded-lg border border-gray-600" />
-                    <button type="button" className="mt-2 text-sm text-red-400 hover:text-red-300" onClick={() => setSelectedEvent({ ...selectedEvent, image_url: '' })}>
-                      × Remove current image
-                    </button>
+                    <img src={selectedEvent.image_url} alt={selectedEvent.name} className="w-full h-36 object-cover rounded border border-zinc-700" />
+                    <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => setSelectedEvent({...selectedEvent, image_url: ''})}>Remove image</button>
                   </div>
                 )}
-                <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors ${isEditDragActive ? 'border-indigo-500 bg-indigo-900/20' : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'}`}>
+                <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border border-dashed rounded p-5 cursor-pointer transition-colors ${isEditDragActive ? 'border-zinc-400 bg-zinc-800/20' : 'border-zinc-700'}`}>
                   <input {...getEditInputProps()} />
-                  {editImagePreview ? (
-                    <img src={editImagePreview} alt="New preview" className="max-h-40 rounded-md object-cover" />
-                  ) : (
-                    <p className="text-gray-400 text-sm">Drag & drop or click to replace image</p>
-                  )}
+                  {editImagePreview
+                    ? <img src={editImagePreview} alt="New preview" className="max-h-36 rounded object-cover" />
+                    : <p className="text-zinc-500 text-xs">Drag and drop or click to replace image</p>}
                 </div>
-                {editImageFile && (
-                  <button type="button" className="mt-2 text-sm text-red-400 hover:text-red-300" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>
-                    × Remove new image
-                  </button>
-                )}
+                {editImageFile && <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>Remove new image</button>}
               </div>
-
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={editUploading} className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors">
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={editUploading} className="flex-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
                   {editUploading ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button type="button" onClick={() => setSelectedEvent(null)} className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors">
+                <button type="button" onClick={() => setSelectedEvent(null)} className="px-5 py-2.5 border border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded text-sm transition-colors">
                   Cancel
                 </button>
               </div>
             </form>
-
-            <div className="border-t border-gray-700 p-6">
+            <div className="border-t border-zinc-800 p-5">
               <ManualCheckIn eventId={selectedEvent.id} onSuccess={refreshEvents} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation */}
       {eventToDelete && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full border border-gray-700 p-6">
-            <h3 className="text-xl font-bold text-white mb-2">Delete Event</h3>
-            <p className="text-gray-400 mb-1">Are you sure you want to delete:</p>
-            <p className="text-white font-semibold mb-6">"{eventToDelete.name}"</p>
-            <p className="text-gray-500 text-sm mb-6">This action cannot be undone. All attendance records for this event will remain.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setEventToDelete(null)} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">
-                Cancel
-              </button>
-              <button onClick={handleDeleteConfirm} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
-                Delete Event
-              </button>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-md max-w-sm w-full p-6">
+            <h3 className="text-base font-semibold text-zinc-50 mb-2">Delete Event</h3>
+            <p className="text-sm text-zinc-400 mb-1">Delete <span className="text-zinc-200 font-medium">"{eventToDelete.name}"</span>?</p>
+            <p className="text-xs text-zinc-500 mb-5">This cannot be undone. Attendance records will remain.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEventToDelete(null)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors">Cancel</button>
+              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors">Delete</button>
             </div>
           </div>
         </div>

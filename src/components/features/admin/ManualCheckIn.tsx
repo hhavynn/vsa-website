@@ -25,12 +25,7 @@ export function ManualCheckIn({ eventId, onSuccess }: ManualCheckInProps) {
 
       const { data, error } = await supabase
         .from('user_profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          email
-        `)
+        .select('id, first_name, last_name, email')
         .or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
         .limit(5);
 
@@ -38,7 +33,7 @@ export function ManualCheckIn({ eventId, onSuccess }: ManualCheckInProps) {
       setSearchResults(data || []);
     } catch (err) {
       console.error('Error searching users:', err);
-      setError('Failed to search users. Please try again.');
+      setError('Failed to search users.');
     } finally {
       setIsLoading(false);
     }
@@ -46,49 +41,49 @@ export function ManualCheckIn({ eventId, onSuccess }: ManualCheckInProps) {
 
   const handleCheckIn = async () => {
     if (!selectedUser) return;
-
     try {
       setIsLoading(true);
       setError(null);
       setSuccess(null);
 
-      const success = await manuallyCheckIn(eventId, selectedUser.id, points);
-      if (success) {
-        setSuccess(`Successfully checked in ${selectedUser.first_name} ${selectedUser.last_name}`);
+      const ok = await manuallyCheckIn(eventId, selectedUser.id, points);
+      if (ok) {
+        setSuccess(`Checked in ${selectedUser.first_name} ${selectedUser.last_name}`);
         setSelectedUser(null);
         setPoints(0);
         onSuccess?.();
       }
     } catch (err) {
       console.error('Error checking in user:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check in user. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to check in user.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-      <h2 className="text-2xl font-bold mb-4 text-white">Manual Check-in</h2>
-      
+    <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
+      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Manual Check-in</h2>
+
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Search User
+          <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">
+            Search member
           </label>
-          <div className="flex space-x-2">
+          <div className="flex gap-2">
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or email"
-              className="flex-1 px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Name or email"
+              className="flex-1 px-3 py-2 rounded border border-zinc-700 bg-zinc-950 text-zinc-100 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
               disabled={isLoading}
             />
             <button
               onClick={handleSearch}
               disabled={isLoading || !searchQuery.trim()}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-sm rounded transition-colors disabled:opacity-50"
             >
               Search
             </button>
@@ -96,63 +91,61 @@ export function ManualCheckIn({ eventId, onSuccess }: ManualCheckInProps) {
         </div>
 
         {searchResults.length > 0 && (
-          <div className="space-y-2">
-            {searchResults.map((user) => (
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded">
+            {searchResults.map(user => (
               <button
                 key={user.id}
                 onClick={() => setSelectedUser(user)}
-                className={`w-full text-left p-3 rounded-lg border ${
+                className={`w-full text-left px-3 py-2.5 transition-colors ${
                   selectedUser?.id === user.id
-                    ? 'border-indigo-500 bg-indigo-900/20'
-                    : 'border-gray-700 hover:border-gray-600'
+                    ? 'bg-zinc-800 border-l-2 border-l-zinc-400'
+                    : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                 }`}
               >
-                <p className="text-white font-medium">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   {user.first_name} {user.last_name}
                 </p>
-                <p className="text-sm text-gray-400">{user.email}</p>
+                <p className="text-xs text-zinc-500">{user.email}</p>
               </button>
             ))}
           </div>
         )}
 
         {selectedUser && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Points to Award
+              <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">
+                Points to award
               </label>
               <input
                 type="number"
                 value={points}
-                onChange={(e) => setPoints(Number(e.target.value))}
+                onChange={e => setPoints(Number(e.target.value))}
                 min="0"
-                className="w-full px-4 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 rounded border border-zinc-700 bg-zinc-950 text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
               />
             </div>
-
             <button
               onClick={handleCheckIn}
               disabled={isLoading || points <= 0}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-sm font-medium rounded transition-colors disabled:opacity-50"
             >
-              Check In User
+              {isLoading ? 'Checking in...' : 'Confirm Check-in'}
             </button>
           </div>
         )}
 
         {error && (
-          <div className="p-4 rounded-lg bg-red-900/20 text-red-400 text-sm">
+          <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">
             {error}
           </div>
         )}
-
         {success && (
-          <div className="p-4 rounded-lg bg-green-900/20 text-green-400 text-sm">
+          <div className="p-3 rounded border border-emerald-900/40 bg-emerald-950/20 text-emerald-400 text-sm">
             {success}
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

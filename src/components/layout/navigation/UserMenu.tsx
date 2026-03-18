@@ -3,7 +3,6 @@ import { memo } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAdmin } from '../../../hooks/useAdmin';
 import { Avatar } from '../../features/avatar/Avatar';
-import { motion } from 'framer-motion';
 
 interface UserMenuProps {
   isMobile?: boolean;
@@ -30,7 +29,7 @@ export const UserMenu = memo(function UserMenu({
         <Link
           to="/signin"
           onClick={onLinkClick}
-          className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+          className="inline-flex items-center px-3 py-1.5 rounded text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-2 focus:ring-offset-zinc-950"
         >
           Sign In
         </Link>
@@ -44,7 +43,7 @@ export const UserMenu = memo(function UserMenu({
         <Link
           to="/profile"
           onClick={onLinkClick}
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors duration-150"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors duration-150"
         >
           <Avatar size="sm" />
           <span>Profile</span>
@@ -53,14 +52,14 @@ export const UserMenu = memo(function UserMenu({
           <Link
             to="/admin/events"
             onClick={onLinkClick}
-            className="block px-3 py-2.5 rounded-lg text-sm font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors duration-150"
+            className="block px-3 py-2.5 rounded text-sm font-medium text-accent-400 hover:text-accent-300 hover:bg-zinc-800 transition-colors duration-150"
           >
             Admin Panel
           </Link>
         )}
         <button
           onClick={handleSignOut}
-          className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors duration-150"
+          className="w-full text-left px-3 py-2.5 rounded text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors duration-150"
         >
           Sign Out
         </button>
@@ -73,26 +72,24 @@ export const UserMenu = memo(function UserMenu({
       {isAdmin && (
         <Link
           to="/admin/events"
-          className="text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors duration-150"
+          className="text-sm font-medium text-accent-400 hover:text-accent-300 transition-colors duration-150"
         >
           Admin
         </Link>
       )}
       <Link
         to="/profile"
-        className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150"
+        className="flex items-center gap-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors duration-150"
       >
         <Avatar size="sm" />
         <span>Profile</span>
       </Link>
-      <motion.button
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
+      <button
         onClick={signOut}
-        className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+        className="px-3 py-1.5 rounded text-sm font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 hover:text-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:ring-offset-2 focus:ring-offset-zinc-950"
       >
         Sign Out
-      </motion.button>
+      </button>
     </div>
   );
 });

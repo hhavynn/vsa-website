@@ -11,7 +11,6 @@ export function Events() {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // Split events into upcoming and past
   const upcomingEvents = events
     .filter((event: Event) => new Date(event.date) >= oneDayAgo)
     .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -48,9 +47,9 @@ export function Events() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         {/* Header */}
         <RevealOnScrollWrapper>
-          <div className="mb-12 text-center">
-            <h1 className="font-heading font-bold text-4xl text-white mb-3">Events</h1>
-            <p className="text-slate-400 text-sm">
+          <div className="mb-12">
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">Events</h1>
+            <p className="text-zinc-500 text-sm">
               {upcomingEvents.length} upcoming · {pastEvents.length} past
             </p>
           </div>
@@ -60,8 +59,8 @@ export function Events() {
         <section className="mb-16">
           <RevealOnScrollWrapper>
             <div className="flex items-center gap-3 mb-6">
-              <h2 className="font-heading font-semibold text-xl text-white">Upcoming</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-600/20 text-emerald-400 border border-emerald-600/20">
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Upcoming</h2>
+              <span className="px-2 py-0.5 text-xs font-medium border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 rounded">
                 {upcomingEvents.length}
               </span>
             </div>
@@ -69,9 +68,9 @@ export function Events() {
 
           {upcomingEvents.length === 0 ? (
             <RevealOnScrollWrapper>
-              <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-10 text-center">
-                <p className="text-slate-400 mb-1">No upcoming events at this time.</p>
-                <p className="text-slate-500 text-sm">Check back soon for new events!</p>
+              <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-10 text-center">
+                <p className="text-zinc-500 mb-1">No upcoming events at this time.</p>
+                <p className="text-zinc-400 text-sm">Check back soon for new events!</p>
               </div>
             </RevealOnScrollWrapper>
           ) : (
@@ -86,14 +85,14 @@ export function Events() {
         </section>
 
         {/* Divider */}
-        <div className="border-t border-slate-800/60 my-12" />
+        <div className="border-t border-zinc-200 dark:border-zinc-800 my-12" />
 
         {/* Past */}
         <section>
           <RevealOnScrollWrapper>
             <div className="flex items-center gap-3 mb-6">
-              <h2 className="font-heading font-semibold text-xl text-slate-300">Past Events</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-700/50 text-slate-400 border border-slate-700/50">
+              <h2 className="text-base font-semibold text-zinc-500">Past Events</h2>
+              <span className="px-2 py-0.5 text-xs font-medium border border-zinc-300 dark:border-zinc-700 text-zinc-500 rounded">
                 {pastEvents.length}
               </span>
             </div>
@@ -101,8 +100,8 @@ export function Events() {
 
           {pastEvents.length === 0 ? (
             <RevealOnScrollWrapper>
-              <div className="rounded-2xl bg-slate-900/40 border border-slate-800/60 p-8 text-center">
-                <p className="text-slate-500">No past events yet.</p>
+              <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-8 text-center">
+                <p className="text-zinc-500">No past events yet.</p>
               </div>
             </RevealOnScrollWrapper>
           ) : (

@@ -10,7 +10,7 @@ interface PaginationControlsProps {
   pageStartLabel: number;
   pageEndLabel: number;
   totalCount: number;
-  theme?: 'slate' | 'gray';
+  theme?: 'slate' | 'gray' | 'zinc';
   showRowsPerPage?: boolean;
   className?: string;
 }
@@ -39,6 +39,18 @@ const THEMES = {
     selectBorder:'border-gray-300 dark:border-gray-600',
     selectFocus: 'focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none',
     countText:   'text-gray-500 dark:text-gray-400',
+  },
+  zinc: {
+    divider:     'border-zinc-200 dark:border-[#27272a]',
+    btnBorder:   'border-zinc-200 dark:border-[#27272a]',
+    btnText:     'text-zinc-700 dark:text-zinc-300',
+    btnHover:    'hover:bg-zinc-50 dark:hover:bg-zinc-800',
+    pageLabel:   'text-zinc-500 dark:text-zinc-400',
+    selectBg:    'bg-white dark:bg-[#18181b]',
+    selectText:  'text-zinc-900 dark:text-zinc-100',
+    selectBorder:'border-zinc-200 dark:border-[#27272a]',
+    selectFocus: 'focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500',
+    countText:   'text-zinc-500 dark:text-zinc-400',
   },
 } as const;
 

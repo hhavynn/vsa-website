@@ -1,76 +1,34 @@
 import { Link, useLocation } from "react-router-dom";
 
-export function AdminNav() {
-  const location = useLocation();
+const NAV_LINKS = [
+  { to: "/admin/events",           label: "Events" },
+  { to: "/admin/gallery",          label: "Gallery" },
+  { to: "/admin/feedback",         label: "Feedback" },
+  { to: "/admin/import",           label: "Import" },
+  { to: "/admin/members",          label: "Members" },
+  { to: "/admin/merge-suggestions",label: "Merge" },
+  { to: "/admin/points",           label: "Points" },
+  { to: "/admin/cabinet",          label: "Cabinet" },
+];
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+export function AdminNav() {
+  const { pathname } = useLocation();
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 mb-8">
-      <div className="flex space-x-4">
+    <nav className="border-b border-zinc-200 dark:border-[#27272a] mb-8 -mx-8 px-8 flex gap-0.5 overflow-x-auto">
+      {NAV_LINKS.map(({ to, label }) => (
         <Link
-          to="/admin/events"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/events")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          key={to}
+          to={to}
+          className={`px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px shrink-0 transition-colors ${
+            pathname === to
+              ? "border-indigo-600 text-[#09090b] dark:text-[#fafafa]"
+              : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
           }`}
         >
-          Events
+          {label}
         </Link>
-        <Link
-          to="/admin/gallery"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/gallery")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-        >
-          Gallery
-        </Link>
-        <Link
-          to="/admin/feedback"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/feedback")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-        >
-          Feedback
-        </Link>
-        <Link
-          to="/admin/import"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/import")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-        >
-          Import
-        </Link>
-        <Link
-          to="/admin/members"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/members")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-        >
-          Members
-        </Link>
-        <Link
-          to="/admin/merge-suggestions"
-          className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-            isActive("/admin/merge-suggestions")
-              ? "bg-indigo-600 text-white"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }`}
-        >
-          Merge Suggestions
-        </Link>
-      </div>
+      ))}
     </nav>
   );
 }

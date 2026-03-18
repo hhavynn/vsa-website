@@ -47,6 +47,12 @@ const Internship = lazy(() =>
 const Vcn = lazy(() =>
   import("../pages/Vcn").then((module) => ({ default: module.VCN }))
 );
+const VcnCurrent = lazy(() =>
+  import("../pages/VcnCurrent").then((module) => ({ default: module.VCNCurrent }))
+);
+const VcnArchive = lazy(() =>
+  import("../pages/VcnArchive").then((module) => ({ default: module.VCNArchive }))
+);
 const WildNCulture = lazy(() =>
   import("../pages/WildNCulture").then((module) => ({
     default: module.WildNCulture,
@@ -62,6 +68,8 @@ const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
+const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
+const AdminPoints = lazy(() => import("../pages/Admin/Points"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -94,6 +102,8 @@ export default function AppRoutes() {
               <Route path="/house-system" element={<House />} />
               <Route path="/intern-program" element={<Internship />} />
               <Route path="/vcn" element={<Vcn />} />
+              <Route path="/vcn/current" element={<VcnCurrent />} />
+              <Route path="/vcn/archive" element={<VcnArchive />} />
               <Route path="/wild-n-culture" element={<WildNCulture />} />
               <Route path="/signin" element={<SignIn />} />
 
@@ -104,15 +114,19 @@ export default function AppRoutes() {
                 <Route path="/feedback" element={<Feedback />} />
               </Route>
 
-              {/* Admin Routes - require admin privileges */}
+              {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}
               <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminLayout />} />
-                <Route path="/admin/events" element={<AdminEvents />} />
-                <Route path="/admin/gallery" element={<AdminGallery />} />
-                <Route path="/admin/feedback" element={<AdminFeedback />} />
-                <Route path="/admin/import" element={<AdminImport />} />
-                <Route path="/admin/members" element={<AdminMembers />} />
-                <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={null} />
+                  <Route path="/admin/events" element={<AdminEvents />} />
+                  <Route path="/admin/gallery" element={<AdminGallery />} />
+                  <Route path="/admin/feedback" element={<AdminFeedback />} />
+                  <Route path="/admin/import" element={<AdminImport />} />
+                  <Route path="/admin/members" element={<AdminMembers />} />
+                  <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
+                  <Route path="/admin/cabinet" element={<AdminCabinet />} />
+                  <Route path="/admin/points" element={<AdminPoints />} />
+                </Route>
               </Route>
 
               {/* 404 Route */}

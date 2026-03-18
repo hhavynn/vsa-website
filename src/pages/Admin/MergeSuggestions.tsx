@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
-import { AdminNav } from '../../components/features/admin/AdminNav';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
@@ -162,43 +161,40 @@ export default function AdminMergeSuggestions() {
   // ─── Render Helper ────────────────────────────────────────────────────────────
   const DiffRow = ({ label, targetVal, sourceVal }: { label: string, targetVal: any, sourceVal: any }) => {
     const hasSourceOnly = !targetVal && sourceVal;
-    
+
     return (
-      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-gray-100 dark:border-gray-800">
-        <div className="col-span-2 text-gray-500 dark:text-gray-400 font-medium">{label}</div>
-        <div className={`col-span-5 ${!targetVal ? 'text-gray-400 italic' : 'text-gray-900 dark:text-gray-100'}`}>
+      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-zinc-100 dark:border-zinc-800">
+        <div className="col-span-2 text-zinc-500 dark:text-zinc-400 font-medium">{label}</div>
+        <div className={`col-span-5 ${!targetVal ? 'text-zinc-400 italic' : 'text-zinc-900 dark:text-zinc-100'}`}>
           {targetVal || '—'}
         </div>
-        <div className={`col-span-5 ${hasSourceOnly ? 'text-green-600 font-medium' : (!sourceVal ? 'text-gray-400 italic' : 'text-gray-900 dark:text-gray-100')}`}>
+        <div className={`col-span-5 ${hasSourceOnly ? 'text-emerald-500 font-medium' : (!sourceVal ? 'text-zinc-400 italic' : 'text-zinc-900 dark:text-zinc-100')}`}>
           {sourceVal || '—'}
-          {hasSourceOnly && <span className="ml-2 text-[10px] uppercase bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1 py-0.5 rounded">Will Fill</span>}
+          {hasSourceOnly && <span className="ml-2 text-[10px] uppercase border border-emerald-500/40 text-emerald-500 px-1 py-0.5 rounded">Will Fill</span>}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
+    <div className="py-6">
       <Toaster position="top-right" />
-      <div className="max-w-6xl mx-auto">
-        <AdminNav />
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 min-h-[500px]">
+        <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6 min-h-[500px]">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Merge Suggestions</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm max-w-2xl">
+            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Merge Suggestions</h1>
+            <p className="text-zinc-500 mt-1 text-sm max-w-2xl">
               Clean up your database. The system automatically finds potential duplicates based on names or emails. 
               Merging will transfer attendance and fill in any missing data on the Target member.
             </p>
           </div>
 
           {loading ? (
-            <div className="py-16 text-center text-gray-400">Loading suggestions…</div>
+            <div className="py-16 text-center text-zinc-500 text-sm">Loading suggestions…</div>
           ) : potentialMatches.length === 0 ? (
             <div className="py-16 text-center">
-              <div className="text-4xl mb-4">✨</div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">All clean!</h3>
-              <p className="text-gray-500 mt-1">We couldn't find any potential duplicates in your database.</p>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">All clean!</h3>
+              <p className="text-zinc-500 mt-1 text-sm">No potential duplicates found in your database.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -207,20 +203,20 @@ export default function AdminMergeSuggestions() {
                 const isWorking = executingRow === pairId;
                 
                 return (
-                  <div key={pairId} className={`border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm transition-opacity ${isWorking ? 'opacity-50 pointer-events-none' : ''}`}>
-                    
+                  <div key={pairId} className={`border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden transition-opacity ${isWorking ? 'opacity-50 pointer-events-none' : ''}`}>
+
                     {/* Header */}
-                    <div className="bg-indigo-50/50 dark:bg-indigo-900/20 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
-                        {pair.reason === 'Exact Email Match' ? '✉️' : '📝'} {pair.reason}
+                    <div className="bg-zinc-50 dark:bg-zinc-900/60 px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                      <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-label">
+                        {pair.reason}
                       </span>
                     </div>
 
                     {/* Columns */}
                     <div className="p-6">
-                      <div className="grid grid-cols-12 gap-4 pb-2 text-xs font-semibold uppercase text-gray-400 tracking-wider">
+                      <div className="grid grid-cols-12 gap-4 pb-2 text-xs font-semibold uppercase text-zinc-500 tracking-label">
                         <div className="col-span-2">Field</div>
-                        <div className="col-span-5 text-indigo-600 dark:text-indigo-400">Target (Master Record)</div>
+                        <div className="col-span-5 text-brand-600 dark:text-brand-400">Target (Master Record)</div>
                         <div className="col-span-5 text-red-600 dark:text-red-400">Source (To be deleted)</div>
                       </div>
 
@@ -230,30 +226,30 @@ export default function AdminMergeSuggestions() {
                       <DiffRow label="College" targetVal={pair.target.college} sourceVal={pair.source.college} />
                       <DiffRow label="Year" targetVal={pair.target.year} sourceVal={pair.source.year} />
                       
-                      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-gray-100 dark:border-gray-800">
-                        <div className="col-span-2 text-gray-500 dark:text-gray-400 font-medium">Points & Events</div>
-                        <div className="col-span-5 text-gray-900 dark:text-gray-100 font-semibold">
-                          {pair.target.points} pts <span className="text-gray-400 font-normal ml-1">({pair.target.events_attended} events)</span>
+                      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-zinc-100 dark:border-zinc-800">
+                        <div className="col-span-2 text-zinc-500 dark:text-zinc-400 font-medium">Points & Events</div>
+                        <div className="col-span-5 text-zinc-900 dark:text-zinc-100 font-semibold">
+                          {pair.target.points} pts <span className="text-zinc-400 font-normal ml-1">({pair.target.events_attended} events)</span>
                         </div>
-                        <div className="col-span-5 text-green-600 font-medium">
-                          <span className="text-gray-900 dark:text-gray-100 line-through mr-2">
-                            {pair.source.points} pts <span className="text-gray-400 font-normal ml-1">({pair.source.events_attended} events)</span>
+                        <div className="col-span-5 text-emerald-500 font-medium">
+                          <span className="text-zinc-900 dark:text-zinc-100 line-through mr-2">
+                            {pair.source.points} pts <span className="text-zinc-400 font-normal ml-1">({pair.source.events_attended} events)</span>
                           </span>
                           + Will Transfer
                         </div>
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <button 
+                      <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <button
                           onClick={() => handleIgnore(pair)}
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-medium transition-colors"
+                          className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded text-sm font-medium transition-colors"
                         >
                           Ignore / Not Match
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleMerge(pair)}
-                          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                          className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded text-sm font-medium transition-colors"
                         >
                           Confirm Merge
                         </button>
@@ -267,12 +263,11 @@ export default function AdminMergeSuggestions() {
                 page={page} totalPages={totalPages}
                 rowsPerPage={rowsPerPage} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage}
                 pageStartLabel={pageStartLabel} pageEndLabel={pageEndLabel} totalCount={potentialMatches.length}
-                theme="gray"
+                theme="zinc"
               />
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
