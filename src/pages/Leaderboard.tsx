@@ -22,7 +22,6 @@ interface LeaderboardEntry extends Member {
   rank: number;
 }
 
-const formatRank = (rank: number): string => String(rank);
 
 /** Initials avatar for members without a linked account */
 function InitialsAvatar({ name, size = 'sm' }: { name: string; size?: 'sm' | 'md' }) {
