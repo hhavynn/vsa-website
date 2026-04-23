@@ -5,6 +5,8 @@ import { PageTitle } from '../components/common/PageTitle';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { useAuth } from '../hooks/useAuth';
 import { useEvents } from '../hooks/useEvents';
+import { usePresidentsContent } from '../hooks/usePresidentsContent';
+import { splitPresidentsMessage } from '../data/presidentsContent';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { format } from 'date-fns';
 
@@ -30,6 +32,7 @@ const pillars = [
 export function Home() {
   const { user } = useAuth();
   const { events, loading: eventsLoading, error: eventsError } = useEvents();
+  const { content: presidentsContent } = usePresidentsContent();
   const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function Home() {
     .filter(e => new Date(e.date) >= oneDayAgo)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
+  const presidentsMessage = splitPresidentsMessage(presidentsContent.message);
 
   return (
     <>
@@ -185,7 +189,56 @@ export function Home() {
         </div>
       </section>
 
-      {/* ── Upcoming Events ────────────────────────────────────── */}
+      {/* Presidents' Message */}
+      <section className="pb-20 px-4 sm:px-6 max-w-7xl mx-auto">
+        <RevealOnScrollWrapper>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden">
+            <div className="bg-zinc-100 dark:bg-zinc-950 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 p-8 sm:p-10 flex items-center justify-center">
+              {presidentsContent.photoUrl ? (
+                <img
+                  src={presidentsContent.photoUrl}
+                  alt={`${presidentsContent.names} presidents`}
+                  className="w-full max-w-sm aspect-[4/5] object-cover rounded-md border border-zinc-200 dark:border-zinc-800"
+                />
+              ) : (
+                <div className="w-full max-w-sm aspect-[4/5] border border-dashed border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 flex items-center justify-center">
+                  <div className="text-center px-6">
+                    <p className="text-4xl font-semibold text-brand-600 mb-3">GN + PL</p>
+                    <p className="text-xs font-medium uppercase tracking-label text-zinc-500 dark:text-zinc-500">
+                      Presidents Photo
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-8 sm:p-10">
+              <p className="text-xs font-medium uppercase tracking-label text-brand-600 dark:text-brand-400 mb-3">
+                Presidents
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">
+                {presidentsContent.names}
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+                {presidentsContent.role}
+              </p>
+
+              <div className="space-y-4 text-sm sm:text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {presidentsMessage.map((paragraph, index) => (
+                  <p
+                    key={`${paragraph.slice(0, 24)}-${index}`}
+                    className={index === presidentsMessage.length - 1 ? 'text-zinc-700 dark:text-zinc-300 whitespace-pre-line' : 'whitespace-pre-line'}
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </RevealOnScrollWrapper>
+      </section>
+
+      {/* Upcoming Events */}
       <section className="pb-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <RevealOnScrollWrapper>
           <div className="flex items-center justify-between mb-8">
