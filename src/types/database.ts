@@ -146,7 +146,7 @@ export interface Database {
           title: string;
           description: string;
           priority: 'low' | 'medium' | 'high';
-          status: 'open' | 'in_progress' | 'closed';
+          status: 'pending' | 'in_progress' | 'resolved' | 'closed';
           created_at: string;
           updated_at: string;
         };
@@ -157,7 +157,7 @@ export interface Database {
           title: string;
           description: string;
           priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'in_progress' | 'closed';
+          status?: 'pending' | 'in_progress' | 'resolved' | 'closed';
           created_at?: string;
           updated_at?: string;
         };
@@ -168,7 +168,36 @@ export interface Database {
           title?: string;
           description?: string;
           priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'in_progress' | 'closed';
+          status?: 'pending' | 'in_progress' | 'resolved' | 'closed';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      gallery_events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string;
+          date: string;
+          images: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description: string;
+          date: string;
+          images: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string;
+          date?: string;
+          images?: string[];
           created_at?: string;
           updated_at?: string;
         };

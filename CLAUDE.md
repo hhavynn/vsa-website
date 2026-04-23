@@ -1,58 +1,63 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository.
 
 ## Commands
 
 ```bash
-npm start          # Start development server (http://localhost:3000)
-npm test           # Run tests (Jest + React Testing Library)
-npm test -- --testPathPattern=<file>  # Run a single test file
-npm run build      # Build for production
-npm run lint       # Lint TypeScript files in src/
-npm run format     # Format TypeScript files with Prettier
+npm start                         # Start CRA dev server at http://localhost:3000
+npm run lint                      # ESLint for src/**/*.ts(x)
+npm run typecheck                 # TypeScript check without emitting
+npm test -- --watchAll=false      # Run tests once
+npm run build                     # Production build
 ```
 
-## Environment Setup
+## Environment
 
-Copy `.env.example` to `.env.local` and fill in:
+Copy `.env.example` to `.env.local`:
 
-```
+```env
 REACT_APP_SUPABASE_URL=
 REACT_APP_SUPABASE_ANON_KEY=
-REACT_APP_OPENAI_API_KEY=   # optional, for chat assistant
 ```
 
 ## Architecture
 
-This is a Create React App (TypeScript) project for the Vietnamese Student Association website. The backend is entirely Supabase (PostgreSQL + Auth + Storage).
+This is a Create React App TypeScript frontend for the Vietnamese Student Association website. The backend is Supabase: PostgreSQL, Auth, Storage, RLS, and edge functions.
 
-**Provider hierarchy** (`App.tsx`):
+Provider hierarchy in `src/App.tsx`:
+
+```text
+ErrorBoundary > QueryClientProvider > ThemeProvider > AuthProvider > AppRoutes > PointsProvider
 ```
-ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider > AppRoutes > PointsProvider
-```
 
-**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages. Three route tiers:
-- Public: `/`, `/events`, `/leaderboard`, `/cabinet`, `/gallery`, etc.
-- Protected (auth required): `/profile`, `/points`, `/feedback`
-- Admin (admin flag required): `/admin`, `/admin/events`, `/admin/gallery`, `/admin/feedback`
+Routing in `src/routes/index.tsx` uses React Router v6:
 
-**Data layer** (`src/data/`):
-- `src/data/repos/` — Repository classes (`EventsRepository`, etc.) that wrap all Supabase queries. Use the exported singleton instances (e.g., `eventsRepository`).
-- `src/data/errors.ts` — Custom error classes (`DatabaseError`, `ValidationError`, `NotFoundError`, etc.) and `withErrorHandling()` wrapper used throughout repos.
+- Public routes: `/`, `/events`, `/leaderboard`, `/cabinet`, `/gallery`, and program pages.
+- Protected routes: `/profile`, `/points`, `/feedback`.
+- Admin routes: `/admin/events`, `/admin/gallery`, `/admin/feedback`; `/admin` redirects to `/admin/events`.
 
-**Auth** (`src/context/AuthContext.tsx`): Wraps Supabase auth. Admin status is checked separately via `useAdmin()` hook which queries the `user_profiles` table for `is_admin`.
+## Data Access
 
-**Supabase client** (`src/lib/supabase.ts`): Singleton pattern. Import `supabase` directly for one-off queries, or use the repository layer for structured access.
+- `src/lib/supabase.ts` owns the typed Supabase client singleton.
+- `src/hooks/` contains app-facing hooks.
+- `src/data/repos/` contains thin repository wrappers for shared query paths.
+- Some admin and feature workflows still call Supabase directly where the query is local to a single flow.
 
-**Key Supabase tables**: `events`, `event_attendance`, `user_profiles`
+Key tables used by the app: `events`, `event_attendance`, `user_profiles`, `user_points`, `feedback`, and `gallery_events`.
 
-**Forms**: react-hook-form + zod schemas (defined in `src/schemas/index.ts`).
+## Structure
 
-**Styling**: Tailwind CSS v3. Utility helpers in `src/lib/utils.ts` (re-exports `clsx`/`tailwind-merge`). Framer Motion used for animations.
+- `src/components/common/` - shared loading, error, modal, title, and animation helpers.
+- `src/components/layout/` - page layout, footer, navigation, and back-to-top controls.
+- `src/components/features/` - feature-specific components for admin, auth, avatar, events, feedback, points, profile, and dashboard.
+- `src/pages/` - route-level pages.
+- `src/routes/` - route declarations and guards.
+- `src/schemas/` - form schemas for active forms.
+- `src/types/` - app and Supabase table types.
 
-**Component organization**:
-- `src/components/layout/` — `Layout`, `Header`, `Footer`, navigation shell
-- `src/components/features/` — Feature-grouped components (admin, auth, events, points, etc.)
-- `src/components/common/` — Shared utilities (ErrorBoundary, LoadingSpinner, Modal, etc.)
-- `src/components/ui/` — Base UI primitives (Button, Input, Card, Badge, Alert)
+## Notes
+
+- Do not track generated folders such as `node_modules/`, `build/`, or Supabase local temp state.
+- Avoid rewriting historical Supabase migrations unless explicitly requested. Prefer forward migrations after confirming the active database schema.
+- The `supabase/functions/secure-ai` edge function exists, but there is no active frontend chat UI wired to it.

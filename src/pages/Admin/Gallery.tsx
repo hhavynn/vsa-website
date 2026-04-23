@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
@@ -22,11 +22,15 @@ export default function AdminGallery() {
   const [uploading, setUploading] = useState(false);
   const [galleries, setGalleries] = useState<GalleryEvent[]>([]);
   const [galleryToDelete, setGalleryToDelete] = useState<GalleryEvent | null>(null);
+  const previewUrlsRef = useRef<string[]>([]);
 
-  // Revoke stale object URLs on cleanup
   useEffect(() => {
-    return () => previewUrls.forEach(URL.revokeObjectURL);
+    previewUrlsRef.current = previewUrls;
   }, [previewUrls]);
+
+  useEffect(() => {
+    return () => previewUrlsRef.current.forEach(URL.revokeObjectURL);
+  }, []);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const combined = [...selectedFiles, ...acceptedFiles];

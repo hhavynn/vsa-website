@@ -8,6 +8,7 @@ interface AvatarProps {
   showUploadButton?: boolean;
   className?: string;
   userId?: string;
+  avatarUrl?: string | null;
 }
 
 const sizeClasses = {
@@ -16,13 +17,15 @@ const sizeClasses = {
   lg: 'w-24 h-24'
 };
 
-export function Avatar({ size = 'md', showUploadButton = false, className = '', userId }: AvatarProps) {
+export function Avatar({ size = 'md', showUploadButton = false, className = '', userId, avatarUrl }: AvatarProps) {
   const { user } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAvatar = useCallback(async () => {
+    if (avatarUrl) return;
+
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
@@ -35,12 +38,12 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
 
       if (error) throw error;
       if (profile?.avatar_url) {
-        setAvatarUrl(profile.avatar_url);
+        setFetchedAvatarUrl(profile.avatar_url);
       }
     } catch (error) {
       console.error('Error fetching avatar:', error);
     }
-  }, [userId, user?.id]);
+  }, [avatarUrl, userId, user?.id]);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;
@@ -76,7 +79,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
 
       if (updateError) throw updateError;
 
-      setAvatarUrl(publicUrl);
+      setFetchedAvatarUrl(publicUrl);
     } catch (error) {
       console.error('Error uploading avatar:', error);
       alert('Error uploading avatar!');
@@ -96,6 +99,8 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
     }
   };
 
+  const displayAvatarUrl = avatarUrl ?? fetchedAvatarUrl;
+
   return (
     <div className={`relative ${className}`}>
       <motion.div
@@ -104,9 +109,9 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
         onClick={handleClick}
         className={`${sizeClasses[size]} rounded-full overflow-hidden cursor-pointer bg-gray-200 flex items-center justify-center`}
       >
-        {avatarUrl ? (
+        {displayAvatarUrl ? (
           <img
-            src={avatarUrl}
+            src={displayAvatarUrl}
             alt="Avatar"
             className="w-full h-full object-cover"
           />
@@ -143,4 +148,4 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
       )}
     </div>
   );
-} 
+}

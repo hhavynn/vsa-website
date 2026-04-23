@@ -4,20 +4,11 @@ import { useEvents } from '../hooks/useEvents';
 import { EventCard } from '../components/features/events/EventCard';
 import { Event } from '../types';
 import { PageLoader } from '../components/common/PageLoader';
+import { splitEventsByDate } from '../lib/events';
 
 export function Events() {
   const { events, loading, error } = useEvents();
-
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-  // Split events into upcoming and past
-  const upcomingEvents = events
-    .filter((event: Event) => new Date(event.date) >= oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const pastEvents = events
-    .filter((event: Event) => new Date(event.date) < oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const { upcomingEvents, pastEvents } = splitEventsByDate(events);
 
   if (loading) {
     return (

@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 interface Feedback {
-  id: number;
+  id: string;
   user_id: string;
   type: string;
   title: string;
@@ -17,6 +17,7 @@ const FEEDBACK_TYPE_LABELS: Record<string, string> = {
   bug: 'Bug Report',
   feature: 'Feature Request',
   improvement: 'Improvement',
+  event: 'Event Feedback',
   other: 'Other'
 };
 
@@ -59,7 +60,7 @@ const FeedbackTab: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('feedback')
@@ -216,4 +217,4 @@ const FeedbackTab: React.FC = () => {
   );
 };
 
-export default FeedbackTab; 
+export default FeedbackTab;

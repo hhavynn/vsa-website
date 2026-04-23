@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { memo, useMemo, useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavItem {
@@ -15,6 +15,33 @@ interface NavLinksProps {
   onLinkClick?: () => void;
 }
 
+const NAV_ITEMS: NavItem[] = [
+  { path: '/', label: 'Home' },
+  {
+    path: '/events',
+    label: 'Events',
+    dropdown: true,
+    items: [
+      { path: '/events', label: 'All Events' },
+      { path: '/vcn', label: 'VCN' },
+      { path: '/wild-n-culture', label: "Wild n' Culture" },
+    ],
+  },
+  { path: '/cabinet', label: 'Cabinet' },
+  { path: '/leaderboard', label: 'Leaderboard' },
+  {
+    path: '/get-involved',
+    label: 'Get Involved',
+    dropdown: true,
+    items: [
+      { path: '/ace', label: 'ACE' },
+      { path: '/house-system', label: 'House System' },
+      { path: '/intern-program', label: 'Intern Program' },
+    ],
+  },
+  { path: '/gallery', label: 'Gallery' },
+];
+
 export const NavLinks = memo(function NavLinks({
   isMobile = false,
   className = '',
@@ -25,29 +52,6 @@ export const NavLinks = memo(function NavLinks({
   const [isGetInvolvedOpen, setIsGetInvolvedOpen] = useState(false);
   const eventsRef = useRef<HTMLDivElement>(null);
   const involvedRef = useRef<HTMLDivElement>(null);
-
-  const navItems: NavItem[] = useMemo(() => [
-    { path: '/', label: 'Home' },
-    {
-      path: '/events', label: 'Events', dropdown: true,
-      items: [
-        { path: '/events', label: 'All Events' },
-        { path: '/vcn', label: 'VCN' },
-        { path: '/wild-n-culture', label: "Wild n' Culture" },
-      ],
-    },
-    { path: '/cabinet', label: 'Cabinet' },
-    { path: '/leaderboard', label: 'Leaderboard' },
-    {
-      path: '/get-involved', label: 'Get Involved', dropdown: true,
-      items: [
-        { path: '/ace', label: 'ACE' },
-        { path: '/house-system', label: 'House System' },
-        { path: '/intern-program', label: 'Intern Program' },
-      ],
-    },
-    { path: '/gallery', label: 'Gallery' },
-  ], []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -76,7 +80,7 @@ export const NavLinks = memo(function NavLinks({
   if (isMobile) {
     return (
       <div className={`space-y-0.5 ${className}`}>
-        {navItems.map(item =>
+        {NAV_ITEMS.map(item =>
           item.dropdown ? (
             <div key={item.label}>
               <button
@@ -135,7 +139,7 @@ export const NavLinks = memo(function NavLinks({
 
   return (
     <div className={`hidden sm:flex items-center gap-1 ${className}`}>
-      {navItems.map(item =>
+      {NAV_ITEMS.map(item =>
         item.dropdown ? (
           <div
             key={item.label}

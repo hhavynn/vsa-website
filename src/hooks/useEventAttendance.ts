@@ -113,7 +113,7 @@ export function useEventAttendance() {
         throw pointsError;
       }
 
-      // Suppress unused variable warning — pointsData returned for caller use
+      // Suppress unused variable warning; values are kept for future caller use.
       void insertData;
       void pointsData;
 
@@ -155,6 +155,27 @@ export function useEventAttendance() {
         });
 
       if (insertError) throw insertError;
+
+      const { data: currentPoints, error: currentPointsError } = await supabase
+        .from('user_points')
+        .select('total_points')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (currentPointsError) throw currentPointsError;
+
+      const { error: pointsError } = await supabase
+        .from('user_points')
+        .upsert({
+          user_id: userId,
+          total_points: (currentPoints?.total_points || 0) + points,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false,
+        });
+
+      if (pointsError) throw pointsError;
 
       return true;
     } catch (err) {
@@ -232,10 +253,10 @@ export function useEventAttendance() {
         throw error;
       }
 
-      // Transform the data to ensure event is a single object
+      // Supabase can return joined rows as either an object or an array depending on relation inference.
       const transformedData = data?.map(record => ({
         ...record,
-        event: record.events[0]
+        event: Array.isArray(record.events) ? record.events[0] : record.events
       }));
 
       return transformedData;

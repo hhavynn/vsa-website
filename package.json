@@ -3,16 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@supabase/ssr": "^0.6.1",
+    "@hookform/resolvers": "^3.10.0",
     "@supabase/supabase-js": "^2.39.0",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
     "framer-motion": "^12.17.3",
@@ -21,24 +13,22 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.5.2",
-    "react-icons": "^5.5.0",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.30.1",
     "tailwind-merge": "^3.3.1",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4",
-    "zod": "^3.25.76"
+    "zod": "3.22.4"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "chmod +x node_modules/.bin/* && react-scripts build",
-    "build:production": "chmod +x node_modules/.bin/* && set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
+    "build": "react-scripts build",
+    "build:production": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
     "analyze:css": "npm run build && npx source-map-explorer 'build/static/css/*.css'",
     "analyze:all": "npm run build && npx source-map-explorer 'build/static/**/*.{js,css}'",
     "lint": "eslint src/**/*.{ts,tsx}",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write src/**/*.{ts,tsx}"
   },
   "eslintConfig": {
@@ -65,11 +55,18 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
     "prettier": "^3.2.5",
     "react-scripts": "^5.0.1",
     "source-map-explorer": "^2.5.3",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.3.5",
+    "typescript": "^4.9.5"
   }
 }

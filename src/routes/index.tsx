@@ -1,12 +1,11 @@
 import { lazy, Suspense } from "react";
-import { Routes as RouterRoutes, Route } from "react-router-dom";
+import { Navigate, Routes as RouterRoutes, Route } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { PointsProvider } from "../context/PointsContext";
-import AdminLayout from "../components/features/admin/AdminLayout";
 
 // Lazy load pages
 const Home = lazy(() =>
@@ -103,7 +102,7 @@ export default function AppRoutes() {
 
               {/* Admin Routes - require admin privileges */}
               <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminLayout />} />
+                <Route path="/admin" element={<Navigate to="/admin/events" replace />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
                 <Route path="/admin/gallery" element={<AdminGallery />} />
                 <Route path="/admin/feedback" element={<AdminFeedback />} />

@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useEvents } from '../hooks/useEvents';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { format } from 'date-fns';
+import { splitEventsByDate } from '../lib/events';
 
 const pillars = [
   {
@@ -46,11 +47,7 @@ export function Home() {
     );
   }, []);
 
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= oneDayAgo)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
+  const upcomingEvents = splitEventsByDate(events).upcomingEvents.slice(0, 3);
 
   return (
     <>

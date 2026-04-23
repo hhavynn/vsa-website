@@ -10,7 +10,7 @@ interface LeaderboardEntry {
   id: string;
   first_name: string;
   last_name: string;
-  points: number;
+  totalPoints: number;
   eventsAttended: number;
   rank: number;
   avatar_url: string | null;
@@ -25,7 +25,7 @@ interface UserProfile {
 
 interface LeaderboardResponse {
   user_id: string;
-  points: number;
+  total_points: number;
   events_attended: number;
   user_profiles: UserProfile;
 }
@@ -52,7 +52,7 @@ export function Leaderboard() {
         .from('user_points')
         .select(`
           user_id,
-          points,
+          total_points,
           user_profiles!inner (
             first_name,
             last_name,
@@ -60,7 +60,7 @@ export function Leaderboard() {
             avatar_url
           )
         `)
-        .order('points', { ascending: false });
+        .order('total_points', { ascending: false });
 
       if (error) throw error;
 
@@ -82,7 +82,7 @@ export function Leaderboard() {
           id: entry.user_id,
           first_name: entry.user_profiles.first_name,
           last_name: entry.user_profiles.last_name,
-          points: entry.points,
+          totalPoints: entry.total_points,
           eventsAttended: eventsCount[entry.user_id] || 0,
           rank: index + 1,
           avatar_url: entry.user_profiles.avatar_url,
@@ -165,12 +165,12 @@ export function Leaderboard() {
                 const heights = ['h-24', 'h-32', 'h-20'];
                 return (
                   <div key={e.id} className="flex flex-col items-center gap-2 flex-1 max-w-[120px]">
-                    <Avatar size="sm" userId={e.id} />
+                    <Avatar size="sm" userId={e.id} avatarUrl={e.avatar_url} />
                     <p className="text-white text-xs font-semibold text-center truncate w-full px-1">
                       {e.first_name} {e.last_name}
                     </p>
                     <p className="text-indigo-400 text-xs font-bold">
-                      {activeTab === 'points' ? `${e.points} pts` : `${e.eventsAttended} events`}
+                      {activeTab === 'points' ? `${e.totalPoints} pts` : `${e.eventsAttended} events`}
                     </p>
                     <div className={`w-full ${heights[i]} rounded-t-xl flex items-center justify-center text-2xl ${
                       i === 0 ? 'bg-amber-500/20 border border-amber-500/30' :
@@ -210,7 +210,7 @@ export function Leaderboard() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        <Avatar size="sm" userId={entry.id} />
+                        <Avatar size="sm" userId={entry.id} avatarUrl={entry.avatar_url} />
                         <span className="text-white text-sm font-medium">
                           {entry.first_name} {entry.last_name}
                         </span>
@@ -218,7 +218,7 @@ export function Leaderboard() {
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <span className={`text-sm font-semibold ${index < 3 ? 'text-indigo-400' : 'text-slate-300'}`}>
-                        {activeTab === 'points' ? entry.points : entry.eventsAttended}
+                        {activeTab === 'points' ? entry.totalPoints : entry.eventsAttended}
                       </span>
                     </td>
                   </tr>

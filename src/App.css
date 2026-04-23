@@ -1,4 +1,0 @@
-/* Keep overflow locked at root level */
-html, body {
-  overflow-x: hidden;
-}

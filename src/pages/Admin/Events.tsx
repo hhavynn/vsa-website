@@ -8,6 +8,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { AdminNav } from '../../components/features/admin/AdminNav';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
+import { formatDateTimeLocal, splitEventsByDate } from '../../lib/events';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '',
@@ -35,26 +36,7 @@ export default function AdminEvents() {
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
 
-  const formatDateForInput = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const upcomingEvents = events
-    .filter((e: Event) => new Date(e.date) >= oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const pastEvents = events
-    .filter((e: Event) => new Date(e.date) < oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const { upcomingEvents, pastEvents } = splitEventsByDate(events);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -367,7 +349,7 @@ export default function AdminEvents() {
                 </div>
                 <div>
                   <label className={labelCls}>Date & Time *</label>
-                  <input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })} className={inputCls} required />
+                  <input type="datetime-local" value={formatDateTimeLocal(selectedEvent.date)} onChange={e => setSelectedEvent({ ...selectedEvent, date: e.target.value })} className={inputCls} required />
                 </div>
                 <div>
                   <label className={labelCls}>Event Type *</label>
