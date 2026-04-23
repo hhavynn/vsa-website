@@ -21,13 +21,6 @@ export function SignIn() {
         {/* Card */}
         <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] rounded-md p-8">
           <SignInForm />
-
-          <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-            <p className="text-zinc-500 text-xs text-center leading-relaxed">
-              VSA membership is by invitation only. If you're interested in becoming a member,
-              connect with our cabinet at one of our events!
-            </p>
-          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-600">

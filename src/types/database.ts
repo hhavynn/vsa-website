@@ -179,6 +179,35 @@ export interface Database {
           updated_at?: string;
         };
       };
+      homepage_content: {
+        Row: {
+          id: string;
+          presidents_names: string;
+          presidents_role: string;
+          presidents_message: string;
+          presidents_photo_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          presidents_names: string;
+          presidents_role: string;
+          presidents_message: string;
+          presidents_photo_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          presidents_names?: string;
+          presidents_role?: string;
+          presidents_message?: string;
+          presidents_photo_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       chat_logs: {
         Row: {
           id: string;
