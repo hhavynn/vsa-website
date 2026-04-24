@@ -42,13 +42,13 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) throw new Error('Unauthorized')
 
-    const { data: profile } = await supabaseClient
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+  const { data: profile } = await supabaseClient
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
 
-    if (profile?.role !== 'admin') throw new Error('Forbidden')
+  if (profile?.is_admin !== true) throw new Error('Forbidden')
 
     // Get GA4 credentials from environment secrets
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
