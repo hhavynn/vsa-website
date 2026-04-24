@@ -116,11 +116,8 @@ export function Events() {
     <>
       <PageTitle title="Events" />
 
-      <div
-        className="border-b"
-        style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}
-      >
-        <div className="flex items-end justify-between gap-6">
+      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>
               Events
@@ -130,7 +127,7 @@ export function Events() {
             </p>
           </div>
 
-          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex flex-wrap overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
             {FILTERS.filter((filter) => filter.key === 'all' || events.some((event) => event.event_type === filter.key)).map(
               (filter, index) => (
                 <button
@@ -154,7 +151,7 @@ export function Events() {
         </div>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="px-5 py-8 sm:px-8 lg:px-[52px] lg:py-10">
         {featured && (
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
@@ -162,8 +159,8 @@ export function Events() {
               className="mb-9 overflow-hidden rounded border lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
               style={{ borderColor: 'var(--color-border)' }}
             >
-              <div className="border-b p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="mb-4 flex items-center gap-3">
+              <div className="border-b p-5 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
                   <Badge
                     label={EVENT_TYPE_LABELS[featured.event_type] ?? featured.event_type}
                     color={TYPE_COLOR[featured.event_type] ?? 'gray'}
@@ -172,10 +169,7 @@ export function Events() {
                     {format(new Date(featured.date), 'MMM d / EEEE / h:mm a').toUpperCase()}
                   </span>
                 </div>
-                <h2
-                  className="mb-3 font-serif leading-[1.1] tracking-[-0.02em]"
-                  style={{ fontSize: 30, color: 'var(--color-text)' }}
-                >
+                <h2 className="mb-3 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[30px]" style={{ color: 'var(--color-text)' }}>
                   {featured.name}
                 </h2>
                 {featured.description && (
@@ -190,7 +184,7 @@ export function Events() {
                 )}
               </div>
 
-              <div className="relative h-[260px] lg:h-full lg:min-h-[260px] lg:max-h-[340px]">
+              <div className="relative h-[220px] sm:h-[260px] lg:h-full lg:min-h-[260px] lg:max-h-[340px]">
                 <EventImage
                   event={featured}
                   className="h-full w-full object-cover"
@@ -219,7 +213,7 @@ export function Events() {
               {rest.map((event: Event) => (
                 <div
                   key={event.id}
-                  className="grid gap-5 border-t py-5 first:border-t-0 md:grid-cols-[88px_156px_minmax(0,1fr)_auto]"
+                  className="grid gap-4 border-t py-5 first:border-t-0 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_156px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--color-border)' }}>
@@ -240,7 +234,7 @@ export function Events() {
                     titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
                   />
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 sm:col-span-2 lg:col-auto">
                     <div className="mb-3 flex flex-wrap items-center gap-3">
                       <Badge
                         label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
@@ -265,10 +259,10 @@ export function Events() {
                     )}
                   </div>
 
-                  <div className="flex items-start md:justify-end">
+                  <div className="flex items-start sm:col-span-2 lg:col-auto lg:justify-end">
                     <button
                       onClick={() => saveEventToCalendar(event)}
-                      className="rounded border px-4 py-2 text-xs font-medium transition-opacity hover:opacity-80"
+                      className="w-full rounded border px-4 py-2.5 text-xs font-medium transition-opacity hover:opacity-80 sm:w-auto"
                       style={{
                         borderColor: 'var(--color-border)',
                         color: 'var(--color-text2)',

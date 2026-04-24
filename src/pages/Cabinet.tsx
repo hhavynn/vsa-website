@@ -184,7 +184,7 @@ function ExecutiveRolePanel({ role, members }: { role: string; members: CabinetM
             className="rounded-md border p-4"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
               <Avatar image={member.image_url} name={member.name} size={72} />
               <div className="min-w-0 flex-1">
                 <p className="font-sans text-[15px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
@@ -252,7 +252,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
             className={`p-6 ${members.length > 1 && index % 2 === 1 ? 'lg:border-l' : ''} ${index > 0 ? 'border-t lg:border-t-0' : ''}`}
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
               <Avatar image={member.image_url} name={member.name} size={96} />
               <div className="min-w-0 flex-1">
                 <p className="font-sans text-[20px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
