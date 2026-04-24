@@ -1,19 +1,14 @@
 import { memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { NavLinks } from './NavLinks';
 import { UserMenu } from './UserMenu';
 
 interface MobileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  className?: string;
 }
 
-export const MobileDrawer = memo(function MobileDrawer({
-  isOpen,
-  onClose,
-  className = '',
-}: MobileDrawerProps) {
+export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -22,11 +17,11 @@ export const MobileDrawer = memo(function MobileDrawer({
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.15, ease: 'easeInOut' }}
-          className={`sm:hidden overflow-hidden border-t border-zinc-800 ${className}`}
+          className="sm:hidden overflow-hidden border-t border-[var(--color-border)]"
         >
-          <div className="bg-zinc-950 px-4 py-3">
+          <div className="bg-[var(--color-surface)] px-4 py-3">
             <NavLinks isMobile onLinkClick={onClose} />
-            <div className="mt-3 pt-3 border-t border-zinc-800">
+            <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
               <UserMenu isMobile onLinkClick={onClose} />
             </div>
           </div>

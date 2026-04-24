@@ -1,25 +1,54 @@
-/* Inter is loaded via <link> in index.html for zero-layout-shift font loading */
+/* Fonts loaded via <link> in index.html for zero-layout-shift loading */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design system color tokens ────────────────────────────────────────────
+   CSS custom properties for light/dark. Consumed by both Tailwind
+   (via tailwind.config.js color aliases) and inline styles where needed.
+   Dark mode flips via html.dark (set by ThemeContext FOUC script).
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --color-bg:            #f7f8fb;
+  --color-surface:       #ffffff;
+  --color-surface2:      #f0f4fb;
+  --color-border:        #dde5f0;
+  --color-border-strong: #b8cce8;
+  --color-text:          #0a1628;
+  --color-text2:         #4e637d;
+  --color-text3:         #9db0c8;
+  --color-nav:           rgba(247, 248, 251, 0.96);
+  --color-nav-border:    #dde5f0;
+  --color-input:         #f0f4fb;
+  --color-sidebar:       #ffffff;
+  --color-sidebar-border:#dde5f0;
+  --color-sidebar-active:#eef3fd;
+}
+
+html.dark {
+  --color-bg:            #050810;
+  --color-surface:       #0a0f1e;
+  --color-surface2:      #10182e;
+  --color-border:        #18274a;
+  --color-border-strong: #2a3f6e;
+  --color-text:          #dde9f8;
+  --color-text2:         #607898;
+  --color-text3:         #2c4268;
+  --color-nav:           rgba(5, 8, 16, 0.94);
+  --color-nav-border:    #18274a;
+  --color-input:         #10182e;
+  --color-sidebar:       #0a0f1e;
+  --color-sidebar-border:#18274a;
+  --color-sidebar-active:rgba(90, 154, 240, 0.08);
+}
+
 @layer base {
   html {
-    /* Inter variable font — editorial base typeface */
-    font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
-    font-variation-settings: normal;
+    font-family: 'DM Sans', system-ui, sans-serif;
     scroll-behavior: smooth;
-    /* Zinc scale base colours — overridden by dark/light class on <html> */
-    background-color: theme('colors.zinc.50');
-    color: theme('colors.zinc.900');
-  }
-
-  .dark html,
-  html.dark {
-    background-color: theme('colors.zinc.950');
-    color: theme('colors.zinc.50');
+    background-color: var(--color-bg);
+    color: var(--color-text);
   }
 
   body {
@@ -29,29 +58,9 @@
     overflow-x: hidden;
   }
 
-  /* Heading defaults — tight tracking, semibold weight */
+  /* Serif headings — tight tracking */
   h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
-    font-weight: 600;
-    line-height: 1.2;
-  }
-}
-
-@layer utilities {
-  /*
-   * Legacy gradient utilities — still referenced on public marketing pages
-   * (Home, SignIn, WildNCulture, NotFound).
-   * TODO: Replace with zinc-scale editorial backgrounds when those pages are
-   * redesigned. Do not add new usages of these classes.
-   */
-  .text-gradient {
-    background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #c4b5fd 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .hero-gradient {
-    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
 }

@@ -3,17 +3,17 @@ import FeedbackTab from '../../components/features/admin/FeedbackTab';
 
 export default function AdminFeedback() {
   return (
-    <div className="py-6">
+    <>
       <PageTitle title="Feedback" />
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Feedback</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Bug reports, feature requests, and suggestions.</p>
-        </div>
+      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Feedback</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Bug reports, feature requests, and suggestions.</p>
       </div>
 
-      <FeedbackTab />
-    </div>
+      <div style={{ padding: '24px 28px' }}>
+        <FeedbackTab />
+      </div>
+    </>
   );
 }

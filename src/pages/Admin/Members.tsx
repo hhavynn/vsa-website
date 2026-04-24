@@ -306,29 +306,35 @@ export default function AdminMembers() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="py-6">
+    <>
       <Toaster position="top-right" />
 
-        {/* PAGE HEADER */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-[24px] font-bold text-[#09090b] dark:text-[#fafafa]">Members</h1>
-          <button
-            onClick={() => {
-              const rows = [
-                ['First Name', 'Last Name', 'Email', 'Year', 'College', 'Points', 'Events'],
-                ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.points, m.events_attended]),
-              ];
-              const csv = rows.map(r => r.join(',')).join('\n');
-              const a = document.createElement('a');
-              a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-              a.download = 'vsa-members.csv';
-              a.click();
-            }}
-            className="h-9 px-4 text-[13px] font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-[#27272a] rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          >
-            Export CSV
-          </button>
+      {/* PAGE HEADER */}
+      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div>
+          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Members</h1>
+          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>{members.length} total members</p>
         </div>
+        <button
+          onClick={() => {
+            const rows = [
+              ['First Name', 'Last Name', 'Email', 'Year', 'College', 'Points', 'Events'],
+              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.points, m.events_attended]),
+            ];
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = 'vsa-members.csv';
+            a.click();
+          }}
+          className="font-sans text-xs font-medium border rounded px-3 py-1.5 transition-colors"
+          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}
+        >
+          Export CSV
+        </button>
+      </div>
+
+      <div style={{ padding: '20px 28px' }}>
 
         {/* STAT CARDS */}
         {!loading && (
@@ -703,7 +709,8 @@ export default function AdminMembers() {
           )}
         </Modal>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

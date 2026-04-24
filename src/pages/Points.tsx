@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckInCodeInput } from '../components/features/points/CheckInCodeInput';
-import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
+import { PageTitle } from '../components/common/PageTitle';
+import { Label } from '../components/ui/Label';
 
 export default function Points() {
   const [points, setPoints] = useState<number | null>(null);
@@ -14,45 +15,44 @@ export default function Points() {
     try {
       setLoading(true);
       setError(null);
-
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('Please sign in to view your points');
-        return;
-      }
-
+      if (!user) { setError('Please sign in to view your points'); return; }
       const { data, error } = await supabase
         .from('user_points')
         .select('total_points')
         .eq('user_id', user.id)
         .single();
-
       if (error) throw error;
       setPoints(data?.total_points || 0);
-    } catch (err) {
-      console.error('Error fetching points:', err);
+    } catch {
       setError('Failed to fetch points');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPoints();
-  }, []);
+  useEffect(() => { fetchPoints(); }, []);
 
   if (loading) return <PageLoader message="Loading your points..." />;
   if (error) return <PageError message={error} resetError={fetchPoints} />;
 
   return (
-    <RevealOnScrollWrapper>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-8">Points</h1>
+    <>
+      <PageTitle title="Points" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] rounded-md p-6">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">Your Points</h2>
-            <p className="text-4xl font-bold text-brand-600">{points}</p>
+      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Points</h1>
+        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>Your earned points and event check-in</p>
+      </div>
+
+      <div style={{ padding: '40px 52px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 720 }}>
+          <div className="border rounded p-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+            <Label className="mb-3">Your Points</Label>
+            <p className="font-serif leading-none tracking-[-0.04em] text-brand-600 dark:text-brand-400" style={{ fontSize: 64 }}>
+              {points}
+            </p>
+            <p className="font-sans text-xs mt-2" style={{ color: 'var(--color-text3)' }}>total points earned</p>
           </div>
 
           <div>
@@ -60,6 +60,6 @@ export default function Points() {
           </div>
         </div>
       </div>
-    </RevealOnScrollWrapper>
+    </>
   );
 }

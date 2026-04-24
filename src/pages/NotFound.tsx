@@ -1,29 +1,27 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { PageTitle } from '../components/common/PageTitle';
 
 export function NotFound() {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <p className="text-8xl font-extrabold text-brand-600 mb-4">404</p>
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">Page not found</h1>
-        <p className="text-zinc-500 mb-8 max-w-sm">
-          Oops — the page you're looking for doesn't exist or has been moved.
+    <>
+      <PageTitle title="404" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
+        <p className="font-serif leading-none tracking-[-0.04em] text-brand-600 dark:text-brand-400" style={{ fontSize: 120 }}>
+          404
+        </p>
+        <h1 className="font-sans text-lg font-semibold tracking-[-0.01em] mt-2 mb-2" style={{ color: 'var(--color-text)' }}>
+          Page not found
+        </h1>
+        <p className="font-sans text-sm mb-8 max-w-sm" style={{ color: 'var(--color-text2)' }}>
+          The page you're looking for doesn't exist or has been moved.
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm transition-colors duration-150"
+          className="inline-flex items-center gap-2 font-sans text-sm font-medium px-5 py-2.5 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
           Go home
         </Link>
-      </motion.div>
-    </div>
+      </div>
+    </>
   );
 }

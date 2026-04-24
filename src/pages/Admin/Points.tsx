@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
+import { PageTitle } from '../../components/common/PageTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,109 +120,108 @@ export default function AdminPoints() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="py-6">
+    <>
+      <PageTitle title="Points" />
       <Toaster position="top-right" />
 
-        {/* PAGE HEADER */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-[22px] font-bold text-zinc-900 dark:text-[#fafafa]">Points Overview</h1>
-        </div>
+      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Points</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Points distribution and check-in history</p>
+      </div>
+
+      <div style={{ padding: '20px 28px' }}>
 
         {loading ? (
-          <div className="py-20 text-center text-zinc-400 text-[13px]">Loading…</div>
+          <div className="py-20 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>Loading...</div>
         ) : (
-          <div className="flex gap-8 items-start">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_288px] items-start">
             {/* ── MAIN COLUMN ── */}
             <div className="flex-1 min-w-0">
               {/* KPI CARDS */}
-              <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="grid gap-4 mb-8 md:grid-cols-3">
                 {/* Total Points */}
-                <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-5 py-4 bg-white dark:bg-[#18181b]">
-                  <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-2">Total Points Distributed</p>
-                  <p className="text-[32px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{totalPoints.toLocaleString()}</p>
+                <div className="border rounded-md px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Total Points Distributed</p>
+                  <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{totalPoints.toLocaleString()}</p>
                 </div>
 
                 {/* Top Earner */}
-                <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-5 py-4 bg-white dark:bg-[#18181b]">
-                  <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-2">Top Earner</p>
+                <div className="border rounded-md px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Top Earner</p>
                   {topEarner ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold" style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
                         {initials(topEarner.first_name, topEarner.last_name)}
                       </div>
                       <div>
-                        <p className="text-[20px] font-semibold text-zinc-900 dark:text-zinc-50 leading-tight">
+                        <p className="font-sans text-[20px] font-semibold leading-tight" style={{ color: 'var(--color-text)' }}>
                           {topEarner.first_name} {topEarner.last_name}
                         </p>
-                        <p className="text-[12px] text-zinc-500">{topEarner.points} pts total</p>
+                        <p className="text-[12px]" style={{ color: 'var(--color-text2)' }}>{topEarner.points} pts total</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-zinc-400 text-[13px]">No data</p>
+                    <p className="text-[13px]" style={{ color: 'var(--color-text3)' }}>No data</p>
                   )}
                 </div>
 
                 {/* Events This Month */}
-                <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-5 py-4 bg-white dark:bg-[#18181b]">
-                  <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-2">Events This Month</p>
-                  <p className="text-[32px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{eventsThisMonth}</p>
-                  {nextEvent && <p className="text-[12px] text-zinc-500 mt-1">{nextEvent}</p>}
+                <div className="border rounded-md px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Events This Month</p>
+                  <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{eventsThisMonth}</p>
+                  {nextEvent && <p className="mt-1 text-[12px]" style={{ color: 'var(--color-text2)' }}>{nextEvent}</p>}
                 </div>
               </div>
 
               {/* LEADERBOARD TABLE */}
               <div className="mb-8">
-                <p className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Top 10 Leaderboard</p>
-                <div className="border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden">
+                <p className="mb-3 text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>Top 10 Leaderboard</p>
+                <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
                   <table className="w-full text-[13px]">
                     <thead>
-                      <tr className="bg-zinc-50 dark:bg-[#27272a] border-b border-zinc-200 dark:border-[#3f3f46]">
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide w-16">Rank</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Name</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Total Pts</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Events</th>
+                      <tr className="border-b" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                        <th className="w-16 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Rank</th>
+                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Name</th>
+                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Total Pts</th>
+                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Events</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-[#27272a]">
+                    <tbody className="divide-y" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                       {leaderboard.map((m, i) => {
                         const rank = i + 1;
                         const isTop = rank === 1;
                         return (
                           <tr
                             key={m.id}
-                            className={`transition-colors ${
-                              isTop
-                                ? 'bg-[#eef2ff] dark:bg-indigo-950/30 border-l-2 border-l-indigo-600'
-                                : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                            }`}
+                            className="transition-colors hover:opacity-95"
+                            style={isTop ? { background: 'var(--color-surface2)', boxShadow: 'inset 2px 0 0 0 var(--color-primary)' } : undefined}
                           >
                             <td className="px-4 py-2.5">
-                              <span className={`font-bold ${
-                                rank === 1 ? 'text-zinc-900 dark:text-zinc-50 text-[15px]' :
-                                rank <= 3  ? 'text-zinc-600 dark:text-zinc-300' :
-                                             'text-zinc-400 dark:text-zinc-500'
-                              }`}>
+                              <span
+                                className={`font-bold ${rank === 1 ? 'text-[15px]' : ''}`}
+                                style={{ color: rank === 1 ? 'var(--color-text)' : rank <= 3 ? 'var(--color-text2)' : 'var(--color-text3)' }}
+                              >
                                 #{rank}
                               </span>
                             </td>
                             <td className="px-4 py-2.5">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
+                                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
                                   {initials(m.first_name, m.last_name)}
                                 </div>
-                                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                                <span className="font-medium" style={{ color: 'var(--color-text)' }}>
                                   {m.first_name} {m.last_name}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-2.5 font-semibold text-zinc-900 dark:text-zinc-100">{m.points.toLocaleString()}</td>
-                            <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400">{m.events_attended}</td>
+                            <td className="px-4 py-2.5 font-semibold" style={{ color: 'var(--color-text)' }}>{m.points.toLocaleString()}</td>
+                            <td className="px-4 py-2.5" style={{ color: 'var(--color-text2)' }}>{m.events_attended}</td>
                           </tr>
                         );
                       })}
                       {leaderboard.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-zinc-400 text-[13px]">No data yet.</td>
+                          <td colSpan={4} className="px-4 py-8 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>No data yet.</td>
                         </tr>
                       )}
                     </tbody>
@@ -231,23 +231,23 @@ export default function AdminPoints() {
 
               {/* RECENT CHECK-INS */}
               <div>
-                <p className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Recent Check-ins</p>
-                <div className="border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden">
+                <p className="mb-3 text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>Recent Check-ins</p>
+                <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
                   {checkIns.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-zinc-400 text-[13px]">No check-ins yet.</div>
+                    <div className="px-4 py-8 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>No check-ins yet.</div>
                   ) : (
-                    <div className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-[#27272a]">
+                    <div className="divide-y" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                       {checkIns.map((ci, i) => (
-                        <div key={i} className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                        <div key={i} className="flex items-center justify-between px-4 py-3 transition-colors" style={{ borderColor: 'var(--color-border)' }}>
                           <div>
-                            <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{ci.member_name}</p>
-                            <p className="text-[12px] text-zinc-400">{ci.event_name}</p>
+                            <p className="text-[13px] font-medium" style={{ color: 'var(--color-text)' }}>{ci.member_name}</p>
+                            <p className="text-[12px]" style={{ color: 'var(--color-text3)' }}>{ci.event_name}</p>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-[12px] text-zinc-400">
+                            <span className="text-[12px]" style={{ color: 'var(--color-text3)' }}>
                               {ci.event_date ? relativeTime(ci.event_date) : '—'}
                             </span>
-                            <span className="text-[12px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-0.5">
+                            <span className="rounded border px-2 py-0.5 text-[12px] font-semibold text-brand-600 dark:text-brand-400" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                               +{ci.points_earned} pts
                             </span>
                           </div>
@@ -260,48 +260,48 @@ export default function AdminPoints() {
             </div>
 
             {/* ── SIDEBAR ── */}
-            <div className="w-72 shrink-0">
+            <div className="w-full shrink-0 xl:w-72">
               {/* QUICK ACTIONS */}
-              <div className="border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden">
-                <div className="bg-zinc-50 dark:bg-[#27272a] px-4 py-3 border-b border-zinc-200 dark:border-[#3f3f46]">
-                  <p className="text-[12px] font-semibold text-zinc-500 uppercase tracking-wide">Quick Actions</p>
+              <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                  <p className="text-[12px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Quick Actions</p>
                 </div>
-                <div className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-[#27272a]">
+                <div className="divide-y" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                   <Link
                     to="/admin/members"
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                    className="group flex items-center justify-between px-4 py-3 transition-colors"
                   >
-                    <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">View All Members</span>
-                    <svg className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--color-text2)' }}>View All Members</span>
+                    <svg className="w-4 h-4 text-brand-600 dark:text-brand-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
                   <Link
                     to="/admin/import"
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                    className="group flex items-center justify-between px-4 py-3 transition-colors"
                   >
-                    <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">Import Attendance</span>
-                    <svg className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--color-text2)' }}>Import Attendance</span>
+                    <svg className="w-4 h-4 text-brand-600 dark:text-brand-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
                   <Link
                     to="/admin/events"
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                    className="group flex items-center justify-between px-4 py-3 transition-colors"
                   >
                     <div>
-                      <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">Manage Events</span>
+                      <span className="text-[13px] font-medium" style={{ color: 'var(--color-text2)' }}>Manage Events</span>
                     </div>
-                    <svg className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4 text-brand-600 dark:text-brand-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
                   <Link
                     to="/admin/merge-suggestions"
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                    className="group flex items-center justify-between px-4 py-3 transition-colors"
                   >
-                    <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">Review Merge Suggestions</span>
-                    <svg className="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--color-text2)' }}>Review Merge Suggestions</span>
+                    <svg className="w-4 h-4 text-brand-600 dark:text-brand-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
@@ -310,6 +310,7 @@ export default function AdminPoints() {
             </div>
           </div>
         )}
-    </div>
+      </div>
+    </>
   );
 }
