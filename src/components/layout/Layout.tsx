@@ -11,7 +11,7 @@ export function Layout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <NavigationShell />
 
       <main id="main-content" className="flex-grow">

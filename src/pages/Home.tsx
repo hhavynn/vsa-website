@@ -1,294 +1,292 @@
-import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { PageTitle } from '../components/common/PageTitle';
-import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { useAuth } from '../hooks/useAuth';
+import { Badge, BadgeColor } from '../components/ui/Badge';
 import { useEvents } from '../hooks/useEvents';
 import { usePresidentsContent } from '../hooks/usePresidentsContent';
-import { splitPresidentsMessage } from '../data/presidentsContent';
-import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
-import { format } from 'date-fns';
+import { Event } from '../types';
 
 const pillars = [
-  {
-    label: 'Social',
-    description: 'Build bonds through the ACE Program and House System',
-  },
-  {
-    label: 'Community',
-    description: 'A supportive space for Vietnamese and non-Vietnamese students alike',
-  },
-  {
-    label: 'Academic',
-    description: 'Prioritize academic growth alongside cultural engagement',
-  },
-  {
-    label: 'Cultural',
-    description: 'Celebrate heritage through VCN, Black April, and more',
-  },
+  { n: '01', label: 'Social', desc: 'Bonds through the ACE Program and House System' },
+  { n: '02', label: 'Community', desc: 'A safe space for Vietnamese and all students alike' },
+  { n: '03', label: 'Academic', desc: 'Growth alongside cultural engagement every year' },
+  { n: '04', label: 'Cultural', desc: 'Heritage through VCN, Black April, and more' },
 ];
 
-export function Home() {
-  const { user } = useAuth();
-  const { events, loading: eventsLoading, error: eventsError } = useEvents();
-  const { content: presidentsContent } = usePresidentsContent();
-  const [currentDate, setCurrentDate] = useState('');
+const TYPE_COLOR: Record<string, BadgeColor> = {
+  gbm: 'green',
+  mixer: 'blue',
+  vcn: 'purple',
+  wildn_culture: 'purple',
+  winter_retreat: 'blue',
+  other: 'gray',
+  external_event: 'gray',
+};
 
-  useEffect(() => {
-    setCurrentDate(
-      new Date().toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    );
-  }, []);
+const PRESIDENTS_MESSAGE = {
+  names: 'Gracie Nguyen & Phuong Le',
+  role: 'Co-Presidents',
+  greeting: 'Hello and welcome to the VSA family! 💕',
+  quote: 'VSA at UC San Diego is not just a student org. It is a home away from home.',
+  body: [
+    'We are Gracie and Phuong, and we are beyond excited to serve as your Co-Presidents this year. Over the summer, our passionate cabinet has been planning a year full of fun, meaningful, and memorable events that we are so excited to share with you.',
+    'VSA at UC San Diego is not just a student org, it is a home away from home. It is a place where strangers become close friends, and where you will find support, community, and endless opportunities to grow. Whether you are here to embrace Vietnamese culture, meet new people, or just find your place on campus, VSA has something special for you.',
+    'Some of our most cherished college memories and lifelong friendships started right here. And we cannot wait for you to experience the same kind of magic.',
+    'So come hang out with us. Join our events, connect with our amazing members, and become a part of something truly meaningful. We are so excited to meet you and welcome you into the family.',
+    'Let us make this year one to remember, together. 🧡',
+  ],
+  signOff: 'With love, Gracie & Phuong',
+  signature: 'Co-Presidents | VSA at UC San Diego',
+};
+
+function EventRow({ event }: { event: Event }) {
+  const d = new Date(event.date);
+
+  return (
+    <div className="flex items-start gap-5 border-t py-4" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="w-[52px] shrink-0 border-r pr-4 text-center" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="font-mono text-[10px] uppercase tracking-[.06em]" style={{ color: 'var(--color-text3)' }}>
+          {format(d, 'MMM')}
+        </div>
+        <div className="mt-0.5 font-serif text-[28px] leading-none" style={{ color: 'var(--color-text)' }}>
+          {format(d, 'd')}
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-sans text-[15px] font-medium leading-snug" style={{ color: 'var(--color-text)', letterSpacing: '-.01em' }}>
+          {event.name}
+        </div>
+        {event.location && (
+          <div className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+            {event.location}
+          </div>
+        )}
+      </div>
+      <Badge label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type} color={TYPE_COLOR[event.event_type] ?? 'gray'} />
+    </div>
+  );
+}
+
+export function Home() {
+  const { events } = useEvents();
+  const { content: presidentsContent } = usePresidentsContent();
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const upcomingEvents = events
-    .filter(e => new Date(e.date) >= oneDayAgo)
+    .filter((event) => new Date(event.date) >= oneDayAgo)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
-  const presidentsMessage = splitPresidentsMessage(presidentsContent.message);
 
   return (
     <>
       <PageTitle title="Home" />
 
-      {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="relative min-h-[72vh] flex items-center justify-center bg-zinc-950 border-b border-zinc-800 overflow-hidden">
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-zinc-500 text-xs font-medium tracking-widest uppercase mb-5"
-          >
-            {currentDate}
-          </motion.p>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="font-bold text-5xl sm:text-6xl md:text-7xl text-zinc-50 mb-6 leading-tight tracking-tight"
-          >
-            Welcome to{' '}
-            <span className="text-brand-500">VSA at UCSD</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="text-zinc-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
-          >
-            Promoting and preserving Vietnamese culture since 1977 — a home
-            for every student at UC San Diego.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex flex-wrap gap-3 justify-center"
-          >
-            <Link
-              to="/events"
-              className="px-7 py-3.5 rounded bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm transition-colors duration-150"
-            >
-              View Events
-            </Link>
-            <Link
-              to="/get-involved"
-              className="px-7 py-3.5 rounded border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-zinc-100 font-semibold text-sm transition-colors duration-150"
-            >
-              Get Involved
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-zinc-600"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </motion.div>
-      </section>
-
-      {/* ── Mission + Pillars ──────────────────────────────────── */}
-      <section className="py-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16">
-          <RevealOnScrollWrapper>
-            <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-8 h-full">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-4">Our Mission &amp; History</h2>
-              <div className="space-y-4 text-zinc-600 dark:text-zinc-400 leading-relaxed text-sm">
-                <p>
-                  The Vietnamese Student Association at UC San Diego strives to promote and preserve
-                  Vietnamese culture. We provide resources and a safe space for students to unite
-                  as a Vietnamese-American community — a nonprofit organization for all.
-                </p>
-                <p>
-                  Established in 1977, VSA at UCSD has grown into an organization that exposes
-                  Vietnamese culture through academics, social, cultural, and community events each year.
-                </p>
-              </div>
+      <section style={{ background: 'var(--color-surface)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 400 }}>
+          <div className="flex flex-col justify-between border-r p-[52px]" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="font-sans text-[11px] font-semibold uppercase tracking-[.1em]" style={{ color: 'var(--color-text3)' }}>
+              Vietnamese Student Association / UC San Diego
             </div>
-          </RevealOnScrollWrapper>
-
-          <RevealOnScrollWrapper delay={0.1}>
-            <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-8 h-full flex flex-col justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-3">Get Involved</h2>
-                <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mb-6">
-                  Come to our events and immerse yourself in Vietnamese culture! Connect with our
-                  community and meet cabinet members who are passionate about making you feel at home.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
+            <div>
+              <h1 className="font-serif italic leading-[.9] tracking-[-0.03em]" style={{ fontSize: 72, color: 'var(--color-text)', marginBottom: 20 }}>
+                Culture,
+                <br />
+                Community.
+              </h1>
+              <div style={{ width: 40, height: 2, background: '#5a9af0', marginBottom: 20 }} />
+              <p className="max-w-[380px] font-sans leading-[1.7]" style={{ fontSize: 15, color: 'var(--color-text2)', marginBottom: 32 }}>
+                Promoting and preserving Vietnamese culture since 1977 - a home for every student at UC San Diego.
+              </p>
+              <div className="flex items-center gap-6">
                 <Link
                   to="/events"
-                  className="px-5 py-2.5 rounded bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors duration-150"
+                  className="border-b pb-[3px] font-sans text-sm font-medium transition-opacity duration-150 hover:opacity-80"
+                  style={{ color: 'var(--color-text)', borderColor: 'var(--color-border-strong)' }}
                 >
-                  Upcoming Events
+                  View Events -&gt;
                 </Link>
-                {!user && (
-                  <Link
-                    to="/signin"
-                    className="px-5 py-2.5 rounded border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-semibold transition-colors duration-150"
-                  >
-                    Member Sign In
-                  </Link>
-                )}
+                <Link
+                  to="/get-involved"
+                  className="font-sans text-sm transition-opacity duration-150 hover:opacity-80"
+                  style={{ color: 'var(--color-text2)' }}
+                >
+                  Get Involved
+                </Link>
               </div>
             </div>
-          </RevealOnScrollWrapper>
-        </div>
-
-        {/* Four Pillars */}
-        <RevealOnScrollWrapper>
-          <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Our Four Pillars</h2>
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            <div className="font-sans text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+              Est. 1977 / Nonprofit / Open to all students
+            </div>
           </div>
-        </RevealOnScrollWrapper>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {pillars.map((p, i) => (
-            <RevealOnScrollWrapper key={p.label} delay={i * 0.08}>
-              <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-6 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
-                <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-2 text-sm">{p.label}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">{p.description}</p>
-              </div>
-            </RevealOnScrollWrapper>
-          ))}
+
+          <div className="relative flex flex-col justify-between overflow-hidden p-[52px]">
+            <div
+              className="absolute right-[-8px] top-4 select-none font-serif leading-none tracking-[-0.04em]"
+              style={{ fontSize: 160, color: 'var(--color-text)', opacity: 0.05 }}
+            >
+              1977
+            </div>
+            <div className="relative z-10 font-sans text-[11px] font-semibold uppercase tracking-[.07em]" style={{ color: 'var(--color-text3)' }}>
+              By the numbers
+            </div>
+            <div className="relative z-10">
+              {[
+                ['200+', 'Active members'],
+                ['50+', 'Events per year'],
+                ['4', 'Core pillars'],
+                ['47', 'Years of community'],
+              ].map(([value, label]) => (
+                <div key={label} className="flex items-baseline gap-4 border-t py-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <span className="font-serif leading-none" style={{ fontSize: 38, color: 'var(--color-text)' }}>
+                    {value}
+                  </span>
+                  <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Presidents' Message */}
-      <section className="pb-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <RevealOnScrollWrapper>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden">
-            <div className="bg-zinc-100 dark:bg-zinc-950 border-b lg:border-b-0 lg:border-r border-zinc-200 dark:border-zinc-800 p-8 sm:p-10 flex items-center justify-center">
+      <section className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '44px 52px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 48, alignItems: 'start' }}>
+          <div>
+            <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">Our Four Pillars</div>
+            <div className="mt-2.5 h-[1.5px] w-5 bg-brand-600 dark:bg-brand-400" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0 }}>
+            {pillars.map((pillar) => (
+              <div key={pillar.label} className="border-l px-7" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="mb-2 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                  {pillar.n}
+                </div>
+                <div className="mb-2 font-sans text-base font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
+                  {pillar.label}
+                </div>
+                <div className="font-sans text-xs leading-[1.6]" style={{ color: 'var(--color-text2)' }}>
+                  {pillar.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="grid gap-12 lg:grid-cols-[1.1fr_1fr]"
+        style={{ padding: '48px 52px', background: 'var(--color-bg)' }}
+      >
+        <div>
+          <div className="mb-0 flex justify-between items-baseline">
+            <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">Upcoming Events</div>
+            <Link to="/events" className="font-sans text-xs text-brand-600 dark:text-brand-400 transition-opacity hover:opacity-80">
+              All events -&gt;
+            </Link>
+          </div>
+          {upcomingEvents.length === 0 ? (
+            <p className="mt-0 border-t pt-4 font-sans text-sm" style={{ color: 'var(--color-text3)', borderColor: 'var(--color-border)' }}>
+              No upcoming events - check back soon.
+            </p>
+          ) : (
+            upcomingEvents.map((event) => <EventRow key={event.id} event={event} />)
+          )}
+          <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+            <Link to="/events" className="inline-flex items-center gap-1.5 font-sans text-sm font-medium text-brand-600 dark:text-brand-400 transition-opacity hover:opacity-80">
+              Browse all events
+            </Link>
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-4 font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">About VSA</div>
+          <blockquote className="mb-5 font-serif italic leading-[1.15] tracking-[-0.01em]" style={{ fontSize: 26, color: 'var(--color-text)' }}>
+            "A home for every student at UC San Diego."
+          </blockquote>
+          <p className="mb-6 font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
+            The Vietnamese Student Association at UC San Diego strives to promote and preserve Vietnamese culture.
+            We provide resources and a safe space for students to unite as a Vietnamese-American community.
+          </p>
+          <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
+        </div>
+      </section>
+
+      <section className="border-t" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', padding: '0 52px 56px' }}>
+        <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <div className="grid lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="border-b p-8 lg:border-b-0 lg:border-r lg:p-10" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="mb-4 font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">
+                Presidents
+              </div>
               {presidentsContent.photoUrl ? (
                 <img
                   src={presidentsContent.photoUrl}
-                  alt={`${presidentsContent.names} presidents`}
-                  className="w-full max-w-sm aspect-[4/5] object-cover rounded-md border border-zinc-200 dark:border-zinc-800"
+                  alt={PRESIDENTS_MESSAGE.names}
+                  className="aspect-[4/5] w-full rounded border object-cover"
+                  style={{ borderColor: 'var(--color-border)' }}
                 />
               ) : (
-                <div className="w-full max-w-sm aspect-[4/5] border border-dashed border-zinc-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900 flex items-center justify-center">
-                  <div className="text-center px-6">
-                    <p className="text-4xl font-semibold text-brand-600 mb-3">GN + PL</p>
-                    <p className="text-xs font-medium uppercase tracking-label text-zinc-500 dark:text-zinc-500">
-                      Presidents Photo
-                    </p>
-                  </div>
+                <div
+                  className="flex aspect-[4/5] w-full items-center justify-center rounded border"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+                >
+                  <span className="text-center font-serif italic" style={{ fontSize: 28, color: 'var(--color-text2)' }}>
+                    G + P
+                  </span>
                 </div>
               )}
+              <div className="mt-5 border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
+                  {PRESIDENTS_MESSAGE.names}
+                </div>
+                <div className="mt-1 font-sans text-xs uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  {PRESIDENTS_MESSAGE.role}
+                </div>
+              </div>
             </div>
 
-            <div className="p-8 sm:p-10">
-              <p className="text-xs font-medium uppercase tracking-label text-brand-600 dark:text-brand-400 mb-3">
-                Presidents
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">
-                {presidentsContent.names}
+            <div className="p-8 lg:p-10">
+              <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">
+                Letter From The Presidents
+              </div>
+              <h2 className="mt-3 font-sans text-[24px] font-semibold tracking-[-0.03em]" style={{ color: 'var(--color-text)' }}>
+                {PRESIDENTS_MESSAGE.greeting}
               </h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-                {presidentsContent.role}
-              </p>
+              <blockquote
+                className="mt-5 max-w-3xl font-serif italic leading-[1.02] tracking-[-0.03em]"
+                style={{ fontSize: 'clamp(34px, 5vw, 56px)', color: 'var(--color-text)' }}
+              >
+                "{PRESIDENTS_MESSAGE.quote}"
+              </blockquote>
 
-              <div className="space-y-4 text-sm sm:text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-                {presidentsMessage.map((paragraph, index) => (
-                  <p
-                    key={`${paragraph.slice(0, 24)}-${index}`}
-                    className={index === presidentsMessage.length - 1 ? 'text-zinc-700 dark:text-zinc-300 whitespace-pre-line' : 'whitespace-pre-line'}
-                  >
-                    {paragraph}
-                  </p>
+              <div className="mt-8 grid gap-6 md:grid-cols-2">
+                {[
+                  PRESIDENTS_MESSAGE.body.slice(0, 3),
+                  PRESIDENTS_MESSAGE.body.slice(3),
+                ].map((column, index) => (
+                  <div key={index} className="space-y-4">
+                    {column.map((paragraph) => (
+                      <p key={paragraph} className="font-sans text-sm leading-[1.85]" style={{ color: 'var(--color-text2)' }}>
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
                 ))}
+              </div>
+
+              <div className="mt-8 border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                  {PRESIDENTS_MESSAGE.signOff}
+                </div>
+                <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  {PRESIDENTS_MESSAGE.signature}
+                </div>
               </div>
             </div>
           </div>
-        </RevealOnScrollWrapper>
-      </section>
-
-      {/* Upcoming Events */}
-      <section className="pb-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <RevealOnScrollWrapper>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Upcoming Events</h2>
-            <Link
-              to="/events"
-              className="text-brand-600 hover:text-brand-700 dark:text-brand-400 text-sm font-medium transition-colors duration-150"
-            >
-              View all →
-            </Link>
-          </div>
-        </RevealOnScrollWrapper>
-
-        {eventsLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 rounded-full border-2 border-zinc-300 dark:border-zinc-700 border-t-brand-600 animate-spin" />
-          </div>
-        ) : eventsError ? (
-          <div className="border border-red-900/40 bg-red-950/20 rounded p-6 text-red-400 text-sm text-center">
-            Failed to load events — please try again later.
-          </div>
-        ) : upcomingEvents.length === 0 ? (
-          <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md p-10 text-center">
-            <p className="text-zinc-500">No upcoming events at the moment. Check back soon!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingEvents.map((event, i) => (
-              <RevealOnScrollWrapper key={event.id} delay={i * 0.08}>
-                <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
-                  {event.image_url && (
-                    <div className="h-40 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-                      <img src={event.image_url} alt={event.name} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="p-5">
-                    <span className="inline-block px-2 py-0.5 text-xs font-medium border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 rounded mb-3">
-                      {EVENT_TYPE_LABELS[event.event_type]}
-                    </span>
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 mb-1.5 line-clamp-1 text-base">{event.name}</h3>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-xs line-clamp-2 mb-3">{event.description}</p>
-                    <p className="text-zinc-400 text-xs">
-                      {format(new Date(event.date), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                </div>
-              </RevealOnScrollWrapper>
-            ))}
-          </div>
-        )}
+        </div>
       </section>
     </>
   );

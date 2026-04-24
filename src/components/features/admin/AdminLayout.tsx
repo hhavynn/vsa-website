@@ -2,19 +2,13 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminNav } from './AdminNav';
 
-/**
- * Shell for all /admin/* pages.
- * Renders AdminNav once in a stable container, then the page via <Outlet />.
- */
-const AdminLayout: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b]">
-      <div className="max-w-7xl mx-auto px-8 pt-8 pb-12">
-        <AdminNav />
-        <Outlet />
-      </div>
+const AdminLayout: React.FC = () => (
+  <div className="flex" style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--color-bg)' }}>
+    <AdminNav />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <Outlet />
     </div>
-  );
-};
+  </div>
+);
 
 export default AdminLayout;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
+import { PageTitle } from '../../components/common/PageTitle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -557,14 +558,22 @@ export default function AdminImport() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="py-6">
+    <>
+      <PageTitle title="Import Attendance" />
       <Toaster position="top-right" />
-      <div>
 
-        <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
+      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Import Attendance</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
+          Match CSV attendance rows to members before applying points.
+        </p>
+      </div>
+
+      <div style={{ padding: '20px 28px' }}>
+        <div className="border rounded-md p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-8">
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Import Attendance</h1>
-            <p className="text-zinc-500 mt-1 text-sm">
+            <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Sheet Setup</h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-text2)' }}>
               Paste a Google Sheets CSV link. Matched members get their points updated; unmatched people are added as new members.
             </p>
           </div>
@@ -931,7 +940,7 @@ export default function AdminImport() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -955,12 +964,13 @@ function SummaryBadge({ color, count, label, plural }: { color: string; count: n
   const cls: Record<string, string> = {
     green:  'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
     blue:   'bg-blue-100  dark:bg-blue-900/30  text-blue-700  dark:text-blue-300',
+    red:    'bg-red-100   dark:bg-red-900/30   text-red-700   dark:text-red-300',
     gray:   'bg-gray-100  dark:bg-gray-700      text-gray-500  dark:text-gray-400',
     amber:  'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
     purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
   };
   const dot: Record<string, string> = {
-    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400',
+    green: 'bg-green-500', blue: 'bg-blue-500', red: 'bg-red-500', gray: 'bg-gray-400',
     amber: 'bg-amber-500', purple: 'bg-purple-500',
   };
   return (

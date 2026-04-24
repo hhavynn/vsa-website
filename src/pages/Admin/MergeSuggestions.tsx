@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
+import { PageTitle } from '../../components/common/PageTitle';
 
 interface Member {
   id: string;
@@ -163,12 +164,12 @@ export default function AdminMergeSuggestions() {
     const hasSourceOnly = !targetVal && sourceVal;
 
     return (
-      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-zinc-100 dark:border-zinc-800">
-        <div className="col-span-2 text-zinc-500 dark:text-zinc-400 font-medium">{label}</div>
-        <div className={`col-span-5 ${!targetVal ? 'text-zinc-400 italic' : 'text-zinc-900 dark:text-zinc-100'}`}>
+      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="col-span-2 font-medium" style={{ color: 'var(--color-text2)' }}>{label}</div>
+        <div className={`col-span-5 ${!targetVal ? 'italic' : ''}`} style={{ color: !targetVal ? 'var(--color-text3)' : 'var(--color-text)' }}>
           {targetVal || '—'}
         </div>
-        <div className={`col-span-5 ${hasSourceOnly ? 'text-emerald-500 font-medium' : (!sourceVal ? 'text-zinc-400 italic' : 'text-zinc-900 dark:text-zinc-100')}`}>
+        <div className={`col-span-5 ${hasSourceOnly ? 'font-medium' : (!sourceVal ? 'italic' : '')}`} style={{ color: hasSourceOnly ? '#10b981' : (!sourceVal ? 'var(--color-text3)' : 'var(--color-text)') }}>
           {sourceVal || '—'}
           {hasSourceOnly && <span className="ml-2 text-[10px] uppercase border border-emerald-500/40 text-emerald-500 px-1 py-0.5 rounded">Will Fill</span>}
         </div>
@@ -177,24 +178,33 @@ export default function AdminMergeSuggestions() {
   };
 
   return (
-    <div className="py-6">
+    <>
+      <PageTitle title="Merge Suggestions" />
       <Toaster position="top-right" />
 
-        <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6 min-h-[500px]">
+      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Merge Suggestions</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
+          Review and merge likely duplicate member records before they diverge further.
+        </p>
+      </div>
+
+      <div style={{ padding: '20px 28px' }}>
+        <div className="border rounded-md p-6 min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-6">
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Merge Suggestions</h1>
-            <p className="text-zinc-500 mt-1 text-sm max-w-2xl">
+            <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Duplicate Review Queue</h2>
+            <p className="mt-1 text-sm max-w-2xl" style={{ color: 'var(--color-text2)' }}>
               Clean up your database. The system automatically finds potential duplicates based on names or emails. 
               Merging will transfer attendance and fill in any missing data on the Target member.
             </p>
           </div>
 
           {loading ? (
-            <div className="py-16 text-center text-zinc-500 text-sm">Loading suggestions…</div>
+            <div className="py-16 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading suggestions...</div>
           ) : potentialMatches.length === 0 ? (
             <div className="py-16 text-center">
-              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">All clean!</h3>
-              <p className="text-zinc-500 mt-1 text-sm">No potential duplicates found in your database.</p>
+              <h3 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>All clean.</h3>
+              <p className="mt-1 text-sm" style={{ color: 'var(--color-text2)' }}>No potential duplicates found in your database.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -203,18 +213,22 @@ export default function AdminMergeSuggestions() {
                 const isWorking = executingRow === pairId;
                 
                 return (
-                  <div key={pairId} className={`border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden transition-opacity ${isWorking ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <div
+                    key={pairId}
+                    className={`border rounded-md overflow-hidden transition-opacity ${isWorking ? 'opacity-50 pointer-events-none' : ''}`}
+                    style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
+                  >
 
                     {/* Header */}
-                    <div className="bg-zinc-50 dark:bg-zinc-900/60 px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                      <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-label">
+                    <div className="px-6 py-3 border-b flex justify-between items-center" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                      <span className="text-xs font-semibold uppercase tracking-label" style={{ color: 'var(--color-text2)' }}>
                         {pair.reason}
                       </span>
                     </div>
 
                     {/* Columns */}
                     <div className="p-6">
-                      <div className="grid grid-cols-12 gap-4 pb-2 text-xs font-semibold uppercase text-zinc-500 tracking-label">
+                      <div className="grid grid-cols-12 gap-4 pb-2 text-xs font-semibold uppercase tracking-label" style={{ color: 'var(--color-text2)' }}>
                         <div className="col-span-2">Field</div>
                         <div className="col-span-5 text-brand-600 dark:text-brand-400">Target (Master Record)</div>
                         <div className="col-span-5 text-red-600 dark:text-red-400">Source (To be deleted)</div>
@@ -226,24 +240,25 @@ export default function AdminMergeSuggestions() {
                       <DiffRow label="College" targetVal={pair.target.college} sourceVal={pair.source.college} />
                       <DiffRow label="Year" targetVal={pair.target.year} sourceVal={pair.source.year} />
                       
-                      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t border-zinc-100 dark:border-zinc-800">
-                        <div className="col-span-2 text-zinc-500 dark:text-zinc-400 font-medium">Points & Events</div>
-                        <div className="col-span-5 text-zinc-900 dark:text-zinc-100 font-semibold">
-                          {pair.target.points} pts <span className="text-zinc-400 font-normal ml-1">({pair.target.events_attended} events)</span>
+                      <div className="grid grid-cols-12 gap-4 py-2 text-sm border-t" style={{ borderColor: 'var(--color-border)' }}>
+                        <div className="col-span-2 font-medium" style={{ color: 'var(--color-text2)' }}>Points & Events</div>
+                        <div className="col-span-5 font-semibold" style={{ color: 'var(--color-text)' }}>
+                          {pair.target.points} pts <span className="font-normal ml-1" style={{ color: 'var(--color-text3)' }}>({pair.target.events_attended} events)</span>
                         </div>
                         <div className="col-span-5 text-emerald-500 font-medium">
-                          <span className="text-zinc-900 dark:text-zinc-100 line-through mr-2">
-                            {pair.source.points} pts <span className="text-zinc-400 font-normal ml-1">({pair.source.events_attended} events)</span>
+                          <span className="line-through mr-2" style={{ color: 'var(--color-text)' }}>
+                            {pair.source.points} pts <span className="font-normal ml-1" style={{ color: 'var(--color-text3)' }}>({pair.source.events_attended} events)</span>
                           </span>
                           + Will Transfer
                         </div>
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                      <div className="flex gap-3 justify-end mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
                         <button
                           onClick={() => handleIgnore(pair)}
-                          className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded text-sm font-medium transition-colors"
+                          className="px-4 py-2 border rounded text-sm font-medium transition-colors"
+                          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
                         >
                           Ignore / Not Match
                         </button>
@@ -268,6 +283,7 @@ export default function AdminMergeSuggestions() {
             </div>
           )}
         </div>
-    </div>
+      </div>
+    </>
   );
 }

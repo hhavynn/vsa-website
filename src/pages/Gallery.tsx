@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
+import { format } from 'date-fns';
 
 interface GalleryAlbum {
   id: string;
@@ -30,42 +32,37 @@ export default function Gallery() {
       });
   }, []);
 
-  if (loading) return <PageLoader />;
+  if (loading) return <PageLoader message="Loading gallery..." />;
   if (error) return <PageError message={error} />;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
-      {/* Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 pt-16 pb-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight mb-2">Gallery</h1>
-          <p className="text-zinc-500 text-sm">
-            Photos from our events — view full albums on Google Photos.
-          </p>
-        </div>
+    <>
+      <PageTitle title="Gallery" />
+
+      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Gallery</h1>
+        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
+          {albums.length} albums · view on Google Photos
+        </p>
       </div>
 
-      {/* Albums grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div style={{ padding: '40px 52px' }}>
         {albums.length === 0 ? (
-          <div className="text-center py-24 text-zinc-500">
-            <svg className="w-14 h-14 mx-auto mb-4 text-zinc-300 dark:text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-base">No albums yet — check back soon!</p>
+          <div className="border rounded py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>No albums yet — check back soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {albums.map((album) => (
               <a
                 key={album.id}
                 href={album.google_photos_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150"
+                className="group block border rounded overflow-hidden transition-colors duration-150"
+                style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
               >
-                {/* Cover image */}
-                <div className="relative h-52 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                <div className="relative overflow-hidden" style={{ height: 200, background: 'var(--color-surface2)' }}>
                   {album.cover_image_url ? (
                     <img
                       src={album.cover_image_url}
@@ -74,42 +71,32 @@ export default function Gallery() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-12 h-12 text-zinc-300 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-10 h-10" style={{ color: 'var(--color-text3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                   )}
-
-                  {/* "View on Google Photos" overlay on hover */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <span className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium px-4 py-2 rounded">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14H7.5C6.67 16 6 15.33 6 14.5v-5C6 8.67 6.67 8 7.5 8h9c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm-7-2l3-2-3-2v4z"/>
-                      </svg>
-                      View Full Album
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
+                    <span className="font-sans text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      View Full Album ↗
                     </span>
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="p-5">
-                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 text-base leading-snug group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                <div className="p-4">
+                  <h3 className="font-sans text-sm font-semibold tracking-[-0.01em] truncate" style={{ color: 'var(--color-text)' }}>
                     {album.title}
                   </h3>
                   {album.description && (
-                    <p className="text-zinc-500 text-sm mt-1.5 line-clamp-2 leading-relaxed">
+                    <p className="font-sans text-xs mt-1 line-clamp-2 leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                       {album.description}
                     </p>
                   )}
                   <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-zinc-400">
-                      {new Date(album.date).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                    <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                      {format(new Date(album.date), 'MMM d, yyyy').toUpperCase()}
                     </span>
-                    <span className="text-xs text-brand-600 dark:text-brand-400 font-medium">
+                    <span className="font-sans text-xs text-brand-600 dark:text-brand-400">
                       Google Photos ↗
                     </span>
                   </div>
@@ -119,6 +106,6 @@ export default function Gallery() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

@@ -240,31 +240,31 @@ export default function AdminGallery() {
   const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1';
 
   return (
-    <div className="py-6">
+    <>
       <PageTitle title="Gallery Management" />
 
-      {/* Tab switcher */}
-      <div className="flex space-x-1 mb-6 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded p-1 w-fit">
-        {(['create', 'manage'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'bg-zinc-800 text-zinc-50'
-                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
-            }`}
-          >
-            {tab === 'create' ? 'Add Album' : `Manage Albums (${albums.length})`}
-          </button>
-        ))}
+      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div>
+          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Gallery</h1>
+          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>{albums.length} albums</p>
+        </div>
+        <div className="inline-flex border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+          {(['create', 'manage'] as const).map((tab, i) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className="font-sans text-xs transition-colors duration-150"
+              style={{ padding: '7px 14px', fontWeight: activeTab === tab ? 500 : 400, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+              {tab === 'create' ? 'Add Album' : `Manage (${albums.length})`}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
+      <div style={{ padding: '20px 28px' }}>
+      <div className="border rounded p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         {activeTab === 'create' ? (
           <>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-1">Add Google Photos Album</h2>
-            <p className="text-sm text-zinc-500 mb-6">
+            <h2 className="mb-1 text-base font-semibold" style={{ color: 'var(--color-text)' }}>Add Google Photos Album</h2>
+            <p className="mb-6 text-sm" style={{ color: 'var(--color-text2)' }}>
               Each album links out to your Google Photos shared album. Upload a cover photo so it looks great on the gallery page.
             </p>
 
@@ -314,14 +314,14 @@ export default function AdminGallery() {
                   required
                   placeholder="https://photos.app.goo.gl/..."
                 />
-                <p className="mt-1 text-xs text-zinc-500">
-                  In Google Photos → open the album → click Share → Copy link
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  In Google Photos, open the album, click Share, then copy the public link.
                 </p>
               </div>
 
               {/* Cover photo upload */}
               <div>
-                <label className={labelCls}>Cover Photo <span className="text-gray-500 font-normal">(optional but recommended)</span></label>
+                <label className={labelCls}>Cover Photo <span className="font-normal" style={{ color: 'var(--color-text3)' }}>(optional but recommended)</span></label>
                 {coverPreview ? (
                   <div className="mt-2 relative inline-block">
                     <img
@@ -350,10 +350,10 @@ export default function AdminGallery() {
                     <svg className="w-8 h-8 text-zinc-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p className="text-zinc-400 text-sm font-medium">
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-text2)' }}>
                       {isDragActive ? 'Drop it here...' : 'Drag & drop a cover photo'}
                     </p>
-                    <p className="text-zinc-600 text-xs mt-1">or click to browse — PNG, JPG, WebP</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>or click to browse - PNG, JPG, WebP</p>
                   </div>
                 )}
               </div>
@@ -377,12 +377,12 @@ export default function AdminGallery() {
           </>
         ) : (
           <>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-6">
+            <h2 className="mb-6 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
               Manage Albums
             </h2>
             {albums.length === 0 ? (
-              <div className="text-center py-16 text-zinc-500">
-                <svg className="w-12 h-12 mx-auto mb-3 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="py-16 text-center" style={{ color: 'var(--color-text2)' }}>
+                <svg className="mx-auto mb-3 h-12 w-12" style={{ color: 'var(--color-text3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p>No albums yet. Add one to get started.</p>
@@ -390,9 +390,9 @@ export default function AdminGallery() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {albums.map(album => (
-                  <div key={album.id} className="border border-zinc-200 dark:border-zinc-700 rounded-md overflow-hidden bg-white dark:bg-zinc-900 flex flex-col">
+                  <div key={album.id} className="flex flex-col overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
                     {/* Cover */}
-                    <div className="relative h-36 bg-zinc-100 dark:bg-zinc-800">
+                    <div className="relative h-36" style={{ background: 'var(--color-surface2)' }}>
                       {album.cover_image_url ? (
                         <img
                           src={album.cover_image_url}
@@ -401,7 +401,7 @@ export default function AdminGallery() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <svg className="w-10 h-10 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-10 w-10" style={{ color: 'var(--color-text3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
@@ -409,11 +409,11 @@ export default function AdminGallery() {
                     </div>
 
                     <div className="p-4 flex flex-col flex-grow">
-                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm">{album.title}</h3>
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{album.title}</h3>
                       {album.description && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">{album.description}</p>
+                        <p className="mt-1 line-clamp-2 text-xs" style={{ color: 'var(--color-text2)' }}>{album.description}</p>
                       )}
-                      <p className="text-xs text-zinc-400 mt-1">
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                         {new Date(album.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
 
@@ -423,7 +423,8 @@ export default function AdminGallery() {
                             href={album.google_photos_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 text-center py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                            className="flex-1 rounded border py-1.5 text-center text-xs transition-colors"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                           >
                             Open Album ↗
                           </a>
@@ -436,7 +437,8 @@ export default function AdminGallery() {
                         </div>
                         <button
                           onClick={() => openEditModal(album)}
-                          className="w-full py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                          className="w-full rounded border py-1.5 text-xs transition-colors"
+                          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                         >
                           Edit Album
                         </button>
@@ -453,10 +455,10 @@ export default function AdminGallery() {
       {/* Edit Album Modal */}
       {albumToEdit && (
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 rounded-md max-w-2xl w-full my-8 border border-zinc-800">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-              <h3 className="text-base font-semibold text-zinc-50">Edit Album</h3>
-              <button onClick={closeEditModal} className="text-zinc-500 hover:text-zinc-100 text-2xl leading-none">&times;</button>
+          <div className="my-8 w-full max-w-2xl rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--color-border)' }}>
+              <h3 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>Edit Album</h3>
+              <button onClick={closeEditModal} className="text-2xl leading-none" style={{ color: 'var(--color-text3)' }}>&times;</button>
             </div>
 
             <form onSubmit={handleEditSave} className="p-6 space-y-5">
@@ -511,13 +513,13 @@ export default function AdminGallery() {
               <div>
                 <label className={labelCls}>
                   Cover Photo
-                  <span className="text-zinc-600 font-normal ml-1">(leave empty to keep current)</span>
+                  <span className="ml-1 font-normal" style={{ color: 'var(--color-text3)' }}>(leave empty to keep current)</span>
                 </label>
 
                 {/* Show current cover if no new one staged */}
                 {!editCoverPreview && albumToEdit.cover_image_url && (
                   <div className="mt-2 mb-3">
-                    <p className="text-xs text-zinc-500 mb-1.5">Current</p>
+                    <p className="mb-1.5 text-xs" style={{ color: 'var(--color-text3)' }}>Current</p>
                     <img
                       src={albumToEdit.cover_image_url}
                       alt={albumToEdit.title}
@@ -528,7 +530,7 @@ export default function AdminGallery() {
 
                 {editCoverPreview ? (
                   <div className="relative mt-2">
-                    <p className="text-xs text-zinc-500 mb-1.5">New cover (staged)</p>
+                    <p className="mb-1.5 text-xs" style={{ color: 'var(--color-text3)' }}>New cover staged</p>
                     <img
                       src={editCoverPreview}
                       alt="New cover preview"
@@ -555,8 +557,8 @@ export default function AdminGallery() {
                     <svg className="w-6 h-6 text-zinc-600 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p className="text-zinc-400 text-sm">{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to replace cover'}</p>
-                    <p className="text-zinc-600 text-xs mt-1">PNG, JPG, WebP</p>
+                    <p className="text-sm" style={{ color: 'var(--color-text2)' }}>{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to replace cover'}</p>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>PNG, JPG, WebP</p>
                   </div>
                 )}
               </div>
@@ -566,7 +568,8 @@ export default function AdminGallery() {
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="flex-1 py-2.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-100 text-sm transition-colors"
+                  className="flex-1 rounded border py-2.5 text-sm transition-colors"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                 >
                   Cancel
                 </button>
@@ -594,17 +597,18 @@ export default function AdminGallery() {
       {/* Delete Confirmation Modal */}
       {albumToDelete && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-md max-w-md w-full border border-zinc-800 p-6">
-            <h3 className="text-base font-semibold text-zinc-50 mb-2">Delete Album</h3>
-            <p className="text-zinc-400 text-sm mb-1">Are you sure you want to remove:</p>
-            <p className="text-zinc-100 font-semibold text-sm mb-2">"{albumToDelete.title}"</p>
-            <p className="text-zinc-500 text-sm mb-6">
+          <div className="w-full max-w-md rounded-md border p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--color-text)' }}>Delete Album</h3>
+            <p className="mb-1 text-sm" style={{ color: 'var(--color-text2)' }}>Are you sure you want to remove:</p>
+            <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>"{albumToDelete.title}"</p>
+            <p className="mb-6 text-sm" style={{ color: 'var(--color-text2)' }}>
               This removes it from the website. Your Google Photos album won't be affected.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setAlbumToDelete(null)}
-                className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors"
+                className="px-4 py-2 text-sm transition-colors"
+                style={{ color: 'var(--color-text2)' }}
               >
                 Cancel
               </button>
@@ -618,6 +622,7 @@ export default function AdminGallery() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

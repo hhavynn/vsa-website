@@ -10,8 +10,8 @@ import {
   splitPresidentsMessage,
 } from '../../data/presidentsContent';
 
-const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
-const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label';
+const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
+const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
 
 export default function AdminContent() {
   const [form, setForm] = useState<PresidentsContent>(DEFAULT_PRESIDENTS_CONTENT);
@@ -122,178 +122,122 @@ export default function AdminContent() {
   const previewPhoto = photoPreview || form.photoUrl;
   const previewParagraphs = splitPresidentsMessage(form.message);
 
+  const fieldStyle = { borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' };
+
   return (
-    <div className="py-6">
+    <>
       <PageTitle title="Admin Content" />
 
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">
-          Homepage Content
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          Edit the presidents message and photo shown on the main page.
-        </p>
+      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Homepage Content</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Edit the presidents message and photo shown on the main page.</p>
       </div>
 
+      <div style={{ padding: '24px 28px' }}>
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)] gap-6">
         <form
           onSubmit={handleSubmit}
-          className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6 space-y-5"
+          className="border rounded p-6 space-y-5"
+          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Presidents *</label>
-              <input
-                type="text"
-                value={form.names}
-                onChange={(e) => setForm({ ...form, names: e.target.value })}
-                className={inputCls}
-                required
-                disabled={loading}
-              />
+              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Presidents *</label>
+              <input type="text" value={form.names} onChange={(e) => setForm({ ...form, names: e.target.value })} className={inputCls} style={fieldStyle} required disabled={loading} />
             </div>
             <div>
-              <label className={labelCls}>Role *</label>
-              <input
-                type="text"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className={inputCls}
-                required
-                disabled={loading}
-              />
+              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Role *</label>
+              <input type="text" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className={inputCls} style={fieldStyle} required disabled={loading} />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Message *</label>
+            <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Message *</label>
             <textarea
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
               className={`${inputCls} min-h-[360px] leading-relaxed`}
+              style={fieldStyle}
               required
               disabled={loading}
             />
-            <p className="text-xs text-zinc-500 mt-2">
+            <p className="font-sans text-xs mt-2" style={{ color: 'var(--color-text3)' }}>
               Use blank lines to separate paragraphs. Single line breaks are preserved inside a paragraph.
             </p>
           </div>
 
           <div>
-            <label className={labelCls}>Photo URL</label>
-            <input
-              type="url"
-              value={form.photoUrl}
-              onChange={(e) => {
-                setForm({ ...form, photoUrl: e.target.value });
-                setPhotoFile(null);
-                setPhotoPreview('');
-              }}
-              className={inputCls}
-              placeholder="https://..."
-              disabled={loading}
-            />
+            <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Photo URL</label>
+            <input type="url" value={form.photoUrl} onChange={(e) => { setForm({ ...form, photoUrl: e.target.value }); setPhotoFile(null); setPhotoPreview(''); }} className={inputCls} style={fieldStyle} placeholder="https://..." disabled={loading} />
           </div>
 
           <div>
-            <label className={labelCls}>Upload Photo</label>
+            <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Upload Photo</label>
             <div
               {...getRootProps()}
-              className={`mt-1 flex min-h-44 flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors ${
-                isDragActive ? 'border-zinc-400 bg-zinc-800/20' : 'border-zinc-700'
-              }`}
+              className="mt-1 flex min-h-44 flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors"
+              style={{ borderColor: isDragActive ? 'var(--color-text2)' : 'var(--color-border)', background: isDragActive ? 'var(--color-surface2)' : 'transparent' }}
             >
               <input {...getInputProps()} />
               {previewPhoto ? (
                 <img src={previewPhoto} alt="Presidents preview" className="max-h-52 rounded object-cover" />
               ) : (
-                <p className="text-zinc-500 text-xs">Drag and drop or click to upload</p>
+                <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
               )}
             </div>
             {previewPhoto && (
-              <button
-                type="button"
-                className="mt-1.5 text-xs text-red-400 hover:text-red-300"
-                onClick={() => {
-                  setForm({ ...form, photoUrl: '' });
-                  setPhotoFile(null);
-                  setPhotoPreview('');
-                }}
-              >
+              <button type="button" className="mt-1.5 font-sans text-xs text-red-500 hover:text-red-400" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                onClick={() => { setForm({ ...form, photoUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}>
                 Remove photo
               </button>
             )}
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
-            <button
-              type="submit"
-              disabled={loading || saving}
-              className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium px-5 py-2.5 rounded text-sm transition-colors disabled:opacity-50"
-            >
+            <button type="submit" disabled={loading || saving} className="font-sans font-medium px-5 py-2 rounded text-sm transition-colors disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none', cursor: saving ? 'default' : 'pointer' }}>
               {saving ? 'Saving...' : 'Save Content'}
             </button>
-            <button
-              type="button"
-              disabled={loading || saving}
-              onClick={() => {
-                setForm(DEFAULT_PRESIDENTS_CONTENT);
-                setPhotoFile(null);
-                setPhotoPreview('');
-              }}
-              className="border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium px-5 py-2.5 rounded text-sm transition-colors disabled:opacity-50"
-            >
+            <button type="button" disabled={loading || saving} onClick={() => { setForm(DEFAULT_PRESIDENTS_CONTENT); setPhotoFile(null); setPhotoPreview(''); }}
+              className="font-sans font-medium px-5 py-2 rounded text-sm border transition-colors disabled:opacity-50"
+              style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
               Reset to Default
             </button>
           </div>
         </form>
 
-        <aside className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md overflow-hidden h-fit">
-          <div className="border-b border-zinc-200 dark:border-zinc-800 px-5 py-4">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Preview</h2>
+        <aside className="border rounded overflow-hidden h-fit" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
+            <h2 className="font-sans font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Preview</h2>
           </div>
           <div className="p-5">
-            <div className="mb-5 bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-4 flex items-center justify-center">
+            <div className="mb-5 border rounded p-4 flex items-center justify-center" style={{ background: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
               {previewPhoto ? (
-                <img
-                  src={previewPhoto}
-                  alt={`${form.names} presidents preview`}
-                  className="w-full max-w-xs aspect-[4/5] object-cover rounded border border-zinc-200 dark:border-zinc-800"
-                />
+                <img src={previewPhoto} alt={`${form.names} presidents preview`} className="w-full max-w-xs aspect-[4/5] object-cover rounded border" style={{ borderColor: 'var(--color-border)' }} />
               ) : (
-                <div className="w-full max-w-xs aspect-[4/5] border border-dashed border-zinc-300 dark:border-zinc-700 rounded-md flex items-center justify-center">
+                <div className="w-full max-w-xs aspect-[4/5] border border-dashed rounded flex items-center justify-center" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="text-center px-6">
-                    <p className="text-3xl font-semibold text-brand-600 mb-2">GN + PL</p>
-                    <p className="text-xs font-medium uppercase tracking-label text-zinc-500">
-                      Presidents Photo
-                    </p>
+                    <p className="font-serif text-2xl text-brand-600 dark:text-brand-400 mb-2">Photo</p>
+                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.07em]" style={{ color: 'var(--color-text3)' }}>Presidents Photo</p>
                   </div>
                 </div>
               )}
             </div>
-
-            <p className="text-xs font-medium uppercase tracking-label text-brand-600 dark:text-brand-400 mb-2">
-              Presidents
-            </p>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight mb-1">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.07em] text-brand-600 dark:text-brand-400 mb-2">Presidents</p>
+            <h2 className="font-sans font-semibold text-lg tracking-[-0.01em] mb-1" style={{ color: 'var(--color-text)' }}>
               {form.names || DEFAULT_PRESIDENTS_CONTENT.names}
             </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+            <p className="font-sans text-sm mb-5" style={{ color: 'var(--color-text2)' }}>
               {form.role || DEFAULT_PRESIDENTS_CONTENT.role}
             </p>
-            <div className="space-y-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            <div className="space-y-3 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
               {previewParagraphs.map((paragraph, index) => (
-                <p
-                  key={`${paragraph.slice(0, 24)}-${index}`}
-                  className={index === previewParagraphs.length - 1 ? 'text-zinc-700 dark:text-zinc-300 whitespace-pre-line' : 'whitespace-pre-line'}
-                >
-                  {paragraph}
-                </p>
+                <p key={`${paragraph.slice(0, 24)}-${index}`} className="whitespace-pre-line">{paragraph}</p>
               ))}
             </div>
           </div>
         </aside>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

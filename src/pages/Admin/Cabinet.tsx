@@ -289,32 +289,27 @@ export default function AdminCabinet() {
   };
 
   return (
-    <div className="py-6">
+    <>
       <PageTitle title="Cabinet Management" />
 
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">Cabinet Directory</h1>
+      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div>
+          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Cabinet</h1>
+          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Manage the cabinet directory</p>
+        </div>
+        <div className="inline-flex border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+          {(['manage', 'create'] as const).map((tab, i) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className="font-sans text-xs transition-colors duration-150"
+              style={{ padding: '7px 14px', fontWeight: activeTab === tab ? 500 : 400, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+              {tab === 'manage' ? 'Manage' : 'Add Member'}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 mb-6">
-        {(['manage', 'create'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors duration-150 ${
-              activeTab === tab
-                ? 'bg-zinc-800 text-zinc-50 dark:bg-zinc-700'
-                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-          >
-            {tab === 'manage' ? 'Manage Directory' : 'Add Member'}
-          </button>
-        ))}
-      </div>
-
-      <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6 min-h-[500px]">
+      <div style={{ padding: '20px 28px' }}>
+      <div className="border rounded min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', padding: 24 }}>
         {activeTab === 'create' ? (
           <div>
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Add Cabinet Member</h2>
@@ -486,6 +481,7 @@ export default function AdminCabinet() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,7 +1,6 @@
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { Label } from '../components/ui/Label';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VCN CURRENT YEAR — Update all fields in this config each production cycle.
@@ -9,42 +8,20 @@ import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrappe
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VCN_CURRENT = {
-  // Set to true when this year's show details are ready to publish.
   active: true,
-
-  // Year label shown on the page.
   year: '2026',
-
-  // Show title / theme (Vietnamese or English, your choice).
   title: 'Tình Yêu Thầm Lặng',
-
-  // One or two sentence synopsis of this year's story.
   synopsis: 'Tình Yêu Thầm Lặng explores unspoken love within a Vietnamese household, highlighting family sacrifice, generational misunderstanding, and the quiet ways care is expressed through action rather than words.',
-
-  // Show details — leave empty strings to hide that field.
   date: 'Saturday, April 18, 2026',
-  time: '', // Assuming evening but not specified, so leaving empty for now
-  venue: '', // Not specified in prompt so leaving empty
-
-  // Ticketing — set ticketsAvailable: true and add a link to enable the ticket button.
+  time: '',
+  venue: '',
   ticketsAvailable: false,
   ticketLink: '',
-  ticketNote: '', // e.g. "General admission · Doors open at 6:30 PM"
-
-  // Optional promotional image URL (poster, banner, etc.)
+  ticketNote: '',
   posterUrl: '',
-
-  // Trailer embed URL (YouTube embed URL format)
   trailerUrl: '',
-
-  // Dances — add each dance with its title and optional choreographer name(s).
-  // Leave choreographer empty if not publishing names publicly.
   dances: [] as Array<{ title: string; choreographer?: string }>,
-
-  // Sponsors for this year — name and optional website.
   sponsors: [] as Array<{ name: string; url?: string }>,
-
-  // Optional short message for the audience from this year's production team.
   messageFromTeam: '',
 };
 
@@ -55,35 +32,23 @@ export function VCNCurrent() {
     return (
       <>
         <PageTitle title="VCN — This Year's Show" />
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="min-h-[60vh] flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
           <div className="text-center max-w-md">
-            <div className="text-6xl mb-6">🎭</div>
-            <h1 className="font-heading font-bold text-3xl text-white mb-4">
+            <h1 className="font-serif leading-none tracking-[-0.03em] mb-4" style={{ fontSize: 44, color: 'var(--color-text)' }}>
               VCN {VCN_CURRENT.year || 'Coming Soon'}
             </h1>
-            <p className="text-slate-400 text-sm leading-relaxed mb-8">
+            <p className="font-sans text-sm leading-relaxed mb-8" style={{ color: 'var(--color-text2)' }}>
               Details for this year's Vietnamese Culture Night production are coming soon. Follow{' '}
-              <a
-                href="https://www.instagram.com/vsaatucsd/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-red-400 hover:text-red-300 transition-colors"
-              >
+              <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
                 @vsaatucsd
               </a>{' '}
               on Instagram for the latest announcements.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link
-                to="/vcn"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl transition-colors text-sm"
-              >
-                ← About VCN
+              <Link to="/vcn" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
+                About VCN
               </Link>
-              <Link
-                to="/vcn/archive"
-                className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white font-medium rounded-xl transition-colors text-sm"
-              >
+              <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
                 Past Productions
               </Link>
             </div>
@@ -96,202 +61,131 @@ export function VCNCurrent() {
   return (
     <>
       <PageTitle title={`VCN ${VCN_CURRENT.year}${VCN_CURRENT.title ? ` — ${VCN_CURRENT.title}` : ''}`} />
-      <div className="min-h-screen bg-slate-950">
 
-        {/* ── Hero ── */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-950/80 via-rose-950/40 to-slate-950" />
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[100px] pointer-events-none" />
-
-          <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-20 pb-16">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <Link
-                to="/vcn"
-                className="inline-flex items-center gap-1.5 text-red-400/60 hover:text-red-400 text-sm mb-8 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Vietnamese Culture Night
-              </Link>
-
-              <div className="flex flex-wrap items-center gap-3 mb-5">
-                <span className="text-5xl">🎭</span>
-                <span className="text-[10px] tracking-[0.3em] uppercase text-red-400 font-semibold border border-red-500/25 rounded-full px-3 py-1.5 bg-red-500/8">
-                  VCN {VCN_CURRENT.year}
-                </span>
-              </div>
-
-              <h1 className="font-heading font-bold text-white leading-none mb-3" style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>
-                {VCN_CURRENT.title || 'Vietnamese Culture Night'}
-              </h1>
-              <p className="text-red-300/50 text-sm font-medium tracking-[0.2em] uppercase mb-6">
-                UCSD VSA · {VCN_CURRENT.year}
-              </p>
-
-              {VCN_CURRENT.synopsis && (
-                <p className="text-slate-300 text-lg leading-relaxed max-w-xl mb-8">{VCN_CURRENT.synopsis}</p>
-              )}
-
-              {/* Show details */}
-              {(VCN_CURRENT.date || VCN_CURRENT.venue) && (
-                <div className="flex flex-wrap gap-3 mb-8">
-                  {VCN_CURRENT.date && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-500/15 bg-red-500/5">
-                      <span className="text-red-400 text-xs font-semibold">{VCN_CURRENT.date}</span>
-                      {VCN_CURRENT.time && <span className="text-slate-600 text-xs">·</span>}
-                      {VCN_CURRENT.time && <span className="text-slate-500 text-xs">{VCN_CURRENT.time}</span>}
-                    </div>
-                  )}
-                  {VCN_CURRENT.venue && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-500/15 bg-red-500/5">
-                      <span className="text-red-400 text-xs font-semibold">{VCN_CURRENT.venue}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Ticket CTA */}
-              {VCN_CURRENT.ticketsAvailable && VCN_CURRENT.ticketLink && (
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href={VCN_CURRENT.ticketLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl transition-colors text-sm"
-                  >
-                    Get Tickets
-                  </a>
-                  {VCN_CURRENT.ticketNote && (
-                    <p className="text-slate-500 text-xs self-center">{VCN_CURRENT.ticketNote}</p>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </div>
+      {/* Page header */}
+      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Link to="/vcn" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Vietnamese Culture Night</Link>
+          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
+          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{VCN_CURRENT.year}</span>
         </div>
+        <h1 className="font-serif leading-none tracking-[-0.03em] italic" style={{ fontSize: 44, color: 'var(--color-text)' }}>
+          {VCN_CURRENT.title || `Vietnamese Culture Night ${VCN_CURRENT.year}`}
+        </h1>
+        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
+          UCSD VSA · VCN {VCN_CURRENT.year}
+          {VCN_CURRENT.date && <span className="ml-3 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+            {VCN_CURRENT.date}{VCN_CURRENT.time ? ` · ${VCN_CURRENT.time}` : ''}
+          </span>}
+        </p>
+        {VCN_CURRENT.ticketsAvailable && VCN_CURRENT.ticketLink && (
+          <div className="mt-4">
+            <a
+              href={VCN_CURRENT.ticketLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center font-sans text-sm font-medium px-4 py-2 rounded"
+              style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+            >
+              Get Tickets →
+            </a>
+            {VCN_CURRENT.ticketNote && (
+              <span className="ml-3 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{VCN_CURRENT.ticketNote}</span>
+            )}
+          </div>
+        )}
+      </div>
 
-        {/* ── Poster / Trailer ── */}
+      <div style={{ padding: '40px 52px', maxWidth: 800 }}>
+
+        {/* Synopsis */}
+        {VCN_CURRENT.synopsis && (
+          <div className="mb-10">
+            <Label className="mb-4">Synopsis</Label>
+            <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
+              {VCN_CURRENT.synopsis}
+            </p>
+          </div>
+        )}
+
+        {/* Venue */}
+        {VCN_CURRENT.venue && (
+          <div className="mb-10">
+            <Label className="mb-3">Venue</Label>
+            <p className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{VCN_CURRENT.venue}</p>
+          </div>
+        )}
+
+        {/* Poster / Trailer */}
         {(VCN_CURRENT.posterUrl || VCN_CURRENT.trailerUrl) && (
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-            <div className="grid md:grid-cols-2 gap-6">
+          <div className="mb-10">
+            <div style={{ display: 'grid', gridTemplateColumns: VCN_CURRENT.posterUrl && VCN_CURRENT.trailerUrl ? '1fr 1fr' : '1fr', gap: 16 }}>
               {VCN_CURRENT.posterUrl && (
-                <RevealOnScrollWrapper>
-                  <img
-                    src={VCN_CURRENT.posterUrl}
-                    alt={`VCN ${VCN_CURRENT.year} poster`}
-                    className="rounded-xl border border-slate-800 w-full object-cover"
-                  />
-                </RevealOnScrollWrapper>
+                <img src={VCN_CURRENT.posterUrl} alt={`VCN ${VCN_CURRENT.year} poster`} className="border rounded w-full object-cover" style={{ borderColor: 'var(--color-border)' }} />
               )}
               {VCN_CURRENT.trailerUrl && (
-                <RevealOnScrollWrapper>
-                  <div className="rounded-xl overflow-hidden border border-slate-800 aspect-video">
-                    <iframe
-                      src={VCN_CURRENT.trailerUrl}
-                      title={`VCN ${VCN_CURRENT.year} trailer`}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                </RevealOnScrollWrapper>
+                <div className="border rounded overflow-hidden aspect-video" style={{ borderColor: 'var(--color-border)' }}>
+                  <iframe src={VCN_CURRENT.trailerUrl} title={`VCN ${VCN_CURRENT.year} trailer`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* ── Dances ── */}
+        {/* Dances */}
         {VCN_CURRENT.dances.length > 0 && (
-          <div className="border-y border-slate-800/50 py-16 bg-slate-900/20">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-              <RevealOnScrollWrapper>
-                <div className="text-center mb-12">
-                  <h2 className="font-heading font-bold text-3xl text-white mb-2">This Year's Dances</h2>
+          <div className="mb-10">
+            <Label className="mb-4">This Year's Dances</Label>
+            <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+              {VCN_CURRENT.dances.map((dance, i) => (
+                <div key={i} className="flex items-baseline gap-4 border-b last:border-b-0" style={{ padding: '12px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <span className="font-mono text-[10px] tracking-[.04em] shrink-0" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
+                  <div>
+                    <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{dance.title}</span>
+                    {dance.choreographer && (
+                      <span className="font-sans text-xs ml-3" style={{ color: 'var(--color-text3)' }}>Choreography by {dance.choreographer}</span>
+                    )}
+                  </div>
                 </div>
-              </RevealOnScrollWrapper>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {VCN_CURRENT.dances.map((dance, i) => (
-                  <RevealOnScrollWrapper key={i}>
-                    <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-800 hover:border-red-500/20 bg-slate-900/30 transition-colors">
-                      <span className="text-red-400/40 font-heading font-bold text-2xl leading-none mt-0.5">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <div>
-                        <p className="text-white font-medium text-sm">{dance.title}</p>
-                        {dance.choreographer && (
-                          <p className="text-slate-600 text-xs mt-0.5">Choreography by {dance.choreographer}</p>
-                        )}
-                      </div>
-                    </div>
-                  </RevealOnScrollWrapper>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Sponsors ── */}
-        {VCN_CURRENT.sponsors.length > 0 && (
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-            <RevealOnScrollWrapper>
-              <div className="text-center mb-10">
-                <h2 className="font-heading font-bold text-2xl text-white mb-2">Thank You to Our Sponsors</h2>
-                <p className="text-slate-500 text-sm">VCN is made possible with the generous support of our community partners.</p>
-              </div>
-            </RevealOnScrollWrapper>
-            <div className="flex flex-wrap justify-center gap-3">
-              {VCN_CURRENT.sponsors.map((s, i) => (
-                <RevealOnScrollWrapper key={i}>
-                  {s.url ? (
-                    <a
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg border border-slate-800 hover:border-red-500/20 bg-slate-900/40 text-slate-300 text-sm font-medium transition-colors"
-                    >
-                      {s.name}
-                    </a>
-                  ) : (
-                    <span className="px-4 py-2 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-400 text-sm font-medium">
-                      {s.name}
-                    </span>
-                  )}
-                </RevealOnScrollWrapper>
               ))}
             </div>
           </div>
         )}
 
-        {/* ── Message from the Team ── */}
-        {VCN_CURRENT.messageFromTeam && (
-          <div className="border-t border-slate-800/50 py-16 bg-slate-900/20">
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-              <RevealOnScrollWrapper>
-                <div className="text-4xl mb-4">💌</div>
-                <h2 className="font-heading font-bold text-2xl text-white mb-4">From the Production Team</h2>
-                <p className="text-slate-400 text-sm leading-relaxed italic">"{VCN_CURRENT.messageFromTeam}"</p>
-              </RevealOnScrollWrapper>
+        {/* Sponsors */}
+        {VCN_CURRENT.sponsors.length > 0 && (
+          <div className="mb-10">
+            <Label className="mb-4">Sponsors</Label>
+            <div className="flex flex-wrap gap-2">
+              {VCN_CURRENT.sponsors.map((s, i) => (
+                s.url ? (
+                  <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="font-sans text-sm border rounded px-3 py-1.5 transition-colors duration-150" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>{s.name}</a>
+                ) : (
+                  <span key={i} className="font-sans text-sm border rounded px-3 py-1.5" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>{s.name}</span>
+                )
+              ))}
             </div>
           </div>
         )}
 
-        {/* ── Footer nav ── */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24 pt-8">
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              to="/vcn"
-              className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white font-medium rounded-xl transition-colors text-sm"
-            >
-              ← About VCN
-            </Link>
-            <Link
-              to="/vcn/archive"
-              className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-white font-medium rounded-xl transition-colors text-sm"
-            >
-              Past Productions
-            </Link>
+        {/* Message from Team */}
+        {VCN_CURRENT.messageFromTeam && (
+          <div className="mb-10 border-l-2 pl-5" style={{ borderColor: 'var(--color-border)' }}>
+            <Label className="mb-3">From the Production Team</Label>
+            <p className="font-serif italic leading-[1.6]" style={{ fontSize: 18, color: 'var(--color-text2)' }}>
+              "{VCN_CURRENT.messageFromTeam}"
+            </p>
           </div>
+        )}
+
+        {/* Footer nav */}
+        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+          <Link to="/vcn" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
+            ← About VCN
+          </Link>
+          <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
+            Past Productions
+          </Link>
         </div>
 
       </div>
