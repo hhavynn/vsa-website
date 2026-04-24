@@ -4,6 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
+import { initGA } from './lib/analytics';
+
+// Initialize GA4
+initGA();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
