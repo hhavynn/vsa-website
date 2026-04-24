@@ -22,7 +22,7 @@ const socialLinks = [
 
 const Footer: React.FC = () => (
   <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-    <div className="max-w-4xl mx-auto px-8 py-10">
+    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
       <div className="flex flex-col items-center gap-6">
 
         <div className="text-center">
@@ -32,7 +32,7 @@ const Footer: React.FC = () => (
           <p className="font-sans text-xs text-[var(--color-text3)] mt-1">Vietnamese Student Association · Est. 1977</p>
         </div>
 
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
           {socialLinks.map(link => (
             <a
               key={link.label}
@@ -40,7 +40,8 @@ const Footer: React.FC = () => (
               target={link.href.startsWith('mailto') ? undefined : '_blank'}
               rel="noopener noreferrer"
               aria-label={link.label}
-              className="text-[var(--color-text3)] hover:text-[var(--color-text2)] transition-colors duration-150"
+              className="flex h-9 w-9 items-center justify-center rounded border text-[var(--color-text3)] transition-colors duration-150 hover:text-[var(--color-text2)]"
+              style={{ borderColor: 'var(--color-border)' }}
             >
               {link.icon}
             </a>

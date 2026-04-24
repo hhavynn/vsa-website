@@ -83,13 +83,16 @@ export function Home() {
       <PageTitle title="Home" />
 
       <section style={{ background: 'var(--color-surface)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 400 }}>
-          <div className="flex flex-col justify-between border-r p-[52px]" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="grid lg:grid-cols-2" style={{ minHeight: 400 }}>
+          <div className="flex flex-col justify-between border-b p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-[52px]" style={{ borderColor: 'var(--color-border)' }}>
             <div className="font-sans text-[11px] font-semibold uppercase tracking-[.1em]" style={{ color: 'var(--color-text3)' }}>
               Vietnamese Student Association / UC San Diego
             </div>
             <div>
-              <h1 className="font-serif italic leading-[.9] tracking-[-0.03em]" style={{ fontSize: 72, color: 'var(--color-text)', marginBottom: 20 }}>
+              <h1
+                className="font-serif italic leading-[.9] tracking-[-0.03em]"
+                style={{ fontSize: 'clamp(3.3rem, 16vw, 4.5rem)', color: 'var(--color-text)', marginBottom: 20 }}
+              >
                 Culture,
                 <br />
                 Community.
@@ -98,7 +101,7 @@ export function Home() {
               <p className="max-w-[380px] font-sans leading-[1.7]" style={{ fontSize: 15, color: 'var(--color-text2)', marginBottom: 32 }}>
                 Promoting and preserving Vietnamese culture since 1977 - a home for every student at UC San Diego.
               </p>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                 <Link
                   to="/events"
                   className="border-b pb-[3px] font-sans text-sm font-medium transition-opacity duration-150 hover:opacity-80"
@@ -120,10 +123,10 @@ export function Home() {
             </div>
           </div>
 
-          <div className="relative flex flex-col justify-between overflow-hidden p-[52px]">
+          <div className="relative flex flex-col justify-between overflow-hidden p-6 sm:p-8 lg:p-[52px]">
             <div
               className="absolute right-[-8px] top-4 select-none font-serif leading-none tracking-[-0.04em]"
-              style={{ fontSize: 160, color: 'var(--color-text)', opacity: 0.05 }}
+              style={{ fontSize: 'clamp(6rem, 28vw, 10rem)', color: 'var(--color-text)', opacity: 0.05 }}
             >
               1977
             </div>
@@ -151,15 +154,22 @@ export function Home() {
         </div>
       </section>
 
-      <section className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '44px 52px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 48, alignItems: 'start' }}>
+      <section className="border-b px-5 py-10 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <div className="grid gap-8 lg:grid-cols-[180px_1fr] lg:items-start lg:gap-12">
           <div>
             <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">Our Four Pillars</div>
             <div className="mt-2.5 h-[1.5px] w-5 bg-brand-600 dark:bg-brand-400" />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0 }}>
-            {pillars.map((pillar) => (
-              <div key={pillar.label} className="border-l px-7" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="grid gap-0 sm:grid-cols-2 xl:grid-cols-4">
+            {pillars.map((pillar, index) => (
+              <div
+                key={pillar.label}
+                className="border-t py-5 sm:px-5 sm:py-0 xl:border-t-0 xl:border-l xl:px-7"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  borderLeftWidth: index === 0 ? 0 : undefined,
+                }}
+              >
                 <div className="mb-2 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                   {pillar.n}
                 </div>
@@ -176,11 +186,11 @@ export function Home() {
       </section>
 
       <section
-        className="grid gap-12 lg:grid-cols-[1.1fr_1fr]"
-        style={{ padding: '48px 52px', background: 'var(--color-bg)' }}
+        className="grid gap-12 px-5 py-10 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:px-[52px] lg:py-12"
+        style={{ background: 'var(--color-bg)' }}
       >
         <div>
-          <div className="mb-0 flex justify-between items-baseline">
+          <div className="mb-0 flex flex-wrap items-baseline justify-between gap-3">
             <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">Upcoming Events</div>
             <Link to="/events" className="font-sans text-xs text-brand-600 dark:text-brand-400 transition-opacity hover:opacity-80">
               All events -&gt;
@@ -213,10 +223,10 @@ export function Home() {
         </div>
       </section>
 
-      <section className="border-t" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', padding: '0 52px 56px' }}>
+      <section className="border-t px-5 pb-10 sm:px-8 lg:px-[52px] lg:pb-14" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="grid lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="border-b p-8 lg:border-b-0 lg:border-r lg:p-10" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="border-b p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10" style={{ borderColor: 'var(--color-border)' }}>
               <div className="mb-4 font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">
                 Presidents
               </div>
@@ -247,16 +257,16 @@ export function Home() {
               </div>
             </div>
 
-            <div className="p-8 lg:p-10">
+            <div className="p-6 sm:p-8 lg:p-10">
               <div className="font-sans text-[11px] font-semibold uppercase tracking-[.07em] text-brand-600 dark:text-brand-400">
                 Letter From The Presidents
               </div>
-              <h2 className="mt-3 font-sans text-[24px] font-semibold tracking-[-0.03em]" style={{ color: 'var(--color-text)' }}>
+              <h2 className="mt-3 font-sans text-[22px] font-semibold tracking-[-0.03em] sm:text-[24px]" style={{ color: 'var(--color-text)' }}>
                 {PRESIDENTS_MESSAGE.greeting}
               </h2>
               <blockquote
                 className="mt-5 max-w-3xl font-serif italic leading-[1.02] tracking-[-0.03em]"
-                style={{ fontSize: 'clamp(34px, 5vw, 56px)', color: 'var(--color-text)' }}
+                style={{ fontSize: 'clamp(2rem, 11vw, 3.5rem)', color: 'var(--color-text)' }}
               >
                 "{PRESIDENTS_MESSAGE.quote}"
               </blockquote>

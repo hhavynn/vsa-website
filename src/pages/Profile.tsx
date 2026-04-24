@@ -117,8 +117,8 @@ export function Profile() {
       <Toaster position="top-right" />
 
       {/* Page header */}
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
-        <div className="flex items-center gap-5">
+      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           <div onClick={e => e.stopPropagation()}>
             <Avatar size="lg" showUploadButton />
           </div>
@@ -136,22 +136,22 @@ export function Profile() {
         </div>
 
         {/* Stats bar */}
-        <div className="flex items-center gap-6 mt-5">
-          <div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(3,max-content)_1fr] xl:items-center xl:gap-6">
+          <div className="flex items-baseline gap-1.5">
             <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{points}</span>
-            <span className="font-sans text-xs ml-1.5" style={{ color: 'var(--color-text3)' }}>points</span>
+            <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>points</span>
           </div>
-          <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
-          <div>
+          <div className="hidden xl:block" style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
+          <div className="flex items-baseline gap-1.5">
             <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{stats.totalEvents}</span>
-            <span className="font-sans text-xs ml-1.5" style={{ color: 'var(--color-text3)' }}>events attended</span>
+            <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>events attended</span>
           </div>
-          <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
-          <div>
+          <div className="hidden xl:block" style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
+          <div className="flex items-baseline gap-1.5">
             <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{stats.eventsThisMonth}</span>
-            <span className="font-sans text-xs ml-1.5" style={{ color: 'var(--color-text3)' }}>this month</span>
+            <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>this month</span>
           </div>
-          <div style={{ marginLeft: 'auto' }}>
+          <div className="sm:col-span-2 xl:col-span-1 xl:ml-auto">
             <button
               onClick={() => setEditOpen(true)}
               className="font-sans text-xs border rounded px-3 py-1.5 transition-colors duration-150"
@@ -163,7 +163,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="px-5 py-8 sm:px-8 lg:px-[52px] lg:py-10">
         {/* Member Dashboard */}
         <MemberDashboard />
 
@@ -175,7 +175,7 @@ export function Profile() {
               {attendance.map((record) => record.event && (
                 <div
                   key={record.id}
-                  className="flex items-center justify-between border-b last:border-b-0"
+                  className="flex flex-col gap-3 border-b last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                   style={{ padding: '12px 20px', borderColor: 'var(--color-border)' }}
                 >
                   <div className="flex items-center gap-4">
@@ -222,7 +222,7 @@ export function Profile() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <Label className="mb-1.5">First Name</Label>
                   <input type="text" value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))} style={inputStyle} />
@@ -251,7 +251,7 @@ export function Profile() {
               </p>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={handleSaveProfile}
                 disabled={saving}

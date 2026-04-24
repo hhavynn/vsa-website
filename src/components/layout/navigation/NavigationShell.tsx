@@ -17,9 +17,9 @@ export const NavigationShell = memo(function NavigationShell() {
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <div className="max-w-7xl mx-auto px-8">
-        <div className="flex items-center justify-between h-[58px]">
-          <div className="flex items-center gap-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-[56px] items-center justify-between sm:h-[58px]">
+          <div className="flex items-center gap-4 sm:gap-10">
             <NavLogo />
             <NavLinks />
           </div>

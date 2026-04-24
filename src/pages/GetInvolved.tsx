@@ -43,14 +43,14 @@ export function GetInvolved() {
     <>
       <PageTitle title="Get Involved" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Get Involved</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
           Three pathways to find your place and build your community at UCSD
         </p>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="px-5 py-8 sm:px-8 lg:px-[52px] lg:py-10">
 
         {/* Programs */}
         <div className="mb-10">
@@ -60,15 +60,15 @@ export function GetInvolved() {
               <Link
                 key={prog.id}
                 to={prog.link}
-                className="group flex items-center justify-between border-b last:border-b-0 transition-colors duration-150"
+                className="group flex flex-col items-start gap-4 border-b last:border-b-0 transition-colors duration-150 lg:flex-row lg:items-center lg:justify-between"
                 style={{
                   padding: '20px 24px',
                   borderColor: 'var(--color-border)',
                   background: 'var(--color-surface)',
                 }}
               >
-                <div className="flex items-start gap-8">
-                  <div className="shrink-0 w-[28px]">
+                <div className="flex w-full items-start gap-4 sm:gap-6">
+                  <div className="w-[28px] shrink-0 pt-0.5">
                     <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                       {String(i + 1).padStart(2, '0')}
                     </span>
@@ -85,7 +85,7 @@ export function GetInvolved() {
                     <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)', maxWidth: 480 }}>
                       {prog.description}
                     </p>
-                    <div className="flex gap-2 mt-2.5">
+                    <div className="mt-2.5 flex flex-wrap gap-2">
                       {prog.details.map(d => (
                         <span
                           key={d}
@@ -99,7 +99,7 @@ export function GetInvolved() {
                   </div>
                 </div>
                 <span
-                  className="font-sans text-sm ml-8 shrink-0 transition-colors duration-150"
+                  className="font-sans text-sm shrink-0 transition-colors duration-150 lg:ml-8"
                   style={{ color: 'var(--color-text3)' }}
                 >
                   Learn more →
