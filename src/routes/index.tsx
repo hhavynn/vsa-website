@@ -7,6 +7,7 @@ import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { PointsProvider } from "../context/PointsContext";
 import AdminLayout from "../components/features/admin/AdminLayout";
+import RouteTracker from "../components/common/RouteTracker";
 
 // Lazy load pages
 const Home = lazy(() =>
@@ -72,6 +73,7 @@ const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
 const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
 const AdminPoints = lazy(() => import("../pages/Admin/Points"));
+const AdminAnalytics = lazy(() => import("../pages/Admin/Analytics"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -91,6 +93,7 @@ export default function AppRoutes() {
           Skip to main content
         </a>
         <PointsProvider>
+          <RouteTracker />
           <RouterRoutes>
             <Route element={<Layout />}>
               {/* Public Routes */}
@@ -129,6 +132,7 @@ export default function AppRoutes() {
                   <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
                   <Route path="/admin/cabinet" element={<AdminCabinet />} />
                   <Route path="/admin/points" element={<AdminPoints />} />
+                  <Route path="/admin/analytics" element={<AdminAnalytics />} />
                 </Route>
               </Route>
 

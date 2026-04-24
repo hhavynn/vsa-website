@@ -14,6 +14,7 @@ const NAV_GROUPS = [
     { to: '/admin/content',           label: 'Content' },
   ]},
   { group: 'Reports', items: [
+    { to: '/admin/analytics',         label: 'Analytics' },
     { to: '/admin/points',            label: 'Points' },
     { to: '/admin/feedback',          label: 'Feedback' },
     { to: '/admin/merge-suggestions', label: 'Merge' },
