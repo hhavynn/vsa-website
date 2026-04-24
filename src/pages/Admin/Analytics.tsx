@@ -47,14 +47,18 @@ export default function AdminAnalytics() {
       setLoading(true);
       setError(null);
       try {
+        console.log('Fetching analytics from analytics-proxy...');
         const { data: result, error: fetchError } = await supabase.functions.invoke('analytics-proxy', {
           body: { startDate: dateRange, endDate: 'today' }
         });
 
-        if (fetchError) throw fetchError;
+        if (fetchError) {
+          console.error('Edge Function Error:', fetchError);
+          throw fetchError;
+        }
         setData(result);
       } catch (err: any) {
-        console.error('Failed to fetch analytics:', err);
+        console.error('Analytics Request Failed:', err);
         setError(err.message || 'Failed to load analytics data.');
       } finally {
         setLoading(false);
