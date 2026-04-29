@@ -74,6 +74,7 @@ const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions
 const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
 const AdminPoints = lazy(() => import("../pages/Admin/Points"));
 const AdminAnalytics = lazy(() => import("../pages/Admin/Analytics"));
+const AdminSettings = lazy(() => import("../pages/Admin/Settings"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -133,6 +134,7 @@ export default function AppRoutes() {
                   <Route path="/admin/cabinet" element={<AdminCabinet />} />
                   <Route path="/admin/points" element={<AdminPoints />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                  <Route path="/admin/settings" element={<AdminSettings />} />
                 </Route>
               </Route>
 

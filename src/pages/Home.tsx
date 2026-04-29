@@ -5,6 +5,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { useEvents } from '../hooks/useEvents';
 import { usePresidentsContent } from '../hooks/usePresidentsContent';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { Event } from '../types';
 
 const pillars = [
@@ -71,6 +72,7 @@ function EventRow({ event }: { event: Event }) {
 export function Home() {
   const { events } = useEvents();
   const { content: presidentsContent } = usePresidentsContent();
+  const { settings: siteSettings } = useSiteSettings();
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const upcomingEvents = events
@@ -97,7 +99,7 @@ export function Home() {
                 <br />
                 Community.
               </h1>
-              <div style={{ width: 40, height: 2, background: '#5a9af0', marginBottom: 20 }} />
+              <div style={{ width: 40, height: 2, background: 'var(--color-brand)', marginBottom: 20 }} />
               <p className="max-w-[380px] font-sans leading-[1.7]" style={{ fontSize: 15, color: 'var(--color-text2)', marginBottom: 32 }}>
                 Promoting and preserving Vietnamese culture since 1977 - a home for every student at UC San Diego.
               </p>
@@ -124,12 +126,24 @@ export function Home() {
           </div>
 
           <div className="relative flex flex-col justify-between overflow-hidden p-6 sm:p-8 lg:p-[52px]">
-            <div
-              className="absolute right-[-8px] top-4 select-none font-serif leading-none tracking-[-0.04em]"
-              style={{ fontSize: 'clamp(6rem, 28vw, 10rem)', color: 'var(--color-text)', opacity: 0.05 }}
-            >
-              1977
-            </div>
+            {siteSettings.logoUrl ? (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                <img
+                  src={siteSettings.logoUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="w-[72%] max-w-[280px] object-contain opacity-[0.12]"
+                  style={{ filter: 'saturate(0)' }}
+                />
+              </div>
+            ) : (
+              <div
+                className="absolute right-[-8px] top-4 select-none font-serif leading-none tracking-[-0.04em]"
+                style={{ fontSize: 'clamp(6rem, 28vw, 10rem)', color: 'var(--color-text)', opacity: 0.05 }}
+              >
+                1977
+              </div>
+            )}
             <div className="relative z-10 font-sans text-[11px] font-semibold uppercase tracking-[.07em]" style={{ color: 'var(--color-text3)' }}>
               By the numbers
             </div>

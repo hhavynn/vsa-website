@@ -1,5 +1,6 @@
 import React from 'react';
 import { FeedbackForm } from '../features/feedback/FeedbackForm';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 
 const socialLinks = [
   {
@@ -20,48 +21,67 @@ const socialLinks = [
   },
 ];
 
-const Footer: React.FC = () => (
-  <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
-      <div className="flex flex-col items-center gap-6">
+const Footer: React.FC = () => {
+  const { settings } = useSiteSettings();
 
-        <div className="text-center">
-          <p className="font-serif text-base text-[var(--color-text)] tracking-[-0.01em]">
-            <em className="italic text-brand-600 dark:text-brand-400">VSA</em> at UCSD
-          </p>
-          <p className="font-sans text-xs text-[var(--color-text3)] mt-1">Vietnamese Student Association · Est. 1977</p>
-        </div>
+  return (
+    <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
+        <div className="flex flex-col items-center gap-6">
 
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
-          {socialLinks.map(link => (
-            <a
-              key={link.label}
-              href={link.href}
-              target={link.href.startsWith('mailto') ? undefined : '_blank'}
-              rel="noopener noreferrer"
-              aria-label={link.label}
-              className="flex h-9 w-9 items-center justify-center rounded border text-[var(--color-text3)] transition-colors duration-150 hover:text-[var(--color-text2)]"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              {link.icon}
-            </a>
-          ))}
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="rounded border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-            <h3 className="font-sans font-semibold text-[var(--color-text)] text-center text-sm mb-1">Send Feedback</h3>
-            <p className="font-sans text-[var(--color-text3)] text-xs text-center mb-4">Help us improve — share thoughts or report issues.</p>
-            <FeedbackForm />
+          <div className="text-center flex flex-col items-center gap-2">
+            {settings.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt={settings.logoAlt}
+                className="h-14 w-14 rounded-full object-cover"
+                style={{ border: '1px solid var(--color-border)' }}
+              />
+            ) : (
+              <div
+                className="h-14 w-14 rounded-full flex items-center justify-center font-sans text-sm font-semibold tracking-wide"
+                style={{ background: 'var(--color-brand)', color: '#fff' }}
+              >
+                VSA
+              </div>
+            )}
+            <p className="font-serif text-base text-[var(--color-text)] tracking-[-0.01em]">
+              <em className="italic" style={{ color: 'var(--color-brand)' }}>VSA</em> at UCSD
+            </p>
+            <p className="font-sans text-xs text-[var(--color-text3)] -mt-1">Vietnamese Student Association · Est. 1977</p>
           </div>
-        </div>
 
-        <p className="font-sans text-[11px] text-[var(--color-text3)]">
-          © {new Date().getFullYear()} VSA at UCSD. All rights reserved.
-        </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+            {socialLinks.map(link => (
+              <a
+                key={link.label}
+                href={link.href}
+                target={link.href.startsWith('mailto') ? undefined : '_blank'}
+                rel="noopener noreferrer"
+                aria-label={link.label}
+                className="flex h-9 w-9 items-center justify-center rounded border text-[var(--color-text3)] transition-colors duration-150 hover:text-[var(--color-text2)]"
+                style={{ borderColor: 'var(--color-border)' }}
+              >
+                {link.icon}
+              </a>
+            ))}
+          </div>
+
+          <div className="w-full max-w-md">
+            <div className="rounded border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+              <h3 className="font-sans font-semibold text-[var(--color-text)] text-center text-sm mb-1">Send Feedback</h3>
+              <p className="font-sans text-[var(--color-text3)] text-xs text-center mb-4">Help us improve — share thoughts or report issues.</p>
+              <FeedbackForm />
+            </div>
+          </div>
+
+          <p className="font-sans text-[11px] text-[var(--color-text3)]">
+            © {new Date().getFullYear()} VSA at UCSD. All rights reserved.
+          </p>
+        </div>
       </div>
-    </div>
-  </footer>
-);
+    </footer>
+  );
+};
 
 export default Footer;

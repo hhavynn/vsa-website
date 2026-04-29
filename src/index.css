@@ -8,39 +8,51 @@
    CSS custom properties for light/dark. Consumed by both Tailwind
    (via tailwind.config.js color aliases) and inline styles where needed.
    Dark mode flips via html.dark (set by ThemeContext FOUC script).
+
+   Palette drawn from the VSA logo:
+     Teal sky   → primary brand color
+     Coral/red  → accent (lantern)
+     Warm gold  → accent (clouds)
+     Cream      → light-mode backgrounds
    ─────────────────────────────────────────────────────────────────────── */
 :root {
-  --color-bg:            #f7f8fb;
+  --color-bg:            #f5f1ea;   /* warm parchment — logo's cream warmth */
   --color-surface:       #ffffff;
-  --color-surface2:      #f0f4fb;
-  --color-border:        #dde5f0;
-  --color-border-strong: #b8cce8;
-  --color-text:          #0a1628;
-  --color-text2:         #4e637d;
-  --color-text3:         #9db0c8;
-  --color-nav:           rgba(247, 248, 251, 0.96);
-  --color-nav-border:    #dde5f0;
-  --color-input:         #f0f4fb;
+  --color-surface2:      #fdf7f0;   /* warm off-white */
+  --color-border:        #e0d8ce;   /* warm border */
+  --color-border-strong: #c4b8a8;   /* warm strong border */
+  --color-text:          #142028;   /* dark teal-charcoal */
+  --color-text2:         #4a6b68;   /* mid teal-sage */
+  --color-text3:         #90aaa8;   /* muted teal */
+  --color-nav:           rgba(245, 241, 234, 0.96);
+  --color-nav-border:    #e0d8ce;
+  --color-input:         #fdf7f0;
   --color-sidebar:       #ffffff;
-  --color-sidebar-border:#dde5f0;
-  --color-sidebar-active:#eef3fd;
+  --color-sidebar-border:#e0d8ce;
+  --color-sidebar-active:#eef8f7;   /* light teal tint */
+  --color-brand:         #1e8878;   /* primary teal CTA */
+  --color-accent:        #e8623a;   /* coral accent */
+  --color-gold:          #d4841a;   /* gold accent */
 }
 
 html.dark {
-  --color-bg:            #050810;
-  --color-surface:       #0a0f1e;
-  --color-surface2:      #10182e;
-  --color-border:        #18274a;
-  --color-border-strong: #2a3f6e;
-  --color-text:          #dde9f8;
-  --color-text2:         #607898;
-  --color-text3:         #2c4268;
-  --color-nav:           rgba(5, 8, 16, 0.94);
-  --color-nav-border:    #18274a;
-  --color-input:         #10182e;
-  --color-sidebar:       #0a0f1e;
-  --color-sidebar-border:#18274a;
-  --color-sidebar-active:rgba(90, 154, 240, 0.08);
+  --color-bg:            #080e14;   /* midnight teal-black */
+  --color-surface:       #0d1a20;   /* deep teal dark */
+  --color-surface2:      #122430;   /* slightly lighter */
+  --color-border:        #1a3038;   /* dark teal border */
+  --color-border-strong: #2a4850;   /* stronger border */
+  --color-text:          #e4d8c8;   /* warm cream */
+  --color-text2:         #6a9a94;   /* mid teal */
+  --color-text3:         #2a5050;   /* deep muted */
+  --color-nav:           rgba(8, 14, 20, 0.96);
+  --color-nav-border:    #1a3038;
+  --color-input:         #122430;
+  --color-sidebar:       #0d1a20;
+  --color-sidebar-border:#1a3038;
+  --color-sidebar-active:rgba(59, 189, 181, 0.08);
+  --color-brand:         #3bbdb5;   /* lighter teal for dark mode */
+  --color-accent:        #f07858;   /* lighter coral for dark mode */
+  --color-gold:          #e8a838;   /* lighter gold for dark mode */
 }
 
 @layer base {

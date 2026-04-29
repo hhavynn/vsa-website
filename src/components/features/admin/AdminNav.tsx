@@ -12,6 +12,7 @@ const NAV_GROUPS = [
     { to: '/admin/cabinet',           label: 'Cabinet' },
     { to: '/admin/gallery',           label: 'Gallery' },
     { to: '/admin/content',           label: 'Content' },
+    { to: '/admin/settings',          label: 'Settings' },
   ]},
   { group: 'Reports', items: [
     { to: '/admin/analytics',         label: 'Analytics' },
