@@ -3,6 +3,7 @@ import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import AppRoutes from "./routes";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { Toaster } from "react-hot-toast";
 
 const queryClient = new QueryClient();
@@ -13,8 +14,10 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            <AppRoutes />
-            <Toaster position="top-right" />
+            <SiteSettingsProvider>
+              <AppRoutes />
+              <Toaster position="top-right" />
+            </SiteSettingsProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>

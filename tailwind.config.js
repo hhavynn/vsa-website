@@ -6,20 +6,32 @@ module.exports = {
     extend: {
       // ─── Brand tokens ─────────────────────────────────────────────────────
       colors: {
-        // VSA Blue — primary accent. Used for CTAs, active nav, focus rings.
-        // 600 = light-mode primary (#1a4ed8), 400 = dark-mode primary (#5a9af0).
+        // VSA Teal — primary accent, drawn from the logo's sky palette.
+        // 600 = light-mode primary (#1e8878), 400 = dark-mode primary (#3bbdb5).
         brand: {
-          50:  '#eff4ff',
-          100: '#dbe8fe',
-          200: '#c0d5fc',
-          300: '#92b8f9',
-          400: '#5a9af0',  // dark mode primary
-          500: '#3073e8',
-          600: '#1a4ed8',  // light mode primary CTA
-          700: '#153fba',  // hover
-          800: '#1535a0',
-          900: '#162e80',
-          950: '#101e52',
+          50:  '#eef8f7',
+          100: '#d2efec',
+          200: '#a6deda',
+          300: '#6ccac2',
+          400: '#3bbdb5',  // dark mode primary
+          500: '#2aa49c',
+          600: '#1e8878',  // light mode primary CTA
+          700: '#196e60',  // hover
+          800: '#165850',
+          900: '#134545',
+          950: '#0a2828',
+        },
+        // Coral accent — lantern red-orange from the logo.
+        coral: {
+          400: '#f07858',
+          500: '#e8623a',
+          600: '#d44e2a',
+        },
+        // Gold accent — warm cloud amber from the logo.
+        gold: {
+          400: '#e8a838',
+          500: '#d4841a',
+          600: '#b86c10',
         },
         // Semantic surface/text tokens — driven by CSS custom properties so
         // dark mode flips automatically without repeating dark: variants everywhere.

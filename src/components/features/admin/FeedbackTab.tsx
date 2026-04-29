@@ -39,12 +39,12 @@ const selectCls =
 function badgeTone(value?: string) {
   const tones: Record<string, { color: string; borderColor: string; background: string }> = {
     pending: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
-    in_progress: { color: '#1a4ed8', borderColor: '#bfd2ff', background: '#edf3ff' },
+    in_progress: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
     resolved: { color: '#0f7a52', borderColor: '#bfe3d4', background: '#eefaf4' },
     closed: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
     bug: { color: '#b42318', borderColor: '#f2c7c3', background: '#fff1f0' },
     feature: { color: '#6a3fc7', borderColor: '#dccffc', background: '#f6f1ff' },
-    improvement: { color: '#1a4ed8', borderColor: '#bfd2ff', background: '#edf3ff' },
+    improvement: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
     other: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
     low: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
     medium: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
@@ -70,9 +70,9 @@ function ActionButton({
       background: 'transparent',
     },
     blue: {
-      color: '#1a4ed8',
-      borderColor: '#bfd2ff',
-      background: '#edf3ff',
+      color: '#1e8878',
+      borderColor: '#a6deda',
+      background: '#eef8f7',
     },
     green: {
       color: '#0f7a52',

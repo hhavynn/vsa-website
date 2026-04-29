@@ -4,6 +4,7 @@ import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
+import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { useEvents } from '../hooks/useEvents';
 import { Event } from '../types';
@@ -31,19 +32,6 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   external_event: 'gray',
 };
 
-function saveEventToCalendar(event: Event) {
-  if (!event.date) return;
-  const startDate = new Date(event.date);
-  const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-  const fmt = (date: Date) => date.toISOString().replace(/[-:]|\.\d+/g, '');
-  const url = new URL('https://calendar.google.com/calendar/render');
-  url.searchParams.append('action', 'TEMPLATE');
-  url.searchParams.append('text', event.name);
-  url.searchParams.append('dates', `${fmt(startDate)}/${fmt(endDate)}`);
-  url.searchParams.append('details', event.description);
-  url.searchParams.append('location', event.location || '');
-  window.open(url.toString(), '_blank');
-}
 
 function EventImage({
   event,
@@ -178,10 +166,11 @@ export function Events() {
                   </p>
                 )}
                 {featured.location && (
-                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     {featured.location}
                   </p>
                 )}
+                <AddToCalendarButton event={featured} variant="ghost" align="left" />
               </div>
 
               <div className="relative h-[220px] sm:h-[260px] lg:h-full lg:min-h-[260px] lg:max-h-[340px]">
@@ -260,17 +249,7 @@ export function Events() {
                   </div>
 
                   <div className="flex items-start sm:col-span-2 lg:col-auto lg:justify-end">
-                    <button
-                      onClick={() => saveEventToCalendar(event)}
-                      className="w-full rounded border px-4 py-2.5 text-xs font-medium transition-opacity hover:opacity-80 sm:w-auto"
-                      style={{
-                        borderColor: 'var(--color-border)',
-                        color: 'var(--color-text2)',
-                        background: 'var(--color-surface)',
-                      }}
-                    >
-                      Add to Calendar
-                    </button>
+                    <AddToCalendarButton event={event} align="right" />
                   </div>
                 </div>
               ))}
