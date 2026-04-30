@@ -127,31 +127,19 @@ export function Leaderboard() {
     <>
       <PageTitle title="Leaderboard" />
 
-      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-              Leaderboard
-            </h1>
-            <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-              {byPoints.length} members / current season
-            </p>
-          </div>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <h1 className="vsa-page-title">Leaderboard</h1>
+          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+            Current season standings for {byPoints.length} members. Track points, events attended, and your next spot to climb.
+          </p>
 
-          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="vsa-filter-bar">
             {(['points', 'events'] as const).map((tab, index) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className="font-sans text-xs transition-colors duration-150"
-                style={{
-                  padding: '7px 16px',
-                  fontWeight: activeTab === tab ? 500 : 400,
-                  background: activeTab === tab ? 'var(--color-surface2)' : 'transparent',
-                  color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)',
-                  borderLeft: index > 0 ? '1px solid var(--color-border)' : 'none',
-                  cursor: 'pointer',
-                }}
+                className={`vsa-filter-btn ${activeTab === tab ? 'active' : ''}`}
               >
                 {tab === 'points' ? 'Points' : 'Events'}
               </button>
@@ -161,7 +149,7 @@ export function Leaderboard() {
       </div>
 
       {top3.length >= 3 && (
-        <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
+        <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--surface2)', borderColor: 'var(--border)' }}>
           <Label className="mb-5">Top Performers</Label>
           <div className="grid gap-4 md:grid-cols-3 md:gap-0">
             {top3.map((entry, index) => (
@@ -205,7 +193,7 @@ export function Leaderboard() {
         </div>
       )}
 
-      <div className="px-5 py-6 sm:px-8 lg:px-[52px] lg:pb-8">
+      <div className="vsa-container py-6 lg:pb-8">
         <div className="mb-3.5">
           <Input
             placeholder="Search by name, college, or year..."
@@ -257,7 +245,7 @@ export function Leaderboard() {
                         College
                       </div>
                       <div className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-                        {entry.college ?? '—'}
+                        {entry.college ?? '-'}
                       </div>
                     </div>
                     <div>
@@ -325,7 +313,7 @@ export function Leaderboard() {
                 </div>
 
                 <div className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-                  {entry.college ?? '—'}
+                  {entry.college ?? '-'}
                 </div>
 
                 <div className="text-center font-sans text-xs" style={{ color: 'var(--color-text2)' }}>

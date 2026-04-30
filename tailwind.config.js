@@ -46,7 +46,7 @@ module.exports = {
       // ─── Typography ───────────────────────────────────────────────────────
       fontFamily: {
         sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
-        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+        serif: ['"DM Serif Display"', 'Georgia', 'serif'],
         mono:  ['"JetBrains Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
       },
 

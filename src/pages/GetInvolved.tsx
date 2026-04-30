@@ -6,9 +6,8 @@ const programs = [
   {
     id: 'ace',
     tag: 'Mentorship',
-    title: 'Anh Chị Em',
-    subtitle: 'Your Family Away From Home',
-    description: 'Meet your future bigs, build lifelong bonds, and become part of a unique lineage. Bigs, pseudos, siblings, and grands — ACE is chosen family.',
+    title: 'Anh Chi Em',
+    description: 'Meet your future bigs, build lifelong bonds, and become part of a unique lineage. Bigs, pseudos, siblings, and grands make ACE feel like chosen family.',
     link: '/ace',
     details: ['Big-Little Matching', 'Family Lineages', 'Year-Long Bonds'],
   },
@@ -16,7 +15,6 @@ const programs = [
     id: 'house',
     tag: 'Competition',
     title: 'House Program',
-    subtitle: 'Compete. Connect. Conquer.',
     description: 'Join one of four houses for friendly rivalries, close-knit events, and a year-long battle for the ultimate prize.',
     link: '/house-system',
     details: ['4 Houses', 'Points Competition', 'Exclusive Events'],
@@ -25,8 +23,7 @@ const programs = [
     id: 'intern',
     tag: 'Leadership',
     title: 'Intern Program',
-    subtitle: 'Step Behind the Scenes',
-    description: 'Shadow the cabinet, build actual leadership experience, and see exactly what it takes to run VSA from the inside out.',
+    description: 'Shadow the cabinet, build real leadership experience, and see exactly what it takes to run VSA from the inside out.',
     link: '/intern-program',
     details: ['Board Shadowing', 'Leadership Skills', 'Real Impact'],
   },
@@ -43,89 +40,84 @@ export function GetInvolved() {
     <>
       <PageTitle title="Get Involved" />
 
-      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Get Involved</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Three pathways to find your place and build your community at UCSD
-        </p>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <h1 className="vsa-page-title">Get <em>Involved</em></h1>
+          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+            Three pathways to find your place and build your community at UCSD.
+          </p>
+        </div>
       </div>
 
-      <div className="px-5 py-8 sm:px-8 lg:px-[52px] lg:py-10">
-
-        {/* Programs */}
+      <div className="vsa-container py-8 lg:py-10">
         <div className="mb-10">
-          <Label className="mb-6">Programs</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {programs.map((prog, i) => (
+          <Label className="mb-6 text-[var(--accent)]">Programs</Label>
+          <div className="overflow-hidden rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+            {programs.map((program, index) => (
               <Link
-                key={prog.id}
-                to={prog.link}
-                className="group flex flex-col items-start gap-4 border-b last:border-b-0 transition-colors duration-150 lg:flex-row lg:items-center lg:justify-between"
+                key={program.id}
+                to={program.link}
+                className="group flex flex-col items-start gap-5 border-b transition-colors duration-150 last:border-b-0 lg:flex-row lg:items-center lg:justify-between"
                 style={{
-                  padding: '20px 24px',
-                  borderColor: 'var(--color-border)',
-                  background: 'var(--color-surface)',
+                  padding: '28px 32px',
+                  borderColor: 'var(--border)',
+                  background: 'var(--surface)',
                 }}
               >
-                <div className="flex w-full items-start gap-4 sm:gap-6">
-                  <div className="w-[28px] shrink-0 pt-0.5">
-                    <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                      {String(i + 1).padStart(2, '0')}
+                <div className="flex w-full items-start gap-5 sm:gap-6">
+                  <div className="w-[28px] shrink-0 pt-1">
+                    <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>
+                      {String(index + 1).padStart(2, '0')}
                     </span>
                   </div>
                   <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="font-sans font-semibold text-[15px] tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
-                        {prog.title}
+                    <div className="mb-2 flex flex-wrap items-center gap-3">
+                      <span className="font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
+                        {program.title}
                       </span>
-                      <span className="font-mono text-[10px] tracking-[.04em] uppercase" style={{ color: 'var(--color-text3)' }}>
-                        {prog.tag}
+                      <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}>
+                        {program.tag}
                       </span>
                     </div>
-                    <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)', maxWidth: 480 }}>
-                      {prog.description}
+                    <p className="max-w-[560px] font-sans text-sm leading-[1.7]" style={{ color: 'var(--text2)' }}>
+                      {program.description}
                     </p>
-                    <div className="mt-2.5 flex flex-wrap gap-2">
-                      {prog.details.map(d => (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {program.details.map((detail) => (
                         <span
-                          key={d}
-                          className="font-sans text-[11px] border rounded-sm px-2 py-0.5"
-                          style={{ color: 'var(--color-text3)', borderColor: 'var(--color-border)' }}
+                          key={detail}
+                          className="rounded-sm border px-2 py-0.5 font-sans text-[11px]"
+                          style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}
                         >
-                          {d}
+                          {detail}
                         </span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <span
-                  className="font-sans text-sm shrink-0 transition-colors duration-150 lg:ml-8"
-                  style={{ color: 'var(--color-text3)' }}
-                >
-                  Learn more →
+                <span className="shrink-0 font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)] lg:ml-8" style={{ color: 'var(--text3)' }}>
+                  Learn more -&gt;
                 </span>
               </Link>
             ))}
           </div>
         </div>
 
-        {/* More opportunities */}
-        <div className="border-t pt-8" style={{ borderColor: 'var(--color-border)' }}>
-          <Label className="mb-5">More Ways to Get Involved</Label>
+        <div className="border-t pt-8" style={{ borderColor: 'var(--border)' }}>
+          <Label className="mb-5 text-[var(--accent)]">More Ways to Get Involved</Label>
           <div className="flex flex-wrap gap-2.5">
-            {extraLinks.map(item => (
+            {extraLinks.map((item) => (
               <Link
                 key={item.link}
                 to={item.link}
-                className="inline-flex items-center border rounded px-4 py-2 font-sans text-sm transition-colors duration-150"
-                style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                className="inline-flex items-center rounded-lg border px-4 py-2 font-sans text-sm transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text2)' }}
               >
                 {item.label}
               </Link>
             ))}
           </div>
         </div>
-
       </div>
     </>
   );

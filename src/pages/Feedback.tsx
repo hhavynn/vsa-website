@@ -1,8 +1,20 @@
 import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FeedbackForm } from '../components/features/feedback/FeedbackForm';
 import { PageTitle } from '../components/common/PageTitle';
 
+const feedbackTypes = ['bug', 'feature', 'improvement', 'event', 'other'] as const;
+type FeedbackType = typeof feedbackTypes[number];
+
+function getFeedbackType(type: string | null): FeedbackType {
+  return feedbackTypes.includes(type as FeedbackType) ? (type as FeedbackType) : 'feature';
+}
+
 export const FeedbackPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const defaultType = getFeedbackType(searchParams.get('type'));
+  const defaultTitle = searchParams.get('title') ?? '';
+
   return (
     <>
       <PageTitle title="Feedback" />
@@ -14,7 +26,7 @@ export const FeedbackPage: React.FC = () => {
 
       <div style={{ padding: '40px 52px' }}>
         <div style={{ maxWidth: 640 }}>
-          <FeedbackForm />
+          <FeedbackForm defaultType={defaultType} defaultTitle={defaultTitle} />
         </div>
       </div>
     </>

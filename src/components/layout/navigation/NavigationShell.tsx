@@ -9,28 +9,27 @@ export const NavigationShell = memo(function NavigationShell() {
 
   return (
     <nav
-      className="sticky top-0 z-50 border-b"
+      className="fixed left-0 right-0 top-0 z-50 border-b"
       style={{
-        background: 'var(--color-nav)',
+        background: 'var(--nav-bg)',
         borderColor: 'var(--color-nav-border)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
       }}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-[56px] items-center justify-between sm:h-[58px]">
-          <div className="flex items-center gap-4 sm:gap-10">
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
+        <div className="flex h-[60px] items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4 lg:gap-8">
             <NavLogo />
             <NavLinks />
           </div>
 
-          {/* Mobile hamburger */}
-          <div className="sm:hidden">
+          <div className="md:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(prev => !prev)}
               aria-expanded={isMobileMenuOpen}
               aria-label="Toggle navigation menu"
-              className="p-2 rounded text-[var(--color-text2)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface2)] transition-colors duration-150"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border2)] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--text)]"
             >
               {isMobileMenuOpen ? (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

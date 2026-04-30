@@ -5,7 +5,6 @@ import { BackToTop } from './BackToTop';
 import { Suspense } from 'react';
 import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
-import { ThemeToggle } from './ThemeToggle';
 
 export function Layout() {
   const location = useLocation();
@@ -14,7 +13,7 @@ export function Layout() {
     <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <NavigationShell />
 
-      <main id="main-content" className="flex-grow">
+      <main id="main-content" className="flex-grow pt-[60px]">
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
             <motion.div
@@ -33,7 +32,6 @@ export function Layout() {
 
       <Footer />
       <BackToTop />
-      <ThemeToggle />
     </div>
   );
 }
