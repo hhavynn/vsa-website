@@ -390,19 +390,19 @@ export function Cabinet() {
     <>
       <PageTitle title="Cabinet" />
 
-      <div className="border-b" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12 lg:px-12">
-          <Label className="text-brand-600 dark:text-brand-400">Leadership</Label>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <Label className="text-[var(--accent)]">Leadership</Label>
           <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_320px] lg:items-end">
             <div>
-              <h1 className="font-serif text-[clamp(3rem,8vw,5.5rem)] leading-[0.92] tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
-                Cabinet
+              <h1 className="vsa-page-title">
+                Cabinet <em>2025-26</em>
               </h1>
-              <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed sm:text-[15px]" style={{ color: 'var(--color-text2)' }}>
+              <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed sm:text-[15px]" style={{ color: 'var(--text2)' }}>
                 The team behind VSA at UCSD. Meet the people planning events, building community,
                 producing programs, and shaping the year from the inside out.
               </p>
-              <p className="mt-3 font-sans text-xs uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+              <p className="mt-3 font-sans text-xs uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
                 2025-2026 / Mi Xao Moggers / {members.length} members
               </p>
             </div>

@@ -4,33 +4,25 @@ import { useSiteSettings } from '../../../context/SiteSettingsContext';
 
 export const NavLogo = memo(function NavLogo() {
   const { settings } = useSiteSettings();
+  const logoSrc = settings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo.jpg`;
 
   return (
     <Link
       to="/"
-      className="flex items-center gap-2 hover:opacity-85 transition-opacity duration-150 shrink-0"
-      aria-label="VSA at UCSD — Home"
+      className="flex shrink-0 items-center gap-2.5 transition-opacity duration-150 hover:opacity-85"
+      aria-label="VSA at UCSD Home"
     >
-      {settings.logoUrl ? (
-        <img
-          src={settings.logoUrl}
-          alt={settings.logoAlt}
-          className="h-8 w-8 rounded-full object-cover"
-        />
-      ) : (
-        <span
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold font-sans tracking-wide"
-          style={{ background: 'var(--color-brand)', color: '#fff' }}
-        >
-          VSA
-        </span>
-      )}
+      <img
+        src={logoSrc}
+        alt={settings.logoAlt || 'VSA logo'}
+        className="h-9 w-9 rounded-full border object-cover"
+        style={{ borderColor: 'var(--border2)' }}
+      />
       <span
-        className="font-serif text-[17px] tracking-[-0.01em]"
-        style={{ color: 'var(--color-text)' }}
+        className="hidden font-serif text-[17px] tracking-[-0.01em] min-[420px]:inline"
+        style={{ color: 'var(--text)' }}
       >
-        <em className="not-italic italic" style={{ color: 'var(--color-brand)' }}>VSA</em>
-        {' '}at UCSD
+        VSA <span className="font-light" style={{ color: 'var(--text3)' }}>at UCSD</span>
       </span>
     </Link>
   );

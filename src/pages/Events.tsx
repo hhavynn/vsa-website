@@ -104,32 +104,20 @@ export function Events() {
     <>
       <PageTitle title="Events" />
 
-      <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-              Events
-            </h1>
-            <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-              {upcomingAll.length} upcoming / {pastAll.length} past
-            </p>
-          </div>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <h1 className="vsa-page-title">Events</h1>
+          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+            Keep up with GBMs, mixers, cultural programs, and VSA traditions. {upcomingAll.length} upcoming / {pastAll.length} past.
+          </p>
 
-          <div className="flex flex-wrap overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="vsa-filter-bar">
             {FILTERS.filter((filter) => filter.key === 'all' || events.some((event) => event.event_type === filter.key)).map(
-              (filter, index) => (
+              (filter) => (
                 <button
                   key={filter.key}
                   onClick={() => setActiveFilter(filter.key)}
-                  className="font-sans text-xs transition-colors duration-150"
-                  style={{
-                    padding: '7px 14px',
-                    fontWeight: activeFilter === filter.key ? 500 : 400,
-                    background: activeFilter === filter.key ? 'var(--color-surface2)' : 'transparent',
-                    color: activeFilter === filter.key ? 'var(--color-text)' : 'var(--color-text2)',
-                    borderLeft: index > 0 ? '1px solid var(--color-border)' : 'none',
-                    cursor: 'pointer',
-                  }}
+                  className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
                 >
                   {filter.label}
                 </button>
@@ -139,12 +127,12 @@ export function Events() {
         </div>
       </div>
 
-      <div className="px-5 py-8 sm:px-8 lg:px-[52px] lg:py-10">
+      <div className="vsa-container py-8 lg:py-10">
         {featured && (
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <div
-              className="mb-9 overflow-hidden rounded border lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
+              className="vsa-card mb-9 lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
               style={{ borderColor: 'var(--color-border)' }}
             >
               <div className="border-b p-5 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>

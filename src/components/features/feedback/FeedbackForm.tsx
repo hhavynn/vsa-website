@@ -9,12 +9,14 @@ import { FeedbackSchema, type FeedbackFormData } from '../../../schemas';
 interface FeedbackFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  defaultType?: FeedbackFormData['type'];
+  defaultTitle?: string;
 }
 
 const inputCls = 'w-full px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600';
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
 
-export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel }) => {
+export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel, defaultType = 'feature', defaultTitle = '' }) => {
   const { user } = useAuth();
 
   const {
@@ -26,7 +28,8 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel 
   } = useForm<FeedbackFormData>({
     resolver: zodResolver(FeedbackSchema),
     defaultValues: {
-      type: 'feature',
+      type: defaultType,
+      title: defaultTitle,
       priority: 'medium',
     },
   });
