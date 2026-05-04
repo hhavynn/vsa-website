@@ -13,26 +13,18 @@ const pillars = [
   {
     n: '01',
     label: 'Social',
-    tag: 'GBMs, mixers, retreat, house events',
-    desc: 'General body meetings, casual mixers, seasonal retreats, and house events give new members low-pressure ways to meet people.',
   },
   {
     n: '02',
     label: 'Community',
-    tag: 'Mentorship, families, member support',
-    desc: "ACE is VSA's Big/Little mentorship program. The House System gives members smaller families inside the larger org.",
   },
   {
     n: '03',
     label: 'Cultural',
-    tag: 'VCN, Black April, cultural programming',
-    desc: 'Vietnamese Culture Night is our annual student-led production. Cultural programming creates space for remembrance and education.',
   },
   {
     n: '04',
     label: 'Academic',
-    tag: 'Growth, mentorship, professional support',
-    desc: 'Members grow alongside cultural engagement through mentorship, leadership practice, and academic support.',
   },
 ];
 
@@ -172,17 +164,22 @@ export function Home() {
                 <Link to="/events" className="vsa-btn-ghost">View Events -&gt;</Link>
               </div>
 
-              <div className="vsa-animate-fade-in vsa-delay-4 mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-xl border sm:grid-cols-4" style={{ borderColor: 'var(--border)', background: 'var(--border)' }}>
-                {pillars.map((pillar) => (
-                  <div
-                    key={pillar.label}
-                    className="flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3"
-                    style={{ background: 'var(--bg)' }}
-                  >
-                    <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
-                    <span className="font-sans text-[13px] font-semibold leading-none" style={{ color: 'var(--text)' }}>{pillar.label}</span>
-                  </div>
-                ))}
+              <div className="vsa-animate-fade-in vsa-delay-4 mt-12">
+                <div className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
+                  VSA Pillars
+                </div>
+                <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border sm:grid-cols-4" style={{ borderColor: 'var(--border)', background: 'var(--border)' }}>
+                  {pillars.map((pillar) => (
+                    <div
+                      key={pillar.label}
+                      className="flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3"
+                      style={{ background: 'var(--bg)' }}
+                    >
+                      <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
+                      <span className="font-sans text-[13px] font-semibold leading-none" style={{ color: 'var(--text)' }}>{pillar.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="vsa-animate-fade-in vsa-delay-4 mt-8 flex gap-8 border-t pt-8" style={{ borderColor: 'var(--border)' }}>
@@ -294,37 +291,6 @@ export function Home() {
                 <div className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>Gracie &amp; Phuong</div>
                 <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]" style={{ color: 'var(--text3)' }}>Co-Presidents</div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="vsa-section">
-        <div className="vsa-container">
-          <div className="grid gap-12 lg:grid-cols-[280px_1fr]">
-            <div>
-              <div className="vsa-section-label">Our DNA</div>
-              <h2 className="vsa-section-title">What VSA feels like in practice</h2>
-              <p className="vsa-section-sub">The four pillars are still the foundation.</p>
-            </div>
-            <div className="grid sm:grid-cols-2">
-              {pillars.map((pillar, index) => (
-                <div
-                  key={pillar.label}
-                  className="border-t p-6 sm:p-7"
-                  style={{
-                    borderColor: 'var(--border)',
-                    borderRight: index % 2 === 0 ? '1px solid var(--border)' : undefined,
-                  }}
-                >
-                  <div className="mb-3 flex items-baseline gap-2.5">
-                    <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
-                    <span className="font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>{pillar.label}</span>
-                  </div>
-                  <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.04em]" style={{ color: 'var(--text3)' }}>{pillar.tag}</p>
-                  <p className="font-sans text-[13px] leading-[1.75]" style={{ color: 'var(--text2)' }}>{pillar.desc}</p>
-                </div>
-              ))}
             </div>
           </div>
         </div>
