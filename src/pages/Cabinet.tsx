@@ -163,10 +163,18 @@ function SectionHeading({
   );
 }
 
-function ExecutiveRolePanel({ role, members }: { role: string; members: CabinetMember[] }) {
+function ExecutiveRolePanel({
+  role,
+  members,
+  className = '',
+}: {
+  role: string;
+  members: CabinetMember[];
+  className?: string;
+}) {
   return (
     <section
-      className="rounded-md border p-5"
+      className={`rounded-md border p-5 ${className}`.trim()}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div className="mb-5 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
@@ -533,19 +541,14 @@ export function Cabinet() {
 
                 {supportingExecRoles.length > 0 && (
                   <div className="space-y-4">
-                    <div className="flex items-end justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
-                      <div>
-                        <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                          Operations Tier
-                        </p>
-                        <p className="mt-1 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                          Supporting exec roles responsible for execution, continuity, and internal operations.
-                        </p>
-                      </div>
-                    </div>
                     <div className="grid gap-5 xl:grid-cols-2">
                       {supportingExecRoles.map(([role, roleMembers]) => (
-                        <ExecutiveRolePanel key={role} role={role} members={roleMembers} />
+                        <ExecutiveRolePanel
+                          key={role}
+                          role={role}
+                          members={roleMembers}
+                          className={roleMembers.length > 1 ? 'xl:col-span-2' : ''}
+                        />
                       ))}
                     </div>
                   </div>

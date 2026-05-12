@@ -8,6 +8,7 @@ import { PageLoader } from '../components/common/PageLoader';
 import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 
 interface Member {
@@ -23,6 +24,15 @@ interface Member {
 
 interface LeaderboardEntry extends Member {
   rank: number;
+}
+
+type SelectedYear = number | 'all';
+
+interface AcademicYearOption {
+  year: number;
+  label: string;
+  isActive: boolean;
+  hasData: boolean;
 }
 
 function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
@@ -51,50 +61,86 @@ function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
 
 export function Leaderboard() {
   const { terms, loading: termsLoading } = useAcademicTerms();
+  const { yearsWithData, loading: yearsWithDataLoading } = useLeaderboardYears();
   const [byPoints, setByPoints] = useState<LeaderboardEntry[]>([]);
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedYear, setSelectedYear] = useState<number | 'all'>(() => {
-    // We'll set the actual default in an effect once terms load
-    return 'all';
-  });
+  const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
+  const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
 
-  // Group terms by academic year for the selector
-  const academicYears = useMemo(() => {
-    const years = new Map<number, string>();
+  const academicYears = useMemo<AcademicYearOption[]>(() => {
+    const years = new Map<number, AcademicYearOption>();
+
     terms.forEach((term) => {
-      if (!years.has(term.academic_year_start)) {
-        years.set(term.academic_year_start, `${term.academic_year_start}-${term.academic_year_end}`);
+      const existing = years.get(term.academic_year_start);
+      if (existing) {
+        existing.isActive = existing.isActive || term.is_active;
+        return;
+      }
+
+      years.set(term.academic_year_start, {
+        year: term.academic_year_start,
+        label: `${term.academic_year_start}-${term.academic_year_end}`,
+        isActive: term.is_active,
+        hasData: false,
+      });
+    });
+
+    yearsWithData.forEach((year) => {
+      const existing = years.get(year);
+      if (existing) {
+        existing.hasData = true;
+      } else {
+        years.set(year, {
+          year,
+          label: `${year}-${year + 1}`,
+          isActive: false,
+          hasData: true,
+        });
       }
     });
-    return Array.from(years.entries()).sort((a, b) => b[0] - a[0]);
-  }, [terms]);
 
-  // Set default year to active year or most recent year
+    return Array.from(years.values()).sort((a, b) => b.year - a.year);
+  }, [terms, yearsWithData]);
+
+  const resolvedDefaultYear = useMemo<SelectedYear | null>(() => {
+    if (academicYears.length === 0) return null;
+
+    const activeYear = academicYears.find((year) => year.isActive);
+    if (activeYear?.hasData) return activeYear.year;
+
+    const mostRecentYearWithData = academicYears.find((year) => year.hasData);
+    if (mostRecentYearWithData) return mostRecentYearWithData.year;
+
+    if (activeYear) return activeYear.year;
+
+    return academicYears[0].year;
+  }, [academicYears]);
+
+  const defaultYearReady = !termsLoading && !yearsWithDataLoading;
+  const initialSelectedYear = defaultYearReady ? resolvedDefaultYear ?? 'all' : null;
+
   useEffect(() => {
-    if (terms.length > 0 && selectedYear === 'all') {
-      const activeTerm = terms.find((t) => t.is_active);
-      if (activeTerm) {
-        setSelectedYear(activeTerm.academic_year_start);
-      } else {
-        setSelectedYear(terms[0].academic_year_start);
-      }
+    if (hasUserSelectedYear || selectedYear !== null || initialSelectedYear === null) {
+      return;
     }
-  }, [terms, selectedYear]);
 
-  const fetchLeaderboard = useCallback(async () => {
+    setSelectedYear(initialSelectedYear);
+  }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
+
+  const fetchLeaderboard = useCallback(async (year: SelectedYear) => {
     try {
       setLoading(true);
       let members: Member[] = [];
 
-      if (selectedYear === 'all') {
+      if (year === 'all') {
         const data = await leaderboardRepository.getAllTimeLeaderboard();
         members = data as Member[];
       } else {
-        const data = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+        const data = await leaderboardRepository.getYearlyLeaderboard(year);
         members = data.map((m) => ({
           id: m.member_id,
           first_name: m.first_name,
@@ -118,13 +164,72 @@ export function Leaderboard() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear]);
+  }, []);
 
   useEffect(() => {
-    if (selectedYear !== 'all' || terms.length > 0) {
-      fetchLeaderboard();
+    if (selectedYear === null) return;
+
+    let isCurrentRequest = true;
+
+    const loadLeaderboard = async () => {
+      try {
+        setLoading(true);
+        let members: Member[] = [];
+
+        if (selectedYear === 'all') {
+          const data = await leaderboardRepository.getAllTimeLeaderboard();
+          members = data as Member[];
+        } else {
+          const data = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+          members = data.map((m) => ({
+            id: m.member_id,
+            first_name: m.first_name,
+            last_name: m.last_name,
+            college: m.college,
+            year: m.graduation_year,
+            points: m.total_points,
+            events_attended: m.events_attended,
+            user_id: m.user_id,
+          }));
+        }
+
+        if (!isCurrentRequest) return;
+
+        setByPoints(members.sort((a, b) => b.points - a.points).map((member, index) => ({ ...member, rank: index + 1 })));
+        setByEvents(
+          [...members]
+            .sort((a, b) => b.events_attended - a.events_attended)
+            .map((member, index) => ({ ...member, rank: index + 1 }))
+        );
+        setError(null);
+      } catch {
+        if (isCurrentRequest) {
+          setError('Failed to load leaderboard.');
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadLeaderboard();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [selectedYear]);
+
+  const handleSelectedYearChange = (value: string) => {
+    setHasUserSelectedYear(true);
+    setSelectedYear(value === 'all' ? 'all' : Number(value));
+  };
+
+  const refreshSelectedLeaderboard = useCallback(() => {
+    if (selectedYear !== null) {
+      fetchLeaderboard(selectedYear);
     }
-  }, [fetchLeaderboard, selectedYear, terms.length]);
+  }, [fetchLeaderboard, selectedYear]);
 
   useEffect(() => {
     // Only subscribe to changes if viewing all-time or if we want real-time updates for yearly too.
@@ -133,13 +238,13 @@ export function Leaderboard() {
     if (selectedYear === 'all') {
       const sub = supabase
         .channel('members_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchLeaderboard)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, refreshSelectedLeaderboard)
         .subscribe();
       return () => {
         sub.unsubscribe();
       };
     }
-  }, [fetchLeaderboard, selectedYear]);
+  }, [refreshSelectedLeaderboard, selectedYear]);
 
   const entries = activeTab === 'points' ? byPoints : byEvents;
   const searchTerm = searchQuery.trim().toLowerCase();
@@ -165,7 +270,9 @@ export function Leaderboard() {
 
   const top3 = filteredEntries.slice(0, 3);
 
-  if (termsLoading && loading) return <PageLoader message="Loading leaderboard..." />;
+  const waitingForInitialYear = selectedYear === null && !defaultYearReady;
+
+  if ((waitingForInitialYear || loading) && selectedYear === null) return <PageLoader message="Loading leaderboard..." />;
   if (error) {
     return (
       <div className="mx-auto max-w-4xl px-8 py-20 text-center">
@@ -176,7 +283,10 @@ export function Leaderboard() {
     );
   }
 
-  const selectedYearLabel = selectedYear === 'all' ? 'All-Time' : academicYears.find(([y]) => y === selectedYear)?.[1] || '';
+  const selectedYearLabel =
+    selectedYear === 'all'
+      ? 'All-Time'
+      : academicYears.find((year) => year.year === selectedYear)?.label || (selectedYear ? `${selectedYear}-${selectedYear + 1}` : '');
 
   return (
     <>
@@ -204,22 +314,31 @@ export function Leaderboard() {
               ))}
             </div>
 
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-              className="h-9 rounded-md border bg-transparent px-3 font-sans text-xs font-medium outline-none transition-colors hover:border-zinc-400 focus:border-zinc-500"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-              }}
-            >
-              <option value="all">All-Time</option>
-              {academicYears.map(([year, label]) => (
-                <option key={year} value={year}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <div className="w-full max-w-xs sm:w-64">
+              <label
+                className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: 'var(--color-text3)' }}
+              >
+                Academic Year
+              </label>
+              <select
+                value={selectedYear ?? ''}
+                onChange={(e) => handleSelectedYearChange(e.target.value)}
+                className="w-full rounded border px-3 py-2 font-sans text-sm"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  background: 'var(--color-surface)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                <option value="all">All-Time</option>
+                {academicYears.map((year) => (
+                  <option key={year.year} value={year.year}>
+                    {year.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -281,7 +400,7 @@ export function Leaderboard() {
         {filteredEntries.length === 0 ? (
           <div className="rounded border py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-              {searchTerm ? 'No matching members.' : 'No members yet.'}
+              {searchTerm ? 'No matching members.' : `No points recorded for ${selectedYearLabel} yet.`}
             </p>
           </div>
         ) : (

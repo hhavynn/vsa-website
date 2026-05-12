@@ -27,6 +27,22 @@ export class LeaderboardRepository {
       return data ?? [];
     }, 'Failed to fetch all-time leaderboard');
   }
+
+  async getYearsWithData(): Promise<number[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('member_yearly_points')
+        .select('academic_year_start')
+        .order('academic_year_start', { ascending: false });
+
+      if (error) throw error;
+
+      const uniqueYears = Array.from(new Set((data ?? []).map((row) => row.academic_year_start)))
+        .filter((year): year is number => typeof year === 'number')
+        .sort((a, b) => b - a);
+      return uniqueYears;
+    }, 'Failed to fetch years with data');
+  }
 }
 
 export const leaderboardRepository = new LeaderboardRepository();
