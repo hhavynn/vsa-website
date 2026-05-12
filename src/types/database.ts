@@ -392,6 +392,71 @@ export interface Database {
           updated_at?: string | null;
         };
       };
+      vcn_archives: {
+        Row: {
+          id: string;
+          year: number;
+          title: string | null;
+          annual_number: string | null;
+          theme_name: string | null;
+          event_date: string | null;
+          venue: string | null;
+          description: string | null;
+          video_url: string | null;
+          photo_album_url: string | null;
+          album_source: string | null;
+          cover_image_url: string | null;
+          photo_credit: string | null;
+          is_published: boolean;
+          is_featured: boolean;
+          display_order: number;
+          internal_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          year: number;
+          title?: string | null;
+          annual_number?: string | null;
+          theme_name?: string | null;
+          event_date?: string | null;
+          venue?: string | null;
+          description?: string | null;
+          video_url?: string | null;
+          photo_album_url?: string | null;
+          album_source?: string | null;
+          cover_image_url?: string | null;
+          photo_credit?: string | null;
+          is_published?: boolean;
+          is_featured?: boolean;
+          display_order?: number;
+          internal_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          year?: number;
+          title?: string | null;
+          annual_number?: string | null;
+          theme_name?: string | null;
+          event_date?: string | null;
+          venue?: string | null;
+          description?: string | null;
+          video_url?: string | null;
+          photo_album_url?: string | null;
+          album_source?: string | null;
+          cover_image_url?: string | null;
+          photo_credit?: string | null;
+          is_published?: boolean;
+          is_featured?: boolean;
+          display_order?: number;
+          internal_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       homepage_content: {
         Row: {
           id: string;
@@ -603,6 +668,28 @@ export interface Database {
       };
     };
     Views: {
+      published_vcn_archives: {
+        Row: {
+          id: string;
+          year: number;
+          title: string | null;
+          annual_number: string | null;
+          theme_name: string | null;
+          event_date: string | null;
+          venue: string | null;
+          description: string | null;
+          video_url: string | null;
+          photo_album_url: string | null;
+          album_source: string | null;
+          cover_image_url: string | null;
+          photo_credit: string | null;
+          is_published: boolean;
+          is_featured: boolean;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+      };
       member_yearly_points: {
         Row: {
           member_id: string;
