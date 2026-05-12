@@ -46,19 +46,24 @@ function formatMeta(member: CabinetMember) {
 
 function rolePriority(role: string) {
   const normalized = role.toLowerCase();
-  if (normalized.includes('president')) return 0;
-  if (normalized.includes('internal vice president')) return 1;
+  if (normalized.includes('president') && !normalized.includes('vice president')) return 0;
+  if (normalized.includes('internal vice president') || normalized.trim() === 'vice president') return 1;
   if (normalized.includes('external vice president')) return 2;
-  if (normalized.includes('vice president')) return 3;
+  if (normalized.includes('intercollegiate council') || /\bicc\b/.test(normalized)) return 3;
   if (normalized.includes('secretary')) return 4;
   if (normalized.includes('treasurer')) return 5;
   return 10;
 }
 
 function splitExecutiveRoles(roles: Array<[string, CabinetMember[]]>) {
+  const minDisplayOrder = (members: CabinetMember[]) =>
+    Math.min(...members.map((member) => member.display_order ?? Number.MAX_SAFE_INTEGER));
+
   const sorted = [...roles].sort((a, b) => {
     const byPriority = rolePriority(a[0]) - rolePriority(b[0]);
     if (byPriority !== 0) return byPriority;
+    const byDisplayOrder = minDisplayOrder(a[1]) - minDisplayOrder(b[1]);
+    if (byDisplayOrder !== 0) return byDisplayOrder;
     return a[0].localeCompare(b[0]);
   });
 
