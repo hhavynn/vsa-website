@@ -603,7 +603,20 @@ export interface Database {
       };
     };
     Views: {
-      [_ in never]: never;
+      member_yearly_points: {
+        Row: {
+          member_id: string;
+          first_name: string;
+          last_name: string;
+          college: string | null;
+          graduation_year: string | null;
+          user_id: string | null;
+          academic_year_start: number;
+          academic_year_end: number;
+          total_points: number;
+          events_attended: number;
+        };
+      };
     };
     Functions: {
       create_events_table: {

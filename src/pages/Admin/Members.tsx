@@ -25,6 +25,13 @@ interface AttendanceRecord {
   event_name: string;
   event_date: string;
   points_earned: number;
+  term_label: string | null;
+}
+
+interface YearlyTotal {
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -103,6 +110,7 @@ export default function AdminMembers() {
   // History modal
   const [historyMember, setHistoryMember] = useState<Member | null>(null);
   const [historyRecords, setHistoryRecords] = useState<AttendanceRecord[]>([]);
+  const [historyYearly, setHistoryYearly] = useState<YearlyTotal[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   // Merge modal
@@ -253,22 +261,54 @@ export default function AdminMembers() {
   async function openHistory(m: Member) {
     setHistoryMember(m);
     setHistoryRecords([]);
+    setHistoryYearly([]);
     setHistoryLoading(true);
-    const { data, error } = await supabase
-      .from('member_event_attendance')
-      .select('event_id, points_earned, events(name, date)')
-      .eq('member_id', m.id);
-    setHistoryLoading(false);
-    if (error) { toast.error('Failed to load history.'); return; }
-    const records = ((data ?? []) as any[])
-      .map(row => ({
-        event_id: row.event_id as string,
-        event_name: (row.events?.name ?? '(unknown)') as string,
-        event_date: (row.events?.date ?? '') as string,
-        points_earned: row.points_earned as number,
-      }))
-      .sort((a, b) => b.event_date.localeCompare(a.event_date));
-    setHistoryRecords(records);
+    
+    try {
+      // 1. Fetch attendance with term labels
+      const { data: attendanceData, error: attError } = await supabase
+        .from('member_event_attendance')
+        .select(`
+          event_id, 
+          points_earned, 
+          events(
+            name, 
+            date, 
+            academic_term_id,
+            academic_terms(label)
+          )
+        `)
+        .eq('member_id', m.id);
+      
+      if (attError) throw attError;
+
+      const records = ((attendanceData ?? []) as any[])
+        .map(row => ({
+          event_id: row.event_id as string,
+          event_name: (row.events?.name ?? '(unknown)') as string,
+          event_date: (row.events?.date ?? '') as string,
+          points_earned: row.points_earned as number,
+          term_label: (row.events?.academic_terms?.label ?? null) as string | null,
+        }))
+        .sort((a, b) => b.event_date.localeCompare(a.event_date));
+      setHistoryRecords(records);
+
+      // 2. Fetch yearly point totals
+      const { data: yearlyData, error: yearlyError } = await supabase
+        .from('member_yearly_points')
+        .select('academic_year_start, academic_year_end, total_points')
+        .eq('member_id', m.id)
+        .order('academic_year_start', { ascending: false });
+      
+      if (yearlyError) throw yearlyError;
+      setHistoryYearly((yearlyData ?? []) as YearlyTotal[]);
+
+    } catch (err: any) {
+      toast.error('Failed to load history.');
+      console.error(err);
+    } finally {
+      setHistoryLoading(false);
+    }
   }
 
   // ── Merge ─────────────────────────────────────────────────────────────────────
@@ -613,32 +653,64 @@ export default function AdminMembers() {
                 {historyMember.first_name} {historyMember.last_name}
               </h2>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                {historyMember.points} pts · {historyMember.events_attended} event{historyMember.events_attended !== 1 ? 's' : ''}
+                {historyMember.points} pts (All-Time) · {historyMember.events_attended} event{historyMember.events_attended !== 1 ? 's' : ''}
               </p>
             </div>
             <button onClick={() => setHistoryMember(null)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
           </div>
+          
           {historyLoading ? (
             <div className="py-8 text-center text-zinc-400 text-[13px]">Loading…</div>
-          ) : historyRecords.length === 0 ? (
-            <div className="py-8 text-center text-zinc-400 text-[13px]">No attendance records found.</div>
           ) : (
-            <div className="overflow-y-auto max-h-80 rounded-md border border-zinc-200 dark:border-[#27272a] divide-y divide-zinc-100 dark:divide-[#27272a]">
-              {historyRecords.map(rec => (
-                <div key={rec.event_id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">{rec.event_name}</p>
-                    <p className="text-[11px] text-zinc-400">
-                      {rec.event_date
-                        ? new Date(rec.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                        : '—'}
-                    </p>
+            <div className="space-y-6">
+              {/* Yearly Breakdown */}
+              {historyYearly.length > 0 && (
+                <div>
+                  <h3 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">Yearly Breakdown</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {historyYearly.map(y => (
+                      <div key={y.academic_year_start} className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-[#27272a] rounded px-3 py-2 flex justify-between items-center">
+                        <span className="text-[12px] text-zinc-600 dark:text-zinc-400 font-medium">{y.academic_year_start}-{y.academic_year_end}</span>
+                        <span className="text-[13px] font-bold text-indigo-600 dark:text-indigo-400">{y.total_points} pts</span>
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">+{rec.points_earned} pts</span>
                 </div>
-              ))}
+              )}
+
+              {/* Event Records */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">Event Records</h3>
+                {historyRecords.length === 0 ? (
+                  <div className="py-4 text-center text-zinc-400 text-[13px] border border-dashed rounded">No attendance records found.</div>
+                ) : (
+                  <div className="overflow-y-auto max-h-64 rounded-md border border-zinc-200 dark:border-[#27272a] divide-y divide-zinc-100 dark:divide-[#27272a]">
+                    {historyRecords.map(rec => (
+                      <div key={rec.event_id} className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">{rec.event_name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-zinc-400">
+                              {rec.event_date
+                                ? new Date(rec.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : '—'}
+                            </span>
+                            {rec.term_label && (
+                              <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
+                                {rec.term_label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">+{rec.points_earned} pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
+          
           <button onClick={() => setHistoryMember(null)}
             className="mt-5 w-full border border-zinc-200 dark:border-[#27272a] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium py-2.5 rounded-md text-[13px] transition-colors">
             Close

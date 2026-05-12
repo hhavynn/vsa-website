@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
@@ -7,6 +7,8 @@ import { Avatar } from '../components/features/avatar/Avatar';
 import { PageLoader } from '../components/common/PageLoader';
 import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
+import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { leaderboardRepository } from '../data/repos/leaderboard';
 
 interface Member {
   id: string;
@@ -48,22 +50,63 @@ function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
 }
 
 export function Leaderboard() {
+  const { terms, loading: termsLoading } = useAcademicTerms();
   const [byPoints, setByPoints] = useState<LeaderboardEntry[]>([]);
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(() => {
+    // We'll set the actual default in an effect once terms load
+    return 'all';
+  });
+
+  // Group terms by academic year for the selector
+  const academicYears = useMemo(() => {
+    const years = new Map<number, string>();
+    terms.forEach((term) => {
+      if (!years.has(term.academic_year_start)) {
+        years.set(term.academic_year_start, `${term.academic_year_start}-${term.academic_year_end}`);
+      }
+    });
+    return Array.from(years.entries()).sort((a, b) => b[0] - a[0]);
+  }, [terms]);
+
+  // Set default year to active year or most recent year
+  useEffect(() => {
+    if (terms.length > 0 && selectedYear === 'all') {
+      const activeTerm = terms.find((t) => t.is_active);
+      if (activeTerm) {
+        setSelectedYear(activeTerm.academic_year_start);
+      } else {
+        setSelectedYear(terms[0].academic_year_start);
+      }
+    }
+  }, [terms, selectedYear]);
 
   const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error: err } = await supabase
-        .from('members')
-        .select('id, first_name, last_name, college, year, points, events_attended, user_id')
-        .order('points', { ascending: false });
-      if (err) throw err;
-      const members = (data ?? []) as Member[];
+      let members: Member[] = [];
+
+      if (selectedYear === 'all') {
+        const data = await leaderboardRepository.getAllTimeLeaderboard();
+        members = data as Member[];
+      } else {
+        const data = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+        members = data.map((m) => ({
+          id: m.member_id,
+          first_name: m.first_name,
+          last_name: m.last_name,
+          college: m.college,
+          year: m.graduation_year,
+          points: m.total_points,
+          events_attended: m.events_attended,
+          user_id: m.user_id,
+        }));
+      }
+
       setByPoints(members.sort((a, b) => b.points - a.points).map((member, index) => ({ ...member, rank: index + 1 })));
       setByEvents(
         [...members]
@@ -75,18 +118,28 @@ export function Leaderboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedYear]);
 
   useEffect(() => {
-    fetchLeaderboard();
-    const sub = supabase
-      .channel('members_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchLeaderboard)
-      .subscribe();
-    return () => {
-      sub.unsubscribe();
-    };
-  }, [fetchLeaderboard]);
+    if (selectedYear !== 'all' || terms.length > 0) {
+      fetchLeaderboard();
+    }
+  }, [fetchLeaderboard, selectedYear, terms.length]);
+
+  useEffect(() => {
+    // Only subscribe to changes if viewing all-time or if we want real-time updates for yearly too.
+    // For now, let's keep it simple and refresh on changes if it's all-time.
+    // Real-time for yearly is trickier because it involves multiple tables.
+    if (selectedYear === 'all') {
+      const sub = supabase
+        .channel('members_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchLeaderboard)
+        .subscribe();
+      return () => {
+        sub.unsubscribe();
+      };
+    }
+  }, [fetchLeaderboard, selectedYear]);
 
   const entries = activeTab === 'points' ? byPoints : byEvents;
   const searchTerm = searchQuery.trim().toLowerCase();
@@ -98,7 +151,7 @@ export function Leaderboard() {
       (entry.year ?? '').toLowerCase().includes(searchTerm)
   );
 
-  const resetKey = `${activeTab}|${searchQuery}`;
+  const resetKey = `${activeTab}|${searchQuery}|${selectedYear}`;
   const {
     page,
     totalPages,
@@ -112,7 +165,7 @@ export function Leaderboard() {
 
   const top3 = filteredEntries.slice(0, 3);
 
-  if (loading) return <PageLoader message="Loading leaderboard..." />;
+  if (termsLoading && loading) return <PageLoader message="Loading leaderboard..." />;
   if (error) {
     return (
       <div className="mx-auto max-w-4xl px-8 py-20 text-center">
@@ -123,6 +176,8 @@ export function Leaderboard() {
     );
   }
 
+  const selectedYearLabel = selectedYear === 'all' ? 'All-Time' : academicYears.find(([y]) => y === selectedYear)?.[1] || '';
+
   return (
     <>
       <PageTitle title="Leaderboard" />
@@ -131,19 +186,40 @@ export function Leaderboard() {
         <div className="vsa-container relative z-10">
           <h1 className="vsa-page-title">Leaderboard</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            Current season standings for {byPoints.length} members. Track points, events attended, and your next spot to climb.
+            {selectedYear === 'all'
+              ? 'All-time standings for our members. Track points and events attended across all years.'
+              : `Standings for the ${selectedYearLabel} academic year. Track points, events attended, and your next spot to climb.`}
           </p>
 
-          <div className="vsa-filter-bar">
-            {(['points', 'events'] as const).map((tab, index) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`vsa-filter-btn ${activeTab === tab ? 'active' : ''}`}
-              >
-                {tab === 'points' ? 'Points' : 'Events'}
-              </button>
-            ))}
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="vsa-filter-bar">
+              {(['points', 'events'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`vsa-filter-btn ${activeTab === tab ? 'active' : ''}`}
+                >
+                  {tab === 'points' ? 'Points' : 'Events'}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+              className="h-9 rounded-md border bg-transparent px-3 font-sans text-xs font-medium outline-none transition-colors hover:border-zinc-400 focus:border-zinc-500"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+              }}
+            >
+              <option value="all">All-Time</option>
+              {academicYears.map(([year, label]) => (
+                <option key={year} value={year}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

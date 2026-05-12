@@ -11,6 +11,12 @@ interface Event {
   name: string;
   date: string;
   points: number;
+  academic_term_id: string | null;
+}
+
+interface AcademicTerm {
+  id: string;
+  label: string;
 }
 
 interface Member {
@@ -246,6 +252,7 @@ export default function AdminImport() {
 
   // Configure
   const [events, setEvents] = useState<Event[]>([]);
+  const [terms, setTerms]   = useState<Record<string, string>>({});
   const [selectedEventId, setSelectedEventId] = useState('');
   const [csvUrl, setCsvUrl] = useState('');
   const [fetchingCsv, setFetchingCsv] = useState(false);
@@ -268,11 +275,21 @@ export default function AdminImport() {
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   useEffect(() => {
-    supabase
-      .from('events')
-      .select('id, name, date, points')
-      .order('date', { ascending: false })
-      .then(({ data }) => setEvents((data ?? []) as Event[]));
+    async function loadData() {
+      const { data: eventsData } = await supabase
+        .from('events')
+        .select('id, name, date, points, academic_term_id')
+        .order('date', { ascending: false });
+      setEvents((eventsData ?? []) as Event[]);
+
+      const { data: termsData } = await supabase
+        .from('academic_terms')
+        .select('id, label');
+      const termMap: Record<string, string> = {};
+      (termsData ?? []).forEach((t: AcademicTerm) => { termMap[t.id] = t.label; });
+      setTerms(termMap);
+    }
+    loadData();
   }, []);
 
   function updateRow(rowId: string, updater: (row: RowResult) => RowResult) {
@@ -610,10 +627,15 @@ export default function AdminImport() {
                   <option value="">— Select an event —</option>
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>
-                      {ev.name} — {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ({ev.points} pts)
+                      {ev.name} — {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ({ev.points} pts) {ev.academic_term_id ? `[${terms[ev.academic_term_id] || '...'}]` : ''}
                     </option>
                   ))}
                 </select>
+                {selectedEvent && !selectedEvent.academic_term_id && (
+                  <p className="mt-2 text-xs text-amber-600 font-medium">
+                    ⚠️ This event has no academic term assigned. Points will be recorded but won't appear in yearly leaderboards until fixed.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -708,9 +730,16 @@ export default function AdminImport() {
               </div>
 
               {selectedEvent && (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Each matched or new member gets <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.name}</strong>.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Each matched or new member gets <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.name}</strong>.
+                  </p>
+                  {!selectedEvent.academic_term_id && (
+                    <p className="text-xs text-amber-600 font-medium">
+                      ⚠️ Note: Selected event has no academic term. Points will not appear in yearly standings.
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Preview table */}
@@ -808,7 +837,7 @@ export default function AdminImport() {
                                 <button
                                   type="button"
                                   onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
-                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:gray-200"
                                 >
                                   Clear Override
                                 </button>
@@ -829,7 +858,7 @@ export default function AdminImport() {
                                 <button
                                   type="button"
                                   onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
-                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:gray-200"
                                 >
                                   Restore Match
                                 </button>

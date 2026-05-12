@@ -59,3 +59,16 @@ export interface User {
   created_at: string;
   updated_at: string;
 }
+
+export interface MemberYearlyPoints {
+  member_id: string;
+  first_name: string;
+  last_name: string;
+  college: string | null;
+  graduation_year: string | null;
+  user_id: string | null;
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
+  events_attended: number;
+}
