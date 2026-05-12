@@ -1,23 +1,104 @@
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useEvents } from '../../hooks/useEvents';
+import { useAcademicTerms } from '../../hooks/useAcademicTerms';
+import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { supabase } from '../../lib/supabase';
-import { Event } from '../../types';
+import { AcademicTerm, Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
+import { getAcademicTermMeta } from '../../lib/academicTerms';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
   event_type: 'other', check_in_form_url: '', points: 0,
+  academic_term_id: null,
 };
 
 const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label';
 
+function findTermForDate(dateString: string | null | undefined, terms: AcademicTerm[]) {
+  const meta = dateString ? getAcademicTermMeta(dateString) : null;
+  if (!meta) return null;
+  return terms.find((term) => term.code === meta.code) ?? null;
+}
+
+function getSuggestedTermLabel(dateString?: string | null) {
+  const meta = dateString ? getAcademicTermMeta(dateString) : null;
+  return meta?.label ?? null;
+}
+
+function AcademicTermSelect({
+  value,
+  date,
+  terms,
+  termsLoading,
+  termsError,
+  onChange,
+}: {
+  value?: string | null;
+  date?: string | null;
+  terms: AcademicTerm[];
+  termsLoading: boolean;
+  termsError: unknown;
+  onChange: (termId: string | null) => void;
+}) {
+  const suggestedLabel = getSuggestedTermLabel(date);
+  const hasSuggestedTerm = !!findTermForDate(date, terms);
+  const selectedTerm = value ? terms.find((term) => term.id === value) : null;
+  const helperText = selectedTerm
+    ? `Manual term selected: ${selectedTerm.label}.`
+    : suggestedLabel
+      ? hasSuggestedTerm
+        ? `Suggested by date: ${suggestedLabel}.`
+        : `Suggested by date: ${suggestedLabel}. It will be created on save if needed.`
+    : 'Pick a date to auto-suggest a term.';
+  const termOptions = [
+    <option key="auto" value="">
+      {termsLoading ? 'Loading terms...' : 'Auto from event date'}
+    </option>,
+    ...terms.map((term: AcademicTerm) => (
+      <option key={term.id} value={term.id}>
+        {term.label}
+      </option>
+    )),
+  ];
+  const children = [
+    <label key="label" className={labelCls}>Academic Term</label>,
+    <select
+      key="select"
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      className={inputCls}
+    >
+      {termOptions}
+    </select>,
+    <p key="helper" className="mt-1 text-xs text-zinc-500">
+      {helperText}
+    </p>,
+  ];
+
+  if (termsError) {
+    children.push(
+      <p key="error" className="mt-1 text-xs text-amber-500">
+        Terms could not be loaded. The event can still be saved if Supabase can infer the term from its date.
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      {children}
+    </div>
+  );
+}
+
 export default function AdminEvents() {
   const { events, refreshEvents } = useEvents();
+  const { terms, loading: termsLoading, error: termsError, refreshTerms } = useAcademicTerms();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<Event>>(EMPTY_EVENT);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -40,6 +121,41 @@ export default function AdminEvents() {
     const h = String(date.getHours()).padStart(2, '0');
     const mi = String(date.getMinutes()).padStart(2, '0');
     return `${y}-${mo}-${d}T${h}:${mi}`;
+  };
+
+  const getTermLabel = (termId?: string | null, dateString?: string | null) => {
+    const term = termId ? terms.find((item) => item.id === termId) : null;
+    return term?.label ?? getSuggestedTermLabel(dateString) ?? 'Unassigned';
+  };
+
+  const resolveAcademicTermId = async (dateString?: string | null, selectedTermId?: string | null) => {
+    if (selectedTermId) return selectedTermId;
+    if (!dateString) return null;
+
+    const existingTerm = findTermForDate(dateString, terms);
+    if (existingTerm) return existingTerm.id;
+
+    const ensuredTerm = await academicTermsRepository.ensureTermForDate(dateString);
+    return ensuredTerm?.id ?? null;
+  };
+
+  const handleNewEventDateChange = (dateValue: string) => {
+    const suggestedTerm = findTermForDate(dateValue, terms);
+    setNewEvent({
+      ...newEvent,
+      date: dateValue,
+      academic_term_id: suggestedTerm?.id ?? null,
+    });
+  };
+
+  const handleSelectedEventDateChange = (dateValue: string) => {
+    if (!selectedEvent) return;
+    const suggestedTerm = findTermForDate(dateValue, terms);
+    setSelectedEvent({
+      ...selectedEvent,
+      date: dateValue,
+      academic_term_id: suggestedTerm?.id ?? null,
+    });
   };
 
   const now = new Date();
@@ -93,16 +209,19 @@ export default function AdminEvents() {
       setUploading(true);
       const imageUrl = imageFile ? await uploadImage(imageFile) : null;
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const academicTermId = await resolveAcademicTermId(newEvent.date, newEvent.academic_term_id);
       const { error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
         date: new Date(newEvent.date!).toISOString(), location: newEvent.location,
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
         points: newEvent.points, image_url: imageUrl,
         check_in_code: checkInCode, is_code_expired: false,
+        academic_term_id: academicTermId,
       }]);
       if (error) throw error;
       toast.success('Event created');
       setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null);
+      refreshTerms();
       refreshEvents(); setActiveTab('manage');
     } catch (err) {
       console.error(err); toast.error('Failed to create event');
@@ -129,6 +248,7 @@ export default function AdminEvents() {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
       if (editImageFile) imageUrl = await uploadImage(editImageFile);
+      const academicTermId = await resolveAcademicTermId(selectedEvent.date, selectedEvent.academic_term_id);
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name, description: selectedEvent.description,
         date: new Date(selectedEvent.date).toISOString(), location: selectedEvent.location,
@@ -136,10 +256,12 @@ export default function AdminEvents() {
         image_url: imageUrl, check_in_code: selectedEvent.check_in_code,
         is_code_expired: selectedEvent.is_code_expired,
         check_in_form_url: selectedEvent.check_in_form_url || '',
+        academic_term_id: academicTermId,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
       toast.success('Event updated');
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
+      refreshTerms();
       refreshEvents();
     } catch (err) {
       console.error(err); toast.error('Failed to update event');
@@ -167,6 +289,9 @@ export default function AdminEvents() {
             {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           <span className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-500 rounded">
+            {getTermLabel(event.academic_term_id, event.date)}
+          </span>
+          <span className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-500 rounded">
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
           <span className="text-xs text-emerald-500 font-medium">{event.points} pts</span>
@@ -174,7 +299,15 @@ export default function AdminEvents() {
       </div>
       <div className="flex gap-1.5 shrink-0">
         <button
-          onClick={() => { setSelectedEvent(event); setEditImageFile(null); setEditImagePreview(null); }}
+          onClick={() => {
+            const suggestedTerm = findTermForDate(event.date, terms);
+            setSelectedEvent({
+              ...event,
+              academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
+            });
+            setEditImageFile(null);
+            setEditImagePreview(null);
+          }}
           className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors"
         >
           Edit
@@ -220,7 +353,7 @@ export default function AdminEvents() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
                 <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
-                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Event Type *</label>
                   <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
@@ -229,6 +362,14 @@ export default function AdminEvents() {
                 </div>
                 <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
                 <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({...newEvent, check_in_form_url: e.target.value})} className={inputCls} placeholder="https://forms.google.com/..." /></div>
+                <AcademicTermSelect
+                  value={newEvent.academic_term_id}
+                  date={newEvent.date}
+                  terms={terms}
+                  termsLoading={termsLoading}
+                  termsError={termsError}
+                  onChange={(termId) => setNewEvent({ ...newEvent, academic_term_id: termId })}
+                />
               </div>
               <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={3} required placeholder="Describe the event." /></div>
               <div>
@@ -284,7 +425,7 @@ export default function AdminEvents() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
                 <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
-                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => setSelectedEvent({...selectedEvent, date: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Event Type *</label>
                   <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
@@ -293,6 +434,14 @@ export default function AdminEvents() {
                 </div>
                 <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
                 <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_form_url: e.target.value})} className={inputCls} /></div>
+                <AcademicTermSelect
+                  value={selectedEvent.academic_term_id}
+                  date={selectedEvent.date}
+                  terms={terms}
+                  termsLoading={termsLoading}
+                  termsError={termsError}
+                  onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
+                />
               </div>
               <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={3} required /></div>
               <div>
