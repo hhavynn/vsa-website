@@ -1,5 +1,5 @@
-import React, { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 const socialLinks = [
   {
@@ -43,17 +43,6 @@ const footerGroups = [
 ];
 
 const Footer: React.FC = () => {
-  const navigate = useNavigate();
-  const [bugTitle, setBugTitle] = useState('');
-
-  const handleBugReport = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const params = new URLSearchParams({ type: 'bug' });
-    const title = bugTitle.trim();
-    if (title) params.set('title', title);
-    navigate(`/feedback?${params.toString()}`);
-  };
-
   return (
     <footer className="border-t" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
       <div className="vsa-container py-12 sm:py-14">
@@ -105,26 +94,6 @@ const Footer: React.FC = () => {
             </div>
             <a className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
             <a className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
-            <form onSubmit={handleBugReport} className="mt-5">
-              <label htmlFor="footer-bug-title" className="mb-2 block font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
-                Bug Report
-              </label>
-              <div className="flex overflow-hidden rounded-lg border" style={{ borderColor: 'var(--border)' }}>
-                <input
-                  id="footer-bug-title"
-                  value={bugTitle}
-                  onChange={(event) => setBugTitle(event.target.value)}
-                  placeholder="What broke?"
-                  className="min-w-0 flex-1 bg-[var(--surface)] px-3 py-2 font-sans text-[13px] text-[var(--text)] outline-none placeholder:text-[var(--text3)]"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 bg-[var(--brand)] px-3 py-2 font-sans text-[12px] font-semibold text-[#f8fbfb] transition-opacity duration-150 hover:opacity-90"
-                >
-                  Report
-                </button>
-              </div>
-            </form>
           </div>
         </div>
 
@@ -132,10 +101,6 @@ const Footer: React.FC = () => {
           <span className="font-sans text-xs" style={{ color: 'var(--text3)' }}>
             Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
           </span>
-          <div className="flex gap-5">
-            <Link to="/feedback?type=bug" className="font-sans text-xs text-[var(--text3)] transition-colors duration-150 hover:text-[var(--brand)]">Bug Report</Link>
-            <Link to="/feedback" className="font-sans text-xs text-[var(--text3)] transition-colors duration-150 hover:text-[var(--brand)]">Feedback</Link>
-          </div>
         </div>
       </div>
     </footer>
