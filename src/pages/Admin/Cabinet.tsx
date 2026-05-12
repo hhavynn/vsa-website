@@ -6,6 +6,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
+import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 
 interface CabinetMember {
   id: string;
@@ -188,9 +189,6 @@ export default function AdminCabinet() {
   // When saving, fall back to the currently selected admin year if no year was explicitly chosen
   const resolveCabinetYearId = (cabinetYearId?: string | null) =>
     cabinetYearId || selectedAdminYearId || currentCabinetYear?.id || null;
-
-  const getMemberCabinetYearId = (member: CabinetMember) =>
-    member.cabinet_year_id || currentCabinetYear?.id || null;
 
   const getCabinetYearLabel = (cabinetYearId?: string | null) => {
     const year = cabinetYearId ? cabinetYears.find((item) => item.id === cabinetYearId) : currentCabinetYear;
@@ -482,8 +480,20 @@ export default function AdminCabinet() {
                   onChange={(cabinetYearId) => setNewMember({ ...newMember, cabinet_year_id: cabinetYearId })}
                 />
                 <div><label className={labelCls}>Sort Order</label><input type="number" value={newMember.display_order} onChange={e => setNewMember({...newMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
-                <div><label className={labelCls}>College</label><input type="text" value={newMember.college || ''} onChange={e => setNewMember({...newMember, college: e.target.value})} className={inputCls} /></div>
-                <div><label className={labelCls}>Year</label><input type="text" value={newMember.year || ''} onChange={e => setNewMember({...newMember, year: e.target.value})} className={inputCls} /></div>
+                <div>
+                  <label className={labelCls}>College</label>
+                  <select value={newMember.college || ''} onChange={e => setNewMember({...newMember, college: e.target.value || null})} className={inputCls}>
+                    <option value="">—</option>
+                    {COLLEGE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Year</label>
+                  <select value={newMember.year || ''} onChange={e => setNewMember({...newMember, year: e.target.value || null})} className={inputCls}>
+                    <option value="">—</option>
+                    {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
                 <div><label className={labelCls}>Major</label><input type="text" value={newMember.major || ''} onChange={e => setNewMember({...newMember, major: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Minor</label><input type="text" value={newMember.minor || ''} onChange={e => setNewMember({...newMember, minor: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Pronouns</label><input type="text" value={newMember.pronouns || ''} onChange={e => setNewMember({...newMember, pronouns: e.target.value})} className={inputCls} /></div>
@@ -525,8 +535,12 @@ export default function AdminCabinet() {
             </div>
             {loading ? (
               <p className="text-zinc-500 text-sm">Loading...</p>
+            ) : filteredMembers.length === 0 && !loading ? (
+              <p className="text-zinc-500 text-sm">
+                No members for {selectedAdminYear?.label ?? 'this cabinet year'} yet. Switch to "Add Member" to create one.
+              </p>
             ) : CATEGORIES.map(category => {
-              const categoryMembers = members.filter(m => m.category === category);
+              const categoryMembers = filteredMembers.filter(m => m.category === category);
               if (categoryMembers.length === 0) return null;
 
               return (
@@ -600,8 +614,26 @@ export default function AdminCabinet() {
                   onChange={(cabinetYearId) => setSelectedMember({ ...selectedMember, cabinet_year_id: cabinetYearId })}
                 />
                 <div><label className={labelCls}>Sort Order</label><input type="number" value={selectedMember.display_order} onChange={e => setSelectedMember({...selectedMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
-                <div><label className={labelCls}>College</label><input type="text" value={selectedMember.college || ''} onChange={e => setSelectedMember({...selectedMember, college: e.target.value})} className={inputCls} /></div>
-                <div><label className={labelCls}>Year</label><input type="text" value={selectedMember.year || ''} onChange={e => setSelectedMember({...selectedMember, year: e.target.value})} className={inputCls} /></div>
+                <div>
+                  <label className={labelCls}>College</label>
+                  <select value={selectedMember.college || ''} onChange={e => setSelectedMember({...selectedMember, college: e.target.value || null})} className={inputCls}>
+                    <option value="">—</option>
+                    {selectedMember.college && !(COLLEGE_OPTIONS as readonly string[]).includes(selectedMember.college) && (
+                      <option value={selectedMember.college}>{selectedMember.college} (legacy)</option>
+                    )}
+                    {COLLEGE_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Year</label>
+                  <select value={selectedMember.year || ''} onChange={e => setSelectedMember({...selectedMember, year: e.target.value || null})} className={inputCls}>
+                    <option value="">—</option>
+                    {selectedMember.year && !(YEAR_OPTIONS as readonly string[]).includes(selectedMember.year) && (
+                      <option value={selectedMember.year}>{selectedMember.year} (legacy)</option>
+                    )}
+                    {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
                 <div><label className={labelCls}>Major</label><input type="text" value={selectedMember.major || ''} onChange={e => setSelectedMember({...selectedMember, major: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Minor</label><input type="text" value={selectedMember.minor || ''} onChange={e => setSelectedMember({...selectedMember, minor: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Pronouns</label><input type="text" value={selectedMember.pronouns || ''} onChange={e => setSelectedMember({...selectedMember, pronouns: e.target.value})} className={inputCls} /></div>
