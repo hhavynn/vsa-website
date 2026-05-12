@@ -526,16 +526,6 @@ export function Cabinet() {
               <div className="space-y-6">
                 {featuredExecRoles.length > 0 && (
                   <div className="space-y-4">
-                    <div className="flex items-end justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
-                      <div>
-                        <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                          Leadership Tier
-                        </p>
-                        <p className="mt-1 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                          Presidents and vice presidents are surfaced first so the structure reads more clearly.
-                        </p>
-                      </div>
-                    </div>
                     <div className="grid gap-5">
                       {featuredExecRoles.map(([role, roleMembers]) => (
                         <ExecutiveFeaturePanel key={role} role={role} members={roleMembers} />
