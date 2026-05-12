@@ -17,6 +17,8 @@ interface Event {
 interface AcademicTerm {
   id: string;
   label: string;
+  academic_year_start: number;
+  academic_year_end: number;
 }
 
 interface Member {
@@ -108,6 +110,7 @@ function nameSimilarity(a: string, b: string): number {
 
 const EXACT_MATCH_THRESHOLD = 75;
 const REVIEW_THRESHOLD = 50;
+const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
 
 // Composite: name 60%, college 25%, year 15%
 function compositeScore(ns: number, cm: boolean, ym: boolean) {
@@ -120,6 +123,11 @@ function getEffectiveStatus(row: RowResult): RowStatus {
   if (row.manualOverride === 'force-match') return 'match';
   if (row.manualOverride === 'mark-new') return 'new';
   return 'review';
+}
+
+function getAcademicYearLabel(term: AcademicTerm | undefined): string {
+  if (!term) return 'its assigned academic year';
+  return `${term.academic_year_start}–${term.academic_year_end}`;
 }
 
 function canForceMatch(row: RowResult): boolean {
@@ -252,7 +260,7 @@ export default function AdminImport() {
 
   // Configure
   const [events, setEvents] = useState<Event[]>([]);
-  const [terms, setTerms]   = useState<Record<string, string>>({});
+  const [terms, setTerms]   = useState<Record<string, AcademicTerm>>({});
   const [selectedEventId, setSelectedEventId] = useState('');
   const [csvUrl, setCsvUrl] = useState('');
   const [fetchingCsv, setFetchingCsv] = useState(false);
@@ -284,9 +292,9 @@ export default function AdminImport() {
 
       const { data: termsData } = await supabase
         .from('academic_terms')
-        .select('id, label');
-      const termMap: Record<string, string> = {};
-      (termsData ?? []).forEach((t: AcademicTerm) => { termMap[t.id] = t.label; });
+        .select('id, label, academic_year_start, academic_year_end');
+      const termMap: Record<string, AcademicTerm> = {};
+      (termsData ?? []).forEach((t: AcademicTerm) => { termMap[t.id] = t; });
       setTerms(termMap);
     }
     loadData();
@@ -329,6 +337,11 @@ export default function AdminImport() {
     setConfigError('');
     if (!selectedEventId) { setConfigError('Select an event.'); return; }
     if (!csvUrl.trim())   { setConfigError('Paste a CSV URL.'); return; }
+    const event = events.find(e => e.id === selectedEventId);
+    if (!event?.academic_term_id) {
+      setConfigError(MISSING_TERM_IMPORT_MESSAGE);
+      return;
+    }
 
     setFetchingCsv(true);
     try {
@@ -347,7 +360,7 @@ export default function AdminImport() {
       const dCollege = detectCol(headers, ['college', 'ucsd college', 'residential college']);
       const dYear    = detectCol(headers, ['year', 'student year', 'year in school', 'academic year', 'standing']);
       const dEmail   = detectCol(headers, ['email', 'email address', 'e-mail', 'contact email', 'gmail']);
-      const useFull  = !dFirst && !dLast && !!dFull;
+      const useFull  = !!dFull;
 
       setFirstNameCol(dFirst); setLastNameCol(dLast); setFullNameCol(dFull);
       setUseFullName(useFull); setCollegeCol(dCollege); setYearCol(dYear); setEmailCol(dEmail);
@@ -487,10 +500,19 @@ export default function AdminImport() {
     }
 
     setImporting(true);
-    const event = events.find(e => e.id === selectedEventId);
-    const pts = event?.points ?? 1;
 
     try {
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('id, name, date, points, academic_term_id')
+        .eq('id', selectedEventId)
+        .single();
+
+      if (eventError) throw eventError;
+      if (!event?.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
+
+      const pts = event.points ?? 1;
+
       // 1. Create new member rows (points/events_attended computed by DB trigger)
       const newNames = toCreate.map(r => {
         const parts = r.displayName.trim().split(/\s+/);
@@ -572,6 +594,8 @@ export default function AdminImport() {
   };
   const totalNewMembers = summary.new + summary.review;
   const selectedEvent = events.find(e => e.id === selectedEventId);
+  const selectedTerm = selectedEvent?.academic_term_id ? terms[selectedEvent.academic_term_id] : undefined;
+  const selectedEventMissingTerm = !!selectedEvent && !selectedEvent.academic_term_id;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -627,14 +651,20 @@ export default function AdminImport() {
                   <option value="">— Select an event —</option>
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>
-                      {ev.name} — {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ({ev.points} pts) {ev.academic_term_id ? `[${terms[ev.academic_term_id] || '...'}]` : ''}
+                      {ev.name} — {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ({ev.points} pts) {ev.academic_term_id ? `[${terms[ev.academic_term_id]?.label || '...'}]` : '[No academic term]'}
                     </option>
                   ))}
                 </select>
-                {selectedEvent && !selectedEvent.academic_term_id && (
-                  <p className="mt-2 text-xs text-amber-600 font-medium">
-                    ⚠️ This event has no academic term assigned. Points will be recorded but won't appear in yearly leaderboards until fixed.
+                {selectedEvent?.academic_term_id && (
+                  <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    This import will count toward {getAcademicYearLabel(selectedTerm)}
+                    {selectedTerm ? ` (${selectedTerm.label}).` : '.'}
                   </p>
+                )}
+                {selectedEventMissingTerm && (
+                  <div className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                    Import blocked: this event has no academic term assigned. Assign a term in Admin Events before importing attendance.
+                  </div>
                 )}
               </div>
 
@@ -655,7 +685,7 @@ export default function AdminImport() {
                 </div>
               )}
 
-              <button onClick={handleFetchCsv} disabled={fetchingCsv}
+              <button onClick={handleFetchCsv} disabled={fetchingCsv || selectedEventMissingTerm}
                 className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 {fetchingCsv
                   ? <><Spinner />Fetching…</>
@@ -734,10 +764,16 @@ export default function AdminImport() {
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     Each matched or new member gets <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.name}</strong>.
                   </p>
-                  {!selectedEvent.academic_term_id && (
-                    <p className="text-xs text-amber-600 font-medium">
-                      ⚠️ Note: Selected event has no academic term. Points will not appear in yearly standings.
+                  {selectedEvent.academic_term_id && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      This import will count toward {getAcademicYearLabel(selectedTerm)}
+                      {selectedTerm ? ` (${selectedTerm.label}).` : '.'}
                     </p>
+                  )}
+                  {selectedEventMissingTerm && (
+                    <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                      Import blocked: this event has no academic term assigned. Assign a term in Admin Events before importing attendance.
+                    </div>
                   )}
                 </div>
               )}
@@ -937,7 +973,7 @@ export default function AdminImport() {
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || (summary.match + totalNewMembers) === 0}
+                  disabled={importing || selectedEventMissingTerm || (summary.match + totalNewMembers) === 0}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
                     text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing
