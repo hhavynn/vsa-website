@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { PageTitle } from '../../components/common/PageTitle';
+import { useAcademicTerms } from '../../hooks/useAcademicTerms';
+import { leaderboardRepository } from '../../data/repos/leaderboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,83 +42,124 @@ function relativeTime(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminPoints() {
+  const { terms, loading: termsLoading } = useAcademicTerms();
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [checkIns, setCheckIns]       = useState<CheckIn[]>([]);
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [eventsThisMonth, setEventsThisMonth] = useState<number>(0);
   const [nextEvent, setNextEvent]     = useState<string | null>(null);
   const [loading, setLoading]         = useState(true);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(() => {
+    return 'all';
+  });
 
+  // Group terms by academic year for the selector
+  const academicYears = useMemo(() => {
+    const years = new Map<number, string>();
+    terms.forEach((term) => {
+      if (!years.has(term.academic_year_start)) {
+        years.set(term.academic_year_start, `${term.academic_year_start}-${term.academic_year_end}`);
+      }
+    });
+    return Array.from(years.entries()).sort((a, b) => b[0] - a[0]);
+  }, [terms]);
+
+  // Set default year to active year or most recent year
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        // Top 10 by points
-        const { data: lb, error: lbErr } = await supabase
-          .from('members')
-          .select('id, first_name, last_name, points, events_attended')
-          .order('points', { ascending: false })
-          .limit(10);
-        if (lbErr) throw lbErr;
-        setLeaderboard((lb ?? []) as LeaderboardRow[]);
+    if (terms.length > 0 && selectedYear === 'all') {
+      const activeTerm = terms.find((t) => t.is_active);
+      if (activeTerm) {
+        setSelectedYear(activeTerm.academic_year_start);
+      } else {
+        setSelectedYear(terms[0].academic_year_start);
+      }
+    }
+  }, [terms, selectedYear]);
 
-        // Total points across all members
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      let lb: LeaderboardRow[] = [];
+      if (selectedYear === 'all') {
+        const data = await leaderboardRepository.getAllTimeLeaderboard();
+        lb = (data ?? []).slice(0, 10) as LeaderboardRow[];
+        
+        // Total points across all members (all-time)
         const { data: totals, error: totErr } = await supabase
           .from('members')
           .select('points');
         if (!totErr && totals) {
           setTotalPoints(totals.reduce((s, m: any) => s + (m.points ?? 0), 0));
         }
+      } else {
+        const data = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+        lb = data.slice(0, 10).map(m => ({
+          id: m.member_id,
+          first_name: m.first_name,
+          last_name: m.last_name,
+          points: m.total_points,
+          events_attended: m.events_attended,
+        }));
 
-        // Events this month + next upcoming
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
-        const monthEnd = new Date(monthStart);
-        monthEnd.setMonth(monthEnd.getMonth() + 1);
-
-        const { data: monthEvents, error: evErr } = await supabase
-          .from('events')
-          .select('name, date')
-          .gte('date', monthStart.toISOString())
-          .lt('date', monthEnd.toISOString())
-          .order('date', { ascending: true });
-        if (!evErr && monthEvents) {
-          setEventsThisMonth(monthEvents.length);
-          const upcoming = (monthEvents as any[]).find(e => new Date(e.date) > new Date());
-          if (upcoming) {
-            const daysAway = Math.ceil((new Date(upcoming.date).getTime() - Date.now()) / 86400000);
-            setNextEvent(`Next: ${upcoming.name} in ${daysAway} day${daysAway !== 1 ? 's' : ''}`);
-          }
-        }
-
-        // Recent check-ins (last 20)
-        const { data: ci, error: ciErr } = await supabase
-          .from('member_event_attendance')
-          .select('member_id, points_earned, members(first_name, last_name), events(name, date)')
-          .order('created_at', { ascending: false })
-          .limit(20);
-        if (!ciErr && ci) {
-          setCheckIns(
-            (ci as any[]).map(row => ({
-              member_id:    row.member_id,
-              member_name:  `${row.members?.first_name ?? ''} ${row.members?.last_name ?? ''}`.trim(),
-              event_name:   row.events?.name ?? '(unknown event)',
-              event_date:   row.events?.date ?? '',
-              points_earned: row.points_earned,
-            }))
-          );
-        }
-      } catch {
-        toast.error('Failed to load points data.');
-      } finally {
-        setLoading(false);
+        // Total points for the year
+        setTotalPoints(data.reduce((s, m) => s + m.total_points, 0));
       }
+      setLeaderboard(lb);
+
+      // Events this month + next upcoming
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+      const { data: monthEvents, error: evErr } = await supabase
+        .from('events')
+        .select('name, date')
+        .gte('date', monthStart.toISOString())
+        .lt('date', monthEnd.toISOString())
+        .order('date', { ascending: true });
+      if (!evErr && monthEvents) {
+        setEventsThisMonth(monthEvents.length);
+        const upcoming = (monthEvents as any[]).find(e => new Date(e.date) > new Date());
+        if (upcoming) {
+          const daysAway = Math.ceil((new Date(upcoming.date).getTime() - Date.now()) / 86400000);
+          setNextEvent(`Next: ${upcoming.name} in ${daysAway} day${daysAway !== 1 ? 's' : ''}`);
+        }
+      }
+
+      // Recent check-ins (last 20)
+      const { data: ci, error: ciErr } = await supabase
+        .from('member_event_attendance')
+        .select('member_id, points_earned, members(first_name, last_name), events(name, date)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (!ciErr && ci) {
+        setCheckIns(
+          (ci as any[]).map(row => ({
+            member_id:    row.member_id,
+            member_name:  `${row.members?.first_name ?? ''} ${row.members?.last_name ?? ''}`.trim(),
+            event_name:   row.events?.name ?? '(unknown event)',
+            event_date:   row.events?.date ?? '',
+            points_earned: row.points_earned,
+          }))
+        );
+      }
+    } catch {
+      toast.error('Failed to load points data.');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  }, [selectedYear]);
+
+  useEffect(() => {
+    if (selectedYear !== 'all' || terms.length > 0) {
+      load();
+    }
+  }, [load, selectedYear, terms.length]);
 
   const topEarner = leaderboard[0];
+  const selectedYearLabel = selectedYear === 'all' ? 'All-Time' : academicYears.find(([y]) => y === selectedYear)?.[1] || '';
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -125,13 +168,33 @@ export default function AdminPoints() {
       <Toaster position="top-right" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Points</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Points distribution and check-in history</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Points</h1>
+            <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Points distribution and check-in history</p>
+          </div>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+            className="h-8 rounded border bg-transparent px-2 font-sans text-xs font-medium outline-none transition-colors hover:border-zinc-400 focus:border-zinc-500"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+          >
+            <option value="all">All-Time</option>
+            {academicYears.map(([year, label]) => (
+              <option key={year} value={year}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div style={{ padding: '20px 28px' }}>
 
-        {loading ? (
+        {loading && termsLoading ? (
           <div className="py-20 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>Loading...</div>
         ) : (
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_288px] items-start">
@@ -141,7 +204,9 @@ export default function AdminPoints() {
               <div className="grid gap-4 mb-8 md:grid-cols-3">
                 {/* Total Points */}
                 <div className="border rounded-md px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Total Points Distributed</p>
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                    Total Points ({selectedYearLabel})
+                  </p>
                   <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{totalPoints.toLocaleString()}</p>
                 </div>
 
@@ -157,7 +222,7 @@ export default function AdminPoints() {
                         <p className="font-sans text-[20px] font-semibold leading-tight" style={{ color: 'var(--color-text)' }}>
                           {topEarner.first_name} {topEarner.last_name}
                         </p>
-                        <p className="text-[12px]" style={{ color: 'var(--color-text2)' }}>{topEarner.points} pts total</p>
+                        <p className="text-[12px]" style={{ color: 'var(--color-text2)' }}>{topEarner.points} pts {selectedYear === 'all' ? 'total' : 'this year'}</p>
                       </div>
                     </div>
                   ) : (
@@ -175,14 +240,16 @@ export default function AdminPoints() {
 
               {/* LEADERBOARD TABLE */}
               <div className="mb-8">
-                <p className="mb-3 text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>Top 10 Leaderboard</p>
+                <p className="mb-3 text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>
+                  Top 10 Standings ({selectedYearLabel})
+                </p>
                 <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
                   <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                         <th className="w-16 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Rank</th>
                         <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Name</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Total Pts</th>
+                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Points</th>
                         <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Events</th>
                       </tr>
                     </thead>
@@ -221,7 +288,7 @@ export default function AdminPoints() {
                       })}
                       {leaderboard.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>No data yet.</td>
+                          <td colSpan={4} className="px-4 py-8 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>No data yet for this year.</td>
                         </tr>
                       )}
                     </tbody>
