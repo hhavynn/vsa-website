@@ -1,40 +1,150 @@
+import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { PageLoader } from '../components/common/PageLoader';
+import { PageError } from '../components/common/PageError';
 import { Label } from '../components/ui/Label';
+import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
+import { VCNArchive as VCNArchiveEntry } from '../types';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VCN ARCHIVE DATA — Add a new entry each year after the show.
-// Entries are displayed newest-first. All fields are optional except year/title.
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface VCNArchiveEntry {
-  year: string;
-  title: string;
-  synopsis?: string;
-  posterUrl?: string;
-  trailerUrl?: string;
-  dances?: string[];
-  sponsors?: string[];
-  note?: string;
+function formatArchiveDate(date: string | null) {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return format(parsed, 'MMMM d, yyyy');
 }
 
-const VCN_ARCHIVE: VCNArchiveEntry[] = [
-  // Add each completed year below — most recent year first.
-  // {
-  //   year: '2025',
-  //   title: 'Example Title',
-  //   synopsis: 'A short story synopsis for the archive.',
-  //   trailerUrl: 'https://www.youtube.com/embed/VIDEO_ID',
-  //   posterUrl: 'https://example.com/poster.jpg',
-  //   dances: ['Dance One', 'Dance Two', 'Dance Three'],
-  //   sponsors: ['Sponsor A', 'Sponsor B'],
-  //   note: 'Sold out in under 24 hours.',
-  // },
-];
+function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
+  const eventDate = formatArchiveDate(entry.event_date);
+  const title = entry.title || `Vietnamese Culture Night ${entry.year}`;
+  const hasMedia = !!entry.video_url || !!entry.photo_album_url;
 
-// ─────────────────────────────────────────────────────────────────────────────
+  return (
+    <article className="overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="relative min-h-[220px] border-b lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+          {entry.cover_image_url ? (
+            <img src={entry.cover_image_url} alt={`${title} cover`} className="h-full min-h-[220px] w-full object-cover" loading="lazy" />
+          ) : (
+            <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
+              <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                UCSD VSA
+              </div>
+              <div>
+                <div className="font-serif text-[58px] leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
+                  {entry.year}
+                </div>
+                <div className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                  Vietnamese Culture Night
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col p-5 sm:p-6">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+              VCN {entry.year}
+            </span>
+            {entry.annual_number && (
+              <span className="rounded-sm border px-2 py-0.5 font-sans text-[11px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                {entry.annual_number}
+              </span>
+            )}
+            {entry.is_featured && (
+              <span className="rounded-sm border px-2 py-0.5 font-sans text-[11px] text-brand-600 dark:text-brand-400" style={{ borderColor: 'var(--color-border)' }}>
+                Featured
+              </span>
+            )}
+          </div>
+
+          <h2 className="font-serif text-[26px] italic leading-[1.12] tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
+            {title}
+          </h2>
+
+          {(eventDate || entry.venue || entry.theme_name) && (
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+              {eventDate && <span>{eventDate}</span>}
+              {entry.venue && <span>{entry.venue}</span>}
+              {entry.theme_name && <span>{entry.theme_name}</span>}
+            </div>
+          )}
+
+          {entry.description && (
+            <p className="mt-4 font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
+              {entry.description}
+            </p>
+          )}
+
+          {hasMedia && (
+            <div className="mt-5 flex flex-wrap gap-3">
+              {entry.video_url && (
+                <a
+                  href={entry.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-sans text-sm font-medium px-4 py-2 rounded"
+                  style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+                >
+                  Watch Video
+                </a>
+              )}
+              {entry.photo_album_url && (
+                <a
+                  href={entry.photo_album_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-sans text-sm px-4 py-2 rounded border"
+                  style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}
+                >
+                  View Photo Album
+                </a>
+              )}
+            </div>
+          )}
+
+          {(entry.album_source || entry.photo_credit) && entry.photo_album_url && (
+            <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
+              {entry.album_source && (
+                <p className="font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  Album source: {entry.album_source}
+                </p>
+              )}
+              {entry.photo_credit && (
+                <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                  {entry.photo_credit}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function VCNArchive() {
+  const { archives, loading, error } = usePublishedVcnArchives();
+
+  if (loading) {
+    return (
+      <>
+        <PageTitle title="VCN Archive" />
+        <PageLoader message="Loading VCN archive..." />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageTitle title="VCN Archive" />
+        <PageError message="Failed to load VCN archive" />
+      </>
+    );
+  }
+
   return (
     <>
       <PageTitle title="VCN Archive" />
@@ -47,15 +157,15 @@ export function VCNArchive() {
         </div>
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>VCN Archive</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Past productions — every year a new story, a new cast, a new chapter.
+          Past productions, preserved through official videos, albums, and production notes.
         </p>
       </div>
 
       <div style={{ padding: '40px 52px' }}>
-        {VCN_ARCHIVE.length === 0 ? (
+        {archives.length === 0 ? (
           <div className="border rounded py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
             <p className="font-sans text-sm mb-4" style={{ color: 'var(--color-text3)' }}>
-              Archive entries will appear here after each production year.
+              Published archive entries will appear here after they are approved.
             </p>
             <Link
               to="/vcn/current"
@@ -65,64 +175,17 @@ export function VCNArchive() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
-            {VCN_ARCHIVE.map((entry) => (
-              <div key={entry.year} className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="border-b" style={{ padding: '16px 20px', background: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
-                  <div className="font-mono text-[10px] tracking-[.04em] mb-0.5" style={{ color: 'var(--color-text3)' }}>VCN {entry.year}</div>
-                  <h2 className="font-serif tracking-[-0.02em] italic" style={{ fontSize: 22, color: 'var(--color-text)' }}>{entry.title}</h2>
-                  {entry.note && (
-                    <p className="font-sans text-xs mt-1 italic" style={{ color: 'var(--color-text3)' }}>{entry.note}</p>
-                  )}
-                </div>
-
-                <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: entry.posterUrl || entry.trailerUrl ? '1fr 1fr' : '1fr', gap: 20, background: 'var(--color-surface)' }}>
-                  {(entry.posterUrl || entry.trailerUrl) && (
-                    <div>
-                      {entry.trailerUrl ? (
-                        <div className="border rounded overflow-hidden aspect-video" style={{ borderColor: 'var(--color-border)' }}>
-                          <iframe src={entry.trailerUrl} title={`VCN ${entry.year} trailer`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                        </div>
-                      ) : entry.posterUrl ? (
-                        <img src={entry.posterUrl} alt={`VCN ${entry.year} poster`} className="border rounded w-full object-cover" style={{ borderColor: 'var(--color-border)' }} />
-                      ) : null}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {entry.synopsis && (
-                      <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>{entry.synopsis}</p>
-                    )}
-
-                    {entry.dances && entry.dances.length > 0 && (
-                      <div>
-                        <Label className="mb-2">Dances</Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.dances.map((d) => (
-                            <span key={d} className="font-sans text-xs border rounded-sm px-2 py-0.5" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>{d}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {entry.sponsors && entry.sponsors.length > 0 && (
-                      <div>
-                        <Label className="mb-2">Sponsors</Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.sponsors.map((s) => (
-                            <span key={s} className="font-sans text-xs border rounded-sm px-2 py-0.5" style={{ color: 'var(--color-text3)', borderColor: 'var(--color-border)' }}>{s}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-6">
+            <Label>{archives.length} Published Productions</Label>
+            <div className="flex flex-col gap-6">
+              {archives.map((entry) => (
+                <ArchiveCard key={entry.id} entry={entry} />
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="border-t pt-6 mt-8 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="border-t pt-6 mt-8 flex flex-wrap gap-3" style={{ borderColor: 'var(--color-border)' }}>
           <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             This Year's Show →
           </Link>

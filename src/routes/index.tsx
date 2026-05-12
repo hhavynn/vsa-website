@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
-import { Routes as RouterRoutes, Route } from "react-router-dom";
+import { Routes as RouterRoutes, Route, Navigate } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
-import { ProtectedRoute } from "./ProtectedRoute";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
@@ -21,9 +20,6 @@ const Leaderboard = lazy(() =>
     default: module.Leaderboard,
   }))
 );
-const Profile = lazy(() =>
-  import("../pages/Profile").then((module) => ({ default: module.Profile }))
-);
 const Cabinet = lazy(() =>
   import("../pages/Cabinet").then((module) => ({ default: module.Cabinet }))
 );
@@ -33,7 +29,6 @@ const GetInvolved = lazy(() =>
   }))
 );
 const Gallery = lazy(() => import("../pages/Gallery"));
-const Points = lazy(() => import("../pages/Points"));
 const Ace = lazy(() =>
   import("../pages/Ace").then((module) => ({ default: module.Ace }))
 );
@@ -59,14 +54,17 @@ const WildNCulture = lazy(() =>
     default: module.WildNCulture,
   }))
 );
-const Feedback = lazy(() =>
-  import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
+const MemberAccountsUnavailable = lazy(() =>
+  import("../pages/MemberAccountsUnavailable").then((module) => ({
+    default: module.MemberAccountsUnavailable,
+  }))
 );
 
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
 const AdminContent = lazy(() => import("../pages/Admin/Content"));
 const AdminGallery = lazy(() => import("../pages/Admin/Gallery"));
+const AdminVcnArchives = lazy(() => import("../pages/Admin/VcnArchives"));
 const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
@@ -112,14 +110,13 @@ export default function AppRoutes() {
               <Route path="/vcn/current" element={<VcnCurrent />} />
               <Route path="/vcn/archive" element={<VcnArchive />} />
               <Route path="/wild-n-culture" element={<WildNCulture />} />
-              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signin" element={<Navigate to="/admin/login" replace />} />
+              <Route path="/admin/login" element={<SignIn />} />
 
-              {/* Member Routes - require authentication */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/points" element={<Points />} />
-                <Route path="/feedback" element={<Feedback />} />
-              </Route>
+              {/* Member account routes are intentionally parked for this release. */}
+              <Route path="/profile" element={<MemberAccountsUnavailable />} />
+              <Route path="/points" element={<MemberAccountsUnavailable />} />
+              <Route path="/feedback" element={<MemberAccountsUnavailable />} />
 
               {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}
               <Route element={<AdminRoute />}>
@@ -128,6 +125,7 @@ export default function AppRoutes() {
                   <Route path="/admin/content" element={<AdminContent />} />
                   <Route path="/admin/events" element={<AdminEvents />} />
                   <Route path="/admin/gallery" element={<AdminGallery />} />
+                  <Route path="/admin/vcn" element={<AdminVcnArchives />} />
                   <Route path="/admin/feedback" element={<AdminFeedback />} />
                   <Route path="/admin/import" element={<AdminImport />} />
                   <Route path="/admin/members" element={<AdminMembers />} />

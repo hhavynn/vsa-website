@@ -10,6 +10,7 @@ const NAV_GROUPS = [
   ]},
   { group: 'Content', items: [
     { to: '/admin/cabinet',           label: 'Cabinet' },
+    { to: '/admin/vcn',               label: 'VCN Archives' },
     { to: '/admin/gallery',           label: 'Gallery' },
     { to: '/admin/content',           label: 'Content' },
     { to: '/admin/years',             label: 'Years & Terms' },
