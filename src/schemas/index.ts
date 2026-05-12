@@ -13,6 +13,7 @@ export const EventSchema = z.object({
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   check_in_code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters').optional(),
   is_code_expired: z.boolean().default(false),
+  academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
 
 export const CreateEventSchema = EventSchema.omit({ id: true });
@@ -69,6 +70,7 @@ export const AdminEventUpdateSchema = z.object({
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   check_in_code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters').optional(),
   is_code_expired: z.boolean().optional(),
+  academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
 
 // Type exports for TypeScript

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { supabase } from '../lib/supabase';
+import { useCabinetYears } from '../hooks/useCabinetYears';
+import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
 
 interface CabinetMember {
   id: string;
@@ -17,6 +19,7 @@ interface CabinetMember {
   pronouns: string | null;
   favorite_snack: string | null;
   fun_fact: string | null;
+  cabinet_year_id: string | null;
 }
 
 const publicUrl = process.env.PUBLIC_URL || '';
@@ -360,8 +363,10 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
 }
 
 export function Cabinet() {
+  const { cabinetYears } = useCabinetYears();
   const [members, setMembers] = useState<CabinetMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCabinetYearId, setSelectedCabinetYearId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -375,10 +380,44 @@ export function Cabinet() {
       });
   }, []);
 
-  const execBoard = members.filter((member) => member.category === 'Executive Board');
-  const genBoard = members.filter((member) => member.category === 'General Board');
-  const interns = members.filter((member) => member.category === 'Interns');
-  const other = members.filter(
+  const cabinetYearsWithMembers = useMemo(
+    () => cabinetYears.filter((year) => members.some((member) => member.cabinet_year_id === year.id)),
+    [cabinetYears, members]
+  );
+  const currentCabinetYear =
+    cabinetYears.find((year) => year.is_active) ??
+    cabinetYearsWithMembers[0] ??
+    getCurrentCabinetYear(cabinetYears);
+  const publicCabinetYears = useMemo(
+    () => {
+      const visibleYearIds = new Set(cabinetYearsWithMembers.map((year) => year.id));
+      if (currentCabinetYear) visibleYearIds.add(currentCabinetYear.id);
+      return cabinetYears.filter((year) => visibleYearIds.has(year.id));
+    },
+    [cabinetYears, cabinetYearsWithMembers, currentCabinetYear]
+  );
+  const effectiveCabinetYearId =
+    selectedCabinetYearId && publicCabinetYears.some((year) => year.id === selectedCabinetYearId)
+      ? selectedCabinetYearId
+      : currentCabinetYear?.id ?? publicCabinetYears[0]?.id ?? null;
+  const selectedCabinetYear =
+    publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
+  const visibleMembers = useMemo(
+    () => {
+      if (!effectiveCabinetYearId) return members;
+      return members.filter(
+        (member) =>
+          member.cabinet_year_id === effectiveCabinetYearId ||
+          (!member.cabinet_year_id && currentCabinetYear?.id === effectiveCabinetYearId)
+      );
+    },
+    [members, effectiveCabinetYearId, currentCabinetYear?.id]
+  );
+
+  const execBoard = visibleMembers.filter((member) => member.category === 'Executive Board');
+  const genBoard = visibleMembers.filter((member) => member.category === 'General Board');
+  const interns = visibleMembers.filter((member) => member.category === 'Interns');
+  const other = visibleMembers.filter(
     (member) => !['Executive Board', 'General Board', 'Interns'].includes(member.category),
   );
 
@@ -396,15 +435,44 @@ export function Cabinet() {
           <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_320px] lg:items-end">
             <div>
               <h1 className="vsa-page-title">
-                Cabinet <em>2025-26</em>
+                Cabinet <em>{formatCabinetYearRange(selectedCabinetYear)}</em>
               </h1>
               <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed sm:text-[15px]" style={{ color: 'var(--text2)' }}>
                 The team behind VSA at UCSD. Meet the people planning events, building community,
                 producing programs, and shaping the year from the inside out.
               </p>
               <p className="mt-3 font-sans text-xs uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
-                2025-2026 / Mi Xao Moggers / {members.length} members
+                {selectedCabinetYear?.label ?? 'Current Cabinet'}
+                {selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''}
+                {' / '}
+                {visibleMembers.length} members
               </p>
+              {publicCabinetYears.length > 0 && (
+                <div className="mt-5 max-w-xs">
+                  <label
+                    className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]"
+                    style={{ color: 'var(--color-text3)' }}
+                  >
+                    Cabinet Year
+                  </label>
+                  <select
+                    value={effectiveCabinetYearId ?? ''}
+                    onChange={(event) => setSelectedCabinetYearId(event.target.value || null)}
+                    className="w-full rounded border px-3 py-2 font-sans text-sm"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      background: 'var(--color-surface)',
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    {publicCabinetYears.map((year) => (
+                      <option key={year.id} value={year.id}>
+                        {year.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -420,14 +488,16 @@ export function Cabinet() {
         <div className="flex justify-center px-5 py-24 sm:px-8 lg:px-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-brand-600" />
         </div>
-      ) : members.length === 0 ? (
+      ) : members.length === 0 || visibleMembers.length === 0 ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
           <div
             className="rounded-md border p-12 text-center"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
           >
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-              Cabinet information is being updated. Check back soon.
+              {members.length === 0
+                ? 'Cabinet information is being updated. Check back soon.'
+                : `No cabinet members are listed for ${selectedCabinetYear?.label ?? 'this cabinet year'} yet.`}
             </p>
           </div>
         </div>

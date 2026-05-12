@@ -1,209 +1,165 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export type SiteEventType =
+  | 'gbm'
+  | 'mixer'
+  | 'winter_retreat'
+  | 'vcn'
+  | 'wildn_culture'
+  | 'external_event'
+  | 'other';
+
+export type CheckInCodeEventType =
+  | 'general_event'
+  | 'wildn_culture'
+  | 'vcn_dance_practice'
+  | 'vcn_attendance';
+
+export type AcademicQuarter = 'fall' | 'winter' | 'spring' | 'summer';
+
 export interface Database {
   public: {
     Tables: {
-      events: {
+      academic_terms: {
+        Row: {
+          id: string;
+          code: string;
+          label: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          quarter: AcademicQuarter;
+          starts_on: string | null;
+          ends_on: string | null;
+          is_active: boolean;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          label: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          quarter: AcademicQuarter;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          is_active?: boolean;
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          label?: string;
+          academic_year_start?: number;
+          academic_year_end?: number;
+          quarter?: AcademicQuarter;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          is_active?: boolean;
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      cabinet_years: {
+        Row: {
+          id: string;
+          label: string;
+          slug: string;
+          start_year: number;
+          end_year: number;
+          theme_name: string | null;
+          is_active: boolean;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          label: string;
+          slug: string;
+          start_year: number;
+          end_year: number;
+          theme_name?: string | null;
+          is_active?: boolean;
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          label?: string;
+          slug?: string;
+          start_year?: number;
+          end_year?: number;
+          theme_name?: string | null;
+          is_active?: boolean;
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      cabinet_members: {
         Row: {
           id: string;
           name: string;
-          description: string;
-          date: string;
-          location: string;
-          points: number;
-          event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
-          check_in_form_url: string;
-          image_url?: string;
-          check_in_code?: string;
-          is_code_expired: boolean;
+          role: string;
+          category: string;
+          display_order: number;
+          image_url: string | null;
+          year: string | null;
+          college: string | null;
+          major: string | null;
+          minor: string | null;
+          pronouns: string | null;
+          favorite_snack: string | null;
+          fun_fact: string | null;
+          cabinet_year_id: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          description: string;
-          date: string;
-          location: string;
-          points: number;
-          event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
-          check_in_form_url: string;
-          image_url?: string;
-          check_in_code?: string;
-          is_code_expired?: boolean;
+          role: string;
+          category: string;
+          display_order?: number;
+          image_url?: string | null;
+          year?: string | null;
+          college?: string | null;
+          major?: string | null;
+          minor?: string | null;
+          pronouns?: string | null;
+          favorite_snack?: string | null;
+          fun_fact?: string | null;
+          cabinet_year_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
-          description?: string;
-          date?: string;
-          location?: string;
-          points?: number;
-          event_type?: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
-          check_in_form_url?: string;
-          image_url?: string;
-          check_in_code?: string;
-          is_code_expired?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      event_attendance: {
-        Row: {
-          id: string;
-          event_id: string;
-          user_id: string;
-          points_earned: number;
-          check_in_type: 'code' | 'manual';
-          checked_in_by?: string;
-          checked_in_at: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          event_id: string;
-          user_id: string;
-          points_earned: number;
-          check_in_type: 'code' | 'manual';
-          checked_in_by?: string;
-          checked_in_at?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          event_id?: string;
-          user_id?: string;
-          points_earned?: number;
-          check_in_type?: 'code' | 'manual';
-          checked_in_by?: string;
-          checked_in_at?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      user_profiles: {
-        Row: {
-          id: string;
-          email: string;
-          first_name: string;
-          last_name: string;
-          is_admin: boolean;
-          avatar_url?: string;
-          college?: string;
-          year?: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id: string;
-          email: string;
-          first_name: string;
-          last_name: string;
-          is_admin?: boolean;
-          avatar_url?: string;
-          college?: string;
-          year?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          first_name?: string;
-          last_name?: string;
-          is_admin?: boolean;
-          avatar_url?: string;
-          college?: string;
-          year?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      user_points: {
-        Row: {
-          id: string;
-          user_id: string;
-          total_points: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          total_points?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          total_points?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      feedback: {
-        Row: {
-          id: string;
-          user_id: string;
-          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
-          title: string;
-          description: string;
-          priority: 'low' | 'medium' | 'high';
-          status: 'open' | 'in_progress' | 'closed';
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
-          title: string;
-          description: string;
-          priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'in_progress' | 'closed';
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          type?: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
-          title?: string;
-          description?: string;
-          priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'in_progress' | 'closed';
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      homepage_content: {
-        Row: {
-          id: string;
-          presidents_names: string;
-          presidents_role: string;
-          presidents_message: string;
-          presidents_photo_url: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id: string;
-          presidents_names: string;
-          presidents_role: string;
-          presidents_message: string;
-          presidents_photo_url?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          presidents_names?: string;
-          presidents_role?: string;
-          presidents_message?: string;
-          presidents_photo_url?: string | null;
+          role?: string;
+          category?: string;
+          display_order?: number;
+          image_url?: string | null;
+          year?: string | null;
+          college?: string | null;
+          major?: string | null;
+          minor?: string | null;
+          pronouns?: string | null;
+          favorite_snack?: string | null;
+          fun_fact?: string | null;
+          cabinet_year_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -237,12 +193,436 @@ export interface Database {
           updated_at?: string;
         };
       };
+      check_in_codes: {
+        Row: {
+          id: string;
+          code: string;
+          event_id: string | null;
+          event_type: CheckInCodeEventType | null;
+          points: number | null;
+          is_used: boolean | null;
+          used_by: string | null;
+          used_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          expires_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          event_id?: string | null;
+          event_type?: CheckInCodeEventType | null;
+          points?: number | null;
+          is_used?: boolean | null;
+          used_by?: string | null;
+          used_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          event_id?: string | null;
+          event_type?: CheckInCodeEventType | null;
+          points?: number | null;
+          is_used?: boolean | null;
+          used_by?: string | null;
+          used_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+        };
+      };
+      event_attendance: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          points_earned: number;
+          check_in_type: 'code' | 'manual';
+          checked_in_by: string | null;
+          checked_in_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          user_id: string;
+          points_earned?: number;
+          check_in_type?: 'code' | 'manual';
+          checked_in_by?: string | null;
+          checked_in_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          points_earned?: number;
+          check_in_type?: 'code' | 'manual';
+          checked_in_by?: string | null;
+          checked_in_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      events: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          date: string;
+          location: string;
+          points: number;
+          event_type: SiteEventType;
+          check_in_form_url: string;
+          image_url: string | null;
+          check_in_code: string | null;
+          is_code_expired: boolean;
+          academic_term_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description: string;
+          date: string;
+          location: string;
+          points?: number;
+          event_type?: SiteEventType;
+          check_in_form_url?: string;
+          image_url?: string | null;
+          check_in_code?: string | null;
+          is_code_expired?: boolean;
+          academic_term_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          date?: string;
+          location?: string;
+          points?: number;
+          event_type?: SiteEventType;
+          check_in_form_url?: string;
+          image_url?: string | null;
+          check_in_code?: string | null;
+          is_code_expired?: boolean;
+          academic_term_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          title: string;
+          description: string;
+          priority: 'low' | 'medium' | 'high';
+          status: 'open' | 'pending' | 'in_progress' | 'closed';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          title: string;
+          description: string;
+          priority?: 'low' | 'medium' | 'high';
+          status?: 'open' | 'pending' | 'in_progress' | 'closed';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          title?: string;
+          description?: string;
+          priority?: 'low' | 'medium' | 'high';
+          status?: 'open' | 'pending' | 'in_progress' | 'closed';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      gallery_events: {
+        Row: {
+          id: string;
+          name: string;
+          title: string;
+          description: string | null;
+          date: string;
+          images: string[];
+          google_photos_url: string | null;
+          cover_image_url: string | null;
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          title?: string;
+          description?: string | null;
+          date: string;
+          images?: string[];
+          google_photos_url?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          title?: string;
+          description?: string | null;
+          date?: string;
+          images?: string[];
+          google_photos_url?: string | null;
+          cover_image_url?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+      };
+      homepage_content: {
+        Row: {
+          id: string;
+          presidents_names: string;
+          presidents_role: string;
+          presidents_message: string;
+          presidents_photo_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          presidents_names: string;
+          presidents_role: string;
+          presidents_message: string;
+          presidents_photo_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          presidents_names?: string;
+          presidents_role?: string;
+          presidents_message?: string;
+          presidents_photo_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      member_event_attendance: {
+        Row: {
+          id: string;
+          member_id: string;
+          event_id: string;
+          points_earned: number;
+          imported_at: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          member_id: string;
+          event_id: string;
+          points_earned?: number;
+          imported_at?: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          member_id?: string;
+          event_id?: string;
+          points_earned?: number;
+          imported_at?: string;
+          created_at?: string | null;
+        };
+      };
+      members: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          college: string | null;
+          year: string | null;
+          email: string | null;
+          points: number;
+          events_attended: number;
+          user_id: string | null;
+          needs_review: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name: string;
+          last_name: string;
+          college?: string | null;
+          year?: string | null;
+          email?: string | null;
+          points?: number;
+          events_attended?: number;
+          user_id?: string | null;
+          needs_review?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          college?: string | null;
+          year?: string | null;
+          email?: string | null;
+          points?: number;
+          events_attended?: number;
+          user_id?: string | null;
+          needs_review?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      merge_exclusions: {
+        Row: {
+          target_id: string;
+          source_id: string;
+          created_at: string;
+        };
+        Insert: {
+          target_id: string;
+          source_id: string;
+          created_at?: string;
+        };
+        Update: {
+          target_id?: string;
+          source_id?: string;
+          created_at?: string;
+        };
+      };
+      site_settings: {
+        Row: {
+          id: string;
+          logo_url: string | null;
+          logo_alt: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          logo_url?: string | null;
+          logo_alt?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          logo_url?: string | null;
+          logo_alt?: string;
+          updated_at?: string;
+        };
+      };
+      user_points: {
+        Row: {
+          id: string;
+          user_id: string;
+          total_points: number;
+          points: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          total_points?: number;
+          points?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          total_points?: number;
+          points?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      user_profiles: {
+        Row: {
+          id: string;
+          email: string;
+          first_name: string;
+          last_name: string;
+          is_admin: boolean;
+          avatar_url: string | null;
+          college: string | null;
+          year: string | null;
+          discord_user_id: string | null;
+          discord_username: string | null;
+          discord_avatar_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          first_name?: string;
+          last_name?: string;
+          is_admin?: boolean;
+          avatar_url?: string | null;
+          college?: string | null;
+          year?: string | null;
+          discord_user_id?: string | null;
+          discord_username?: string | null;
+          discord_avatar_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          first_name?: string;
+          last_name?: string;
+          is_admin?: boolean;
+          avatar_url?: string | null;
+          college?: string | null;
+          year?: string | null;
+          discord_user_id?: string | null;
+          discord_username?: string | null;
+          discord_avatar_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      create_events_table: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      get_event_points: {
+        Args: {
+          event_type: CheckInCodeEventType;
+        };
+        Returns: number;
+      };
+      smart_merge_members: {
+        Args: {
+          p_source_id: string;
+          p_target_id: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       [_ in never]: never;

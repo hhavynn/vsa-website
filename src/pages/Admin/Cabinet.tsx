@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
+import { useCabinetYears } from '../../hooks/useCabinetYears';
+import { getCurrentCabinetYear } from '../../lib/cabinetYears';
+import { CabinetYear } from '../../types';
 
 interface CabinetMember {
   id: string;
@@ -18,6 +21,7 @@ interface CabinetMember {
   pronouns: string | null;
   favorite_snack: string | null;
   fun_fact: string | null;
+  cabinet_year_id: string | null;
 }
 
 const CATEGORIES = ['Executive Board', 'General Board', 'Interns'];
@@ -34,6 +38,7 @@ const EMPTY_MEMBER: Partial<CabinetMember> = {
   pronouns: '',
   favorite_snack: '',
   fun_fact: '',
+  cabinet_year_id: null,
 };
 
 const MIGRATION_DATA = [
@@ -71,13 +76,77 @@ const MIGRATION_DATA = [
   { name: 'Hailie Cheng', role: 'Intern', category: 'Interns', image: 'https://drive.google.com/uc?id=1trhJaQx_NUHJLdDUAop4KmgCO8vvWyI6', year: '2nd Year', college: 'Seventh College', major: 'Public Health with Concentration in Medicine Sciences', funFact: 'Met Daniela from KATSEYE at a VSA event last month' },
 ];
 
+const ROLE_SUGGESTIONS = ['Historian', 'Public Relations Chair'];
+
 const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
 const labelCls = 'block text-xs font-medium text-zinc-400 uppercase tracking-label';
 
+function CabinetYearSelect({
+  value,
+  cabinetYears,
+  currentCabinetYear,
+  loading,
+  error,
+  onChange,
+}: {
+  value?: string | null;
+  cabinetYears: CabinetYear[];
+  currentCabinetYear: CabinetYear | null;
+  loading: boolean;
+  error: unknown;
+  onChange: (cabinetYearId: string | null) => void;
+}) {
+  const selectedYear = value ? cabinetYears.find((year) => year.id === value) : null;
+  const helperText = selectedYear
+    ? `Assigned to ${selectedYear.label}.`
+    : currentCabinetYear
+      ? `Defaults to active year: ${currentCabinetYear.label}.`
+      : 'No active cabinet year is available yet.';
+  const yearOptions = [
+    <option key="default" value="">
+      {loading ? 'Loading years...' : 'Use active cabinet year'}
+    </option>,
+    ...cabinetYears.map((year) => (
+      <option key={year.id} value={year.id}>
+        {year.label}
+      </option>
+    )),
+  ];
+  const children = [
+    <label key="label" className={labelCls}>Cabinet Year</label>,
+    <select
+      key="select"
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      className={inputCls}
+    >
+      {yearOptions}
+    </select>,
+    <p key="helper" className="mt-1 text-xs text-zinc-500">
+      {helperText}
+    </p>,
+  ];
+
+  if (error) {
+    children.push(
+      <p key="error" className="mt-1 text-xs text-amber-500">
+        Cabinet years could not be loaded. Existing cabinet member fields can still be edited.
+      </p>
+    );
+  }
+
+  return <div>{children}</div>;
+}
+
 export default function AdminCabinet() {
+  const { cabinetYears, loading: yearsLoading, error: yearsError } = useCabinetYears();
+  const currentCabinetYear = getCurrentCabinetYear(cabinetYears);
   const [members, setMembers] = useState<CabinetMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('manage');
+
+  // Which cabinet year the admin is currently editing
+  const [selectedAdminYearId, setSelectedAdminYearId] = useState<string | null>(null);
 
   const [selectedMember, setSelectedMember] = useState<CabinetMember | null>(null);
   const [newMember, setNewMember] = useState<Partial<CabinetMember>>(EMPTY_MEMBER);
@@ -90,6 +159,46 @@ export default function AdminCabinet() {
 
   const [uploading, setUploading] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<CabinetMember | null>(null);
+
+  // Once cabinet years load, default to the active/most-recent year
+  useEffect(() => {
+    if (selectedAdminYearId === null && cabinetYears.length > 0) {
+      const defaultYear = currentCabinetYear ?? cabinetYears[0];
+      setSelectedAdminYearId(defaultYear?.id ?? null);
+    }
+  }, [cabinetYears, currentCabinetYear, selectedAdminYearId]);
+
+  // Keep new-member cabinet_year_id in sync with the selected admin year
+  useEffect(() => {
+    setNewMember(prev => ({ ...prev, cabinet_year_id: selectedAdminYearId }));
+  }, [selectedAdminYearId]);
+
+  const selectedAdminYear = cabinetYears.find(y => y.id === selectedAdminYearId) ?? null;
+
+  // Members visible in the manage tab: only those belonging to the selected year.
+  // Null-year members are shown alongside the current/active year (matching public page behaviour).
+  const filteredMembers = useMemo(() => {
+    if (!selectedAdminYearId) return members;
+    return members.filter(m =>
+      m.cabinet_year_id === selectedAdminYearId ||
+      (!m.cabinet_year_id && selectedAdminYearId === currentCabinetYear?.id)
+    );
+  }, [members, selectedAdminYearId, currentCabinetYear?.id]);
+
+  // When saving, fall back to the currently selected admin year if no year was explicitly chosen
+  const resolveCabinetYearId = (cabinetYearId?: string | null) =>
+    cabinetYearId || selectedAdminYearId || currentCabinetYear?.id || null;
+
+  const getMemberCabinetYearId = (member: CabinetMember) =>
+    member.cabinet_year_id || currentCabinetYear?.id || null;
+
+  const getCabinetYearLabel = (cabinetYearId?: string | null) => {
+    const year = cabinetYearId ? cabinetYears.find((item) => item.id === cabinetYearId) : currentCabinetYear;
+    return year?.label ?? 'Unassigned year';
+  };
+  const roleSuggestions = Array.from(
+    new Set([...filteredMembers.map((member) => member.role), ...ROLE_SUGGESTIONS])
+  ).filter(Boolean).sort((a, b) => a.localeCompare(b));
 
   const fetchMembers = async () => {
     try {
@@ -130,6 +239,7 @@ export default function AdminCabinet() {
           college: mem.college || null,
           major: mem.major || null,
           fun_fact: mem.funFact || null,
+          cabinet_year_id: resolveCabinetYearId(null),
         }]);
       }
       toast.success('Migration complete!', { id: 'migrate' });
@@ -197,6 +307,7 @@ export default function AdminCabinet() {
       const { error } = await supabase.from('cabinet_members').insert([{
         ...newMember,
         image_url: imageUrl,
+        cabinet_year_id: resolveCabinetYearId(newMember.cabinet_year_id),
       }]);
 
       if (error) throw error;
@@ -239,6 +350,7 @@ export default function AdminCabinet() {
         favorite_snack: selectedMember.favorite_snack,
         fun_fact: selectedMember.fun_fact,
         image_url: imageUrl,
+        cabinet_year_id: resolveCabinetYearId(selectedMember.cabinet_year_id),
       }).eq('id', selectedMember.id);
 
       if (error) throw error;
@@ -272,7 +384,7 @@ export default function AdminCabinet() {
   };
 
   const moveMember = async (member: CabinetMember, direction: 'up' | 'down') => {
-    const categoryMembers = members.filter(m => m.category === member.category);
+    const categoryMembers = filteredMembers.filter(m => m.category === member.category);
     const currentIndex = categoryMembers.findIndex(m => m.id === member.id);
 
     if (direction === 'up' && currentIndex > 0) {
@@ -308,6 +420,44 @@ export default function AdminCabinet() {
         </div>
       </div>
 
+      {/* Cabinet year selector */}
+      <div className="border-b flex items-center gap-4 flex-wrap" style={{ padding: '12px 28px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <span className="font-sans text-xs font-semibold uppercase tracking-[0.07em]" style={{ color: 'var(--color-text3)', whiteSpace: 'nowrap' }}>
+          Cabinet Year
+        </span>
+        {yearsLoading ? (
+          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Loading years…</span>
+        ) : cabinetYears.length === 0 ? (
+          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>No cabinet years configured</span>
+        ) : (
+          <div className="flex items-center gap-3 flex-wrap">
+            <select
+              value={selectedAdminYearId ?? ''}
+              onChange={e => setSelectedAdminYearId(e.target.value || null)}
+              className="font-sans text-sm rounded border px-3 py-1.5"
+              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+            >
+              {cabinetYears.map(year => (
+                <option key={year.id} value={year.id}>
+                  {year.label}{year.is_active ? ' (Active)' : ''}
+                </option>
+              ))}
+            </select>
+            {selectedAdminYear && (
+              <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                Editing: <strong style={{ color: 'var(--color-text)' }}>{selectedAdminYear.label} Cabinet</strong>
+                {selectedAdminYear.is_active && (
+                  <span className="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]"
+                    style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)', border: '1px solid var(--color-border)' }}>
+                    Active
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={{ padding: '20px 28px' }}>
       <div className="border rounded min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', padding: 24 }}>
         {activeTab === 'create' ? (
@@ -316,13 +466,21 @@ export default function AdminCabinet() {
             <form onSubmit={handleCreateMember} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Name *</label><input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className={inputCls} required /></div>
-                <div><label className={labelCls}>Role / Title *</label><input type="text" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Role / Title *</label><input type="text" list="cabinet-role-options" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Category *</label>
                   <select value={newMember.category} onChange={e => setNewMember({...newMember, category: e.target.value})} className={inputCls} required>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+                <CabinetYearSelect
+                  value={newMember.cabinet_year_id}
+                  cabinetYears={cabinetYears}
+                  currentCabinetYear={currentCabinetYear}
+                  loading={yearsLoading}
+                  error={yearsError}
+                  onChange={(cabinetYearId) => setNewMember({ ...newMember, cabinet_year_id: cabinetYearId })}
+                />
                 <div><label className={labelCls}>Sort Order</label><input type="number" value={newMember.display_order} onChange={e => setNewMember({...newMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
                 <div><label className={labelCls}>College</label><input type="text" value={newMember.college || ''} onChange={e => setNewMember({...newMember, college: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Year</label><input type="text" value={newMember.year || ''} onChange={e => setNewMember({...newMember, year: e.target.value})} className={inputCls} /></div>
@@ -396,10 +554,13 @@ export default function AdminCabinet() {
                           <div>
                             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 leading-tight">{m.name}</p>
                             <p className="text-xs text-zinc-500">{m.role}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-label text-zinc-600">
+                              {getCabinetYearLabel(m.cabinet_year_id)}
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-1.5">
-                          <button onClick={() => setSelectedMember(m)} className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors">Edit</button>
+                          <button onClick={() => setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) })} className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors">Edit</button>
                           <button onClick={() => setMemberToDelete(m)} className="px-3 py-1.5 border border-red-900/30 text-red-500 hover:bg-red-600 hover:text-white text-xs rounded transition-colors">Remove</button>
                         </div>
                       </div>
@@ -423,13 +584,21 @@ export default function AdminCabinet() {
             <form onSubmit={handleEditSubmit} className="p-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className={labelCls}>Name *</label><input type="text" value={selectedMember.name} onChange={e => setSelectedMember({...selectedMember, name: e.target.value})} className={inputCls} required /></div>
-                <div><label className={labelCls}>Role / Title *</label><input type="text" value={selectedMember.role} onChange={e => setSelectedMember({...selectedMember, role: e.target.value})} className={inputCls} required /></div>
+                <div><label className={labelCls}>Role / Title *</label><input type="text" list="cabinet-role-options" value={selectedMember.role} onChange={e => setSelectedMember({...selectedMember, role: e.target.value})} className={inputCls} required /></div>
                 <div>
                   <label className={labelCls}>Category *</label>
                   <select value={selectedMember.category} onChange={e => setSelectedMember({...selectedMember, category: e.target.value})} className={inputCls} required>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
+                <CabinetYearSelect
+                  value={selectedMember.cabinet_year_id}
+                  cabinetYears={cabinetYears}
+                  currentCabinetYear={currentCabinetYear}
+                  loading={yearsLoading}
+                  error={yearsError}
+                  onChange={(cabinetYearId) => setSelectedMember({ ...selectedMember, cabinet_year_id: cabinetYearId })}
+                />
                 <div><label className={labelCls}>Sort Order</label><input type="number" value={selectedMember.display_order} onChange={e => setSelectedMember({...selectedMember, display_order: Number(e.target.value)})} className={inputCls} /></div>
                 <div><label className={labelCls}>College</label><input type="text" value={selectedMember.college || ''} onChange={e => setSelectedMember({...selectedMember, college: e.target.value})} className={inputCls} /></div>
                 <div><label className={labelCls}>Year</label><input type="text" value={selectedMember.year || ''} onChange={e => setSelectedMember({...selectedMember, year: e.target.value})} className={inputCls} /></div>
@@ -481,6 +650,11 @@ export default function AdminCabinet() {
           </div>
         </div>
       )}
+      <datalist id="cabinet-role-options">
+        {roleSuggestions.map((role) => (
+          <option key={role} value={role} />
+        ))}
+      </datalist>
       </div>
     </>
   );

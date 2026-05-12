@@ -7,6 +7,10 @@ interface OverviewStats {
   members: number;
   events: number;
   upcomingEvents: number;
+  cabinetMembers: number;
+  galleryAlbums: number;
+  academicTerms: number;
+  cabinetYears: number;
   feedback: number;
   pendingFeedback: number;
   mergeCandidates: number;
@@ -16,14 +20,22 @@ const DEFAULT_STATS: OverviewStats = {
   members: 0,
   events: 0,
   upcomingEvents: 0,
+  cabinetMembers: 0,
+  galleryAlbums: 0,
+  academicTerms: 0,
+  cabinetYears: 0,
   feedback: 0,
   pendingFeedback: 0,
   mergeCandidates: 0,
 };
 
 const QUICK_LINKS = [
-  { to: '/admin/members', label: 'Members', desc: 'Search, edit, merge, and export the member directory.' },
-  { to: '/admin/events', label: 'Events', desc: 'Create new events, manage check-in codes, and update details.' },
+  { to: '/admin/events', label: 'Events', desc: 'Create events, assign academic terms, manage images, forms, points, and check-in codes.' },
+  { to: '/admin/cabinet', label: 'Cabinet', desc: 'Add board members, assign cabinet years, upload photos, and keep public leadership pages current.' },
+  { to: '/admin/years', label: 'Years & Terms', desc: 'Create quarters and cabinet years, then choose which ones are active/current.' },
+  { to: '/admin/gallery', label: 'Gallery', desc: 'Add Google Photos albums and cover images for the public gallery.' },
+  { to: '/admin/content', label: 'Homepage Content', desc: 'Update the presidents message and homepage photo without changing code.' },
+  { to: '/admin/members', label: 'Members', desc: 'Search, edit, merge, and export the member directory used by points tools.' },
   { to: '/admin/import', label: 'Import', desc: 'Match attendance sheets against member records before awarding points.' },
   { to: '/admin/feedback', label: 'Feedback', desc: 'Triage bugs, feature requests, and user suggestions.' },
 ];
@@ -57,6 +69,10 @@ export default function AdminOverview() {
         membersResult,
         eventsResult,
         upcomingResult,
+        cabinetResult,
+        galleryResult,
+        academicTermsResult,
+        cabinetYearsResult,
         feedbackResult,
         pendingFeedbackResult,
         mergeResult,
@@ -64,6 +80,10 @@ export default function AdminOverview() {
         supabase.from('members').select('*', { count: 'exact', head: true }),
         supabase.from('events').select('*', { count: 'exact', head: true }),
         supabase.from('events').select('*', { count: 'exact', head: true }).gte('date', nowIso),
+        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }),
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }),
+        supabase.from('academic_terms').select('*', { count: 'exact', head: true }),
+        supabase.from('cabinet_years').select('*', { count: 'exact', head: true }),
         supabase.from('feedback').select('*', { count: 'exact', head: true }),
         supabase.from('feedback').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
         supabase.from('merge_exclusions').select('*', { count: 'exact', head: true }),
@@ -73,6 +93,10 @@ export default function AdminOverview() {
         members: membersResult.count ?? 0,
         events: eventsResult.count ?? 0,
         upcomingEvents: upcomingResult.count ?? 0,
+        cabinetMembers: cabinetResult.count ?? 0,
+        galleryAlbums: galleryResult.count ?? 0,
+        academicTerms: academicTermsResult.count ?? 0,
+        cabinetYears: cabinetYearsResult.count ?? 0,
         feedback: feedbackResult.count ?? 0,
         pendingFeedback: pendingFeedbackResult.count ?? 0,
         mergeCandidates: mergeResult.count ?? 0,
@@ -106,6 +130,9 @@ export default function AdminOverview() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <StatCard label="Members" value={stats.members} detail="Total member records currently in the system." />
               <StatCard label="Events" value={stats.events} detail={`${stats.upcomingEvents} upcoming events are still active.`} />
+              <StatCard label="Cabinet" value={stats.cabinetMembers} detail={`${stats.cabinetYears} cabinet years are available for archives.`} />
+              <StatCard label="Gallery" value={stats.galleryAlbums} detail="Public albums linked from Google Photos." />
+              <StatCard label="Terms" value={stats.academicTerms} detail="Academic terms used to group event archives." />
               <StatCard label="Feedback" value={stats.feedback} detail={`${stats.pendingFeedback} items still need follow-up.`} />
             </div>
 

@@ -1,13 +1,15 @@
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
 import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
+import { getAcademicTermMeta } from '../lib/academicTerms';
+import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents } from '../hooks/useEvents';
-import { Event } from '../types';
+import { AcademicTerm, Event } from '../types';
 
 type FilterKey = 'all' | Event['event_type'];
 
@@ -32,6 +34,42 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   external_event: 'gray',
 };
 
+type ArchiveTermOption = AcademicTerm | { id: 'unassigned'; label: 'Unassigned Dates' };
+
+function sortTermsByDateDesc(a: AcademicTerm, b: AcademicTerm) {
+  const aDate = a.starts_on ? new Date(a.starts_on).getTime() : a.display_order;
+  const bDate = b.starts_on ? new Date(b.starts_on).getTime() : b.display_order;
+  return bDate - aDate;
+}
+
+function getEventTerm(event: Event, terms: AcademicTerm[]) {
+  const assignedTerm = event.academic_term_id
+    ? terms.find((term) => term.id === event.academic_term_id)
+    : null;
+
+  if (assignedTerm) return assignedTerm;
+
+  const inferredTerm = getAcademicTermMeta(event.date);
+  if (!inferredTerm) return null;
+
+  return terms.find((term) => term.code === inferredTerm.code) ?? null;
+}
+
+function eventMatchesTerm(event: Event, term: AcademicTerm, terms: AcademicTerm[]) {
+  return getEventTerm(event, terms)?.id === term.id;
+}
+
+function getEventTermLabel(event: Event, terms: AcademicTerm[]) {
+  const term = getEventTerm(event, terms);
+  if (term) return term.label;
+  return getAcademicTermMeta(event.date)?.label ?? 'Unassigned';
+}
+
+function getEventTermCode(event: Event, terms: AcademicTerm[]) {
+  const term = getEventTerm(event, terms);
+  if (term) return term.code;
+  return getAcademicTermMeta(event.date)?.code ?? 'TERM';
+}
 
 function EventImage({
   event,
@@ -60,7 +98,9 @@ function EventImage({
 
 export function Events() {
   const { events, loading, error } = useEvents();
+  const { terms } = useAcademicTerms();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
 
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -77,6 +117,31 @@ export function Events() {
   const upcomingEvents = upcomingAll.filter(filterFn);
   const pastEvents = pastAll.filter(filterFn);
   const [featured, ...rest] = upcomingEvents;
+  const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now)?.code);
+
+  const archiveTerms = useMemo(
+    () =>
+      terms
+        .filter((term) => pastAll.some((event) => eventMatchesTerm(event, term, terms)))
+        .sort(sortTermsByDateDesc),
+    [pastAll, terms]
+  );
+  const hasUnassignedPastEvents = pastAll.some((event) => !getEventTerm(event, terms));
+  const archiveOptions: ArchiveTermOption[] = hasUnassignedPastEvents
+    ? [...archiveTerms, { id: 'unassigned', label: 'Unassigned Dates' }]
+    : archiveTerms;
+  const effectiveArchiveTermId =
+    selectedArchiveTermId && archiveOptions.some((term) => term.id === selectedArchiveTermId)
+      ? selectedArchiveTermId
+      : archiveOptions[0]?.id ?? null;
+  const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
+  const archivedEvents = effectiveArchiveTermId
+    ? pastEvents.filter((event) => {
+        if (effectiveArchiveTermId === 'unassigned') return !getEventTerm(event, terms);
+        const term = terms.find((item) => item.id === effectiveArchiveTermId);
+        return term ? eventMatchesTerm(event, term, terms) : false;
+      })
+    : pastEvents;
 
   if (loading) {
     return (
@@ -110,6 +175,11 @@ export function Events() {
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions. {upcomingAll.length} upcoming / {pastAll.length} past.
           </p>
+          {activeTerm && (
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
+              Current term / {activeTerm.label}
+            </p>
+          )}
 
           <div className="vsa-filter-bar">
             {FILTERS.filter((filter) => filter.key === 'all' || events.some((event) => event.event_type === filter.key)).map(
@@ -260,30 +330,83 @@ export function Events() {
           <>
             <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
             <div className="mt-7" style={{ opacity: 0.72 }}>
-              <Label className="mb-4">Past Events / {pastEvents.length}</Label>
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {pastEvents.map((event: Event) => (
-                  <div
-                    key={event.id}
-                    className="overflow-hidden rounded border"
-                    style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-                  >
-                    <EventImage
-                      event={event}
-                      className="aspect-[5/3] w-full object-cover"
-                      titleClassName="px-5 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[22px]"
-                    />
-                    <div className="flex items-center justify-between gap-4 border-t px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
-                      <span className="font-sans text-sm" style={{ color: 'var(--color-text)' }}>
-                        {event.name}
-                      </span>
-                      <span className="shrink-0 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                        {format(new Date(event.date), 'MMM d')}
-                      </span>
-                    </div>
+              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <Label className="mb-2">Past Events Archive</Label>
+                  <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                    Browse previous events by academic term. Events without a saved term are matched by date when possible.
+                  </p>
+                </div>
+                {archiveOptions.length > 0 && (
+                  <div className="min-w-[220px]">
+                    <label className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                      Term
+                    </label>
+                    <select
+                      value={effectiveArchiveTermId ?? ''}
+                      onChange={(event) => setSelectedArchiveTermId(event.target.value || null)}
+                      className="w-full rounded border px-3 py-2 font-sans text-sm"
+                      style={{
+                        borderColor: 'var(--color-border)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {archiveOptions.map((term) => (
+                        <option key={term.id} value={term.id}>
+                          {term.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                ))}
+                )}
               </div>
+
+              {archivedEvents.length === 0 ? (
+                <div
+                  className="rounded border p-10 text-center"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+                >
+                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    No {activeFilter === 'all' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
+                    events found for {selectedArchiveTerm?.label ?? 'this term'}.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {archivedEvents.map((event: Event) => (
+                    <div
+                      key={event.id}
+                      className="overflow-hidden rounded border"
+                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+                    >
+                      <EventImage
+                        event={event}
+                        className="aspect-[5/3] w-full object-cover"
+                        titleClassName="px-5 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[22px]"
+                      />
+                      <div className="border-t px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-sans text-sm" style={{ color: 'var(--color-text)' }}>
+                            {event.name}
+                          </span>
+                          <span className="shrink-0 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                            {format(new Date(event.date), 'MMM d')}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                            {getEventTermCode(event, terms)}
+                          </span>
+                          <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                            {getEventTermLabel(event, terms)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

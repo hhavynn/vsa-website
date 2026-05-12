@@ -10,6 +10,35 @@ export interface Event {
   image_url?: string;
   check_in_code?: string;
   is_code_expired: boolean;
+  academic_term_id?: string | null;
+}
+
+export interface AcademicTerm {
+  id: string;
+  code: string;
+  label: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  quarter: 'fall' | 'winter' | 'spring' | 'summer';
+  starts_on: string | null;
+  ends_on: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CabinetYear {
+  id: string;
+  label: string;
+  slug: string;
+  start_year: number;
+  end_year: number;
+  theme_name: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EventAttendance {
@@ -29,4 +58,4 @@ export interface User {
   is_admin: boolean;
   created_at: string;
   updated_at: string;
-} 
+}

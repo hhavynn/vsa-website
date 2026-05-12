@@ -10,6 +10,7 @@ export interface EventWithAttendance extends Event {
 
 export interface EventFilters {
   event_type?: Event['event_type'];
+  academic_term_id?: string | null;
   date_from?: string;
   date_to?: string;
   limit?: number;
@@ -34,6 +35,11 @@ export class EventsRepository {
 
       // Apply filters
       if (filters.event_type) eventsQuery = eventsQuery.eq('event_type', filters.event_type);
+      if (filters.academic_term_id !== undefined) {
+        eventsQuery = filters.academic_term_id
+          ? eventsQuery.eq('academic_term_id', filters.academic_term_id)
+          : eventsQuery.is('academic_term_id', null);
+      }
       if (filters.date_from) eventsQuery = eventsQuery.gte('date', filters.date_from);
       if (filters.date_to) eventsQuery = eventsQuery.lte('date', filters.date_to);
 
