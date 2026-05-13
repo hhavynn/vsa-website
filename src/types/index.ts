@@ -94,3 +94,36 @@ export interface MemberYearlyPoints {
   total_points: number;
   events_attended: number;
 }
+
+export interface HouseYearlyPoints {
+  house: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
+  events_attended: number;
+  unique_events: number;
+  unique_members: number;
+  average_points_per_member: number | null;
+  latest_activity_at: string | null;
+}
+
+export interface HouseAllTimePoints {
+  house: string;
+  total_points: number;
+  events_attended: number;
+  unique_members: number;
+  average_points_per_member: number | null;
+  latest_activity_at: string | null;
+}
+
+export interface HouseRecentActivity {
+  house: string;
+  event_id: string;
+  event_name: string;
+  event_date: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
+  contributing_members: number;
+  latest_activity_at: string | null;
+}
