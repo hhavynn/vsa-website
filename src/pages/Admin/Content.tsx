@@ -1,8 +1,10 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
+import { useQueryClient } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
+import { PRESIDENTS_CONTENT_QUERY_KEY } from '../../hooks/usePresidentsContent';
 import {
   DEFAULT_PRESIDENTS_CONTENT,
   PRESIDENTS_CONTENT_ID,
@@ -14,6 +16,7 @@ const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outli
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
 
 export default function AdminContent() {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<PresidentsContent>(DEFAULT_PRESIDENTS_CONTENT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,12 +96,18 @@ export default function AdminContent() {
     try {
       setSaving(true);
       const photoUrl = photoFile ? await uploadPhoto(photoFile) : form.photoUrl.trim();
+      const savedContent: PresidentsContent = {
+        names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
+        role: form.role.trim() || DEFAULT_PRESIDENTS_CONTENT.role,
+        message: form.message.trim() || DEFAULT_PRESIDENTS_CONTENT.message,
+        photoUrl,
+      };
       const { error } = await supabase.from('homepage_content').upsert(
         {
           id: PRESIDENTS_CONTENT_ID,
-          presidents_names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
-          presidents_role: form.role.trim() || DEFAULT_PRESIDENTS_CONTENT.role,
-          presidents_message: form.message.trim() || DEFAULT_PRESIDENTS_CONTENT.message,
+          presidents_names: savedContent.names,
+          presidents_role: savedContent.role,
+          presidents_message: savedContent.message,
           presidents_photo_url: photoUrl || null,
           updated_at: new Date().toISOString(),
         },
@@ -107,9 +116,11 @@ export default function AdminContent() {
 
       if (error) throw error;
 
-      setForm((current) => ({ ...current, photoUrl }));
+      setForm(savedContent);
       setPhotoFile(null);
       setPhotoPreview('');
+      queryClient.setQueryData(PRESIDENTS_CONTENT_QUERY_KEY, savedContent);
+      queryClient.invalidateQueries(PRESIDENTS_CONTENT_QUERY_KEY);
       toast.success('Presidents message saved');
     } catch (error) {
       console.error(error);
