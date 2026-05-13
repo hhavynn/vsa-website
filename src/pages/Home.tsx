@@ -8,6 +8,7 @@ import { useEvents } from '../hooks/useEvents';
 import { usePresidentsContent } from '../hooks/usePresidentsContent';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { Event } from '../types';
+import { splitPresidentsMessage } from '../data/presidentsContent';
 
 const pillars = [
   {
@@ -53,21 +54,6 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   external_event: 'gray',
 };
 
-const PRESIDENTS_MESSAGE = {
-  names: 'Gracie Nguyen & Phuong Le',
-  role: 'Co-Presidents',
-  greeting: 'Hello and welcome to the VSA family! 💕',
-  body: [
-    'We’re Gracie and Phuong, and we’re beyond excited to serve as your Co-Presidents this year! Over the summer, our passionate cabinet has been planning a year full of fun, meaningful, and memorable events that we’re so excited to share with you.',
-    'VSA at UC San Diego isn’t just a student org, it’s a home away from home. It’s a place where strangers become close friends, and where you’ll find support, community, and endless opportunities to grow. Whether you’re here to embrace Vietnamese culture, meet new people, or just find your place on campus, VSA has something special for you.',
-    'Some of our most cherished college memories and lifelong friendships started right here. And we can’t wait for you to experience the same kind of magic.',
-    'So come hang out with us! Join our events, connect with our amazing members, and become a part of something truly meaningful. We’re so excited to meet you and welcome you into the family.',
-    'Let’s make this year one to remember, together. 🧡',
-  ],
-  signOff: 'With love,',
-  signature: 'Co-Presidents | VSA at UC San Diego',
-};
-
 function EventRow({ event }: { event: Event }) {
   const d = new Date(event.date);
 
@@ -105,6 +91,17 @@ export function Home() {
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const logoSrc = siteSettings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo.jpg`;
+  const presidentParagraphs = splitPresidentsMessage(presidentsContent.message);
+  const [presidentsHeading, ...presidentsBody] = presidentParagraphs;
+  const possibleSignature = presidentsBody[presidentsBody.length - 1];
+  const signatureLines = possibleSignature
+    ?.split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean) ?? [];
+  const hasSignatureBlock = signatureLines.length >= 2 && signatureLines[0].toLowerCase().startsWith('with love');
+  const presidentBodyParagraphs = hasSignatureBlock ? presidentsBody.slice(0, -1) : presidentsBody;
+  const signatureName = presidentsContent.names;
+  const signatureRole = presidentsContent.role;
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const upcomingEvents = events
@@ -259,26 +256,28 @@ export function Home() {
             <div>
               <div className="vsa-section-label">Presidents</div>
               <h2 className="vsa-section-title max-w-[720px]">
-                {PRESIDENTS_MESSAGE.greeting}
+                {presidentsHeading}
               </h2>
               <div className="mt-8 grid gap-5 md:grid-cols-2">
-                {PRESIDENTS_MESSAGE.body.map((paragraph) => (
-                  <p key={paragraph} className="font-sans text-sm leading-[1.9]" style={{ color: 'var(--text2)' }}>
+                {presidentBodyParagraphs.map((paragraph, index) => (
+                  <p key={`${paragraph.slice(0, 24)}-${index}`} className="whitespace-pre-line font-sans text-sm leading-[1.9]" style={{ color: 'var(--text2)' }}>
                     {paragraph}
                   </p>
                 ))}
               </div>
-              <div className="mt-7 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-                <div className="font-sans text-sm" style={{ color: 'var(--text3)' }}>{PRESIDENTS_MESSAGE.signOff}</div>
-                <div className="mt-1 font-serif text-xl italic" style={{ color: 'var(--accent)' }}>Gracie &amp; Phuong</div>
-                <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>{PRESIDENTS_MESSAGE.signature}</div>
-              </div>
+              {hasSignatureBlock && (
+                <div className="mt-7 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+                  <div className="font-sans text-sm" style={{ color: 'var(--text3)' }}>{signatureLines[0]}</div>
+                  <div className="mt-1 font-serif text-xl italic" style={{ color: 'var(--accent)' }}>{signatureName}</div>
+                  <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>{signatureRole}</div>
+                </div>
+              )}
             </div>
             <div>
               {presidentsContent.photoUrl ? (
                 <img
                   src={presidentsContent.photoUrl}
-                  alt={PRESIDENTS_MESSAGE.names}
+                  alt={presidentsContent.names}
                   className="aspect-[3/4] w-full rounded-2xl border object-cover"
                   style={{ borderColor: 'var(--border)' }}
                 />
@@ -288,8 +287,8 @@ export function Home() {
                 </div>
               )}
               <div className="mt-3 border-t py-3" style={{ borderColor: 'var(--border)' }}>
-                <div className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>Gracie &amp; Phuong</div>
-                <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]" style={{ color: 'var(--text3)' }}>Co-Presidents</div>
+                <div className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>{presidentsContent.names}</div>
+                <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]" style={{ color: 'var(--text3)' }}>{presidentsContent.role}</div>
               </div>
             </div>
           </div>

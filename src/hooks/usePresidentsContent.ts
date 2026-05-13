@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from 'react-query';
 import { supabase } from '../lib/supabase';
 import {
   DEFAULT_PRESIDENTS_CONTENT,
@@ -6,7 +6,9 @@ import {
   PresidentsContent,
 } from '../data/presidentsContent';
 
-function normalizePresidentsContent(row: any): PresidentsContent {
+export const PRESIDENTS_CONTENT_QUERY_KEY = ['homepage-content', PRESIDENTS_CONTENT_ID] as const;
+
+export function normalizePresidentsContent(row: any): PresidentsContent {
   return {
     names: row?.presidents_names || DEFAULT_PRESIDENTS_CONTENT.names,
     role: row?.presidents_role || DEFAULT_PRESIDENTS_CONTENT.role,
@@ -15,43 +17,33 @@ function normalizePresidentsContent(row: any): PresidentsContent {
   };
 }
 
+async function fetchPresidentsContent(): Promise<PresidentsContent> {
+  const { data, error } = await supabase
+    .from('homepage_content')
+    .select('*')
+    .eq('id', PRESIDENTS_CONTENT_ID)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Using default presidents content:', error.message);
+    return DEFAULT_PRESIDENTS_CONTENT;
+  }
+
+  return normalizePresidentsContent(data);
+}
+
 export function usePresidentsContent() {
-  const [content, setContent] = useState<PresidentsContent>(DEFAULT_PRESIDENTS_CONTENT);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, error, refetch } = useQuery<PresidentsContent>({
+    queryKey: PRESIDENTS_CONTENT_QUERY_KEY,
+    queryFn: fetchPresidentsContent,
+    placeholderData: DEFAULT_PRESIDENTS_CONTENT,
+    staleTime: 30 * 1000,
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchContent() {
-      try {
-        const result = await supabase
-          .from('homepage_content')
-          .select('*')
-          .eq('id', PRESIDENTS_CONTENT_ID)
-          .single();
-        const { data, error } = result ?? {};
-
-        if (error) {
-          console.warn('Using default presidents content:', error.message);
-          return;
-        }
-
-        if (data && isMounted) {
-          setContent(normalizePresidentsContent(data));
-        }
-      } catch (error) {
-        console.warn('Using default presidents content:', error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    fetchContent();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return { content, loading };
+  return {
+    content: data ?? DEFAULT_PRESIDENTS_CONTENT,
+    loading: isLoading,
+    error,
+    refetch,
+  };
 }
