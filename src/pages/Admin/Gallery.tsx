@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
+import { formatDateOnly, toDateOnlyString } from '../../lib/dateOnly';
 import { PageTitle } from '../../components/common/PageTitle';
 
 interface GalleryAlbum {
@@ -89,7 +90,7 @@ export default function AdminGallery() {
     setEditForm({
       title: album.title ?? '',
       description: album.description ?? '',
-      date: album.date ?? '',
+      date: toDateOnlyString(album.date),
       google_photos_url: album.google_photos_url ?? '',
     });
     setEditCoverFile(null);
@@ -108,6 +109,11 @@ export default function AdminGallery() {
     if (!albumToEdit) return;
     if (!editForm.title || !editForm.date || !editForm.google_photos_url) {
       toast.error('Title, date, and Google Photos link are required');
+      return;
+    }
+    const eventDate = toDateOnlyString(editForm.date);
+    if (!eventDate) {
+      toast.error('Please enter a valid event date');
       return;
     }
     try {
@@ -138,7 +144,7 @@ export default function AdminGallery() {
           title: editForm.title,
           name: editForm.title,
           description: editForm.description,
-          date: editForm.date,
+          date: eventDate,
           google_photos_url: editForm.google_photos_url,
           cover_image_url: coverImageUrl,
         })
@@ -149,7 +155,7 @@ export default function AdminGallery() {
       setAlbums(prev =>
         prev.map(a =>
           a.id === albumToEdit.id
-            ? { ...a, ...editForm, cover_image_url: coverImageUrl }
+            ? { ...a, ...editForm, date: eventDate, cover_image_url: coverImageUrl }
             : a
         )
       );
@@ -166,6 +172,11 @@ export default function AdminGallery() {
     e.preventDefault();
     if (!form.title || !form.date || !form.google_photos_url) {
       toast.error('Title, date, and Google Photos link are required');
+      return;
+    }
+    const eventDate = toDateOnlyString(form.date);
+    if (!eventDate) {
+      toast.error('Please enter a valid event date');
       return;
     }
     if (!form.google_photos_url.includes('photos')) {
@@ -192,7 +203,7 @@ export default function AdminGallery() {
         title: form.title,
         name: form.title,           // keep legacy column in sync
         description: form.description,
-        date: form.date,
+        date: eventDate,
         google_photos_url: form.google_photos_url,
         cover_image_url: coverImageUrl,
         images: [],                 // legacy column — no longer used
@@ -414,7 +425,7 @@ export default function AdminGallery() {
                         <p className="mt-1 line-clamp-2 text-xs" style={{ color: 'var(--color-text2)' }}>{album.description}</p>
                       )}
                       <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                        {new Date(album.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {formatDateOnly(album.date, { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
 
                       <div className="mt-auto pt-4 flex flex-col gap-2">
