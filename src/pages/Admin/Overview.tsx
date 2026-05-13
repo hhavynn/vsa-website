@@ -36,6 +36,7 @@ const QUICK_LINKS = [
   { to: '/admin/gallery', label: 'Gallery', desc: 'Add Google Photos albums and cover images for the public gallery.' },
   { to: '/admin/content', label: 'Homepage Content', desc: 'Update the presidents message and homepage photo without changing code.' },
   { to: '/admin/members', label: 'Members', desc: 'Search, edit, merge, and export the member directory used by points tools.' },
+  { to: '/admin/houses', label: 'Houses', desc: 'Import House Reveal assignments and assign members to houses without changing attendance.' },
   { to: '/admin/import', label: 'Import', desc: 'Match attendance sheets against member records before awarding points.' },
   { to: '/admin/feedback', label: 'Feedback', desc: 'Triage bugs, feature requests, and user suggestions.' },
 ];

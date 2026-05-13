@@ -4,6 +4,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
+import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
+import { normalizeEmail } from '../../lib/memberMatching';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,7 @@ interface Member {
   last_name: string;
   college: string | null;
   year: string | null;
+  house: string | null;
   email: string | null;
   points: number;
   events_attended: number;
@@ -82,9 +85,10 @@ export default function AdminMembers() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showReviewOnly, setShowReviewOnly] = useState(false);
+  const [houseFilter, setHouseFilter] = useState<'all' | 'unassigned' | string>('all');
 
   // Sorting
-  type SortKey = 'name' | 'points' | 'events_attended';
+  type SortKey = 'name' | 'house' | 'points' | 'events_attended';
   const [sortKey, setSortKey] = useState<SortKey>('points');
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -100,7 +104,7 @@ export default function AdminMembers() {
 
   // Edit modal
   const [editing, setEditing] = useState<Member | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '' });
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '', house: '' });
   const [saving, setSaving] = useState(false);
 
   // Single delete modal
@@ -125,7 +129,7 @@ export default function AdminMembers() {
     setLoading(true);
     const { data, error } = await supabase
       .from('members')
-      .select('id, first_name, last_name, college, year, email, points, events_attended, created_at, needs_review')
+      .select('id, first_name, last_name, college, year, house, email, points, events_attended, created_at, needs_review')
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
     setMembers((data ?? []) as Member[]);
@@ -139,11 +143,17 @@ export default function AdminMembers() {
   const filtered = members
     .filter(m => showReviewOnly ? m.needs_review : true)
     .filter(m => {
+      if (houseFilter === 'all') return true;
+      if (houseFilter === 'unassigned') return !m.house;
+      return m.house === houseFilter;
+    })
+    .filter(m => {
       const q = search.toLowerCase();
       return (
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
         (m.college ?? '').toLowerCase().includes(q) ||
         (m.year ?? '').toLowerCase().includes(q) ||
+        (m.house ?? '').toLowerCase().includes(q) ||
         (m.email ?? '').toLowerCase().includes(q)
       );
     })
@@ -151,6 +161,8 @@ export default function AdminMembers() {
       let cmp = 0;
       if (sortKey === 'name') {
         cmp = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+      } else if (sortKey === 'house') {
+        cmp = (a.house ?? '').localeCompare(b.house ?? '');
       } else if (sortKey === 'points') {
         cmp = a.points - b.points;
       } else {
@@ -160,7 +172,7 @@ export default function AdminMembers() {
     });
 
   // ── Pagination ───────────────────────────────────────────────────────────────
-  const resetKey = `${search}|${showReviewOnly}|${sortKey}|${sortAsc}`;
+  const resetKey = `${search}|${showReviewOnly}|${houseFilter}|${sortKey}|${sortAsc}`;
   const {
     page, totalPages, rowsPerPage, setRowsPerPage, setCurrentPage,
     pageStart, pageStartLabel, pageEndLabel,
@@ -201,6 +213,7 @@ export default function AdminMembers() {
       college: m.college ? toCollegeKey(m.college) : '',
       year: m.year ?? '',
       email: m.email ?? '',
+      house: m.house ?? '',
     });
   }
 
@@ -214,7 +227,8 @@ export default function AdminMembers() {
         last_name: editForm.last_name.trim(),
         college: editForm.college.trim() || null,
         year: editForm.year.trim() || null,
-        email: editForm.email.trim() || null,
+        house: normalizeHouse(editForm.house) ?? null,
+        email: normalizeEmail(editForm.email) || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', editing.id);
@@ -337,6 +351,7 @@ export default function AdminMembers() {
 
   const selectedCount = selected.size;
   const needsReviewCount = members.filter(m => m.needs_review).length;
+  const unassignedHouseCount = members.filter(m => !m.house).length;
 
   // Stat card values
   const activeCount = members.filter(m => m.events_attended > 0).length;
@@ -358,8 +373,8 @@ export default function AdminMembers() {
         <button
           onClick={() => {
             const rows = [
-              ['First Name', 'Last Name', 'Email', 'Year', 'College', 'Points', 'Events'],
-              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.points, m.events_attended]),
+              ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
+              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.house ?? '', m.points, m.events_attended]),
             ];
             const csv = rows.map(r => r.join(',')).join('\n');
             const a = document.createElement('a');
@@ -388,10 +403,9 @@ export default function AdminMembers() {
               <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{activeCount}</p>
             </div>
             <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Points Leaders</p>
-              <a href="/admin/points" className="text-[13px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                View Top 10 →
-              </a>
+              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Unassigned House</p>
+              <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{unassignedHouseCount}</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">members</p>
             </div>
             <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
               <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Avg Attendance</p>
@@ -431,10 +445,21 @@ export default function AdminMembers() {
                 type="search"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search members…"
+                placeholder="Search members..."
                 className="h-9 w-64 pl-8 pr-3 text-[13px] border border-zinc-200 dark:border-[#27272a] rounded-md bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition"
               />
             </div>
+            <select
+              value={houseFilter}
+              onChange={e => setHouseFilter(e.target.value)}
+              className="h-9 rounded-md border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] px-3 text-[13px] text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
+            >
+              <option value="all">All houses</option>
+              <option value="unassigned">Unassigned</option>
+              {HOUSE_OPTIONS.map(house => (
+                <option key={house} value={house}>{HOUSE_LABELS[house]}</option>
+              ))}
+            </select>
           </div>
           {selectedCount > 0 && (
             <button
@@ -471,6 +496,7 @@ export default function AdminMembers() {
                   <SortTh label="Name" sk="name" active={sortKey} asc={sortAsc} onSort={handleSort} />
                   <th className="px-4 py-2.5 w-28 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Year</th>
                   <th className="px-4 py-2.5 w-28 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">College</th>
+                  <SortTh label="House" sk="house" active={sortKey} asc={sortAsc} onSort={handleSort} />
                   <SortTh label="Points" sk="points" active={sortKey} asc={sortAsc} onSort={handleSort} />
                   <SortTh label="Events" sk="events_attended" active={sortKey} asc={sortAsc} onSort={handleSort} />
                   <th className="px-4 py-2.5" />
@@ -519,6 +545,14 @@ export default function AdminMembers() {
                       </td>
                       {/* COLLEGE */}
                       <td className="px-4 py-3 text-[13px] text-zinc-500 dark:text-zinc-400">{m.college || '—'}</td>
+                      {/* HOUSE */}
+                      <td className="px-4 py-3 text-[13px] text-zinc-500 dark:text-zinc-400">
+                        {m.house ? (
+                          <span className="inline-flex items-center rounded border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
+                            {m.house}
+                          </span>
+                        ) : <span className="text-zinc-400 text-[12px]">Unassigned</span>}
+                      </td>
                       {/* POINTS */}
                       <td className="px-4 py-3 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{m.points} pts</td>
                       {/* EVENTS */}
@@ -586,7 +620,15 @@ export default function AdminMembers() {
             </div>
             <Field label="Email">
               <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="optional — helps identify duplicates" className={inputCls} />
+                placeholder="optional - helps identify duplicates" className={inputCls} />
+            </Field>
+            <Field label="House">
+              <select value={editForm.house} onChange={e => setEditForm(f => ({ ...f, house: e.target.value }))} className={inputCls}>
+                <option value="">Unassigned</option>
+                {HOUSE_OPTIONS.map(house => (
+                  <option key={house} value={house}>{HOUSE_LABELS[house]}</option>
+                ))}
+              </select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="College">

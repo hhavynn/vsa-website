@@ -519,6 +519,7 @@ export interface Database {
           last_name: string;
           college: string | null;
           year: string | null;
+          house: string | null;
           email: string | null;
           points: number;
           events_attended: number;
@@ -533,6 +534,7 @@ export interface Database {
           last_name: string;
           college?: string | null;
           year?: string | null;
+          house?: string | null;
           email?: string | null;
           points?: number;
           events_attended?: number;
@@ -547,6 +549,7 @@ export interface Database {
           last_name?: string;
           college?: string | null;
           year?: string | null;
+          house?: string | null;
           email?: string | null;
           points?: number;
           events_attended?: number;
@@ -702,6 +705,42 @@ export interface Database {
           academic_year_end: number;
           total_points: number;
           events_attended: number;
+        };
+      };
+      house_yearly_points: {
+        Row: {
+          house: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          total_points: number;
+          events_attended: number;
+          unique_events: number;
+          unique_members: number;
+          average_points_per_member: number | null;
+          latest_activity_at: string | null;
+        };
+      };
+      house_all_time_points: {
+        Row: {
+          house: string;
+          total_points: number;
+          events_attended: number;
+          unique_members: number;
+          average_points_per_member: number | null;
+          latest_activity_at: string | null;
+        };
+      };
+      house_recent_activity: {
+        Row: {
+          house: string;
+          event_id: string;
+          event_name: string;
+          event_date: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          total_points: number;
+          contributing_members: number;
+          latest_activity_at: string | null;
         };
       };
     };

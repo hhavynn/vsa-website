@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { HOUSE_LABELS } from '../constants/houses';
+import { leaderboardRepository } from '../data/repos/leaderboard';
+import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { HouseYearlyPoints } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -63,6 +67,35 @@ const faqs = [
 
 export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { terms } = useAcademicTerms();
+  const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
+  const [standingsLoading, setStandingsLoading] = useState(true);
+
+  const activeYear = terms.find((term) => term.is_active)?.academic_year_start
+    ?? terms[0]?.academic_year_start
+    ?? null;
+  const activeYearLabel = activeYear ? `${activeYear}-${activeYear + 1}` : '';
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadStandings() {
+      if (!activeYear) {
+        setStandingsLoading(false);
+        return;
+      }
+      setStandingsLoading(true);
+      try {
+        const data = await leaderboardRepository.getYearlyHouseLeaderboard(activeYear);
+        if (isMounted) setStandings(data);
+      } catch {
+        if (isMounted) setStandings([]);
+      } finally {
+        if (isMounted) setStandingsLoading(false);
+      }
+    }
+    loadStandings();
+    return () => { isMounted = false; };
+  }, [activeYear]);
 
   return (
     <>
@@ -123,6 +156,42 @@ export function House() {
                 <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{house.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Standings */}
+        <div className="mb-10">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <Label>House Standings{activeYearLabel ? ` / ${activeYearLabel}` : ''}</Label>
+            <Link to="/leaderboard" className="font-sans text-xs font-medium text-brand-600 dark:text-brand-400">
+              Full Leaderboard
+            </Link>
+          </div>
+          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            {standingsLoading ? (
+              <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>Loading house standings...</div>
+            ) : standings.length === 0 ? (
+              <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                House standings will appear after House Reveal assignments are imported.
+              </div>
+            ) : (
+              standings.map((standing, index) => (
+                <div key={standing.house} className="grid items-center gap-4 border-b last:border-b-0 px-5 py-4" style={{ gridTemplateColumns: '48px minmax(0,1fr) 92px', borderColor: 'var(--color-border)' }}>
+                  <div className="font-serif leading-none" style={{ fontSize: 28, color: index < 3 ? 'var(--color-text)' : 'var(--color-text3)' }}>#{index + 1}</div>
+                  <div>
+                    <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                      {HOUSE_LABELS[standing.house as keyof typeof HOUSE_LABELS] ?? standing.house}
+                    </div>
+                    <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                      {standing.unique_members} contributing members / {standing.events_attended} check-ins
+                    </div>
+                  </div>
+                  <div className="text-right font-serif" style={{ fontSize: 24, color: 'var(--color-text)' }}>
+                    {standing.total_points}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
