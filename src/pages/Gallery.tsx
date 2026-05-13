@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
+import { formatDateOnly } from '../lib/dateOnly';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
@@ -96,7 +96,7 @@ export default function Gallery() {
                   )}
                   <div className="mt-3 flex items-center justify-between gap-4">
                     <span className="font-mono text-[10px] tracking-[0.04em]" style={{ color: 'var(--text3)' }}>
-                      {format(new Date(album.date), 'MMM d, yyyy').toUpperCase()}
+                      {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
                     </span>
                     <span className="font-sans text-xs text-brand-600 dark:text-brand-400">
                       Google Photos
