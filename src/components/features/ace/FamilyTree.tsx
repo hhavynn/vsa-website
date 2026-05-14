@@ -8,7 +8,6 @@ export interface TreeNode {
   role: string;
   cohort?: string | null;
   parent?: string | null;
-  newest?: boolean;
 }
 
 interface AccentPalette {
@@ -120,7 +119,7 @@ export function FamilyTree({
     return { x: p.x * unitX + padX, y: p.y * unitY + padY };
   };
 
-  const edges: Array<{ id: string; d: string; newest?: boolean }> = [];
+  const edges: Array<{ id: string; d: string }> = [];
   nodes.forEach((n) => {
     if (!n.parent) return;
     if (!layout.positions[n.parent]) return;
@@ -130,7 +129,6 @@ export function FamilyTree({
     edges.push({
       id: `${n.parent}-${n.id}`,
       d: `M ${a.x} ${a.y + nodeR} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y - nodeR}`,
-      newest: n.newest,
     });
   });
 
@@ -151,10 +149,10 @@ export function FamilyTree({
           key={e.id}
           d={e.d}
           fill="none"
-          stroke={e.newest ? A.fill : A.edge}
-          strokeWidth={e.newest ? 2 : 1.5}
+          stroke={A.edge}
+          strokeWidth={1.5}
           strokeLinecap="round"
-          opacity={e.newest ? 0.9 : 0.6}
+          opacity={0.6}
         />
       ))}
 
@@ -208,12 +206,6 @@ export function FamilyTree({
             >
               {(n.role || 'Member').toUpperCase()}{n.cohort ? ` · ${n.cohort}` : ''}
             </text>
-            {n.newest && (
-              <g transform={`translate(${nodeR - 2}, ${-nodeR + 2})`}>
-                <circle r={5} fill={A.fill} />
-                <circle r={5} fill="none" stroke={A.node2bg} strokeWidth="1.5" />
-              </g>
-            )}
           </g>
         );
       })}

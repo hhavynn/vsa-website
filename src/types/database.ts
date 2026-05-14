@@ -558,8 +558,8 @@ export interface Database {
       ace_families: {
         Row: {
           id: string;
-          academic_year_start: number;
-          academic_year_end: number;
+          academic_year_start: number | null;
+          academic_year_end: number | null;
           name: string;
           slug: string;
           cover_image_url: string | null;
@@ -572,8 +572,8 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          academic_year_start: number;
-          academic_year_end: number;
+          academic_year_start?: number | null;
+          academic_year_end?: number | null;
           name: string;
           slug: string;
           cover_image_url?: string | null;
@@ -586,8 +586,8 @@ export interface Database {
         };
         Update: {
           id?: string;
-          academic_year_start?: number;
-          academic_year_end?: number;
+          academic_year_start?: number | null;
+          academic_year_end?: number | null;
           name?: string;
           slug?: string;
           cover_image_url?: string | null;
@@ -895,8 +895,8 @@ export interface Database {
       published_ace_families: {
         Row: {
           id: string;
-          academic_year_start: number;
-          academic_year_end: number;
+          academic_year_start: number | null;
+          academic_year_end: number | null;
           name: string;
           slug: string;
           cover_image_url: string | null;

@@ -322,6 +322,45 @@
 }
 .ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-strong); }
 .ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6cd8d1; }
+.ace-app .ace-graveyard-section {
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+}
+.ace-app .ace-graveyard-copy {
+  margin: -4px 0 16px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.ace-app .ace-fam-card-graveyard {
+  background: color-mix(in srgb, var(--surface) 86%, var(--bg-2));
+}
+.ace-app .ace-fam-card-graveyard .ace-fam-cover-img {
+  filter: saturate(0.72) contrast(0.96);
+}
+.ace-app .ace-graveyard-pill,
+.ace-app .ace-sheet-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.ace-app .ace-graveyard-pill {
+  flex-shrink: 0;
+  padding: 5px 8px;
+}
+.ace-app .ace-sheet-badge {
+  margin-left: 10px;
+  padding: 5px 8px 4px;
+  vertical-align: middle;
+}
 
 .ace-app .ace-fam-empty {
   border: 1px dashed var(--border-strong); border-radius: 14px;
@@ -459,11 +498,6 @@
 .ace-app .ace-legend-swatch-ring-teal  { background: var(--surface); border: 2px solid var(--brand); }
 .ace-app .ace-legend-swatch-ring-coral { background: var(--surface); border: 2px solid var(--accent); }
 .ace-app .ace-legend-swatch-ring-gold  { background: var(--surface); border: 2px solid var(--gold); }
-.ace-app .ace-legend-line { width: 22px; height: 2px; border-radius: 999px; }
-.ace-app .ace-legend-line-teal  { background: var(--brand); }
-.ace-app .ace-legend-line-coral { background: var(--accent); }
-.ace-app .ace-legend-line-gold  { background: var(--gold); }
-
 .ace-app .ace-sheet-treewrap {
   flex: 1; overflow: hidden;
   position: relative;

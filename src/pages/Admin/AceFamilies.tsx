@@ -5,7 +5,6 @@ import { useQueryClient } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
-import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import {
   useAdminAceFamilies,
   useAdminAceFamilyMembers,
@@ -15,7 +14,6 @@ import {
   AceFamilyMemberFormData,
   aceFamiliesRepository,
 } from '../../data/repos/aceFamilies';
-import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { AceFamily, AceFamilyMember } from '../../types';
 import { ImportPlan, buildImportPlan, validateJson } from '../../lib/aceFamilyImport';
 
@@ -46,41 +44,6 @@ function isValidSlug(slug: string) {
 
 function isValidHex(color: string) {
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color);
-}
-
-function getCurrentAcademicYearStart() {
-  return getAcademicTermMeta(new Date())?.academicYearStart ?? new Date().getFullYear();
-}
-
-function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  const years = new Map<number, { start: number; label: string; isActive: boolean }>();
-  const currentYear = getCurrentAcademicYearStart();
-
-  years.set(currentYear, {
-    start: currentYear,
-    label: formatAcademicYear(currentYear),
-    isActive: false,
-  });
-
-  terms.forEach((term) => {
-    const existing = years.get(term.academic_year_start);
-    years.set(term.academic_year_start, {
-      start: term.academic_year_start,
-      label: `${term.academic_year_start}-${term.academic_year_end}`,
-      isActive: term.is_active || existing?.isActive || false,
-    });
-  });
-
-  return Array.from(years.values()).sort((a, b) => b.start - a.start);
-}
-
-function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  return (
-    terms.find((term) => term.is_active)?.academic_year_start
-    ?? getCurrentAcademicYearStart()
-    ?? terms[0]?.academic_year_start
-    ?? null
-  );
 }
 
 type FamilyDraft = {
@@ -143,7 +106,6 @@ function MemberRow({
   const [role, setRole] = useState(member.role_label ?? '');
   const [photoUrl, setPhotoUrl] = useState(member.photo_url ?? '');
   const [parentId, setParentId] = useState(member.parent_member_id ?? '');
-  const [order, setOrder] = useState(String(member.display_order ?? 0));
   const [published, setPublished] = useState(member.is_published);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -153,11 +115,10 @@ function MemberRow({
     setRole(member.role_label ?? '');
     setPhotoUrl(member.photo_url ?? '');
     setParentId(member.parent_member_id ?? '');
-    setOrder(String(member.display_order ?? 0));
     setPublished(member.is_published);
     setPhotoFile(null);
     setPhotoPreview('');
-  }, [member.id, member.name, member.role_label, member.photo_url, member.parent_member_id, member.display_order, member.is_published]);
+  }, [member.id, member.name, member.role_label, member.photo_url, member.parent_member_id, member.is_published]);
 
   const onDrop = useCallback((accepted: File[]) => {
     const file = accepted[0];
@@ -203,7 +164,6 @@ function MemberRow({
         role_label: nullable(role),
         photo_url: nullable(photoUrl),
         parent_member_id: parentId || null,
-        display_order: Number(order || 0),
         is_published: published,
       },
       photoFile,
@@ -214,7 +174,7 @@ function MemberRow({
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_72px_auto] gap-3 items-start rounded border p-3"
+      className="grid grid-cols-1 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-start rounded border p-3"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div
@@ -294,17 +254,6 @@ function MemberRow({
         </select>
       </div>
 
-      <div>
-        <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Order</label>
-        <input
-          type="number"
-          value={order}
-          onChange={(e) => setOrder(e.target.value)}
-          className={inputCls}
-          style={fieldStyle()}
-        />
-      </div>
-
       <div className="flex flex-col items-end gap-2 pt-5">
         <label className="flex items-center gap-1.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
           <input
@@ -352,9 +301,7 @@ function TreePreview({ members }: { members: AceFamilyMember[] }) {
       list.push(m);
       map.set(key, list);
     });
-    map.forEach((list) =>
-      list.sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name)),
-    );
+    map.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
     return map;
   }, [members]);
 
@@ -409,10 +356,7 @@ function TreePreview({ members }: { members: AceFamilyMember[] }) {
 
 export default function AdminAceFamilies() {
   const queryClient = useQueryClient();
-  const { terms } = useAcademicTerms();
-  const academicYearOptions = useMemo(() => buildAcademicYearOptions(terms), [terms]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const { families, loading, error, refetch } = useAdminAceFamilies(selectedYear);
+  const { families, loading, error, refetch } = useAdminAceFamilies();
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const selectedFamily = useMemo(
     () => families.find((f) => f.id === selectedFamilyId) ?? null,
@@ -432,18 +376,11 @@ export default function AdminAceFamilies() {
   // ── Import JSON state ──────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
   const [importJson, setImportJson] = useState('');
-  const [importYear, setImportYear] = useState<number | null>(null);
   const [importPublished, setImportPublished] = useState(false);
   const [importThemeColor, setImportThemeColor] = useState('');
   const [importPreview, setImportPreview] = useState<ImportPlan | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-
-  useEffect(() => {
-    if (selectedYear === null) {
-      setSelectedYear(defaultAcademicYearStart(terms));
-    }
-  }, [selectedYear, terms]);
 
   useEffect(() => {
     if (selectedFamily) {
@@ -491,10 +428,6 @@ export default function AdminAceFamilies() {
 
   const handleFamilySubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (selectedYear === null) {
-      toast.error('Select an academic year first');
-      return;
-    }
     if (!familyDraft.name.trim()) {
       toast.error('Family name is required');
       return;
@@ -517,8 +450,8 @@ export default function AdminAceFamilies() {
       }
 
       const payload: AceFamilyFormData = {
-        academic_year_start: selectedYear,
-        academic_year_end: selectedYear + 1,
+        academic_year_start: selectedFamily?.academic_year_start ?? null,
+        academic_year_end: selectedFamily?.academic_year_end ?? null,
         name: familyDraft.name.trim(),
         slug: slugCandidate,
         cover_image_url: nullable(coverUrl),
@@ -642,11 +575,6 @@ export default function AdminAceFamilies() {
       toast.error('Click Preview first.');
       return;
     }
-    const year = importYear ?? selectedYear ?? defaultAcademicYearStart(terms);
-    if (year === null) {
-      toast.error('Pick an academic year for the imported fam.');
-      return;
-    }
     if (importThemeColor && !isValidHex(importThemeColor)) {
       toast.error('Theme color must be a hex like #E07856.');
       return;
@@ -655,8 +583,6 @@ export default function AdminAceFamilies() {
       setImporting(true);
       const { family, memberCount } = await aceFamiliesRepository.bulkCreateFamily(
         {
-          academic_year_start: year,
-          academic_year_end: year + 1,
           theme_color: importThemeColor.trim() || null,
           cover_image_url: null,
           display_order: 0,
@@ -669,7 +595,6 @@ export default function AdminAceFamilies() {
       setImportJson('');
       setImportPreview(null);
       setImportError(null);
-      setSelectedYear(year);
       setSelectedFamilyId(family.id);
       await queryClient.invalidateQueries(['ace-families']);
       await queryClient.invalidateQueries(['ace-family-members']);
@@ -695,7 +620,7 @@ export default function AdminAceFamilies() {
     }
   };
 
-  if (loading && selectedYear !== null) {
+  if (loading) {
     return (
       <>
         <PageTitle title="ACE Fams" />
@@ -729,30 +654,10 @@ export default function AdminAceFamilies() {
             ACE Fams
           </h1>
           <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
-            Manage ACE families and Big/Little tree structure. Public page wiring is a follow-up.
+            Manage timeless ACE families and Big/Little tree structure.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-            Academic year
-          </label>
-          <select
-            value={selectedYear ?? ''}
-            onChange={(e) => {
-              const next = e.target.value ? Number(e.target.value) : null;
-              setSelectedYear(next);
-              setSelectedFamilyId(null);
-            }}
-            className="rounded border px-2 py-1.5 font-sans text-xs"
-            style={fieldStyle()}
-          >
-            {academicYearOptions.map((opt) => (
-              <option key={opt.start} value={opt.start}>
-                {opt.label}
-                {opt.isActive ? ' · active' : ''}
-              </option>
-            ))}
-          </select>
           <button
             type="button"
             onClick={() => {
@@ -828,22 +733,7 @@ export default function AdminAceFamilies() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Academic year</label>
-                  <select
-                    value={importYear ?? selectedYear ?? ''}
-                    onChange={(e) => setImportYear(e.target.value ? Number(e.target.value) : null)}
-                    className={inputCls}
-                    style={fieldStyle()}
-                  >
-                    {academicYearOptions.map((opt) => (
-                      <option key={opt.start} value={opt.start}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Theme color (optional)</label>
                   <div className="mt-1 flex items-center gap-2">
@@ -922,7 +812,7 @@ export default function AdminAceFamilies() {
           </div>
           {families.length === 0 ? (
             <p className="px-4 py-8 text-center font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-              No fams for this year yet.
+              No fams yet.
             </p>
           ) : (
             <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>

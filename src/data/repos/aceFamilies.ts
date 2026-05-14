@@ -7,19 +7,13 @@ export type AceFamilyFormData = Omit<AceFamily, 'id' | 'created_at' | 'updated_a
 export type AceFamilyMemberFormData = Omit<AceFamilyMember, 'id' | 'created_at' | 'updated_at'>;
 
 export class AceFamiliesRepository {
-  async getPublishedFamilies(academicYearStart?: number): Promise<AceFamily[]> {
+  async getPublishedFamilies(): Promise<AceFamily[]> {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('published_ace_families')
         .select('*')
         .order('display_order', { ascending: true })
         .order('name', { ascending: true });
-
-      if (typeof academicYearStart === 'number') {
-        query = query.eq('academic_year_start', academicYearStart);
-      }
-
-      const { data, error } = await query;
       if (error) {
         console.warn('Using fallback published ace families:', error.message);
         return [];
@@ -36,7 +30,7 @@ export class AceFamiliesRepository {
       const { data, error } = await supabase
         .from('published_ace_family_members')
         .select('*')
-        .order('display_order', { ascending: true });
+        .order('name', { ascending: true });
       if (error) {
         console.warn('Using fallback published ace members (all):', error.message);
         return [];
@@ -54,7 +48,6 @@ export class AceFamiliesRepository {
         .from('published_ace_family_members')
         .select('*')
         .eq('family_id', familyId)
-        .order('display_order', { ascending: true })
         .order('name', { ascending: true });
       if (error) {
         console.warn('Using fallback published ace members:', error.message);
@@ -67,19 +60,13 @@ export class AceFamiliesRepository {
     }
   }
 
-  async getAdminFamilies(academicYearStart?: number): Promise<AceFamily[]> {
+  async getAdminFamilies(): Promise<AceFamily[]> {
     return withErrorHandling(async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('ace_families')
         .select('*')
         .order('display_order', { ascending: true })
         .order('name', { ascending: true });
-
-      if (typeof academicYearStart === 'number') {
-        query = query.eq('academic_year_start', academicYearStart);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as AceFamily[];
     }, 'Failed to fetch ACE families');
@@ -91,7 +78,6 @@ export class AceFamiliesRepository {
         .from('ace_family_members')
         .select('*')
         .eq('family_id', familyId)
-        .order('display_order', { ascending: true })
         .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as AceFamilyMember[];
@@ -170,7 +156,7 @@ export class AceFamiliesRepository {
    *   2) update parent_member_id on the rows that have a parent
    */
   async bulkCreateFamily(
-    famFields: Pick<AceFamily, 'academic_year_start' | 'academic_year_end' | 'theme_color' | 'cover_image_url' | 'display_order' | 'is_published'>,
+    famFields: Pick<AceFamily, 'theme_color' | 'cover_image_url' | 'display_order' | 'is_published'>,
     plan: ImportPlan,
   ): Promise<{ family: AceFamily; memberCount: number }> {
     return withErrorHandling(async () => {
@@ -181,8 +167,8 @@ export class AceFamiliesRepository {
           name: plan.familyName,
           slug: plan.familySlug,
           description: plan.description,
-          academic_year_start: famFields.academic_year_start,
-          academic_year_end: famFields.academic_year_end,
+          academic_year_start: null,
+          academic_year_end: null,
           theme_color: famFields.theme_color,
           cover_image_url: famFields.cover_image_url,
           display_order: famFields.display_order,
