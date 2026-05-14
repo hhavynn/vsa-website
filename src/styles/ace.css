@@ -623,6 +623,10 @@
     right: 8px;
     gap: 4px;
   }
+  .ace-app .ace-tree-zoom-button,
+  .ace-app .ace-tree-zoom-readout {
+    display: none;
+  }
   .ace-app .ace-tree-control,
   .ace-app .ace-tree-zoom-readout {
     min-width: 40px;
