@@ -11,6 +11,7 @@ const NAV_GROUPS = [
   ]},
   { group: 'Content', items: [
     { to: '/admin/cabinet',           label: 'Cabinet' },
+    { to: '/admin/ace',               label: 'ACE Fams' },
     { to: '/admin/vcn',               label: 'VCN Archives' },
     { to: '/admin/gallery',           label: 'Gallery' },
     { to: '/admin/content',           label: 'Content' },

@@ -1,13 +1,17 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import { supabase } from '../../../lib/supabase';
 import { SignInSchema, type SignInFormData } from '../../../schemas';
 
 const inputCls = 'mt-1 block w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
 
 export function SignInForm() {
-  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, signOut } = useAuth();
   const {
     register,
     handleSubmit,
@@ -17,9 +21,37 @@ export function SignInForm() {
     resolver: zodResolver(SignInSchema),
   });
 
+  const locationState = location.state as { from?: { pathname?: string; search?: string } } | null;
+  const requestedPath = locationState?.from?.pathname || '/admin';
+  const requestedSearch = locationState?.from?.search || '';
+  const redirectTo = requestedPath.startsWith('/admin') && requestedPath !== '/admin/login'
+    ? `${requestedPath}${requestedSearch}`
+    : '/admin';
+
   const onSubmit = async (data: SignInFormData) => {
     try {
-      await signIn(data.email, data.password);
+      const signedInUser = await signIn(data.email, data.password);
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', signedInUser.id)
+        .single();
+
+      if (error) {
+        await signOut();
+        throw new Error('Unable to verify admin access.');
+      }
+
+      if (!profile?.is_admin) {
+        await signOut();
+        setFormError('root', {
+          type: 'manual',
+          message: 'This sign-in is for VSA admins only. Your account is not authorized for the admin panel.',
+        });
+        return;
+      }
+
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
       setFormError('root', {
@@ -70,7 +102,7 @@ export function SignInForm() {
         disabled={isSubmitting}
         className="w-full flex justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
       >
-        {isSubmitting ? 'Signing in...' : 'Sign In'}
+        {isSubmitting ? 'Verifying access...' : 'Sign In'}
       </button>
     </form>
   );

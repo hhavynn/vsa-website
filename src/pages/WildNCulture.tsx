@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { useProgramContent } from '../hooks/useProgramContent';
+import {
+  getProgramMetaParts,
+  hasPrimaryProgramLink,
+  isProgramContentHidden,
+  PROGRAM_STATUS_LABELS,
+} from '../lib/programContent';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WNC CONFIG — Update these fields each year for the upcoming event.
@@ -60,18 +67,51 @@ const faqs = [
 
 export function WildNCulture() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { content: eventContent } = useProgramContent('wnc');
+  const dynamicEventVisible = !!eventContent && !isProgramContentHidden(eventContent);
+  const eventMeta = eventContent ? getProgramMetaParts(eventContent) : [];
+  const eventStatusLabel = eventContent ? PROGRAM_STATUS_LABELS[eventContent.status] : '';
 
   return (
     <>
       <PageTitle title="Wild N' Culture" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Wild N' Culture</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
           Annual intercollegiate comedy competition · UCSD VSA
         </p>
-        {WNC_CONFIG.eventActive && (
-          <div className="flex items-center gap-3 mt-4">
+        {dynamicEventVisible ? (
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            {eventStatusLabel && (
+              <span className="font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
+              </span>
+            )}
+            {eventMeta.length > 0 && (
+              <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                {eventMeta.join(' · ')}
+              </span>
+            )}
+            {hasPrimaryProgramLink(eventContent) && (
+              <a
+                href={eventContent.primary_link_url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-sans text-sm font-medium px-4 py-2 rounded"
+                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+              >
+                {eventContent.primary_link_label || 'Get Tickets'} →
+              </a>
+            )}
+            {eventContent.body && (
+              <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+                {eventContent.body}
+              </span>
+            )}
+          </div>
+        ) : !eventContent && WNC_CONFIG.eventActive && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             {WNC_CONFIG.date && (
               <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                 {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
@@ -92,7 +132,7 @@ export function WildNCulture() {
         )}
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="program-page-content">
 
         {/* About */}
         <div className="mb-10">
@@ -129,8 +169,8 @@ export function WildNCulture() {
               {WNC_ARCHIVE.map((entry) => (
                 <div key={entry.year} className="border-b last:border-b-0" style={{ background: 'var(--color-surface)' }}>
                   <div style={{ padding: '16px 20px' }}>
-                    <div className="flex items-baseline justify-between mb-2">
-                      <div className="flex items-baseline gap-3">
+                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-3">
                         <span className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{entry.label || `WNC ${entry.year}`}</span>
                         {entry.date && <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>{entry.date}</span>}
                       </div>
@@ -170,7 +210,7 @@ export function WildNCulture() {
                   className="w-full flex items-center justify-between text-left"
                   style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
                 >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
+                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
                   <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
                 </button>
                 {openFaq === i && (
@@ -183,7 +223,7 @@ export function WildNCulture() {
           </div>
         </div>
 
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
           <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             Follow @vsaatucsd
           </a>

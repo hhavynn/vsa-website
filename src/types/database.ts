@@ -555,6 +555,88 @@ export interface Database {
           updated_at?: string;
         };
       };
+      ace_families: {
+        Row: {
+          id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          name: string;
+          slug: string;
+          cover_image_url: string | null;
+          theme_color: string | null;
+          description: string | null;
+          display_order: number;
+          is_published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          name: string;
+          slug: string;
+          cover_image_url?: string | null;
+          theme_color?: string | null;
+          description?: string | null;
+          display_order?: number;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          academic_year_start?: number;
+          academic_year_end?: number;
+          name?: string;
+          slug?: string;
+          cover_image_url?: string | null;
+          theme_color?: string | null;
+          description?: string | null;
+          display_order?: number;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      ace_family_members: {
+        Row: {
+          id: string;
+          family_id: string;
+          name: string;
+          role_label: string | null;
+          photo_url: string | null;
+          parent_member_id: string | null;
+          display_order: number;
+          is_published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          family_id: string;
+          name: string;
+          role_label?: string | null;
+          photo_url?: string | null;
+          parent_member_id?: string | null;
+          display_order?: number;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          family_id?: string;
+          name?: string;
+          role_label?: string | null;
+          photo_url?: string | null;
+          parent_member_id?: string | null;
+          display_order?: number;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       house_page_assets: {
         Row: {
           id: string;
@@ -810,6 +892,34 @@ export interface Database {
       };
     };
     Views: {
+      published_ace_families: {
+        Row: {
+          id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          name: string;
+          slug: string;
+          cover_image_url: string | null;
+          theme_color: string | null;
+          description: string | null;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      published_ace_family_members: {
+        Row: {
+          id: string;
+          family_id: string;
+          name: string;
+          role_label: string | null;
+          photo_url: string | null;
+          parent_member_id: string | null;
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+      };
       published_house_page_assets: {
         Row: {
           id: string;

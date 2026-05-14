@@ -142,7 +142,7 @@ export function Internship() {
     <>
       <PageTitle title="Intern Program" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-2 mb-3">
           <Link to="/get-involved" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Get Involved</Link>
           <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
@@ -164,7 +164,7 @@ export function Internship() {
         </p>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="program-page-content">
 
         {/* CTA */}
         {cycleContent ? (
@@ -174,12 +174,12 @@ export function Internship() {
             defaultLinkLabel="Apply Now"
           />
         ) : INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink && (
-          <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div>
+          <div className="mb-8 flex flex-col gap-4 rounded border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="min-w-0">
               <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
               {INTERN_CONFIG.cycleLabel && <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{INTERN_CONFIG.cycleLabel}</div>}
             </div>
-            <a href={INTERN_CONFIG.applicationLink} target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150">
+            <a href={INTERN_CONFIG.applicationLink} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
               Apply Now →
             </a>
           </div>
@@ -207,9 +207,9 @@ export function Internship() {
         {/* Four Pillars */}
         <div className="mb-10">
           <Label className="mb-4">Four Pillars</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+          <div className="program-step-grid">
             {pillars.map((p) => (
-              <div key={p.title} className="border-l px-5 pb-4" style={{ borderColor: 'var(--color-border)' }}>
+              <div key={p.title} className="program-step-card border-l px-5 pb-4" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="font-sans text-sm font-semibold mb-1.5" style={{ color: 'var(--color-text)' }}>{p.title}</div>
                 <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{p.desc}</p>
               </div>
@@ -222,8 +222,8 @@ export function Internship() {
           <Label className="mb-4">What You'll Do</Label>
           <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
             {whatYouDo.map((item) => (
-              <div key={item.title} className="flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="font-sans text-sm font-semibold shrink-0" style={{ color: 'var(--color-text)', width: 180 }}>{item.title}</div>
+              <div key={item.title} className="program-split-row flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <div className="program-split-row-title shrink-0 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{item.title}</div>
                 <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{item.desc}</p>
               </div>
             ))}
@@ -233,7 +233,7 @@ export function Internship() {
         {/* Shadow Areas */}
         <div className="mb-10">
           <Label className="mb-4">Shadow Areas</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
+          <div className="program-three-grid">
             {shadowAreas.map((area) => (
               <div key={area.title} className="border-t py-3" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="font-sans text-sm font-semibold mb-0.5" style={{ color: 'var(--color-text)' }}>{area.title}</div>
@@ -255,7 +255,7 @@ export function Internship() {
                   className="w-full flex items-center justify-between text-left"
                   style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
                 >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
+                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
                   <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
                 </button>
                 {openFaq === i && (
@@ -268,7 +268,7 @@ export function Internship() {
           </div>
         </div>
 
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
           <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             Follow @vsaatucsd
           </a>

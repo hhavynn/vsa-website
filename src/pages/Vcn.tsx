@@ -34,12 +34,12 @@ export function VCN() {
     <>
       <PageTitle title="Vietnamese Culture Night" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Vietnamese Culture Night</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
           Annual cultural production · UCSD VSA
         </p>
-        <div className="flex gap-3 mt-4">
+        <div className="program-footer-actions mt-4">
           <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             This Year's Show →
           </Link>
@@ -49,12 +49,12 @@ export function VCN() {
         </div>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="program-page-content">
 
         {/* What is VCN */}
         <div className="mb-10">
           <Label className="mb-4">What is VCN?</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'start' }}>
+          <div className="program-two-grid items-start md:gap-10">
             <div>
               <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
                 Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
@@ -72,7 +72,7 @@ export function VCN() {
         {/* What to Expect */}
         <div className="mb-10">
           <Label className="mb-4">What to Expect</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          <div className="program-two-grid gap-0">
             {highlights.map((item, i) => (
               <div key={item.title} className="border-t border-l" style={{ borderColor: 'var(--color-border)', padding: '16px 20px', ...(i % 2 === 0 ? {} : {}) }}>
                 <div className="font-sans text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{item.title}</div>
@@ -88,8 +88,8 @@ export function VCN() {
           <Label className="mb-4">Get Involved</Label>
           <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
             {committees.map((c) => (
-              <div key={c.title} className="flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="font-sans text-sm font-semibold shrink-0" style={{ color: 'var(--color-text)', width: 160 }}>{c.title}</div>
+              <div key={c.title} className="program-split-row flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <div className="program-split-row-title shrink-0 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{c.title}</div>
                 <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{c.desc}</p>
               </div>
             ))}
@@ -110,7 +110,7 @@ export function VCN() {
                   className="w-full flex items-center justify-between text-left"
                   style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
                 >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
+                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
                   <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
                 </button>
                 {openFaq === i && (
@@ -123,7 +123,7 @@ export function VCN() {
           </div>
         </div>
 
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
           <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             This Year's Show →
           </Link>

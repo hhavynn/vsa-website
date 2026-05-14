@@ -124,7 +124,7 @@ export function House() {
     <>
       <PageTitle title="House Program" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-2 mb-3">
           <Link to="/get-involved" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Get Involved</Link>
           <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
@@ -142,7 +142,7 @@ export function House() {
         </p>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="program-page-content">
 
         {/* CTA */}
         {cycleContent ? (
@@ -152,9 +152,9 @@ export function House() {
             defaultLinkLabel="Apply Now"
           />
         ) : APPLICATIONS_OPEN && APPLICATION_LINK && (
-          <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}</div>
-            <a href={APPLICATION_LINK} target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150">
+          <div className="mb-8 flex flex-col gap-4 rounded border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}</div>
+            <a href={APPLICATION_LINK} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
               Apply Now →
             </a>
           </div>
@@ -218,7 +218,7 @@ export function House() {
 
         {/* Standings */}
         <div className="mb-10">
-          <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <Label>House Standings{activeYearLabel ? ` / ${activeYearLabel}` : ''}</Label>
             <Link to="/leaderboard" className="font-sans text-xs font-medium text-brand-600 dark:text-brand-400">
               Full Leaderboard
@@ -240,7 +240,7 @@ export function House() {
               </div>
             ) : (
               standings.map((standing, index) => (
-                <div key={standing.house} className="grid items-center gap-4 border-b last:border-b-0 px-5 py-4" style={{ gridTemplateColumns: '48px minmax(0,1fr) 92px', borderColor: 'var(--color-border)' }}>
+                <div key={standing.house} className="program-standing-row grid items-center gap-3 border-b px-4 py-4 last:border-b-0 sm:gap-4 sm:px-5" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="font-serif leading-none" style={{ fontSize: 28, color: index < 3 ? 'var(--color-text)' : 'var(--color-text3)' }}>#{index + 1}</div>
                   <div>
                     <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
@@ -263,7 +263,7 @@ export function House() {
         {HOUSE_PARENTS.length > 0 && (
           <div className="mb-10">
             <Label className="mb-4">House Parents</Label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 24px' }}>
+            <div className="program-four-grid">
               {HOUSE_PARENTS.map(hp => (
                 <div key={hp.name} className="border-t py-3" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{hp.name}</div>
@@ -278,10 +278,10 @@ export function House() {
         {/* How it works */}
         <div className="mb-10">
           <Label className="mb-4">How It Works</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+          <div className="program-step-grid">
             {steps.map((step) => (
-              <div key={step.num} className="border-l px-5 pb-4" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="font-serif leading-none mb-3" style={{ fontSize: 32, color: 'var(--color-text3)' }}>{step.num}</div>
+              <div key={step.num} className="program-step-card border-l px-5 pb-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 32, color: 'var(--color-text3)' }}>{step.num}</div>
                 <div className="font-sans text-sm font-semibold mb-1.5" style={{ color: 'var(--color-text)' }}>{step.title}</div>
                 <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{step.desc}</p>
               </div>
@@ -310,7 +310,7 @@ export function House() {
                   className="w-full flex items-center justify-between text-left"
                   style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
                 >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
+                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
                   <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
                 </button>
                 {openFaq === i && (
@@ -323,7 +323,7 @@ export function House() {
           </div>
         </div>
 
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
           <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
             Follow @vsaatucsd
           </a>

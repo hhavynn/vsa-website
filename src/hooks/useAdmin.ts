@@ -8,10 +8,16 @@ export function useAdmin() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function checkAdminStatus() {
+      setLoading(true);
+
       if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
+        if (!cancelled) {
+          setIsAdmin(false);
+          setLoading(false);
+        }
         return;
       }
 
@@ -23,17 +29,27 @@ export function useAdmin() {
           .single();
 
         if (error) throw error;
-        setIsAdmin(data?.is_admin || false);
+        if (!cancelled) {
+          setIsAdmin(data?.is_admin || false);
+        }
       } catch (error) {
         console.error('Error checking admin status:', error);
-        setIsAdmin(false);
+        if (!cancelled) {
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     checkAdminStatus();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   return { isAdmin, loading };
-} 
+}

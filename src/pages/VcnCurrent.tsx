@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
+import { formatDateOnly } from '../lib/dateOnly';
+import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { ProgramContentStatus, VCNArchive } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VCN CURRENT YEAR — Update all fields in this config each production cycle.
@@ -15,7 +19,7 @@ const VCN_CURRENT = {
   date: 'Saturday, April 18, 2026',
   time: '',
   venue: '',
-  ticketsAvailable: false,
+  ticketStatus: 'hidden' as ProgramContentStatus,
   ticketLink: '',
   ticketNote: '',
   posterUrl: '',
@@ -27,15 +31,54 @@ const VCN_CURRENT = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+function formatArchiveDate(date: string | null) {
+  return formatDateOnly(date, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function currentFromArchive(archive: VCNArchive | null) {
+  if (!archive) return VCN_CURRENT;
+
+  return {
+    active: true,
+    year: String(archive.year),
+    title: archive.title ?? '',
+    synopsis: archive.description ?? '',
+    date: formatArchiveDate(archive.event_date),
+    time: archive.event_time ?? '',
+    venue: archive.venue ?? '',
+    ticketStatus: archive.ticket_status ?? 'hidden',
+    ticketLink: archive.ticket_url ?? '',
+    ticketNote: archive.ticket_note ?? '',
+    posterUrl: archive.poster_url || archive.cover_image_url || '',
+    trailerUrl: archive.trailer_url || '',
+    dances: VCN_CURRENT.dances,
+    sponsors: VCN_CURRENT.sponsors,
+    messageFromTeam: VCN_CURRENT.messageFromTeam,
+  };
+}
+
 export function VCNCurrent() {
-  if (!VCN_CURRENT.active) {
+  const { archive } = useCurrentVcnArchive();
+  const currentVcn = currentFromArchive(archive);
+  const ticketStatusLabel = PROGRAM_STATUS_LABELS[currentVcn.ticketStatus];
+  const canShowTicketButton =
+    !!currentVcn.ticketLink && (currentVcn.ticketStatus === 'open' || currentVcn.ticketStatus === 'active');
+  const showTicketStatus =
+    currentVcn.ticketStatus !== 'hidden' && (canShowTicketButton || !!currentVcn.ticketNote || !!ticketStatusLabel);
+
+  if (!currentVcn.active) {
     return (
       <>
         <PageTitle title="VCN — This Year's Show" />
         <div className="min-h-[60vh] flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
           <div className="text-center max-w-md">
             <h1 className="font-serif leading-none tracking-[-0.03em] mb-4" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-              VCN {VCN_CURRENT.year || 'Coming Soon'}
+              VCN {currentVcn.year || 'Coming Soon'}
             </h1>
             <p className="font-sans text-sm leading-relaxed mb-8" style={{ color: 'var(--color-text2)' }}>
               Details for this year's Vietnamese Culture Night production are coming soon. Follow{' '}
@@ -60,37 +103,42 @@ export function VCNCurrent() {
 
   return (
     <>
-      <PageTitle title={`VCN ${VCN_CURRENT.year}${VCN_CURRENT.title ? ` — ${VCN_CURRENT.title}` : ''}`} />
+      <PageTitle title={`VCN ${currentVcn.year}${currentVcn.title ? ` — ${currentVcn.title}` : ''}`} />
 
       {/* Page header */}
       <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
         <div className="flex items-center gap-2 mb-3">
           <Link to="/vcn" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Vietnamese Culture Night</Link>
           <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{VCN_CURRENT.year}</span>
+          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{currentVcn.year}</span>
         </div>
         <h1 className="font-serif leading-none tracking-[-0.03em] italic" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-          {VCN_CURRENT.title || `Vietnamese Culture Night ${VCN_CURRENT.year}`}
+          {currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
         </h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          UCSD VSA · VCN {VCN_CURRENT.year}
-          {VCN_CURRENT.date && <span className="ml-3 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-            {VCN_CURRENT.date}{VCN_CURRENT.time ? ` · ${VCN_CURRENT.time}` : ''}
+          UCSD VSA · VCN {currentVcn.year}
+          {currentVcn.date && <span className="ml-3 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+            {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}
           </span>}
         </p>
-        {VCN_CURRENT.ticketsAvailable && VCN_CURRENT.ticketLink && (
-          <div className="mt-4">
-            <a
-              href={VCN_CURRENT.ticketLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center font-sans text-sm font-medium px-4 py-2 rounded"
-              style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
-            >
-              Get Tickets →
-            </a>
-            {VCN_CURRENT.ticketNote && (
-              <span className="ml-3 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{VCN_CURRENT.ticketNote}</span>
+        {showTicketStatus && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {canShowTicketButton && (
+              <a
+                href={currentVcn.ticketLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center font-sans text-sm font-medium px-4 py-2 rounded"
+                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
+              >
+                Get Tickets →
+              </a>
+            )}
+            {ticketStatusLabel && (
+              <span className="font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">{ticketStatusLabel}</span>
+            )}
+            {currentVcn.ticketNote && (
+              <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{currentVcn.ticketNote}</span>
             )}
           </div>
         )}
@@ -99,33 +147,33 @@ export function VCNCurrent() {
       <div style={{ padding: '40px 52px', maxWidth: 800 }}>
 
         {/* Synopsis */}
-        {VCN_CURRENT.synopsis && (
+        {currentVcn.synopsis && (
           <div className="mb-10">
             <Label className="mb-4">Synopsis</Label>
             <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
-              {VCN_CURRENT.synopsis}
+              {currentVcn.synopsis}
             </p>
           </div>
         )}
 
         {/* Venue */}
-        {VCN_CURRENT.venue && (
+        {currentVcn.venue && (
           <div className="mb-10">
             <Label className="mb-3">Venue</Label>
-            <p className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{VCN_CURRENT.venue}</p>
+            <p className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{currentVcn.venue}</p>
           </div>
         )}
 
         {/* Poster / Trailer */}
-        {(VCN_CURRENT.posterUrl || VCN_CURRENT.trailerUrl) && (
+        {(currentVcn.posterUrl || currentVcn.trailerUrl) && (
           <div className="mb-10">
-            <div style={{ display: 'grid', gridTemplateColumns: VCN_CURRENT.posterUrl && VCN_CURRENT.trailerUrl ? '1fr 1fr' : '1fr', gap: 16 }}>
-              {VCN_CURRENT.posterUrl && (
-                <img src={VCN_CURRENT.posterUrl} alt={`VCN ${VCN_CURRENT.year} poster`} className="border rounded w-full object-cover" style={{ borderColor: 'var(--color-border)' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: currentVcn.posterUrl && currentVcn.trailerUrl ? '1fr 1fr' : '1fr', gap: 16 }}>
+              {currentVcn.posterUrl && (
+                <img src={currentVcn.posterUrl} alt={`VCN ${currentVcn.year} poster`} className="border rounded w-full object-cover" style={{ borderColor: 'var(--color-border)' }} />
               )}
-              {VCN_CURRENT.trailerUrl && (
+              {currentVcn.trailerUrl && (
                 <div className="border rounded overflow-hidden aspect-video" style={{ borderColor: 'var(--color-border)' }}>
-                  <iframe src={VCN_CURRENT.trailerUrl} title={`VCN ${VCN_CURRENT.year} trailer`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  <iframe src={currentVcn.trailerUrl} title={`VCN ${currentVcn.year} trailer`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                 </div>
               )}
             </div>
@@ -133,11 +181,11 @@ export function VCNCurrent() {
         )}
 
         {/* Dances */}
-        {VCN_CURRENT.dances.length > 0 && (
+        {currentVcn.dances.length > 0 && (
           <div className="mb-10">
             <Label className="mb-4">This Year's Dances</Label>
             <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-              {VCN_CURRENT.dances.map((dance, i) => (
+              {currentVcn.dances.map((dance, i) => (
                 <div key={i} className="flex items-baseline gap-4 border-b last:border-b-0" style={{ padding: '12px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
                   <span className="font-mono text-[10px] tracking-[.04em] shrink-0" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
                   <div>
@@ -153,11 +201,11 @@ export function VCNCurrent() {
         )}
 
         {/* Sponsors */}
-        {VCN_CURRENT.sponsors.length > 0 && (
+        {currentVcn.sponsors.length > 0 && (
           <div className="mb-10">
             <Label className="mb-4">Sponsors</Label>
             <div className="flex flex-wrap gap-2">
-              {VCN_CURRENT.sponsors.map((s, i) => (
+              {currentVcn.sponsors.map((s, i) => (
                 s.url ? (
                   <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="font-sans text-sm border rounded px-3 py-1.5 transition-colors duration-150" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>{s.name}</a>
                 ) : (
@@ -169,11 +217,11 @@ export function VCNCurrent() {
         )}
 
         {/* Message from Team */}
-        {VCN_CURRENT.messageFromTeam && (
+        {currentVcn.messageFromTeam && (
           <div className="mb-10 border-l-2 pl-5" style={{ borderColor: 'var(--color-border)' }}>
             <Label className="mb-3">From the Production Team</Label>
             <p className="font-serif italic leading-[1.6]" style={{ fontSize: 18, color: 'var(--color-text2)' }}>
-              "{VCN_CURRENT.messageFromTeam}"
+              "{currentVcn.messageFromTeam}"
             </p>
           </div>
         )}
