@@ -154,7 +154,7 @@ export function Home() {
                 <span className="italic" style={{ color: 'var(--brand)' }}>Community.</span>
               </h1>
               <p className="vsa-animate-slide-up vsa-delay-2 mt-7 max-w-[400px] font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-                Promoting and preserving Vietnamese culture since 1977. If you are new here, come to an event and let us introduce you around.
+                A Vietnamese cultural and social community at UC San Diego since 1977.
               </p>
               <div className="vsa-animate-slide-up vsa-delay-3 mt-10 flex flex-wrap gap-3">
                 <Link to="/get-involved" className="vsa-btn-primary">Join VSA</Link>
@@ -221,15 +221,12 @@ export function Home() {
         <div className="vsa-container">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
-              <div className="vsa-section-label">Start Here If You're New</div>
+              <div className="vsa-section-label">Events</div>
               <h2 className="vsa-section-title">
-                Come to our
+                Upcoming
                 <br />
-                <em>next event.</em>
+                <em>events.</em>
               </h2>
-              <p className="vsa-section-sub max-w-[420px]">
-                All events are open to every UCSD student. No experience required, just show up.
-              </p>
               <div className="mt-7">
                 <Link to="/events" className="vsa-btn-primary">See All Events</Link>
               </div>
@@ -240,7 +237,7 @@ export function Home() {
               </div>
               {upcomingEvents.length === 0 ? (
                 <div className="border-y py-5 font-sans text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text3)' }}>
-                  No upcoming events. Check back soon.
+                  No upcoming events posted yet.
                 </div>
               ) : (
                 upcomingEvents.map((event) => <EventRow key={event.id} event={event} />)

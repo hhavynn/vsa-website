@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { useProgramContent } from '../hooks/useProgramContent';
+import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 
 const ACE_CONFIG = {
   applicationsOpen: false,
@@ -30,13 +33,6 @@ const perks = [
   { title: 'A Family Lineage', desc: 'Become part of a multi-generation fam with unique traditions, inside jokes, and a shared history that grows every year.' },
 ];
 
-const experienceTypes = [
-  { title: 'Welcome Mixers', desc: 'Low-pressure social events at the start of each ACE cycle designed to help potential Bigs and Littles meet, mingle, and make connections.' },
-  { title: 'Big Appreciation', desc: 'Seasonal programming dedicated to celebrating the Bigs who show up for their Littles — because being a mentor deserves recognition.' },
-  { title: 'Fam Competitions', desc: 'Fams go head-to-head in friendly challenges and games throughout the year, building team spirit and fam pride along the way.' },
-  { title: 'Reveals & Seasonal Events', desc: 'Each cycle concludes with an ACE reveal. Programming continues across quarters to keep fams active, bonded, and engaged year-round.' },
-];
-
 const faqs = [
   { q: 'What is ACE?', a: 'ACE stands for Anh Chị Em — Vietnamese for "older brother, older sister, younger sibling." It is VSA\'s Big/Little family program, built to help members find mentorship, community, and a family away from home.' },
   { q: 'What is a Big?', a: 'A Big (Anh/Chị) is a supportive VSA member who helps guide and welcome their Little into the community. Think of a Big as an older sibling, mentor, or trusted friend.' },
@@ -50,6 +46,9 @@ const faqs = [
 
 export function Ace() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { content: cycleContent } = useProgramContent('ace');
+  const cycleLabel = cycleContent?.title || ACE_CONFIG.cycleLabel;
+  const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
 
   return (
     <>
@@ -64,8 +63,13 @@ export function Ace() {
         </div>
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Anh Chị Em</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          VSA's Big/Little family program · {ACE_CONFIG.cycleLabel}
-          {ACE_CONFIG.applicationsOpen && (
+          VSA's Big/Little family program · {cycleLabel}
+          {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
+            <span className="ml-3 inline-flex items-center font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+              {statusLabel}
+            </span>
+          )}
+          {!cycleContent && ACE_CONFIG.applicationsOpen && (
             <span className="ml-3 inline-flex items-center font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
               Applications Open
             </span>
@@ -76,7 +80,13 @@ export function Ace() {
       <div style={{ padding: '40px 52px' }}>
 
         {/* CTA if apps open */}
-        {ACE_CONFIG.applicationsOpen && ACE_CONFIG.applicationLink && (
+        {cycleContent ? (
+          <ProgramContentCallout
+            content={cycleContent}
+            defaultTitle="ACE applications"
+            defaultLinkLabel="Apply Now"
+          />
+        ) : ACE_CONFIG.applicationsOpen && ACE_CONFIG.applicationLink && (
           <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div>
               <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
@@ -98,9 +108,6 @@ export function Ace() {
           <Label className="mb-4">What is ACE?</Label>
           <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
             ACE stands for <span className="font-medium" style={{ color: 'var(--color-text)' }}>Anh Chị Em</span> — Vietnamese for "older brother, older sister, younger sibling." It is VSA's Big/Little family program built to help members find mentorship, community, and a family away from home.
-          </p>
-          <p className="font-sans text-sm leading-[1.75] mt-3" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            Whether you are new to VSA or returning, ACE helps you find your place and your people. Members are paired based on shared interests, backgrounds, values, and career goals — and those connections grow into multi-generation family lines that last long after graduation.
           </p>
         </div>
 
@@ -157,19 +164,6 @@ export function Ace() {
           <p className="font-sans text-xs mt-4" style={{ color: 'var(--color-text3)' }}>
             Eligibility requirements and application timelines are announced each cycle. Follow @vsaatucsd for current details.
           </p>
-        </div>
-
-        {/* ACE Experience */}
-        <div className="mb-10">
-          <Label className="mb-4">The ACE Experience</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {experienceTypes.map(ev => (
-              <div key={ev.title} className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="font-sans text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{ev.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{ev.desc}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* FAQ */}
