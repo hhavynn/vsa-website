@@ -55,7 +55,7 @@ export function Ace() {
       <PageTitle title="ACE Program" />
 
       {/* Page header */}
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
+      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex items-center gap-2 mb-3">
           <Link to="/get-involved" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Get Involved</Link>
           <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
@@ -77,7 +77,7 @@ export function Ace() {
         </p>
       </div>
 
-      <div style={{ padding: '40px 52px' }}>
+      <div className="program-page-content">
 
         {/* CTA if apps open */}
         {cycleContent ? (
@@ -87,8 +87,8 @@ export function Ace() {
             defaultLinkLabel="Apply Now"
           />
         ) : ACE_CONFIG.applicationsOpen && ACE_CONFIG.applicationLink && (
-          <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div>
+          <div className="mb-8 flex flex-col gap-4 rounded border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="min-w-0">
               <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
               <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{ACE_CONFIG.cycleLabel}</div>
             </div>
@@ -96,7 +96,7 @@ export function Ace() {
               href={ACE_CONFIG.applicationLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-sans text-sm font-medium px-4 py-2 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150"
+              className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950"
             >
               Apply Now →
             </a>
@@ -121,7 +121,7 @@ export function Ace() {
                 className="border-b last:border-b-0"
                 style={{ padding: '16px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
               >
-                <div className="flex items-baseline gap-2 mb-1">
+                <div className="mb-1 flex flex-wrap items-baseline gap-2">
                   <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
                   <span className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{r.role}</span>
                   <span className="font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>{r.viet}</span>
@@ -135,7 +135,7 @@ export function Ace() {
         {/* Why Join */}
         <div className="mb-10">
           <Label className="mb-4">Why Join ACE?</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="program-two-grid">
             {perks.map(p => (
               <div key={p.title} className="border-l pl-5" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="font-sans text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{p.title}</div>
@@ -148,14 +148,14 @@ export function Ace() {
         {/* How it works */}
         <div className="mb-10">
           <Label className="mb-4">How ACE Works</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+          <div className="program-step-grid">
             {steps.map((step, i) => (
               <div
                 key={step.num}
-                className="border-l px-5 pb-4"
+                className="program-step-card border-l px-5 pb-4"
                 style={{ borderColor: 'var(--color-border)' }}
               >
-                <div className="font-serif leading-none mb-3" style={{ fontSize: 32, color: 'var(--color-text3)' }}>{step.num}</div>
+                <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 32, color: 'var(--color-text3)' }}>{step.num}</div>
                 <div className="font-sans text-sm font-semibold mb-1.5" style={{ color: 'var(--color-text)' }}>{step.title}</div>
                 <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{step.desc}</p>
               </div>
@@ -177,7 +177,7 @@ export function Ace() {
                   className="w-full flex items-center justify-between text-left transition-colors duration-150"
                   style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
                 >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
+                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
                   <span className="font-sans text-lg ml-4 shrink-0" style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>+</span>
                 </button>
                 {openFaq === i && (
@@ -191,7 +191,7 @@ export function Ace() {
         </div>
 
         {/* Footer links */}
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
           <a
             href="https://www.instagram.com/vsaatucsd/"
             target="_blank"

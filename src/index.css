@@ -322,6 +322,72 @@
     pointer-events: none;
     animation: vsa-particle-float linear infinite;
   }
+
+  .program-page-header {
+    padding: 36px 52px 28px;
+  }
+
+  .program-page-content {
+    padding: 40px 52px;
+  }
+
+  .program-two-grid,
+  .program-three-grid,
+  .program-four-grid,
+  .program-step-grid {
+    display: grid;
+    min-width: 0;
+  }
+
+  .program-two-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .program-three-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 32px;
+  }
+
+  .program-four-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 24px;
+  }
+
+  .program-step-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .program-step-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .program-split-row {
+    min-width: 0;
+  }
+
+  .program-split-row-title {
+    width: 180px;
+  }
+
+  .program-footer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .program-cta-link {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .program-standing-row {
+    grid-template-columns: 48px minmax(0, 1fr) 92px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -343,6 +409,55 @@
   .vsa-event-row {
     grid-template-columns: 58px 1fr;
     gap: 16px;
+  }
+
+  .program-page-header {
+    padding: 28px 16px 24px;
+  }
+
+  .program-page-content {
+    padding: 32px 16px;
+  }
+
+  .program-two-grid,
+  .program-three-grid,
+  .program-four-grid,
+  .program-step-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .program-step-card {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    padding: 16px !important;
+  }
+
+  .program-step-number {
+    overflow-wrap: normal;
+    font-size: 26px !important;
+    margin-bottom: 8px;
+  }
+
+  .program-split-row {
+    flex-direction: column;
+    gap: 4px !important;
+  }
+
+  .program-split-row-title {
+    width: auto !important;
+  }
+
+  .program-footer-actions > a,
+  .program-footer-actions > button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .program-standing-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
   }
 }
 
