@@ -3,10 +3,10 @@ export const HOUSE_OPTIONS = ['Bowser', 'Donkey Kong', 'Boo', 'Toad'] as const;
 export type HouseName = typeof HOUSE_OPTIONS[number];
 
 export const HOUSE_LABELS: Record<HouseName, string> = {
-  Bowser: 'House Bowser',
-  'Donkey Kong': 'House Donkey Kong',
-  Boo: 'House Boo',
-  Toad: 'House Toad',
+  Bowser: 'Bowser',
+  'Donkey Kong': 'Donkey Kong',
+  Boo: 'Boo',
+  Toad: 'Toad',
 };
 
 export const HOUSE_COLORS: Record<HouseName, string> = {

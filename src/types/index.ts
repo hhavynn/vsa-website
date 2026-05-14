@@ -48,16 +48,66 @@ export interface VCNArchive {
   annual_number: string | null;
   theme_name: string | null;
   event_date: string | null;
+  event_time: string | null;
   venue: string | null;
   description: string | null;
   video_url: string | null;
   photo_album_url: string | null;
   album_source: string | null;
   cover_image_url: string | null;
+  poster_url: string | null;
+  trailer_url: string | null;
   photo_credit: string | null;
   is_published: boolean;
   is_featured: boolean;
+  is_current: boolean;
+  ticket_status: ProgramContentStatus;
+  ticket_url: string | null;
+  ticket_note: string | null;
   display_order: number;
+  source_doc_url: string | null;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProgramPageKey = 'ace' | 'intern' | 'house' | 'wnc';
+export type ProgramSectionKey = 'current_cycle' | 'application_cta' | 'event_cta' | 'notice';
+export type ProgramContentStatus = 'hidden' | 'coming_soon' | 'open' | 'closed' | 'active';
+
+export interface ProgramContent {
+  id: string;
+  page_key: ProgramPageKey;
+  section_key: ProgramSectionKey;
+  title: string | null;
+  body: string | null;
+  status: ProgramContentStatus;
+  primary_link_label: string | null;
+  primary_link_url: string | null;
+  secondary_link_label: string | null;
+  secondary_link_url: string | null;
+  open_at: string | null;
+  close_at: string | null;
+  deadline_at: string | null;
+  event_date: string | null;
+  venue: string | null;
+  is_published: boolean;
+  display_order: number;
+  source_doc_url: string | null;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HousePageAsset {
+  id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  house: string;
+  image_url: string | null;
+  image_alt: string | null;
+  display_order: number;
+  source_doc_url: string | null;
   internal_notes: string | null;
   created_at: string;
   updated_at: string;

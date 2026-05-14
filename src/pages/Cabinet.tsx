@@ -24,10 +24,34 @@ interface CabinetMember {
 
 const publicUrl = process.env.PUBLIC_URL || '';
 const cabinetImage = (fileName: string) => `${publicUrl}/images/cabinet/${fileName}`;
+const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, created_at';
 
 function resolveImageUrl(image?: string | null) {
   if (!image) return null;
   return image.startsWith('http') || image.startsWith('data:') ? image : cabinetImage(image);
+}
+
+function getSizedCabinetImageUrl(image: string, width: number, height: number) {
+  try {
+    const url = new URL(image);
+    const publicStoragePath = '/storage/v1/object/public/cabinet_images/';
+    if (!url.pathname.includes(publicStoragePath)) return image;
+
+    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/cabinet_images/');
+    url.searchParams.set('width', String(width));
+    url.searchParams.set('height', String(height));
+    url.searchParams.set('resize', 'cover');
+    url.searchParams.set('quality', '75');
+    return url.toString();
+  } catch {
+    return image;
+  }
+}
+
+function sortCabinetMembers(a: CabinetMember, b: CabinetMember) {
+  const byDisplayOrder = (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER);
+  if (byDisplayOrder !== 0) return byDisplayOrder;
+  return a.name.localeCompare(b.name);
 }
 
 function groupByRole(members: CabinetMember[]) {
@@ -80,10 +104,12 @@ function Avatar({
   image,
   name,
   size = 48,
+  priority = false,
 }: {
   image?: string | null;
   name: string;
   size?: number;
+  priority?: boolean;
 }) {
   const [hasError, setHasError] = useState(false);
   const imageUrl = resolveImageUrl(image);
@@ -115,11 +141,15 @@ function Avatar({
 
   return (
     <img
-      src={imageUrl}
+      src={getSizedCabinetImageUrl(imageUrl, size * 2, size * 2)}
+      srcSet={`${getSizedCabinetImageUrl(imageUrl, size, size)} 1x, ${getSizedCabinetImageUrl(imageUrl, size * 2, size * 2)} 2x`}
       alt={name}
       className="shrink-0 rounded-full object-cover"
+      width={size}
+      height={size}
       style={{ width: size, height: size }}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
       onError={() => setHasError(true)}
     />
   );
@@ -269,7 +299,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
             style={{ borderColor: 'var(--color-border)' }}
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
-              <Avatar image={member.image_url} name={member.name} size={96} />
+              <Avatar image={member.image_url} name={member.name} size={96} priority={index < 2} />
               <div className="min-w-0 flex-1">
                 <p className="font-sans text-[20px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
                   {member.name}
@@ -378,24 +408,37 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
 export function Cabinet() {
   const { cabinetYears } = useCabinetYears();
   const [members, setMembers] = useState<CabinetMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingYearIds, setLoadingYearIds] = useState(true);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [memberCabinetYearIds, setMemberCabinetYearIds] = useState<string[]>([]);
+  const [hasLegacyMembers, setHasLegacyMembers] = useState(false);
   const [selectedCabinetYearId, setSelectedCabinetYearId] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     supabase
       .from('cabinet_members')
-      .select('*')
-      .order('display_order', { ascending: true })
-      .order('created_at', { ascending: true })
+      .select('cabinet_year_id')
       .then(({ data, error }) => {
-        if (!error && data) setMembers(data as CabinetMember[]);
-        setLoading(false);
+        if (!isMounted) return;
+        if (!error && data) {
+          const yearIds = new Set<string>();
+          let hasNullYear = false;
+          data.forEach((member) => {
+            if (member.cabinet_year_id) yearIds.add(member.cabinet_year_id);
+            else hasNullYear = true;
+          });
+          setMemberCabinetYearIds(Array.from(yearIds));
+          setHasLegacyMembers(hasNullYear);
+        }
+        setLoadingYearIds(false);
       });
+    return () => { isMounted = false; };
   }, []);
 
   const cabinetYearsWithMembers = useMemo(
-    () => cabinetYears.filter((year) => members.some((member) => member.cabinet_year_id === year.id)),
-    [cabinetYears, members]
+    () => cabinetYears.filter((year) => memberCabinetYearIds.includes(year.id)),
+    [cabinetYears, memberCabinetYearIds]
   );
   const currentCabinetYear =
     cabinetYears.find((year) => year.is_active) ??
@@ -405,9 +448,10 @@ export function Cabinet() {
     () => {
       const visibleYearIds = new Set(cabinetYearsWithMembers.map((year) => year.id));
       if (currentCabinetYear) visibleYearIds.add(currentCabinetYear.id);
+      if (hasLegacyMembers && currentCabinetYear) visibleYearIds.add(currentCabinetYear.id);
       return cabinetYears.filter((year) => visibleYearIds.has(year.id));
     },
-    [cabinetYears, cabinetYearsWithMembers, currentCabinetYear]
+    [cabinetYears, cabinetYearsWithMembers, currentCabinetYear, hasLegacyMembers]
   );
   const effectiveCabinetYearId =
     selectedCabinetYearId && publicCabinetYears.some((year) => year.id === selectedCabinetYearId)
@@ -415,22 +459,58 @@ export function Cabinet() {
       : currentCabinetYear?.id ?? publicCabinetYears[0]?.id ?? null;
   const selectedCabinetYear =
     publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
-  const visibleMembers = useMemo(
-    () => {
-      if (!effectiveCabinetYearId) return members;
-      return members.filter(
-        (member) =>
-          member.cabinet_year_id === effectiveCabinetYearId ||
-          (!member.cabinet_year_id && currentCabinetYear?.id === effectiveCabinetYearId)
-      );
-    },
-    [members, effectiveCabinetYearId, currentCabinetYear?.id]
-  );
+  const shouldIncludeLegacyMembers = !!effectiveCabinetYearId && currentCabinetYear?.id === effectiveCabinetYearId;
 
-  const execBoard = visibleMembers.filter((member) => member.category === 'Executive Board');
-  const genBoard = visibleMembers.filter((member) => member.category === 'General Board');
-  const interns = visibleMembers.filter((member) => member.category === 'Interns');
-  const other = visibleMembers.filter(
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMembersForSelectedYear() {
+      if (!effectiveCabinetYearId) {
+        setMembers([]);
+        setLoadingMembers(false);
+        return;
+      }
+
+      setLoadingMembers(true);
+      const selectedYearQuery = supabase
+        .from('cabinet_members')
+        .select(CABINET_MEMBER_FIELDS)
+        .eq('cabinet_year_id', effectiveCabinetYearId)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      const [selectedYearResult, legacyResult] = await Promise.all([
+        selectedYearQuery,
+        shouldIncludeLegacyMembers
+          ? supabase
+              .from('cabinet_members')
+              .select(CABINET_MEMBER_FIELDS)
+              .is('cabinet_year_id', null)
+              .order('display_order', { ascending: true })
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (!isMounted) return;
+      if (selectedYearResult.error || legacyResult.error) {
+        setMembers([]);
+      } else {
+        const nextMembers = [
+          ...((selectedYearResult.data ?? []) as CabinetMember[]),
+          ...((legacyResult.data ?? []) as CabinetMember[]),
+        ].sort(sortCabinetMembers);
+        setMembers(nextMembers);
+      }
+      setLoadingMembers(false);
+    }
+
+    loadMembersForSelectedYear();
+    return () => { isMounted = false; };
+  }, [effectiveCabinetYearId, shouldIncludeLegacyMembers]);
+
+  const execBoard = members.filter((member) => member.category === 'Executive Board');
+  const genBoard = members.filter((member) => member.category === 'General Board');
+  const interns = members.filter((member) => member.category === 'Interns');
+  const other = members.filter(
     (member) => !['Executive Board', 'General Board', 'Interns'].includes(member.category),
   );
 
@@ -458,7 +538,7 @@ export function Cabinet() {
                 {selectedCabinetYear?.label ?? 'Current Cabinet'}
                 {selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''}
                 {' / '}
-                {visibleMembers.length} members
+                {members.length} members
               </p>
               {publicCabinetYears.length > 0 && (
                 <div className="mt-5 max-w-xs">
@@ -497,18 +577,18 @@ export function Cabinet() {
         </div>
       </div>
 
-      {loading ? (
+      {loadingYearIds || loadingMembers ? (
         <div className="flex justify-center px-5 py-24 sm:px-8 lg:px-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-brand-600" />
         </div>
-      ) : members.length === 0 || visibleMembers.length === 0 ? (
+      ) : members.length === 0 ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
           <div
             className="rounded-md border p-12 text-center"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
           >
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-              {members.length === 0
+              {publicCabinetYears.length === 0
                 ? 'Cabinet information is being updated. Check back soon.'
                 : `No cabinet members are listed for ${selectedCabinetYear?.label ?? 'this cabinet year'} yet.`}
             </p>

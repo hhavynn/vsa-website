@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
 import { HOUSE_LABELS, HouseName, normalizeHouse } from '../../constants/houses';
 import {
   cleanNameForImport,
@@ -27,6 +28,7 @@ interface Member {
 
 type SheetFormat = 'wide' | 'long';
 type RowStatus = 'match' | 'review' | 'unmatched' | 'invalid';
+type AdminHouseTab = 'assignments' | 'images';
 
 interface ParsedHouseRow {
   rowId: string;
@@ -44,6 +46,7 @@ interface ParsedHouseRow {
   selected: boolean;
   note: string;
 }
+
 
 const EMPTY_SUMMARY = {
   match: 0,
@@ -273,6 +276,7 @@ function statusClass(status: RowStatus) {
 }
 
 export default function AdminHouses() {
+  const [activeTab, setActiveTab] = useState<AdminHouseTab>('assignments');
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [rawInput, setRawInput] = useState('');
@@ -399,11 +403,36 @@ export default function AdminHouses() {
           <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>House Assignments</h1>
           <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Import House Reveal assignments without changing attendance or points.</p>
         </div>
-        <Link to="/admin/members" className="font-sans text-xs font-medium border rounded px-3 py-1.5 transition-colors" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
-          Members
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+            {([
+              ['assignments', 'Assignment Import'],
+              ['images', 'House Page Images'],
+            ] as const).map(([tab, label], index) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className="font-sans text-xs transition-colors duration-150"
+                style={{
+                  padding: '7px 14px',
+                  fontWeight: activeTab === tab ? 600 : 400,
+                  background: activeTab === tab ? 'var(--color-surface2)' : 'transparent',
+                  color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)',
+                  borderLeft: index > 0 ? '1px solid var(--color-border)' : 'none',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <Link to="/admin/members" className="font-sans text-xs font-medium border rounded px-3 py-1.5 transition-colors" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
+            Members
+          </Link>
+        </div>
       </div>
 
+      {activeTab === 'assignments' ? (
       <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]" style={{ padding: '20px 28px' }}>
         <div className="rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-5">
@@ -561,6 +590,9 @@ export default function AdminHouses() {
           </div>
         </div>
       </div>
+      ) : (
+        <HouseImagesManager />
+      )}
     </>
   );
 }

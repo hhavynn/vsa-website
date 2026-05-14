@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
-import { HOUSE_LABELS } from '../constants/houses';
+import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { HouseYearlyPoints } from '../types';
+import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
+import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
+import { useProgramContent } from '../hooks/useProgramContent';
+import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { HousePageAsset, HouseYearlyPoints } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -16,11 +22,7 @@ const APPLICATION_LINK = '';
 const CYCLE_LABEL = '';
 
 interface HouseData {
-  name: string;
-  meaning: string;
-  color: string;
-  trait: string;
-  desc: string;
+  house: HouseName;
 }
 
 interface HouseParent {
@@ -31,16 +33,11 @@ interface HouseParent {
   photo?: string;
 }
 
-const HOUSES: HouseData[] = [
-  { name: 'House Boo', meaning: 'Ghost', color: '#e2e8f0', trait: 'Sneaky & Spooky', desc: 'The house that lurks in the shadows — always watching, always ready. Strength lies in the element of surprise.' },
-  { name: 'House Bowser', meaning: 'Koopa King', color: '#f97316', trait: 'Fierce & Mighty', desc: 'Bold, powerful, and unapologetically competitive. House Bowser comes to win every single time.' },
-  { name: 'House Toad', meaning: 'Mushroom Retainer', color: '#ef4444', trait: 'Loyal & Cheerful', desc: 'Warm, welcoming, and endlessly enthusiastic. House Toad is the beating heart of every event.' },
-  { name: 'House Donkey Kong', meaning: 'Jungle King', color: '#eab308', trait: 'Strong & Wild', desc: 'Raw energy, unstoppable momentum, and house pride that shakes the whole jungle.' },
-];
+const HOUSES: HouseData[] = (['Boo', 'Bowser', 'Toad', 'Donkey Kong'] as HouseName[]).map((house) => ({ house }));
 
 const HOUSE_PARENTS: HouseParent[] = [
   // Example — replace with actual House Parents each year:
-  // { name: 'First Last', house: 'House Boo', emoji: '👻', bio: 'Short bio here.' },
+  // { name: 'First Last', house: 'Boo', emoji: '', bio: 'Short bio here.' },
 ];
 
 const steps = [
@@ -65,16 +62,42 @@ const faqs = [
   { q: 'When do sign-ups or applications open?', a: "Sign-up timelines are announced at the start of each year through VSA's official channels. Follow @vsaatucsd on Instagram to stay up to date." },
 ];
 
+function getCurrentAcademicYearStart() {
+  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+}
+
+function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
+  const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
+  if (activeTermYear) return activeTermYear;
+
+  const currentYear = getCurrentAcademicYearStart();
+  if (currentYear) return currentYear;
+
+  return terms[0]?.academic_year_start ?? null;
+}
+
+function assetMapByHouse(assets: HousePageAsset[]) {
+  return assets.reduce((map, asset) => {
+    map.set(asset.house, asset);
+    return map;
+  }, new Map<string, HousePageAsset>());
+}
+
 export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
+  const { yearsWithData } = useLeaderboardYears();
+  const { content: cycleContent } = useProgramContent('house');
   const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
   const [standingsLoading, setStandingsLoading] = useState(true);
+  const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
 
-  const activeYear = terms.find((term) => term.is_active)?.academic_year_start
-    ?? terms[0]?.academic_year_start
-    ?? null;
-  const activeYearLabel = activeYear ? `${activeYear}-${activeYear + 1}` : '';
+  const activeYear = resolveHouseYear(terms);
+  const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
+  const hasAnyLeaderboardData = yearsWithData.length > 0;
+  const hasSelectedYearData = activeYear ? yearsWithData.includes(activeYear) : false;
+  const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
+  const houseAssetsByName = assetMapByHouse(houseAssets);
 
   useEffect(() => {
     let isMounted = true;
@@ -110,14 +133,25 @@ export function House() {
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>House Program</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
           Year-long community competition · UCSD VSA
-          {APPLICATIONS_OPEN && CYCLE_LABEL && <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">Applications Open · {CYCLE_LABEL}</span>}
+          {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
+            <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+              {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
+            </span>
+          )}
+          {!cycleContent && APPLICATIONS_OPEN && CYCLE_LABEL && <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">Applications Open · {CYCLE_LABEL}</span>}
         </p>
       </div>
 
       <div style={{ padding: '40px 52px' }}>
 
         {/* CTA */}
-        {APPLICATIONS_OPEN && APPLICATION_LINK && (
+        {cycleContent ? (
+          <ProgramContentCallout
+            content={cycleContent}
+            defaultTitle="House Program updates"
+            defaultLinkLabel="Apply Now"
+          />
+        ) : APPLICATIONS_OPEN && APPLICATION_LINK && (
           <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}</div>
             <a href={APPLICATION_LINK} target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150">
@@ -132,30 +166,53 @@ export function House() {
           <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
             The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.
           </p>
-          <p className="font-sans text-sm leading-[1.75] mt-3" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            Whether you're new to VSA or looking for a tighter-knit community within the organization, the House Program is built to help you connect and belong.
-          </p>
         </div>
 
         {/* The Four Houses */}
         <div className="mb-10">
           <Label className="mb-4">The Four Houses</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
-            {HOUSES.map((house, i) => (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {HOUSES.map(({ house }) => {
+              const asset = houseAssetsByName.get(house);
+              const color = HOUSE_COLORS[house];
+              return (
               <div
-                key={house.name}
-                className="border-l px-5 pb-5"
-                style={{ borderColor: 'var(--color-border)' }}
+                key={house}
+                className="overflow-hidden rounded border"
+                style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
               >
                 <div
-                  className="w-3 h-3 rounded-full mb-3"
-                  style={{ background: house.color }}
-                />
-                <div className="font-sans text-sm font-semibold mb-0.5" style={{ color: 'var(--color-text)' }}>{house.name}</div>
-                <div className="font-sans text-[11px] mb-2" style={{ color: 'var(--color-text3)' }}>{house.trait}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{house.desc}</p>
+                  className="relative aspect-[4/3] overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
+                >
+                  {asset?.image_url ? (
+                    <img
+                      src={asset.image_url}
+                      alt={asset.image_alt || HOUSE_LABELS[house]}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <div
+                        className="grid h-16 w-16 place-items-center rounded-full border font-serif text-2xl"
+                        style={{ borderColor: `${color}66`, color, background: 'var(--color-surface)' }}
+                      >
+                        {house === 'Donkey Kong' ? 'DK' : house.slice(0, 2).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <div>
+                    <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                      {HOUSE_LABELS[house]}
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -171,8 +228,15 @@ export function House() {
             {standingsLoading ? (
               <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>Loading house standings...</div>
             ) : standings.length === 0 ? (
-              <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                House standings will appear after House Reveal assignments are imported.
+              <div className="px-5 py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                <p style={{ color: 'var(--color-text2)' }}>
+                  House standings will appear after House Reveal assignments are imported.
+                </p>
+                {activeYearLabel && (
+                  <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                    No house points are recorded for {activeYearLabel}{hasAnyLeaderboardData && !hasSelectedYearData ? ' yet' : ''}.
+                  </p>
+                )}
               </div>
             ) : (
               standings.map((standing, index) => (

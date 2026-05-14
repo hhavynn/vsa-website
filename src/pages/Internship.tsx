@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { useProgramContent } from '../hooks/useProgramContent';
+import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERN PROGRAM CONFIG — Update these values each cycle.
@@ -57,6 +60,8 @@ const faqs = [
 
 export function Internship() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { content: cycleContent } = useProgramContent('intern');
+  const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
 
   return (
     <>
@@ -71,7 +76,12 @@ export function Internship() {
         <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Intern Program</h1>
         <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
           Leadership development · UCSD VSA
-          {INTERN_CONFIG.applicationsOpen && (
+          {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
+            <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+              {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
+            </span>
+          )}
+          {!cycleContent && INTERN_CONFIG.applicationsOpen && (
             <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
               Applications Open{INTERN_CONFIG.cycleLabel ? ` · ${INTERN_CONFIG.cycleLabel}` : ''}
             </span>
@@ -82,7 +92,13 @@ export function Internship() {
       <div style={{ padding: '40px 52px' }}>
 
         {/* CTA */}
-        {INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink && (
+        {cycleContent ? (
+          <ProgramContentCallout
+            content={cycleContent}
+            defaultTitle="Intern Program applications"
+            defaultLinkLabel="Apply Now"
+          />
+        ) : INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink && (
           <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div>
               <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
@@ -99,9 +115,6 @@ export function Internship() {
           <Label className="mb-4">About the Program</Label>
           <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
             The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
-          </p>
-          <p className="font-sans text-sm leading-[1.75] mt-3" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            Interns are an active part of cabinet — not just helpers. The program is built around mentorship, collaboration, and hands-on involvement across VSA's four pillars: Social, Cultural, Community, and Academic & Professional.
           </p>
         </div>
 
