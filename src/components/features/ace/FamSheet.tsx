@@ -11,7 +11,7 @@ import {
   useState,
 } from 'react';
 import { AceFamily, AceFamilyMember } from '../../../types';
-import { membersToTreeNodes } from '../../../lib/aceFamilyAdapter';
+import { getDisplayFamName, isDeadFam, membersToTreeNodes } from '../../../lib/aceFamilyAdapter';
 import { FamilyTree, TreeNode } from './FamilyTree';
 import { FamAccent } from './FamCover';
 
@@ -412,6 +412,8 @@ function usePannableTree(resetKey: string) {
 
 export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSheetProps) {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const displayName = getDisplayFamName(family.name);
+  const deadFam = isDeadFam(family.name);
 
   const treeNodes = useMemo<TreeNode[]>(() => membersToTreeNodes(members), [members]);
   const pan = usePannableTree(`${family.id}:${treeNodes.length}`);
@@ -463,21 +465,22 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
     !!m && (m.role_label ?? '').toLowerCase().includes('little');
 
   return (
-    <div className="ace-sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={`${family.name} family tree`}>
+    <div className="ace-sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={`${displayName} family tree`}>
       <div className="ace-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="ace-sheet-grabber" />
 
         <div className="ace-sheet-head">
           <div className="ace-sheet-head-left">
             <div className={`ace-sheet-eyebrow ace-sheet-eyebrow-${accent}`}>
-              Family{viet ? ` · ${viet}` : ''}
+              Family{viet ? ` · ${viet}` : ''}{deadFam ? ' · Graveyard' : ''}
             </div>
             <div className="ace-sheet-title">
-              {family.name}
+              {displayName}
               {viet && <span className={`ace-sheet-viet ace-sheet-viet-${accent}`}> · {viet}</span>}
+              {deadFam && <span className="ace-sheet-badge">Graveyard</span>}
             </div>
             <div className="ace-sheet-meta">
-              {members.length} members · {genCount} generation{genCount === 1 ? '' : 's'} · Est. {family.academic_year_start}
+              {members.length} members · {genCount} generation{genCount === 1 ? '' : 's'}
             </div>
           </div>
           <button className="ace-iconbtn" onClick={onClose} aria-label="Close">
@@ -495,10 +498,6 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
           <span className="ace-legend-item">
             <span className={`ace-legend-swatch ace-legend-swatch-ring-${accent}`} />
             Little · current
-          </span>
-          <span className="ace-legend-item">
-            <span className={`ace-legend-line ace-legend-line-${accent}`} />
-            Newest line
           </span>
         </div>
 

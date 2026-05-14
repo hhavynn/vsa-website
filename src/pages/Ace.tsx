@@ -7,14 +7,13 @@ import {
   usePublishedAceFamilies,
   useAllPublishedAceFamilyMembers,
 } from '../hooks/useAceFamilies';
-import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { PROGRAM_STATUS_LABELS, formatProgramDateTime } from '../lib/programContent';
-import { getAcademicTermMeta } from '../lib/academicTerms';
 import { AceFamily, AceFamilyMember } from '../types';
 import {
   accentFromThemeColor,
   generationDepth,
-  isCurrentAcademicYear,
+  getDisplayFamName,
+  isDeadFam,
   patternForFamily,
   vietForFamily,
 } from '../lib/aceFamilyAdapter';
@@ -44,23 +43,13 @@ const FAQS = [
   { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
 ];
 
-function getCurrentAcademicYearStart(): number | null {
-  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
-}
-
-function resolveActiveYear(terms: ReturnType<typeof useAcademicTerms>['terms']): number | null {
-  const activeTermYear = terms.find((t) => t.is_active)?.academic_year_start;
-  if (activeTermYear) return activeTermYear;
-  return getCurrentAcademicYearStart();
-}
-
 interface FamDerived {
   family: AceFamily;
   accent: FamAccent;
   viet: string | null;
   members: AceFamilyMember[];
   gens: number;
-  isActiveYear: boolean;
+  isDead: boolean;
 }
 
 export function Ace() {
@@ -70,10 +59,7 @@ export function Ace() {
   const { content: cycleContent } = useProgramContent('ace');
   const { families } = usePublishedAceFamilies();
   const { members: allMembers } = useAllPublishedAceFamilyMembers();
-  const { terms } = useAcademicTerms();
-  const activeYear = useMemo(() => resolveActiveYear(terms), [terms]);
 
-  const [filter, setFilter] = useState<'all' | 'active' | 'deep'>('all');
   const [openFamId, setOpenFamId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number>(-1);
 
@@ -96,24 +82,15 @@ export function Ace() {
         viet: vietForFamily(f, i),
         members,
         gens: generationDepth(members),
-        isActiveYear: isCurrentAcademicYear(f, activeYear),
+        isDead: isDeadFam(f.name),
       };
     });
-  }, [families, membersByFamily, activeYear]);
+  }, [families, membersByFamily]);
 
-  const filteredFams = useMemo(() => {
-    if (filter === 'active') return derivedFams.filter((f) => f.isActiveYear);
-    if (filter === 'deep')   return derivedFams.filter((f) => f.gens >= 3);
-    return derivedFams;
-  }, [filter, derivedFams]);
+  const activeFams = useMemo(() => derivedFams.filter((f) => !f.isDead), [derivedFams]);
+  const graveyardFams = useMemo(() => derivedFams.filter((f) => f.isDead), [derivedFams]);
 
   const openFam = openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
-
-  const filters = [
-    { id: 'all'    as const, label: 'All fams',  n: derivedFams.length },
-    { id: 'active' as const, label: 'Active this year', n: derivedFams.filter((f) => f.isActiveYear).length },
-    { id: 'deep'   as const, label: '3+ gens',   n: derivedFams.filter((f) => f.gens >= 3).length },
-  ];
 
   // Cycle CTA: drive from program_content('ace'). Hide if hidden/null.
   const cycleStatusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
@@ -228,46 +205,49 @@ export function Ace() {
         {/* Fam grid */}
         <section className="ace-section">
           <div className="ace-eyebrow">ACE Fams</div>
-          {derivedFams.length === 0 ? (
+          {activeFams.length === 0 ? (
             <div className="ace-fam-empty">
-              ACE fams will appear here once they're published.
+              Active ACE fams will appear here once they're published.
             </div>
           ) : (
-            <>
-              <div className="ace-filterbar">
-                {filters.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setFilter(f.id)}
-                    className={`ace-filter ${filter === f.id ? 'is-active' : ''}`}
-                    type="button"
-                  >
-                    {f.label}
-                    <span className="ace-filter-n">{f.n}</span>
-                  </button>
-                ))}
-              </div>
-              {filteredFams.length === 0 ? (
-                <div className="ace-fam-empty">No fams match this filter yet.</div>
-              ) : (
-                <div className="ace-fam-grid">
-                  {filteredFams.map((f) => (
-                    <FamCard
-                      key={f.family.id}
-                      family={f.family}
-                      accent={f.accent}
-                      viet={f.viet}
-                      memberCount={f.members.length}
-                      gens={f.gens}
-                      isActiveYear={f.isActiveYear}
-                      onOpen={() => setOpenFamId(f.family.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+            <div className="ace-fam-grid">
+              {activeFams.map((f) => (
+                <FamCard
+                  key={f.family.id}
+                  family={f.family}
+                  accent={f.accent}
+                  viet={f.viet}
+                  memberCount={f.members.length}
+                  gens={f.gens}
+                  onOpen={() => setOpenFamId(f.family.id)}
+                />
+              ))}
+            </div>
           )}
         </section>
+
+        {graveyardFams.length > 0 && (
+          <section className="ace-section ace-graveyard-section">
+            <div className="ace-eyebrow">Fam Graveyard</div>
+            <p className="ace-graveyard-copy">
+              Preserved ACE family lines from earlier eras.
+            </p>
+            <div className="ace-fam-grid ace-graveyard-grid">
+              {graveyardFams.map((f) => (
+                <FamCard
+                  key={f.family.id}
+                  family={f.family}
+                  accent={f.accent}
+                  viet={f.viet}
+                  memberCount={f.members.length}
+                  gens={f.gens}
+                  isGraveyard
+                  onOpen={() => setOpenFamId(f.family.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* How it works */}
         <section className="ace-section">
@@ -343,34 +323,29 @@ interface FamCardProps {
   viet: string | null;
   memberCount: number;
   gens: number;
-  isActiveYear: boolean;
+  isGraveyard?: boolean;
   onOpen: () => void;
 }
 
-function FamCard({ family, accent, viet, memberCount, gens, isActiveYear, onOpen }: FamCardProps) {
+function FamCard({ family, accent, viet, memberCount, gens, isGraveyard = false, onOpen }: FamCardProps) {
+  const displayName = getDisplayFamName(family.name);
   return (
-    <button className="ace-fam-card" onClick={onOpen} type="button">
+    <button className={`ace-fam-card ${isGraveyard ? 'ace-fam-card-graveyard' : ''}`} onClick={onOpen} type="button">
       <FamCover
         pattern={patternForFamily(family)}
         accent={accent}
         imageUrl={family.cover_image_url}
-        alt={family.name}
+        alt={displayName}
       />
       <div className="ace-fam-body">
         <div className="ace-fam-row">
           <div className="ace-fam-name">
-            {family.name}
+            {displayName}
             {viet && <span className={`ace-fam-viet ace-fam-viet-${accent}`}>· {viet}</span>}
           </div>
-          {isActiveYear && (
-            <span className={`ace-pill ace-pill-${accent}`}>
-              {family.academic_year_start}-{String(family.academic_year_end).slice(-2)}
-            </span>
-          )}
+          {isGraveyard && <span className="ace-graveyard-pill">Graveyard</span>}
         </div>
         <div className="ace-fam-meta">
-          <span>Est. {family.academic_year_start}</span>
-          <span className="ace-fam-meta-sep">·</span>
           <span>{memberCount} member{memberCount === 1 ? '' : 's'}</span>
           <span className="ace-fam-meta-sep">·</span>
           <span>{gens} gen{gens === 1 ? '' : 's'}</span>

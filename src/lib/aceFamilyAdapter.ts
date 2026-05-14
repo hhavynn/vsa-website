@@ -61,6 +61,14 @@ export function patternForFamily(family: AceFamily): FamPattern {
   return PATTERNS[hashString(family.id) % PATTERNS.length];
 }
 
+export function isDeadFam(name: string): boolean {
+  return name.trim().toLowerCase().startsWith('(dead)');
+}
+
+export function getDisplayFamName(name: string): string {
+  return name.replace(/^\s*\(dead\)\s*/i, '').trim() || name;
+}
+
 export function vietForFamily(family: AceFamily, indexInList: number): string | null {
   // No dedicated column yet — derive a fallback. Prefer a number word based on
   // display_order so admins implicitly control which name a fam gets.
@@ -91,11 +99,6 @@ export function generationDepth(members: Pick<AceFamilyMember, 'id' | 'parent_me
   return max;
 }
 
-export function isCurrentAcademicYear(family: AceFamily, currentAcademicYearStart: number | null): boolean {
-  if (currentAcademicYearStart === null) return false;
-  return family.academic_year_start === currentAcademicYearStart;
-}
-
 function firstInitial(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return '?';
@@ -118,13 +121,6 @@ function classifyRole(rawRole: string | null): string {
 
 /** Convert published members into tree-node shape expected by FamilyTree. */
 export function membersToTreeNodes(members: AceFamilyMember[]): TreeNode[] {
-  // Mark the most recently created members as "newest" so the design's
-  // emphasis line lights up for them.
-  const sorted = [...members].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
-  const newestSet = new Set(sorted.slice(0, Math.min(4, sorted.length)).map((m) => m.id));
-
   return members.map((m) => ({
     id: m.id,
     initial: firstInitial(m.name),
@@ -132,6 +128,5 @@ export function membersToTreeNodes(members: AceFamilyMember[]): TreeNode[] {
     role: classifyRole(m.role_label),
     cohort: null,
     parent: m.parent_member_id ?? null,
-    newest: newestSet.has(m.id) && !!m.parent_member_id,
   }));
 }
