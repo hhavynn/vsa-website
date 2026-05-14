@@ -99,6 +99,34 @@ export interface ProgramContent {
   updated_at: string;
 }
 
+export interface AceFamily {
+  id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  name: string;
+  slug: string;
+  cover_image_url: string | null;
+  theme_color: string | null;
+  description: string | null;
+  display_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AceFamilyMember {
+  id: string;
+  family_id: string;
+  name: string;
+  role_label: string | null;
+  photo_url: string | null;
+  parent_member_id: string | null;
+  display_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HousePageAsset {
   id: string;
   academic_year_start: number;

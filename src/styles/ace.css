@@ -1,0 +1,679 @@
+/* ─────────────────────────────────────────────────────────────────
+   ACE page styles. All rules are scoped under .ace-app so this file
+   can be loaded globally without leaking onto other pages.
+   ───────────────────────────────────────────────────────────────── */
+
+.ace-app {
+  /* Light (default) */
+  --bg:           #f5f1ea;
+  --bg-2:         #fdf7f0;
+  --hero-grad-a:  #fde0d4;
+  --hero-grad-b:  #d2efec;
+  --hero-grad-c:  #f9f4ec;
+  --surface:      #ffffff;
+  --surface-2:    #fdf7f0;
+  --surface-ink:  #142028;
+  --surface-ink-2:#1c2e36;
+  --border:       rgba(196,184,168,0.55);
+  --border-soft:  rgba(196,184,168,0.4);
+  --border-strong:#c4b8a8;
+  --text:         #142028;
+  --text-2:       #4a6b68;
+  --text-3:       #90aaa8;
+  --text-on-ink:  #f5f1ea;
+  --text-on-ink-muted: rgba(245,241,234,0.7);
+  --brand:        #1e8878;
+  --brand-strong: #0f5a4f;
+  --brand-soft:   #d2efec;
+  --accent:       #e8623a;
+  --accent-soft:  #fde0d4;
+  --accent-strong:#a83a18;
+  --gold:         #d4841a;
+  --gold-soft:    #fbe8c4;
+  --gold-strong:  #7a4806;
+  --watermark:    rgba(30,136,120,0.07);
+  --grain-a:      rgba(20,32,40,0.18);
+  --grain-b:      rgba(20,32,40,0.12);
+  --shadow-card:  0 1px 0 rgba(196,184,168,0.4), 0 8px 24px rgba(20,32,40,0.04);
+  --shadow-cardh: 0 1px 0 rgba(196,184,168,0.4), 0 16px 36px rgba(20,32,40,0.12);
+  --shadow-sheet: 0 -20px 60px rgba(20,32,40,0.25);
+
+  container-type: inline-size;
+  container-name: ace;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "DM Sans", system-ui, sans-serif;
+  position: relative;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.ace-app.is-dark {
+  --bg:           #080e14;
+  --bg-2:         #0d1a20;
+  --hero-grad-a:  rgba(232,98,58,0.14);
+  --hero-grad-b:  rgba(59,189,181,0.16);
+  --hero-grad-c:  #0a1218;
+  --surface:      #0d1a20;
+  --surface-2:    #122430;
+  --surface-ink:  #0a1218;
+  --surface-ink-2:#122430;
+  --border:       #1a3038;
+  --border-soft:  rgba(42,72,80,0.55);
+  --border-strong:#2a4850;
+  --text:         #e4d8c8;
+  --text-2:       #8eb0aa;
+  --text-3:       #547b78;
+  --text-on-ink:  #e4d8c8;
+  --text-on-ink-muted: rgba(228,216,200,0.66);
+  --brand:        #3bbdb5;
+  --brand-strong: #0d6a62;
+  --brand-soft:   rgba(59,189,181,0.16);
+  --accent:       #f07858;
+  --accent-soft:  rgba(240,120,88,0.18);
+  --accent-strong:#f29279;
+  --gold:         #e8a838;
+  --gold-soft:    rgba(232,168,56,0.16);
+  --gold-strong:  #f0bf60;
+  --watermark:    rgba(59,189,181,0.06);
+  --grain-a:      rgba(255,255,255,0.06);
+  --grain-b:      rgba(255,255,255,0.04);
+  --shadow-card:  0 1px 0 rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3);
+  --shadow-cardh: 0 1px 0 rgba(0,0,0,0.4), 0 16px 36px rgba(0,0,0,0.5);
+  --shadow-sheet: 0 -20px 60px rgba(0,0,0,0.6);
+}
+
+.ace-app a { color: inherit; text-decoration: none; }
+.ace-app button { font-family: inherit; cursor: pointer; }
+
+/* ── Section frame ───────────────────────────────────────────── */
+.ace-app .ace-section { padding: 36px 20px; border-top: 1px solid var(--border); }
+.ace-app .ace-section:first-of-type { border-top: none; }
+
+/* ── Page breadcrumb (replaces design's TopBar) ──────────────── */
+.ace-app .ace-breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text);
+}
+.ace-app .ace-breadcrumb-muted { color: var(--text-3); }
+.ace-app .ace-breadcrumb-arrow { color: var(--text-3); }
+
+/* ── Labels / eyebrows ───────────────────────────────────────── */
+.ace-app .ace-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-2);
+  margin-bottom: 16px;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.ace-app .ace-eyebrow::before {
+  content: ''; width: 22px; height: 1.5px; border-radius: 2px;
+  background: var(--accent); opacity: 0.85;
+}
+
+/* ── Body type ───────────────────────────────────────────────── */
+.ace-app .ace-body {
+  margin: 0; max-width: 56ch;
+  font-size: 15px; line-height: 1.7; color: var(--text-2);
+}
+.ace-app .ace-body-strong { color: var(--text); font-weight: 500; }
+
+/* ── Pills ───────────────────────────────────────────────────── */
+.ace-app .ace-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px; font-weight: 500; letter-spacing: 0.06em;
+  white-space: nowrap; text-transform: uppercase;
+  border: 1px solid;
+}
+.ace-app .ace-pill-default { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(30,136,120,0.25); }
+.ace-app .ace-pill-coral { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(232,98,58,0.25); }
+.ace-app .ace-pill-gold  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(212,132,26,0.25); }
+.ace-app .ace-pill-live  { background: var(--brand); color: var(--text-on-ink); border-color: var(--brand); }
+.ace-app .ace-pill-dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28);
+}
+.ace-app.is-dark .ace-pill-live  { color: #061013; }
+.ace-app.is-dark .ace-pill-teal  { color: #b0eee9; }
+.ace-app.is-dark .ace-pill-coral { color: #f7c4b1; }
+.ace-app.is-dark .ace-pill-gold  { color: #f2d088; }
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.ace-app .ace-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 18px; border-radius: 12px; border: 1.5px solid transparent;
+  font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  transition: transform .18s ease, background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+  min-height: 44px; text-decoration: none;
+}
+.ace-app .ace-btn-primary {
+  background: var(--brand); color: #f8fbfb; border-color: var(--brand);
+}
+.ace-app .ace-btn-primary:hover { transform: translateY(-1px); background: var(--brand-strong); border-color: var(--brand-strong); }
+.ace-app.is-dark .ace-btn-primary { color: #061013; }
+.ace-app .ace-btn-secondary {
+  background: transparent; color: var(--text); border-color: var(--border-strong);
+}
+.ace-app .ace-btn-secondary:hover { background: var(--surface-2); border-color: var(--text-2); }
+.ace-app .ace-btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border-strong); }
+.ace-app .ace-btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.ace-app .ace-hero {
+  position: relative; overflow: hidden;
+  padding: 40px 20px 36px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, var(--hero-grad-a) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, var(--hero-grad-b) 0%, transparent 50%),
+    linear-gradient(180deg, var(--hero-grad-c) 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+}
+.ace-app .ace-hero-grain {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+  background-image:
+    radial-gradient(1.2px 1.2px at 20% 30%, var(--grain-a) 50%, transparent 51%),
+    radial-gradient(1px 1px at 60% 80%, var(--grain-b) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 80% 20%, rgba(232,98,58,0.22) 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 60%, rgba(30,136,120,0.18) 50%, transparent 51%);
+  background-size: 220px 220px, 180px 180px, 260px 260px, 200px 200px;
+}
+.ace-app .ace-hero-inner { position: relative; z-index: 2; }
+.ace-app .ace-hero-title {
+  margin: 18px 0 12px;
+  font-family: "DM Serif Display", Georgia, serif;
+  font-size: 60px; line-height: 0.96; letter-spacing: -0.035em; color: var(--text);
+  font-weight: 400;
+}
+.ace-app .ace-hero-script { font-style: italic; color: var(--accent); }
+.ace-app .ace-hero-meta {
+  max-width: 36ch; margin: 6px 0 0;
+  font-size: 14px; line-height: 1.55; color: var(--text-2);
+}
+.ace-app .ace-hero-watermark {
+  position: absolute; right: -20px; bottom: -36px; z-index: 1;
+  font-family: "DM Serif Display", serif; font-style: italic;
+  font-size: 132px; line-height: 0.84; color: var(--watermark);
+  letter-spacing: -0.03em; user-select: none; pointer-events: none;
+  text-align: right;
+}
+
+/* ── Roles list ──────────────────────────────────────────────── */
+.ace-app .ace-rolelist {
+  border-radius: 14px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.ace-app .ace-rolerow { padding: 16px 18px; border-bottom: 1px solid var(--border-soft); }
+.ace-app .ace-rolerow:last-child { border-bottom: 0; }
+.ace-app .ace-rolerow-head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;
+}
+.ace-app .ace-rolerow-num {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.ace-app .ace-rolerow-role {
+  font-family: "DM Sans", sans-serif; font-size: 14.5px; font-weight: 600; color: var(--text);
+}
+.ace-app .ace-rolerow-viet {
+  font-family: "DM Serif Display", serif; font-style: italic;
+  font-size: 14px; color: var(--text-2);
+}
+.ace-app .ace-rolerow-desc {
+  margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-2);
+}
+
+/* ── Cycle CTA ───────────────────────────────────────────────── */
+.ace-app .ace-cta-card {
+  border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 18px 18px 16px;
+}
+.ace-app .ace-cta-row {
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: stretch;
+}
+.ace-app .ace-cta-body { min-width: 0; }
+.ace-app .ace-cta-status { font-size: 14px; font-weight: 600; color: var(--text); }
+.ace-app .ace-cta-cycle {
+  margin-top: 3px;
+  font-family: "JetBrains Mono", monospace; font-size: 11.5px; letter-spacing: 0.04em;
+  color: var(--text-3); text-transform: uppercase;
+}
+.ace-app .ace-cta-meta {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px dashed var(--border-strong);
+  display: flex; flex-wrap: wrap; gap: 6px;
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+  color: var(--text-2); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ace-app .ace-cta-meta-sep { color: var(--text-3); }
+
+/* ── Filter bar ──────────────────────────────────────────────── */
+.ace-app .ace-filterbar {
+  display: flex; gap: 8px; margin: 0 0 18px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.ace-app .ace-filterbar::-webkit-scrollbar { display: none; }
+.ace-app .ace-filter {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 999px; flex-shrink: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 12.5px; font-weight: 500; color: var(--text-2);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ace-app .ace-filter:hover { color: var(--text); border-color: var(--border-strong); }
+.ace-app .ace-filter.is-active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.ace-app .ace-filter-n {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; opacity: 0.8;
+  padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,0.06);
+}
+.ace-app .ace-filter.is-active .ace-filter-n { background: rgba(255,255,255,0.16); }
+
+/* ── Fam grid ────────────────────────────────────────────────── */
+.ace-app .ace-fam-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.ace-app .ace-fam-card {
+  text-align: left; padding: 0; border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  width: 100%;
+}
+.ace-app .ace-fam-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-cardh);
+}
+.ace-app .ace-fam-card:active { transform: translateY(0); }
+.ace-app .ace-fam-cover-img {
+  display: block; width: 100%; height: 132px; object-fit: cover;
+}
+.ace-app .ace-fam-body { padding: 14px 16px 16px; }
+.ace-app .ace-fam-row {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+}
+.ace-app .ace-fam-name {
+  font-family: "DM Serif Display", serif; font-size: 22px; line-height: 1.05;
+  letter-spacing: -0.02em; color: var(--text);
+  display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+}
+.ace-app .ace-fam-viet { font-style: italic; font-size: 16px; }
+.ace-app .ace-fam-viet-teal  { color: var(--brand); }
+.ace-app .ace-fam-viet-coral { color: var(--accent); }
+.ace-app .ace-fam-viet-gold  { color: var(--gold); }
+.ace-app .ace-fam-meta {
+  margin-top: 10px;
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--text-2); display: flex; flex-wrap: wrap; gap: 6px; text-transform: uppercase;
+}
+.ace-app .ace-fam-meta-sep { color: var(--text-3); }
+.ace-app .ace-fam-cta {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px dashed var(--border-strong);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--brand);
+}
+.ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-strong); }
+.ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6cd8d1; }
+
+.ace-app .ace-fam-empty {
+  border: 1px dashed var(--border-strong); border-radius: 14px;
+  padding: 36px 20px; text-align: center;
+  background: var(--surface);
+  font-size: 13.5px; color: var(--text-2);
+}
+
+/* ── How it works ────────────────────────────────────────────── */
+.ace-app .ace-steps {
+  display: grid; gap: 12px; grid-template-columns: 1fr;
+}
+.ace-app .ace-step {
+  padding: 16px 16px 18px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.ace-app .ace-step-num {
+  font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
+  color: var(--text-3); letter-spacing: -0.02em;
+}
+.ace-app .ace-step-t { margin: 8px 0 4px; font-size: 14.5px; font-weight: 600; color: var(--text); }
+.ace-app .ace-step-d { font-size: 13px; line-height: 1.55; color: var(--text-2); }
+.ace-app .ace-section-foot {
+  margin: 14px 0 0;
+  font-size: 12px; color: var(--text-3);
+  font-family: "DM Sans", sans-serif;
+}
+
+/* ── FAQ ─────────────────────────────────────────────────────── */
+.ace-app .ace-faq {
+  border-radius: 14px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.ace-app .ace-faq-row { border-bottom: 1px solid var(--border-soft); }
+.ace-app .ace-faq-row:last-child { border-bottom: 0; }
+.ace-app .ace-faq-q {
+  width: 100%; padding: 14px 16px; background: transparent; border: 0;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  text-align: left; font-size: 14px; font-weight: 500; color: var(--text);
+}
+.ace-app .ace-faq-q:hover { background: var(--surface-2); }
+.ace-app .ace-faq-plus {
+  width: 24px; height: 24px; border-radius: 999px;
+  background: var(--bg-2); color: var(--brand);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; line-height: 1; flex-shrink: 0;
+}
+.ace-app .ace-faq-row.is-open .ace-faq-plus { background: var(--brand); color: #fff; }
+.ace-app.is-dark .ace-faq-row.is-open .ace-faq-plus { color: #061013; }
+.ace-app .ace-faq-a {
+  padding: 0 16px 16px;
+  font-size: 13.5px; line-height: 1.65; color: var(--text-2);
+}
+
+/* ── Footer actions ──────────────────────────────────────────── */
+.ace-app .ace-footer-actions {
+  padding: 24px 20px 36px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 10px;
+  background: var(--bg-2);
+}
+
+/* ── Sheet (family tree detail) ──────────────────────────────── */
+.ace-app .ace-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(0,0,0,0.42);
+  display: flex; justify-content: center; align-items: flex-end;
+  animation: ace-fade 0.18s ease;
+}
+@keyframes ace-fade { from { opacity: 0 } to { opacity: 1 } }
+.ace-app .ace-sheet {
+  width: 100%; max-width: 1280px;
+  max-height: 92dvh; min-height: 72dvh;
+  background: var(--bg);
+  border-top-left-radius: 20px; border-top-right-radius: 20px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-sheet);
+  animation: ace-rise 0.28s cubic-bezier(.2,.7,.1,1);
+  border-top: 1px solid var(--border);
+}
+@keyframes ace-rise { from { transform: translateY(40px); opacity: 0.6 } to { transform: translateY(0); opacity: 1 } }
+.ace-app .ace-sheet-grabber {
+  width: 42px; height: 4px; border-radius: 999px;
+  background: var(--border-strong); opacity: 0.6;
+  margin: 8px auto 4px;
+}
+.ace-app .ace-sheet-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 6px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ace-app .ace-sheet-eyebrow {
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ace-app .ace-sheet-eyebrow-teal  { color: var(--brand); }
+.ace-app .ace-sheet-eyebrow-coral { color: var(--accent); }
+.ace-app .ace-sheet-eyebrow-gold  { color: var(--gold); }
+.ace-app .ace-sheet-title {
+  margin-top: 2px;
+  font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
+  letter-spacing: -0.02em; color: var(--text);
+}
+.ace-app .ace-sheet-viet { font-style: italic; }
+.ace-app .ace-sheet-viet-teal  { color: var(--brand-strong); }
+.ace-app .ace-sheet-viet-coral { color: var(--accent-strong); }
+.ace-app .ace-sheet-viet-gold  { color: var(--gold-strong); }
+.ace-app .ace-sheet-meta {
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--text-2); text-transform: uppercase;
+}
+.ace-app .ace-iconbtn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text); transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ace-app .ace-iconbtn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+
+.ace-app .ace-sheet-legend {
+  padding: 10px 16px;
+  display: flex; flex-wrap: wrap; gap: 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  font-size: 11px; color: var(--text-2); align-items: center;
+  font-family: "JetBrains Mono", monospace; letter-spacing: 0.02em;
+}
+.ace-app .ace-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.ace-app .ace-legend-swatch { width: 14px; height: 14px; border-radius: 999px; display: inline-block; }
+.ace-app .ace-legend-swatch-fill-teal  { background: var(--brand); }
+.ace-app .ace-legend-swatch-fill-coral { background: var(--accent); }
+.ace-app .ace-legend-swatch-fill-gold  { background: var(--gold); }
+.ace-app .ace-legend-swatch-ring-teal  { background: var(--surface); border: 2px solid var(--brand); }
+.ace-app .ace-legend-swatch-ring-coral { background: var(--surface); border: 2px solid var(--accent); }
+.ace-app .ace-legend-swatch-ring-gold  { background: var(--surface); border: 2px solid var(--gold); }
+.ace-app .ace-legend-line { width: 22px; height: 2px; border-radius: 999px; }
+.ace-app .ace-legend-line-teal  { background: var(--brand); }
+.ace-app .ace-legend-line-coral { background: var(--accent); }
+.ace-app .ace-legend-line-gold  { background: var(--gold); }
+
+.ace-app .ace-sheet-treewrap {
+  flex: 1; overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+.ace-app .ace-sheet-treepad {
+  padding: 12px 12px 24px; width: max-content;
+}
+.ace-app .ace-tree-panviewport {
+  cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
+  outline: none;
+}
+.ace-app .ace-tree-panviewport:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.ace-app .ace-tree-panviewport.is-dragging {
+  cursor: grabbing;
+}
+.ace-app .ace-tree-panviewport.is-dragging,
+.ace-app .ace-tree-panviewport.is-dragging * {
+  user-select: none;
+}
+.ace-app .ace-tree-panviewport .ace-tree-canvas,
+.ace-app .ace-tree-panviewport svg,
+.ace-app .ace-tree-panviewport g {
+  cursor: inherit !important;
+}
+.ace-app .ace-tree-canvas {
+  transform-origin: 0 0;
+  will-change: transform;
+  transition: transform 0.16s ease-out;
+}
+.ace-app .ace-tree-panviewport.is-dragging .ace-tree-canvas {
+  transition: none;
+}
+.ace-app .ace-tree-controls {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ace-app .ace-tree-control,
+.ace-app .ace-tree-zoom-readout {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ace-app .ace-tree-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.ace-app .ace-tree-control:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+.ace-app .ace-tree-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.ace-app .ace-tree-control-symbol {
+  display: none;
+  font-size: 15px;
+  line-height: 1;
+}
+.ace-app .ace-tree-zoom-readout {
+  min-width: 48px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+}
+
+.ace-app .ace-sheet-rail {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.ace-app .ace-sheet-rail.is-open { max-height: 360px; }
+.ace-app .ace-sheet-hint {
+  padding: 14px 18px; font-size: 12.5px; color: var(--text-2);
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  font-family: "JetBrains Mono", monospace; letter-spacing: 0.02em;
+}
+.ace-app .ace-rail-body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.ace-app .ace-rail-card { display: flex; gap: 14px; align-items: center; }
+.ace-app .ace-rail-avatar {
+  width: 52px; height: 52px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "DM Serif Display", serif; font-style: italic; font-size: 26px;
+  border: 2px solid; flex-shrink: 0; color: #fff;
+}
+.ace-app .ace-rail-avatar-teal  { background: var(--brand);  border-color: var(--brand-strong); }
+.ace-app .ace-rail-avatar-coral { background: var(--accent); border-color: var(--accent-strong); }
+.ace-app .ace-rail-avatar-gold  { background: var(--gold);   border-color: var(--gold-strong); }
+.ace-app .ace-rail-avatar.is-little { background: var(--surface); }
+.ace-app .ace-rail-avatar-teal.is-little  { color: var(--brand); }
+.ace-app .ace-rail-avatar-coral.is-little { color: var(--accent); }
+.ace-app .ace-rail-avatar-gold.is-little  { color: var(--gold); }
+
+.ace-app .ace-rail-name { font-size: 15px; font-weight: 600; color: var(--text); font-family: "DM Sans", sans-serif; }
+.ace-app .ace-rail-role { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--text-2); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
+.ace-app .ace-rail-major { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.ace-app .ace-rail-rel { display: flex; flex-direction: column; gap: 10px; }
+.ace-app .ace-rail-rel-h {
+  font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--text-3);
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;
+}
+.ace-app .ace-rail-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ace-app .ace-rail-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 10px 5px 5px; border-radius: 999px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 500; color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ace-app .ace-rail-chip:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.ace-app .ace-rail-chip-dot {
+  width: 22px; height: 22px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: "DM Serif Display", serif; font-style: italic; font-size: 12px;
+  color: #fff; flex-shrink: 0;
+}
+.ace-app .ace-rail-chip-dot-teal  { background: var(--brand); }
+.ace-app .ace-rail-chip-dot-coral { background: var(--accent); }
+.ace-app .ace-rail-chip-dot-gold  { background: var(--gold); }
+.ace-app .ace-rail-chip-dot.is-little { background: var(--surface); border: 1.5px solid currentColor; }
+.ace-app .ace-rail-chip-dot-teal.is-little  { color: var(--brand); }
+.ace-app .ace-rail-chip-dot-coral.is-little { color: var(--accent); }
+.ace-app .ace-rail-chip-dot-gold.is-little  { color: var(--gold); }
+.ace-app .ace-rail-empty {
+  font-size: 12.5px; color: var(--text-3); font-style: italic;
+}
+
+@media (max-width: 520px) {
+  .ace-app .ace-tree-controls {
+    top: 8px;
+    right: 8px;
+    gap: 4px;
+  }
+  .ace-app .ace-tree-control,
+  .ace-app .ace-tree-zoom-readout {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+  .ace-app .ace-tree-control-text {
+    display: none;
+  }
+  .ace-app .ace-tree-control-symbol {
+    display: inline;
+  }
+  .ace-app .ace-tree-reset {
+    min-width: 54px;
+  }
+  .ace-app .ace-tree-zoom-readout {
+    min-width: 42px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CONTAINER QUERIES — desktop layout kicks in when ace-app is wide.
+   ───────────────────────────────────────────────────────────────── */
+@container ace (min-width: 760px) {
+  .ace-app .ace-breadcrumb { padding: 18px 32px 0; }
+  .ace-app .ace-section { padding: 56px 64px; }
+  .ace-app .ace-hero { padding: 76px 64px 64px; }
+  .ace-app .ace-hero-title { font-size: 104px; }
+  .ace-app .ace-hero-meta { font-size: 16px; max-width: 56ch; }
+  .ace-app .ace-hero-watermark { font-size: 260px; bottom: -80px; right: -40px; }
+
+  .ace-app .ace-body { font-size: 17px; }
+  .ace-app .ace-rolelist { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .ace-app .ace-rolerow { border-right: 1px solid var(--border-soft); border-bottom: 0; }
+  .ace-app .ace-rolerow:last-child { border-right: 0; }
+
+  .ace-app .ace-cta-row { flex-direction: row; align-items: center; justify-content: space-between; }
+  .ace-app .ace-cta-body { flex: 1; }
+
+  .ace-app .ace-fam-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .ace-app .ace-steps { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .ace-app .ace-sheet-backdrop { padding: 24px; }
+  .ace-app .ace-sheet { border-radius: 20px; max-height: 90dvh; }
+  .ace-app .ace-sheet-rail.is-open { max-height: 220px; }
+
+  .ace-app .ace-footer-actions { padding: 32px 64px 44px; }
+}
+
+@container ace (min-width: 1080px) {
+  .ace-app .ace-hero-title { font-size: 132px; }
+  .ace-app .ace-fam-grid { grid-template-columns: repeat(3, 1fr); }
+}

@@ -57,29 +57,28 @@ export function GetInvolved() {
               <Link
                 key={program.id}
                 to={program.link}
-                className="group flex flex-col items-start gap-5 border-b transition-colors duration-150 last:border-b-0 lg:flex-row lg:items-center lg:justify-between"
+                className="group flex flex-col items-start gap-4 border-b px-4 py-5 transition-colors duration-150 last:border-b-0 sm:gap-5 sm:px-8 sm:py-7 lg:flex-row lg:items-center lg:justify-between"
                 style={{
-                  padding: '28px 32px',
                   borderColor: 'var(--border)',
                   background: 'var(--surface)',
                 }}
               >
-                <div className="flex w-full items-start gap-5 sm:gap-6">
+                <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
                   <div className="w-[28px] shrink-0 pt-1">
                     <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>
                       {String(index + 1).padStart(2, '0')}
                     </span>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-3">
-                      <span className="font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
+                      <span className="min-w-0 font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
                         {program.title}
                       </span>
                       <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}>
                         {program.tag}
                       </span>
                     </div>
-                    <p className="max-w-[560px] font-sans text-sm leading-[1.7]" style={{ color: 'var(--text2)' }}>
+                    <p className="max-w-[560px] break-words font-sans text-sm leading-[1.7]" style={{ color: 'var(--text2)' }}>
                       {program.description}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -95,7 +94,7 @@ export function GetInvolved() {
                     </div>
                   </div>
                 </div>
-                <span className="shrink-0 font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)] lg:ml-8" style={{ color: 'var(--text3)' }}>
+                <span className="font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)] lg:ml-8 lg:shrink-0" style={{ color: 'var(--text3)' }}>
                   Learn more -&gt;
                 </span>
               </Link>
@@ -110,7 +109,7 @@ export function GetInvolved() {
               <Link
                 key={item.link}
                 to={item.link}
-                className="inline-flex items-center rounded-lg border px-4 py-2 font-sans text-sm transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                className="inline-flex max-w-full items-center rounded-lg border px-4 py-2 font-sans text-sm text-left transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
                 style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text2)' }}
               >
                 {item.label}

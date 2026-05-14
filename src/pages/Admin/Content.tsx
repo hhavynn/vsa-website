@@ -11,6 +11,7 @@ import {
   PresidentsContent,
   splitPresidentsMessage,
 } from '../../data/presidentsContent';
+import { ProgramContentManager } from '../../components/features/admin/ProgramContentManager';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -140,8 +141,8 @@ export default function AdminContent() {
       <PageTitle title="Admin Content" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Homepage Content</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Edit the presidents message and photo shown on the main page.</p>
+        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Content</h1>
+        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Edit the presidents message plus volatile program links, dates, and statuses.</p>
       </div>
 
       <div style={{ padding: '24px 28px' }}>
@@ -248,6 +249,7 @@ export default function AdminContent() {
           </div>
         </aside>
       </div>
+      <ProgramContentManager />
       </div>
     </>
   );

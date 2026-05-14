@@ -18,6 +18,22 @@ export function usePublishedVcnArchives() {
   return { archives, loading, error, refreshArchives };
 }
 
+export function useCurrentVcnArchive() {
+  const {
+    data: archive = null,
+    isLoading: loading,
+    error,
+    refetch: refreshArchive,
+  } = useQuery<VCNArchive | null>({
+    queryKey: ['vcn-archives', 'current'],
+    queryFn: () => vcnArchivesRepository.getCurrentArchive(),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+  });
+
+  return { archive, loading, error, refreshArchive };
+}
+
 export function useAllVcnArchives() {
   const {
     data: archives = [],

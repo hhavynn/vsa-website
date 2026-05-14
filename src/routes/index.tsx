@@ -71,6 +71,7 @@ const AdminYearsTerms = lazy(() => import("../pages/Admin/YearsTerms"));
 const AdminPoints = lazy(() => import("../pages/Admin/Points"));
 const AdminAnalytics = lazy(() => import("../pages/Admin/Analytics"));
 const AdminSettings = lazy(() => import("../pages/Admin/Settings"));
+const AdminAceFamilies = lazy(() => import("../pages/Admin/AceFamilies"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -160,6 +161,7 @@ export default function AppRoutes() {
                   <Route path="/admin/points" element={<AdminPoints />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   <Route path="/admin/settings" element={<AdminSettings />} />
+                  <Route path="/admin/ace" element={<AdminAceFamilies />} />
                 </Route>
               </Route>
 

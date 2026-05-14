@@ -1,216 +1,387 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
-import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { useTheme } from '../context/ThemeContext';
 import { useProgramContent } from '../hooks/useProgramContent';
-import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import {
+  usePublishedAceFamilies,
+  useAllPublishedAceFamilyMembers,
+} from '../hooks/useAceFamilies';
+import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { PROGRAM_STATUS_LABELS, formatProgramDateTime } from '../lib/programContent';
+import { getAcademicTermMeta } from '../lib/academicTerms';
+import { AceFamily, AceFamilyMember } from '../types';
+import {
+  accentFromThemeColor,
+  generationDepth,
+  isCurrentAcademicYear,
+  patternForFamily,
+  vietForFamily,
+} from '../lib/aceFamilyAdapter';
+import { FamAccent, FamCover } from '../components/features/ace/FamCover';
+import { FamSheet } from '../components/features/ace/FamSheet';
+import '../styles/ace.css';
 
-const ACE_CONFIG = {
-  applicationsOpen: false,
-  applicationLink: '',
-  cycleLabel: 'Spring 2026 Cycle',
-  contactNote: '',
-};
-
-const roles = [
-  { role: 'Big', viet: 'Anh / Chị', desc: 'A supportive VSA member who helps guide and welcome their Little into the community. Think of your Big as an older sibling, mentor, or trusted friend.' },
-  { role: 'Little', viet: 'Em', desc: 'Someone who receives support and guidance from their Big. As a Little, you gain a built-in support system and a connection to an entire fam.' },
-  { role: 'Fam', viet: 'Gia Đình', desc: 'The family line built through the Big/Little system. When a Big picks up a Little and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
+const ROLES = [
+  { role: 'Big',    viet: 'Anh / Chị',  desc: 'A supportive VSA member who helps guide and welcome their Little into the community. Think of your Big as an older sibling, mentor, or trusted friend.' },
+  { role: 'Little', viet: 'Em',         desc: 'Someone who receives support and guidance from their Big. As a Little, you gain a built-in support system and a connection to an entire fam.' },
+  { role: 'Fam',    viet: 'Gia Đình',   desc: 'The family line built through the Big/Little system. When a Big picks up a Little and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
 ];
 
-const steps = [
-  { num: '01', title: 'Attend VSA Events', desc: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open — details are announced each cycle.' },
-  { num: '02', title: 'Meet the Community', desc: 'Connect with potential Bigs or Littles at VSA events, Welcome Week activities, and ACE-hosted socials and mixers throughout the quarter.' },
-  { num: '03', title: 'Apply When Ready', desc: 'When applications open, Littles share their intro materials and Bigs submit a profile. Application timelines and materials are announced each cycle.' },
-  { num: '04', title: 'ACE Reveal & Fam Life', desc: "Your Big is revealed! You're officially part of a fam — with connections to a multi-generation lineage and seasonal programming throughout the year." },
+const STEPS = [
+  { n: '01', t: 'Attend VSA Events',     d: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open — details are announced each cycle.' },
+  { n: '02', t: 'Meet the Community',    d: 'Connect with potential Bigs or Littles at VSA events, Welcome Week activities, and ACE-hosted socials and mixers throughout the quarter.' },
+  { n: '03', t: 'Apply When Ready',      d: 'When applications open, Littles share their intro materials and Bigs submit a profile. Application timelines and materials are announced each cycle.' },
+  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Your Big is revealed! You’re officially part of a fam — with connections to a multi-generation lineage and seasonal programming throughout the year.' },
 ];
 
-const perks = [
-  { title: 'Mentorship & Guidance', desc: 'Your Big has walked the path you are on. Get honest advice, insider knowledge, and a trusted support system.' },
-  { title: 'Friendship & Belonging', desc: 'ACE is designed to make VSA feel smaller, warmer, and more connected — a family away from home.' },
-  { title: 'Shared Culture & Connection', desc: 'Connect with people who share your interests, backgrounds, values, and career goals.' },
-  { title: 'A Family Lineage', desc: 'Become part of a multi-generation fam with unique traditions, inside jokes, and a shared history that grows every year.' },
-];
-
-const faqs = [
-  { q: 'What is ACE?', a: 'ACE stands for Anh Chị Em — Vietnamese for "older brother, older sister, younger sibling." It is VSA\'s Big/Little family program, built to help members find mentorship, community, and a family away from home.' },
-  { q: 'What is a Big?', a: 'A Big (Anh/Chị) is a supportive VSA member who helps guide and welcome their Little into the community. Think of a Big as an older sibling, mentor, or trusted friend.' },
-  { q: 'What is a Little?', a: 'A Little (Em) is someone who receives support and guidance from their Big during their VSA experience. As a Little, you gain a built-in support system and a connection to a fam.' },
-  { q: 'What is a Fam?', a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
+const FAQS = [
+  { q: 'What is a Big?',                          a: 'A Big (Anh/Chị) is a supportive VSA member who helps guide and welcome their Little into the community. Think of a Big as an older sibling, mentor, or trusted friend.' },
+  { q: 'What is a Little?',                       a: 'A Little (Em) is someone who receives support and guidance from their Big during their VSA experience. As a Little, you gain a built-in support system and a connection to a fam.' },
+  { q: 'What is a Fam?',                          a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
-  { q: 'Do requirements change each cycle?', a: 'Yes — eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
-  { q: 'How do I know when applications open?', a: "Application dates are announced through VSA's Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed." },
-  { q: 'Who should I contact for current ACE questions?', a: 'Reach out to VSA through Instagram (@vsaatucsd) or speak with a board member. The current ACE Chair is identified through VSA\'s official announcements each year.' },
+  { q: 'Do requirements change each cycle?',       a: 'Yes — eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
+  { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
 ];
+
+function getCurrentAcademicYearStart(): number | null {
+  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+}
+
+function resolveActiveYear(terms: ReturnType<typeof useAcademicTerms>['terms']): number | null {
+  const activeTermYear = terms.find((t) => t.is_active)?.academic_year_start;
+  if (activeTermYear) return activeTermYear;
+  return getCurrentAcademicYearStart();
+}
+
+interface FamDerived {
+  family: AceFamily;
+  accent: FamAccent;
+  viet: string | null;
+  members: AceFamilyMember[];
+  gens: number;
+  isActiveYear: boolean;
+}
 
 export function Ace() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
+
   const { content: cycleContent } = useProgramContent('ace');
-  const cycleLabel = cycleContent?.title || ACE_CONFIG.cycleLabel;
-  const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
+  const { families } = usePublishedAceFamilies();
+  const { members: allMembers } = useAllPublishedAceFamilyMembers();
+  const { terms } = useAcademicTerms();
+  const activeYear = useMemo(() => resolveActiveYear(terms), [terms]);
+
+  const [filter, setFilter] = useState<'all' | 'active' | 'deep'>('all');
+  const [openFamId, setOpenFamId] = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number>(-1);
+
+  const membersByFamily = useMemo(() => {
+    const map = new Map<string, AceFamilyMember[]>();
+    allMembers.forEach((m) => {
+      const list = map.get(m.family_id) ?? [];
+      list.push(m);
+      map.set(m.family_id, list);
+    });
+    return map;
+  }, [allMembers]);
+
+  const derivedFams = useMemo<FamDerived[]>(() => {
+    return families.map((f, i) => {
+      const members = membersByFamily.get(f.id) ?? [];
+      return {
+        family: f,
+        accent: accentFromThemeColor(f.theme_color, f.id),
+        viet: vietForFamily(f, i),
+        members,
+        gens: generationDepth(members),
+        isActiveYear: isCurrentAcademicYear(f, activeYear),
+      };
+    });
+  }, [families, membersByFamily, activeYear]);
+
+  const filteredFams = useMemo(() => {
+    if (filter === 'active') return derivedFams.filter((f) => f.isActiveYear);
+    if (filter === 'deep')   return derivedFams.filter((f) => f.gens >= 3);
+    return derivedFams;
+  }, [filter, derivedFams]);
+
+  const openFam = openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
+
+  const filters = [
+    { id: 'all'    as const, label: 'All fams',  n: derivedFams.length },
+    { id: 'active' as const, label: 'Active this year', n: derivedFams.filter((f) => f.isActiveYear).length },
+    { id: 'deep'   as const, label: '3+ gens',   n: derivedFams.filter((f) => f.gens >= 3).length },
+  ];
+
+  // Cycle CTA: drive from program_content('ace'). Hide if hidden/null.
+  const cycleStatusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
+  const cycleVisible = !!cycleContent && cycleContent.status !== 'hidden';
+  const cycleStatusText = cycleVisible
+    ? (cycleContent!.status === 'open' ? 'Applications are now open'
+      : cycleContent!.status === 'coming_soon' ? 'Applications coming soon'
+      : cycleContent!.status === 'closed' ? 'Applications are closed'
+      : cycleContent!.status === 'active' ? cycleContent!.title || 'Active cycle'
+      : '')
+    : '';
+  const cyclePrimaryLink = cycleVisible
+    && cycleContent!.primary_link_url
+    && (cycleContent!.status === 'open' || cycleContent!.status === 'active')
+    ? { href: cycleContent!.primary_link_url!, label: cycleContent!.primary_link_label || 'Apply Now' }
+    : null;
+  const cycleMetaParts = cycleVisible
+    ? [
+        cycleContent!.body ?? '',
+        cycleContent!.deadline_at ? `Closes ${formatProgramDateTime(cycleContent!.deadline_at)}` : '',
+        cycleContent!.event_date ? `Reveal ${formatProgramDateTime(cycleContent!.event_date)}` : '',
+      ].filter(Boolean)
+    : [];
+
+  const heroCycleLine = cycleVisible
+    ? cycleContent!.title || cycleStatusLabel
+    : '';
 
   return (
     <>
       <PageTitle title="ACE Program" />
 
-      {/* Page header */}
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Link to="/get-involved" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Get Involved</Link>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>ACE</span>
+      <div className={`ace-app ${dark ? 'is-dark' : ''}`}>
+        {/* Breadcrumb (replaces design's TopBar) */}
+        <div className="ace-breadcrumb">
+          <Link to="/get-involved" className="ace-breadcrumb-muted">Get Involved</Link>
+          <span className="ace-breadcrumb-arrow">→</span>
+          <span>ACE</span>
         </div>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Anh Chị Em</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          VSA's Big/Little family program · {cycleLabel}
-          {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
-            <span className="ml-3 inline-flex items-center font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-              {statusLabel}
-            </span>
-          )}
-          {!cycleContent && ACE_CONFIG.applicationsOpen && (
-            <span className="ml-3 inline-flex items-center font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-              Applications Open
-            </span>
-          )}
-        </p>
-      </div>
 
-      <div style={{ padding: '40px 52px' }}>
-
-        {/* CTA if apps open */}
-        {cycleContent ? (
-          <ProgramContentCallout
-            content={cycleContent}
-            defaultTitle="ACE applications"
-            defaultLinkLabel="Apply Now"
-          />
-        ) : ACE_CONFIG.applicationsOpen && ACE_CONFIG.applicationLink && (
-          <div className="border rounded p-5 mb-8 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div>
-              <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
-              <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{ACE_CONFIG.cycleLabel}</div>
-            </div>
-            <a
-              href={ACE_CONFIG.applicationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-sans text-sm font-medium px-4 py-2 rounded border border-brand-600 text-brand-600 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 transition-colors duration-150"
-            >
-              Apply Now →
-            </a>
+        {/* Hero */}
+        <section className="ace-hero">
+          <div className="ace-hero-grain" aria-hidden="true" />
+          <div className="ace-hero-inner">
+            <div className="ace-eyebrow">ACE · Anh Chị Em</div>
+            <h1 className="ace-hero-title">
+              Anh<span className="ace-hero-script"> Chị </span>Em
+            </h1>
+            <p className="ace-hero-meta">
+              VSA's Big/Little family program{heroCycleLine ? ` · ${heroCycleLine}` : ''}
+            </p>
           </div>
-        )}
+          <div className="ace-hero-watermark" aria-hidden="true">gia<br/>đình</div>
+        </section>
 
         {/* What is ACE */}
-        <div className="mb-10">
-          <Label className="mb-4">What is ACE?</Label>
-          <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            ACE stands for <span className="font-medium" style={{ color: 'var(--color-text)' }}>Anh Chị Em</span> — Vietnamese for "older brother, older sister, younger sibling." It is VSA's Big/Little family program built to help members find mentorship, community, and a family away from home.
+        <section className="ace-section">
+          <div className="ace-eyebrow">What is ACE?</div>
+          <p className="ace-body">
+            ACE stands for <span className="ace-body-strong">Anh Chị Em</span> — Vietnamese for "older brother, older sister, younger sibling." It is VSA's Big/Little family program built to help members find mentorship, community, and a family away from home.
           </p>
-        </div>
+        </section>
 
         {/* Roles */}
-        <div className="mb-10">
-          <Label className="mb-4">Big, Little & Fam</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {roles.map((r, i) => (
-              <div
-                key={r.role}
-                className="border-b last:border-b-0"
-                style={{ padding: '16px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-              >
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  <span className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{r.role}</span>
-                  <span className="font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>{r.viet}</span>
+        <section className="ace-section">
+          <div className="ace-eyebrow">Big, Little &amp; Fam</div>
+          <div className="ace-rolelist">
+            {ROLES.map((r, i) => (
+              <div key={r.role} className="ace-rolerow">
+                <div className="ace-rolerow-head">
+                  <span className="ace-rolerow-num">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="ace-rolerow-role">{r.role}</span>
+                  <span className="ace-rolerow-viet">{r.viet}</span>
                 </div>
-                <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{r.desc}</p>
+                <p className="ace-rolerow-desc">{r.desc}</p>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Why Join */}
-        <div className="mb-10">
-          <Label className="mb-4">Why Join ACE?</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {perks.map(p => (
-              <div key={p.title} className="border-l pl-5" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="font-sans text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{p.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{p.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* How it works */}
-        <div className="mb-10">
-          <Label className="mb-4">How ACE Works</Label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
-            {steps.map((step, i) => (
-              <div
-                key={step.num}
-                className="border-l px-5 pb-4"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                <div className="font-serif leading-none mb-3" style={{ fontSize: 32, color: 'var(--color-text3)' }}>{step.num}</div>
-                <div className="font-sans text-sm font-semibold mb-1.5" style={{ color: 'var(--color-text)' }}>{step.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{step.desc}</p>
-              </div>
-            ))}
-          </div>
-          <p className="font-sans text-xs mt-4" style={{ color: 'var(--color-text3)' }}>
-            Eligibility requirements and application timelines are announced each cycle. Follow @vsaatucsd for current details.
-          </p>
-        </div>
-
-        {/* FAQ */}
-        <div className="mb-10">
-          <Label className="mb-4">FAQ</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {faqs.map((faq, i) => (
-              <div key={i} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between text-left transition-colors duration-150"
-                  style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
-                >
-                  <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
-                  <span className="font-sans text-lg ml-4 shrink-0" style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="border-t" style={{ padding: '12px 20px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                    <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{faq.a}</p>
-                  </div>
+        {/* Cycle CTA */}
+        {cycleVisible && (
+          <section className="ace-section">
+            <div className="ace-cta-card">
+              <div className="ace-cta-row">
+                <div className="ace-cta-body">
+                  <div className="ace-cta-status">{cycleStatusText || (cycleContent!.title ?? '')}</div>
+                  {cycleContent!.title && cycleStatusText && (
+                    <div className="ace-cta-cycle">{cycleContent!.title}</div>
+                  )}
+                </div>
+                {cyclePrimaryLink && (
+                  <a className="ace-btn ace-btn-primary" href={cyclePrimaryLink.href} target="_blank" rel="noopener noreferrer">
+                    {cyclePrimaryLink.label} →
+                  </a>
                 )}
               </div>
+              {cycleMetaParts.length > 0 && (
+                <div className="ace-cta-meta">
+                  {cycleMetaParts.map((part, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {i > 0 && <span className="ace-cta-meta-sep">·</span>}
+                      <span>{part}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Fam grid */}
+        <section className="ace-section">
+          <div className="ace-eyebrow">ACE Fams</div>
+          {derivedFams.length === 0 ? (
+            <div className="ace-fam-empty">
+              ACE fams will appear here once they're published.
+            </div>
+          ) : (
+            <>
+              <div className="ace-filterbar">
+                {filters.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilter(f.id)}
+                    className={`ace-filter ${filter === f.id ? 'is-active' : ''}`}
+                    type="button"
+                  >
+                    {f.label}
+                    <span className="ace-filter-n">{f.n}</span>
+                  </button>
+                ))}
+              </div>
+              {filteredFams.length === 0 ? (
+                <div className="ace-fam-empty">No fams match this filter yet.</div>
+              ) : (
+                <div className="ace-fam-grid">
+                  {filteredFams.map((f) => (
+                    <FamCard
+                      key={f.family.id}
+                      family={f.family}
+                      accent={f.accent}
+                      viet={f.viet}
+                      memberCount={f.members.length}
+                      gens={f.gens}
+                      isActiveYear={f.isActiveYear}
+                      onOpen={() => setOpenFamId(f.family.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* How it works */}
+        <section className="ace-section">
+          <div className="ace-eyebrow">How ACE Works</div>
+          <div className="ace-steps">
+            {STEPS.map((s) => (
+              <div key={s.n} className="ace-step">
+                <div className="ace-step-num">{s.n}</div>
+                <div className="ace-step-t">{s.t}</div>
+                <div className="ace-step-d">{s.d}</div>
+              </div>
             ))}
           </div>
-        </div>
+          <p className="ace-section-foot">
+            Eligibility requirements and application timelines are announced each cycle. Follow @vsaatucsd for current details.
+          </p>
+        </section>
 
-        {/* Footer links */}
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        {/* FAQ */}
+        <section className="ace-section">
+          <div className="ace-eyebrow">FAQ</div>
+          <div className="ace-faq">
+            {FAQS.map((f, i) => (
+              <div key={i} className={`ace-faq-row ${openFaq === i ? 'is-open' : ''}`}>
+                <button
+                  className="ace-faq-q"
+                  onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
+                  type="button"
+                  aria-expanded={openFaq === i}
+                >
+                  <span>{f.q}</span>
+                  <span className="ace-faq-plus" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
+                </button>
+                {openFaq === i && <div className="ace-faq-a">{f.a}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Footer actions */}
+        <div className="ace-footer-actions">
           <a
+            className="ace-btn ace-btn-primary"
             href="https://www.instagram.com/vsaatucsd/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans text-sm font-medium px-4 py-2 rounded transition-colors duration-150"
-            style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
           >
             Follow @vsaatucsd
           </a>
-          <Link
-            to="/get-involved"
-            className="font-sans text-sm px-4 py-2 rounded border transition-colors duration-150"
-            style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}
-          >
+          <Link to="/get-involved" className="ace-btn ace-btn-ghost">
             ← All Programs
           </Link>
         </div>
 
+        {openFam && (
+          <FamSheet
+            family={openFam.family}
+            members={openFam.members}
+            accent={openFam.accent}
+            viet={openFam.viet}
+            dark={dark}
+            onClose={() => setOpenFamId(null)}
+          />
+        )}
       </div>
     </>
+  );
+}
+
+interface FamCardProps {
+  family: AceFamily;
+  accent: FamAccent;
+  viet: string | null;
+  memberCount: number;
+  gens: number;
+  isActiveYear: boolean;
+  onOpen: () => void;
+}
+
+function FamCard({ family, accent, viet, memberCount, gens, isActiveYear, onOpen }: FamCardProps) {
+  return (
+    <button className="ace-fam-card" onClick={onOpen} type="button">
+      <FamCover
+        pattern={patternForFamily(family)}
+        accent={accent}
+        imageUrl={family.cover_image_url}
+        alt={family.name}
+      />
+      <div className="ace-fam-body">
+        <div className="ace-fam-row">
+          <div className="ace-fam-name">
+            {family.name}
+            {viet && <span className={`ace-fam-viet ace-fam-viet-${accent}`}>· {viet}</span>}
+          </div>
+          {isActiveYear && (
+            <span className={`ace-pill ace-pill-${accent}`}>
+              {family.academic_year_start}-{String(family.academic_year_end).slice(-2)}
+            </span>
+          )}
+        </div>
+        <div className="ace-fam-meta">
+          <span>Est. {family.academic_year_start}</span>
+          <span className="ace-fam-meta-sep">·</span>
+          <span>{memberCount} member{memberCount === 1 ? '' : 's'}</span>
+          <span className="ace-fam-meta-sep">·</span>
+          <span>{gens} gen{gens === 1 ? '' : 's'}</span>
+        </div>
+        <div className="ace-fam-cta">
+          View family tree
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+    </button>
   );
 }
