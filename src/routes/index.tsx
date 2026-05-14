@@ -69,6 +69,7 @@ const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminHouses = lazy(() => import("../pages/Admin/Houses"));
+const AdminInterns = lazy(() => import("../pages/Admin/Interns"));
 const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
 const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
 const AdminYearsTerms = lazy(() => import("../pages/Admin/YearsTerms"));
@@ -131,6 +132,7 @@ export default function AppRoutes() {
                   <Route path="/admin/import" element={<AdminImport />} />
                   <Route path="/admin/members" element={<AdminMembers />} />
                   <Route path="/admin/houses" element={<AdminHouses />} />
+                  <Route path="/admin/interns" element={<AdminInterns />} />
                   <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
                   <Route path="/admin/cabinet" element={<AdminCabinet />} />
                   <Route path="/admin/years" element={<AdminYearsTerms />} />

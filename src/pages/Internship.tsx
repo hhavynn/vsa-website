@@ -3,8 +3,12 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { usePublishedInternCohort } from '../hooks/useInternCohort';
 import { useProgramContent } from '../hooks/useProgramContent';
+import { getAcademicTermMeta } from '../lib/academicTerms';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { PublicInternCohortMember } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERN PROGRAM CONFIG — Update these values each cycle.
@@ -58,10 +62,95 @@ const faqs = [
   { q: 'Who do I contact with questions?', a: 'Reach out to VSA through Instagram (@vsaatucsd) or speak with a board member. For program-specific questions, contact the Internal Vice President through official VSA channels.' },
 ];
 
+function getCurrentAcademicYearStart() {
+  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+}
+
+function resolveInternCohortYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
+  const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
+  if (activeTermYear) return activeTermYear;
+
+  const currentYear = getCurrentAcademicYearStart();
+  if (currentYear) return currentYear;
+
+  return terms[0]?.academic_year_start ?? null;
+}
+
+function getSizedInternImageUrl(image: string, width: number, height: number) {
+  try {
+    const url = new URL(image);
+    const publicStoragePath = '/storage/v1/object/public/intern_images/';
+    if (!url.pathname.includes(publicStoragePath)) return image;
+
+    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/intern_images/');
+    url.searchParams.set('width', String(width));
+    url.searchParams.set('height', String(height));
+    url.searchParams.set('resize', 'cover');
+    url.searchParams.set('quality', '75');
+    return url.toString();
+  } catch {
+    return image;
+  }
+}
+
+function internInitials(name: string) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'IN';
+}
+
+function InternCard({ intern }: { intern: PublicInternCohortMember }) {
+  const imageSize = 360;
+
+  return (
+    <article className="min-w-0">
+      <div
+        className="aspect-[4/5] overflow-hidden rounded border"
+        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+      >
+        {intern.photo_url ? (
+          <img
+            src={getSizedInternImageUrl(intern.photo_url, imageSize, Math.round(imageSize * 1.25))}
+            alt={intern.name}
+            width={imageSize}
+            height={Math.round(imageSize * 1.25)}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center">
+            <span className="font-serif text-[34px]" style={{ color: 'var(--color-text3)' }}>
+              {internInitials(intern.name)}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="mt-3">
+        <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{intern.name}</h3>
+        {intern.role_or_track && (
+          <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{intern.role_or_track}</p>
+        )}
+        {intern.caption && (
+          <p className="mt-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{intern.caption}</p>
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function Internship() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('intern');
   const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
+  const activeYear = resolveInternCohortYear(terms);
+  const { members: interns, loading: internsLoading } = usePublishedInternCohort(activeYear);
+  const showInternCohort = !internsLoading && interns.length > 0;
 
   return (
     <>
@@ -117,6 +206,17 @@ export function Internship() {
             The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
           </p>
         </div>
+
+        {showInternCohort && (
+          <div className="mb-10">
+            <Label className="mb-4">Meet the Interns</Label>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {interns.map((intern) => (
+                <InternCard key={intern.id} intern={intern} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Four Pillars */}
         <div className="mb-10">

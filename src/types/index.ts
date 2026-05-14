@@ -113,6 +113,24 @@ export interface HousePageAsset {
   updated_at: string;
 }
 
+export interface InternCohortMember {
+  id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  name: string;
+  photo_url: string | null;
+  role_or_track: string | null;
+  caption: string | null;
+  display_order: number;
+  is_published: boolean;
+  source_doc_url: string | null;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PublicInternCohortMember = Omit<InternCohortMember, 'is_published' | 'source_doc_url' | 'internal_notes'>;
+
 export interface EventAttendance {
   id: string;
   event_id: string;
