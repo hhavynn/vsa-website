@@ -6,7 +6,6 @@ const NAV_GROUPS = [
   { group: 'Data',    items: [
     { to: '/admin/members',           label: 'Members' },
     { to: '/admin/houses',            label: 'Houses' },
-    { to: '/admin/interns',           label: 'Interns' },
     { to: '/admin/events',            label: 'Events' },
     { to: '/admin/import',            label: 'Import' },
   ]},

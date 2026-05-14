@@ -596,53 +596,6 @@ export interface Database {
           updated_at?: string;
         };
       };
-      intern_cohort_members: {
-        Row: {
-          id: string;
-          academic_year_start: number;
-          academic_year_end: number;
-          name: string;
-          photo_url: string | null;
-          role_or_track: string | null;
-          caption: string | null;
-          display_order: number;
-          is_published: boolean;
-          source_doc_url: string | null;
-          internal_notes: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          academic_year_start: number;
-          academic_year_end: number;
-          name: string;
-          photo_url?: string | null;
-          role_or_track?: string | null;
-          caption?: string | null;
-          display_order?: number;
-          is_published?: boolean;
-          source_doc_url?: string | null;
-          internal_notes?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          academic_year_start?: number;
-          academic_year_end?: number;
-          name?: string;
-          photo_url?: string | null;
-          role_or_track?: string | null;
-          caption?: string | null;
-          display_order?: number;
-          is_published?: boolean;
-          source_doc_url?: string | null;
-          internal_notes?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
       homepage_content: {
         Row: {
           id: string;
@@ -865,20 +818,6 @@ export interface Database {
           house: string;
           image_url: string | null;
           image_alt: string | null;
-          display_order: number;
-          created_at: string;
-          updated_at: string;
-        };
-      };
-      published_intern_cohort_members: {
-        Row: {
-          id: string;
-          academic_year_start: number;
-          academic_year_end: number;
-          name: string;
-          photo_url: string | null;
-          role_or_track: string | null;
-          caption: string | null;
           display_order: number;
           created_at: string;
           updated_at: string;

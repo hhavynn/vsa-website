@@ -3,12 +3,9 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
-import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { usePublishedInternCohort } from '../hooks/useInternCohort';
+import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
 import { useProgramContent } from '../hooks/useProgramContent';
-import { getAcademicTermMeta } from '../lib/academicTerms';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
-import { PublicInternCohortMember } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERN PROGRAM CONFIG — Update these values each cycle.
@@ -62,27 +59,13 @@ const faqs = [
   { q: 'Who do I contact with questions?', a: 'Reach out to VSA through Instagram (@vsaatucsd) or speak with a board member. For program-specific questions, contact the Internal Vice President through official VSA channels.' },
 ];
 
-function getCurrentAcademicYearStart() {
-  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
-}
-
-function resolveInternCohortYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
-  if (activeTermYear) return activeTermYear;
-
-  const currentYear = getCurrentAcademicYearStart();
-  if (currentYear) return currentYear;
-
-  return terms[0]?.academic_year_start ?? null;
-}
-
 function getSizedInternImageUrl(image: string, width: number, height: number) {
   try {
     const url = new URL(image);
-    const publicStoragePath = '/storage/v1/object/public/intern_images/';
+    const publicStoragePath = '/storage/v1/object/public/cabinet_images/';
     if (!url.pathname.includes(publicStoragePath)) return image;
 
-    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/intern_images/');
+    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/cabinet_images/');
     url.searchParams.set('width', String(width));
     url.searchParams.set('height', String(height));
     url.searchParams.set('resize', 'cover');
@@ -103,8 +86,16 @@ function internInitials(name: string) {
     .toUpperCase() || 'IN';
 }
 
-function InternCard({ intern }: { intern: PublicInternCohortMember }) {
+const publicUrl = process.env.PUBLIC_URL || '';
+
+function resolveInternImageUrl(image?: string | null) {
+  if (!image) return null;
+  return image.startsWith('http') || image.startsWith('data:') ? image : `${publicUrl}/images/cabinet/${image}`;
+}
+
+function InternCard({ intern }: { intern: CabinetIntern }) {
   const imageSize = 360;
+  const imageUrl = resolveInternImageUrl(intern.image_url);
 
   return (
     <article className="min-w-0">
@@ -112,9 +103,9 @@ function InternCard({ intern }: { intern: PublicInternCohortMember }) {
         className="aspect-[4/5] overflow-hidden rounded border"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
       >
-        {intern.photo_url ? (
+        {imageUrl ? (
           <img
-            src={getSizedInternImageUrl(intern.photo_url, imageSize, Math.round(imageSize * 1.25))}
+            src={getSizedInternImageUrl(imageUrl, imageSize, Math.round(imageSize * 1.25))}
             alt={intern.name}
             width={imageSize}
             height={Math.round(imageSize * 1.25)}
@@ -132,11 +123,8 @@ function InternCard({ intern }: { intern: PublicInternCohortMember }) {
       </div>
       <div className="mt-3">
         <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{intern.name}</h3>
-        {intern.role_or_track && (
-          <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{intern.role_or_track}</p>
-        )}
-        {intern.caption && (
-          <p className="mt-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{intern.caption}</p>
+        {intern.role && intern.role !== 'Intern' && (
+          <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{intern.role}</p>
         )}
       </div>
     </article>
@@ -145,11 +133,9 @@ function InternCard({ intern }: { intern: PublicInternCohortMember }) {
 
 export function Internship() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('intern');
   const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
-  const activeYear = resolveInternCohortYear(terms);
-  const { members: interns, loading: internsLoading } = usePublishedInternCohort(activeYear);
+  const { interns, loading: internsLoading } = useCurrentCabinetInterns();
   const showInternCohort = !internsLoading && interns.length > 0;
 
   return (
