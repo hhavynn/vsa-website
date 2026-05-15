@@ -10,6 +10,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
@@ -105,6 +106,7 @@ export default function AdminEvents() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
   const [copiedCode, setCopiedCode] = useState(false);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
@@ -177,7 +179,7 @@ export default function AdminEvents() {
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] }, maxFiles: 1,
+    onDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1, maxSize: 10 * 1024 * 1024,
   });
 
   const onEditDrop = useCallback((acceptedFiles: File[]) => {
@@ -190,16 +192,25 @@ export default function AdminEvents() {
   }, []);
 
   const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
-    onDrop: onEditDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] }, maxFiles: 1,
+    onDrop: onEditDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1, maxSize: 10 * 1024 * 1024,
   });
 
   async function uploadImage(file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
+    const preparedFile = await prepareImageForUpload(file, 'event');
+    const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
-    const { error } = await supabase.storage.from('event_images').upload(fileName, file);
+    const { error } = await supabase.storage.from('event_images').upload(fileName, preparedFile, {
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
     if (error) throw error;
     const { data } = supabase.storage.from('event_images').getPublicUrl(fileName);
     return data.publicUrl;
+  }
+
+  async function removeEventImage(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'event_images');
+    if (objectName) await supabase.storage.from('event_images').remove([objectName]);
   }
 
   const handleCreateEvent = async (e: React.FormEvent) => {
@@ -233,6 +244,7 @@ export default function AdminEvents() {
     try {
       const { error } = await supabase.from('events').delete().eq('id', eventToDelete.id);
       if (error) throw error;
+      await removeEventImage(eventToDelete.image_url);
       toast.success(`"${eventToDelete.name}" deleted`);
       refreshEvents();
       if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
@@ -247,7 +259,13 @@ export default function AdminEvents() {
     try {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
-      if (editImageFile) imageUrl = await uploadImage(editImageFile);
+      let imageUrlToRemove: string | null = null;
+      if (editImageFile) {
+        imageUrl = await uploadImage(editImageFile);
+        imageUrlToRemove = selectedEventOriginalImageUrl;
+      } else if (!imageUrl && selectedEventOriginalImageUrl) {
+        imageUrlToRemove = selectedEventOriginalImageUrl;
+      }
       const academicTermId = await resolveAcademicTermId(selectedEvent.date, selectedEvent.academic_term_id);
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name, description: selectedEvent.description,
@@ -259,8 +277,9 @@ export default function AdminEvents() {
         academic_term_id: academicTermId,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
+      await removeEventImage(imageUrlToRemove);
       toast.success('Event updated');
-      setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
+      setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null); setSelectedEventOriginalImageUrl(null);
       refreshTerms();
       refreshEvents();
     } catch (err) {
@@ -305,6 +324,7 @@ export default function AdminEvents() {
               ...event,
               academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
             });
+            setSelectedEventOriginalImageUrl(event.image_url ?? null);
             setEditImageFile(null);
             setEditImagePreview(null);
           }}

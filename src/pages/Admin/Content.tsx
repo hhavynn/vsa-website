@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { PRESIDENTS_CONTENT_QUERY_KEY } from '../../hooks/usePresidentsContent';
 import {
   DEFAULT_PRESIDENTS_CONTENT,
@@ -77,18 +78,28 @@ export default function AdminContent() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] },
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
   });
 
   async function uploadPhoto(file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
+    const preparedFile = await prepareImageForUpload(file, 'homepage');
+    const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
-    const { error } = await supabase.storage.from('presidents_images').upload(fileName, file);
+    const { error } = await supabase.storage.from('presidents_images').upload(fileName, preparedFile, {
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
     if (error) throw error;
 
     const { data } = supabase.storage.from('presidents_images').getPublicUrl(fileName);
     return data.publicUrl;
+  }
+
+  async function removePresidentsImage(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'presidents_images');
+    if (objectName) await supabase.storage.from('presidents_images').remove([objectName]);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -96,6 +107,7 @@ export default function AdminContent() {
 
     try {
       setSaving(true);
+      const oldPhotoUrl = form.photoUrl;
       const photoUrl = photoFile ? await uploadPhoto(photoFile) : form.photoUrl.trim();
       const savedContent: PresidentsContent = {
         names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
@@ -116,6 +128,7 @@ export default function AdminContent() {
       );
 
       if (error) throw error;
+      if (photoFile) await removePresidentsImage(oldPhotoUrl);
 
       setForm(savedContent);
       setPhotoFile(null);

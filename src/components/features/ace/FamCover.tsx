@@ -1,4 +1,5 @@
 import React from 'react';
+import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 
 export type FamAccent = 'teal' | 'coral' | 'gold';
 export type FamPattern = 'sunburst' | 'wave' | 'dots' | 'arches' | 'lantern' | 'leaves';
@@ -26,7 +27,16 @@ interface FamCoverProps {
 
 export function FamCover({ pattern, accent, height = 132, imageUrl, alt }: FamCoverProps) {
   if (imageUrl) {
-    return <img className="ace-fam-cover-img" src={imageUrl} alt={alt ?? ''} style={{ height }} />;
+    return (
+      <img
+        className="ace-fam-cover-img"
+        src={getSupabaseImageUrl(imageUrl, { width: 520, height: 180, resize: 'cover', quality: 72 })}
+        alt={alt ?? ''}
+        style={{ height }}
+        loading="lazy"
+        decoding="async"
+      />
+    );
   }
   const p = PALETTE[accent] ?? PALETTE.teal;
   const w = 600;
