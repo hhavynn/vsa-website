@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { motion } from 'framer-motion';
+import { getUploadExtension, prepareImageForUpload } from '../../../lib/imageUpload';
 
 interface AvatarProps {
   size?: 'sm' | 'md' | 'lg';
@@ -52,14 +53,17 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
         throw new Error('You must select an image to upload.');
       }
 
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
+      const file = await prepareImageForUpload(event.target.files[0], 'avatar');
+      const fileExt = getUploadExtension(file);
       const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 
       // Upload image to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '31536000',
+          contentType: file.type,
+        });
 
       if (uploadError) throw uploadError;
 

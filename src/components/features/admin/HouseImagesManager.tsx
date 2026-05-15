@@ -6,6 +6,7 @@ import { houseAssetsRepository } from '../../../data/repos/houseAssets';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
 import { formatAcademicYear, getAcademicTermMeta } from '../../../lib/academicTerms';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../../lib/imageUpload';
 import { supabase } from '../../../lib/supabase';
 import { HousePageAsset } from '../../../types';
 
@@ -141,12 +142,21 @@ export function HouseImagesManager() {
   }
 
   async function uploadHouseImage(house: HouseName, file: File) {
-    const fileExt = file.name.split('.').pop() || 'jpg';
+    const preparedFile = await prepareImageForUpload(file, 'house');
+    const fileExt = getUploadExtension(preparedFile);
     const fileName = `${selectedYear}/${house.toLowerCase().replace(/\s+/g, '-')}-${crypto.randomUUID()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, file);
+    const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, preparedFile, {
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
     if (uploadError) throw uploadError;
     const { data } = supabase.storage.from('house_images').getPublicUrl(fileName);
     return data.publicUrl;
+  }
+
+  async function removeHouseImage(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'house_images');
+    if (objectName) await supabase.storage.from('house_images').remove([objectName]);
   }
 
   async function saveAsset(house: HouseName) {
@@ -159,6 +169,7 @@ export function HouseImagesManager() {
       setSavingHouse(house);
       const file = files[house];
       const draft = drafts[house] ?? emptyDraft(house);
+      const oldImageUrl = draft.image_url;
       const uploadedUrl = file ? await uploadHouseImage(house, file) : null;
 
       await houseAssetsRepository.upsertAsset({
@@ -172,6 +183,7 @@ export function HouseImagesManager() {
         internal_notes: nullable(draft.internal_notes),
       });
 
+      if (uploadedUrl) await removeHouseImage(oldImageUrl);
       setHouseFile(house, null);
       toast.success(`${HOUSE_LABELS[house]} image saved.`);
       await refetch();

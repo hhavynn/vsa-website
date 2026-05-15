@@ -11,6 +11,7 @@ import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseYearlyPoints } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,10 +188,21 @@ export function House() {
                 >
                   {asset?.image_url ? (
                     <img
-                      src={asset.image_url}
+                      src={getSupabaseImageUrl(asset.image_url, {
+                        width: 520,
+                        height: 390,
+                        resize: 'cover',
+                        quality: 72,
+                      })}
+                      srcSet={getSupabaseImageSrcSet(asset.image_url, [320, 520, 720], {
+                        resize: 'cover',
+                        quality: 72,
+                      })}
+                      sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
                       alt={asset.image_alt || HOUSE_LABELS[house]}
                       className="h-full w-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center">
