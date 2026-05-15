@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { memo } from 'react';
 import { useSiteSettings } from '../../../context/SiteSettingsContext';
+import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 
 export const NavLogo = memo(function NavLogo() {
   const { settings } = useSiteSettings();
@@ -13,10 +14,11 @@ export const NavLogo = memo(function NavLogo() {
       aria-label="VSA at UCSD Home"
     >
       <img
-        src={logoSrc}
+        src={getSupabaseImageUrl(logoSrc, { width: 96, height: 96, resize: 'cover', quality: 78 })}
         alt={settings.logoAlt || 'VSA logo'}
         className="h-9 w-9 rounded-full border object-cover"
         style={{ borderColor: 'var(--border2)' }}
+        decoding="async"
       />
       <span
         className="hidden font-serif text-[17px] tracking-[-0.01em] min-[420px]:inline"

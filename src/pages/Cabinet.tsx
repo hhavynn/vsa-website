@@ -4,6 +4,7 @@ import { Label } from '../components/ui/Label';
 import { supabase } from '../lib/supabase';
 import { useCabinetYears } from '../hooks/useCabinetYears';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
+import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
 interface CabinetMember {
   id: string;
@@ -29,23 +30,6 @@ const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_ur
 function resolveImageUrl(image?: string | null) {
   if (!image) return null;
   return image.startsWith('http') || image.startsWith('data:') ? image : cabinetImage(image);
-}
-
-function getSizedCabinetImageUrl(image: string, width: number, height: number) {
-  try {
-    const url = new URL(image);
-    const publicStoragePath = '/storage/v1/object/public/cabinet_images/';
-    if (!url.pathname.includes(publicStoragePath)) return image;
-
-    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/cabinet_images/');
-    url.searchParams.set('width', String(width));
-    url.searchParams.set('height', String(height));
-    url.searchParams.set('resize', 'cover');
-    url.searchParams.set('quality', '75');
-    return url.toString();
-  } catch {
-    return image;
-  }
 }
 
 function sortCabinetMembers(a: CabinetMember, b: CabinetMember) {
@@ -141,8 +125,23 @@ function Avatar({
 
   return (
     <img
-      src={getSizedCabinetImageUrl(imageUrl, size * 2, size * 2)}
-      srcSet={`${getSizedCabinetImageUrl(imageUrl, size, size)} 1x, ${getSizedCabinetImageUrl(imageUrl, size * 2, size * 2)} 2x`}
+      src={getSupabaseImageUrl(imageUrl, {
+        width: size * 2,
+        height: size * 2,
+        resize: 'cover',
+        quality: 75,
+      })}
+      srcSet={`${getSupabaseImageUrl(imageUrl, {
+        width: size,
+        height: size,
+        resize: 'cover',
+        quality: 75,
+      })} 1x, ${getSupabaseImageUrl(imageUrl, {
+        width: size * 2,
+        height: size * 2,
+        resize: 'cover',
+        quality: 75,
+      })} 2x`}
       alt={name}
       className="shrink-0 rounded-full object-cover"
       width={size}

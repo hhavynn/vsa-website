@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { formatDateOnly } from '../lib/dateOnly';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
@@ -66,10 +67,21 @@ export default function Gallery() {
                 <div className="relative h-[220px] overflow-hidden" style={{ background: 'var(--surface2)' }}>
                   {album.cover_image_url ? (
                     <img
-                      src={album.cover_image_url}
+                      src={getSupabaseImageUrl(album.cover_image_url, {
+                        width: 520,
+                        height: 330,
+                        resize: 'cover',
+                        quality: 72,
+                      })}
+                      srcSet={getSupabaseImageSrcSet(album.cover_image_url, [360, 520, 720], {
+                        resize: 'cover',
+                        quality: 72,
+                      })}
+                      sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
                       alt={album.title}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">

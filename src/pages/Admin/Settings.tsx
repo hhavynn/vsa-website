@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { DEFAULT_SITE_SETTINGS, SITE_SETTINGS_ID } from '../../data/siteSettings';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 
@@ -33,23 +34,35 @@ export default function AdminSettings() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'] },
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.svg'] },
     maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
   });
 
   async function uploadLogo(file: File): Promise<string> {
-    const ext = file.name.split('.').pop();
+    const preparedFile = await prepareImageForUpload(file, 'logo');
+    const ext = getUploadExtension(preparedFile);
     const fileName = `logo-${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from('site_assets').upload(fileName, file, { upsert: true });
+    const { error } = await supabase.storage.from('site_assets').upload(fileName, preparedFile, {
+      upsert: true,
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
     if (error) throw error;
     const { data } = supabase.storage.from('site_assets').getPublicUrl(fileName);
     return data.publicUrl;
+  }
+
+  async function removeSiteAsset(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'site_assets');
+    if (objectName) await supabase.storage.from('site_assets').remove([objectName]);
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     try {
       setLoading(true);
+      const oldLogoUrl = logoUrl;
       const finalLogoUrl = logoFile ? await uploadLogo(logoFile) : logoUrl.trim();
       const { error } = await supabase.from('site_settings').upsert(
         {
@@ -61,6 +74,7 @@ export default function AdminSettings() {
         { onConflict: 'id' }
       );
       if (error) throw error;
+      if (logoFile) await removeSiteAsset(oldLogoUrl);
       setLogoUrl(finalLogoUrl);
       setLogoFile(null);
       setLogoPreview('');

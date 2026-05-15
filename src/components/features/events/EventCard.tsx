@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { Event } from '../../../types';
 import { CountdownTimer } from '../../common/CountdownTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../../../lib/supabaseImages';
 
 export interface EventCardProps {
   event: Event;
@@ -39,9 +40,21 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
       <div className="relative h-44 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
         {event.image_url ? (
           <img
-            src={event.image_url}
+            src={getSupabaseImageUrl(event.image_url, {
+              width: 520,
+              height: 330,
+              resize: 'cover',
+              quality: 72,
+            })}
+            srcSet={getSupabaseImageSrcSet(event.image_url, [320, 520, 720], {
+              resize: 'cover',
+              quality: 72,
+            })}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             alt={event.name}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

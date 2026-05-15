@@ -7,6 +7,7 @@ import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
 import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 
 interface CabinetMember {
   id: string;
@@ -264,6 +265,7 @@ export default function AdminCabinet() {
     onDrop,
     accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
+    maxSize: 8 * 1024 * 1024,
   });
 
   // Dropzone for EDIT
@@ -280,16 +282,26 @@ export default function AdminCabinet() {
     onDrop: onEditDrop,
     accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
+    maxSize: 8 * 1024 * 1024,
   });
 
   const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
+    const preparedFile = await prepareImageForUpload(file, 'cabinet');
+    const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
-    const { error } = await supabase.storage.from('cabinet_images').upload(fileName, file);
+    const { error } = await supabase.storage.from('cabinet_images').upload(fileName, preparedFile, {
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
     if (error) throw error;
     const { data } = supabase.storage.from('cabinet_images').getPublicUrl(fileName);
     return data.publicUrl;
   };
+
+  async function removeCabinetImage(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'cabinet_images');
+    if (objectName) await supabase.storage.from('cabinet_images').remove([objectName]);
+  }
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,7 +343,9 @@ export default function AdminCabinet() {
     try {
       setUploading(true);
       let imageUrl = selectedMember.image_url;
+      let imageUrlToRemove: string | null = null;
       if (editImageFile) {
+        imageUrlToRemove = selectedMember.image_url;
         imageUrl = await uploadImage(editImageFile);
       }
 
@@ -352,6 +366,7 @@ export default function AdminCabinet() {
       }).eq('id', selectedMember.id);
 
       if (error) throw error;
+      await removeCabinetImage(imageUrlToRemove);
 
       toast.success('Member updated');
       setEditImageFile(null);
@@ -371,6 +386,7 @@ export default function AdminCabinet() {
     try {
       const { error } = await supabase.from('cabinet_members').delete().eq('id', memberToDelete.id);
       if (error) throw error;
+      await removeCabinetImage(memberToDelete.image_url);
       toast.success(`${memberToDelete.name} removed`);
       fetchMembers();
     } catch (err) {

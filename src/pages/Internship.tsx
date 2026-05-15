@@ -6,6 +6,7 @@ import { ProgramContentCallout } from '../components/features/program/ProgramCon
 import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERN PROGRAM CONFIG — Update these values each cycle.
@@ -59,23 +60,6 @@ const faqs = [
   { q: 'Who do I contact with questions?', a: 'Reach out to VSA through Instagram (@vsaatucsd) or speak with a board member. For program-specific questions, contact the Internal Vice President through official VSA channels.' },
 ];
 
-function getSizedInternImageUrl(image: string, width: number, height: number) {
-  try {
-    const url = new URL(image);
-    const publicStoragePath = '/storage/v1/object/public/cabinet_images/';
-    if (!url.pathname.includes(publicStoragePath)) return image;
-
-    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/cabinet_images/');
-    url.searchParams.set('width', String(width));
-    url.searchParams.set('height', String(height));
-    url.searchParams.set('resize', 'cover');
-    url.searchParams.set('quality', '75');
-    return url.toString();
-  } catch {
-    return image;
-  }
-}
-
 function internInitials(name: string) {
   return name
     .split(' ')
@@ -105,7 +89,12 @@ function InternCard({ intern }: { intern: CabinetIntern }) {
       >
         {imageUrl ? (
           <img
-            src={getSizedInternImageUrl(imageUrl, imageSize, Math.round(imageSize * 1.25))}
+            src={getSupabaseImageUrl(imageUrl, {
+              width: imageSize,
+              height: Math.round(imageSize * 1.25),
+              resize: 'cover',
+              quality: 75,
+            })}
             alt={intern.name}
             width={imageSize}
             height={Math.round(imageSize * 1.25)}

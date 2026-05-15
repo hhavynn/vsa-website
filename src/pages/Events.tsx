@@ -7,6 +7,7 @@ import { Label } from '../components/ui/Label';
 import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { getAcademicTermMeta } from '../lib/academicTerms';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents } from '../hooks/useEvents';
 import { AcademicTerm, Event } from '../types';
@@ -75,13 +76,37 @@ function EventImage({
   event,
   className,
   titleClassName,
+  imageWidth = 720,
+  imageHeight = 432,
+  priority = false,
 }: {
   event: Event;
   className: string;
   titleClassName: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  priority?: boolean;
 }) {
   if (event.image_url) {
-    return <img src={event.image_url} alt={event.name} className={className} />;
+    return (
+      <img
+        src={getSupabaseImageUrl(event.image_url, {
+          width: imageWidth,
+          height: imageHeight,
+          resize: 'cover',
+          quality: 72,
+        })}
+        srcSet={getSupabaseImageSrcSet(event.image_url, [Math.round(imageWidth / 2), imageWidth], {
+          resize: 'cover',
+          quality: 72,
+        })}
+        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+        alt={event.name}
+        className={className}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+      />
+    );
   }
 
   return (
@@ -236,6 +261,9 @@ export function Events() {
                   event={featured}
                   className="h-full w-full object-cover"
                   titleClassName="px-8 text-center font-serif italic leading-[1.04] tracking-[-0.03em] text-[34px]"
+                  imageWidth={760}
+                  imageHeight={520}
+                  priority
                 />
                 <div
                   className="absolute bottom-5 left-5 rounded border px-4 py-3 backdrop-blur-sm"
@@ -279,6 +307,8 @@ export function Events() {
                     event={event}
                     className="aspect-[4/3] w-full rounded border object-cover"
                     titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
+                    imageWidth={360}
+                    imageHeight={270}
                   />
 
                   <div className="min-w-0 sm:col-span-2 lg:col-auto">
@@ -384,6 +414,8 @@ export function Events() {
                         event={event}
                         className="aspect-[5/3] w-full object-cover"
                         titleClassName="px-5 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[22px]"
+                        imageWidth={520}
+                        imageHeight={312}
                       />
                       <div className="border-t px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
                         <div className="flex items-center justify-between gap-4">

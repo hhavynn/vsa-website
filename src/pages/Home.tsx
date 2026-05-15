@@ -9,6 +9,7 @@ import { usePresidentsContent } from '../hooks/usePresidentsContent';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { Event } from '../types';
 import { splitPresidentsMessage } from '../data/presidentsContent';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 
 const pillars = [
   {
@@ -203,10 +204,16 @@ export function Home() {
                   }}
                 />
                 <img
-                  src={logoSrc}
+                  src={getSupabaseImageUrl(logoSrc, { width: 420, height: 420, resize: 'contain', quality: 78 })}
+                  srcSet={getSupabaseImageSrcSet(logoSrc, [240, 420, 720], {
+                    resize: 'contain',
+                    quality: 78,
+                  })}
+                  sizes="(min-width: 1024px) 360px, 80vw"
                   alt={siteSettings.logoAlt || 'VSA logo lantern'}
                   className="h-full w-full object-contain"
                   style={{ filter: 'drop-shadow(0 0 60px rgba(240,120,88,0.35)) drop-shadow(0 0 120px rgba(232,98,58,0.15))' }}
+                  decoding="async"
                 />
               </div>
               <p className="mt-8 text-center font-sans text-[13px] tracking-[0.04em]" style={{ color: 'var(--text3)' }}>
@@ -273,10 +280,22 @@ export function Home() {
             <div>
               {presidentsContent.photoUrl ? (
                 <img
-                  src={presidentsContent.photoUrl}
+                  src={getSupabaseImageUrl(presidentsContent.photoUrl, {
+                    width: 440,
+                    height: 586,
+                    resize: 'cover',
+                    quality: 74,
+                  })}
+                  srcSet={getSupabaseImageSrcSet(presidentsContent.photoUrl, [320, 440, 640], {
+                    resize: 'cover',
+                    quality: 74,
+                  })}
+                  sizes="(min-width: 1024px) 220px, 70vw"
                   alt={presidentsContent.names}
                   className="aspect-[3/4] w-full rounded-2xl border object-cover"
                   style={{ borderColor: 'var(--border)' }}
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="flex aspect-[3/4] items-center justify-center rounded-2xl border" style={{ borderColor: 'var(--border)', background: 'linear-gradient(135deg,var(--surface2),var(--bg2))' }}>

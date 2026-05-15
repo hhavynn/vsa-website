@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { formatDateOnly, toDateOnlyString } from '../../lib/dateOnly';
 import { PageTitle } from '../../components/common/PageTitle';
+import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 
 interface GalleryAlbum {
   id: string;
@@ -62,6 +63,7 @@ export default function AdminGallery() {
     onDrop,
     accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
   });
 
   const removeCover = () => {
@@ -83,7 +85,27 @@ export default function AdminGallery() {
     onDrop: onEditDrop,
     accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
   });
+
+  async function uploadCoverImage(file: File) {
+    const preparedFile = await prepareImageForUpload(file, 'galleryCover');
+    const fileName = `${crypto.randomUUID()}.${getUploadExtension(preparedFile)}`;
+    const { error } = await supabase.storage
+      .from('gallery_images')
+      .upload(fileName, preparedFile, {
+        cacheControl: '31536000',
+        contentType: preparedFile.type,
+      });
+    if (error) throw error;
+    const { data } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
+    return data.publicUrl;
+  }
+
+  async function removeGalleryImage(url?: string | null) {
+    const objectName = extractSupabasePublicObjectName(url, 'gallery_images');
+    if (objectName) await supabase.storage.from('gallery_images').remove([objectName]);
+  }
 
   const openEditModal = (album: GalleryAlbum) => {
     setAlbumToEdit(album);
@@ -121,21 +143,10 @@ export default function AdminGallery() {
 
       // Upload new cover if one was selected
       let coverImageUrl = albumToEdit.cover_image_url;
+      let coverImageToRemove: string | null = null;
       if (editCoverFile) {
-        const ext = editCoverFile.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('gallery_images')
-          .upload(fileName, editCoverFile);
-        if (uploadErr) throw uploadErr;
-        const { data: urlData } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
-        coverImageUrl = urlData.publicUrl;
-
-        // Delete old cover from storage if we uploaded it
-        if (albumToEdit.cover_image_url?.includes('gallery_images')) {
-          const oldFile = albumToEdit.cover_image_url.split('/').pop();
-          if (oldFile) await supabase.storage.from('gallery_images').remove([oldFile]);
-        }
+        coverImageUrl = await uploadCoverImage(editCoverFile);
+        coverImageToRemove = albumToEdit.cover_image_url;
       }
 
       const { error: updateErr } = await supabase
@@ -150,6 +161,7 @@ export default function AdminGallery() {
         })
         .eq('id', albumToEdit.id);
       if (updateErr) throw updateErr;
+      await removeGalleryImage(coverImageToRemove);
 
       toast.success('Album updated!');
       setAlbums(prev =>
@@ -189,14 +201,7 @@ export default function AdminGallery() {
 
       let coverImageUrl: string | null = null;
       if (coverFile) {
-        const ext = coverFile.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('gallery_images')
-          .upload(fileName, coverFile);
-        if (uploadErr) throw uploadErr;
-        const { data } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
-        coverImageUrl = data.publicUrl;
+        coverImageUrl = await uploadCoverImage(coverFile);
       }
 
       const { error } = await supabase.from('gallery_events').insert([{
@@ -228,10 +233,7 @@ export default function AdminGallery() {
     if (!albumToDelete) return;
     try {
       // Delete cover from storage if it was uploaded
-      if (albumToDelete.cover_image_url?.includes('gallery_images')) {
-        const fileName = albumToDelete.cover_image_url.split('/').pop();
-        if (fileName) await supabase.storage.from('gallery_images').remove([fileName]);
-      }
+      await removeGalleryImage(albumToDelete.cover_image_url);
       const { error } = await supabase
         .from('gallery_events')
         .delete()
