@@ -43,14 +43,14 @@ const QUICK_LINKS = [
 
 function StatCard({ label, value, detail }: { label: string; value: number; detail: string }) {
   return (
-    <div className="rounded-md border px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+    <div className="scrapbook-note flex flex-col justify-center px-5 py-5 sm:px-6">
+      <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
         {label}
       </p>
-      <p className="font-serif text-[34px] leading-none" style={{ color: 'var(--color-text)' }}>
+      <p className="font-serif text-[38px] leading-none" style={{ color: 'var(--color-text)' }}>
         {value}
       </p>
-      <p className="mt-2 text-xs" style={{ color: 'var(--color-text2)' }}>
+      <p className="mt-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
         {detail}
       </p>
     </div>
@@ -109,26 +109,26 @@ export default function AdminOverview() {
   }, []);
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Overview" />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans text-base font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
+      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
           Overview
         </h1>
-        <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+        <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
           High-level status across members, events, and incoming admin work.
         </p>
       </div>
 
-      <div style={{ padding: '24px 28px' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
         {loading ? (
           <div className="py-16 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
             Loading overview...
           </div>
         ) : (
-          <div className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-8 lg:space-y-10">
+            <div className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:grid-cols-3">
               <StatCard label="Members" value={stats.members} detail="Total member records currently in the system." />
               <StatCard label="Events" value={stats.events} detail={`${stats.upcomingEvents} upcoming events are still active.`} />
               <StatCard label="Cabinet" value={stats.cabinetMembers} detail={`${stats.cabinetYears} cabinet years are available for archives.`} />
@@ -137,10 +137,10 @@ export default function AdminOverview() {
               <StatCard label="Feedback" value={stats.feedback} detail={`${stats.pendingFeedback} items still need follow-up.`} />
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
-                  <h2 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <div className="border-b px-5 py-4 sm:px-6 sm:py-5" style={{ borderColor: 'var(--color-border)' }}>
+                  <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
                     Quick Actions
                   </h2>
                 </div>
@@ -149,41 +149,46 @@ export default function AdminOverview() {
                     <Link
                       key={link.to}
                       to={link.to}
-                      className="flex items-start justify-between gap-4 px-5 py-4 transition-opacity hover:opacity-80"
+                      className="group flex flex-col items-start justify-between gap-2 px-5 py-4 transition-colors hover:bg-[var(--color-surface2)] sm:flex-row sm:items-center sm:px-6"
                     >
                       <div>
-                        <p className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        <p className="font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>
                           {link.label}
                         </p>
                         <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                           {link.desc}
                         </p>
                       </div>
-                      <span className="font-sans text-sm text-brand-600 dark:text-brand-400">→</span>
+                      <span className="shrink-0 rounded-full bg-[var(--color-surface)] p-2 text-brand-600 transition-transform group-hover:translate-x-1 dark:text-brand-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                      </span>
                     </Link>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <h2 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <span className="scrapbook-pin" aria-hidden />
+                <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
                   Attention
                 </h2>
-                <div className="mt-4 space-y-3">
-                  <div className="border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                <div className="mt-6 space-y-6">
+                  <div>
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
                       Pending Feedback
                     </p>
-                    <p className="mt-1 font-serif text-3xl leading-none" style={{ color: 'var(--color-text)' }}>
+                    <p className="mt-2 font-serif text-[42px] leading-none text-[var(--accent)]">
                       {stats.pendingFeedback}
                     </p>
                   </div>
-                  <div className="border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  <div className="border-t pt-5" style={{ borderColor: 'var(--color-border)' }}>
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
                       Merge Exclusions
                     </p>
-                    <p className="mt-1 text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                      {stats.mergeCandidates} merge exclusions are stored. Review duplicates from the merge screen when needed.
+                    <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                      <span className="font-semibold text-[var(--color-text)]">{stats.mergeCandidates}</span> merge exclusions are stored. Review duplicates from the merge screen when needed.
                     </p>
                   </div>
                 </div>
@@ -192,6 +197,6 @@ export default function AdminOverview() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

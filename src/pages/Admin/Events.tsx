@@ -18,8 +18,8 @@ const EMPTY_EVENT: Partial<Event> = {
   academic_term_id: null,
 };
 
-const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
-const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label';
+const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)]';
+const labelCls = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
 function findTermForDate(dateString: string | null | undefined, terms: AcademicTerm[]) {
   const meta = dateString ? getAcademicTermMeta(dateString) : null;
@@ -296,27 +296,27 @@ export default function AdminEvents() {
   };
 
   const EventRow = ({ event }: { event: Event }) => (
-    <div className="flex items-start gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+    <div className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-start sm:p-5 transition-colors hover:bg-[var(--color-surface2)] last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
       {event.image_url && (
-        <img src={event.image_url} alt={event.name} className="w-14 h-14 object-cover rounded shrink-0" />
+        <img src={event.image_url} alt={event.name} className="h-40 w-full shrink-0 rounded border object-cover sm:h-16 sm:w-16" style={{ borderColor: 'var(--color-border)' }} />
       )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">{event.name}</p>
-        <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{event.description}</p>
-        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-          <span className="text-xs text-zinc-400">
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-sans text-base font-bold sm:text-sm sm:font-semibold" style={{ color: 'var(--color-text)' }}>{event.name}</p>
+        <p className="mt-1 line-clamp-2 text-xs sm:line-clamp-1" style={{ color: 'var(--color-text2)' }}>{event.description}</p>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
             {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
-          <span className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-500 rounded">
+          <span className="rounded border px-1.5 py-0.5 font-mono text-[10px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
             {getTermLabel(event.academic_term_id, event.date)}
           </span>
-          <span className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-700 text-zinc-500 rounded">
+          <span className="rounded border px-1.5 py-0.5 font-mono text-[10px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
-          <span className="text-xs text-emerald-500 font-medium">{event.points} pts</span>
+          <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{event.points} pts</span>
         </div>
       </div>
-      <div className="flex gap-1.5 shrink-0">
+      <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <button
           onClick={() => {
             const suggestedTerm = findTermForDate(event.date, terms);
@@ -328,13 +328,14 @@ export default function AdminEvents() {
             setEditImageFile(null);
             setEditImagePreview(null);
           }}
-          className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors"
+          className="flex-1 rounded border px-4 py-2 text-xs font-medium transition-colors hover:bg-[var(--color-surface2)] sm:flex-none sm:px-3 sm:py-1.5"
+          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
         >
           Edit
         </button>
         <button
           onClick={() => setEventToDelete(event)}
-          className="px-3 py-1.5 border border-red-900/30 text-red-500 hover:bg-red-600 hover:text-white text-xs rounded transition-colors"
+          className="flex-1 rounded border border-red-900/30 px-4 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white sm:flex-none sm:px-3 sm:py-1.5"
         >
           Delete
         </button>
@@ -343,187 +344,194 @@ export default function AdminEvents() {
   );
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Events" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Events</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>{events.length} events total</p>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Events</h1>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{events.length} events total</p>
         </div>
         {/* Tab toggle */}
-        <div className="inline-flex border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
           {(['create', 'manage'] as const).map((tab, i) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-xs transition-colors duration-150"
-              style={{ padding: '7px 14px', fontWeight: activeTab === tab ? 500 : 400, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
               {tab === 'create' ? 'Create Event' : `Manage (${events.length})`}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
-
-      <div className="border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] rounded-md p-6">
-        {activeTab === 'create' ? (
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Create Event</h2>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
-                <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
-                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          {activeTab === 'create' ? (
+            <div className="p-6 sm:p-8">
+              <h2 className="mb-6 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Create Event</h2>
+              <form onSubmit={handleCreateEvent} className="space-y-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
+                  <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
+                  <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
+                  <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div>
+                    <label className={labelCls}>Event Type *</label>
+                    <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                      {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                  <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({...newEvent, check_in_form_url: e.target.value})} className={inputCls} placeholder="https://forms.google.com/..." /></div>
+                  <AcademicTermSelect
+                    value={newEvent.academic_term_id}
+                    date={newEvent.date}
+                    terms={terms}
+                    termsLoading={termsLoading}
+                    termsError={termsError}
+                    onChange={(termId) => setNewEvent({ ...newEvent, academic_term_id: termId })}
+                  />
+                </div>
+                <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={4} required placeholder="Describe the event." /></div>
                 <div>
-                  <label className={labelCls}>Event Type *</label>
-                  <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
-                    {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+                  <label className={labelCls}>Image</label>
+                  <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
+                    <input {...getInputProps()} />
+                    {imagePreview
+                      ? <img src={imagePreview} alt="Preview" className="max-h-48 rounded object-cover shadow-sm" />
+                      : <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>}
+                  </div>
+                  {imageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setImageFile(null); setImagePreview(null); }}>Remove image</button>}
                 </div>
-                <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
-                <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({...newEvent, check_in_form_url: e.target.value})} className={inputCls} placeholder="https://forms.google.com/..." /></div>
-                <AcademicTermSelect
-                  value={newEvent.academic_term_id}
-                  date={newEvent.date}
-                  terms={terms}
-                  termsLoading={termsLoading}
-                  termsError={termsError}
-                  onChange={(termId) => setNewEvent({ ...newEvent, academic_term_id: termId })}
-                />
-              </div>
-              <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={3} required placeholder="Describe the event." /></div>
-              <div>
-                <label className={labelCls}>Image</label>
-                <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors ${isDragActive ? 'border-zinc-400 bg-zinc-800/20' : 'border-zinc-700'}`}>
-                  <input {...getInputProps()} />
-                  {imagePreview
-                    ? <img src={imagePreview} alt="Preview" className="max-h-40 rounded object-cover" />
-                    : <p className="text-zinc-500 text-xs">Drag and drop or click to upload</p>}
+                <div className="pt-2">
+                  <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
+                    {uploading ? 'Creating...' : 'Create Event'}
+                  </button>
                 </div>
-                {imageFile && <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => { setImageFile(null); setImagePreview(null); }}>Remove image</button>}
+              </form>
+            </div>
+          ) : (
+            <div>
+              <div className="border-b px-6 py-5 sm:px-8" style={{ borderColor: 'var(--color-border)' }}>
+                <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Manage Events</h2>
               </div>
-              <button type="submit" disabled={uploading} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
-                {uploading ? 'Creating...' : 'Create Event'}
-              </button>
-            </form>
+              {upcomingEvents.length === 0 && pastEvents.length === 0 && (
+                <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>No events yet.</p>
+              )}
+              {upcomingEvents.length > 0 && (
+                <div className="mb-2">
+                  <div className="border-b bg-[var(--color-surface2)] px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Upcoming ({upcomingEvents.length})</p>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                    {upcomingEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
+                  </div>
+                </div>
+              )}
+              {pastEvents.length > 0 && (
+                <div>
+                  <div className="border-y bg-[var(--color-surface2)] px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Past ({pastEvents.length})</p>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                    {pastEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Edit Modal */}
+        {selectedEvent && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6 lg:p-8">
+            <div className="scrapbook-paper my-8 w-full max-w-2xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
+                <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit Event</h2>
+                <button onClick={() => setSelectedEvent(null)} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="space-y-5 p-6 sm:p-8">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
+                  <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
+                  <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
+                  <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div>
+                    <label className={labelCls}>Event Type *</label>
+                    <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                      {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                  <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_form_url: e.target.value})} className={inputCls} /></div>
+                  <AcademicTermSelect
+                    value={selectedEvent.academic_term_id}
+                    date={selectedEvent.date}
+                    terms={terms}
+                    termsLoading={termsLoading}
+                    termsError={termsError}
+                    onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
+                  />
+                </div>
+                <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={4} required /></div>
+                <div>
+                  <label className={labelCls}>Check-in Code</label>
+                  <div className="mt-1 flex gap-2">
+                    <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_code: e.target.value})} className={`${inputCls} mt-0 font-mono tracking-widest`} />
+                    <button type="button" onClick={handleCopyCode} className={`shrink-0 rounded border px-4 py-2 text-sm font-semibold transition-colors ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400' : 'bg-[var(--color-surface2)] hover:bg-[var(--color-surface)]'}`} style={{ borderColor: copiedCode ? '' : 'var(--color-border)', color: copiedCode ? '' : 'var(--color-text)' }}>
+                      {copiedCode ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'var(--color-text2)' }}>
+                    <input type="checkbox" checked={selectedEvent.is_code_expired} onChange={e => setSelectedEvent({...selectedEvent, is_code_expired: e.target.checked})} className="rounded border-[var(--color-border)] bg-[var(--color-surface2)] text-[var(--brand)] focus:ring-[var(--brand)]" />
+                    Mark code as expired
+                  </label>
+                </div>
+                <div>
+                  <label className={labelCls}>Image</label>
+                  {selectedEvent.image_url && !editImagePreview && (
+                    <div className="mb-4 mt-2">
+                      <img src={selectedEvent.image_url} alt={selectedEvent.name} className="h-48 w-full rounded border object-cover shadow-sm sm:w-auto sm:min-w-[320px]" style={{ borderColor: 'var(--color-border)' }} />
+                      <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedEvent({...selectedEvent, image_url: ''})}>Remove image</button>
+                    </div>
+                  )}
+                  <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
+                    <input {...getEditInputProps()} />
+                    {editImagePreview
+                      ? <img src={editImagePreview} alt="New preview" className="max-h-40 rounded object-cover shadow-sm" />
+                      : <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to replace image</p>}
+                  </div>
+                  {editImageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>Remove new image</button>}
+                </div>
+                <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
+                  <button type="submit" disabled={editUploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
+                    {editUploading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button type="button" onClick={() => setSelectedEvent(null)} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+              <div className="border-t p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                <ManualCheckIn eventId={selectedEvent.id} onSuccess={refreshEvents} />
+              </div>
+            </div>
           </div>
-        ) : (
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Events</h2>
-            {upcomingEvents.length === 0 && pastEvents.length === 0 && (
-              <p className="text-zinc-500 text-sm text-center py-10">No events yet.</p>
-            )}
-            {upcomingEvents.length > 0 && (
-              <div className="mb-6">
-                <p className="text-xs font-semibold uppercase tracking-label text-zinc-500 mb-3">Upcoming ({upcomingEvents.length})</p>
-                <div className="border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden">
-                  {upcomingEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
-                </div>
+        )}
+
+        {/* Delete Confirmation */}
+        {eventToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete Event</h3>
+              <p className="mb-2 font-sans text-[15px]" style={{ color: 'var(--color-text)' }}>Delete <span className="font-bold">"{eventToDelete.name}"</span>?</p>
+              <p className="mb-6 font-sans text-xs leading-relaxed text-red-500">This cannot be undone. Attendance records will remain.</p>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button onClick={() => setEventToDelete(null)} className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+                <button onClick={handleDeleteConfirm} className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">Delete Event</button>
               </div>
-            )}
-            {pastEvents.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-label text-zinc-500 mb-3">Past ({pastEvents.length})</p>
-                <div className="border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden">
-                  {pastEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Edit Modal */}
-      {selectedEvent && (
-        <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-md w-full max-w-2xl my-8">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-              <h2 className="text-base font-semibold text-zinc-50">Edit Event</h2>
-              <button onClick={() => setSelectedEvent(null)} className="text-zinc-500 hover:text-zinc-200 text-xl leading-none">&times;</button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="p-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
-                <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
-                <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
-                <div>
-                  <label className={labelCls}>Event Type *</label>
-                  <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
-                    {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
-                <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_form_url: e.target.value})} className={inputCls} /></div>
-                <AcademicTermSelect
-                  value={selectedEvent.academic_term_id}
-                  date={selectedEvent.date}
-                  terms={terms}
-                  termsLoading={termsLoading}
-                  termsError={termsError}
-                  onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
-                />
-              </div>
-              <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={3} required /></div>
-              <div>
-                <label className={labelCls}>Check-in Code</label>
-                <div className="mt-1 flex gap-2">
-                  <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_code: e.target.value})} className={`${inputCls} mt-0 font-mono tracking-widest`} />
-                  <button type="button" onClick={handleCopyCode} className={`shrink-0 px-3 py-2 rounded text-sm font-medium transition-colors border ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-400' : 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-300'}`}>
-                    {copiedCode ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <label className="flex items-center gap-2 mt-2 text-xs text-zinc-500 cursor-pointer">
-                  <input type="checkbox" checked={selectedEvent.is_code_expired} onChange={e => setSelectedEvent({...selectedEvent, is_code_expired: e.target.checked})} className="rounded-sm" />
-                  Mark code as expired
-                </label>
-              </div>
-              <div>
-                <label className={labelCls}>Image</label>
-                {selectedEvent.image_url && !editImagePreview && (
-                  <div className="mt-2 mb-3">
-                    <img src={selectedEvent.image_url} alt={selectedEvent.name} className="w-full h-36 object-cover rounded border border-zinc-700" />
-                    <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => setSelectedEvent({...selectedEvent, image_url: ''})}>Remove image</button>
-                  </div>
-                )}
-                <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border border-dashed rounded p-5 cursor-pointer transition-colors ${isEditDragActive ? 'border-zinc-400 bg-zinc-800/20' : 'border-zinc-700'}`}>
-                  <input {...getEditInputProps()} />
-                  {editImagePreview
-                    ? <img src={editImagePreview} alt="New preview" className="max-h-36 rounded object-cover" />
-                    : <p className="text-zinc-500 text-xs">Drag and drop or click to replace image</p>}
-                </div>
-                {editImageFile && <button type="button" className="mt-1.5 text-xs text-red-400 hover:text-red-300" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>Remove new image</button>}
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button type="submit" disabled={editUploading} className="flex-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
-                  {editUploading ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button type="button" onClick={() => setSelectedEvent(null)} className="px-5 py-2.5 border border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded text-sm transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
-            <div className="border-t border-zinc-800 p-5">
-              <ManualCheckIn eventId={selectedEvent.id} onSuccess={refreshEvents} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {eventToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-md max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-zinc-50 mb-2">Delete Event</h3>
-            <p className="text-sm text-zinc-400 mb-1">Delete <span className="text-zinc-200 font-medium">"{eventToDelete.name}"</span>?</p>
-            <p className="text-xs text-zinc-500 mb-5">This cannot be undone. Attendance records will remain.</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setEventToDelete(null)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors">Cancel</button>
-              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-      </div>
-    </>
+    </div>
   );
 }

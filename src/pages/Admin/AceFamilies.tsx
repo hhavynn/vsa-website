@@ -20,8 +20,8 @@ import { extractSupabasePublicObjectName } from '../../lib/imageUpload';
 import { supabase } from '../../lib/supabase';
 
 const inputCls =
-  'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
-const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
+  'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
+const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
 function fieldStyle() {
   return {
@@ -658,38 +658,37 @@ export default function AdminAceFamilies() {
   const slugForPlaceholder = slugify(familyDraft.name) || 'fam-slug';
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="ACE Fams" />
 
       <div
-        className="border-b flex items-center justify-between gap-4"
-        style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+        className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8"
+        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
       >
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
             ACE Fams
           </h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
             Manage timeless ACE families and Big/Little tree structure.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => {
               setImportOpen((o) => !o);
               setImportError(null);
             }}
-            className="rounded border px-3 py-1.5 font-sans text-xs"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
+            className="rounded border bg-transparent px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
           >
             {importOpen ? 'Close Import' : 'Import JSON'}
           </button>
           <button
             type="button"
             onClick={handleNewFamily}
-            className="rounded border px-3 py-1.5 font-sans text-xs"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
+            className="vsa-btn-primary px-4 py-2 text-[13px]"
           >
             + New Fam
           </button>
@@ -1157,6 +1156,6 @@ export default function AdminAceFamilies() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

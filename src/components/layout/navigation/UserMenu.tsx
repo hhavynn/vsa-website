@@ -47,7 +47,7 @@ export const UserMenu = memo(function UserMenu({ isMobile = false, className = '
         {user && (
           <>
             {isAdmin && (
-              <Link to="/admin/events" onClick={onLinkClick} className="block rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-[var(--accent)] transition-colors duration-150 hover:bg-[var(--surface2)]">
+              <Link to="/admin" onClick={onLinkClick} className="block rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-[var(--accent)] transition-colors duration-150 hover:bg-[var(--surface2)]">
                 Admin
               </Link>
             )}
@@ -75,7 +75,7 @@ export const UserMenu = memo(function UserMenu({ isMobile = false, className = '
   return (
     <div className={`hidden items-center gap-2.5 md:flex ${className}`}>
       {isAdmin && (
-        <Link to="/admin/events" className="text-[13.5px] font-semibold text-[var(--accent)] transition-opacity duration-150 hover:opacity-80">
+        <Link to="/admin" className="text-[13.5px] font-semibold text-[var(--accent)] transition-opacity duration-150 hover:opacity-80">
           Admin
         </Link>
       )}

@@ -325,7 +325,9 @@ export interface Database {
       feedback: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
+          name: string | null;
+          email: string | null;
           type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
           title: string;
           description: string;
@@ -336,7 +338,9 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          user_id: string;
+          user_id?: string | null;
+          name?: string | null;
+          email?: string | null;
           type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
           title: string;
           description: string;
@@ -347,7 +351,9 @@ export interface Database {
         };
         Update: {
           id?: string;
-          user_id?: string;
+          user_id?: string | null;
+          name?: string | null;
+          email?: string | null;
           type?: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
           title?: string;
           description?: string;

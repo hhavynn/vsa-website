@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import { useEffect } from 'react';
 
 const NAV_GROUPS = [
   { group: null,      items: [{ to: '/admin',                   label: 'Overview' }] },
@@ -26,7 +27,7 @@ const NAV_GROUPS = [
   ]},
 ];
 
-export function AdminNav() {
+export function AdminNav({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const { pathname } = useLocation();
   const { user } = useAuth();
 
@@ -34,67 +35,114 @@ export function AdminNav() {
     ? user.email.slice(0, 2).toUpperCase()
     : 'AD';
 
+  // Prevent scrolling on body when mobile nav is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   return (
-    <aside
-      className="w-[200px] shrink-0 flex flex-col border-r"
-      style={{
-        background: 'var(--color-sidebar)',
-        borderColor: 'var(--color-sidebar-border)',
-        minHeight: 'calc(100vh - 58px)',
-      }}
-    >
-      {/* Header */}
-      <div className="px-4 py-3.5 border-b" style={{ borderColor: 'var(--color-sidebar-border)' }}>
-        <div className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400 tracking-[0.03em]">
-          VSA ADMIN
-        </div>
-        <div className="font-sans text-[11px] text-[var(--color-text3)] mt-0.5">Dashboard</div>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity md:hidden" 
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Nav groups */}
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        {NAV_GROUPS.map(({ group, items }) => (
-          <div key={group ?? 'top'}>
-            {group && (
-              <div className="font-sans text-[10px] font-semibold text-[var(--color-text3)] uppercase tracking-[0.07em] px-2 pt-3 pb-1">
-                {group}
-              </div>
-            )}
-            {items.map(({ to, label }) => {
-              const active = pathname === to;
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className="flex items-center gap-2 px-2 py-[7px] rounded text-[13px] font-sans tracking-[-0.01em] transition-colors duration-150 border"
-                  style={{
-                    background: active ? 'var(--color-sidebar-active)' : 'transparent',
-                    color: active ? 'var(--color-text)' : 'var(--color-text2)',
-                    borderColor: active ? 'var(--color-border-strong)' : 'transparent',
-                    fontWeight: active ? 500 : 400,
-                  }}
-                >
-                  {label}
-                </Link>
-              );
-            })}
+      {/* Nav Drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col border-r transition-transform duration-300 md:static md:w-[220px] md:translate-x-0 ${
+          isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: 'var(--color-border)',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
+          <div>
+            <div className="font-sans text-[13px] font-bold tracking-widest text-[var(--brand)] uppercase">
+              VSA Admin
+            </div>
+            <div className="mt-1 font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
+              Dashboard
+            </div>
           </div>
-        ))}
-      </nav>
+          {onClose && (
+            <button 
+              onClick={onClose} 
+              className="flex h-8 w-8 items-center justify-center rounded border bg-[var(--color-surface2)] text-[var(--color-text2)] transition-colors hover:text-[var(--color-text)] md:hidden"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t flex items-center gap-2.5" style={{ borderColor: 'var(--color-sidebar-border)' }}>
-        <div
-          className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center font-sans text-[10px] font-semibold"
-          style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)' }}
-        >
-          {initials}
+        {/* Nav groups */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {NAV_GROUPS.map(({ group, items }) => (
+            <div key={group ?? 'top'} className="mb-4 last:mb-0">
+              {group && (
+                <div className="mb-2 px-3 font-sans text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+                  {group}
+                </div>
+              )}
+              <div className="space-y-1">
+                {items.map(({ to, label }) => {
+                  const active = pathname === to;
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={onClose}
+                      className="group flex items-center gap-2 rounded-md border px-3 py-2 text-[13px] font-medium transition-all"
+                      style={{
+                        background: active ? 'var(--color-surface2)' : 'transparent',
+                        color: active ? 'var(--color-text)' : 'var(--color-text2)',
+                        borderColor: active ? 'var(--color-border)' : 'transparent',
+                      }}
+                    >
+                      {active && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                      )}
+                      <span className={active ? '' : 'group-hover:translate-x-1 transition-transform'}>
+                        {label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="flex items-center gap-3 border-t px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm font-sans text-[11px] font-bold uppercase"
+            style={{ background: 'var(--color-surface)', color: 'var(--color-text)', borderColor: 'var(--color-border)' }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate font-sans text-[13px] font-semibold text-[var(--color-text)]">Admin User</div>
+            <div className="truncate font-mono text-[9px] uppercase tracking-wider text-[var(--color-text3)]">vsaucsd.org</div>
+          </div>
         </div>
-        <div>
-          <div className="font-sans text-xs font-medium text-[var(--color-text)]">Admin</div>
-          <div className="font-sans text-[10px] text-[var(--color-text3)]">vsaucsd.org</div>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

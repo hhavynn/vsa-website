@@ -20,16 +20,73 @@ interface AnalyticsData {
   }>;
 }
 
+type AnalyticsErrorBody = {
+  error?: string;
+  message?: string;
+  code?: string;
+};
+
+function isAnalyticsData(value: unknown): value is AnalyticsData {
+  const candidate = value as AnalyticsData;
+
+  return Boolean(
+    candidate &&
+    typeof candidate === 'object' &&
+    candidate.summary &&
+    typeof candidate.summary.users === 'number' &&
+    typeof candidate.summary.sessions === 'number' &&
+    typeof candidate.summary.pageViews === 'number' &&
+    typeof candidate.summary.newUsers === 'number' &&
+    Array.isArray(candidate.trend) &&
+    Array.isArray(candidate.topPages)
+  );
+}
+
+async function getAnalyticsErrorMessage(error: any): Promise<string> {
+  const response = error?.context;
+
+  if (response instanceof Response) {
+    if (response.status === 404) {
+      return 'Analytics Edge Function is not deployed or unreachable';
+    }
+
+    try {
+      const body = await response.clone().json() as AnalyticsErrorBody;
+      const message = body.error || body.message;
+
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+    } catch {
+      // Fall back to Supabase's error message below.
+    }
+  }
+
+  if (typeof error?.message === 'string') {
+    if (error.message.includes('Failed to send a request')) {
+      return 'Analytics Edge Function is not deployed or unreachable';
+    }
+
+    if (error.message === 'Edge Function returned a non-2xx status code') {
+      return 'Analytics Edge Function returned an error. Check Supabase function logs.';
+    }
+
+    return error.message;
+  }
+
+  return 'Failed to load analytics data.';
+}
+
 function StatCard({ label, value, detail }: { label: string; value: number | string; detail: string }) {
   return (
-    <div className="rounded-md border px-5 py-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+    <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
+      <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
         {label}
       </p>
-      <p className="font-serif text-[34px] leading-none" style={{ color: 'var(--color-text)' }}>
+      <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>
         {value}
       </p>
-      <p className="mt-2 text-xs" style={{ color: 'var(--color-text2)' }}>
+      <p className="mt-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
         {detail}
       </p>
     </div>
@@ -54,8 +111,13 @@ export default function AdminAnalytics() {
 
         if (fetchError) {
           console.error('Edge Function Error:', fetchError);
-          throw fetchError;
+          throw new Error(await getAnalyticsErrorMessage(fetchError));
         }
+
+        if (!isAnalyticsData(result)) {
+          throw new Error('Unexpected analytics response format');
+        }
+
         setData(result);
       } catch (err: any) {
         console.error('Analytics Request Failed:', err);
@@ -71,15 +133,15 @@ export default function AdminAnalytics() {
   const maxTrendValue = data ? Math.max(...data.trend.map(d => d.pageViews), 1) : 1;
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Website Analytics" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans text-base font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
             Analytics
           </h1>
-          <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
             Website traffic and engagement metrics from Google Analytics 4.
           </p>
         </div>
@@ -167,6 +229,6 @@ export default function AdminAnalytics() {
           </div>
         ) : null}
       </div>
-    </>
+    </div>
   );
 }

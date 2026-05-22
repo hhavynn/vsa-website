@@ -150,11 +150,11 @@ export default function AdminContent() {
   const fieldStyle = { borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' };
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Content" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Content</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Content</h1>
         <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Edit the presidents message plus volatile program links, dates, and statuses.</p>
       </div>
 
@@ -264,6 +264,6 @@ export default function AdminContent() {
       </div>
       <ProgramContentManager />
       </div>
-    </>
+    </div>
   );
 }

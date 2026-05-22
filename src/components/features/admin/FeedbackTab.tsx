@@ -3,8 +3,10 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 
 interface Feedback {
-  id: number;
-  user_id: string;
+  id: string;
+  user_id: string | null;
+  name: string | null;
+  email: string | null;
   type: string;
   title: string;
   description: string;
@@ -14,9 +16,10 @@ interface Feedback {
 }
 
 const FEEDBACK_TYPE_LABELS: Record<string, string> = {
-  bug: 'Bug',
+  bug: 'Bug Report',
   feature: 'Feature Request',
   improvement: 'Improvement',
+  event: 'Event Feedback',
   other: 'Other',
 };
 
@@ -45,6 +48,7 @@ function badgeTone(value?: string) {
     bug: { color: '#b42318', borderColor: '#f2c7c3', background: '#fff1f0' },
     feature: { color: '#6a3fc7', borderColor: '#dccffc', background: '#f6f1ff' },
     improvement: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
+    event: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
     other: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
     low: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
     medium: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
@@ -120,7 +124,7 @@ const FeedbackTab: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase.from('feedback').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
@@ -245,7 +249,29 @@ const FeedbackTab: React.FC = () => {
                   <h3 className="text-base font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
                     {feedback.title}
                   </h3>
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+
+                  {(feedback.name || feedback.email) && (
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium" style={{ color: 'var(--color-text3)' }}>
+                      {feedback.name && (
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {feedback.name}
+                        </span>
+                      )}
+                      {feedback.email && (
+                        <span className="flex items-center gap-1">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {feedback.email}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="mt-2.5 max-w-3xl text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                     {feedback.description}
                   </p>
                 </div>
