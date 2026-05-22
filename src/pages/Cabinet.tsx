@@ -84,30 +84,45 @@ function splitExecutiveRoles(roles: Array<[string, CabinetMember[]]>) {
 }
 
 // Staggered layout patterns — mirrors the gallery-memory-wall approach.
-// Each pair sums to 12 cols so rows fill cleanly: (7+5), (5+7), (6+6).
+// Each pair sums to 12 cols so rows fill cleanly: (7+5), (5+7), (4+8), etc.
 const EXEC_PATTERNS = [
-  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '38%', tapeR: '-2deg'   },
-  { span: 5, offset: '20px', rotate: '0.5deg',  tapeX: '60%', tapeR: '1.5deg'  },
-  { span: 5, offset: '10px', rotate: '-0.3deg', tapeX: '44%', tapeR: '-1deg'   },
-  { span: 7, offset: '16px', rotate: '0.3deg',  tapeX: '62%', tapeR: '2deg'    },
-  { span: 6, offset: '4px',  rotate: '0.4deg',  tapeX: '52%', tapeR: '1deg'    },
-  { span: 6, offset: '12px', rotate: '-0.5deg', tapeX: '46%', tapeR: '-1.5deg' },
+  { span: 7, offset: '0px',  rotate: '-0.8deg', tapeX: '36%', tapeR: '-2deg'   },
+  { span: 5, offset: '18px', rotate: '0.6deg',  tapeX: '62%', tapeR: '1.5deg'  },
+  { span: 5, offset: '10px', rotate: '-0.5deg', tapeX: '42%', tapeR: '-1.5deg' },
+  { span: 7, offset: '22px', rotate: '0.7deg',  tapeX: '65%', tapeR: '2deg'    },
+];
+
+const SUPPORTING_EXEC_PATTERNS = [
+  { span: 7, offset: '0px',  rotate: '-0.6deg', tapeX: '45%', tapeR: '-1.5deg' },
+  { span: 5, offset: '14px', rotate: '0.8deg',  tapeX: '55%', tapeR: '1deg'    },
+  { span: 5, offset: '4px',  rotate: '-0.7deg', tapeX: '40%', tapeR: '-1deg'   },
+  { span: 7, offset: '20px', rotate: '1.1deg',  tapeX: '60%', tapeR: '1.5deg'  },
 ];
 
 const DEPT_PATTERNS = [
-  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '40%', tapeR: '-2deg'   },
-  { span: 5, offset: '24px', rotate: '0.5deg',  tapeX: '58%', tapeR: '1.5deg'  },
-  { span: 5, offset: '12px', rotate: '0.3deg',  tapeX: '46%', tapeR: '1deg'    },
-  { span: 7, offset: '18px', rotate: '-0.3deg', tapeX: '54%', tapeR: '-1.5deg' },
-  { span: 6, offset: '8px',  rotate: '0.4deg',  tapeX: '50%', tapeR: '2deg'    },
-  { span: 6, offset: '0px',  rotate: '-0.5deg', tapeX: '42%', tapeR: '-1deg'   },
+  { span: 7, offset: '0px',  rotate: '-1.2deg', tapeX: '38%', tapeR: '-2deg'   },
+  { span: 5, offset: '28px', rotate: '0.9deg',  tapeX: '60%', tapeR: '1.5deg'  },
+  { span: 4, offset: '12px', rotate: '1.1deg',  tapeX: '50%', tapeR: '1.2deg'  },
+  { span: 8, offset: '32px', rotate: '-0.8deg', tapeX: '44%', tapeR: '-1.8deg' },
+  { span: 6, offset: '16px', rotate: '0.6deg',  tapeX: '52%', tapeR: '1.5deg'  },
+  { span: 6, offset: '4px',  rotate: '-1.1deg', tapeX: '46%', tapeR: '-1.2deg' },
 ];
 
-type WallPattern = (typeof EXEC_PATTERNS)[number];
+const INTERN_PATTERNS = [
+  { span: 4, offset: '0px',  rotate: '-1.4deg', tapeX: '50%', tapeR: '-2deg'   },
+  { span: 4, offset: '12px', rotate: '1.2deg',  tapeX: '50%', tapeR: '1.5deg'  },
+  { span: 4, offset: '6px',  rotate: '-0.9deg', tapeX: '50%', tapeR: '-1deg'   },
+  { span: 3, offset: '22px', rotate: '1.5deg',  tapeX: '50%', tapeR: '2deg'    },
+  { span: 3, offset: '2px',  rotate: '-1.1deg', tapeX: '50%', tapeR: '-1.5deg' },
+  { span: 3, offset: '14px', rotate: '0.8deg',  tapeX: '50%', tapeR: '1.2deg'  },
+  { span: 3, offset: '8px',  rotate: '-1.3deg', tapeX: '50%', tapeR: '-1deg'   },
+];
 
-function cabCardStyle(idx: number, patterns: WallPattern[], total: number, isLead: boolean = false): CSSProperties {
-  const p = (total === 1 || isLead)
-    ? { span: 12, offset: '0px', rotate: '-0.2deg', tapeX: '44%', tapeR: '-1deg' }
+type WallPattern = (typeof DEPT_PATTERNS)[number];
+
+function cabCardStyle(idx: number, patterns: WallPattern[], total: number, isFullWidth: boolean = false): CSSProperties {
+  const p = (total === 1 || isFullWidth)
+    ? { span: 12, offset: '0px', rotate: '-0.1deg', tapeX: '46%', tapeR: '-1deg' }
     : patterns[idx % patterns.length];
   return {
     '--cab-span':   String(p.span),
@@ -213,12 +228,14 @@ function ExecutiveRolePanel({
   members: CabinetMember[];
   className?: string;
 }) {
+  const isSingle = members.length === 1;
+
   return (
     <section
-      className={`scrapbook-paper p-5 ${className}`.trim()}
+      className={`scrapbook-paper p-5 h-full ${className}`.trim()}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
-      <div className="mb-5 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="mb-4 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
         <div>
           <p className="font-sans text-[15px] font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
             {role}
@@ -229,26 +246,26 @@ function ExecutiveRolePanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className={`flex flex-col gap-1 ${isSingle ? '' : 'sm:grid sm:grid-cols-2 sm:gap-4'}`}>
         {members.map((member, idx) => (
           <article
             key={member.id}
-            className={`flex flex-col gap-3 py-4 ${idx < members.length - 1 ? 'border-b' : ''}`}
+            className={`flex flex-col gap-3 py-3 ${!isSingle && idx < members.length ? 'sm:py-0' : ''} ${isSingle ? '' : (idx % 2 === 0 && idx < members.length - 1 ? 'border-b sm:border-b-0 sm:border-r sm:pr-4' : '')} ${isSingle && idx < members.length - 1 ? 'border-b' : ''}`}
             style={{ borderColor: 'var(--color-border2)' }}
           >
-            <div className="flex items-center gap-4">
-              <Avatar image={member.image_url} name={member.name} size={64} />
+            <div className={`flex gap-4 ${isSingle ? 'items-center' : 'flex-col sm:flex-row sm:items-start'}`}>
+              <Avatar image={member.image_url} name={member.name} size={isSingle ? 64 : 56} />
               <div className="min-w-0 flex-1">
-                <p className="font-sans text-[15px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+                <p className="font-sans text-[14.5px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
                 </p>
                 {formatMeta(member) && (
-                  <p className="mt-1 font-sans text-[11px] font-medium" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mt-1 font-sans text-[10.5px] font-medium leading-tight" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
                   </p>
                 )}
                 {(member.pronouns || member.favorite_snack) && (
-                  <p className="mt-1.5 font-sans text-[10.5px] opacity-80" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mt-1.5 font-sans text-[10px] opacity-80" style={{ color: 'var(--color-text3)' }}>
                     {[member.pronouns, member.favorite_snack && `Snack: ${member.favorite_snack}`]
                       .filter(Boolean)
                       .join(' · ')}
@@ -259,7 +276,7 @@ function ExecutiveRolePanel({
 
             {member.fun_fact && (
               <div
-                className="rounded-lg bg-[var(--color-surface2)] p-2.5 font-sans text-[11.5px] italic leading-relaxed"
+                className="rounded-lg bg-[var(--color-surface2)] p-2.5 font-sans text-[11px] italic leading-relaxed"
                 style={{ color: 'var(--color-text2)' }}
               >
                 "{member.fun_fact}"
@@ -475,20 +492,23 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
 
 function RookieTile({ member }: { member: CabinetMember }) {
   return (
-    <article className="text-center">
+    <article 
+      className="scrapbook-paper h-full p-3 text-center transition-transform hover:scale-[1.03]"
+      style={{ background: 'var(--color-surface)' }}
+    >
       <div className="mx-auto mb-2 w-fit">
-        <Avatar image={member.image_url} name={member.name} size={52} />
+        <Avatar image={member.image_url} name={member.name} size={56} />
       </div>
-      <p className="font-serif text-[12px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+      <p className="truncate font-serif text-[13px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
         {member.name}
       </p>
       {member.year && (
-        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.05em]" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.05em]" style={{ color: 'var(--color-text3)' }}>
           {member.year}
         </p>
       )}
       {member.college && (
-        <p className="font-sans text-[10px] truncate" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-0.5 truncate font-sans text-[10px] opacity-70" style={{ color: 'var(--color-text3)' }}>
           {member.college}
         </p>
       )}
@@ -704,14 +724,30 @@ export function Cabinet() {
                 </div>
               </div>
 
+              {/* 1. Executive Leads (Priority 0 - Presidents) */}
+              <div className="mb-10">
+                {allExecRoles
+                  .filter(([role]) => rolePriority(role) === 0)
+                  .map(([role, roleMembers]) => (
+                    <div
+                      key={role}
+                      className="cabinet-card mx-auto"
+                      style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
+                    >
+                      <ExecutiveFeaturePanel role={role} members={roleMembers} />
+                    </div>
+                  ))}
+              </div>
+
+              {/* 2. Supporting Executive Roles (VPs, ICC, Sec, Treas) */}
               <div className="cabinet-wall">
-                {allExecRoles.map(([role, roleMembers], idx) => {
-                  const isLead = rolePriority(role) === 0;
-                  return (
+                {allExecRoles
+                  .filter(([role]) => rolePriority(role) > 0)
+                  .map(([role, roleMembers], idx) => (
                     <div
                       key={role}
                       className="cabinet-card"
-                      style={cabCardStyle(idx, EXEC_PATTERNS, allExecRoles.length, isLead)}
+                      style={cabCardStyle(idx, SUPPORTING_EXEC_PATTERNS, allExecRoles.length - 1)}
                     >
                       {rolePriority(role) <= 3 ? (
                         <ExecutiveFeaturePanel role={role} members={roleMembers} />
@@ -719,8 +755,7 @@ export function Cabinet() {
                         <ExecutiveRolePanel role={role} members={roleMembers} />
                       )}
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </section>
           )}
@@ -779,14 +814,16 @@ export function Cabinet() {
                 </div>
               </div>
 
-              <div className="scrapbook-paper relative p-6 pt-8">
-                <span className="scrapbook-pin" style={{ left: '22%' }} aria-hidden />
-                <span className="scrapbook-pin" style={{ left: '78%' }} aria-hidden />
-                <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {interns.map((member) => (
-                    <RookieTile key={member.id} member={member} />
-                  ))}
-                </div>
+              <div className="cabinet-wall">
+                {interns.map((member, idx) => (
+                  <div
+                    key={member.id}
+                    className="cabinet-card"
+                    style={cabCardStyle(idx, INTERN_PATTERNS, interns.length)}
+                  >
+                    <RookieTile member={member} />
+                  </div>
+                ))}
               </div>
             </section>
           )}
