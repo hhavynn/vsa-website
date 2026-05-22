@@ -1,8 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  FaTrophy, FaMedal, FaAward, FaCrown, FaStar, 
-  FaSearch, FaChevronLeft, FaChevronRight, FaBolt, FaArrowTrendUp 
-} from 'react-icons/fa6';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
@@ -16,6 +12,42 @@ import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { HOUSE_COLORS, HOUSE_LABELS, HOUSE_OPTIONS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ICONS (SVG implementations to avoid react-icons type issues)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TrophyIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 576 512" fill="currentColor"><path d="M400 64c0-35.3-28.7-64-64-64H240c-35.3 0-64 28.7-64 64H64C28.7 64 0 92.7 0 128V192c0 88.4 86 160 192 160c5.3 0 10.5-.3 15.6-.8c21.3 27.6 48.3 49.3 79.5 61.2L288 512H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H384c17.7 0 32-14.3 32-32s-14.3-32-32-32H288l1.1-98.7c31.2-11.9 58.2-33.5 79.5-61.2c5.1 .5 10.3 .8 15.6 .8c106 0 192-71.6 192-160V128c0-35.3-28.7-64-64-64H400zM64 128H176V301.9C104.5 282.4 48 238.1 48 192V128H64zm336 173.9V128H512v64c0 46.1-56.5 90.4-128 109.9z"/></svg>
+);
+
+const MedalIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 512 512" fill="currentColor"><path d="M223.7 239l136-136c9.4-9.4 24.6-9.4 33.9 0l22.6 22.6c9.4 9.4 9.4 24.6 0 33.9L280.3 295.4c-9.4 9.4-24.6 9.4-33.9 0l-22.6-22.6c-9.4-9.5-9.4-24.7 0-33.8zm256-111.4L440.3 88.2c-18.7-18.7-49.1-18.7-67.9 0L236.1 224.5c-18.7 18.7-18.7 49.1 0 67.9l39.4 39.4c18.7 18.7 49.1 18.7 67.9 0l136.3-136.3c18.7-18.8 18.7-49.1 0-67.9zm-261.2 59.8L121.7 84c-4.7-4.7-12.3-4.7-17 0L82 106.7c-4.7 4.7-4.7 12.3 0 17L185.3 227c4.7 4.7 12.3 4.7 17 0l22.6-22.6c4.7-4.7 4.7-12.3 0-17zM432.5 400.3c-14.7-14.7-38.5-14.7-53.1 0l-22.6 22.6c-14.7 14.7-14.7 38.5 0 53.1l22.6 22.6c14.7 14.7 38.5 14.7 53.1 0l22.6-22.6c14.7-14.7 14.7-38.5 0-53.1l-22.6-22.6z"/></svg>
+);
+
+const AwardIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 384 512" fill="currentColor"><path d="M173.5 1.6C121.5 10 80 54.4 80 107.4V270.5c0 14.1 6.5 27.5 17.5 36.2l128 102.4c16.3 13 40.7 1.5 40.7-19.4V107.4c0-53-41.5-97.4-93.5-105.8l-1.3-.2C172.5 1.2 173 1.4 173.5 1.6zM320 270.5c0 14.1 6.5 27.5 17.5 36.2l128 102.4c16.3 13 40.7 1.5 40.7-19.4V107.4c0-53-41.5-97.4-93.5-105.8l-1.3-.2c-.9-.1-.4 .1 .1 .3C361.5 10 320 54.4 320 107.4V270.5z"/></svg>
+);
+
+const CrownIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 576 512" fill="currentColor"><path d="M576 136c0 22.1-17.9 40-40 40c-.2 0-.4 0-.6 0l-71 208.6c-4.6 13.5-16.9 22.8-31.2 23.4l-146.4 6c-1.4 0-2.9 0-4.3 0c-1.4 0-2.9 0-4.3 0l-146.4-6c-14.3-.6-26.5-9.9-31.2-23.4L28.6 176c-.3 0-.5 0-.6 0C17.9 176 0 158.1 0 136c0-22.1 17.9-40 40-40c16.3 0 30.5 9.8 36.9 23.8l105.1 36.1c11.9 4.1 25.1-1.3 30.3-12.7L269.1 32.5c8.7-19.2 31-23.9 45.8-9.1c2.1 2.1 3.9 4.6 5.2 7.2l56.8 111.4c5.2 11.4 18.4 16.9 30.3 12.7l105.1-36.1c6.4-2.2 13.1-3.3 19.9-3.3c22.1 0 40 17.9 40 40z"/></svg>
+);
+
+const StarIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 576 512" fill="currentColor"><path d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.5 7-28.8 18L195 150.3 47.7 171.5c-12.1 1.7-22.1 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.8 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 546.2 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.6-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></svg>
+);
+
+const SearchIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 512 512" fill="currentColor"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></svg>
+);
+
+const BoltIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 448 512" fill="currentColor"><path d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288H175.5L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7H272.5L349.4 44.6z"/></svg>
+);
+
+const TrendUpIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 576 512" fill="currentColor"><path d="M384 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H544c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64.7L443.9 66.8c-12.5-12.5-32.8-12.5-45.3 0L288 177.4l-93.5-93.5c-12.5-12.5-32.8-12.5-45.3 0L7.4 225.4c-9.9 9.9-9.9 26 0 35.9s26 9.9 35.9 0l128-128L264.7 227c12.5 12.5 32.8 12.5 45.3 0L420.7 116.3 544 239.7V160H384z"/></svg>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOCAL REUSABLE COMPONENTS (Scrapbook Elements)
@@ -385,7 +417,7 @@ export function Leaderboard() {
             <span className="scrapbook-pin" aria-hidden />
             
             <div className="absolute right-6 top-6 opacity-10 sm:right-10 sm:top-10">
-              <FaTrophy className="h-24 w-24 text-[var(--brand)]" />
+              <TrophyIcon className="h-24 w-24 text-[var(--brand)]" />
             </div>
 
             <div className="relative z-10">
@@ -465,7 +497,7 @@ export function Leaderboard() {
               </div>
 
               <div className="mb-6 relative">
-                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)]" />
                 <Input
                   className="pl-11 h-12 bg-[var(--surface)] border-2 border-[var(--border)] focus:ring-[var(--brand)]"
                   placeholder="Search for a member..."
@@ -580,9 +612,9 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
   if (!first) return null;
 
   const cards = [
-    { entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: FaMedal, rotation: -2, pin: 'secondary' as const },
-    { entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: FaCrown, rotation: 0, pin: 'accent' as const, featured: true },
-    { entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: FaAward, rotation: 2, pin: 'primary' as const },
+    { entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const },
+    { entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true },
+    { entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const },
   ];
 
   return (
@@ -590,7 +622,7 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="h-8 w-2 rounded-full bg-[var(--accent)]" />
         <h3 className="font-serif text-2xl font-bold">Top Performers</h3>
-        <FaStar className="text-[var(--accent)]" />
+        <StarIcon className="h-5 w-5 text-[var(--accent)]" />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 md:items-end">
@@ -613,7 +645,7 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
                   ? 'border-4 border-[var(--accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface2)]' 
                   : 'border-2 border-[var(--border)]'
               }`}>
-                {isFirst && <div className="absolute top-2 right-2 opacity-20"><FaBolt className="h-6 w-6" /></div>}
+                {isFirst && <div className="absolute top-2 right-2 opacity-20"><BoltIcon className="h-6 w-6" /></div>}
                 
                 {/* Rank Badge */}
                 <div className="absolute right-4 top-4">
@@ -694,7 +726,7 @@ function HouseStandingsWall({
       <div className="flex items-center gap-3 px-2">
         <div className="h-8 w-2 rounded-full bg-[var(--gold-t)]" />
         <h3 className="font-serif text-2xl font-bold">House Competition</h3>
-        <FaTrophy className="text-[var(--gold-t)]" />
+        <TrophyIcon className="h-6 w-6 text-[var(--gold-t)]" />
       </div>
 
       <div className="space-y-8">
@@ -732,7 +764,7 @@ function HouseStandingsWall({
                       >
                         <span className="font-mono text-3xl font-black sm:text-4xl" style={{ color }}>{standing.rank}</span>
                       </div>
-                      {isFirst && <FaCrown className="absolute -right-2 -top-2 h-8 w-8 text-[var(--gold-t)] drop-shadow-sm" />}
+                      {isFirst && <CrownIcon className="absolute -right-2 -top-2 h-8 w-8 text-[var(--gold-t)] drop-shadow-sm" />}
                     </div>
 
                     <div className="min-w-0">
@@ -781,12 +813,12 @@ function HouseStandingsWall({
                 <div className="border-t-2 border-dashed border-[var(--border)] bg-[var(--surface2)] px-6 py-3 sm:px-8">
                   <div className="flex flex-wrap items-center gap-6 text-[11px] font-bold text-[var(--text3)]">
                     <div className="flex items-center gap-2">
-                      <FaArrowTrendUp className="text-[var(--brand)]" />
+                      <TrendUpIcon className="h-3 w-3 text-[var(--brand)]" />
                       <span>AVG PER MEMBER: <span className="text-[var(--text)]">{standing.average_points_per_member?.toFixed(1) ?? '0.0'}</span></span>
                     </div>
                     {isFirst && (
                       <div className="flex items-center gap-1.5 rounded-full bg-[var(--gold-t)]/10 px-3 py-1 text-[var(--gold-t)]">
-                        <FaCrown className="h-3 w-3" />
+                        <CrownIcon className="h-3 w-3" />
                         <span>1ST PLACE CHAMPIONS</span>
                       </div>
                     )}
@@ -803,7 +835,7 @@ function HouseStandingsWall({
           <PushPin color="primary" className="left-10 top-2" />
           <div className="scrapbook-paper p-6 sm:p-8">
             <div className="mb-6 flex items-center gap-3">
-              <FaBolt className="text-[var(--accent)]" />
+              <BoltIcon className="h-5 w-5 text-[var(--accent)]" />
               <h3 className="font-serif text-xl font-bold">Recent House Activity</h3>
             </div>
             
