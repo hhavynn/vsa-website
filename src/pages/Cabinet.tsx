@@ -84,30 +84,45 @@ function splitExecutiveRoles(roles: Array<[string, CabinetMember[]]>) {
 }
 
 // Staggered layout patterns — mirrors the gallery-memory-wall approach.
-// Each pair sums to 12 cols so rows fill cleanly: (7+5), (5+7), (6+6).
+// Each pair sums to 12 cols so rows fill cleanly: (7+5), (5+7), (4+8), etc.
 const EXEC_PATTERNS = [
-  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '38%', tapeR: '-2deg'   },
-  { span: 5, offset: '20px', rotate: '0.5deg',  tapeX: '60%', tapeR: '1.5deg'  },
-  { span: 5, offset: '10px', rotate: '-0.3deg', tapeX: '44%', tapeR: '-1deg'   },
-  { span: 7, offset: '16px', rotate: '0.3deg',  tapeX: '62%', tapeR: '2deg'    },
-  { span: 6, offset: '4px',  rotate: '0.4deg',  tapeX: '52%', tapeR: '1deg'    },
-  { span: 6, offset: '12px', rotate: '-0.5deg', tapeX: '46%', tapeR: '-1.5deg' },
+  { span: 7, offset: '0px',  rotate: '-0.8deg', tapeX: '36%', tapeR: '-2deg'   },
+  { span: 5, offset: '18px', rotate: '0.6deg',  tapeX: '62%', tapeR: '1.5deg'  },
+  { span: 5, offset: '10px', rotate: '-0.5deg', tapeX: '42%', tapeR: '-1.5deg' },
+  { span: 7, offset: '22px', rotate: '0.7deg',  tapeX: '65%', tapeR: '2deg'    },
+];
+
+const SUPPORTING_EXEC_PATTERNS = [
+  { span: 7, offset: '0px',  rotate: '-0.6deg', tapeX: '45%', tapeR: '-1.5deg' },
+  { span: 5, offset: '14px', rotate: '0.8deg',  tapeX: '55%', tapeR: '1deg'    },
+  { span: 5, offset: '4px',  rotate: '-0.7deg', tapeX: '40%', tapeR: '-1deg'   },
+  { span: 7, offset: '20px', rotate: '1.1deg',  tapeX: '60%', tapeR: '1.5deg'  },
 ];
 
 const DEPT_PATTERNS = [
-  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '40%', tapeR: '-2deg'   },
-  { span: 5, offset: '24px', rotate: '0.5deg',  tapeX: '58%', tapeR: '1.5deg'  },
-  { span: 5, offset: '12px', rotate: '0.3deg',  tapeX: '46%', tapeR: '1deg'    },
-  { span: 7, offset: '18px', rotate: '-0.3deg', tapeX: '54%', tapeR: '-1.5deg' },
-  { span: 6, offset: '8px',  rotate: '0.4deg',  tapeX: '50%', tapeR: '2deg'    },
-  { span: 6, offset: '0px',  rotate: '-0.5deg', tapeX: '42%', tapeR: '-1deg'   },
+  { span: 7, offset: '0px',  rotate: '-1.2deg', tapeX: '38%', tapeR: '-2deg'   },
+  { span: 5, offset: '28px', rotate: '0.9deg',  tapeX: '60%', tapeR: '1.5deg'  },
+  { span: 4, offset: '12px', rotate: '1.1deg',  tapeX: '50%', tapeR: '1.2deg'  },
+  { span: 8, offset: '32px', rotate: '-0.8deg', tapeX: '44%', tapeR: '-1.8deg' },
+  { span: 6, offset: '16px', rotate: '0.6deg',  tapeX: '52%', tapeR: '1.5deg'  },
+  { span: 6, offset: '4px',  rotate: '-1.1deg', tapeX: '46%', tapeR: '-1.2deg' },
 ];
 
-type WallPattern = (typeof EXEC_PATTERNS)[number];
+const INTERN_PATTERNS = [
+  { span: 4, offset: '0px',  rotate: '-1.4deg', tapeX: '50%', tapeR: '-2deg'   },
+  { span: 4, offset: '12px', rotate: '1.2deg',  tapeX: '50%', tapeR: '1.5deg'  },
+  { span: 4, offset: '6px',  rotate: '-0.9deg', tapeX: '50%', tapeR: '-1deg'   },
+  { span: 3, offset: '22px', rotate: '1.5deg',  tapeX: '50%', tapeR: '2deg'    },
+  { span: 3, offset: '2px',  rotate: '-1.1deg', tapeX: '50%', tapeR: '-1.5deg' },
+  { span: 3, offset: '14px', rotate: '0.8deg',  tapeX: '50%', tapeR: '1.2deg'  },
+  { span: 3, offset: '8px',  rotate: '-1.3deg', tapeX: '50%', tapeR: '-1deg'   },
+];
 
-function cabCardStyle(idx: number, patterns: WallPattern[], total: number): CSSProperties {
-  const p = total === 1
-    ? { span: 12, offset: '0px', rotate: '-0.2deg', tapeX: '44%', tapeR: '-1deg' }
+type WallPattern = (typeof DEPT_PATTERNS)[number];
+
+function cabCardStyle(idx: number, patterns: WallPattern[], total: number, isFullWidth: boolean = false): CSSProperties {
+  const p = (total === 1 || isFullWidth)
+    ? { span: 12, offset: '0px', rotate: '-0.1deg', tapeX: '46%', tapeR: '-1deg' }
     : patterns[idx % patterns.length];
   return {
     '--cab-span':   String(p.span),
@@ -143,7 +158,7 @@ function Avatar({
 
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-full font-sans font-semibold"
+        className="flex shrink-0 items-center justify-center rounded-full font-sans font-semibold border-2 border-[var(--color-surface)] shadow-sm"
         style={{
           width: size,
           height: size,
@@ -177,7 +192,7 @@ function Avatar({
         quality: 75,
       })} 2x`}
       alt={name}
-      className="shrink-0 rounded-full object-cover"
+      className="shrink-0 rounded-full object-cover border-2 border-[var(--color-surface)] shadow-sm"
       width={size}
       height={size}
       style={{ width: size, height: size }}
@@ -213,60 +228,59 @@ function ExecutiveRolePanel({
   members: CabinetMember[];
   className?: string;
 }) {
+  const isSingle = members.length === 1;
+
   return (
     <section
-      className={`scrapbook-paper p-5 ${className}`.trim()}
+      className={`scrapbook-paper p-5 h-full ${className}`.trim()}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
-      <div className="mb-5 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="mb-4 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
         <div>
-          <p className="font-sans text-lg font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
+          <p className="font-sans text-[15px] font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
             {role}
           </p>
-          <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-            {members.length} {members.length === 1 ? 'person' : 'people'}
+          <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+            {members.length} {members.length === 1 ? 'position' : 'positions'}
           </p>
         </div>
       </div>
 
-      <div className={`grid gap-5 ${members.length > 1 ? 'md:grid-cols-2' : ''}`}>
-        {members.map((member) => (
+      <div className={`flex flex-col gap-1 ${isSingle ? '' : 'sm:grid sm:grid-cols-2 sm:gap-4'}`}>
+        {members.map((member, idx) => (
           <article
             key={member.id}
-            className="scrapbook-yearbook p-4"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
+            className={`flex flex-col gap-3 py-3 ${!isSingle && idx < members.length ? 'sm:py-0' : ''} ${isSingle ? '' : (idx % 2 === 0 && idx < members.length - 1 ? 'border-b sm:border-b-0 sm:border-r sm:pr-4' : '')} ${isSingle && idx < members.length - 1 ? 'border-b' : ''}`}
+            style={{ borderColor: 'var(--color-border2)' }}
           >
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
-              <Avatar image={member.image_url} name={member.name} size={72} />
+            <div className={`flex gap-4 ${isSingle ? 'items-center' : 'flex-col sm:flex-row sm:items-start'}`}>
+              <Avatar image={member.image_url} name={member.name} size={isSingle ? 64 : 56} />
               <div className="min-w-0 flex-1">
-                <p className="font-sans text-[15px] font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
+                <p className="font-sans text-[14.5px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
                 </p>
-                <p className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400">
-                  {member.role}
-                </p>
                 {formatMeta(member) && (
-                  <p className="mt-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mt-1 font-sans text-[10.5px] font-medium leading-tight" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
                   </p>
                 )}
                 {(member.pronouns || member.favorite_snack) && (
-                  <p className="mt-2 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mt-1.5 font-sans text-[10px] opacity-80" style={{ color: 'var(--color-text3)' }}>
                     {[member.pronouns, member.favorite_snack && `Snack: ${member.favorite_snack}`]
                       .filter(Boolean)
-                      .join(' / ')}
+                      .join(' · ')}
                   </p>
                 )}
               </div>
             </div>
 
             {member.fun_fact && (
-              <p
-                className="mt-4 border-t pt-3 font-sans text-[12px] italic leading-relaxed"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+              <div
+                className="rounded-lg bg-[var(--color-surface2)] p-2.5 font-sans text-[11px] italic leading-relaxed"
+                style={{ color: 'var(--color-text2)' }}
               >
                 "{member.fun_fact}"
-              </p>
+              </div>
             )}
           </article>
         ))}
@@ -276,23 +290,38 @@ function ExecutiveRolePanel({
 }
 
 function ExecutiveFeaturePanel({ role, members }: { role: string; members: CabinetMember[] }) {
+  const isPresident = rolePriority(role) === 0;
+
   return (
     <section
-      className="scrapbook-paper"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      className="scrapbook-paper overflow-hidden"
+      style={{
+        borderColor: isPresident ? 'var(--tape-teal)' : 'var(--color-border)',
+        background: 'var(--color-surface)',
+        borderWidth: isPresident ? '2px' : '1px',
+      }}
     >
       <span className="scrapbook-pin" aria-hidden />
       <div
         className="border-b px-6 py-5"
         style={{
           borderColor: 'var(--color-border)',
-          background: 'linear-gradient(135deg, rgba(30,136,120,0.06) 0%, transparent 60%)',
+          background: isPresident
+            ? 'linear-gradient(135deg, rgba(30,136,120,0.12) 0%, transparent 60%)'
+            : 'linear-gradient(135deg, rgba(30,136,120,0.06) 0%, transparent 60%)',
         }}
       >
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400 mb-2">
-          Executive Core
+        <div className="flex items-center gap-2 mb-2">
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-brand-600 dark:text-brand-400">
+            {isPresident ? 'Executive Lead' : 'Executive Core'}
+          </div>
+          {isPresident && (
+            <div className="h-1 w-1 rounded-full bg-brand-500 animate-pulse" />
+          )}
         </div>
-        <span className="scrapbook-sticker scrapbook-sticker-teal">{role}</span>
+        <span className={`scrapbook-sticker ${isPresident ? 'scrapbook-sticker-teal scale-110 origin-left' : 'scrapbook-sticker-teal'}`}>
+          {role}
+        </span>
       </div>
 
       <div className={`grid gap-0 ${members.length > 1 ? 'lg:grid-cols-2' : ''}`}>
@@ -303,39 +332,58 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
             style={{ borderColor: 'var(--color-border)' }}
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
-              <Avatar image={member.image_url} name={member.name} size={104} priority={index < 2} />
+              <div className="relative shrink-0">
+                <Avatar image={member.image_url} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
+                {isPresident && (
+                  <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
+                    <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 <p
-                  className="font-serif text-[22px] font-bold tracking-[-0.02em] leading-tight"
+                  className={`${isPresident ? 'font-serif text-[24px]' : 'font-serif text-[22px]'} font-bold tracking-tight leading-tight`}
                   style={{ color: 'var(--color-text)' }}
                 >
                   {member.name}
                 </p>
                 {member.pronouns && (
-                  <p className="mt-0.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mt-0.5 font-sans text-[11px] font-medium opacity-70" style={{ color: 'var(--color-text3)' }}>
                     {member.pronouns}
                   </p>
                 )}
                 {formatMeta(member) && (
-                  <p className="mt-2 max-w-md font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mt-2.5 max-w-md font-sans text-[13px] font-medium leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
                   </p>
                 )}
                 {member.favorite_snack && (
-                  <p className="mt-2 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                    🍿 {member.favorite_snack}
-                  </p>
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--color-border2)] bg-[var(--color-surface2)] px-2.5 py-1 font-sans text-[10px] font-bold uppercase tracking-wider text-[var(--color-text3)]">
+                    <span className="text-[12px]">🍿</span> {member.favorite_snack}
+                  </div>
                 )}
               </div>
             </div>
 
             {member.fun_fact && (
-              <p
-                className="mt-5 border-t pt-4 font-serif text-[18px] italic leading-[1.45] tracking-[-0.01em]"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+              <div
+                className={`mt-5 relative ${isPresident ? 'p-5' : 'pt-4 border-t'}`}
+                style={{ borderColor: 'var(--color-border)' }}
               >
-                "{member.fun_fact}"
-              </p>
+                {isPresident && (
+                  <div className="absolute inset-0 rounded-xl bg-teal-500/5 -z-10" />
+                )}
+                <p
+                  className={`${isPresident ? 'font-serif text-[19px]' : 'font-serif text-[17px]'} italic leading-[1.5] tracking-tight`}
+                  style={{ color: 'var(--color-text)' }}
+                >
+                  "{member.fun_fact}"
+                </p>
+              </div>
             )}
           </article>
         ))}
@@ -351,42 +399,42 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
       style={{ background: 'var(--color-surface)' }}
     >
       <div
-        className="mb-5 pb-4 border-b flex items-start justify-between gap-4"
+        className="mb-6 pb-4 border-b flex items-start justify-between gap-4"
         style={{ borderColor: 'var(--color-border)' }}
       >
         <div>
-          <p className="font-serif text-xl font-bold tracking-[-0.015em]" style={{ color: 'var(--color-text)' }}>
+          <p className="font-serif text-xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
             {role}
           </p>
-          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.07em]" style={{ color: 'var(--color-text3)' }}>
+          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
             {members.length} {members.length === 1 ? 'member' : 'members'}
           </p>
         </div>
       </div>
 
-      <div className={`grid gap-4 ${members.length > 1 ? 'sm:grid-cols-2' : ''}`}>
-        {members.map((member) => (
+      <div className="flex flex-col gap-1">
+        {members.map((member, idx) => (
           <article
             key={member.id}
-            className="scrapbook-yearbook p-4"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
+            className={`py-4 ${idx < members.length - 1 ? 'border-b' : ''}`}
+            style={{ borderColor: 'var(--color-border2)' }}
           >
-            <div className="flex items-start gap-3">
-              <Avatar image={member.image_url} name={member.name} size={56} />
+            <div className="flex items-start gap-4">
+              <Avatar image={member.image_url} name={member.name} size={60} />
               <div className="min-w-0 flex-1">
-                <p className="font-serif text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>
+                <p className="font-serif text-[16px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
                 </p>
-                <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-brand-600 dark:text-brand-400">
+                <p className="mt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400">
                   {member.role}
                 </p>
                 {formatMeta(member) && (
-                  <p className="mt-1.5 font-sans text-[11px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mt-2 font-sans text-[11px] leading-relaxed opacity-90" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
                   </p>
                 )}
                 {(member.pronouns || member.favorite_snack) && (
-                  <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mt-1.5 font-sans text-[10px] opacity-70" style={{ color: 'var(--color-text3)' }}>
                     {[member.pronouns, member.favorite_snack && `🍿 ${member.favorite_snack}`]
                       .filter(Boolean)
                       .join(' · ')}
@@ -396,12 +444,12 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
             </div>
 
             {member.fun_fact && (
-              <p
-                className="mt-3 border-t pt-3 font-sans text-[11px] italic leading-relaxed"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+              <div
+                className="mt-3 rounded-lg bg-[var(--color-surface2)] p-2.5 font-sans text-[11px] italic leading-relaxed"
+                style={{ color: 'var(--color-text2)' }}
               >
                 "{member.fun_fact}"
-              </p>
+              </div>
             )}
           </article>
         ))}
@@ -413,20 +461,20 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
 function CompactMemberCard({ member }: { member: CabinetMember }) {
   return (
     <article
-      className="scrapbook-yearbook p-4"
+      className="scrapbook-paper p-4"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div className="flex items-start gap-3">
-        <Avatar image={member.image_url} name={member.name} size={38} />
+        <Avatar image={member.image_url} name={member.name} size={44} />
         <div className="min-w-0">
-          <p className="font-sans text-[13px] font-medium" style={{ color: 'var(--color-text)' }}>
+          <p className="font-sans text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>
             {member.name}
           </p>
-          <p className="mt-0.5 font-sans text-[11px]" style={{ color: 'var(--color-text2)' }}>
+          <p className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
             {member.role}
           </p>
           {formatMeta(member) && (
-            <p className="mt-1 font-sans text-[11px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+            <p className="mt-1.5 font-sans text-[11px] leading-relaxed opacity-80" style={{ color: 'var(--color-text2)' }}>
               {formatMeta(member)}
             </p>
           )}
@@ -434,9 +482,9 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
       </div>
 
       {member.fun_fact && (
-        <p className="mt-3 border-t pt-3 font-sans text-[11px] italic leading-relaxed" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+        <div className="mt-3 border-t pt-3 font-sans text-[11px] italic leading-relaxed opacity-70" style={{ borderColor: 'var(--color-border2)', color: 'var(--color-text2)' }}>
           "{member.fun_fact}"
-        </p>
+        </div>
       )}
     </article>
   );
@@ -444,20 +492,23 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
 
 function RookieTile({ member }: { member: CabinetMember }) {
   return (
-    <article className="text-center">
+    <article 
+      className="scrapbook-paper h-full p-3 text-center transition-transform hover:scale-[1.03]"
+      style={{ background: 'var(--color-surface)' }}
+    >
       <div className="mx-auto mb-2 w-fit">
-        <Avatar image={member.image_url} name={member.name} size={52} />
+        <Avatar image={member.image_url} name={member.name} size={56} />
       </div>
-      <p className="font-serif text-[12px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+      <p className="truncate font-serif text-[13px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
         {member.name}
       </p>
       {member.year && (
-        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.05em]" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.05em]" style={{ color: 'var(--color-text3)' }}>
           {member.year}
         </p>
       )}
       {member.college && (
-        <p className="font-sans text-[10px] truncate" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-0.5 truncate font-sans text-[10px] opacity-70" style={{ color: 'var(--color-text3)' }}>
           {member.college}
         </p>
       )}
@@ -673,20 +724,38 @@ export function Cabinet() {
                 </div>
               </div>
 
-              <div className="cabinet-wall">
-                {allExecRoles.map(([role, roleMembers], idx) => (
-                  <div
-                    key={role}
-                    className="cabinet-card"
-                    style={cabCardStyle(idx, EXEC_PATTERNS, allExecRoles.length)}
-                  >
-                    {rolePriority(role) <= 3 ? (
+              {/* 1. Executive Leads (Priority 0 - Presidents) */}
+              <div className="mb-10">
+                {allExecRoles
+                  .filter(([role]) => rolePriority(role) === 0)
+                  .map(([role, roleMembers]) => (
+                    <div
+                      key={role}
+                      className="cabinet-card mx-auto"
+                      style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
+                    >
                       <ExecutiveFeaturePanel role={role} members={roleMembers} />
-                    ) : (
-                      <ExecutiveRolePanel role={role} members={roleMembers} />
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  ))}
+              </div>
+
+              {/* 2. Supporting Executive Roles (VPs, ICC, Sec, Treas) */}
+              <div className="cabinet-wall">
+                {allExecRoles
+                  .filter(([role]) => rolePriority(role) > 0)
+                  .map(([role, roleMembers], idx) => (
+                    <div
+                      key={role}
+                      className="cabinet-card"
+                      style={cabCardStyle(idx, SUPPORTING_EXEC_PATTERNS, allExecRoles.length - 1)}
+                    >
+                      {rolePriority(role) <= 3 ? (
+                        <ExecutiveFeaturePanel role={role} members={roleMembers} />
+                      ) : (
+                        <ExecutiveRolePanel role={role} members={roleMembers} />
+                      )}
+                    </div>
+                  ))}
               </div>
             </section>
           )}
@@ -745,14 +814,16 @@ export function Cabinet() {
                 </div>
               </div>
 
-              <div className="scrapbook-paper relative p-6 pt-8">
-                <span className="scrapbook-pin" style={{ left: '22%' }} aria-hidden />
-                <span className="scrapbook-pin" style={{ left: '78%' }} aria-hidden />
-                <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {interns.map((member) => (
-                    <RookieTile key={member.id} member={member} />
-                  ))}
-                </div>
+              <div className="cabinet-wall">
+                {interns.map((member, idx) => (
+                  <div
+                    key={member.id}
+                    className="cabinet-card"
+                    style={cabCardStyle(idx, INTERN_PATTERNS, interns.length)}
+                  >
+                    <RookieTile member={member} />
+                  </div>
+                ))}
               </div>
             </section>
           )}
