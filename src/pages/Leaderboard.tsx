@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 import { Input } from '../components/ui/Input';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PageLoader } from '../components/common/PageLoader';
@@ -10,7 +9,7 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { HOUSE_COLORS, HOUSE_LABELS, HOUSE_OPTIONS, HouseName } from '../constants/houses';
+import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
