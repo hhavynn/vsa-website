@@ -228,54 +228,57 @@ export function Events() {
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <div
-              className="scrapbook-paper mb-9 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
+              className="scrapbook-paper mb-9 overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
               style={{ borderColor: 'var(--color-border)' }}
             >
               <span className="scrapbook-pin" aria-hidden />
-              <div className="border-b p-5 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="border-b p-6 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <Badge
                     label={EVENT_TYPE_LABELS[featured.event_type] ?? featured.event_type}
                     color={TYPE_COLOR[featured.event_type] ?? 'gray'}
                   />
-                  <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                    {format(new Date(featured.date), 'MMM d / EEEE / h:mm a').toUpperCase()}
+                  <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                    {format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
                   </span>
                 </div>
-                <h2 className="mb-3 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[30px]" style={{ color: 'var(--color-text)' }}>
+                <h2 className="mb-4 font-serif text-[32px] leading-[1.05] tracking-[-0.03em] sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
                   {featured.name}
                 </h2>
                 {featured.description && (
-                  <p className="mb-5 font-sans text-sm leading-[1.65]" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mb-6 font-sans text-[15px] leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
                     {featured.description}
                   </p>
                 )}
                 {featured.location && (
-                  <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  <div className="mb-7 flex items-center gap-2 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
                     {featured.location}
-                  </p>
+                  </div>
                 )}
                 <AddToCalendarButton event={featured} variant="ghost" align="left" />
               </div>
 
-              <div className="scrapbook-photo relative m-4 h-[220px] sm:h-[260px] lg:h-auto lg:min-h-[260px] lg:max-h-[340px]">
-                <EventImage
-                  event={featured}
-                  className="h-full w-full object-cover"
-                  titleClassName="px-8 text-center font-serif italic leading-[1.04] tracking-[-0.03em] text-[34px]"
-                  imageWidth={760}
-                  imageHeight={520}
-                  priority
-                />
+              <div className="relative flex flex-col justify-center bg-[var(--color-surface2)] p-6 sm:p-10 lg:p-12">
+                <div className="scrapbook-photo relative mx-auto w-full rotate-[1deg] transition-transform hover:rotate-0">
+                  <EventImage
+                    event={featured}
+                    className="h-full w-full object-contain"
+                    titleClassName="px-8 text-center font-serif italic leading-[1.04] tracking-[-0.03em] text-[38px]"
+                    imageWidth={800}
+                    imageHeight={1000}
+                    priority
+                  />
+                </div>
                 <div
-                  className="absolute bottom-8 left-8 rounded-lg border px-4 py-3 backdrop-blur-sm"
-                  style={{ borderColor: 'rgba(255,255,255,0.32)', background: 'rgba(5, 9, 18, 0.58)' }}
+                  className="absolute bottom-6 right-6 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-md lg:bottom-12 lg:right-12"
+                  style={{ borderColor: 'rgba(255,255,255,0.25)', background: 'rgba(5, 9, 18, 0.45)' }}
                 >
-                  <div className="font-serif leading-none tracking-[-0.03em] text-brand-400" style={{ fontSize: 44 }}>
+                  <div className="font-serif leading-none tracking-[-0.04em] text-brand-400" style={{ fontSize: 44 }}>
                     {format(new Date(featured.date), 'd')}
                   </div>
-                  <div className="mt-1 font-mono text-[10px] tracking-[.08em] text-white/75">
-                    {format(new Date(featured.date), 'MMMM yyyy').toUpperCase()}
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[.1em] text-white/80">
+                    {format(new Date(featured.date), 'MMMM yyyy')}
                   </div>
                 </div>
               </div>
@@ -290,7 +293,7 @@ export function Events() {
               {rest.map((event: Event) => (
                 <div
                   key={event.id}
-                  className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_156px_minmax(0,1fr)_auto]"
+                  className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_200px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--color-border)' }}>
@@ -305,22 +308,24 @@ export function Events() {
                     </div>
                   </div>
 
-                  <EventImage
-                    event={event}
-                    className="aspect-[4/3] w-full rounded-lg border object-cover"
-                    titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
-                    imageWidth={360}
-                    imageHeight={270}
-                  />
+                  <div className="relative bg-[var(--color-surface2)] p-2">
+                    <EventImage
+                      event={event}
+                      className="aspect-[4/5] w-full object-contain"
+                      titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
+                      imageWidth={400}
+                      imageHeight={500}
+                    />
+                  </div>
 
-                  <div className="min-w-0 sm:col-span-2 lg:col-auto">
+                  <div className="min-w-0 sm:col-span-2 lg:col-auto lg:py-1">
                     <div className="mb-3 flex flex-wrap items-center gap-3">
                       <Badge
                         label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
                         color={TYPE_COLOR[event.event_type] ?? 'gray'}
                       />
-                      <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                        {format(new Date(event.date), 'MMM d / h:mm a').toUpperCase()}
+                      <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                        {format(new Date(event.date), 'MMM d / h:mm a')}
                       </span>
                     </div>
                     <h3 className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
@@ -338,7 +343,7 @@ export function Events() {
                     )}
                   </div>
 
-                  <div className="flex items-start sm:col-span-2 lg:col-auto lg:justify-end">
+                  <div className="flex items-start pt-1 sm:col-span-2 lg:col-auto lg:justify-end">
                     <AddToCalendarButton event={event} align="right" />
                   </div>
                 </div>

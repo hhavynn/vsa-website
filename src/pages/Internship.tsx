@@ -22,7 +22,7 @@ const pillars = [
   { title: 'Social', desc: 'Build lasting friendships with fellow interns and cabinet. Bond through GBMs, aftersocials, externals, and VSA events throughout the year.' },
   { title: 'Cultural', desc: 'Stay connected to Vietnamese culture and AAPI identity. Participate in events like Vietnamese Culture Night, Tet Fest, and other cultural programming.' },
   { title: 'Community', desc: "Help create a welcoming space for Vietnamese and non-Vietnamese students alike. Contribute to VSA's broader community and philanthropic work." },
-  { title: 'Academic & Professional', desc: 'Build communication, planning, and leadership skills. Learn to balance commitment with your academic and personal goals.' },
+  { title: 'Academic', desc: 'Build communication, planning, and leadership skills. Learn to balance commitment with your academic and personal goals.' },
 ];
 
 const whatYouDo = [
@@ -41,11 +41,12 @@ const shadowAreas = [
   { title: 'ACE', desc: 'Fam event planning, ACE content creation, fam relations, and spring sorting support.' },
   { title: 'Events', desc: 'Event planning, delegation, logistics, working with media, and real-time problem solving.' },
   { title: 'Media', desc: 'Social media, graphics, marketing strategy, promotion, and digital content.' },
+  { title: 'PR Chair', desc: 'Short-form video, TikToks/Reels, event promo clips, and social content that helps general members interact with VSA online.' },
   { title: 'Vietnamese Culture Night', desc: 'Committee coordination, promotion, production logistics, props, scheduling, and show day support.' },
   { title: 'Community Relations', desc: 'House events, sortings, check-ins, member communications, and event calendars.' },
   { title: 'Culture & Philanthropy', desc: 'Cultural programming, culture corners, and major community-centered events.' },
   { title: 'Fundraising', desc: 'Fundraiser planning and aftersocials, merchant relationships, and sponsorship support.' },
-  { title: 'Historian', desc: 'Photo and video capture, media archiving, and storytelling across VSA events.' },
+  { title: 'Historian', desc: 'Photo capture, event documentation, media archiving, and storytelling across VSA events.' },
 ];
 
 const faqs = [

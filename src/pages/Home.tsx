@@ -71,6 +71,61 @@ function EventRow({ event }: { event: Event }) {
   );
 }
 
+function FeaturedEventHome({ event }: { event: Event }) {
+  const d = new Date(event.date);
+  const imageUrl = event.image_url;
+
+  return (
+    <div className="scrapbook-paper mb-6 overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]">
+      <div className="flex flex-col justify-center border-b p-6 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <Badge
+            label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+            color={TYPE_COLOR[event.event_type] ?? 'gray'}
+          />
+          <span className="font-mono text-[10px] uppercase tracking-[.04em]" style={{ color: 'var(--text3)' }}>
+            {format(d, 'MMM d / h:mm a')}
+          </span>
+        </div>
+        <h3 className="mb-2 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]" style={{ color: 'var(--text)' }}>
+          {event.name}
+        </h3>
+        {event.location && (
+          <div className="mb-6 flex items-center gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
+            <span className="h-1 w-1 rounded-full bg-brand-500" />
+            {event.location}
+          </div>
+        )}
+        <div>
+          <Link to="/events" className="vsa-btn-primary py-2 text-xs">
+            View Details -&gt;
+          </Link>
+        </div>
+      </div>
+      <div className="relative flex min-h-[220px] flex-col justify-center bg-[var(--surface2)] p-6 lg:p-8">
+        <div className="scrapbook-photo relative mx-auto w-full max-w-[320px] rotate-[1.5deg]">
+          {imageUrl ? (
+            <img
+              src={getSupabaseImageUrl(imageUrl, { width: 600, height: 800, resize: 'contain', quality: 75 })}
+              alt={event.name}
+              className="h-full w-full object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex aspect-[4/5] items-center justify-center p-8 text-center">
+              <span className="font-serif text-2xl italic leading-tight" style={{ color: 'var(--text3)' }}>{event.name}</span>
+            </div>
+          )}
+        </div>
+        <div className="absolute top-4 right-4 rounded-lg border bg-white/80 px-2.5 py-2 text-center shadow-sm backdrop-blur-md dark:bg-zinc-900/80" style={{ borderColor: 'var(--border)' }}>
+          <div className="font-serif text-2xl leading-none" style={{ color: 'var(--text)' }}>{format(d, 'd')}</div>
+          <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{format(d, 'MMM')}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Home() {
   const { events } = useEvents();
   const { content: presidentsContent } = usePresidentsContent();
@@ -89,10 +144,12 @@ export function Home() {
   const signatureRole = presidentsContent.role;
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const upcomingEvents = events
+  const sortedUpcoming = events
     .filter((event) => new Date(event.date) >= oneDayAgo)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const [featured, ...rest] = sortedUpcoming.slice(0, 4);
+  const upcomingEvents = sortedUpcoming.slice(0, 3); // For compatibility with older layout if needed, but we'll use featured/rest
 
   return (
     <>
@@ -191,13 +248,16 @@ export function Home() {
               <div className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
                 Upcoming
               </div>
-              {upcomingEvents.length === 0 ? (
+              {!featured ? (
                 <div className="scrapbook-empty font-sans text-sm" style={{ color: 'var(--text3)' }}>
                   No upcoming events posted yet.
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {upcomingEvents.map((event) => <EventRow key={event.id} event={event} />)}
+                <div className="flex flex-col">
+                  <FeaturedEventHome event={featured} />
+                  <div className="space-y-3">
+                    {rest.slice(0, 2).map((event) => <EventRow key={event.id} event={event} />)}
+                  </div>
                 </div>
               )}
             </div>
