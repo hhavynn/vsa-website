@@ -124,7 +124,7 @@ const FeedbackTab: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase.from('feedback').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
