@@ -1,4 +1,3 @@
-import { CSSProperties } from 'react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
@@ -30,21 +29,6 @@ const pillars = [
   },
 ];
 
-const particleSeeds = [
-  [14, 12, 2.5, '#3bbdb5', '-28px', 5.2, 0.2],
-  [22, 31, 3.6, '#f07858', '36px', 7.1, 1.1],
-  [35, 18, 2.8, '#e8a838', '14px', 6.4, 2.2],
-  [47, 38, 4.3, '#2a9d8f', '-42px', 8.2, 0.8],
-  [55, 20, 2.3, '#3bbdb5', '22px', 4.9, 3.6],
-  [63, 44, 4.8, '#f07858', '-18px', 7.8, 1.7],
-  [72, 15, 3.4, '#e8a838', '44px', 5.8, 2.9],
-  [80, 34, 2.6, '#2a9d8f', '-34px', 6.9, 0.5],
-  [18, 48, 4.1, '#e8a838', '30px', 8.4, 4.1],
-  [40, 8, 2.2, '#3bbdb5', '-16px', 5.5, 2.7],
-  [68, 52, 3.2, '#f07858', '18px', 7.4, 3.3],
-  [88, 24, 2.9, '#3bbdb5', '-24px', 6.2, 1.4],
-] as const;
-
 const TYPE_COLOR: Record<string, BadgeColor> = {
   gbm: 'green',
   mixer: 'red',
@@ -59,7 +43,7 @@ function EventRow({ event }: { event: Event }) {
   const d = new Date(event.date);
 
   return (
-    <div className="vsa-event-row">
+    <div className="vsa-event-row scrapbook-note px-4 py-4">
       <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--border)' }}>
         <div className="font-sans text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
           {format(d, 'MMM')}
@@ -114,37 +98,11 @@ export function Home() {
     <>
       <PageTitle title="Home" />
 
-      <section className="relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 70% 60% at 60% 30%, var(--glow), transparent 70%), radial-gradient(ellipse 50% 50% at 20% 80%, var(--glow-coral), transparent 70%)',
-          }}
-        />
-        <div className="absolute inset-0 pointer-events-none">
-          {particleSeeds.map(([left, bottom, size, color, dx, duration, delay], index) => (
-            <span
-              key={index}
-              className="vsa-particle"
-              style={{
-                left: `${left}%`,
-                bottom: `${bottom}%`,
-                width: size,
-                height: size,
-                background: color,
-                opacity: 0.6,
-                '--dx': dx,
-                animationDuration: `${duration}s`,
-                animationDelay: `${delay}s`,
-              } as CSSProperties}
-            />
-          ))}
-        </div>
-
+      <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden">
         <div className="vsa-container relative z-10 w-full">
-          <div className="grid min-h-[calc(100vh-60px)] lg:grid-cols-2">
-            <div className="flex flex-col justify-center border-b py-16 lg:border-b-0 lg:border-r lg:px-12 lg:py-20 xl:px-16" style={{ borderColor: 'var(--border)' }}>
+          <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+            <div className="scrapbook-paper flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+              <span className="scrapbook-pin" aria-hidden />
               <div className="vsa-animate-slide-up mb-6 flex items-center gap-3 font-sans text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
                 <span className="h-[1.5px] w-8 bg-[var(--brand)]" />
                 Vietnamese Student Association / UC San Diego
@@ -166,12 +124,11 @@ export function Home() {
                 <div className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
                   VSA Pillars
                 </div>
-                <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border sm:grid-cols-4" style={{ borderColor: 'var(--border)', background: 'var(--border)' }}>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {pillars.map((pillar) => (
                     <div
                       key={pillar.label}
-                      className="flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3"
-                      style={{ background: 'var(--bg)' }}
+                      className="scrapbook-note flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3"
                     >
                       <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
                       <span className="font-sans text-[13px] font-semibold leading-none" style={{ color: 'var(--text)' }}>{pillar.label}</span>
@@ -194,15 +151,8 @@ export function Home() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[340px] flex-col items-center justify-center overflow-hidden py-12 lg:p-20">
-              <div className="relative aspect-square w-[min(360px,80%)]" style={{ animation: 'vsa-float 7s ease-in-out infinite' }}>
-                <div
-                  className="pointer-events-none absolute inset-[-20%]"
-                  style={{
-                    background: 'radial-gradient(circle, rgba(240,120,88,0.2) 0%, transparent 70%)',
-                    animation: 'vsa-glow-pulse 3s ease-in-out infinite',
-                  }}
-                />
+            <div className="relative flex min-h-[340px] flex-col items-center justify-center py-8 lg:p-10">
+              <div className="scrapbook-photo relative aspect-square w-[min(360px,80%)] rotate-[2deg]" style={{ animation: 'vsa-float 7s ease-in-out infinite' }}>
                 <img
                   src={getSupabaseImageUrl(logoSrc, { width: 420, height: 420, resize: 'contain', quality: 78 })}
                   srcSet={getSupabaseImageSrcSet(logoSrc, [240, 420, 720], {
@@ -212,11 +162,10 @@ export function Home() {
                   sizes="(min-width: 1024px) 360px, 80vw"
                   alt={siteSettings.logoAlt || 'VSA logo lantern'}
                   className="h-full w-full object-contain"
-                  style={{ filter: 'drop-shadow(0 0 60px rgba(240,120,88,0.35)) drop-shadow(0 0 120px rgba(232,98,58,0.15))' }}
                   decoding="async"
                 />
               </div>
-              <p className="mt-8 text-center font-sans text-[13px] tracking-[0.04em]" style={{ color: 'var(--text3)' }}>
+              <p className="scrapbook-sticker scrapbook-sticker-gold mt-8 text-center">
                 Est. 1977 / Nonprofit / Open to all UCSD students
               </p>
             </div>
@@ -224,7 +173,7 @@ export function Home() {
         </div>
       </section>
 
-      <section className="vsa-section" style={{ background: 'var(--bg)' }}>
+      <section className="vsa-section scrapbook-board">
         <div className="vsa-container">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
@@ -243,21 +192,24 @@ export function Home() {
                 Upcoming
               </div>
               {upcomingEvents.length === 0 ? (
-                <div className="border-y py-5 font-sans text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text3)' }}>
+                <div className="scrapbook-empty font-sans text-sm" style={{ color: 'var(--text3)' }}>
                   No upcoming events posted yet.
                 </div>
               ) : (
-                upcomingEvents.map((event) => <EventRow key={event.id} event={event} />)
+                <div className="space-y-4">
+                  {upcomingEvents.map((event) => <EventRow key={event.id} event={event} />)}
+                </div>
               )}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="vsa-message-section">
+      <section className="vsa-message-section scrapbook-board">
         <div className="vsa-container">
-          <div className="grid gap-12 lg:grid-cols-[1fr_220px] lg:items-start">
-            <div>
+          <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-start">
+            <div className="scrapbook-paper p-6 sm:p-8">
+              <span className="scrapbook-pin" aria-hidden />
               <div className="vsa-section-label">Presidents</div>
               <h2 className="vsa-section-title max-w-[720px]">
                 {presidentsHeading}
@@ -279,26 +231,27 @@ export function Home() {
             </div>
             <div>
               {presidentsContent.photoUrl ? (
-                <img
-                  src={getSupabaseImageUrl(presidentsContent.photoUrl, {
-                    width: 440,
-                    height: 586,
-                    resize: 'cover',
-                    quality: 74,
-                  })}
-                  srcSet={getSupabaseImageSrcSet(presidentsContent.photoUrl, [320, 440, 640], {
-                    resize: 'cover',
-                    quality: 74,
-                  })}
-                  sizes="(min-width: 1024px) 220px, 70vw"
-                  alt={presidentsContent.names}
-                  className="aspect-[3/4] w-full rounded-2xl border object-cover"
-                  style={{ borderColor: 'var(--border)' }}
-                  loading="lazy"
-                  decoding="async"
-                />
+                <div className="scrapbook-photo rotate-[1.5deg]">
+                  <img
+                    src={getSupabaseImageUrl(presidentsContent.photoUrl, {
+                      width: 440,
+                      height: 586,
+                      resize: 'cover',
+                      quality: 74,
+                    })}
+                    srcSet={getSupabaseImageSrcSet(presidentsContent.photoUrl, [320, 440, 640], {
+                      resize: 'cover',
+                      quality: 74,
+                    })}
+                    sizes="(min-width: 1024px) 220px, 70vw"
+                    alt={presidentsContent.names}
+                    className="aspect-[3/4] w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
               ) : (
-                <div className="flex aspect-[3/4] items-center justify-center rounded-2xl border" style={{ borderColor: 'var(--border)', background: 'linear-gradient(135deg,var(--surface2),var(--bg2))' }}>
+                <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
                   <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>G + P</span>
                 </div>
               )}

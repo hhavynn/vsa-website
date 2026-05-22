@@ -169,10 +169,35 @@
   position: relative; overflow: hidden;
   padding: 40px 20px 36px;
   background:
+    linear-gradient(90deg, rgba(20,32,40,0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(20,32,40,0.03) 1px, transparent 1px),
     radial-gradient(120% 80% at 100% 0%, var(--hero-grad-a) 0%, transparent 55%),
     radial-gradient(80% 60% at 0% 100%, var(--hero-grad-b) 0%, transparent 50%),
     linear-gradient(180deg, var(--hero-grad-c) 0%, var(--bg) 100%);
+  background-size: 34px 34px, 34px 34px, auto, auto, auto;
   border-bottom: 1px solid var(--border);
+}
+.ace-app .ace-hero::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 8%;
+  right: 8%;
+  height: 24px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(-45deg, rgba(212,132,26,0.24) 0 8px, rgba(255,255,255,0.14) 8px 12px);
+  transform: rotate(-0.7deg);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.ace-app.is-dark .ace-hero {
+  background:
+    linear-gradient(90deg, rgba(228,216,200,0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(228,216,200,0.03) 1px, transparent 1px),
+    radial-gradient(120% 80% at 100% 0%, var(--hero-grad-a) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, var(--hero-grad-b) 0%, transparent 50%),
+    linear-gradient(180deg, var(--hero-grad-c) 0%, var(--bg) 100%);
+  background-size: 34px 34px, 34px 34px, auto, auto, auto;
 }
 .ace-app .ace-hero-grain {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
@@ -205,8 +230,9 @@
 
 /* ── Roles list ──────────────────────────────────────────────── */
 .ace-app .ace-rolelist {
-  border-radius: 14px; overflow: hidden;
+  border-radius: 8px; overflow: hidden;
   background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
 }
 .ace-app .ace-rolerow { padding: 16px 18px; border-bottom: 1px solid var(--border-soft); }
 .ace-app .ace-rolerow:last-child { border-bottom: 0; }
@@ -230,9 +256,10 @@
 
 /* ── Cycle CTA ───────────────────────────────────────────────── */
 .ace-app .ace-cta-card {
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--surface); border: 1px solid var(--border);
   padding: 18px 18px 16px;
+  box-shadow: var(--shadow-card);
 }
 .ace-app .ace-cta-row {
   display: flex; flex-direction: column; gap: 12px;
@@ -280,11 +307,25 @@
 .ace-app .ace-fam-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 .ace-app .ace-fam-card {
   text-align: left; padding: 0; border: 1px solid var(--border);
-  border-radius: 16px; overflow: hidden;
+  border-radius: 8px; overflow: visible;
   background: var(--surface);
   box-shadow: var(--shadow-card);
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   width: 100%;
+  position: relative;
+}
+.ace-app .ace-fam-card::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  z-index: 2;
+  width: 76px;
+  height: 20px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, rgba(59,189,181,0.24) 0 8px, rgba(255,255,255,0.16) 8px 12px);
+  transform: translateX(-50%) rotate(-2deg);
+  pointer-events: none;
 }
 .ace-app .ace-fam-card:hover {
   transform: translateY(-2px);
@@ -294,6 +335,8 @@
 .ace-app .ace-fam-card:active { transform: translateY(0); }
 .ace-app .ace-fam-cover-img {
   display: block; width: 100%; height: 132px; object-fit: cover;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
 }
 .ace-app .ace-fam-body { padding: 14px 16px 16px; }
 .ace-app .ace-fam-row {
@@ -374,8 +417,9 @@
   display: grid; gap: 12px; grid-template-columns: 1fr;
 }
 .ace-app .ace-step {
-  padding: 16px 16px 18px; border-radius: 12px;
+  padding: 16px 16px 18px; border-radius: 8px;
   background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
 }
 .ace-app .ace-step-num {
   font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
@@ -391,8 +435,9 @@
 
 /* ── FAQ ─────────────────────────────────────────────────────── */
 .ace-app .ace-faq {
-  border-radius: 14px; overflow: hidden;
+  border-radius: 8px; overflow: hidden;
   background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
 }
 .ace-app .ace-faq-row { border-bottom: 1px solid var(--border-soft); }
 .ace-app .ace-faq-row:last-child { border-bottom: 0; }

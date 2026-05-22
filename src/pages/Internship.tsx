@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INTERN PROGRAM CONFIG — Update these values each cycle.
@@ -59,23 +59,6 @@ const faqs = [
   { q: 'Who do I contact with questions?', a: 'Reach out to VSA through Instagram (@vsaatucsd) or speak with a board member. For program-specific questions, contact the Internal Vice President through official VSA channels.' },
 ];
 
-function getSizedInternImageUrl(image: string, width: number, height: number) {
-  try {
-    const url = new URL(image);
-    const publicStoragePath = '/storage/v1/object/public/cabinet_images/';
-    if (!url.pathname.includes(publicStoragePath)) return image;
-
-    url.pathname = url.pathname.replace(publicStoragePath, '/storage/v1/render/image/public/cabinet_images/');
-    url.searchParams.set('width', String(width));
-    url.searchParams.set('height', String(height));
-    url.searchParams.set('resize', 'cover');
-    url.searchParams.set('quality', '75');
-    return url.toString();
-  } catch {
-    return image;
-  }
-}
-
 function internInitials(name: string) {
   return name
     .split(' ')
@@ -98,14 +81,19 @@ function InternCard({ intern }: { intern: CabinetIntern }) {
   const imageUrl = resolveInternImageUrl(intern.image_url);
 
   return (
-    <article className="min-w-0">
+    <article className="program-poster-card min-w-0">
       <div
-        className="aspect-[4/5] overflow-hidden rounded border"
+        className="aspect-[4/5] overflow-hidden rounded"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
       >
         {imageUrl ? (
           <img
-            src={getSizedInternImageUrl(imageUrl, imageSize, Math.round(imageSize * 1.25))}
+            src={getSupabaseImageUrl(imageUrl, {
+              width: imageSize,
+              height: Math.round(imageSize * 1.25),
+              resize: 'cover',
+              quality: 75,
+            })}
             alt={intern.name}
             width={imageSize}
             height={Math.round(imageSize * 1.25)}
@@ -121,7 +109,7 @@ function InternCard({ intern }: { intern: CabinetIntern }) {
           </div>
         )}
       </div>
-      <div className="mt-3">
+      <div className="mt-3 px-1">
         <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{intern.name}</h3>
         {intern.role && intern.role !== 'Intern' && (
           <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{intern.role}</p>
@@ -142,141 +130,163 @@ export function Internship() {
     <>
       <PageTitle title="Intern Program" />
 
-      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Link to="/get-involved" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Get Involved</Link>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>Intern Program</span>
+      <div className="program-app">
+        <div className="program-breadcrumb">
+          <Link to="/get-involved">Get Involved</Link>
+          <span>→</span>
+          <span style={{ color: 'var(--color-text2)' }}>Intern Program</span>
         </div>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Intern Program</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Leadership development · UCSD VSA
-          {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
-            <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-              {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
-            </span>
-          )}
-          {!cycleContent && INTERN_CONFIG.applicationsOpen && (
-            <span className="ml-3 font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-              Applications Open{INTERN_CONFIG.cycleLabel ? ` · ${INTERN_CONFIG.cycleLabel}` : ''}
-            </span>
-          )}
-        </p>
-      </div>
 
-      <div className="program-page-content">
-
-        {/* CTA */}
-        {cycleContent ? (
-          <ProgramContentCallout
-            content={cycleContent}
-            defaultTitle="Intern Program applications"
-            defaultLinkLabel="Apply Now"
-          />
-        ) : INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink && (
-          <div className="mb-8 flex flex-col gap-4 rounded border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div className="min-w-0">
-              <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
-              {INTERN_CONFIG.cycleLabel && <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{INTERN_CONFIG.cycleLabel}</div>}
+        <section className="program-hero">
+          <div className="program-hero-grain" />
+          <div className="program-hero-inner">
+            <span className="program-hero-kicker">Leadership Cohort</span>
+            <h1 className="program-title">
+              Intern <span className="program-title-script">Program</span>
+            </h1>
+            <p className="program-hero-meta">
+              A year-long leadership class for students who want to learn how VSA runs, build community, and grow into future cabinet leaders.
+            </p>
+            <div className="program-hero-actions">
+              {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
+                <span className="scrapbook-sticker scrapbook-sticker-teal">
+                  {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
+                </span>
+              )}
+              {!cycleContent && INTERN_CONFIG.applicationsOpen && (
+                <span className="scrapbook-sticker scrapbook-sticker-teal">
+                  Applications Open{INTERN_CONFIG.cycleLabel ? ` · ${INTERN_CONFIG.cycleLabel}` : ''}
+                </span>
+              )}
             </div>
-            <a href={INTERN_CONFIG.applicationLink} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
-              Apply Now →
-            </a>
           </div>
+          <div className="program-watermark">cohort</div>
+        </section>
+
+        {(cycleContent || (INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink)) && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              {cycleContent ? (
+                <ProgramContentCallout
+                  content={cycleContent}
+                  defaultTitle="Intern Program applications"
+                  defaultLinkLabel="Apply Now"
+                />
+              ) : (
+                <div className="scrapbook-note flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div className="min-w-0">
+                    <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
+                    {INTERN_CONFIG.cycleLabel && <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{INTERN_CONFIG.cycleLabel}</div>}
+                  </div>
+                  <a href={INTERN_CONFIG.applicationLink} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
+                    Apply Now →
+                  </a>
+                </div>
+              )}
+            </div>
+          </section>
         )}
 
-        {/* About */}
-        <div className="mb-10">
-          <Label className="mb-4">About the Program</Label>
-          <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
-          </p>
-        </div>
+        <section className="program-section">
+          <div className="program-section-inner program-section-narrow">
+            <div className="program-eyebrow">About the Program</div>
+            <p className="program-body">
+              The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
+            </p>
+          </div>
+        </section>
 
         {showInternCohort && (
-          <div className="mb-10">
-            <Label className="mb-4">Meet the Interns</Label>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {interns.map((intern) => (
-                <InternCard key={intern.id} intern={intern} />
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">Meet the Interns</div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {interns.map((intern) => (
+                  <InternCard key={intern.id} intern={intern} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Four Pillars</div>
+            <div className="program-step-grid">
+              {pillars.map((p) => (
+                <div key={p.title} className="program-step-card program-feature-card">
+                  <div className="program-card-title">{p.title}</div>
+                  <p className="program-card-copy">{p.desc}</p>
+                </div>
               ))}
             </div>
           </div>
-        )}
+        </section>
 
-        {/* Four Pillars */}
-        <div className="mb-10">
-          <Label className="mb-4">Four Pillars</Label>
-          <div className="program-step-grid">
-            {pillars.map((p) => (
-              <div key={p.title} className="program-step-card border-l px-5 pb-4" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="font-sans text-sm font-semibold mb-1.5" style={{ color: 'var(--color-text)' }}>{p.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{p.desc}</p>
-              </div>
-            ))}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">What You'll Do</div>
+            <div className="program-list">
+              {whatYouDo.map((item) => (
+                <div key={item.title} className="program-list-row">
+                  <div className="program-list-title">{item.title}</div>
+                  <p className="program-list-copy">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* What You'll Do */}
-        <div className="mb-10">
-          <Label className="mb-4">What You'll Do</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {whatYouDo.map((item) => (
-              <div key={item.title} className="program-split-row flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="program-split-row-title shrink-0 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{item.title}</div>
-                <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{item.desc}</p>
-              </div>
-            ))}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Shadow Areas</div>
+            <div className="program-three-grid">
+              {shadowAreas.map((area) => (
+                <div key={area.title} className="program-feature-card">
+                  <div className="program-card-title">{area.title}</div>
+                  <p className="program-card-copy">{area.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Shadow Areas */}
-        <div className="mb-10">
-          <Label className="mb-4">Shadow Areas</Label>
-          <div className="program-three-grid">
-            {shadowAreas.map((area) => (
-              <div key={area.title} className="border-t py-3" style={{ borderColor: 'var(--color-border)' }}>
-                <div className="font-sans text-sm font-semibold mb-0.5" style={{ color: 'var(--color-text)' }}>{area.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{area.desc}</p>
-              </div>
-            ))}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">FAQ</div>
+            <div className="program-faq-card">
+              {faqs.map((faq, i) => (
+                <div key={i} className="program-faq-row">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="program-faq-button"
+                  >
+                    <span className="program-faq-question">{faq.q}</span>
+                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="program-faq-answer">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
-        </div>
+        </section>
 
-        {/* FAQ */}
-        <div className="mb-10">
-          <Label className="mb-4">FAQ</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {faqs.map((faq, i) => (
-              <div key={i} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between text-left"
-                  style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
-                >
-                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
-                  <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="border-t" style={{ padding: '12px 20px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                    <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{faq.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-footer-actions-rich">
+              <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="vsa-btn-primary font-sans text-sm font-medium">
+                Follow @vsaatucsd
+              </a>
+              <Link to="/get-involved" className="vsa-btn-ghost font-sans text-sm">
+                ← All Programs
+              </Link>
+            </div>
           </div>
-        </div>
-
-        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
-          <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-            Follow @vsaatucsd
-          </a>
-          <Link to="/get-involved" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            ← All Programs
-          </Link>
-        </div>
-
+        </section>
       </div>
     </>
   );

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
 import { formatDateOnly } from '../lib/dateOnly';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
@@ -75,27 +74,32 @@ export function VCNCurrent() {
     return (
       <>
         <PageTitle title="VCN — This Year's Show" />
-        <div className="min-h-[60vh] flex items-center justify-center px-4" style={{ background: 'var(--color-bg)' }}>
-          <div className="text-center max-w-md">
-            <h1 className="font-serif leading-none tracking-[-0.03em] mb-4" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-              VCN {currentVcn.year || 'Coming Soon'}
-            </h1>
-            <p className="font-sans text-sm leading-relaxed mb-8" style={{ color: 'var(--color-text2)' }}>
-              Details for this year's Vietnamese Culture Night production are coming soon. Follow{' '}
-              <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
-                @vsaatucsd
-              </a>{' '}
-              on Instagram for the latest announcements.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Link to="/vcn" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-                About VCN
-              </Link>
-              <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-                Past Productions
-              </Link>
+        <div className="program-app min-h-[60vh]">
+          <section className="program-hero">
+            <div className="program-hero-grain" />
+            <div className="program-hero-inner">
+              <span className="program-hero-kicker">Current Production</span>
+              <h1 className="program-title">
+                VCN <span className="program-title-script">{currentVcn.year || 'Coming Soon'}</span>
+              </h1>
+              <p className="program-hero-meta">
+                Details for this year's Vietnamese Culture Night production are coming soon. Follow{' '}
+                <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
+                  @vsaatucsd
+                </a>{' '}
+                on Instagram for the latest announcements.
+              </p>
+              <div className="program-hero-actions">
+                <Link to="/vcn" className="vsa-btn-primary font-sans text-sm font-medium">
+                  About VCN
+                </Link>
+                <Link to="/vcn/archive" className="vsa-btn-ghost font-sans text-sm">
+                  Past Productions
+                </Link>
+              </div>
             </div>
-          </div>
+            <div className="program-watermark">soon</div>
+          </section>
         </div>
       </>
     );
@@ -105,136 +109,153 @@ export function VCNCurrent() {
     <>
       <PageTitle title={`VCN ${currentVcn.year}${currentVcn.title ? ` — ${currentVcn.title}` : ''}`} />
 
-      {/* Page header */}
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Link to="/vcn" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Vietnamese Culture Night</Link>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{currentVcn.year}</span>
+      <div className="program-app">
+        <div className="program-breadcrumb">
+          <Link to="/vcn">Vietnamese Culture Night</Link>
+          <span>→</span>
+          <span style={{ color: 'var(--color-text2)' }}>{currentVcn.year}</span>
         </div>
-        <h1 className="font-serif leading-none tracking-[-0.03em] italic" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-          {currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
-        </h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          UCSD VSA · VCN {currentVcn.year}
-          {currentVcn.date && <span className="ml-3 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-            {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}
-          </span>}
-        </p>
-        {showTicketStatus && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {canShowTicketButton && (
-              <a
-                href={currentVcn.ticketLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center font-sans text-sm font-medium px-4 py-2 rounded"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
-              >
-                Get Tickets →
-              </a>
-            )}
-            {ticketStatusLabel && (
-              <span className="font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">{ticketStatusLabel}</span>
-            )}
-            {currentVcn.ticketNote && (
-              <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{currentVcn.ticketNote}</span>
+
+        <section className="program-hero">
+          <div className="program-hero-grain" />
+          <div className="program-hero-inner">
+            <span className="program-hero-kicker">Current Production</span>
+            <h1 className="program-title">
+              {currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
+            </h1>
+            <p className="program-hero-meta">
+              UCSD VSA · VCN {currentVcn.year}
+              {currentVcn.date && (
+                <span className="block pt-2 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+                  {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}
+                </span>
+              )}
+            </p>
+            {showTicketStatus && (
+              <div className="program-hero-actions">
+                {canShowTicketButton && (
+                  <a
+                    href={currentVcn.ticketLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="vsa-btn-primary font-sans text-sm font-medium"
+                  >
+                    Get Tickets →
+                  </a>
+                )}
+                {ticketStatusLabel && (
+                  <span className="scrapbook-sticker scrapbook-sticker-teal">{ticketStatusLabel}</span>
+                )}
+                {currentVcn.ticketNote && (
+                  <span className="scrapbook-sticker">{currentVcn.ticketNote}</span>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+          <div className="program-watermark">{currentVcn.year}</div>
+        </section>
 
-      <div style={{ padding: '40px 52px', maxWidth: 800 }}>
-
-        {/* Synopsis */}
         {currentVcn.synopsis && (
-          <div className="mb-10">
-            <Label className="mb-4">Synopsis</Label>
-            <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
-              {currentVcn.synopsis}
-            </p>
-          </div>
+          <section className="program-section">
+            <div className="program-section-inner program-section-narrow">
+              <div className="program-eyebrow">Synopsis</div>
+              <p className="program-body">{currentVcn.synopsis}</p>
+            </div>
+          </section>
         )}
 
-        {/* Venue */}
         {currentVcn.venue && (
-          <div className="mb-10">
-            <Label className="mb-3">Venue</Label>
-            <p className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{currentVcn.venue}</p>
-          </div>
+          <section className="program-section">
+            <div className="program-section-inner program-section-narrow">
+              <div className="program-eyebrow">Venue</div>
+              <p className="program-body">{currentVcn.venue}</p>
+            </div>
+          </section>
         )}
 
-        {/* Poster / Trailer */}
         {(currentVcn.posterUrl || currentVcn.trailerUrl) && (
-          <div className="mb-10">
-            <div style={{ display: 'grid', gridTemplateColumns: currentVcn.posterUrl && currentVcn.trailerUrl ? '1fr 1fr' : '1fr', gap: 16 }}>
-              {currentVcn.posterUrl && (
-                <img src={currentVcn.posterUrl} alt={`VCN ${currentVcn.year} poster`} className="border rounded w-full object-cover" style={{ borderColor: 'var(--color-border)' }} />
-              )}
-              {currentVcn.trailerUrl && (
-                <div className="border rounded overflow-hidden aspect-video" style={{ borderColor: 'var(--color-border)' }}>
-                  <iframe src={currentVcn.trailerUrl} title={`VCN ${currentVcn.year} trailer`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Dances */}
-        {currentVcn.dances.length > 0 && (
-          <div className="mb-10">
-            <Label className="mb-4">This Year's Dances</Label>
-            <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-              {currentVcn.dances.map((dance, i) => (
-                <div key={i} className="flex items-baseline gap-4 border-b last:border-b-0" style={{ padding: '12px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                  <span className="font-mono text-[10px] tracking-[.04em] shrink-0" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  <div>
-                    <span className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{dance.title}</span>
-                    {dance.choreographer && (
-                      <span className="font-sans text-xs ml-3" style={{ color: 'var(--color-text3)' }}>Choreography by {dance.choreographer}</span>
-                    )}
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">Poster / Trailer</div>
+              <div className={currentVcn.posterUrl && currentVcn.trailerUrl ? 'grid gap-5 md:grid-cols-2' : 'grid gap-5'}>
+                {currentVcn.posterUrl && (
+                  <div className="program-poster-card">
+                    <img src={currentVcn.posterUrl} alt={`VCN ${currentVcn.year} poster`} className="w-full object-cover" />
                   </div>
-                </div>
-              ))}
+                )}
+                {currentVcn.trailerUrl && (
+                  <div className="program-poster-card aspect-video">
+                    <iframe src={currentVcn.trailerUrl} title={`VCN ${currentVcn.year} trailer`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Sponsors */}
+        {currentVcn.dances.length > 0 && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">This Year's Dances</div>
+              <div className="program-list">
+                {currentVcn.dances.map((dance, i) => (
+                  <div key={i} className="program-list-row">
+                    <span className="font-mono text-[10px] tracking-[.04em] shrink-0" style={{ color: 'var(--color-text3)' }}>{String(i + 1).padStart(2, '0')}</span>
+                    <div className="min-w-0">
+                      <span className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{dance.title}</span>
+                      {dance.choreographer && (
+                        <span className="font-sans text-xs ml-3" style={{ color: 'var(--color-text3)' }}>Choreography by {dance.choreographer}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {currentVcn.sponsors.length > 0 && (
-          <div className="mb-10">
-            <Label className="mb-4">Sponsors</Label>
-            <div className="flex flex-wrap gap-2">
-              {currentVcn.sponsors.map((s, i) => (
-                s.url ? (
-                  <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="font-sans text-sm border rounded px-3 py-1.5 transition-colors duration-150" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>{s.name}</a>
-                ) : (
-                  <span key={i} className="font-sans text-sm border rounded px-3 py-1.5" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>{s.name}</span>
-                )
-              ))}
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">Sponsors</div>
+              <div className="flex flex-wrap gap-2">
+                {currentVcn.sponsors.map((s, i) => (
+                  s.url ? (
+                    <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" className="scrapbook-sticker scrapbook-sticker-teal">{s.name}</a>
+                  ) : (
+                    <span key={i} className="scrapbook-sticker">{s.name}</span>
+                  )
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentVcn.messageFromTeam && (
+          <section className="program-section">
+            <div className="program-section-inner program-section-narrow">
+              <div className="program-eyebrow">From the Production Team</div>
+              <div className="program-rich-card">
+                <p className="font-serif italic leading-[1.6]" style={{ fontSize: 20, color: 'var(--color-text2)' }}>
+                  "{currentVcn.messageFromTeam}"
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-footer-actions-rich">
+              <Link to="/vcn" className="vsa-btn-ghost font-sans text-sm">
+                ← About VCN
+              </Link>
+              <Link to="/vcn/archive" className="vsa-btn-primary font-sans text-sm font-medium">
+                Past Productions
+              </Link>
             </div>
           </div>
-        )}
-
-        {/* Message from Team */}
-        {currentVcn.messageFromTeam && (
-          <div className="mb-10 border-l-2 pl-5" style={{ borderColor: 'var(--color-border)' }}>
-            <Label className="mb-3">From the Production Team</Label>
-            <p className="font-serif italic leading-[1.6]" style={{ fontSize: 18, color: 'var(--color-text2)' }}>
-              "{currentVcn.messageFromTeam}"
-            </p>
-          </div>
-        )}
-
-        {/* Footer nav */}
-        <div className="border-t pt-6 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
-          <Link to="/vcn" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            ← About VCN
-          </Link>
-          <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            Past Productions
-          </Link>
-        </div>
+        </section>
 
       </div>
     </>

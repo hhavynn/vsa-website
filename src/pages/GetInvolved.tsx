@@ -27,12 +27,36 @@ const programs = [
     link: '/intern-program',
     details: ['Board Shadowing', 'Leadership Skills', 'Real Impact'],
   },
+  {
+    id: 'vcn',
+    tag: 'Performance',
+    title: 'Vietnamese Culture Night',
+    description: 'Step into VSA culture through the annual student-led show, from performance and acting to production and behind-the-scenes committees.',
+    link: '/vcn',
+    details: ['Annual Show', 'Dance & Theatre', 'Production Teams'],
+  },
+  {
+    id: 'wnc',
+    tag: 'Showcase',
+    title: "Wild N' Culture",
+    description: "Join the crowd for UCSD VSA's intercollegiate comedy competition and keep up with each year's event updates.",
+    link: '/wild-n-culture',
+    details: ['Comedy Night', 'Campus Teams', 'Crowd Energy'],
+  },
+  {
+    id: 'events',
+    tag: 'Start Here',
+    title: 'Events Calendar',
+    description: 'Find the next GBM, social, cultural program, or fundraiser and show up when you are ready.',
+    link: '/events',
+    details: ['GBMs', 'Socials', 'Cultural Events'],
+  },
 ];
 
 const extraLinks = [
-  { label: 'Vietnamese Culture Night', link: '/vcn' },
-  { label: "Wild n' Culture", link: '/wild-n-culture' },
-  { label: 'Events Calendar', link: '/events' },
+  { label: 'VCN Current Show', link: '/vcn/current' },
+  { label: 'VCN Archive', link: '/vcn/archive' },
+  { label: 'Leaderboard', link: '/leaderboard' },
 ];
 
 export function GetInvolved() {
@@ -42,9 +66,10 @@ export function GetInvolved() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
+          <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Choose Your Path</span>
           <h1 className="vsa-page-title">Get <em>Involved</em></h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            Three pathways to find your place and build your community at UCSD.
+            Find your place in VSA through mentorship, houses, leadership, performances, events, and campus-wide traditions.
           </p>
         </div>
       </div>
@@ -52,16 +77,12 @@ export function GetInvolved() {
       <div className="vsa-container py-8 lg:py-10">
         <div className="mb-10">
           <Label className="mb-6 text-[var(--accent)]">Programs</Label>
-          <div className="overflow-hidden rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {programs.map((program, index) => (
               <Link
                 key={program.id}
                 to={program.link}
-                className="group flex flex-col items-start gap-4 border-b px-4 py-5 transition-colors duration-150 last:border-b-0 sm:gap-5 sm:px-8 sm:py-7 lg:flex-row lg:items-center lg:justify-between"
-                style={{
-                  borderColor: 'var(--border)',
-                  background: 'var(--surface)',
-                }}
+                className="scrapbook-paper group flex min-h-full flex-col items-start gap-4 p-5 transition-transform duration-150 hover:-translate-y-1 sm:p-6"
               >
                 <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
                   <div className="w-[28px] shrink-0 pt-1">
@@ -74,7 +95,7 @@ export function GetInvolved() {
                       <span className="min-w-0 font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
                         {program.title}
                       </span>
-                      <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}>
+                      <span className="scrapbook-sticker scrapbook-sticker-coral">
                         {program.tag}
                       </span>
                     </div>
@@ -94,7 +115,7 @@ export function GetInvolved() {
                     </div>
                   </div>
                 </div>
-                <span className="font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)] lg:ml-8 lg:shrink-0" style={{ color: 'var(--text3)' }}>
+                <span className="mt-auto font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)]" style={{ color: 'var(--text3)' }}>
                   Learn more -&gt;
                 </span>
               </Link>

@@ -19,7 +19,7 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
           transition={{ duration: 0.15, ease: 'easeInOut' }}
           className="overflow-hidden border-t border-[var(--border)] md:hidden"
         >
-          <div className="bg-[var(--surface)] px-4 py-4">
+          <div className="scrapbook-board px-4 py-4">
             <NavLinks isMobile onLinkClick={onClose} />
             <div className="mt-4 border-t border-[var(--border)] pt-4">
               <UserMenu isMobile onLinkClick={onClose} />

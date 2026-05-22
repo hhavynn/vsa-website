@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
-import { Label } from '../components/ui/Label';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
 import { VCNArchive as VCNArchiveEntry } from '../types';
 
@@ -20,7 +19,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
   const hasMedia = !!entry.video_url || !!entry.photo_album_url;
 
   return (
-    <article className="overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+    <article className="program-poster-card overflow-hidden p-0">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <div className="relative min-h-[220px] border-b lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
           {entry.cover_image_url ? (
@@ -31,7 +30,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
                 UCSD VSA
               </div>
               <div>
-                <div className="font-serif text-[58px] leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
+                <div className="font-serif text-[58px] italic leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>
                   {entry.year}
                 </div>
                 <div className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
@@ -48,12 +47,12 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
               VCN {entry.year}
             </span>
             {entry.annual_number && (
-              <span className="rounded-sm border px-2 py-0.5 font-sans text-[11px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+              <span className="scrapbook-sticker">
                 {entry.annual_number}
               </span>
             )}
             {entry.is_featured && (
-              <span className="rounded-sm border px-2 py-0.5 font-sans text-[11px] text-brand-600 dark:text-brand-400" style={{ borderColor: 'var(--color-border)' }}>
+              <span className="scrapbook-sticker scrapbook-sticker-coral">
                 Featured
               </span>
             )}
@@ -84,7 +83,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
                   href={entry.video_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-sans text-sm font-medium px-4 py-2 rounded"
+                  className="vsa-btn-primary font-sans text-sm font-medium"
                   style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
                 >
                   Watch Video
@@ -95,7 +94,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
                   href={entry.photo_album_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-sans text-sm px-4 py-2 rounded border"
+                  className="vsa-btn-ghost font-sans text-sm"
                   style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}
                 >
                   View Photo Album
@@ -149,50 +148,66 @@ export function VCNArchive() {
     <>
       <PageTitle title="VCN Archive" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Link to="/vcn" className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Vietnamese Culture Night</Link>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>→</span>
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>Archive</span>
+      <div className="program-app">
+        <div className="program-breadcrumb">
+          <Link to="/vcn">Vietnamese Culture Night</Link>
+          <span>→</span>
+          <span style={{ color: 'var(--color-text2)' }}>Archive</span>
         </div>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>VCN Archive</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Past productions, preserved through official videos, albums, and production notes.
-        </p>
-      </div>
 
-      <div style={{ padding: '40px 52px' }}>
-        {archives.length === 0 ? (
-          <div className="border rounded py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
-            <p className="font-sans text-sm mb-4" style={{ color: 'var(--color-text3)' }}>
-              Published archive entries will appear here after they are approved.
+        <section className="program-hero">
+          <div className="program-hero-grain" />
+          <div className="program-hero-inner">
+            <span className="program-hero-kicker">Poster Archive</span>
+            <h1 className="program-title">
+              VCN <span className="program-title-script">Archive</span>
+            </h1>
+            <p className="program-hero-meta">
+              Past productions, preserved through official videos, albums, and production notes.
             </p>
-            <Link
-              to="/vcn/current"
-              className="font-sans text-sm font-medium text-brand-600 dark:text-brand-400"
-            >
-              See This Year's Show →
-            </Link>
           </div>
-        ) : (
-          <div className="space-y-6">
-            <Label>{archives.length} Published Productions</Label>
-            <div className="flex flex-col gap-6">
-              {archives.map((entry) => (
-                <ArchiveCard key={entry.id} entry={entry} />
-              ))}
+          <div className="program-watermark">archive</div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            {archives.length === 0 ? (
+              <div className="scrapbook-empty">
+                <p className="font-sans text-sm mb-4" style={{ color: 'var(--color-text3)' }}>
+                  Published archive entries will appear here after they are approved.
+                </p>
+                <Link
+                  to="/vcn/current"
+                  className="font-sans text-sm font-medium text-brand-600 dark:text-brand-400"
+                >
+                  See This Year's Show →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="program-eyebrow">{archives.length} Published Productions</div>
+                <div className="flex flex-col gap-7">
+                  {archives.map((entry) => (
+                    <ArchiveCard key={entry.id} entry={entry} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-footer-actions-rich">
+              <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
+                This Year's Show →
+              </Link>
+              <Link to="/vcn" className="vsa-btn-ghost font-sans text-sm">
+                ← About VCN
+              </Link>
             </div>
           </div>
-        )}
-
-        <div className="border-t pt-6 mt-8 flex flex-wrap gap-3" style={{ borderColor: 'var(--color-border)' }}>
-          <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-            This Year's Show →
-          </Link>
-          <Link to="/vcn" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            ← About VCN
-          </Link>
-        </div>
+        </section>
       </div>
     </>
   );

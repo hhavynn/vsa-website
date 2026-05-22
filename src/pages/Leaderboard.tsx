@@ -360,6 +360,7 @@ export function Leaderboard() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
+          <span className="scrapbook-sticker scrapbook-sticker-gold mb-4">Scoreboard</span>
           <h1 className="vsa-page-title">Leaderboard</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
             {selectedYear === 'all'
@@ -404,12 +405,7 @@ export function Leaderboard() {
               <select
                 value={selectedYear ?? ''}
                 onChange={(e) => handleSelectedYearChange(e.target.value)}
-                className="w-full rounded border px-3 py-2 font-sans text-sm"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  background: 'var(--color-surface)',
-                  color: 'var(--color-text)',
-                }}
+                className="scrapbook-select"
               >
                 <option value="all">All-Time</option>
                 {academicYears.map((year) => (
@@ -438,13 +434,13 @@ export function Leaderboard() {
               </div>
 
               {filteredEntries.length === 0 ? (
-                <div className="rounded border py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="scrapbook-empty">
                   <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     {searchTerm ? 'No matching members.' : `No points recorded for ${selectedYearLabel} yet.`}
                   </p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <div className="scrapbook-score overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="divide-y md:hidden" style={{ borderColor: 'var(--color-border)' }}>
               {paginatedData.map((entry) => (
                 <div key={entry.id} className="space-y-3 p-4">
@@ -621,7 +617,7 @@ function PodiumTop3({ top3, activeTab }: { top3: LeaderboardEntry[]; activeTab: 
 
   return (
     <div
-      className="overflow-hidden rounded border px-4 py-8 sm:px-6"
+      className="scrapbook-score overflow-hidden px-4 py-8 sm:px-6"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
     >
       <div className="mx-auto max-w-3xl">
@@ -646,7 +642,7 @@ function PodiumTop3({ top3, activeTab }: { top3: LeaderboardEntry[]; activeTab: 
             return (
               <div
                 key={entry.id}
-                className={`relative overflow-hidden rounded-xl border ${isFirst ? 'pb-5 pt-6 sm:pt-7' : 'pb-4 pt-5'} px-2 text-center sm:px-3`}
+                className={`scrapbook-note relative overflow-hidden ${isFirst ? 'pb-5 pt-6 sm:pt-7' : 'pb-4 pt-5'} px-2 text-center sm:px-3`}
                 style={{
                   borderColor: isFirst ? ring : 'var(--color-border)',
                   background: `radial-gradient(120% 80% at 50% 0%, ${soft} 0%, transparent 70%), linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface2) 100%)`,
@@ -753,7 +749,7 @@ function HousePodiumTop3({ top3 }: { top3: HouseStanding[] }) {
 
   return (
     <div
-      className="overflow-hidden rounded border px-4 py-8 sm:px-6"
+      className="scrapbook-score overflow-hidden px-4 py-8 sm:px-6"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
     >
       <div className="mx-auto max-w-3xl">
@@ -779,7 +775,7 @@ function HousePodiumTop3({ top3 }: { top3: HouseStanding[] }) {
             return (
               <div
                 key={standing.house}
-                className={`relative overflow-hidden rounded-xl border ${isFirst ? 'pb-5 pt-6 sm:pt-7' : 'pb-4 pt-5'} px-2 text-center sm:px-3`}
+                className={`scrapbook-note relative overflow-hidden ${isFirst ? 'pb-5 pt-6 sm:pt-7' : 'pb-4 pt-5'} px-2 text-center sm:px-3`}
                 style={{
                   borderColor: isFirst ? ring : 'var(--color-border)',
                   background: `radial-gradient(120% 80% at 50% 0%, ${soft} 0%, transparent 70%), linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface2) 100%)`,
@@ -859,12 +855,12 @@ function HouseStandingsPanel({
   selectedYearLabel: string;
 }) {
   if (loading) {
-    return <div className="rounded border py-16 text-center text-sm" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>Loading house standings...</div>;
+    return <div className="scrapbook-empty text-sm" style={{ color: 'var(--color-text3)' }}>Loading house standings...</div>;
   }
 
   if (standings.length === 0) {
     return (
-      <div className="rounded border py-16 text-center" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="scrapbook-empty">
         <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
           No house points recorded for {selectedYearLabel} yet.
         </p>
@@ -892,7 +888,7 @@ function HouseStandingsPanel({
     <div className="space-y-8">
       {standings.length >= 3 && <HousePodiumTop3 top3={standings.slice(0, 3)} />}
 
-      <div className="overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="scrapbook-score overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="hidden border-b md:grid" style={{ gridTemplateColumns: '64px 1fr 120px 120px 120px 120px', padding: '9px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
           {['Rank', 'House', 'Points', 'Members', 'Check-ins', 'Avg/member'].map((heading) => (
             <Label key={heading}>{heading}</Label>
@@ -937,7 +933,7 @@ function HouseStandingsPanel({
       {activity.length > 0 && (
         <div>
           <Label className="mb-3">Recent House Activity</Label>
-          <div className="overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             {activity.map((item) => (
               <div key={`${item.house}-${item.event_id}`} className="flex items-center justify-between gap-4 border-b px-4 py-3 last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
                 <div>

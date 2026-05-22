@@ -25,8 +25,7 @@ export function ProgramContentCallout({
 
   return (
     <div
-      className="border rounded p-4 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      className="scrapbook-note mb-8 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
@@ -34,7 +33,7 @@ export function ProgramContentCallout({
             {content.title || defaultTitle}
           </div>
           {statusLabel && (
-            <span className="font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+            <span className="scrapbook-sticker scrapbook-sticker-teal">
               {statusLabel}
             </span>
           )}
@@ -58,7 +57,7 @@ export function ProgramContentCallout({
               href={content.primary_link_url!}
               target="_blank"
               rel="noopener noreferrer"
-              className="program-cta-link w-full rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950 sm:w-auto"
+              className="program-cta-link vsa-btn-primary w-full justify-center px-4 py-2 font-sans text-sm font-medium sm:w-auto"
             >
               {primaryLabel} →
             </a>
@@ -68,8 +67,7 @@ export function ProgramContentCallout({
               href={content.secondary_link_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="program-cta-link w-full rounded border px-4 py-2 font-sans text-sm transition-colors duration-150 sm:w-auto"
-              style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}
+              className="program-cta-link vsa-btn-ghost w-full justify-center px-4 py-2 font-sans text-sm transition-colors duration-150 sm:w-auto"
             >
               {content.secondary_link_label || 'More Info'} →
             </a>

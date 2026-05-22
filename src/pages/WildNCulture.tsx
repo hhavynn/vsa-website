@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 import { useProgramContent } from '../hooks/useProgramContent';
 import {
   getProgramMetaParts,
@@ -76,162 +75,167 @@ export function WildNCulture() {
     <>
       <PageTitle title="Wild N' Culture" />
 
-      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Wild N' Culture</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Annual intercollegiate comedy competition · UCSD VSA
-        </p>
-        {dynamicEventVisible ? (
-          <div className="flex flex-wrap items-center gap-3 mt-4">
-            {eventStatusLabel && (
-              <span className="font-sans text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-                {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
-              </span>
-            )}
-            {eventMeta.length > 0 && (
-              <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                {eventMeta.join(' · ')}
-              </span>
-            )}
-            {hasPrimaryProgramLink(eventContent) && (
-              <a
-                href={eventContent.primary_link_url!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-sans text-sm font-medium px-4 py-2 rounded"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
-              >
-                {eventContent.primary_link_label || 'Get Tickets'} →
-              </a>
-            )}
-            {eventContent.body && (
-              <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                {eventContent.body}
-              </span>
-            )}
-          </div>
-        ) : !eventContent && WNC_CONFIG.eventActive && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {WNC_CONFIG.date && (
-              <span className="font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
-              </span>
-            )}
-            {WNC_CONFIG.ticketsAvailable && WNC_CONFIG.ticketLink && (
-              <a
-                href={WNC_CONFIG.ticketLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-sans text-sm font-medium px-4 py-2 rounded"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
-              >
-                Get Tickets →
-              </a>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="program-page-content">
-
-        {/* About */}
-        <div className="mb-10">
-          <Label className="mb-4">About WNC</Label>
-          <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            Wild N' Culture is UCSD VSA's annual intercollegiate comedy competition. Inspired by Wild 'N Out, it brings together Vietnamese Student Associations and Asian American student groups from across Southern California for a night of live improv-style games, roast battles, and pure crowd energy.
-          </p>
-          <p className="font-sans text-sm leading-[1.75] mt-3" style={{ color: 'var(--color-text2)', maxWidth: 640 }}>
-            WNC is more than a competition — it's a celebration of shared culture, community, and the kind of chaotic fun that only a packed auditorium can produce.
-          </p>
+      <div className="program-app">
+        <div className="program-breadcrumb">
+          <Link to="/get-involved">Get Involved</Link>
+          <span>→</span>
+          <span style={{ color: 'var(--color-text2)' }}>Wild N' Culture</span>
         </div>
 
-        {/* What to Expect */}
-        <div className="mb-10">
-          <Label className="mb-4">What to Expect</Label>
-          <div className="flex flex-wrap gap-2">
-            {whatToExpect.map(item => (
-              <span
-                key={item}
-                className="font-sans text-xs border rounded-sm px-3 py-1.5"
-                style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-              >
-                {item}
-              </span>
-            ))}
+        <section className="program-hero">
+          <div className="program-hero-grain" />
+          <div className="program-hero-inner">
+            <span className="program-hero-kicker">Event Flyer</span>
+            <h1 className="program-title">
+              Wild N' <span className="program-title-script">Culture</span>
+            </h1>
+            <p className="program-hero-meta">
+              Annual intercollegiate comedy competition · UCSD VSA
+            </p>
+            {(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) && (
+              <div className="program-hero-actions">
+                {dynamicEventVisible && eventStatusLabel && (
+                  <span className="scrapbook-sticker scrapbook-sticker-coral">
+                    {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
+                  </span>
+                )}
+                {dynamicEventVisible && eventMeta.length > 0 && (
+                  <span className="scrapbook-sticker scrapbook-sticker-gold">
+                    {eventMeta.join(' · ')}
+                  </span>
+                )}
+                {dynamicEventVisible && hasPrimaryProgramLink(eventContent) && (
+                  <a
+                    href={eventContent.primary_link_url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="vsa-btn-primary font-sans text-sm font-medium"
+                  >
+                    {eventContent.primary_link_label || 'Get Tickets'} →
+                  </a>
+                )}
+                {dynamicEventVisible && eventContent.body && (
+                  <span className="scrapbook-sticker">{eventContent.body}</span>
+                )}
+                {!eventContent && WNC_CONFIG.date && (
+                  <span className="scrapbook-sticker scrapbook-sticker-gold">
+                    {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
+                  </span>
+                )}
+                {!eventContent && WNC_CONFIG.ticketsAvailable && WNC_CONFIG.ticketLink && (
+                  <a
+                    href={WNC_CONFIG.ticketLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="vsa-btn-primary font-sans text-sm font-medium"
+                  >
+                    Get Tickets →
+                  </a>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+          <div className="program-watermark">wnc</div>
+        </section>
 
-        {/* Past highlights */}
+        <section className="program-section">
+          <div className="program-section-inner program-section-narrow">
+            <div className="program-eyebrow">About WNC</div>
+            <p className="program-body">
+              Wild N' Culture is UCSD VSA's annual intercollegiate comedy competition. Inspired by Wild 'N Out, it brings together Vietnamese Student Associations and Asian American student groups from across Southern California for a night of live improv-style games, roast battles, and pure crowd energy.
+            </p>
+            <p className="program-body">
+              WNC is more than a competition — it's a celebration of shared culture, community, and the kind of chaotic fun that only a packed auditorium can produce.
+            </p>
+          </div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">What to Expect</div>
+            <div className="flex flex-wrap gap-2">
+              {whatToExpect.map(item => (
+                <span key={item} className="scrapbook-sticker">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {WNC_ARCHIVE.length > 0 && (
-          <div className="mb-10">
-            <Label className="mb-4">Past Events</Label>
-            <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-              {WNC_ARCHIVE.map((entry) => (
-                <div key={entry.year} className="border-b last:border-b-0" style={{ background: 'var(--color-surface)' }}>
-                  <div style={{ padding: '16px 20px' }}>
-                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                      <div className="flex min-w-0 flex-wrap items-baseline gap-3">
-                        <span className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{entry.label || `WNC ${entry.year}`}</span>
-                        {entry.date && <span className="font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>{entry.date}</span>}
-                      </div>
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">Past Events</div>
+              <div className="program-list">
+                {WNC_ARCHIVE.map((entry) => (
+                  <div key={entry.year} className="program-list-row">
+                    <div className="program-list-title">
+                      {entry.label || `WNC ${entry.year}`}
+                      {entry.date && <div className="mt-1 font-mono text-[10px] font-normal tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>{entry.date}</div>}
+                    </div>
+                    <div className="program-list-copy">
                       {entry.winner && (
-                        <span className="font-sans text-xs font-medium text-brand-600 dark:text-brand-400">Winner: {entry.winner}</span>
+                        <div className="mb-2 font-semibold text-brand-600 dark:text-brand-400">Winner: {entry.winner}</div>
+                      )}
+                      {entry.venue && <p>{entry.venue}</p>}
+                      {entry.schools && entry.schools.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {entry.schools.map(s => (
+                            <span key={s} className="scrapbook-sticker">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                      {entry.note && <p className="mt-2 italic" style={{ color: 'var(--color-text3)' }}>{entry.note}</p>}
+                      {entry.trailerUrl && (
+                        <div className="program-poster-card aspect-video mt-3 max-w-[420px]">
+                          <iframe src={entry.trailerUrl} title={`WNC ${entry.year} recap`} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                        </div>
                       )}
                     </div>
-                    {entry.venue && <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{entry.venue}</p>}
-                    {entry.schools && entry.schools.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {entry.schools.map(s => (
-                          <span key={s} className="font-sans text-[11px] border rounded-sm px-2 py-0.5" style={{ color: 'var(--color-text3)', borderColor: 'var(--color-border)' }}>{s}</span>
-                        ))}
-                      </div>
-                    )}
-                    {entry.note && <p className="font-sans text-xs italic mt-2" style={{ color: 'var(--color-text3)' }}>{entry.note}</p>}
-                    {entry.trailerUrl && (
-                      <div className="border rounded overflow-hidden aspect-video mt-3" style={{ borderColor: 'var(--color-border)', maxWidth: 400 }}>
-                        <iframe src={entry.trailerUrl} title={`WNC ${entry.year} recap`} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                      </div>
-                    )}
                   </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">FAQ</div>
+            <div className="program-faq-card">
+              {faqs.map((faq, i) => (
+                <div key={i} className="program-faq-row">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="program-faq-button"
+                  >
+                    <span className="program-faq-question">{faq.q}</span>
+                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="program-faq-answer">
+                      {faq.a}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        )}
+        </section>
 
-        {/* FAQ */}
-        <div className="mb-10">
-          <Label className="mb-4">FAQ</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            {faqs.map((faq, i) => (
-              <div key={i} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between text-left"
-                  style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
-                >
-                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
-                  <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="border-t" style={{ padding: '12px 20px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                    <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{faq.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-footer-actions-rich">
+              <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="vsa-btn-primary font-sans text-sm font-medium">
+                Follow @vsaatucsd
+              </a>
+              <Link to="/events" className="vsa-btn-ghost font-sans text-sm">
+                ← Events
+              </Link>
+            </div>
           </div>
-        </div>
-
-        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
-          <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-            Follow @vsaatucsd
-          </a>
-          <Link to="/events" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            ← Events
-          </Link>
-        </div>
-
+        </section>
       </div>
     </>
   );

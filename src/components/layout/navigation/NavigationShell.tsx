@@ -11,7 +11,7 @@ export const NavigationShell = memo(function NavigationShell() {
     <nav
       className="fixed left-0 right-0 top-0 z-50 border-b"
       style={{
-        background: 'var(--nav-bg)',
+        background: 'linear-gradient(180deg, var(--nav-bg) 0%, var(--color-bg) 180%)',
         borderColor: 'var(--color-nav-border)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
@@ -29,7 +29,7 @@ export const NavigationShell = memo(function NavigationShell() {
               onClick={() => setIsMobileMenuOpen(prev => !prev)}
               aria-expanded={isMobileMenuOpen}
               aria-label="Toggle navigation menu"
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border2)] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--text)]"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] bg-[var(--surface2)] text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)]"
             >
               {isMobileMenuOpen ? (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

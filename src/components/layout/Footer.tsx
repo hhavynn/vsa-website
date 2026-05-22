@@ -44,10 +44,12 @@ const footerGroups = [
 
 const Footer: React.FC = () => {
   return (
-    <footer className="border-t" style={{ borderColor: 'var(--border)', background: 'var(--bg2)' }}>
+    <footer className="scrapbook-board border-t" style={{ borderColor: 'var(--border)' }}>
       <div className="vsa-container py-12 sm:py-14">
+        <div className="scrapbook-paper p-6 sm:p-8">
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          <div>
+          <div className="min-w-0">
+            <span className="scrapbook-pin" aria-hidden />
             <div className="font-serif text-[22px]" style={{ color: 'var(--text)' }}>
               <span className="italic" style={{ color: 'var(--brand)' }}>VSA</span> at UCSD
             </div>
@@ -62,7 +64,7 @@ const Footer: React.FC = () => {
                   target={link.href.startsWith('mailto') ? undefined : '_blank'}
                   rel={link.href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
                   aria-label={link.label}
-                  className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-[10px] border text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                  className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border bg-[var(--surface2)] text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
                   style={{ borderColor: 'var(--border)' }}
                 >
                   {link.icon}
@@ -101,6 +103,7 @@ const Footer: React.FC = () => {
           <span className="font-sans text-xs" style={{ color: 'var(--text3)' }}>
             Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
           </span>
+        </div>
         </div>
       </div>
     </footer>
