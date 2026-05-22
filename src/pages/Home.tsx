@@ -76,8 +76,8 @@ function FeaturedEventHome({ event }: { event: Event }) {
   const imageUrl = event.image_url;
 
   return (
-    <div className="scrapbook-paper mb-6 overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]">
-      <div className="flex flex-col justify-center border-b p-6 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--border)' }}>
+    <div className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]">
+      <div className="flex flex-col justify-center p-6 sm:p-8 lg:border-r" style={{ borderColor: 'var(--border)' }}>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <Badge
             label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
@@ -87,11 +87,16 @@ function FeaturedEventHome({ event }: { event: Event }) {
             {format(d, 'MMM d / h:mm a')}
           </span>
         </div>
-        <h3 className="mb-2 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]" style={{ color: 'var(--text)' }}>
+        <h3 className="mb-2 line-clamp-2 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]" style={{ color: 'var(--text)' }}>
           {event.name}
         </h3>
+        {event.description && (
+          <p className="mb-4 line-clamp-3 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
+            {event.description}
+          </p>
+        )}
         {event.location && (
-          <div className="mb-6 flex items-center gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
+          <div className="mb-6 flex items-center gap-2 font-sans text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
             <span className="h-1 w-1 rounded-full bg-brand-500" />
             {event.location}
           </div>
@@ -102,13 +107,13 @@ function FeaturedEventHome({ event }: { event: Event }) {
           </Link>
         </div>
       </div>
-      <div className="relative flex min-h-[220px] flex-col justify-center bg-[var(--surface2)] p-6 lg:p-8">
+      <div className="relative flex flex-col justify-center bg-[var(--surface2)] p-6 lg:p-8">
         <div className="scrapbook-photo relative mx-auto w-full max-w-[320px] rotate-[1.5deg]">
           {imageUrl ? (
             <img
               src={getSupabaseImageUrl(imageUrl, { width: 600, height: 800, resize: 'contain', quality: 75 })}
               alt={event.name}
-              className="h-full w-full object-contain"
+              className="max-h-[360px] w-full object-contain lg:max-h-none"
               loading="lazy"
             />
           ) : (
@@ -149,7 +154,6 @@ export function Home() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const [featured, ...rest] = sortedUpcoming.slice(0, 4);
-  const upcomingEvents = sortedUpcoming.slice(0, 3); // For compatibility with older layout if needed, but we'll use featured/rest
 
   return (
     <>
