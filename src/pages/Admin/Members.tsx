@@ -365,10 +365,10 @@ export default function AdminMembers() {
       <Toaster position="top-right" />
 
       {/* PAGE HEADER */}
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Members</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>{members.length} total members</p>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Members</h1>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{members.length} total members</p>
         </div>
         <button
           onClick={() => {
@@ -382,35 +382,35 @@ export default function AdminMembers() {
             a.download = 'vsa-members.csv';
             a.click();
           }}
-          className="font-sans text-xs font-medium border rounded px-3 py-1.5 transition-colors"
-          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}
+          className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
         >
           Export CSV
         </button>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
 
         {/* STAT CARDS */}
         {!loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Total Members</p>
-              <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{members.length}</p>
+          <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-6">
+            <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
+              <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Total Members</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{members.length}</p>
             </div>
-            <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Active This Semester</p>
-              <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{activeCount}</p>
+            <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
+              <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Active This Term</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{activeCount}</p>
             </div>
-            <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Unassigned House</p>
-              <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{unassignedHouseCount}</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">members</p>
+            <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
+              <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Unassigned House</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{unassignedHouseCount}</p>
+              <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>members</p>
             </div>
-            <div className="border border-zinc-200 dark:border-[#27272a] rounded-md px-4 py-3 bg-white dark:bg-[#18181b]">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wide mb-1">Avg Attendance</p>
-              <p className="text-[28px] font-bold text-zinc-900 dark:text-zinc-50 leading-none">{avgAttendance}</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">events/member</p>
+            <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
+              <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Avg Attendance</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{avgAttendance}</p>
+              <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>events/member</p>
             </div>
           </div>
         )}
@@ -434,11 +434,11 @@ export default function AdminMembers() {
         )}
 
         {/* TOOLBAR */}
-        <div className="flex items-center justify-between mt-2 mb-4 gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
             {/* Search */}
             <div className="relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 w-3.5 h-3.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text3)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
               </svg>
               <input
@@ -446,13 +446,15 @@ export default function AdminMembers() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search members..."
-                className="h-9 w-64 pl-8 pr-3 text-[13px] border border-zinc-200 dark:border-[#27272a] rounded-md bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition"
+                className="w-full rounded border bg-[var(--color-surface2)] py-2 pl-9 pr-3 text-[13px] text-[var(--color-text)] placeholder-[var(--color-text3)] transition focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] sm:w-64"
+                style={{ borderColor: 'var(--color-border)' }}
               />
             </div>
             <select
               value={houseFilter}
               onChange={e => setHouseFilter(e.target.value)}
-              className="h-9 rounded-md border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b] px-3 text-[13px] text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
+              className="w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-[13px] text-[var(--color-text)] transition focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] sm:w-auto"
+              style={{ borderColor: 'var(--color-border)' }}
             >
               <option value="all">All houses</option>
               <option value="unassigned">Unassigned</option>
@@ -464,7 +466,7 @@ export default function AdminMembers() {
           {selectedCount > 0 && (
             <button
               onClick={() => setConfirmBulk(true)}
-              className="h-9 px-4 text-[13px] font-medium bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+              className="w-full rounded bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-red-700 sm:w-auto"
             >
               Delete {selectedCount} selected
             </button>
@@ -473,105 +475,107 @@ export default function AdminMembers() {
 
         {/* TABLE */}
         {loading ? (
-          <div className="py-20 text-center text-zinc-400 text-sm">Loading…</div>
+          <div className="py-20 text-center text-sm text-[var(--color-text3)]">Loading…</div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center text-zinc-400 text-sm">
+          <div className="py-20 text-center text-sm text-[var(--color-text3)]">
             {search ? 'No members match your search.' : 'No members yet. Import a sign-in sheet to get started.'}
           </div>
         ) : (
-          <div className="border border-zinc-200 dark:border-[#27272a] rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-zinc-50 dark:bg-[#27272a] border-b border-zinc-200 dark:border-[#3f3f46]">
-                  <th className="px-4 py-2.5 w-10">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                      onChange={toggleAll}
-                      className="rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                  </th>
-                  <th className="px-4 py-2.5 w-10 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">#</th>
-                  <SortTh label="Name" sk="name" active={sortKey} asc={sortAsc} onSort={handleSort} />
-                  <th className="px-4 py-2.5 w-28 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Year</th>
-                  <th className="px-4 py-2.5 w-28 text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">College</th>
-                  <SortTh label="House" sk="house" active={sortKey} asc={sortAsc} onSort={handleSort} />
-                  <SortTh label="Points" sk="points" active={sortKey} asc={sortAsc} onSort={handleSort} />
-                  <SortTh label="Events" sk="events_attended" active={sortKey} asc={sortAsc} onSort={handleSort} />
-                  <th className="px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-[#27272a]">
-                {paginatedFiltered.map((m, i) => {
-                  const isChecked = selected.has(m.id);
-                  return (
-                    <tr
-                      key={m.id}
-                      onClick={() => toggleOne(m.id)}
-                      className={`transition-colors cursor-pointer ${isChecked
-                          ? 'bg-[#eef2ff] dark:bg-indigo-950/30 border-l-2 border-l-indigo-600'
-                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                        }`}
-                    >
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleOne(m.id)}
-                          className="rounded border-zinc-300 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs font-mono">{pageStart + i + 1}</td>
-                      {/* NAME */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-[12px] font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
-                            {initials(m.first_name, m.last_name)}
+          <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px] text-sm">
+                <thead>
+                  <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+                    <th className="w-10 px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={toggleAll}
+                        className="cursor-pointer rounded border-[var(--color-border)] bg-[var(--color-surface2)] text-[var(--brand)] focus:ring-[var(--brand)]"
+                      />
+                    </th>
+                    <th className="w-10 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">#</th>
+                    <SortTh label="Name" sk="name" active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <th className="w-28 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">Year</th>
+                    <th className="w-28 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">College</th>
+                    <SortTh label="House" sk="house" active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <SortTh label="Points" sk="points" active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <SortTh label="Events" sk="events_attended" active={sortKey} asc={sortAsc} onSort={handleSort} />
+                    <th className="px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y bg-[var(--color-surface)]" style={{ borderColor: 'var(--color-border)' }}>
+                  {paginatedFiltered.map((m, i) => {
+                    const isChecked = selected.has(m.id);
+                    return (
+                      <tr
+                        key={m.id}
+                        onClick={() => toggleOne(m.id)}
+                        className={`cursor-pointer transition-colors ${isChecked
+                            ? 'bg-[var(--color-surface2)] border-l-2 border-l-[var(--brand)]'
+                            : 'hover:bg-[var(--color-surface2)]'
+                          }`}
+                      >
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleOne(m.id)}
+                            className="cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]"
+                          />
+                        </td>
+                        <td className="font-mono text-xs px-4 py-3 text-[var(--color-text3)]">{pageStart + i + 1}</td>
+                        {/* NAME */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-surface2)] text-[12px] font-semibold text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
+                              {initials(m.first_name, m.last_name)}
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-medium text-[var(--color-text)]">{m.first_name} {m.last_name}</p>
+                              {m.email && <p className="text-[11px] text-[var(--color-text3)]">{m.email}</p>}
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100">{m.first_name} {m.last_name}</p>
-                            {m.email && <p className="text-[11px] text-zinc-400">{m.email}</p>}
+                        </td>
+                        {/* YEAR */}
+                        <td className="px-4 py-3">
+                          {m.year ? (
+                            <span className={`inline-flex items-center text-[11px] font-medium border rounded px-1.5 py-0.5 ${yearBadgeCls(m.year)}`}>
+                              {m.year}
+                            </span>
+                          ) : <span className="text-[12px] text-[var(--color-text3)]">—</span>}
+                        </td>
+                        {/* COLLEGE */}
+                        <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">{m.college || '—'}</td>
+                        {/* HOUSE */}
+                        <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">
+                          {m.house ? (
+                            <span className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
+                              {m.house}
+                            </span>
+                          ) : <span className="text-[12px] text-[var(--color-text3)]">Unassigned</span>}
+                        </td>
+                        {/* POINTS */}
+                        <td className="whitespace-nowrap px-4 py-3 text-[13px] font-semibold text-[var(--color-text)]">{m.points} pts</td>
+                        {/* EVENTS */}
+                        <td className="whitespace-nowrap px-4 py-3 text-[13px] text-[var(--color-text2)]">{m.events_attended} events</td>
+                        {/* ACTIONS */}
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <GhostBtn onClick={() => openEdit(m)}>Edit</GhostBtn>
+                            {m.needs_review && <GhostBtn color="green" onClick={() => handleUnflag(m)}>Review OK</GhostBtn>}
+                            <GhostBtn color="zinc" onClick={() => openHistory(m)}>History</GhostBtn>
+                            <GhostBtn color="amber" onClick={() => openMerge(m)}>Merge</GhostBtn>
+                            <GhostBtn color="red" onClick={() => setDeleting(m)}>Delete</GhostBtn>
                           </div>
-                        </div>
-                      </td>
-                      {/* YEAR */}
-                      <td className="px-4 py-3">
-                        {m.year ? (
-                          <span className={`inline-flex items-center text-[11px] font-medium border rounded-full px-2 py-0.5 ${yearBadgeCls(m.year)}`}>
-                            {m.year}
-                          </span>
-                        ) : <span className="text-zinc-400 text-[12px]">—</span>}
-                      </td>
-                      {/* COLLEGE */}
-                      <td className="px-4 py-3 text-[13px] text-zinc-500 dark:text-zinc-400">{m.college || '—'}</td>
-                      {/* HOUSE */}
-                      <td className="px-4 py-3 text-[13px] text-zinc-500 dark:text-zinc-400">
-                        {m.house ? (
-                          <span className="inline-flex items-center rounded border border-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                            {m.house}
-                          </span>
-                        ) : <span className="text-zinc-400 text-[12px]">Unassigned</span>}
-                      </td>
-                      {/* POINTS */}
-                      <td className="px-4 py-3 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{m.points} pts</td>
-                      {/* EVENTS */}
-                      <td className="px-4 py-3 text-[13px] text-zinc-600 dark:text-zinc-400 whitespace-nowrap">{m.events_attended} events</td>
-                      {/* ACTIONS */}
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <GhostBtn onClick={() => openEdit(m)}>Edit</GhostBtn>
-                          {m.needs_review && <GhostBtn color="green" onClick={() => handleUnflag(m)}>Review OK</GhostBtn>}
-                          <GhostBtn color="zinc" onClick={() => openHistory(m)}>History</GhostBtn>
-                          <GhostBtn color="amber" onClick={() => openMerge(m)}>Merge</GhostBtn>
-                          <GhostBtn color="red" onClick={() => setDeleting(m)}>Delete</GhostBtn>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
             {filtered.length > 0 && (
               <PaginationControls
                 page={page} totalPages={totalPages}
@@ -830,14 +834,14 @@ export default function AdminMembers() {
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
-const inputCls = `w-full rounded-md border border-zinc-200 dark:border-[#27272a] bg-white dark:bg-[#18181b]
-  text-zinc-900 dark:text-zinc-100 px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition`;
+const inputCls = `mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition`;
 
 function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div
-        className={`bg-white dark:bg-[#18181b] rounded-lg shadow-xl p-6 border border-zinc-200 dark:border-[#27272a] w-full ${wide ? 'max-w-lg' : 'max-w-sm'}`}
+        className={`scrapbook-paper rounded-lg shadow-xl p-6 sm:p-8 w-full my-8 sm:my-0 ${wide ? 'max-w-lg' : 'max-w-sm'}`}
+        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
         onClick={e => e.stopPropagation()}
       >
         {children}
@@ -849,7 +853,8 @@ function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose
 function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?: string }) {
   return (
     <button onClick={onClick}
-      className="flex-1 border border-zinc-200 dark:border-[#27272a] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium py-2.5 rounded-md text-[13px] transition-colors">
+      className="flex-1 border bg-transparent hover:bg-[var(--color-surface2)] font-medium py-2.5 rounded-md text-[13px] transition-colors"
+      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
       {label}
     </button>
   );
@@ -857,14 +862,14 @@ function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?:
 
 function GhostBtn({ color = 'indigo', onClick, children }: { color?: string; onClick: () => void; children: React.ReactNode }) {
   const cls: Record<string, string> = {
-    indigo: 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30',
+    indigo: 'text-brand-600 dark:text-brand-400 hover:bg-[var(--color-surface2)]',
     green: 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30',
-    zinc: 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+    zinc: 'text-[var(--color-text2)] hover:bg-[var(--color-surface2)]',
     amber: 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30',
     red: 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30',
   };
   return (
-    <button onClick={onClick} className={`text-[12px] font-medium px-2 py-1 rounded transition-colors ${cls[color] ?? cls.indigo}`}>
+    <button onClick={onClick} className={`text-[12px] font-semibold px-2 py-1 rounded transition-colors ${cls[color] ?? cls.indigo}`}>
       {children}
     </button>
   );
@@ -877,10 +882,10 @@ function SortTh({ label, sk, active, asc, onSort }: {
   return (
     <th className="px-4 py-2.5 text-left whitespace-nowrap">
       <button onClick={() => onSort(sk)}
-        className={`flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-          }`}>
+        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] transition-colors"
+        style={{ color: isActive ? 'var(--brand)' : 'var(--color-text3)' }}>
         {label}
-        <span className="text-[10px] leading-none">{isActive ? (asc ? '▲' : '▼') : '⇅'}</span>
+        <span className="text-[9px] leading-none">{isActive ? (asc ? '▲' : '▼') : '⇅'}</span>
       </button>
     </th>
   );
@@ -889,7 +894,7 @@ function SortTh({ label, sk, active, asc, onSort }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">{label}</label>
+      <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)] mb-1">{label}</label>
       {children}
     </div>
   );

@@ -599,18 +599,18 @@ export default function AdminImport() {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Import Attendance" />
       <Toaster position="top-right" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Import Attendance</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Import Attendance</h1>
         <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
           Match CSV attendance rows to members before applying points.
         </p>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="border rounded-md p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-8">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Sheet Setup</h2>
@@ -627,11 +627,11 @@ export default function AdminImport() {
               return (
                 <div key={s} className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                    ${step === s ? 'bg-brand-600 text-white' : past ? 'bg-emerald-500 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500'}`}>
+                    ${step === s ? 'bg-brand-600 text-white' : past ? 'bg-emerald-500 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-[var(--color-text3)]'}`}>
                     {past ? '✓' : i + 1}
                   </div>
                   <span className={`text-sm font-medium capitalize
-                    ${step === s ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-400 dark:text-zinc-500'}`}>
+                    ${step === s ? 'text-brand-600 dark:text-brand-400' : 'text-[var(--color-text3)] dark:text-[var(--color-text3)]'}`}>
                     {s === 'configure' ? 'Configure' : s === 'preview' ? 'Preview' : 'Done'}
                   </span>
                   {i < 2 && <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />}
@@ -644,10 +644,10 @@ export default function AdminImport() {
           {step === 'configure' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">Event *</label>
+                <label className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Event *</label>
                 <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}
                   className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-                    text-zinc-900 dark:text-zinc-100 px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
+                    text-[var(--color-text)] px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
                   <option value="">— Select an event —</option>
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>
@@ -669,12 +669,12 @@ export default function AdminImport() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1.5">Google Sheets CSV URL *</label>
+                <label className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Google Sheets CSV URL *</label>
                 <input type="url" value={csvUrl} onChange={e => setCsvUrl(e.target.value)}
                   placeholder="https://docs.google.com/spreadsheets/d/..."
                   className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-                    text-zinc-900 dark:text-zinc-100 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500" />
-                <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">
+                    text-[var(--color-text)] px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500" />
+                <p className="text-xs text-[var(--color-text3)] mt-1.5 leading-relaxed">
                   <strong>File → Share → Publish to web</strong> → sheet → CSV → Publish. Or paste the edit URL — we convert it automatically.
                 </p>
               </div>
@@ -698,11 +698,11 @@ export default function AdminImport() {
           {step === 'preview' && (
             <div className="space-y-6">
               {/* Column mapping */}
-              <div className="bg-zinc-50 dark:bg-zinc-900/60 rounded-md p-5 border border-zinc-200 dark:border-zinc-800">
-                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-label mb-4">Column Mapping</h2>
+              <div className="bg-zinc-50 dark:bg-zinc-900/60 rounded-md p-5 border border-[var(--color-border)]">
+                <h2 className="text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label mb-4">Column Mapping</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1 flex items-end">
-                    <label className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 cursor-pointer select-none">
+                    <label className="flex items-center gap-1.5 text-xs text-[var(--color-text3)] cursor-pointer select-none">
                       <input type="checkbox" checked={useFullName} onChange={e => setUseFullName(e.target.checked)} className="rounded" />
                       Use single "full name" column
                     </label>
@@ -735,7 +735,7 @@ export default function AdminImport() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-md border border-[var(--color-border)] bg-zinc-50 dark:bg-zinc-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-zinc-600 dark:text-zinc-300">
                   {selectedRows.length === 0
                     ? 'Select rows to apply manual match overrides.'
@@ -752,7 +752,7 @@ export default function AdminImport() {
                   <button
                     onClick={() => applyManualOverrideToSelected('mark-new')}
                     disabled={selectedOverridableRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Mark Selected as New
                   </button>
@@ -761,8 +761,8 @@ export default function AdminImport() {
 
               {selectedEvent && (
                 <div className="space-y-1">
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Each matched or new member gets <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-zinc-700 dark:text-zinc-200">{selectedEvent.name}</strong>.
+                  <p className="text-sm text-[var(--color-text3)]">
+                    Each matched or new member gets <strong className="text-[var(--color-text2)]">{selectedEvent.points} pt{selectedEvent.points !== 1 ? 's' : ''}</strong> for <strong className="text-[var(--color-text2)]">{selectedEvent.name}</strong>.
                   </p>
                   {selectedEvent.academic_term_id && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
@@ -779,11 +779,11 @@ export default function AdminImport() {
               )}
 
               {/* Preview table */}
-              <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-700">
+              <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
                 <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700 text-sm">
                   <thead>
                     <tr className="bg-zinc-50 dark:bg-zinc-900/60">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={allRowsSelected}
@@ -792,7 +792,7 @@ export default function AdminImport() {
                           aria-label="Select all rows"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">
                         <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-200">
                           Action
                           <span className="text-[10px] normal-case">
@@ -801,11 +801,11 @@ export default function AdminImport() {
                         </button>
                       </th>
                       {['CSV Name', 'CSV College', 'CSV Year', 'Matched Member', 'Confidence'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-label whitespace-nowrap">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-[#18181b] divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <tbody className="bg-[var(--color-surface)] divide-y divide-zinc-100 dark:divide-zinc-800">
                     {displayedRows.map((row) => {
                       const effectiveStatus = getEffectiveStatus(row);
                       const forcedMatch = row.status === 'review' && row.manualOverride === 'force-match';
@@ -902,14 +902,14 @@ export default function AdminImport() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-50">
-                          <div>{row.displayName || <span className="text-zinc-400 italic">—</span>}</div>
+                        <td className="px-4 py-2.5 font-medium text-[var(--color-text)]">
+                          <div>{row.displayName || <span className="text-[var(--color-text3)] italic">—</span>}</div>
                           {row.matchName !== row.displayName && (
-                            <div className="text-[10px] text-zinc-400 mt-0.5">matched as: {row.matchName}</div>
+                            <div className="text-[10px] text-[var(--color-text3)] mt-0.5">matched as: {row.matchName}</div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400 text-xs">{row.csvCollege || '—'}</td>
-                        <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400 text-xs">
+                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs">{row.csvCollege || '—'}</td>
+                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs">
                           {row.csvYear || '—'}
                           {row.invalidYear && (
                             <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">!</span>
@@ -920,12 +920,12 @@ export default function AdminImport() {
                             <span>
                               {row.matchedMember.first_name} {row.matchedMember.last_name}
                               {row.matchedMember.college && (
-                                <span className={`ml-1 text-xs ${row.collegeMatch ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                                <span className={`ml-1 text-xs ${row.collegeMatch ? 'text-emerald-500' : 'text-[var(--color-text3)]'}`}>
                                   · {row.matchedMember.college}
                                 </span>
                               )}
                               {row.matchedMember.year && (
-                                <span className={`ml-1 text-xs ${row.yearMatch ? 'text-emerald-500' : 'text-zinc-400'}`}>
+                                <span className={`ml-1 text-xs ${row.yearMatch ? 'text-emerald-500' : 'text-[var(--color-text3)]'}`}>
                                   · {row.matchedMember.year}
                                 </span>
                               )}
@@ -956,9 +956,9 @@ export default function AdminImport() {
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : effectiveStatus === 'new' ? (
-                            <span className="text-xs text-zinc-400">—</span>
+                            <span className="text-xs text-[var(--color-text3)]">—</span>
                           ) : (
-                            <span className="text-xs text-zinc-400">already done</span>
+                            <span className="text-xs text-[var(--color-text3)]">already done</span>
                           )}
                         </td>
                       </tr>
@@ -967,7 +967,7 @@ export default function AdminImport() {
                 </table>
               </div>
 
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              <p className="text-xs text-[var(--color-text3)] dark:text-[var(--color-text3)]">
                 Score = name (60%) + college (25%) + year (15%). ≥75% → exact match. 50-74% → flagged as duplicate but added as new. &lt;50% → new member.
               </p>
 
@@ -981,7 +981,7 @@ export default function AdminImport() {
                     : <><CheckIcon />Import ({summary.match} update{summary.match !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
                 </button>
                 <button onClick={() => { setStep('configure'); setRows([]); }}
-                  className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
+                  className="text-sm text-[var(--color-text3)] hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
                   ← Back
                 </button>
               </div>
@@ -994,8 +994,8 @@ export default function AdminImport() {
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4">
                 <CheckIcon className="w-8 h-8 text-emerald-500" />
               </div>
-              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Import complete!</h2>
-              <p className="text-zinc-500 text-sm mb-8">Points and new members have been added to the leaderboard.</p>
+              <h2 className="text-base font-semibold text-[var(--color-text)] mb-2">Import complete!</h2>
+              <p className="text-[var(--color-text3)] text-sm mb-8">Points and new members have been added to the leaderboard.</p>
               <button
                 onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setSelectedEventId(''); setCachedParsed([]); }}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
@@ -1005,7 +1005,7 @@ export default function AdminImport() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1014,10 +1014,10 @@ export default function AdminImport() {
 function ColSelect({ label, value, onChange, headers }: { label: string; value: string; onChange: (v: string) => void; headers: string[] }) {
   return (
     <div>
-      <label className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</label>
+      <label className="block text-xs text-[var(--color-text3)] mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-          text-zinc-900 dark:text-zinc-100 text-xs px-2 py-1.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
+          text-[var(--color-text)] text-xs px-2 py-1.5 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
         <option value="">(none)</option>
         {headers.map(h => <option key={h} value={h}>{h}</option>)}
       </select>

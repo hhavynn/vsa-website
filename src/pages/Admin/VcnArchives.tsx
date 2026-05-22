@@ -62,7 +62,7 @@ const EMPTY_FORM: VCNArchiveFormState = {
 };
 
 const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
-const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label';
+const labelCls = 'block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label';
 
 function toNullable(value: string) {
   const trimmed = value.trim();
@@ -177,29 +177,29 @@ export default function AdminVcnArchives() {
 
   if (loading) {
     return (
-      <>
+      <div className="flex-1 overflow-y-auto">
         <PageTitle title="VCN Archive Management" />
         <PageLoader message="Loading VCN archive entries..." />
-      </>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <>
+      <div className="flex-1 overflow-y-auto">
         <PageTitle title="VCN Archive Management" />
         <PageError message="Failed to load VCN archive entries" />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="VCN Archive Management" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>VCN Archives</h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>VCN Archives</h1>
           <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
             {archives.length} entries, {publishedCount} published
           </p>
@@ -434,6 +434,6 @@ export default function AdminVcnArchives() {
           </button>
         </form>
       </div>
-    </>
+    </div>
   );
 }

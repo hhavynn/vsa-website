@@ -96,11 +96,11 @@ export default function AdminSettings() {
   };
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Settings" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Site Settings</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Site Settings</h1>
         <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
           Manage the logo and branding displayed across the website.
         </p>
@@ -242,6 +242,6 @@ export default function AdminSettings() {
           </aside>
         </div>
       </div>
-    </>
+    </div>
   );
 }

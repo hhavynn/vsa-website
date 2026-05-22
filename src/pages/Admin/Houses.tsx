@@ -398,12 +398,12 @@ export default function AdminHouses() {
       <PageTitle title="House Assignments" />
       <Toaster position="top-right" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>House Assignments</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Import House Reveal assignments without changing attendance or points.</p>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>House Assignments</h1>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Import House Reveal assignments without changing attendance or points.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
             {([
               ['assignments', 'Assignment Import'],
@@ -413,10 +413,10 @@ export default function AdminHouses() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className="font-sans text-xs transition-colors duration-150"
+                className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
                 style={{
-                  padding: '7px 14px',
-                  fontWeight: activeTab === tab ? 600 : 400,
+                  padding: '8px 16px',
+                  fontWeight: activeTab === tab ? 600 : 500,
                   background: activeTab === tab ? 'var(--color-surface2)' : 'transparent',
                   color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)',
                   borderLeft: index > 0 ? '1px solid var(--color-border)' : 'none',
@@ -426,28 +426,28 @@ export default function AdminHouses() {
               </button>
             ))}
           </div>
-          <Link to="/admin/members" className="font-sans text-xs font-medium border rounded px-3 py-1.5 transition-colors" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
+          <Link to="/admin/members" className="rounded border bg-transparent px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
             Members
           </Link>
         </div>
       </div>
 
       {activeTab === 'assignments' ? (
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]" style={{ padding: '20px 28px' }}>
-        <div className="rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-          <div className="mb-5">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Import Sheet</h2>
-            <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <div className="grid gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+        <div className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <div className="mb-6">
+            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Import Sheet</h2>
+            <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
               Wide sheets use house column headers. Preference labels like (first) and timestamps are stripped from names and never stored as class year.
             </p>
           </div>
 
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Sheet Format</label>
+          <label className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Sheet Format</label>
           <select
             value={format}
             onChange={(event) => { setFormat(event.target.value as SheetFormat); setRows([]); }}
-            className="mb-4 w-full rounded border px-3 py-2 text-sm"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
+            className="mb-5 w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
+            style={{ borderColor: 'var(--color-border)' }}
           >
             <option value="wide">Wide House sorting sheet</option>
             <option value="long">Long CSV with name/email/house</option>
@@ -470,14 +470,14 @@ export default function AdminHouses() {
               type="button"
               onClick={handleParse}
               disabled={loadingMembers || parsing || !rawInput.trim()}
-              className="flex-1 rounded bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-40"
+              className="vsa-btn-primary flex-1 py-3 text-xs disabled:opacity-50"
             >
               {parsing ? 'Parsing...' : 'Preview Assignments'}
             </button>
             <button
               type="button"
               onClick={() => { setRawInput(''); setRows([]); }}
-              className="rounded border px-4 py-2.5 text-sm font-medium"
+              className="rounded border bg-transparent px-5 py-3 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
             >
               Clear
@@ -485,8 +485,8 @@ export default function AdminHouses() {
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-5">
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 lg:gap-6">
             {[
               ['Auto Matches', summary.match],
               ['Needs Review', summary.review],
@@ -494,24 +494,24 @@ export default function AdminHouses() {
               ['Invalid', summary.invalid],
               ['Selected', summary.selected],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-md border px-4 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>{label}</p>
-                <p className="mt-1 font-serif text-2xl leading-none" style={{ color: 'var(--color-text)' }}>{value}</p>
+              <div key={label} className="scrapbook-note flex flex-col justify-center px-4 py-4">
+                <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{label}</p>
+                <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{value}</p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div className="flex items-center justify-between gap-4 border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5" style={{ borderColor: 'var(--color-border)' }}>
               <div>
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Preview</h2>
-                <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text3)' }}>Only selected rows update member.house. Points and attendance stay untouched.</p>
+                <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Preview</h2>
+                <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Only selected rows update member.house. Points and attendance stay untouched.</p>
               </div>
               <button
                 type="button"
                 onClick={handleApply}
                 disabled={applying || summary.selected === 0}
-                className="rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-40"
+                className="vsa-btn-primary w-full py-2.5 text-xs disabled:opacity-50 sm:w-auto sm:px-6"
               >
                 {applying ? 'Applying...' : `Apply ${summary.selected}`}
               </button>
@@ -523,37 +523,43 @@ export default function AdminHouses() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="min-w-[800px] w-full text-sm">
                   <thead>
-                    <tr className="border-b" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                    <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
                       {['Apply', 'Parsed Name', 'House', 'Match', 'Confidence', 'Resolve'].map((heading) => (
-                        <th key={heading} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>{heading}</th>
+                        <th key={heading} className="px-4 py-3 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{heading}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                  <tbody className="divide-y bg-[var(--color-surface)]" style={{ borderColor: 'var(--color-border)' }}>
                     {rows.map((row) => (
-                      <tr key={row.rowId}>
+                      <tr key={row.rowId} className="transition-colors hover:bg-[var(--color-surface2)]">
                         <td className="px-4 py-3">
                           <input
                             type="checkbox"
                             checked={row.selected}
                             disabled={!row.house || (!row.selectedMemberId && row.status !== 'match')}
                             onChange={() => updateRow(row.rowId, (current) => ({ ...current, selected: !current.selected }))}
-                            className="rounded"
+                            className="cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]"
                             aria-label={`Apply ${row.name}`}
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-medium" style={{ color: 'var(--color-text)' }}>{row.name || '-'}</p>
+                          <p className="font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{row.name || '-'}</p>
                           {row.email && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>{row.email}</p>}
                         </td>
                         <td className="px-4 py-3">
-                          {row.house ? HOUSE_LABELS[row.house] : <span className="text-red-500">Unknown</span>}
+                          {row.house ? (
+                            <span className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
+                              {HOUSE_LABELS[row.house]}
+                            </span>
+                          ) : (
+                            <span className="text-red-500">Unknown</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
-                          <p className={`font-medium ${statusClass(row.status)}`}>{row.status}</p>
-                          <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>{row.note}</p>
+                          <p className={`font-mono text-[11px] font-bold uppercase ${statusClass(row.status)}`}>{row.status}</p>
+                          <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>{row.note}</p>
                         </td>
                         <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--color-text2)' }}>
                           {row.method === 'none' ? '-' : `${row.score}% ${row.method}`}
@@ -562,8 +568,8 @@ export default function AdminHouses() {
                           <select
                             value={row.selectedMemberId}
                             onChange={(event) => setManualMember(row.rowId, event.target.value)}
-                            className="w-64 rounded border px-2 py-1.5 text-xs"
-                            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
+                            className="w-full min-w-[200px] rounded border bg-[var(--color-surface2)] px-2 py-1.5 text-xs text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
+                            style={{ borderColor: 'var(--color-border)' }}
                           >
                             <option value="">Skip / unresolved</option>
                             {row.matchedMember && (

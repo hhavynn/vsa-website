@@ -178,18 +178,18 @@ export default function AdminMergeSuggestions() {
   };
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Merge Suggestions" />
       <Toaster position="top-right" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Merge Suggestions</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Merge Suggestions</h1>
         <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
           Review and merge likely duplicate member records before they diverge further.
         </p>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="border rounded-md p-6 min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-6">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Duplicate Review Queue</h2>
@@ -284,6 +284,6 @@ export default function AdminMergeSuggestions() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

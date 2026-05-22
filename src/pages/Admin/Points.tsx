@@ -163,14 +163,14 @@ export default function AdminPoints() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Points" />
       <Toaster position="top-right" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Points</h1>
+            <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Points</h1>
             <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Points distribution and check-in history</p>
           </div>
           <select
@@ -192,7 +192,7 @@ export default function AdminPoints() {
         </div>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
 
         {loading && termsLoading ? (
           <div className="py-20 text-center text-[13px]" style={{ color: 'var(--color-text3)' }}>Loading...</div>
@@ -378,6 +378,6 @@ export default function AdminPoints() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

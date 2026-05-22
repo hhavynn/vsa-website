@@ -31,25 +31,24 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
       type: defaultType,
       title: defaultTitle,
       priority: 'medium',
+      name: '',
+      email: '',
     },
   });
 
   const onSubmit = async (data: FeedbackFormData) => {
-    if (!user) {
-      toast.error('Please sign in to submit feedback');
-      return;
-    }
-
     try {
       const { error } = await supabase
         .from('feedback')
         .insert([
           {
-            user_id: user.id,
+            user_id: user?.id || null,
             type: data.type,
             title: data.title.trim(),
             description: data.description.trim(),
             priority: data.priority,
+            name: data.name?.trim() || null,
+            email: data.email?.trim() || null,
           },
         ]);
 
@@ -69,32 +68,61 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 w-full">
-      <div className="flex flex-col md:flex-row md:space-x-2">
-        <div className="flex-1 mb-2 md:mb-0">
-          <label htmlFor="type" className={labelCls}>Type</label>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label htmlFor="name" className={labelCls}>Name (Optional)</label>
+          <input
+            type="text"
+            id="name"
+            {...register('name')}
+            placeholder="Your name"
+            className={inputCls}
+          />
+          {errors.name && (
+            <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+          )}
+        </div>
+        <div>
+          <label htmlFor="email" className={labelCls}>Email (Optional)</label>
+          <input
+            type="email"
+            id="email"
+            {...register('email')}
+            placeholder="Your email"
+            className={inputCls}
+          />
+          {errors.email && (
+            <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label htmlFor="type" className={labelCls}>Category</label>
           <select
             id="type"
             {...register('type')}
             className={inputCls}
           >
-            <option value="bug">Bug</option>
-            <option value="feature">Feature</option>
+            <option value="bug">Bug Report</option>
+            <option value="feature">Feature Request</option>
             <option value="improvement">Improvement</option>
-            <option value="event">Event</option>
+            <option value="event">Event Feedback</option>
             <option value="other">Other</option>
           </select>
           {errors.type && (
             <p className="mt-1 text-xs text-red-400">{errors.type.message}</p>
           )}
         </div>
-        <div className="flex-1">
-          <label htmlFor="title" className={labelCls}>Title</label>
+        <div>
+          <label htmlFor="title" className={labelCls}>Subject</label>
           <input
             type="text"
             id="title"
             {...register('title')}
-            placeholder="Brief summary"
+            placeholder="What's on your mind?"
             className={inputCls}
           />
           {errors.title && (
@@ -102,13 +130,14 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
           )}
         </div>
       </div>
+
       <div>
-        <label htmlFor="description" className={labelCls}>Description</label>
+        <label htmlFor="description" className={labelCls}>Message</label>
         <textarea
           id="description"
           {...register('description')}
-          placeholder="How can we help?"
-          rows={2}
+          placeholder="Detailed description..."
+          rows={4}
           className={`${inputCls} resize-none`}
         />
         {errors.description && (
@@ -117,17 +146,17 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
       </div>
 
       {errors.root && (
-        <div className="p-2 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-xs">
+        <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-xs">
           {errors.root.message}
         </div>
       )}
 
-      <div className="flex justify-end space-x-2">
+      <div className="flex justify-end pt-2">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 rounded hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
+            className="mr-3 px-4 py-2 text-sm font-medium text-[var(--color-text2)] hover:text-[var(--color-text)] transition-colors"
           >
             Cancel
           </button>
@@ -135,9 +164,9 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-4 py-1 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-[var(--brand)] px-6 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Sending...' : 'Send'}
+          {isSubmitting ? 'Sending...' : 'Submit Feedback'}
         </button>
       </div>
     </form>

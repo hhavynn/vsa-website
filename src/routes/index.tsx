@@ -55,6 +55,9 @@ const WildNCulture = lazy(() =>
     default: module.WildNCulture,
   }))
 );
+const FeedbackPage = lazy(() =>
+  import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
+);
 
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
@@ -141,7 +144,7 @@ export default function AppRoutes() {
               {/* Member account routes are intentionally parked for this release. */}
               <Route path="/profile" element={<MemberAccountsUnavailable />} />
               <Route path="/points" element={<MemberAccountsUnavailable />} />
-              <Route path="/feedback" element={<MemberAccountsUnavailable />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
 
               {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}
               <Route element={<AdminRoute />}>

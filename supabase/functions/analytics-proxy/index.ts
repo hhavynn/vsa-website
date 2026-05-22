@@ -7,6 +7,32 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+class AnalyticsError extends Error {
+  status: number
+  code: string
+
+  constructor(message: string, status = 500, code = 'ANALYTICS_ERROR') {
+    super(message)
+    this.status = status
+    this.code = code
+  }
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+function getRequiredEnv(name: string, publicMessage: string) {
+  const value = Deno.env.get(name)
+  if (!value) {
+    throw new AnalyticsError(publicMessage, 503, `MISSING_${name}`)
+  }
+  return value
+}
+
 async function getAccessToken(clientId: string, clientSecret: string, refreshToken: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -18,17 +44,87 @@ async function getAccessToken(clientId: string, clientSecret: string, refreshTok
       grant_type: "refresh_token",
     }),
   });
-  
+
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(`Failed to refresh access token: ${data.error_description || data.error}`);
+    const errorCode = data.error || 'token_refresh_failed'
+
+    if (errorCode === 'invalid_grant') {
+      throw new AnalyticsError(
+        'Google OAuth refresh token is invalid or expired',
+        502,
+        'GOOGLE_OAUTH_INVALID_GRANT',
+      )
+    }
+
+    if (errorCode === 'invalid_client') {
+      throw new AnalyticsError(
+        'Google OAuth client credentials were rejected',
+        502,
+        'GOOGLE_OAUTH_INVALID_CLIENT',
+      )
+    }
+
+    throw new AnalyticsError(
+      'Google OAuth access token refresh failed',
+      502,
+      'GOOGLE_OAUTH_REFRESH_FAILED',
+    )
   }
+
+  if (!data.access_token) {
+    throw new AnalyticsError(
+      'Google OAuth token response was missing an access token',
+      502,
+      'GOOGLE_OAUTH_TOKEN_MISSING',
+    )
+  }
+
   return data.access_token;
+}
+
+function getGa4Error(status: number, responseBody: any, reportName: string) {
+  const googleStatus = responseBody?.error?.status
+  const googleCode = responseBody?.error?.code
+
+  if (status === 403 || googleStatus === 'PERMISSION_DENIED') {
+    return new AnalyticsError(
+      'GA4 API rejected the request: permission denied',
+      502,
+      'GA4_PERMISSION_DENIED',
+    )
+  }
+
+  if (status === 401 || googleStatus === 'UNAUTHENTICATED') {
+    return new AnalyticsError(
+      'GA4 API rejected the request: credentials were not accepted',
+      502,
+      'GA4_UNAUTHENTICATED',
+    )
+  }
+
+  if (status === 400) {
+    return new AnalyticsError(
+      'GA4 API rejected the request: invalid property ID or report request',
+      502,
+      'GA4_INVALID_REQUEST',
+    )
+  }
+
+  return new AnalyticsError(
+    `GA4 API failed while loading ${reportName}`,
+    502,
+    typeof googleStatus === 'string' ? `GA4_${googleStatus}` : `GA4_HTTP_${googleCode || status}`,
+  )
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }, 405)
   }
 
   try {
@@ -40,25 +136,25 @@ serve(async (req) => {
 
     // Check if user is admin
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-    if (userError || !user) throw new Error('Unauthorized')
+    if (userError || !user) {
+      throw new AnalyticsError('Unauthorized', 401, 'UNAUTHORIZED')
+    }
 
-  const { data: profile } = await supabaseClient
-    .from('user_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
+    const { data: profile } = await supabaseClient
+      .from('user_profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
 
-  if (profile?.is_admin !== true) throw new Error('Forbidden')
+    if (profile?.is_admin !== true) {
+      throw new AnalyticsError('Forbidden', 403, 'FORBIDDEN')
+    }
 
     // Get GA4 credentials from environment secrets
-    const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
-    const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    const refreshToken = Deno.env.get('GOOGLE_REFRESH_TOKEN');
-    const propertyId = Deno.env.get('GA4_PROPERTY_ID');
-
-    if (!clientId || !clientSecret || !refreshToken || !propertyId) {
-      throw new Error('GA4 OAuth configuration missing');
-    }
+    const clientId = getRequiredEnv('GOOGLE_CLIENT_ID', 'Missing Google OAuth client ID');
+    const clientSecret = getRequiredEnv('GOOGLE_CLIENT_SECRET', 'Missing Google OAuth client secret');
+    const refreshToken = getRequiredEnv('GOOGLE_REFRESH_TOKEN', 'Missing Google OAuth refresh token');
+    const propertyId = getRequiredEnv('GA4_PROPERTY_ID', 'Missing GA4 property ID');
 
     const accessToken = await getAccessToken(clientId, clientSecret, refreshToken);
     const { startDate = '30daysAgo', endDate = 'today' } = await req.json().catch(() => ({}));
@@ -85,7 +181,7 @@ serve(async (req) => {
 
     const reportData = await reportRes.json();
     if (!reportRes.ok) {
-      throw new Error(`GA4 Data API Error: ${reportData.error?.message || JSON.stringify(reportData)}`);
+      throw getGa4Error(reportRes.status, reportData, 'analytics summary');
     }
 
     // Fetch top pages
@@ -106,11 +202,11 @@ serve(async (req) => {
     
     const pagesData = await pagesRes.json();
     if (!pagesRes.ok) {
-      throw new Error(`GA4 Pages API Error: ${pagesData.error?.message || JSON.stringify(pagesData)}`);
+      throw getGa4Error(pagesRes.status, pagesData, 'top pages');
     }
 
     // Process and return simplified data
-    return new Response(JSON.stringify({
+    return jsonResponse({
       summary: reportData.rows?.reduce((acc: any, row: any) => {
         acc.users += parseInt(row.metricValues[0].value);
         acc.sessions += parseInt(row.metricValues[1].value);
@@ -127,14 +223,22 @@ serve(async (req) => {
         path: row.dimensionValues[0].value,
         views: parseInt(row.metricValues[0].value)
       })) || []
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    const analyticsError = error instanceof AnalyticsError
+      ? error
+      : new AnalyticsError('Unexpected analytics service error', 500, 'UNEXPECTED_ANALYTICS_ERROR')
+
+    console.error('analytics-proxy error', {
+      code: analyticsError.code,
+      status: analyticsError.status,
+      message: analyticsError.message,
     })
+
+    return jsonResponse({
+      error: analyticsError.message,
+      code: analyticsError.code,
+    }, analyticsError.status)
   }
 })

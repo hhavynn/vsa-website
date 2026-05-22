@@ -28,6 +28,7 @@ const footerGroups = [
       { label: 'Cabinet', to: '/cabinet' },
       { label: 'Gallery', to: '/gallery' },
       { label: 'Leaderboard', to: '/leaderboard' },
+      { label: 'Feedback', to: '/feedback' },
     ],
   },
   {

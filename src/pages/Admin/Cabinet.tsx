@@ -80,8 +80,8 @@ const MIGRATION_DATA = [
 
 const ROLE_SUGGESTIONS = ['Historian', 'Public Relations Chair'];
 
-const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-600';
-const labelCls = 'block text-xs font-medium text-zinc-400 uppercase tracking-label';
+const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
+const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
 function CabinetYearSelect({
   value,
@@ -415,19 +415,19 @@ export default function AdminCabinet() {
   };
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Cabinet Management" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Cabinet</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Manage the cabinet directory</p>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Cabinet</h1>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Manage the cabinet directory</p>
         </div>
-        <div className="inline-flex border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
           {(['manage', 'create'] as const).map((tab, i) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-xs transition-colors duration-150"
-              style={{ padding: '7px 14px', fontWeight: activeTab === tab ? 500 : 400, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
               {tab === 'manage' ? 'Manage' : 'Add Member'}
             </button>
           ))}
@@ -435,21 +435,21 @@ export default function AdminCabinet() {
       </div>
 
       {/* Cabinet year selector */}
-      <div className="border-b flex items-center gap-4 flex-wrap" style={{ padding: '12px 28px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <span className="font-sans text-xs font-semibold uppercase tracking-[0.07em]" style={{ color: 'var(--color-text3)', whiteSpace: 'nowrap' }}>
+      <div className="flex flex-wrap items-center gap-4 border-b px-6 py-4 sm:px-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)', whiteSpace: 'nowrap' }}>
           Cabinet Year
         </span>
         {yearsLoading ? (
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Loading years…</span>
+          <span className="font-sans text-[13px]" style={{ color: 'var(--color-text3)' }}>Loading years…</span>
         ) : cabinetYears.length === 0 ? (
-          <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>No cabinet years configured</span>
+          <span className="font-sans text-[13px]" style={{ color: 'var(--color-text3)' }}>No cabinet years configured</span>
         ) : (
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-3">
             <select
               value={selectedAdminYearId ?? ''}
               onChange={e => setSelectedAdminYearId(e.target.value || null)}
-              className="font-sans text-sm rounded border px-3 py-1.5"
-              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+              className="rounded border bg-[var(--color-surface2)] px-3 py-1.5 font-sans text-[13px] text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
+              style={{ borderColor: 'var(--color-border)' }}
             >
               {cabinetYears.map(year => (
                 <option key={year.id} value={year.id}>
@@ -458,11 +458,11 @@ export default function AdminCabinet() {
               ))}
             </select>
             {selectedAdminYear && (
-              <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+              <span className="font-sans text-[13px]" style={{ color: 'var(--color-text2)' }}>
                 Editing: <strong style={{ color: 'var(--color-text)' }}>{selectedAdminYear.label} Cabinet</strong>
                 {selectedAdminYear.is_active && (
-                  <span className="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]"
-                    style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)', border: '1px solid var(--color-border)' }}>
+                  <span className="ml-2 inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.1em]"
+                    style={{ background: 'var(--color-surface2)', color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
                     Active
                   </span>
                 )}
@@ -472,13 +472,13 @@ export default function AdminCabinet() {
         )}
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
-      <div className="border rounded min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', padding: 24 }}>
+      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="scrapbook-paper min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         {activeTab === 'create' ? (
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-5">Add Cabinet Member</h2>
+          <div className="p-6 sm:p-8">
+            <h2 className="mb-6 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Add Cabinet Member</h2>
             <form onSubmit={handleCreateMember} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                 <div><label className={labelCls}>Name *</label><input type="text" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} className={inputCls} required /></div>
                 <div><label className={labelCls}>Role / Title *</label><input type="text" list="cabinet-role-options" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} className={inputCls} required /></div>
                 <div>
@@ -521,38 +521,40 @@ export default function AdminCabinet() {
               </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
-                <div {...getRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors ${isDragActive ? 'border-zinc-400 bg-zinc-800/30' : 'border-zinc-700 bg-zinc-900/30'}`}>
+                <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
                   <input {...getInputProps()} />
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
+                    <img src={imagePreview} alt="Preview" className="h-24 w-24 rounded-full object-cover shadow-sm" />
                   ) : (
-                    <p className="text-zinc-500 text-xs">Drag and drop or click to upload</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
                   )}
                 </div>
               </div>
-              <button type="submit" disabled={uploading} className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-medium py-2.5 rounded text-sm transition-colors disabled:opacity-50">
-                {uploading ? 'Adding...' : 'Add Member'}
-              </button>
+              <div className="pt-2">
+                <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
+                  {uploading ? 'Adding...' : 'Add Member'}
+                </button>
+              </div>
             </form>
           </div>
         ) : (
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Directory</h2>
+          <div className="p-6 sm:p-8">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Directory</h2>
               {members.length === 0 && !loading && (
                 <button
                   onClick={handleBulkMigrate}
                   disabled={uploading}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded transition-colors disabled:opacity-50"
+                  className="vsa-btn-primary py-2 text-xs disabled:opacity-50"
                 >
                   {uploading ? 'Migrating...' : 'Run Initial Data Migration'}
                 </button>
               )}
             </div>
             {loading ? (
-              <p className="text-zinc-500 text-sm">Loading...</p>
+              <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading...</p>
             ) : filteredMembers.length === 0 && !loading ? (
-              <p className="text-zinc-500 text-sm">
+              <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
                 No members for {selectedAdminYear?.label ?? 'this cabinet year'} yet. Switch to "Add Member" to create one.
               </p>
             ) : CATEGORIES.map(category => {
@@ -561,37 +563,37 @@ export default function AdminCabinet() {
 
               return (
                 <div key={category} className="mb-8">
-                  <div className="flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-2 mb-3">
-                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-label">{category}</h3>
-                    <span className="text-xs text-zinc-600">{categoryMembers.length}</span>
+                  <div className="mb-3 flex items-center gap-3 border-b pb-2" style={{ borderColor: 'var(--color-border)' }}>
+                    <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{category}</h3>
+                    <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>{categoryMembers.length}</span>
                   </div>
                   <div className="space-y-2">
                     {categoryMembers.map((m, idx) => (
-                      <div key={m.id} className="flex items-center justify-between p-3 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 rounded">
+                      <div key={m.id} className="flex flex-col gap-3 rounded border bg-[var(--color-surface2)] p-3 transition-colors hover:bg-[var(--color-surface)] sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--color-border)' }}>
                         <div className="flex items-center gap-3">
-                          <div className="flex flex-col gap-0.5 items-center px-1">
-                            <button onClick={() => moveMember(m, 'up')} disabled={idx === 0} className="text-zinc-500 hover:text-zinc-200 disabled:opacity-20 text-xs leading-none">▲</button>
-                            <span className="text-[10px] text-zinc-600 tabular-nums">{m.display_order}</span>
-                            <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-zinc-500 hover:text-zinc-200 disabled:opacity-20 text-xs leading-none">▼</button>
+                          <div className="flex flex-col items-center gap-0.5 px-1">
+                            <button onClick={() => moveMember(m, 'up')} disabled={idx === 0} className="text-xs leading-none transition-colors disabled:opacity-20" style={{ color: 'var(--color-text3)' }}>▲</button>
+                            <span className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>{m.display_order}</span>
+                            <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-xs leading-none transition-colors disabled:opacity-20" style={{ color: 'var(--color-text3)' }}>▼</button>
                           </div>
                           {m.image_url ? (
-                            <img src={m.image_url} alt={m.name} className="w-10 h-10 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
+                            <img src={m.image_url} alt={m.name} className="h-12 w-12 shrink-0 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 text-xs border border-zinc-300 dark:border-zinc-600">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text2)' }}>
                               {m.name.charAt(0)}
                             </div>
                           )}
-                          <div>
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 leading-tight">{m.name}</p>
-                            <p className="text-xs text-zinc-500">{m.role}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-label text-zinc-600">
+                          <div className="min-w-0">
+                            <p className="truncate font-sans text-[15px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>{m.name}</p>
+                            <p className="truncate font-sans text-xs" style={{ color: 'var(--color-text2)' }}>{m.role}</p>
+                            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
                               {getCabinetYearLabel(m.cabinet_year_id)}
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-1.5">
-                          <button onClick={() => setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) })} className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 text-xs rounded transition-colors">Edit</button>
-                          <button onClick={() => setMemberToDelete(m)} className="px-3 py-1.5 border border-red-900/30 text-red-500 hover:bg-red-600 hover:text-white text-xs rounded transition-colors">Remove</button>
+                        <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
+                          <button onClick={() => setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) })} className="flex-1 rounded border bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] sm:flex-none" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Edit</button>
+                          <button onClick={() => setMemberToDelete(m)} className="flex-1 rounded border border-red-900/30 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white sm:flex-none">Remove</button>
                         </div>
                       </div>
                     ))}
@@ -605,14 +607,14 @@ export default function AdminCabinet() {
 
       {/* Edit Modal */}
       {selectedMember && (
-        <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 rounded-md max-w-2xl w-full my-8 border border-zinc-800">
-            <div className="p-5 border-b border-zinc-800 flex justify-between items-center">
-              <h2 className="text-base font-semibold text-zinc-50">Edit {selectedMember.name}</h2>
-              <button onClick={() => setSelectedMember(null)} className="text-zinc-500 hover:text-zinc-200 text-xl leading-none">&times;</button>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+          <div className="scrapbook-paper my-8 w-full max-w-2xl sm:my-0" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
+              <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit {selectedMember.name}</h2>
+              <button onClick={() => setSelectedMember(null)} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
             </div>
-            <form onSubmit={handleEditSubmit} className="p-5 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleEditSubmit} className="space-y-5 p-6 sm:p-8">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                 <div><label className={labelCls}>Name *</label><input type="text" value={selectedMember.name} onChange={e => setSelectedMember({...selectedMember, name: e.target.value})} className={inputCls} required /></div>
                 <div><label className={labelCls}>Role / Title *</label><input type="text" list="cabinet-role-options" value={selectedMember.role} onChange={e => setSelectedMember({...selectedMember, role: e.target.value})} className={inputCls} required /></div>
                 <div>
@@ -662,23 +664,23 @@ export default function AdminCabinet() {
               <div>
                 <label className={labelCls}>Profile Photo</label>
                 {selectedMember.image_url && !editImagePreview && (
-                  <div className="mt-2 mb-3 flex items-center gap-3">
-                    <img src={selectedMember.image_url} alt="Current" className="w-16 h-16 object-cover rounded-full border border-zinc-700" />
-                    <button type="button" className="text-xs text-red-400 hover:text-red-300" onClick={() => setSelectedMember({...selectedMember, image_url: ''})}>Remove image</button>
+                  <div className="mb-4 mt-2 flex items-center gap-4">
+                    <img src={selectedMember.image_url} alt="Current" className="h-20 w-20 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
+                    <button type="button" className="text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedMember({...selectedMember, image_url: ''})}>Remove image</button>
                   </div>
                 )}
-                <div {...getEditRootProps()} className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-5 cursor-pointer transition-colors ${isEditDragActive ? 'border-zinc-400 bg-zinc-800/30' : 'border-zinc-700'}`}>
+                <div {...getEditRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
                   <input {...getEditInputProps()} />
                   {editImagePreview ? (
-                    <img src={editImagePreview} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
+                    <img src={editImagePreview} alt="Preview" className="h-20 w-20 rounded-full object-cover shadow-sm" />
                   ) : (
-                    <p className="text-zinc-500 text-xs">Drag and drop or click to upload new photo</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload new photo</p>
                   )}
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="submit" disabled={uploading} className="flex-1 bg-zinc-700 hover:bg-zinc-600 border border-zinc-600 text-zinc-100 py-2.5 rounded text-sm font-medium transition-colors disabled:opacity-50">Save Changes</button>
-                <button type="button" onClick={() => setSelectedMember(null)} className="px-5 py-2.5 border border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded text-sm transition-colors">Cancel</button>
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
+                <button type="submit" disabled={uploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>
+                <button type="button" onClick={() => setSelectedMember(null)} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
               </div>
             </form>
           </div>
@@ -687,13 +689,13 @@ export default function AdminCabinet() {
 
       {/* Delete Confirmation */}
       {memberToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 p-6 rounded-md max-w-sm w-full border border-zinc-800">
-            <h3 className="text-base font-semibold text-zinc-50 mb-2">Remove Member</h3>
-            <p className="text-zinc-400 text-sm mb-5">Remove <span className="text-zinc-200 font-medium">{memberToDelete.name}</span> from the directory? This cannot be undone.</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setMemberToDelete(null)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-200 transition-colors">Cancel</button>
-              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors">Remove</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Remove Member</h3>
+            <p className="mb-6 font-sans text-[15px] text-[var(--color-text)]">Remove <span className="font-bold">{memberToDelete.name}</span> from the directory? This cannot be undone.</p>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button onClick={() => setMemberToDelete(null)} className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+              <button onClick={handleDeleteConfirm} className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">Remove</button>
             </div>
           </div>
         </div>
@@ -704,6 +706,6 @@ export default function AdminCabinet() {
         ))}
       </datalist>
       </div>
-    </>
+    </div>
   );
 }

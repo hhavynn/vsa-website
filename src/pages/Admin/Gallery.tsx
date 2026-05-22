@@ -249,31 +249,31 @@ export default function AdminGallery() {
     }
   };
 
-  const inputCls = 'mt-1 block w-full rounded border border-zinc-700 bg-zinc-900 text-zinc-100 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 px-3 py-2 text-sm placeholder:text-zinc-600';
-  const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-label mb-1';
+  const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
+  const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
   return (
-    <>
+    <div className="flex-1 overflow-y-auto">
       <PageTitle title="Gallery Management" />
 
-      <div className="border-b flex items-center justify-between" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div>
-          <h1 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Gallery</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>{albums.length} albums</p>
+      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <div className="mb-4 sm:mb-0">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Gallery</h1>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Manage public photo albums</p>
         </div>
-        <div className="inline-flex border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
           {(['create', 'manage'] as const).map((tab, i) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-xs transition-colors duration-150"
-              style={{ padding: '7px 14px', fontWeight: activeTab === tab ? 500 : 400, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-              {tab === 'create' ? 'Add Album' : `Manage (${albums.length})`}
+              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+              {tab === 'create' ? 'Add Album' : 'Manage Albums'}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: '20px 28px' }}>
-      <div className="border rounded p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="scrapbook-paper min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         {activeTab === 'create' ? (
           <>
             <h2 className="mb-1 text-base font-semibold" style={{ color: 'var(--color-text)' }}>Add Google Photos Album</h2>
@@ -577,29 +577,29 @@ export default function AdminGallery() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="flex-1 rounded border py-2.5 text-sm transition-colors"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-                >
-                  Cancel
-                </button>
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className="flex-1 py-2.5 rounded bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="vsa-btn-primary sm:px-8 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {editSaving ? (
                     <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
                       Saving...
                     </>
                   ) : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                >
+                  Cancel
                 </button>
               </div>
             </form>
@@ -609,25 +609,25 @@ export default function AdminGallery() {
 
       {/* Delete Confirmation Modal */}
       {albumToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-md border p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--color-text)' }}>Delete Album</h3>
-            <p className="mb-1 text-sm" style={{ color: 'var(--color-text2)' }}>Are you sure you want to remove:</p>
-            <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>"{albumToDelete.title}"</p>
-            <p className="mb-6 text-sm" style={{ color: 'var(--color-text2)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete Album</h3>
+            <p className="mb-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Are you sure you want to remove:</p>
+            <p className="mb-2 font-sans text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>"{albumToDelete.title}"</p>
+            <p className="mb-6 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
               This removes it from the website. Your Google Photos album won't be affected.
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 onClick={() => setAlbumToDelete(null)}
-                className="px-4 py-2 text-sm transition-colors"
-                style={{ color: 'var(--color-text2)' }}
+                className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
+                className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
               >
                 Remove Album
               </button>
@@ -636,6 +636,6 @@ export default function AdminGallery() {
         </div>
       )}
       </div>
-    </>
+    </div>
   );
 }
