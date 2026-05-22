@@ -16,15 +16,15 @@ export const NavLogo = memo(function NavLogo() {
       <img
         src={getSupabaseImageUrl(logoSrc, { width: 96, height: 96, resize: 'cover', quality: 78 })}
         alt={settings.logoAlt || 'VSA logo'}
-        className="h-9 w-9 rounded-full border object-cover"
-        style={{ borderColor: 'var(--border2)' }}
+        className="h-9 w-9 rotate-[-2deg] rounded-lg border object-cover shadow-[0_2px_8px_rgba(20,32,40,0.12)]"
+        style={{ borderColor: 'var(--border2)', background: 'var(--surface)' }}
         decoding="async"
       />
       <span
         className="hidden font-serif text-[17px] tracking-[-0.01em] min-[420px]:inline"
         style={{ color: 'var(--text)' }}
       >
-        VSA <span className="font-light" style={{ color: 'var(--text3)' }}>at UCSD</span>
+        VSA <span className="font-light italic" style={{ color: 'var(--brand)' }}>at UCSD</span>
       </span>
     </Link>
   );

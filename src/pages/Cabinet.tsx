@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 import { supabase } from '../lib/supabase';
 import { useCabinetYears } from '../hooks/useCabinetYears';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
@@ -84,6 +83,41 @@ function splitExecutiveRoles(roles: Array<[string, CabinetMember[]]>) {
   };
 }
 
+// Staggered layout patterns — mirrors the gallery-memory-wall approach.
+// Each pair sums to 12 cols so rows fill cleanly: (7+5), (5+7), (6+6).
+const EXEC_PATTERNS = [
+  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '38%', tapeR: '-2deg'   },
+  { span: 5, offset: '20px', rotate: '0.5deg',  tapeX: '60%', tapeR: '1.5deg'  },
+  { span: 5, offset: '10px', rotate: '-0.3deg', tapeX: '44%', tapeR: '-1deg'   },
+  { span: 7, offset: '16px', rotate: '0.3deg',  tapeX: '62%', tapeR: '2deg'    },
+  { span: 6, offset: '4px',  rotate: '0.4deg',  tapeX: '52%', tapeR: '1deg'    },
+  { span: 6, offset: '12px', rotate: '-0.5deg', tapeX: '46%', tapeR: '-1.5deg' },
+];
+
+const DEPT_PATTERNS = [
+  { span: 7, offset: '0px',  rotate: '-0.4deg', tapeX: '40%', tapeR: '-2deg'   },
+  { span: 5, offset: '24px', rotate: '0.5deg',  tapeX: '58%', tapeR: '1.5deg'  },
+  { span: 5, offset: '12px', rotate: '0.3deg',  tapeX: '46%', tapeR: '1deg'    },
+  { span: 7, offset: '18px', rotate: '-0.3deg', tapeX: '54%', tapeR: '-1.5deg' },
+  { span: 6, offset: '8px',  rotate: '0.4deg',  tapeX: '50%', tapeR: '2deg'    },
+  { span: 6, offset: '0px',  rotate: '-0.5deg', tapeX: '42%', tapeR: '-1deg'   },
+];
+
+type WallPattern = (typeof EXEC_PATTERNS)[number];
+
+function cabCardStyle(idx: number, patterns: WallPattern[], total: number): CSSProperties {
+  const p = total === 1
+    ? { span: 12, offset: '0px', rotate: '-0.2deg', tapeX: '44%', tapeR: '-1deg' }
+    : patterns[idx % patterns.length];
+  return {
+    '--cab-span':   String(p.span),
+    '--cab-offset': p.offset,
+    '--cab-rotate': p.rotate,
+    '--tape-x':     p.tapeX,
+    '--tape-r':     p.tapeR,
+  } as CSSProperties;
+}
+
 function Avatar({
   image,
   name,
@@ -156,10 +190,7 @@ function Avatar({
 
 function StatBlock({ label, value }: { label: string; value: string | number }) {
   return (
-    <div
-      className="rounded-md border px-4 py-4"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-    >
+    <div className="scrapbook-score px-4 py-4">
       <p
         className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.08em]"
         style={{ color: 'var(--color-text3)' }}
@@ -169,30 +200,6 @@ function StatBlock({ label, value }: { label: string; value: string | number }) 
       <p className="font-serif text-3xl leading-none" style={{ color: 'var(--color-text)' }}>
         {value}
       </p>
-    </div>
-  );
-}
-
-function SectionHeading({
-  title,
-  subtitle,
-  count,
-}: {
-  title: string;
-  subtitle: string;
-  count: number;
-}) {
-  return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <Label className="text-brand-600 dark:text-brand-400">{title}</Label>
-        <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-          {subtitle}
-        </p>
-      </div>
-      <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
-        {count} {count === 1 ? 'member' : 'members'}
-      </span>
     </div>
   );
 }
@@ -208,7 +215,7 @@ function ExecutiveRolePanel({
 }) {
   return (
     <section
-      className={`rounded-md border p-5 ${className}`.trim()}
+      className={`scrapbook-paper p-5 ${className}`.trim()}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div className="mb-5 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
@@ -226,7 +233,7 @@ function ExecutiveRolePanel({
         {members.map((member) => (
           <article
             key={member.id}
-            className="rounded-md border p-4"
+            className="scrapbook-yearbook p-4"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
           >
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
@@ -271,23 +278,21 @@ function ExecutiveRolePanel({
 function ExecutiveFeaturePanel({ role, members }: { role: string; members: CabinetMember[] }) {
   return (
     <section
-      className="rounded-md border"
+      className="scrapbook-paper"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
-      <div className="border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
-        <div className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400">
+      <span className="scrapbook-pin" aria-hidden />
+      <div
+        className="border-b px-6 py-5"
+        style={{
+          borderColor: 'var(--color-border)',
+          background: 'linear-gradient(135deg, rgba(30,136,120,0.06) 0%, transparent 60%)',
+        }}
+      >
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400 mb-2">
           Executive Core
         </div>
-        <div className="mt-2 flex items-end justify-between gap-4">
-          <div>
-            <p className="font-serif text-[30px] leading-none tracking-[-0.03em]" style={{ color: 'var(--color-text)' }}>
-              {role}
-            </p>
-            <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-              {members.length} {members.length === 1 ? 'leader' : 'leaders'}
-            </p>
-          </div>
-        </div>
+        <span className="scrapbook-sticker scrapbook-sticker-teal">{role}</span>
       </div>
 
       <div className={`grid gap-0 ${members.length > 1 ? 'lg:grid-cols-2' : ''}`}>
@@ -298,24 +303,27 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
             style={{ borderColor: 'var(--color-border)' }}
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
-              <Avatar image={member.image_url} name={member.name} size={96} priority={index < 2} />
+              <Avatar image={member.image_url} name={member.name} size={104} priority={index < 2} />
               <div className="min-w-0 flex-1">
-                <p className="font-sans text-[20px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
+                <p
+                  className="font-serif text-[22px] font-bold tracking-[-0.02em] leading-tight"
+                  style={{ color: 'var(--color-text)' }}
+                >
                   {member.name}
                 </p>
-                <p className="mt-1 font-sans text-[11px] font-semibold uppercase tracking-[0.1em] text-brand-600 dark:text-brand-400">
-                  {member.role}
-                </p>
+                {member.pronouns && (
+                  <p className="mt-0.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    {member.pronouns}
+                  </p>
+                )}
                 {formatMeta(member) && (
-                  <p className="mt-3 max-w-md font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  <p className="mt-2 max-w-md font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
                   </p>
                 )}
-                {(member.pronouns || member.favorite_snack) && (
-                  <p className="mt-3 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                    {[member.pronouns, member.favorite_snack && `Snack: ${member.favorite_snack}`]
-                      .filter(Boolean)
-                      .join(' / ')}
+                {member.favorite_snack && (
+                  <p className="mt-2 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    🍿 {member.favorite_snack}
                   </p>
                 )}
               </div>
@@ -336,35 +344,65 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
   );
 }
 
-function RoleListPanel({ role, members }: { role: string; members: CabinetMember[] }) {
+function DeptSpreadCard({ role, members }: { role: string; members: CabinetMember[] }) {
   return (
     <section
-      className="rounded-md border p-4"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      className="scrapbook-dept p-6"
+      style={{ background: 'var(--color-surface)' }}
     >
-      <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
-        <p className="font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>
-          {role}
-        </p>
-        <span className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
-          {members.length}
-        </span>
+      <div
+        className="mb-5 pb-4 border-b flex items-start justify-between gap-4"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <div>
+          <p className="font-serif text-xl font-bold tracking-[-0.015em]" style={{ color: 'var(--color-text)' }}>
+            {role}
+          </p>
+          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.07em]" style={{ color: 'var(--color-text3)' }}>
+            {members.length} {members.length === 1 ? 'member' : 'members'}
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className={`grid gap-4 ${members.length > 1 ? 'sm:grid-cols-2' : ''}`}>
         {members.map((member) => (
-          <article key={member.id} className="flex items-start gap-3">
-            <Avatar image={member.image_url} name={member.name} size={34} />
-            <div className="min-w-0">
-              <p className="font-sans text-[13px] font-medium" style={{ color: 'var(--color-text)' }}>
-                {member.name}
-              </p>
-              {formatMeta(member) && (
-                <p className="mt-0.5 font-sans text-[11px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                  {formatMeta(member)}
+          <article
+            key={member.id}
+            className="scrapbook-yearbook p-4"
+            style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
+          >
+            <div className="flex items-start gap-3">
+              <Avatar image={member.image_url} name={member.name} size={56} />
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>
+                  {member.name}
                 </p>
-              )}
+                <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-brand-600 dark:text-brand-400">
+                  {member.role}
+                </p>
+                {formatMeta(member) && (
+                  <p className="mt-1.5 font-sans text-[11px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                    {formatMeta(member)}
+                  </p>
+                )}
+                {(member.pronouns || member.favorite_snack) && (
+                  <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    {[member.pronouns, member.favorite_snack && `🍿 ${member.favorite_snack}`]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {member.fun_fact && (
+              <p
+                className="mt-3 border-t pt-3 font-sans text-[11px] italic leading-relaxed"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+              >
+                "{member.fun_fact}"
+              </p>
+            )}
           </article>
         ))}
       </div>
@@ -375,7 +413,7 @@ function RoleListPanel({ role, members }: { role: string; members: CabinetMember
 function CompactMemberCard({ member }: { member: CabinetMember }) {
   return (
     <article
-      className="rounded-md border p-4"
+      className="scrapbook-yearbook p-4"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div className="flex items-start gap-3">
@@ -398,6 +436,29 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
       {member.fun_fact && (
         <p className="mt-3 border-t pt-3 font-sans text-[11px] italic leading-relaxed" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
           "{member.fun_fact}"
+        </p>
+      )}
+    </article>
+  );
+}
+
+function RookieTile({ member }: { member: CabinetMember }) {
+  return (
+    <article className="text-center">
+      <div className="mx-auto mb-2 w-fit">
+        <Avatar image={member.image_url} name={member.name} size={52} />
+      </div>
+      <p className="font-serif text-[12px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+        {member.name}
+      </p>
+      {member.year && (
+        <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.05em]" style={{ color: 'var(--color-text3)' }}>
+          {member.year}
+        </p>
+      )}
+      {member.college && (
+        <p className="font-sans text-[10px] truncate" style={{ color: 'var(--color-text3)' }}>
+          {member.college}
         </p>
       )}
     </article>
@@ -516,6 +577,7 @@ export function Cabinet() {
   const execRoles = groupByRole(execBoard);
   const generalRoles = groupByRole(genBoard);
   const { featured: featuredExecRoles, supporting: supportingExecRoles } = splitExecutiveRoles(execRoles);
+  const allExecRoles = [...featuredExecRoles, ...supportingExecRoles];
 
   return (
     <>
@@ -523,7 +585,8 @@ export function Cabinet() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
-          <Label className="text-[var(--accent)]">Leadership</Label>
+          <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Yearbook</span>
+          <p className="vsa-section-label mt-3">Leadership</p>
           <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_320px] lg:items-end">
             <div>
               <h1 className="vsa-page-title">
@@ -550,12 +613,7 @@ export function Cabinet() {
                   <select
                     value={effectiveCabinetYearId ?? ''}
                     onChange={(event) => setSelectedCabinetYearId(event.target.value || null)}
-                    className="w-full rounded border px-3 py-2 font-sans text-sm"
-                    style={{
-                      borderColor: 'var(--color-border)',
-                      background: 'var(--color-surface)',
-                      color: 'var(--color-text)',
-                    }}
+                    className="scrapbook-select"
                   >
                     {publicCabinetYears.map((year) => (
                       <option key={year.id} value={year.id}>
@@ -583,7 +641,7 @@ export function Cabinet() {
       ) : members.length === 0 ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
           <div
-            className="rounded-md border p-12 text-center"
+            className="scrapbook-empty p-12 text-center"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
           >
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
@@ -594,80 +652,120 @@ export function Cabinet() {
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12 lg:px-12">
+        <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
+          {/* ── EXECUTIVE BOARD — one cohesive staggered wall ── */}
           {execBoard.length > 0 && (
-            <section className="mb-12">
-              <SectionHeading
-                title="Executive Board"
-                subtitle="The core leadership team guiding VSA strategy, operations, and the rhythm of the year."
-                count={execBoard.length}
-              />
-              <div className="space-y-6">
-                {featuredExecRoles.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="grid gap-5">
-                      {featuredExecRoles.map(([role, roleMembers]) => (
-                        <ExecutiveFeaturePanel key={role} role={role} members={roleMembers} />
-                      ))}
-                    </div>
+            <section className="mb-16">
+              <div className="mb-10 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="scrapbook-sticker scrapbook-sticker-teal">Executive Board</span>
+                    <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                      {execBoard.length} {execBoard.length === 1 ? 'member' : 'members'}
+                    </span>
                   </div>
-                )}
+                  <h2 className="font-serif text-3xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
+                    Leadership
+                  </h2>
+                  <p className="mt-1.5 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                    The core leadership team guiding VSA strategy, operations, and the rhythm of the year.
+                  </p>
+                </div>
+              </div>
 
-                {supportingExecRoles.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="grid gap-5 xl:grid-cols-2">
-                      {supportingExecRoles.map(([role, roleMembers]) => (
-                        <ExecutiveRolePanel
-                          key={role}
-                          role={role}
-                          members={roleMembers}
-                          className={roleMembers.length > 1 ? 'xl:col-span-2' : ''}
-                        />
-                      ))}
-                    </div>
+              <div className="cabinet-wall">
+                {allExecRoles.map(([role, roleMembers], idx) => (
+                  <div
+                    key={role}
+                    className="cabinet-card"
+                    style={cabCardStyle(idx, EXEC_PATTERNS, allExecRoles.length)}
+                  >
+                    {rolePriority(role) <= 3 ? (
+                      <ExecutiveFeaturePanel role={role} members={roleMembers} />
+                    ) : (
+                      <ExecutiveRolePanel role={role} members={roleMembers} />
+                    )}
                   </div>
-                )}
+                ))}
               </div>
             </section>
           )}
 
+          {/* ── GENERAL BOARD — staggered department wall ── */}
           {genBoard.length > 0 && (
-            <section className="mb-12 border-t pt-10" style={{ borderColor: 'var(--color-border)' }}>
-              <SectionHeading
-                title="General Board"
-                subtitle="Program leads, creatives, and planners carrying each initiative from idea to execution."
-                count={genBoard.length}
-              />
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {generalRoles.map(([role, roleMembers]) => (
-                  <RoleListPanel key={role} role={role} members={roleMembers} />
+            <section className="mb-16 border-t pt-14" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="mb-10 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="scrapbook-sticker scrapbook-sticker-coral">General Board</span>
+                    <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                      {genBoard.length} {genBoard.length === 1 ? 'member' : 'members'}
+                    </span>
+                  </div>
+                  <h2 className="font-serif text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
+                    The Teams
+                  </h2>
+                  <p className="mt-1.5 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                    Program leads, creatives, and planners carrying each initiative from idea to execution.
+                  </p>
+                </div>
+              </div>
+
+              <div className="cabinet-wall">
+                {generalRoles.map(([role, roleMembers], idx) => (
+                  <div
+                    key={role}
+                    className="cabinet-card"
+                    style={cabCardStyle(idx, DEPT_PATTERNS, generalRoles.length)}
+                  >
+                    <DeptSpreadCard role={role} members={roleMembers} />
+                  </div>
                 ))}
               </div>
             </section>
           )}
 
+          {/* ── INTERNS — compact photo strip ── */}
           {interns.length > 0 && (
-            <section className="mb-12 border-t pt-10" style={{ borderColor: 'var(--color-border)' }}>
-              <SectionHeading
-                title="Interns"
-                subtitle="New leaders learning the ropes, supporting execution, and building toward future cabinet roles."
-                count={interns.length}
-              />
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {interns.map((member) => (
-                  <CompactMemberCard key={member.id} member={member} />
-                ))}
+            <section className="mb-16 border-t pt-14" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="scrapbook-sticker scrapbook-sticker-gold">Interns</span>
+                    <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                      {interns.length} {interns.length === 1 ? 'intern' : 'interns'}
+                    </span>
+                  </div>
+                  <h2 className="font-serif text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
+                    Interns
+                  </h2>
+                  <p className="mt-1.5 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                    New leaders learning the ropes, supporting execution, and building toward future cabinet roles.
+                  </p>
+                </div>
+              </div>
+
+              <div className="scrapbook-paper relative p-6 pt-8">
+                <span className="scrapbook-pin" style={{ left: '22%' }} aria-hidden />
+                <span className="scrapbook-pin" style={{ left: '78%' }} aria-hidden />
+                <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {interns.map((member) => (
+                    <RookieTile key={member.id} member={member} />
+                  ))}
+                </div>
               </div>
             </section>
           )}
 
+          {/* ── OTHER LEADERSHIP ── */}
           {other.length > 0 && (
-            <section className="border-t pt-10" style={{ borderColor: 'var(--color-border)' }}>
-              <SectionHeading
-                title="Other Leadership"
-                subtitle="Additional contributors and specialty roles that support the organization across the year."
-                count={other.length}
-              />
+            <section className="border-t pt-12" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="mb-6">
+                <span className="scrapbook-sticker">Other Leadership</span>
+                <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  Additional contributors and specialty roles supporting the organization across the year.
+                </p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {other.map((member) => (
                   <CompactMemberCard key={member.id} member={member} />

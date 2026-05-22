@@ -44,10 +44,10 @@ export function AddToCalendarButton({ event, variant = 'default' }: Props) {
       href={googleUrl(event)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded border font-sans text-xs font-medium transition-colors duration-150"
+      className="inline-flex items-center gap-1.5 rounded-lg border font-mono text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors duration-150"
       style={{
-        padding: isGhost ? '6px 12px' : '8px 14px',
-        borderColor: 'var(--color-border)',
+        padding: isGhost ? '7px 12px' : '9px 14px',
+        borderColor: 'var(--color-border-strong)',
         background: isGhost ? 'transparent' : 'var(--color-surface)',
         color: 'var(--color-text2)',
         textDecoration: 'none',

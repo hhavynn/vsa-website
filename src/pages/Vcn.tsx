@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
 
 const highlights = [
   { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances spanning a range of styles — from traditional Vietnamese dance to contemporary choreography.' },
@@ -34,104 +33,121 @@ export function VCN() {
     <>
       <PageTitle title="Vietnamese Culture Night" />
 
-      <div className="program-page-header border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Vietnamese Culture Night</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>
-          Annual cultural production · UCSD VSA
-        </p>
-        <div className="program-footer-actions mt-4">
-          <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-            This Year's Show →
-          </Link>
-          <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            Past Productions
-          </Link>
+      <div className="program-app">
+        <div className="program-breadcrumb">
+          <Link to="/get-involved">Get Involved</Link>
+          <span>→</span>
+          <span style={{ color: 'var(--color-text2)' }}>Vietnamese Culture Night</span>
         </div>
-      </div>
 
-      <div className="program-page-content">
-
-        {/* What is VCN */}
-        <div className="mb-10">
-          <Label className="mb-4">What is VCN?</Label>
-          <div className="program-two-grid items-start md:gap-10">
-            <div>
-              <p className="font-sans text-sm leading-[1.75]" style={{ color: 'var(--color-text2)' }}>
-                Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
-              </p>
-              <p className="font-sans text-sm leading-[1.75] mt-3" style={{ color: 'var(--color-text2)' }}>
-                VCN is fully student-led: from the creative vision to the choreography, props, costumes, and show-day execution, every part of the production is built and performed by UCSD students.
-              </p>
+        <section className="program-hero">
+          <div className="program-hero-grain" />
+          <div className="program-hero-inner">
+            <span className="program-hero-kicker">Program Booklet</span>
+            <h1 className="program-title">
+              Vietnamese Culture <span className="program-title-script">Night</span>
+            </h1>
+            <p className="program-hero-meta">
+              UCSD VSA's annual student-led cultural production, told through story, dance, theatre, and community.
+            </p>
+            <div className="program-hero-actions">
+              <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
+                This Year's Show →
+              </Link>
+              <Link to="/vcn/archive" className="vsa-btn-ghost font-sans text-sm">
+                Past Productions
+              </Link>
             </div>
-            <blockquote className="font-serif italic leading-[1.2] border-l-2 pl-6" style={{ fontSize: 22, color: 'var(--color-text)', borderColor: 'var(--color-border)' }}>
+          </div>
+          <div className="program-watermark">vcn</div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">What is VCN?</div>
+            <div className="program-two-grid items-start md:gap-10">
+              <div>
+                <p className="program-body">
+                Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
+                </p>
+                <p className="program-body">
+                VCN is fully student-led: from the creative vision to the choreography, props, costumes, and show-day execution, every part of the production is built and performed by UCSD students.
+                </p>
+              </div>
+              <blockquote className="program-rich-card font-serif italic leading-[1.2]" style={{ fontSize: 24, color: 'var(--color-text)' }}>
               "A celebration of Vietnamese culture — built by students, for the community."
-            </blockquote>
+              </blockquote>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* What to Expect */}
-        <div className="mb-10">
-          <Label className="mb-4">What to Expect</Label>
-          <div className="program-two-grid gap-0">
-            {highlights.map((item, i) => (
-              <div key={item.title} className="border-t border-l" style={{ borderColor: 'var(--color-border)', padding: '16px 20px', ...(i % 2 === 0 ? {} : {}) }}>
-                <div className="font-sans text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>{item.title}</div>
-                <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>{item.desc}</p>
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">What to Expect</div>
+            <div className="program-two-grid">
+            {highlights.map((item) => (
+              <div key={item.title} className="program-feature-card">
+                <div className="program-card-title">{item.title}</div>
+                <p className="program-card-copy">{item.desc}</p>
               </div>
             ))}
+            </div>
           </div>
-          <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
-        </div>
+        </section>
 
-        {/* Get Involved */}
-        <div className="mb-10">
-          <Label className="mb-4">Get Involved</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Get Involved</div>
+            <div className="program-list">
             {committees.map((c) => (
-              <div key={c.title} className="program-split-row flex items-start gap-6 border-b last:border-b-0" style={{ padding: '14px 20px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="program-split-row-title shrink-0 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{c.title}</div>
-                <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{c.desc}</p>
+              <div key={c.title} className="program-list-row">
+                <div className="program-list-title">{c.title}</div>
+                <p className="program-list-copy">{c.desc}</p>
               </div>
             ))}
-          </div>
-          <p className="font-sans text-xs mt-3" style={{ color: 'var(--color-text3)' }}>
+            </div>
+            <p className="font-sans text-xs mt-3" style={{ color: 'var(--color-text3)' }}>
             Auditions and committee applications are announced each production cycle. Follow @vsaatucsd for updates.
-          </p>
-        </div>
+            </p>
+          </div>
+        </section>
 
-        {/* FAQ */}
-        <div className="mb-10">
-          <Label className="mb-4">FAQ</Label>
-          <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">FAQ</div>
+            <div className="program-faq-card">
             {faqs.map((faq, i) => (
-              <div key={i} className="border-b last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
+              <div key={i} className="program-faq-row">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between text-left"
-                  style={{ padding: '14px 20px', background: 'var(--color-surface)', border: 'none', cursor: 'pointer' }}
+                  className="program-faq-button"
                 >
-                  <span className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>{faq.q}</span>
-                  <span style={{ color: 'var(--color-text3)', transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block', fontSize: 18, marginLeft: 16, flexShrink: 0 }}>+</span>
+                  <span className="program-faq-question">{faq.q}</span>
+                  <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
                 </button>
                 {openFaq === i && (
-                  <div className="border-t" style={{ padding: '12px 20px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                    <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>{faq.a}</p>
+                  <div className="program-faq-answer">
+                    {faq.a}
                   </div>
                 )}
               </div>
             ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="program-footer-actions border-t pt-6" style={{ borderColor: 'var(--color-border)' }}>
-          <Link to="/vcn/current" className="font-sans text-sm font-medium px-4 py-2 rounded" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
-            This Year's Show →
-          </Link>
-          <Link to="/vcn/archive" className="font-sans text-sm px-4 py-2 rounded border" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent' }}>
-            Past Productions
-          </Link>
-        </div>
-
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-footer-actions-rich">
+              <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
+                This Year's Show →
+              </Link>
+              <Link to="/vcn/archive" className="vsa-btn-ghost font-sans text-sm">
+                Past Productions
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     </>
   );

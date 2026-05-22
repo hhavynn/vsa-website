@@ -111,7 +111,7 @@ function EventImage({
 
   return (
     <div
-      className={`flex items-center justify-center border ${className}`}
+      className={`scrapbook-note flex items-center justify-center border ${className}`}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
     >
       <span className={titleClassName} style={{ color: 'var(--color-text2)' }}>
@@ -196,6 +196,7 @@ export function Events() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
+          <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions. {upcomingAll.length} upcoming / {pastAll.length} past.
@@ -227,9 +228,10 @@ export function Events() {
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <div
-              className="vsa-card mb-9 lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
+              className="scrapbook-paper mb-9 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.35fr)_320px]"
               style={{ borderColor: 'var(--color-border)' }}
             >
+              <span className="scrapbook-pin" aria-hidden />
               <div className="border-b p-5 sm:p-8 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)' }}>
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <Badge
@@ -256,7 +258,7 @@ export function Events() {
                 <AddToCalendarButton event={featured} variant="ghost" align="left" />
               </div>
 
-              <div className="relative h-[220px] sm:h-[260px] lg:h-full lg:min-h-[260px] lg:max-h-[340px]">
+              <div className="scrapbook-photo relative m-4 h-[220px] sm:h-[260px] lg:h-auto lg:min-h-[260px] lg:max-h-[340px]">
                 <EventImage
                   event={featured}
                   className="h-full w-full object-cover"
@@ -266,7 +268,7 @@ export function Events() {
                   priority
                 />
                 <div
-                  className="absolute bottom-5 left-5 rounded border px-4 py-3 backdrop-blur-sm"
+                  className="absolute bottom-8 left-8 rounded-lg border px-4 py-3 backdrop-blur-sm"
                   style={{ borderColor: 'rgba(255,255,255,0.32)', background: 'rgba(5, 9, 18, 0.58)' }}
                 >
                   <div className="font-serif leading-none tracking-[-0.03em] text-brand-400" style={{ fontSize: 44 }}>
@@ -284,11 +286,11 @@ export function Events() {
         {rest.length > 0 && (
           <>
             <Label className="mb-0">All Upcoming</Label>
-            <div className="mt-5 mb-10 border-y" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="mt-5 mb-10 grid gap-4">
               {rest.map((event: Event) => (
                 <div
                   key={event.id}
-                  className="grid gap-4 border-t py-5 first:border-t-0 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_156px_minmax(0,1fr)_auto]"
+                  className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_156px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--color-border)' }}>
@@ -305,7 +307,7 @@ export function Events() {
 
                   <EventImage
                     event={event}
-                    className="aspect-[4/3] w-full rounded border object-cover"
+                    className="aspect-[4/3] w-full rounded-lg border object-cover"
                     titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
                     imageWidth={360}
                     imageHeight={270}
@@ -347,8 +349,7 @@ export function Events() {
 
         {upcomingEvents.length === 0 && (
           <div
-            className="mb-10 rounded border p-10 text-center"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+            className="scrapbook-empty mb-10"
           >
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
               No upcoming events - check back soon.
@@ -375,12 +376,7 @@ export function Events() {
                     <select
                       value={effectiveArchiveTermId ?? ''}
                       onChange={(event) => setSelectedArchiveTermId(event.target.value || null)}
-                      className="w-full rounded border px-3 py-2 font-sans text-sm"
-                      style={{
-                        borderColor: 'var(--color-border)',
-                        background: 'var(--color-surface)',
-                        color: 'var(--color-text)',
-                      }}
+                      className="scrapbook-select"
                     >
                       {archiveOptions.map((term) => (
                         <option key={term.id} value={term.id}>
@@ -407,7 +403,7 @@ export function Events() {
                   {archivedEvents.map((event: Event) => (
                     <div
                       key={event.id}
-                      className="overflow-hidden rounded border"
+                      className="scrapbook-photo overflow-hidden"
                       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
                     >
                       <EventImage
@@ -417,7 +413,7 @@ export function Events() {
                         imageWidth={520}
                         imageHeight={312}
                       />
-                      <div className="border-t px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+                      <div className="px-2 py-3">
                         <div className="flex items-center justify-between gap-4">
                           <span className="font-sans text-sm" style={{ color: 'var(--color-text)' }}>
                             {event.name}
