@@ -1,13 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
+import { useEventRecapEventIds } from '../../hooks/useEventRecap';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
+import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
@@ -168,6 +170,8 @@ export default function AdminEvents() {
   const pastEvents = events
     .filter((e: Event) => new Date(e.date) < oneDayAgo)
     .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const eventIds = useMemo(() => events.map((event: Event) => event.id), [events]);
+  const { recapEventIds } = useEventRecapEventIds(eventIds);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -307,6 +311,11 @@ export default function AdminEvents() {
           <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
             {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
+          {recapEventIds.has(event.id) && (
+            <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-emerald-700 dark:text-emerald-300">
+              Recap
+            </span>
+          )}
           <span className="rounded border px-1.5 py-0.5 font-mono text-[10px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
             {getTermLabel(event.academic_term_id, event.date)}
           </span>
@@ -444,7 +453,7 @@ export default function AdminEvents() {
         {/* Edit Modal */}
         {selectedEvent && (
           <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6 lg:p-8">
-            <div className="scrapbook-paper my-8 w-full max-w-2xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div className="scrapbook-paper my-8 w-full max-w-5xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
                 <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit Event</h2>
                 <button onClick={() => setSelectedEvent(null)} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
@@ -510,6 +519,7 @@ export default function AdminEvents() {
                   </button>
                 </div>
               </form>
+              <EventRecapEditor event={selectedEvent} />
               <div className="border-t p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                 <ManualCheckIn eventId={selectedEvent.id} onSuccess={refreshEvents} />
               </div>

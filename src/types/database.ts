@@ -25,6 +25,10 @@ export type AcademicQuarter = 'fall' | 'winter' | 'spring' | 'summer';
 export type ProgramPageKey = 'ace' | 'intern' | 'house' | 'wnc';
 export type ProgramSectionKey = 'current_cycle' | 'application_cta' | 'event_cta' | 'notice';
 export type ProgramContentStatus = 'hidden' | 'coming_soon' | 'open' | 'closed' | 'active';
+export type ImportJobStatus = 'completed' | 'failed';
+export type ImportSourceType = 'csv_url' | 'google_sheets_csv' | 'manual' | 'unknown';
+export type ImportRowDecision = 'matched' | 'created' | 'skipped_duplicate' | 'review' | 'error';
+export type ImportRowStatus = 'recorded' | 'error';
 
 export interface Database {
   public: {
@@ -272,6 +276,74 @@ export interface Database {
           updated_at?: string;
         };
       };
+      event_recaps: {
+        Row: {
+          id: string;
+          event_id: string;
+          owner_names: string | null;
+          cabinet_roles: string | null;
+          attendance_notes: string | null;
+          what_worked: string | null;
+          what_failed: string | null;
+          next_time_improvements: string | null;
+          budget_notes: string | null;
+          aftersocial_notes: string | null;
+          risks_issues: string | null;
+          drive_folder_url: string | null;
+          planning_doc_url: string | null;
+          gallery_event_id: string | null;
+          public_highlight: string | null;
+          is_public_highlight_published: boolean;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          owner_names?: string | null;
+          cabinet_roles?: string | null;
+          attendance_notes?: string | null;
+          what_worked?: string | null;
+          what_failed?: string | null;
+          next_time_improvements?: string | null;
+          budget_notes?: string | null;
+          aftersocial_notes?: string | null;
+          risks_issues?: string | null;
+          drive_folder_url?: string | null;
+          planning_doc_url?: string | null;
+          gallery_event_id?: string | null;
+          public_highlight?: string | null;
+          is_public_highlight_published?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          owner_names?: string | null;
+          cabinet_roles?: string | null;
+          attendance_notes?: string | null;
+          what_worked?: string | null;
+          what_failed?: string | null;
+          next_time_improvements?: string | null;
+          budget_notes?: string | null;
+          aftersocial_notes?: string | null;
+          risks_issues?: string | null;
+          drive_folder_url?: string | null;
+          planning_doc_url?: string | null;
+          gallery_event_id?: string | null;
+          public_highlight?: string | null;
+          is_public_highlight_published?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       events: {
         Row: {
           id: string;
@@ -373,6 +445,7 @@ export interface Database {
           images: string[];
           google_photos_url: string | null;
           cover_image_url: string | null;
+          event_id: string | null;
           created_at: string;
           updated_at: string | null;
         };
@@ -385,6 +458,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
@@ -397,6 +471,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
@@ -711,6 +786,127 @@ export interface Database {
           presidents_photo_url?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      import_jobs: {
+        Row: {
+          id: string;
+          event_id: string | null;
+          source_url: string | null;
+          source_type: ImportSourceType;
+          total_rows: number;
+          matched_rows: number;
+          created_members: number;
+          created_attendance_count: number;
+          skipped_duplicate_rows: number;
+          review_rows: number;
+          error_count: number;
+          error_message: string | null;
+          created_by: string | null;
+          created_at: string;
+          completed_at: string | null;
+          status: ImportJobStatus;
+        };
+        Insert: {
+          id?: string;
+          event_id?: string | null;
+          source_url?: string | null;
+          source_type?: ImportSourceType;
+          total_rows?: number;
+          matched_rows?: number;
+          created_members?: number;
+          created_attendance_count?: number;
+          skipped_duplicate_rows?: number;
+          review_rows?: number;
+          error_count?: number;
+          error_message?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+          status?: ImportJobStatus;
+        };
+        Update: {
+          id?: string;
+          event_id?: string | null;
+          source_url?: string | null;
+          source_type?: ImportSourceType;
+          total_rows?: number;
+          matched_rows?: number;
+          created_members?: number;
+          created_attendance_count?: number;
+          skipped_duplicate_rows?: number;
+          review_rows?: number;
+          error_count?: number;
+          error_message?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+          status?: ImportJobStatus;
+        };
+      };
+      import_job_rows: {
+        Row: {
+          id: string;
+          import_job_id: string;
+          source_row_index: number;
+          raw_row: Json;
+          display_name: string | null;
+          csv_email: string | null;
+          csv_college: string | null;
+          csv_year: string | null;
+          matched_member_id: string | null;
+          created_member_id: string | null;
+          event_id: string | null;
+          attendance_member_id: string | null;
+          points_earned: number | null;
+          decision: ImportRowDecision;
+          status: ImportRowStatus;
+          score: number | null;
+          match_details: Json;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          import_job_id: string;
+          source_row_index: number;
+          raw_row?: Json;
+          display_name?: string | null;
+          csv_email?: string | null;
+          csv_college?: string | null;
+          csv_year?: string | null;
+          matched_member_id?: string | null;
+          created_member_id?: string | null;
+          event_id?: string | null;
+          attendance_member_id?: string | null;
+          points_earned?: number | null;
+          decision: ImportRowDecision;
+          status?: ImportRowStatus;
+          score?: number | null;
+          match_details?: Json;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          import_job_id?: string;
+          source_row_index?: number;
+          raw_row?: Json;
+          display_name?: string | null;
+          csv_email?: string | null;
+          csv_college?: string | null;
+          csv_year?: string | null;
+          matched_member_id?: string | null;
+          created_member_id?: string | null;
+          event_id?: string | null;
+          attendance_member_id?: string | null;
+          points_earned?: number | null;
+          decision?: ImportRowDecision;
+          status?: ImportRowStatus;
+          score?: number | null;
+          match_details?: Json;
+          error_message?: string | null;
+          created_at?: string;
         };
       };
       member_event_attendance: {

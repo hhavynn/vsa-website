@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
@@ -8,6 +8,7 @@ import { AddToCalendarButton } from '../components/features/events/AddToCalendar
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents } from '../hooks/useEvents';
 import { AcademicTerm, Event } from '../types';
@@ -126,6 +127,32 @@ export function Events() {
   const { terms } = useAcademicTerms();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
+  // Map of event_id -> google_photos_url for events that have a linked album.
+  // Lightweight side fetch so we don't have to grow EventsRepository for this MVP.
+  const [linkedAlbums, setLinkedAlbums] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('gallery_events')
+      .select('event_id, google_photos_url')
+      .not('event_id', 'is', null)
+      .not('google_photos_url', 'is', null)
+      .then(({ data, error: err }) => {
+        if (cancelled || err || !data) return;
+        const map: Record<string, string> = {};
+        for (const row of data as Array<{ event_id: string | null; google_photos_url: string | null }>) {
+          if (row.event_id && row.google_photos_url && !map[row.event_id]) {
+            // First album per event wins (MVP: single album link).
+            map[row.event_id] = row.google_photos_url;
+          }
+        }
+        setLinkedAlbums(map);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -435,6 +462,21 @@ export function Events() {
                             {getEventTermLabel(event, terms)}
                           </span>
                         </div>
+                        {linkedAlbums[event.id] && (
+                          <a
+                            href={linkedAlbums[event.id]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="scrapbook-sticker scrapbook-sticker-coral mt-3 inline-flex items-center gap-1.5"
+                            aria-label={`View photos from ${event.name}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            View Photos
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

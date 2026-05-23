@@ -12,6 +12,7 @@ import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
+import { PointsExplainer } from '../components/features/points/PointsExplainer';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -304,86 +305,47 @@ export function House() {
 
         <section className="program-section">
           <div className="program-section-inner">
-            <div className="grid gap-8 lg:grid-cols-2">
-              {/* How House Points Work */}
-              <div>
-                <div className="program-eyebrow">How House Points Work</div>
-                <div className="scrapbook-note p-5">
-                  <ul className="space-y-4 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text)' }}>
-                    <li className="flex gap-3">
-                      <span className="shrink-0 text-brand-600 dark:text-brand-400">✦</span>
-                      <span>Members earn points by <strong>attending VSA events</strong> and checking in.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="shrink-0 text-brand-600 dark:text-brand-400">✦</span>
-                      <span>House totals are the <strong>sum of all points</strong> earned by that house's members.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="shrink-0 text-brand-600 dark:text-brand-400">✦</span>
-                      <span>Standings are calculated per <strong>academic year</strong> based on event terms.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="shrink-0 text-brand-600 dark:text-brand-400">✦</span>
-                      <span>Points may update periodically after <strong>admin attendance imports</strong>.</span>
-                    </li>
-                  </ul>
-                  
-                  <div className="mt-6 border-t border-dashed border-zinc-200 pt-4 dark:border-zinc-800">
-                    <p className="mb-3 font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>
-                      Notice a mistake in your house points or recent check-ins?
-                    </p>
-                    <Link 
-                      to="/feedback?type=event&title=House%20points%20correction"
-                      className="inline-flex items-center gap-2 font-sans text-xs font-bold text-brand-600 hover:underline dark:text-brand-400"
-                    >
-                      Submit a correction →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent House Activity */}
-              {(recentActivityLoading || recentActivity.length > 0) && (
-                <div>
-                  <div className="program-eyebrow">Recent House Activity</div>
-                  <div className="scrapbook-paper overflow-hidden p-0">
-                    {recentActivityLoading ? (
-                      <div className="py-8 text-center font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                        Loading activity...
-                      </div>
-                    ) : (
-                      recentActivity.map((activity, i) => (
-                        <div 
-                          key={`${activity.event_id}-${activity.house}`} 
-                          className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span 
-                                className="h-1.5 w-1.5 rounded-full" 
-                                style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }} 
-                              />
-                              <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
-                                {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
-                              {activity.event_name}
-                            </div>
+            <PointsExplainer />
+            {(recentActivityLoading || recentActivity.length > 0) && (
+              <div className="mt-8">
+                <div className="program-eyebrow">Recent House Activity</div>
+                <div className="scrapbook-paper overflow-hidden p-0">
+                  {recentActivityLoading ? (
+                    <div className="py-8 text-center font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+                      Loading activity...
+                    </div>
+                  ) : (
+                    recentActivity.map((activity, i) => (
+                      <div
+                        key={`${activity.event_id}-${activity.house}`}
+                        className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }}
+                            />
+                            <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
+                              {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
+                            </span>
                           </div>
-                          <div className="shrink-0 text-right">
-                            <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
-                            <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
-                              {activity.contributing_members} members
-                            </div>
+                          <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
+                            {activity.event_name}
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
+                          <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
+                            {activity.contributing_members} members
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </section>
 
