@@ -597,6 +597,10 @@ export function Leaderboard() {
             metric={activeTab}
           />
         )}
+
+        <div className="mt-20">
+          <PointsExplainer />
+        </div>
       </div>
     </>
   );
