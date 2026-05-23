@@ -149,12 +149,6 @@ export function VCNArchive() {
       <PageTitle title="VCN Archive" />
 
       <div className="program-app">
-        <div className="program-breadcrumb">
-          <Link to="/vcn">Vietnamese Culture Night</Link>
-          <span>→</span>
-          <span style={{ color: 'var(--color-text2)' }}>Archive</span>
-        </div>
-
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">

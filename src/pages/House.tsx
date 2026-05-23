@@ -145,12 +145,6 @@ export function House() {
       <PageTitle title="House Program" />
 
       <div className="program-app">
-        <div className="program-breadcrumb">
-          <Link to="/get-involved">Get Involved</Link>
-          <span>→</span>
-          <span style={{ color: 'var(--color-text2)' }}>House Program</span>
-        </div>
-
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">

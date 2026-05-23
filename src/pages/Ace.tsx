@@ -124,13 +124,6 @@ export function Ace() {
       <PageTitle title="ACE Program" />
 
       <div className={`ace-app ${dark ? 'is-dark' : ''}`}>
-        {/* Breadcrumb (replaces design's TopBar) */}
-        <div className="ace-breadcrumb">
-          <Link to="/get-involved" className="ace-breadcrumb-muted">Get Involved</Link>
-          <span className="ace-breadcrumb-arrow">→</span>
-          <span>ACE</span>
-        </div>
-
         {/* Hero */}
         <section className="ace-hero">
           <div className="ace-hero-grain" aria-hidden="true" />
