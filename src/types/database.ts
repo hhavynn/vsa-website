@@ -272,6 +272,74 @@ export interface Database {
           updated_at?: string;
         };
       };
+      event_recaps: {
+        Row: {
+          id: string;
+          event_id: string;
+          owner_names: string | null;
+          cabinet_roles: string | null;
+          attendance_notes: string | null;
+          what_worked: string | null;
+          what_failed: string | null;
+          next_time_improvements: string | null;
+          budget_notes: string | null;
+          aftersocial_notes: string | null;
+          risks_issues: string | null;
+          drive_folder_url: string | null;
+          planning_doc_url: string | null;
+          gallery_event_id: string | null;
+          public_highlight: string | null;
+          is_public_highlight_published: boolean;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          owner_names?: string | null;
+          cabinet_roles?: string | null;
+          attendance_notes?: string | null;
+          what_worked?: string | null;
+          what_failed?: string | null;
+          next_time_improvements?: string | null;
+          budget_notes?: string | null;
+          aftersocial_notes?: string | null;
+          risks_issues?: string | null;
+          drive_folder_url?: string | null;
+          planning_doc_url?: string | null;
+          gallery_event_id?: string | null;
+          public_highlight?: string | null;
+          is_public_highlight_published?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          owner_names?: string | null;
+          cabinet_roles?: string | null;
+          attendance_notes?: string | null;
+          what_worked?: string | null;
+          what_failed?: string | null;
+          next_time_improvements?: string | null;
+          budget_notes?: string | null;
+          aftersocial_notes?: string | null;
+          risks_issues?: string | null;
+          drive_folder_url?: string | null;
+          planning_doc_url?: string | null;
+          gallery_event_id?: string | null;
+          public_highlight?: string | null;
+          is_public_highlight_published?: boolean;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       events: {
         Row: {
           id: string;
