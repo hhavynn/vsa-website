@@ -12,6 +12,7 @@ import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseYearlyPoints } from '../types';
+import { PointsExplainer } from '../components/features/points/PointsExplainer';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
