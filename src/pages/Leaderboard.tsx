@@ -12,6 +12,8 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 
+import { PointsExplainer } from '../components/features/points/PointsExplainer';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
 // ─────────────────────────────────────────────────────────────────────────────
