@@ -11,6 +11,7 @@ const NAV_GROUPS = [
     { to: '/admin/import',            label: 'Import' },
   ]},
   { group: 'Content', items: [
+    { to: '/admin/resources',         label: 'Resources' },
     { to: '/admin/cabinet',           label: 'Cabinet' },
     { to: '/admin/ace',               label: 'ACE Fams' },
     { to: '/admin/vcn',               label: 'VCN Archives' },
