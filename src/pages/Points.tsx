@@ -1,64 +1,47 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { CheckInCodeInput } from '../components/features/points/CheckInCodeInput';
-import { PageLoader } from '../components/common/PageLoader';
-import { PageError } from '../components/common/PageError';
 import { PageTitle } from '../components/common/PageTitle';
-import { Label } from '../components/ui/Label';
+import { FindMyPoints } from '../components/features/points/FindMyPoints';
 
 export default function Points() {
-  const [points, setPoints] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPoints = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setError('Please sign in to view your points'); return; }
-      const { data, error } = await supabase
-        .from('user_points')
-        .select('total_points')
-        .eq('user_id', user.id)
-        .single();
-      if (error) throw error;
-      setPoints(data?.total_points || 0);
-    } catch {
-      setError('Failed to fetch points');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchPoints(); }, []);
-
-  if (loading) return <PageLoader message="Loading your points..." />;
-  if (error) return <PageError message={error} resetError={fetchPoints} />;
-
   return (
     <>
-      <PageTitle title="Points" />
+      <PageTitle title="Points Lookup" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '36px 52px 28px' }}>
-        <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>Points</h1>
-        <p className="font-sans text-sm mt-2" style={{ color: 'var(--color-text2)' }}>Your earned points and event check-in</p>
-      </div>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10">
+            <span className="scrapbook-pin" aria-hidden />
 
-      <div style={{ padding: '40px 52px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 720 }}>
-          <div className="border rounded p-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-            <Label className="mb-3">Your Points</Label>
-            <p className="font-serif leading-none tracking-[-0.04em] text-brand-600 dark:text-brand-400" style={{ fontSize: 64 }}>
-              {points}
-            </p>
-            <p className="font-sans text-xs mt-2" style={{ color: 'var(--color-text3)' }}>total points earned</p>
-          </div>
+            <div className="relative z-10">
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <span
+                  className="scrapbook-sticker scrapbook-sticker-coral"
+                  style={{ transform: 'rotate(-2deg)' }}
+                >
+                  POINTS LOOKUP
+                </span>
+                <span
+                  className="scrapbook-sticker scrapbook-sticker-teal px-2 py-1 text-[9px]"
+                  style={{ transform: 'rotate(1deg)' }}
+                >
+                  NO ACCOUNT NEEDED
+                </span>
+              </div>
 
-          <div>
-            <CheckInCodeInput onPointsAdded={fetchPoints} />
+              <h1 className="vsa-page-title mb-4">Find My Points</h1>
+              <p
+                className="max-w-2xl font-sans text-[15px] leading-[1.8]"
+                style={{ color: 'var(--text2)' }}
+              >
+                Search your name to see your VSA points, events attended, and rank for the academic
+                year. Everything here uses public leaderboard data — no email or sign-in required.
+              </p>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="vsa-container space-y-10 py-10">
+        <FindMyPoints variant="page" />
       </div>
     </>
   );
