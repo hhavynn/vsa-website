@@ -51,14 +51,16 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
       }
 
       const yearly = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
-      const memberIds = yearly.map((m) => m.member_id);
 
+      // Build an enrichment map of member_id -> { house, all-time points }.
+      // We fetch the full members table here (bounded, small) instead of
+      // .in(id, [...big list]) because PostgREST rejects URLs longer than
+      // ~8KB and the yearly leaderboard can easily exceed that.
       const enrichment = new Map<string, { house: string | null; allTime: number }>();
-      if (memberIds.length > 0) {
+      if (yearly.length > 0) {
         const { data: enrichRows, error: enrichError } = await supabase
           .from('members')
-          .select('id, house, points')
-          .in('id', memberIds);
+          .select('id, house, points');
         if (enrichError) throw enrichError;
         for (const row of enrichRows ?? []) {
           enrichment.set((row as any).id, {
