@@ -62,7 +62,7 @@ export function NewMemberChecklist() {
     },
     {
       title: 'Join the House System',
-      description: 'Find your smaller community within VSA and compete for the House Cup.',
+      description: 'Find your smaller community within VSA and compete to earn the most house points.',
       link: '/house-system',
     },
     {
