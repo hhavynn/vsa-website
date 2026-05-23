@@ -144,7 +144,7 @@ export default function AppRoutes() {
 
               {/* Member account routes are intentionally parked for this release. */}
               <Route path="/profile" element={<MemberAccountsUnavailable />} />
-              {/* /points is a public no-account lookup (Find My Points). */}
+              {/* /points is a public no-account lookup (Find My Points + how-it-works). */}
               <Route path="/points" element={<Points />} />
               <Route path="/feedback" element={<FeedbackPage />} />
 

@@ -6,6 +6,12 @@ import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 
+interface RelatedEvent {
+  id: string;
+  name: string;
+  date: string;
+}
+
 interface GalleryAlbum {
   id: string;
   title: string;
@@ -13,6 +19,8 @@ interface GalleryAlbum {
   date: string;
   google_photos_url: string;
   cover_image_url: string | null;
+  event_id: string | null;
+  event: RelatedEvent | null;
 }
 
 const albumPatterns = [
@@ -55,12 +63,21 @@ export default function Gallery() {
   useEffect(() => {
     supabase
       .from('gallery_events')
-      .select('id, title, description, date, google_photos_url, cover_image_url')
+      .select('id, title, description, date, google_photos_url, cover_image_url, event_id, event:events(id, name, date)')
       .not('google_photos_url', 'is', null)
       .order('date', { ascending: false })
       .then(({ data, error: err }) => {
-        if (err) setError('Failed to load gallery');
-        else setAlbums((data ?? []) as GalleryAlbum[]);
+        if (err) {
+          setError('Failed to load gallery');
+        } else {
+          // Supabase may return the embedded relation as an array depending on
+          // its inferred cardinality. Normalize to a single object or null.
+          const normalized = (data ?? []).map((row: any) => ({
+            ...row,
+            event: Array.isArray(row.event) ? (row.event[0] ?? null) : (row.event ?? null),
+          })) as GalleryAlbum[];
+          setAlbums(normalized);
+        }
         setLoading(false);
       });
   }, []);
@@ -134,10 +151,18 @@ export default function Gallery() {
                 </div>
 
                 <div className="gallery-memory-caption">
-                  <div className="mb-3">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className="scrapbook-sticker scrapbook-sticker-gold">
                       {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
                     </span>
+                    {album.event && (
+                      <span
+                        className="scrapbook-sticker scrapbook-sticker-coral"
+                        title={`From event: ${album.event.name}`}
+                      >
+                        From event
+                      </span>
+                    )}
                   </div>
                   <h3 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
                     {album.title}
@@ -145,6 +170,14 @@ export default function Gallery() {
                   {album.description && (
                     <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
                       {album.description}
+                    </p>
+                  )}
+                  {album.event && (
+                    <p
+                      className="mt-2 truncate font-mono text-[10px] uppercase tracking-[0.08em]"
+                      style={{ color: 'var(--text3)' }}
+                    >
+                      Related event / {album.event.name}
                     </p>
                   )}
                   <div className="mt-3 flex items-center justify-between gap-4">

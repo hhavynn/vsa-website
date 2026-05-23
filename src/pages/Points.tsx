@@ -1,5 +1,6 @@
 import { PageTitle } from '../components/common/PageTitle';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
+import { PointsExplainer } from '../components/features/points/PointsExplainer';
 
 export default function Points() {
   return (
@@ -19,12 +20,6 @@ export default function Points() {
                 >
                   POINTS LOOKUP
                 </span>
-                <span
-                  className="scrapbook-sticker scrapbook-sticker-teal px-2 py-1 text-[9px]"
-                  style={{ transform: 'rotate(1deg)' }}
-                >
-                  NO ACCOUNT NEEDED
-                </span>
               </div>
 
               <h1 className="vsa-page-title mb-4">Find My Points</h1>
@@ -33,7 +28,7 @@ export default function Points() {
                 style={{ color: 'var(--text2)' }}
               >
                 Search your name to see your VSA points, events attended, and rank for the academic
-                year. Everything here uses public leaderboard data — no email or sign-in required.
+                year.
               </p>
             </div>
           </div>
@@ -42,6 +37,7 @@ export default function Points() {
 
       <div className="vsa-container space-y-10 py-10">
         <FindMyPoints variant="page" />
+        <PointsExplainer />
       </div>
     </>
   );

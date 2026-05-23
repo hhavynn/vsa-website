@@ -13,6 +13,13 @@ interface GalleryAlbum {
   date: string;
   google_photos_url: string;
   cover_image_url: string | null;
+  event_id: string | null;
+}
+
+interface EventOption {
+  id: string;
+  name: string;
+  date: string;
 }
 
 const EMPTY_FORM = {
@@ -20,6 +27,7 @@ const EMPTY_FORM = {
   description: '',
   date: '',
   google_photos_url: '',
+  event_id: '' as string,
 };
 
 export default function AdminGallery() {
@@ -30,7 +38,8 @@ export default function AdminGallery() {
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [albumToDelete, setAlbumToDelete] = useState<GalleryAlbum | null>(null);
   const [albumToEdit, setAlbumToEdit] = useState<GalleryAlbum | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', google_photos_url: '' });
+  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', google_photos_url: '', event_id: '' as string });
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -39,12 +48,20 @@ export default function AdminGallery() {
   const fetchAlbums = async () => {
     const { data, error } = await supabase
       .from('gallery_events')
-      .select('id, title, description, date, google_photos_url, cover_image_url')
+      .select('id, title, description, date, google_photos_url, cover_image_url, event_id')
       .order('date', { ascending: false });
     if (!error) setAlbums((data ?? []) as GalleryAlbum[]);
   };
 
-  useEffect(() => { fetchAlbums(); }, []);
+  const fetchEventOptions = async () => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('id, name, date')
+      .order('date', { ascending: false });
+    if (!error) setEventOptions((data ?? []) as EventOption[]);
+  };
+
+  useEffect(() => { fetchAlbums(); fetchEventOptions(); }, []);
 
   // Revoke stale object URL on unmount / change
   useEffect(() => {
@@ -114,6 +131,7 @@ export default function AdminGallery() {
       description: album.description ?? '',
       date: toDateOnlyString(album.date),
       google_photos_url: album.google_photos_url ?? '',
+      event_id: album.event_id ?? '',
     });
     setEditCoverFile(null);
     setEditCoverPreview(null);
@@ -149,6 +167,7 @@ export default function AdminGallery() {
         coverImageToRemove = albumToEdit.cover_image_url;
       }
 
+      const nextEventId = editForm.event_id ? editForm.event_id : null;
       const { error: updateErr } = await supabase
         .from('gallery_events')
         .update({
@@ -158,6 +177,7 @@ export default function AdminGallery() {
           date: eventDate,
           google_photos_url: editForm.google_photos_url,
           cover_image_url: coverImageUrl,
+          event_id: nextEventId,
         })
         .eq('id', albumToEdit.id);
       if (updateErr) throw updateErr;
@@ -167,7 +187,7 @@ export default function AdminGallery() {
       setAlbums(prev =>
         prev.map(a =>
           a.id === albumToEdit.id
-            ? { ...a, ...editForm, date: eventDate, cover_image_url: coverImageUrl }
+            ? { ...a, ...editForm, date: eventDate, cover_image_url: coverImageUrl, event_id: nextEventId }
             : a
         )
       );
@@ -211,6 +231,7 @@ export default function AdminGallery() {
         date: eventDate,
         google_photos_url: form.google_photos_url,
         cover_image_url: coverImageUrl,
+        event_id: form.event_id ? form.event_id : null,
         images: [],                 // legacy column — no longer used
       }]);
 
@@ -329,6 +350,28 @@ export default function AdminGallery() {
                 />
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                   In Google Photos, open the album, click Share, then copy the public link.
+                </p>
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Related Event
+                  <span className="ml-1 font-normal" style={{ color: 'var(--color-text3)' }}>(optional)</span>
+                </label>
+                <select
+                  value={form.event_id}
+                  onChange={e => setForm({ ...form, event_id: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="">— No linked event —</option>
+                  {eventOptions.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {formatDateOnly(ev.date, { month: 'short', day: 'numeric', year: 'numeric' })} — {ev.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  Linking lets the Events page show a "View Photos" button on the matching past event.
                 </p>
               </div>
 
@@ -520,6 +563,26 @@ export default function AdminGallery() {
                   className={inputCls}
                   required
                 />
+              </div>
+
+              {/* Related Event */}
+              <div>
+                <label className={labelCls}>
+                  Related Event
+                  <span className="ml-1 font-normal" style={{ color: 'var(--color-text3)' }}>(optional)</span>
+                </label>
+                <select
+                  value={editForm.event_id}
+                  onChange={e => setEditForm({ ...editForm, event_id: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="">— No linked event —</option>
+                  {eventOptions.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {formatDateOnly(ev.date, { month: 'short', day: 'numeric', year: 'numeric' })} — {ev.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Cover photo */}

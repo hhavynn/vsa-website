@@ -13,6 +13,8 @@ import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
 
+import { PointsExplainer } from '../components/features/points/PointsExplainer';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -600,6 +602,10 @@ export function Leaderboard() {
             metric={activeTab}
           />
         )}
+
+        <div className="mt-20">
+          <PointsExplainer />
+        </div>
       </div>
     </>
   );
