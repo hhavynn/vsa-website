@@ -283,6 +283,12 @@ export function House() {
           </div>
         </section>
 
+        <section className="program-section">
+          <div className="program-section-inner">
+            <PointsExplainer />
+          </div>
+        </section>
+
         {HOUSE_PARENTS.length > 0 && (
           <section className="program-section">
             <div className="program-section-inner">
