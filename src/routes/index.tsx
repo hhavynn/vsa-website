@@ -58,9 +58,7 @@ const WildNCulture = lazy(() =>
 const FeedbackPage = lazy(() =>
   import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
 );
-const PublicPointsExplainer = lazy(() =>
-  import("../pages/PublicPointsExplainer").then((module) => ({ default: module.PublicPointsExplainer }))
-);
+const Points = lazy(() => import("../pages/Points"));
 
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
@@ -146,7 +144,8 @@ export default function AppRoutes() {
 
               {/* Member account routes are intentionally parked for this release. */}
               <Route path="/profile" element={<MemberAccountsUnavailable />} />
-              <Route path="/points" element={<PublicPointsExplainer />} />
+              {/* /points is a public no-account lookup (Find My Points + how-it-works). */}
+              <Route path="/points" element={<Points />} />
               <Route path="/feedback" element={<FeedbackPage />} />
 
               {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}

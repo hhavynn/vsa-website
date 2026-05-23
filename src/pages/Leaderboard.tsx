@@ -11,6 +11,7 @@ import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
+import { FindMyPoints } from '../components/features/points/FindMyPoints';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 
@@ -484,6 +485,10 @@ export function Leaderboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="vsa-container pt-8">
+        <FindMyPoints variant="panel" />
       </div>
 
       <div className="vsa-container py-8">
