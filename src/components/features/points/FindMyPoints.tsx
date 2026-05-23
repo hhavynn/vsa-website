@@ -233,7 +233,7 @@ export function FindMyPoints({ variant = 'panel', className = '', showHeader = t
               Look up your points
             </h2>
             <p className="mt-2 max-w-xl font-sans text-[13px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
-              No account needed. Search your name to see your rank and event count for the selected academic year.
+              Search your name to see your rank and event count for the selected academic year.
             </p>
           </div>
 
