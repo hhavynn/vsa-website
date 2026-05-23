@@ -14,6 +14,9 @@ interface OverviewStats {
   feedback: number;
   pendingFeedback: number;
   mergeCandidates: number;
+  eventsMissingTerms: number;
+  upcomingEventsMissingInfo: number;
+  galleryAlbumsMissingCover: number;
 }
 
 const DEFAULT_STATS: OverviewStats = {
@@ -27,6 +30,9 @@ const DEFAULT_STATS: OverviewStats = {
   feedback: 0,
   pendingFeedback: 0,
   mergeCandidates: 0,
+  eventsMissingTerms: 0,
+  upcomingEventsMissingInfo: 0,
+  galleryAlbumsMissingCover: 0,
 };
 
 const QUICK_LINKS = [
@@ -57,6 +63,27 @@ function StatCard({ label, value, detail }: { label: string; value: number; deta
   );
 }
 
+function HealthWarning({ count, label, to, critical = false }: { count: number; label: string; to: string; critical?: boolean }) {
+  if (count === 0) return null;
+
+  return (
+    <Link to={to} className="group flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+      <div className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${critical ? 'bg-red-500' : 'bg-amber-500'}`} />
+      <div>
+        <p className="font-sans text-[13px] font-semibold leading-none" style={{ color: 'var(--color-text)' }}>
+          {count} {label}
+        </p>
+        <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+          Click to view and fix
+        </p>
+      </div>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="ml-auto h-3 w-3 shrink-0 self-center opacity-0 transition-opacity group-hover:opacity-100" style={{ color: 'var(--color-text3)' }}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+      </svg>
+    </Link>
+  );
+}
+
 export default function AdminOverview() {
   const [stats, setStats] = useState<OverviewStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
@@ -77,6 +104,9 @@ export default function AdminOverview() {
         feedbackResult,
         pendingFeedbackResult,
         mergeResult,
+        missingTermsResult,
+        upcomingMissingInfoResult,
+        missingGalleryCoverResult,
       ] = await Promise.all([
         supabase.from('members').select('*', { count: 'exact', head: true }),
         supabase.from('events').select('*', { count: 'exact', head: true }),
@@ -88,6 +118,9 @@ export default function AdminOverview() {
         supabase.from('feedback').select('*', { count: 'exact', head: true }),
         supabase.from('feedback').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
         supabase.from('merge_exclusions').select('*', { count: 'exact', head: true }),
+        supabase.from('events').select('*', { count: 'exact', head: true }).is('academic_term_id', null),
+        supabase.from('events').select('*', { count: 'exact', head: true }).gte('date', nowIso).or('location.eq."",check_in_form_url.eq."",image_url.is.null'),
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
       ]);
 
       setStats({
@@ -101,6 +134,9 @@ export default function AdminOverview() {
         feedback: feedbackResult.count ?? 0,
         pendingFeedback: pendingFeedbackResult.count ?? 0,
         mergeCandidates: mergeResult.count ?? 0,
+        eventsMissingTerms: missingTermsResult.count ?? 0,
+        upcomingEventsMissingInfo: upcomingMissingInfoResult.count ?? 0,
+        galleryAlbumsMissingCover: missingGalleryCoverResult.count ?? 0,
       });
       setLoading(false);
     }
@@ -191,9 +227,50 @@ export default function AdminOverview() {
                       <span className="font-semibold text-[var(--color-text)]">{stats.mergeCandidates}</span> merge exclusions are stored. Review duplicates from the merge screen when needed.
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
+                  </div>
+                  </div>
+
+                  <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+                    Data Health
+                  </h2>
+                  {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                      {stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover}
+                    </span>
+                  )}
+                  </div>
+
+                  <div className="mt-6 space-y-3">
+                  {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) === 0 ? (
+                    <p className="font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                      All systems normal. No critical data issues detected.
+                    </p>
+                  ) : (
+                    <>
+                      <HealthWarning 
+                        count={stats.eventsMissingTerms} 
+                        label="events missing terms" 
+                        to="/admin/events" 
+                        critical={true} 
+                      />
+                      <HealthWarning 
+                        count={stats.upcomingEventsMissingInfo} 
+                        label="upcoming events need info" 
+                        to="/admin/events" 
+                      />
+                      <HealthWarning 
+                        count={stats.galleryAlbumsMissingCover} 
+                        label="albums missing covers" 
+                        to="/admin/gallery" 
+                      />
+                    </>
+                  )}
+                  </div>
+                  </div>
+                  </div>
+
           </div>
         )}
       </div>
