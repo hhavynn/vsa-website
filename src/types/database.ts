@@ -373,6 +373,7 @@ export interface Database {
           images: string[];
           google_photos_url: string | null;
           cover_image_url: string | null;
+          event_id: string | null;
           created_at: string;
           updated_at: string | null;
         };
@@ -385,6 +386,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
@@ -397,6 +399,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
