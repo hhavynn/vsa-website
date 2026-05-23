@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
 
 const programs = [
   {
@@ -75,7 +76,73 @@ export function GetInvolved() {
       </div>
 
       <div className="vsa-container py-8 lg:py-10">
-        <div className="mb-10">
+        <div className="mb-16">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] xl:gap-8">
+            <div className="scrapbook-paper overflow-hidden p-5 sm:p-6 lg:p-7">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <Label className="text-[var(--accent)]">New Member Start Here</Label>
+                <span className="scrapbook-sticker scrapbook-sticker-coral">Start Here</span>
+              </div>
+              <h2 className="vsa-section-title mb-5">
+                Your VSA
+                <br />
+                <em>Passport.</em>
+              </h2>
+              <p className="max-w-[58ch] font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+                Welcome to the family! Whether you just joined or are looking to get more active, this checklist guides you through the core VSA experience.
+                There is no single "right way" to be in VSA, explore at your own pace and find what resonates with you.
+              </p>
+
+              <div className="mt-6 rounded-lg border p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--accent)' }}>
+                    Route preview
+                  </span>
+                  <span className="rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ borderColor: 'var(--border2)', color: 'var(--gold-t)' }}>
+                    VSA Passport
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {['Show up', 'Join in', 'Give back'].map((step, index) => (
+                    <div key={step} className="flex items-center gap-2 rounded-md border px-3 py-2" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                      <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--brand)' }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="font-sans text-[12px] font-semibold" style={{ color: 'var(--text)' }}>
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:max-w-xs">
+                <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
+                  <span className="block font-serif text-3xl leading-none" style={{ color: 'var(--text)' }}>01</span>
+                  <span className="mt-1 block font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text2)' }}>Start step</span>
+                </div>
+                <div className="rounded-lg border p-3" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
+                  <span className="block font-serif text-3xl leading-none" style={{ color: 'var(--text)' }}>08</span>
+                  <span className="mt-1 block font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text2)' }}>Tasks</span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/events" className="vsa-btn-primary px-4 py-2.5 text-[13px]">
+                  View Events
+                </Link>
+                <Link to="/leaderboard" className="vsa-btn-ghost px-4 py-2.5 text-[13px]">
+                  Check Points
+                </Link>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <NewMemberChecklist />
+            </div>
+          </div>
+        </div>
+
+        <div id="programs" className="mb-10">
           <Label className="mb-6 text-[var(--accent)]">Programs</Label>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {programs.map((program, index) => (
