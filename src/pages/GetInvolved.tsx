@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
 
 const programs = [
   {
@@ -75,6 +76,36 @@ export function GetInvolved() {
       </div>
 
       <div className="vsa-container py-8 lg:py-10">
+        <div className="mb-16">
+          <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+            <div>
+              <Label className="mb-4 text-[var(--accent)]">New Member Start Here</Label>
+              <h2 className="vsa-section-title mb-6">
+                Your VSA
+                <br />
+                <em>Passport.</em>
+              </h2>
+              <p className="max-w-xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+                Welcome to the family! Whether you just joined or are looking to get more active, this checklist will guide you through the core VSA experience. 
+                There's no single "right way" to be in VSA—explore at your own pace and find what resonates with you.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <div className="scrapbook-note flex flex-col items-center justify-center p-4 text-center">
+                  <span className="font-serif text-2xl" style={{ color: 'var(--text)' }}>01</span>
+                  <span className="font-sans text-[11px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Step</span>
+                </div>
+                <div className="scrapbook-note flex flex-col items-center justify-center p-4 text-center">
+                  <span className="font-serif text-2xl" style={{ color: 'var(--text)' }}>08</span>
+                  <span className="font-sans text-[11px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Tasks</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <NewMemberChecklist />
+            </div>
+          </div>
+        </div>
+
         <div className="mb-10">
           <Label className="mb-6 text-[var(--accent)]">Programs</Label>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

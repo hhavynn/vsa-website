@@ -234,6 +234,44 @@ export function Home() {
         </div>
       </section>
 
+      <section className="py-12 sm:py-16 bg-[var(--surface2)]">
+        <div className="vsa-container">
+          <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10 lg:p-12">
+            <span className="scrapbook-pin" aria-hidden />
+            <div className="grid gap-10 lg:grid-cols-[1fr_0.5fr] lg:items-center">
+              <div>
+                <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Start Your Journey</span>
+                <h2 className="vsa-section-title mb-6">
+                  New to VSA?
+                  <br />
+                  <span className="italic" style={{ color: 'var(--brand)' }}>Begin here.</span>
+                </h2>
+                <p className="max-w-xl font-sans text-base leading-relaxed" style={{ color: 'var(--text2)' }}>
+                  We've put together a friendly "Passport" checklist to help you navigate our programs, 
+                  meet new people, and make the most of your time with us.
+                </p>
+                <div className="mt-8">
+                  <Link to="/get-involved" className="vsa-btn-primary">
+                    View the Checklist -&gt;
+                  </Link>
+                </div>
+              </div>
+              <div className="relative hidden lg:block">
+                <div className="scrapbook-note rotate-[-2deg] p-6 text-center">
+                  <div className="mb-2 font-serif text-3xl" style={{ color: 'var(--brand)' }}>8</div>
+                  <div className="font-sans text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text3)' }}>Ways to Connect</div>
+                </div>
+                <div className="absolute -bottom-4 -right-4 scrapbook-note rotate-[4deg] p-4 text-center">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="mx-auto h-6 w-6 text-green-500">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="vsa-section scrapbook-board">
         <div className="vsa-container">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
