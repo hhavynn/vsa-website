@@ -25,6 +25,7 @@ export type AcademicQuarter = 'fall' | 'winter' | 'spring' | 'summer';
 export type ProgramPageKey = 'ace' | 'intern' | 'house' | 'wnc';
 export type ProgramSectionKey = 'current_cycle' | 'application_cta' | 'event_cta' | 'notice';
 export type ProgramContentStatus = 'hidden' | 'coming_soon' | 'open' | 'closed' | 'active';
+export type ResourceLinkVisibility = 'admin_only';
 
 export interface Database {
   public: {
@@ -557,6 +558,71 @@ export interface Database {
           display_order?: number;
           source_doc_url?: string | null;
           internal_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      resource_links: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          url: string;
+          category: string;
+          role: string | null;
+          program: string | null;
+          workflow: string | null;
+          academic_year_start: number | null;
+          academic_year_end: number | null;
+          is_current: boolean;
+          is_archived: boolean;
+          visibility: ResourceLinkVisibility;
+          owner_role: string | null;
+          last_verified_at: string | null;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          url: string;
+          category: string;
+          role?: string | null;
+          program?: string | null;
+          workflow?: string | null;
+          academic_year_start?: number | null;
+          academic_year_end?: number | null;
+          is_current?: boolean;
+          is_archived?: boolean;
+          visibility?: ResourceLinkVisibility;
+          owner_role?: string | null;
+          last_verified_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          url?: string;
+          category?: string;
+          role?: string | null;
+          program?: string | null;
+          workflow?: string | null;
+          academic_year_start?: number | null;
+          academic_year_end?: number | null;
+          is_current?: boolean;
+          is_archived?: boolean;
+          visibility?: ResourceLinkVisibility;
+          owner_role?: string | null;
+          last_verified_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };

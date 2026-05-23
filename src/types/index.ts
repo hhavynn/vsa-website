@@ -99,6 +99,30 @@ export interface ProgramContent {
   updated_at: string;
 }
 
+export type ResourceLinkVisibility = 'admin_only';
+
+export interface ResourceLink {
+  id: string;
+  title: string;
+  description: string | null;
+  url: string;
+  category: string;
+  role: string | null;
+  program: string | null;
+  workflow: string | null;
+  academic_year_start: number | null;
+  academic_year_end: number | null;
+  is_current: boolean;
+  is_archived: boolean;
+  visibility: ResourceLinkVisibility;
+  owner_role: string | null;
+  last_verified_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AceFamily {
   id: string;
   academic_year_start: number | null;

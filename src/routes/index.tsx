@@ -62,6 +62,7 @@ const FeedbackPage = lazy(() =>
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
 const AdminContent = lazy(() => import("../pages/Admin/Content"));
+const AdminResources = lazy(() => import("../pages/Admin/Resources"));
 const AdminGallery = lazy(() => import("../pages/Admin/Gallery"));
 const AdminVcnArchives = lazy(() => import("../pages/Admin/VcnArchives"));
 const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
@@ -151,6 +152,7 @@ export default function AppRoutes() {
                 <Route element={<AdminLayout />}>
                   <Route path="/admin" element={<AdminOverview />} />
                   <Route path="/admin/content" element={<AdminContent />} />
+                  <Route path="/admin/resources" element={<AdminResources />} />
                   <Route path="/admin/events" element={<AdminEvents />} />
                   <Route path="/admin/gallery" element={<AdminGallery />} />
                   <Route path="/admin/vcn" element={<AdminVcnArchives />} />
