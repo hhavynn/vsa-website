@@ -11,7 +11,7 @@ import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
-import { HousePageAsset, HouseYearlyPoints } from '../types';
+import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +91,8 @@ export function House() {
   const { content: cycleContent } = useProgramContent('house');
   const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
   const [standingsLoading, setStandingsLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<HouseRecentActivity[]>([]);
+  const [recentActivityLoading, setRecentActivityLoading] = useState(true);
   const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
 
   const activeYear = resolveHouseYear(terms);
@@ -102,22 +104,39 @@ export function House() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadStandings() {
+    async function loadData() {
       if (!activeYear) {
         setStandingsLoading(false);
+        setRecentActivityLoading(false);
         return;
       }
       setStandingsLoading(true);
+      setRecentActivityLoading(true);
+      
       try {
-        const data = await leaderboardRepository.getYearlyHouseLeaderboard(activeYear);
-        if (isMounted) setStandings(data);
-      } catch {
-        if (isMounted) setStandings([]);
+        const [standingsData, activityData] = await Promise.all([
+          leaderboardRepository.getYearlyHouseLeaderboard(activeYear),
+          leaderboardRepository.getRecentHouseActivity(activeYear, 6)
+        ]);
+        
+        if (isMounted) {
+          setStandings(standingsData);
+          setRecentActivity(activityData);
+        }
+      } catch (err) {
+        console.error('Error loading house data:', err);
+        if (isMounted) {
+          setStandings([]);
+          setRecentActivity([]);
+        }
       } finally {
-        if (isMounted) setStandingsLoading(false);
+        if (isMounted) {
+          setStandingsLoading(false);
+          setRecentActivityLoading(false);
+        }
       }
     }
-    loadStandings();
+    loadData();
     return () => { isMounted = false; };
   }, [activeYear]);
 
@@ -126,12 +145,6 @@ export function House() {
       <PageTitle title="House Program" />
 
       <div className="program-app">
-        <div className="program-breadcrumb">
-          <Link to="/get-involved">Get Involved</Link>
-          <span>→</span>
-          <span style={{ color: 'var(--color-text2)' }}>House Program</span>
-        </div>
-
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">
@@ -287,6 +300,46 @@ export function House() {
         <section className="program-section">
           <div className="program-section-inner">
             <PointsExplainer />
+            {(recentActivityLoading || recentActivity.length > 0) && (
+              <div className="mt-8">
+                <div className="program-eyebrow">Recent House Activity</div>
+                <div className="scrapbook-paper overflow-hidden p-0">
+                  {recentActivityLoading ? (
+                    <div className="py-8 text-center font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+                      Loading activity...
+                    </div>
+                  ) : (
+                    recentActivity.map((activity, i) => (
+                      <div
+                        key={`${activity.event_id}-${activity.house}`}
+                        className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }}
+                            />
+                            <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
+                              {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
+                            {activity.event_name}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
+                          <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
+                            {activity.contributing_members} members
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

@@ -110,12 +110,6 @@ export function VCNCurrent() {
       <PageTitle title={`VCN ${currentVcn.year}${currentVcn.title ? ` — ${currentVcn.title}` : ''}`} />
 
       <div className="program-app">
-        <div className="program-breadcrumb">
-          <Link to="/vcn">Vietnamese Culture Night</Link>
-          <span>→</span>
-          <span style={{ color: 'var(--color-text2)' }}>{currentVcn.year}</span>
-        </div>
-
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">
