@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
+import { useQueryClient } from 'react-query';
 import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPanel';
+import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
+import { ImportJobStatus } from '../../types/database';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -251,11 +255,19 @@ function toCSVUrl(raw: string): string {
   return url;
 }
 
+function getImportSourceType(raw: string): 'google_sheets_csv' | 'csv_url' | 'unknown' {
+  const url = raw.trim();
+  if (!url) return 'unknown';
+  if (url.includes('docs.google.com/spreadsheets')) return 'google_sheets_csv';
+  return 'csv_url';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Step = 'configure' | 'preview' | 'done';
 
 export default function AdminImport() {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>('configure');
 
   // Configure
@@ -500,6 +512,9 @@ export default function AdminImport() {
     }
 
     setImporting(true);
+    let importPoints = selectedEvent?.points ?? 0;
+    const createdMemberIdsByRowId: Record<string, string> = {};
+    let createdAttendanceCount = 0;
 
     try {
       const { data: event, error: eventError } = await supabase
@@ -512,6 +527,7 @@ export default function AdminImport() {
       if (!event?.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
 
       const pts = event.points ?? 1;
+      importPoints = pts;
 
       // 1. Create new member rows (points/events_attended computed by DB trigger)
       const newNames = toCreate.map(r => {
@@ -536,6 +552,10 @@ export default function AdminImport() {
           .select('id');
         if (error) throw error;
         newMemberIds = (inserted ?? []).map((m: { id: string }) => m.id);
+        toCreate.forEach((row, index) => {
+          const memberId = newMemberIds[index];
+          if (memberId) createdMemberIdsByRowId[row.rowId] = memberId;
+        });
       }
 
       // 2. Insert attendance records — DB trigger recalculates member points automatically
@@ -549,6 +569,7 @@ export default function AdminImport() {
           .from('member_event_attendance')
           .upsert(attendanceRows, { onConflict: 'member_id,event_id', ignoreDuplicates: true });
         if (error) throw error;
+        createdAttendanceCount = attendanceRows.length;
       }
 
       // 3. Fill missing profile fields on matched members using import data
@@ -566,12 +587,109 @@ export default function AdminImport() {
       }
 
       const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} profile${toEnrich.length !== 1 ? 's' : ''}` : '';
+      await recordImportAudit({
+        status: 'completed',
+        points: pts,
+        createdMemberIdsByRowId,
+        createdMembersCount: newMemberIds.length,
+        createdAttendanceCount,
+      });
       toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new${enrichMsg}.`);
       setStep('done');
     } catch (err: unknown) {
-      toast.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      await recordImportAudit({
+        status: 'failed',
+        points: importPoints,
+        createdMemberIdsByRowId,
+        createdMembersCount: Object.keys(createdMemberIdsByRowId).length,
+        createdAttendanceCount,
+        errorMessage,
+      });
+      toast.error(`Import failed: ${errorMessage}`);
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function recordImportAudit({
+    status,
+    points,
+    createdMemberIdsByRowId,
+    createdMembersCount,
+    createdAttendanceCount,
+    errorMessage,
+  }: {
+    status: ImportJobStatus;
+    points: number;
+    createdMemberIdsByRowId: Record<string, string>;
+    createdMembersCount: number;
+    createdAttendanceCount: number;
+    errorMessage?: string;
+  }) {
+    if (!selectedEventId || rows.length === 0) return;
+
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const rowInserts = rows.map(row => {
+        const effectiveStatus = getEffectiveStatus(row);
+        const createdMemberId = createdMemberIdsByRowId[row.rowId] ?? null;
+        const attendanceMemberId =
+          effectiveStatus === 'match'
+            ? row.matchedMember?.id ?? null
+            : (effectiveStatus === 'new' || effectiveStatus === 'review')
+              ? createdMemberId
+              : null;
+
+        return {
+          source_row_index: row.originalIndex,
+          raw_row: asJson(row.csvRow),
+          display_name: row.displayName || null,
+          csv_email: row.csvEmail || null,
+          csv_college: row.csvCollege || null,
+          csv_year: row.csvYear || null,
+          matched_member_id: row.matchedMember?.id ?? null,
+          created_member_id: createdMemberId,
+          event_id: selectedEventId,
+          attendance_member_id: attendanceMemberId,
+          points_earned: status === 'completed' && attendanceMemberId ? points : null,
+          decision: decisionFromRowStatus(effectiveStatus),
+          status: 'recorded' as const,
+          score: row.score || null,
+          match_details: asJson({
+            original_status: row.status,
+            effective_status: effectiveStatus,
+            manual_override: row.manualOverride,
+            match_name: row.matchName,
+            name_score: row.nameScore,
+            college_match: row.collegeMatch,
+            year_match: row.yearMatch,
+            invalid_year: row.invalidYear,
+          }),
+          error_message: null,
+        };
+      });
+
+      await importJobsRepository.createJob({
+        event_id: selectedEventId,
+        source_url: csvUrl.trim() || null,
+        source_type: getImportSourceType(csvUrl),
+        total_rows: rows.length,
+        matched_rows: rows.filter(row => getEffectiveStatus(row) === 'match').length,
+        created_members: createdMembersCount,
+        created_attendance_count: createdAttendanceCount,
+        skipped_duplicate_rows: rows.filter(row => getEffectiveStatus(row) === 'already').length,
+        review_rows: rows.filter(row => row.status === 'review').length,
+        error_count: errorMessage ? 1 : 0,
+        error_message: errorMessage ?? null,
+        created_by: authData.user?.id ?? null,
+        completed_at: new Date().toISOString(),
+        status,
+        rows: rowInserts,
+      });
+      queryClient.invalidateQueries({ queryKey: ['import-jobs'] });
+    } catch (auditError) {
+      console.warn('Import audit logging failed', auditError);
     }
   }
 
@@ -610,7 +728,7 @@ export default function AdminImport() {
         </p>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="border rounded-md p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-8">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Sheet Setup</h2>
@@ -1004,6 +1122,7 @@ export default function AdminImport() {
             </div>
           )}
         </div>
+        <ImportAuditPanel />
       </div>
     </div>
   );
