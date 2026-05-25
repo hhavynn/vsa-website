@@ -243,6 +243,25 @@ export interface MemberYearlyPoints {
   events_attended: number;
 }
 
+export interface HouseMemberRankEntry {
+  house: string;
+  house_profile_id: string;
+  display_name: string;
+  image_url: string | null;
+  accent_color: string | null;
+  member_id: string;
+  first_name: string;
+  last_name: string;
+  college: string | null;
+  graduation_year: string | null;
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
+  events_attended: number;
+  unique_events: number;
+  latest_activity_at: string | null;
+}
+
 export interface HouseYearlyPoints {
   house: string;
   house_profile_id: string;
