@@ -790,9 +790,15 @@ export interface Database {
           academic_year_start: number;
           academic_year_end: number;
           house: string;
+          house_key: string;
+          display_name: string;
+          description: string | null;
           image_url: string | null;
           image_alt: string | null;
+          cover_image_url: string | null;
+          accent_color: string | null;
           display_order: number;
+          is_active: boolean;
           source_doc_url: string | null;
           internal_notes: string | null;
           created_at: string;
@@ -803,9 +809,15 @@ export interface Database {
           academic_year_start: number;
           academic_year_end: number;
           house: string;
+          house_key?: string;
+          display_name?: string;
+          description?: string | null;
           image_url?: string | null;
           image_alt?: string | null;
+          cover_image_url?: string | null;
+          accent_color?: string | null;
           display_order?: number;
+          is_active?: boolean;
           source_doc_url?: string | null;
           internal_notes?: string | null;
           created_at?: string;
@@ -816,11 +828,67 @@ export interface Database {
           academic_year_start?: number;
           academic_year_end?: number;
           house?: string;
+          house_key?: string;
+          display_name?: string;
+          description?: string | null;
           image_url?: string | null;
           image_alt?: string | null;
+          cover_image_url?: string | null;
+          accent_color?: string | null;
           display_order?: number;
+          is_active?: boolean;
           source_doc_url?: string | null;
           internal_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      house_memberships: {
+        Row: {
+          id: string;
+          member_id: string;
+          house_profile_id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          effective_start_date: string;
+          effective_end_date: string | null;
+          source: string | null;
+          source_import_id: string | null;
+          notes: string | null;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          member_id: string;
+          house_profile_id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          effective_start_date: string;
+          effective_end_date?: string | null;
+          source?: string | null;
+          source_import_id?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          member_id?: string;
+          house_profile_id?: string;
+          academic_year_start?: number;
+          academic_year_end?: number;
+          effective_start_date?: string;
+          effective_end_date?: string | null;
+          source?: string | null;
+          source_import_id?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1194,9 +1262,15 @@ export interface Database {
           academic_year_start: number;
           academic_year_end: number;
           house: string;
+          house_key: string;
+          display_name: string;
+          description: string | null;
           image_url: string | null;
           image_alt: string | null;
+          cover_image_url: string | null;
+          accent_color: string | null;
           display_order: number;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -1247,6 +1321,10 @@ export interface Database {
       house_yearly_points: {
         Row: {
           house: string;
+          house_profile_id: string;
+          display_name: string;
+          image_url: string | null;
+          accent_color: string | null;
           academic_year_start: number;
           academic_year_end: number;
           total_points: number;
@@ -1260,8 +1338,15 @@ export interface Database {
       house_all_time_points: {
         Row: {
           house: string;
+          house_profile_id: string;
+          display_name: string;
+          image_url: string | null;
+          accent_color: string | null;
+          academic_year_start: number;
+          academic_year_end: number;
           total_points: number;
           events_attended: number;
+          unique_events: number;
           unique_members: number;
           average_points_per_member: number | null;
           latest_activity_at: string | null;
@@ -1270,6 +1355,10 @@ export interface Database {
       house_recent_activity: {
         Row: {
           house: string;
+          house_profile_id: string;
+          display_name: string;
+          image_url: string | null;
+          accent_color: string | null;
           event_id: string;
           event_name: string;
           event_date: string;

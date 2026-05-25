@@ -1,4 +1,3 @@
-import { HOUSE_OPTIONS, HouseName } from '../../constants/houses';
 import { supabase } from '../../lib/supabase';
 import { HousePageAsset } from '../../types';
 import { withErrorHandling } from '../errors';
@@ -7,7 +6,12 @@ export type HousePageAssetFormData = Omit<HousePageAsset, 'id' | 'created_at' | 
 
 function normalizeAssets(data: HousePageAsset[]): HousePageAsset[] {
   return data
-    .filter((asset) => HOUSE_OPTIONS.includes(asset.house as HouseName))
+    .map((asset) => ({
+      ...asset,
+      house_key: asset.house_key ?? asset.house,
+      display_name: asset.display_name ?? asset.house,
+      is_active: asset.is_active ?? true,
+    }))
     .sort((a, b) => a.display_order - b.display_order);
 }
 

@@ -69,61 +69,42 @@ export class LeaderboardRepository {
 
   async getHouseMemberRankings(academicYearStart: number | 'all'): Promise<Map<string, HouseMemberRankEntry[]>> {
     return withErrorHandling(async () => {
-      if (academicYearStart === 'all') {
-        const { data, error } = await supabase
-          .from('members')
-          .select('id, first_name, last_name, college, year, points, events_attended, house')
-          .not('house', 'is', null)
-          .order('points', { ascending: false });
-        if (error) throw error;
-
-        const byHouse = new Map<string, HouseMemberRankEntry[]>();
-        for (const m of (data ?? []) as any[]) {
-          if (!m.house) continue;
-          const entry: HouseMemberRankEntry = {
-            member_id: m.id,
-            first_name: m.first_name ?? '',
-            last_name: m.last_name ?? '',
-            college: m.college ?? null,
-            graduation_year: m.year ?? null,
-            total_points: m.points ?? 0,
-            events_attended: m.events_attended ?? 0,
-          };
-          const arr = byHouse.get(m.house) ?? [];
-          arr.push(entry);
-          byHouse.set(m.house, arr);
-        }
-        return byHouse;
-      }
-
-      const [yearlyResult, memberResult] = await Promise.all([
-        supabase
-          .from('member_yearly_points')
+      const query = academicYearStart === 'all'
+        ? supabase
+          .from('house_member_all_time_points')
+          .select('*')
+          .order('academic_year_start', { ascending: false })
+          .order('total_points', { ascending: false })
+        : supabase
+          .from('house_member_yearly_points')
           .select('*')
           .eq('academic_year_start', academicYearStart)
-          .order('total_points', { ascending: false }),
-        supabase.from('members').select('id, house'),
-      ]);
-      if (yearlyResult.error) throw yearlyResult.error;
-      if (memberResult.error) throw memberResult.error;
+          .order('total_points', { ascending: false });
 
-      const houseMap = new Map<string, string | null>();
-      for (const row of (memberResult.data ?? []) as any[]) {
-        houseMap.set(row.id, row.house ?? null);
-      }
+      const { data, error } = await query;
+      if (error) throw error;
 
       const byHouse = new Map<string, HouseMemberRankEntry[]>();
-      for (const m of (yearlyResult.data ?? []) as any[]) {
-        const house = houseMap.get(m.member_id);
+      for (const m of (data ?? []) as any[]) {
+        const house = m.house_profile_id || m.house;
         if (!house) continue;
         const entry: HouseMemberRankEntry = {
+          house: m.house ?? '',
+          house_profile_id: m.house_profile_id ?? '',
+          display_name: m.display_name ?? m.house ?? '',
+          image_url: m.image_url ?? null,
+          accent_color: m.accent_color ?? null,
           member_id: m.member_id,
           first_name: m.first_name ?? '',
           last_name: m.last_name ?? '',
           college: m.college ?? null,
           graduation_year: m.graduation_year ?? null,
+          academic_year_start: m.academic_year_start,
+          academic_year_end: m.academic_year_end,
           total_points: m.total_points ?? 0,
           events_attended: m.events_attended ?? 0,
+          unique_events: m.unique_events ?? 0,
+          latest_activity_at: m.latest_activity_at ?? null,
         };
         const arr = byHouse.get(house) ?? [];
         arr.push(entry);

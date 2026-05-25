@@ -107,9 +107,17 @@ function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
 
 function assetMapByHouse(assets: HousePageAsset[]) {
   return assets.reduce((map, asset) => {
-    map.set(asset.house, asset);
+    map.set(asset.house_key ?? asset.house, asset);
     return map;
   }, new Map<string, HousePageAsset>());
+}
+
+function getHouseLabel(house: string, asset?: HousePageAsset | null, displayName?: string | null) {
+  return displayName || asset?.display_name || HOUSE_LABELS[house as HouseName] || house;
+}
+
+function getHouseColor(house: string, asset?: HousePageAsset | null, accentColor?: string | null) {
+  return accentColor || asset?.accent_color || HOUSE_COLORS[house as HouseName] || 'var(--brand)';
 }
 
 interface AutoBadges {
@@ -167,6 +175,9 @@ export function House() {
   const hasSelectedYearData = activeYear ? yearsWithData.includes(activeYear) : false;
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
   const houseAssetsByName = assetMapByHouse(houseAssets);
+  const displayedHouses = houseAssets.length > 0
+    ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
+    : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
 
   // Upcoming events (next ~2 weeks, all types)
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -247,7 +258,7 @@ export function House() {
               {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>}
               {leader && (
                 <span className="scrapbook-sticker scrapbook-sticker-coral">
-                  {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {HOUSE_LABELS[leader.house as HouseName] ?? leader.house} leading
+                  {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
                 </span>
               )}
             </div>
@@ -294,13 +305,13 @@ export function House() {
           <div className="program-section-inner">
             <div className="program-eyebrow">The Four Houses</div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {HOUSES.map(({ house }) => {
-                const asset = houseAssetsByName.get(house);
-                const color = HOUSE_COLORS[house];
+              {displayedHouses.map(({ house, asset }) => {
+                const color = getHouseColor(house, asset);
                 const standing = standings.find((s) => s.house === house);
                 const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
-                const emoji = HOUSE_EMOJI[house];
-                const tagline = HOUSE_TAGLINES[house];
+                const emoji = HOUSE_EMOJI[house as HouseName] ?? '';
+                const label = getHouseLabel(house, asset, standing?.display_name);
+                const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';
 
                 return (
                   <div
@@ -318,14 +329,14 @@ export function House() {
                           src={getSupabaseImageUrl(asset.image_url, { width: 520, height: 390, resize: 'cover', quality: 72 })}
                           srcSet={getSupabaseImageSrcSet(asset.image_url, [320, 520, 720], { resize: 'cover', quality: 72 })}
                           sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                          alt={asset.image_alt || HOUSE_LABELS[house]}
+                          alt={asset.image_alt || label}
                           className="h-full w-full object-cover"
                           loading="lazy"
                           decoding="async"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
-                          <span className="font-serif text-5xl">{emoji}</span>
+                          <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
                         </div>
                       )}
 
@@ -354,7 +365,7 @@ export function House() {
                     <div className="p-4">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{emoji}</span>
-                        <div className="program-card-title leading-tight">{HOUSE_LABELS[house]}</div>
+                        <div className="program-card-title leading-tight">{label}</div>
                       </div>
 
                       <p className="mt-1.5 font-sans text-[12px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
@@ -440,9 +451,10 @@ export function House() {
               ) : (
                 <>
                   {standings.map((standing, index) => {
+                    const asset = houseAssetsByName.get(standing.house);
                     const houseKey = standing.house as HouseName;
-                    const color = HOUSE_COLORS[houseKey] ?? 'var(--brand)';
-                    const label = HOUSE_LABELS[houseKey] ?? standing.house;
+                    const color = getHouseColor(standing.house, asset, standing.accent_color);
+                    const label = getHouseLabel(standing.house, asset, standing.display_name);
                     const emoji = HOUSE_EMOJI[houseKey] ?? '';
                     const pct = maxPoints > 0 ? Math.round((standing.total_points / maxPoints) * 100) : 0;
                     const houseBadges: string[] = [];
@@ -452,7 +464,7 @@ export function House() {
 
                     return (
                       <div
-                        key={standing.house}
+                        key={standing.house_profile_id ?? standing.house}
                         className="group border-b last:border-0"
                         style={{ borderColor: 'var(--color-border)' }}
                       >
@@ -536,33 +548,51 @@ export function House() {
                       Loading activity...
                     </div>
                   ) : (
-                    recentActivity.map((activity, i) => (
-                      <div
-                        key={`${activity.event_id}-${activity.house}`}
-                        className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }}
-                            />
-                            <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
-                              {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
-                            </span>
+                    recentActivity.map((activity, i) => {
+                      const houseKey = activity.house as HouseName;
+                      const asset = houseAssetsByName.get(activity.house);
+                      const color = getHouseColor(activity.house, asset, activity.accent_color);
+                      const label = getHouseLabel(activity.house, asset, activity.display_name);
+                      const emoji = HOUSE_EMOJI[houseKey] ?? '';
+                      return (
+                        <div
+                          key={`${activity.event_id}-${activity.house}`}
+                          className={`flex items-center gap-3 px-4 py-3 ${i !== recentActivity.length - 1 ? 'border-b' : ''}`}
+                          style={{ borderColor: 'var(--color-border)' }}
+                        >
+                          {/* House color dot */}
+                          <div
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: color }}
+                          />
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-sans text-[12px] font-bold" style={{ color: 'var(--color-text)' }}>
+                                {emoji} {label}
+                              </span>
+                            </div>
+                            <div className="truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                              {activity.event_name}
+                              {activity.event_date && (
+                                <span> · {format(parseISO(activity.event_date), 'MMM d')}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
-                            {activity.event_name}
+
+                          {/* Points earned */}
+                          <div className="shrink-0 text-right">
+                            <div className="font-mono text-sm font-black" style={{ color }}>
+                              +{activity.total_points}
+                            </div>
+                            <div className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
+                              {activity.contributing_members} members
+                            </div>
                           </div>
                         </div>
-                        <div className="shrink-0 text-right">
-                          <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
-                          <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
-                            {activity.contributing_members} members
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

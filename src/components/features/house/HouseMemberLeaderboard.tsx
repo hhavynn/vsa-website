@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HOUSE_COLORS, HOUSE_LABELS, HOUSE_OPTIONS, HouseName } from '../../../constants/houses';
+import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { HouseMemberRankEntry } from '../../../types';
 
@@ -78,6 +78,15 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
     });
   };
 
+  const houseGroups = Array.from(byHouse.entries())
+    .map(([key, members]) => ({ key, members, profile: members[0] }))
+    .sort((a, b) => {
+      const aOrder = a.profile?.academic_year_start ?? 0;
+      const bOrder = b.profile?.academic_year_start ?? 0;
+      if (aOrder !== bOrder) return bOrder - aOrder;
+      return (a.profile?.display_name ?? a.key).localeCompare(b.profile?.display_name ?? b.key);
+    });
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -92,24 +101,36 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
       </div>
 
       <div className="space-y-3">
-        {(HOUSE_OPTIONS as readonly HouseName[]).map((house) => {
-          const color = HOUSE_COLORS[house];
-          const emoji = HOUSE_EMOJI[house];
-          const members = byHouse.get(house) ?? [];
-          const isExpanded = expandedHouses.has(house);
-          const isShowingAll = showAll.has(house);
+        {!loading && houseGroups.length === 0 && (
+          <div className="scrapbook-empty">
+            <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+              No active house member rankings for this period yet.
+            </p>
+          </div>
+        )}
+
+        {houseGroups.map(({ key, members, profile }) => {
+          const house = (profile?.house ?? key) as HouseName;
+          const color = profile?.accent_color ?? HOUSE_COLORS[house] ?? 'var(--brand)';
+          const emoji = HOUSE_EMOJI[house] ?? '';
+          const label = profile?.display_name ?? HOUSE_LABELS[house] ?? profile?.house ?? key;
+          const isExpanded = expandedHouses.has(key);
+          const isShowingAll = showAll.has(key);
           const visible = isShowingAll ? members : members.slice(0, DEFAULT_VISIBLE);
           const hiddenCount = members.length - DEFAULT_VISIBLE;
+          const yearSuffix = selectedYear === 'all' && profile?.academic_year_start
+            ? ` · ${profile.academic_year_start}-${profile.academic_year_end}`
+            : '';
 
           return (
             <div
-              key={house}
+              key={key}
               className="overflow-hidden rounded-xl border-2 transition-colors duration-200"
               style={{ borderColor: isExpanded ? color : 'var(--color-border)' }}
             >
               {/* Header — click to expand */}
               <button
-                onClick={() => toggleHouse(house)}
+                onClick={() => toggleHouse(key)}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-surface2)]"
                 style={{ background: isExpanded ? `${color}10` : undefined }}
                 aria-expanded={isExpanded}
@@ -118,7 +139,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
 
                 <div className="flex flex-1 items-center gap-2 min-w-0">
                   <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
-                    {emoji} {HOUSE_LABELS[house]}
+                    {emoji} {label}{yearSuffix}
                   </span>
                   {!loading && members.length > 0 && (
                     <span
@@ -157,7 +178,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                   ) : members.length === 0 ? (
                     <div className="px-5 py-6">
                       <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                        No members in {HOUSE_LABELS[house]} for this period yet.
+                        No members in {label} for this period yet.
                       </p>
                     </div>
                   ) : (
@@ -231,7 +252,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                       {hiddenCount > 0 && (
                         <div className="border-t px-4 py-3 text-center" style={{ borderColor: 'var(--color-border)' }}>
                           <button
-                            onClick={() => toggleShowAll(house)}
+                            onClick={() => toggleShowAll(key)}
                             className="font-sans text-xs font-semibold transition-opacity hover:opacity-70"
                             style={{ color }}
                           >
