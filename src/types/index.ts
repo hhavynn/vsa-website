@@ -220,6 +220,16 @@ export interface MemberYearlyPoints {
   events_attended: number;
 }
 
+export interface HouseMemberRankEntry {
+  member_id: string;
+  first_name: string;
+  last_name: string;
+  college: string | null;
+  graduation_year: string | null;
+  total_points: number;
+  events_attended: number;
+}
+
 export interface HouseYearlyPoints {
   house: string;
   academic_year_start: number;
