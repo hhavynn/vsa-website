@@ -185,11 +185,13 @@ export function House() {
       }
       setStandingsLoading(true);
       setRecentActivityLoading(true);
+      
       try {
         const [standingsData, activityData] = await Promise.all([
           leaderboardRepository.getYearlyHouseLeaderboard(activeYear),
-          leaderboardRepository.getRecentHouseActivity(activeYear, 8),
+          leaderboardRepository.getRecentHouseActivity(activeYear, 6)
         ]);
+        
         if (isMounted) {
           setStandings(standingsData);
           setRecentActivity(activityData);
@@ -534,50 +536,33 @@ export function House() {
                       Loading activity...
                     </div>
                   ) : (
-                    recentActivity.map((activity, i) => {
-                      const houseKey = activity.house as HouseName;
-                      const color = HOUSE_COLORS[houseKey] ?? 'var(--brand)';
-                      const label = HOUSE_LABELS[houseKey] ?? activity.house;
-                      const emoji = HOUSE_EMOJI[houseKey] ?? '';
-                      return (
-                        <div
-                          key={`${activity.event_id}-${activity.house}`}
-                          className={`flex items-center gap-3 px-4 py-3 ${i !== recentActivity.length - 1 ? 'border-b' : ''}`}
-                          style={{ borderColor: 'var(--color-border)' }}
-                        >
-                          {/* House color dot */}
-                          <div
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ background: color }}
-                          />
-
-                          {/* Info */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="font-sans text-[12px] font-bold" style={{ color: 'var(--color-text)' }}>
-                                {emoji} {label}
-                              </span>
-                            </div>
-                            <div className="truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                              {activity.event_name}
-                              {activity.event_date && (
-                                <span> · {format(parseISO(activity.event_date), 'MMM d')}</span>
-                              )}
-                            </div>
+                    recentActivity.map((activity, i) => (
+                      <div
+                        key={`${activity.event_id}-${activity.house}`}
+                        className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }}
+                            />
+                            <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
+                              {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
+                            </span>
                           </div>
-
-                          {/* Points earned */}
-                          <div className="shrink-0 text-right">
-                            <div className="font-mono text-sm font-black" style={{ color }}>
-                              +{activity.total_points}
-                            </div>
-                            <div className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
-                              {activity.contributing_members} members
-                            </div>
+                          <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
+                            {activity.event_name}
                           </div>
                         </div>
-                      );
-                    })
+                        <div className="shrink-0 text-right">
+                          <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
+                          <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
+                            {activity.contributing_members} members
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
