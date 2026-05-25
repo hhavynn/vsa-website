@@ -7,6 +7,13 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
+import {
+  AttendanceMatchMethod,
+  AttendanceMatchReason,
+  AttendanceMatchResult,
+  getSafeAttendanceMemberEnrichment,
+  matchAttendanceImportRows,
+} from '../../lib/memberMatching';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,95 +44,28 @@ interface Member {
   needs_review?: boolean;
 }
 
-type RowStatus = 'match' | 'new' | 'already' | 'review';
+type RowStatus = 'match' | 'new' | 'already' | 'review' | 'duplicate';
 type ManualOverride = 'force-match' | 'mark-new' | null;
 type SortMode = 'default' | 'review-first' | 'review-last';
 
-interface RowResult {
-  rowId: string;
-  originalIndex: number;
-  csvRow: Record<string, string>;
-  /** Original (capitalised) name from CSV — shown in the table */
-  displayName: string;
-  /** Cleaned name used for matching (no middle initials, comma-reversed) */
-  matchName: string;
-  csvCollege: string;
-  csvYear: string;
-  csvEmail: string;
+interface RowResult extends Omit<AttendanceMatchResult, 'matchedMember' | 'status' | 'method' | 'reason'> {
   /** Existing member if matched or reviewed, null if new */
   matchedMember: Member | null;
   status: RowStatus;
-  /** Composite score 0–100 (set when status === 'match' or 'review') */
-  score: number;
-  nameScore: number;
-  collegeMatch: boolean;
-  yearMatch: boolean;
-  invalidYear: boolean;
+  method: AttendanceMatchMethod;
+  reason: AttendanceMatchReason;
   selected: boolean;
   manualOverride: ManualOverride;
 }
 
-// ─── Normalisation helpers ────────────────────────────────────────────────────
-
 type MemberEnrichment = Partial<Pick<Member, 'college' | 'year' | 'email'>>;
-
-const COLLEGE_ALIASES: [RegExp, string][] = [
-  [/revelle/i,                        'revelle'],
-  [/muir/i,                           'muir'],
-  [/marshall|thurgood/i,              'marshall'],
-  [/eleanor|erc|roosevelt.*college/i, 'erc'],
-  [/sixth|6th/i,                      'sixth'],
-  [/seventh|7th/i,                    'seventh'],
-  [/eighth|8th/i,                     'eighth'],
-];
-
-function normalizeCollege(s: string): string {
-  for (const [re, key] of COLLEGE_ALIASES) if (re.test(s)) return key;
-  return s.toLowerCase().trim();
-}
-
-// ─── Fuzzy name similarity ────────────────────────────────────────────────────
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, (_, i) =>
-    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
-  );
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1]
-        ? dp[i-1][j-1]
-        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-  return dp[m][n];
-}
-
-/** Lowercase + strip all punctuation + collapse whitespace for comparison only.
- *  "Lynna, On" and "Lynna On" both → "lynna on" (distance 0, score 100) */
-function normalizeForMatch(s: string): string {
-  return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function nameSimilarity(a: string, b: string): number {
-  const na = normalizeForMatch(a), nb = normalizeForMatch(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 100;
-  return Math.round((1 - levenshtein(na, nb) / Math.max(na.length, nb.length)) * 100);
-}
-
-const EXACT_MATCH_THRESHOLD = 75;
-const REVIEW_THRESHOLD = 50;
 const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
 
-// Composite: name 60%, college 25%, year 15%
-function compositeScore(ns: number, cm: boolean, ym: boolean) {
-  return Math.round(ns * 0.6 + (cm ? 25 : 0) + (ym ? 15 : 0));
-}
-
 function getEffectiveStatus(row: RowResult): RowStatus {
-  if (row.status === 'match' && row.manualOverride === 'mark-new') return 'new';
+  if (row.status === 'match' && row.manualOverride === 'mark-new' && row.canMarkNew) return 'new';
   if (row.status !== 'review') return row.status;
-  if (row.manualOverride === 'force-match') return 'match';
-  if (row.manualOverride === 'mark-new') return 'new';
+  if (row.manualOverride === 'force-match' && row.canForceMatch) return 'match';
+  if (row.manualOverride === 'mark-new' && row.canMarkNew) return 'new';
   return 'review';
 }
 
@@ -135,30 +75,21 @@ function getAcademicYearLabel(term: AcademicTerm | undefined): string {
 }
 
 function canForceMatch(row: RowResult): boolean {
-  return row.status === 'review' && !!row.matchedMember;
+  return row.status === 'review' && row.canForceMatch && !!row.matchedMember;
 }
 
 /** Returns true for any row that can be manually overridden to "Create New" —
  *  both 75%+ confident matches AND 50–74% review rows. */
 function canMarkAsNew(row: RowResult): boolean {
-  return (row.status === 'match' || row.status === 'review') && !!row.matchedMember;
+  return row.canMarkNew && (row.status === 'match' || row.status === 'review');
 }
 
-function buildMemberEnrichment(row: RowResult): MemberEnrichment {
-  const member = row.matchedMember;
-  if (!member) return {};
-
-  const updates: MemberEnrichment = {};
-
-  if (!member.email && row.csvEmail) updates.email = row.csvEmail;
-  if (!member.college && row.csvCollege) updates.college = row.csvCollege;
-  if (!member.year && row.csvYear && !row.invalidYear) updates.year = row.csvYear;
-
-  return updates;
+function buildMemberEnrichment(row: RowResult, members: Member[]): MemberEnrichment {
+  return getSafeAttendanceMemberEnrichment(row, members) as MemberEnrichment;
 }
 
-function hasMemberEnrichment(row: RowResult): boolean {
-  return Object.keys(buildMemberEnrichment(row)).length > 0;
+function hasMemberEnrichment(row: RowResult, members: Member[]): boolean {
+  return Object.keys(buildMemberEnrichment(row, members)).length > 0;
 }
 
 function getActionLabel(row: RowResult): string {
@@ -166,6 +97,7 @@ function getActionLabel(row: RowResult): string {
   if (status === 'match') return row.status === 'review' ? 'Forced Update' : 'Update';
   if (status === 'new') return row.status === 'review' ? 'Create New' : 'Create';
   if (status === 'review') return 'Review';
+  if (status === 'duplicate') return 'Skip';
   return 'Skip';
 }
 
@@ -175,13 +107,15 @@ function getSortPriority(row: RowResult, sortMode: SortMode): number {
     review: 0,
     match: 1,
     new: 2,
-    already: 3,
+    duplicate: 3,
+    already: 4,
   };
   const reviewLastOrder: Record<RowStatus, number> = {
     already: 0,
-    new: 1,
-    match: 2,
-    review: 3,
+    duplicate: 1,
+    new: 2,
+    match: 3,
+    review: 4,
   };
 
   if (sortMode === 'review-first') return reviewFirstOrder[status];
@@ -291,6 +225,7 @@ export default function AdminImport() {
   // Preview
   const [rows, setRows] = useState<RowResult[]>([]);
   const [cachedParsed, setCachedParsed] = useState<Record<string, string>[]>([]);
+  const [matchedMembersSnapshot, setMatchedMembersSnapshot] = useState<Member[]>([]);
   const [importing, setImporting] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
@@ -405,7 +340,7 @@ export default function AdminImport() {
       .eq('event_id', eventId);
     const alreadySet = new Set((existingAtt ?? []).map((r: { member_id: string }) => r.member_id));
 
-    const results: RowResult[] = parsed.map((row, index) => {
+    const matchInputs = parsed.map((row, index) => {
       // Build display name (capitalised, shown in table)
       let displayName = '';
       if (useFull) {
@@ -422,70 +357,24 @@ export default function AdminImport() {
       const csvCollege    = (cCol ? row[cCol] : '').trim();
       const csvYear       = normalizeYearInput(yCol ? row[yCol] : '');
       const csvEmail      = (eCol ? row[eCol] : '').trim().toLowerCase();
-      const normCsvCollege = normalizeCollege(csvCollege);
-      
       const invalidYear = csvYear !== '' && !OFFICIAL_YEARS.includes(csvYear);
 
-      // Score against every member using email first, then the cleaned match name
-      let best: Member | null = null;
-      let bestScore = 0, bestNS = 0;
-      let bestCM = false, bestYM = false;
-
-      for (const m of allMembers) {
-        const emailMatches = !!(csvEmail && m.email && m.email.trim().toLowerCase() === csvEmail);
-        const cm = !!(normCsvCollege && m.college && normalizeCollege(m.college) === normCsvCollege);
-        const ym = !!(csvYear && m.year && m.year === csvYear);
-
-        if (emailMatches) {
-          best = m;
-          bestScore = 100;
-          bestNS = 100;
-          bestCM = cm;
-          bestYM = ym;
-          break;
-        }
-
-        const memberFullName = cleanName(`${m.first_name} ${m.last_name}`);
-        const ns = nameSimilarity(matchName, memberFullName);
-        if (ns < 50) continue; // fast-reject
-        const cs = compositeScore(ns, cm, ym);
-        if (cs > bestScore) { bestScore = cs; best = m; bestNS = ns; bestCM = cm; bestYM = ym; }
-      }
-
-      // Composite score 50-74% means probable duplicate; add as new and flag for review
-      if (best && bestScore >= REVIEW_THRESHOLD && bestScore < EXACT_MATCH_THRESHOLD) {
-        return {
-          rowId: `${index}-${displayName}-${csvEmail}`,
-          originalIndex: index,
-          csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
-          matchedMember: best, status: 'review' as RowStatus,
-          score: bestScore, nameScore: bestNS, collegeMatch: bestCM, yearMatch: bestYM,
-          invalidYear, selected: false, manualOverride: null,
-        };
-      }
-
-      // Composite score >= 75 counts as an exact match
-      if (best && bestScore >= EXACT_MATCH_THRESHOLD) {
-        const status: RowStatus = alreadySet.has(best.id) ? 'already' : 'match';
-        return {
-          rowId: `${index}-${displayName}-${csvEmail}`,
-          originalIndex: index,
-          csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
-          matchedMember: best, status, score: bestScore, nameScore: bestNS,
-          collegeMatch: bestCM, yearMatch: bestYM, invalidYear, selected: false, manualOverride: null,
-        };
-      }
-
-      // No match → create new member
       return {
         rowId: `${index}-${displayName}-${csvEmail}`,
         originalIndex: index,
         csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
-        matchedMember: null, status: 'new', score: 0, nameScore: 0,
-        collegeMatch: false, yearMatch: false, invalidYear, selected: false, manualOverride: null,
+        invalidYear,
       };
     });
 
+    const results = matchAttendanceImportRows(matchInputs, allMembers, alreadySet).map((result) => ({
+      ...result,
+      matchedMember: result.matchedMember as Member | null,
+      selected: false,
+      manualOverride: null,
+    })) as RowResult[];
+
+    setMatchedMembersSnapshot(allMembers);
     setRows(results);
     setSortMode('default');
   }
@@ -504,11 +393,13 @@ export default function AdminImport() {
     const toUpdate = rows.filter(r => getEffectiveStatus(r) === 'match');
     const toCreate = rows.filter(r => {
       const effectiveStatus = getEffectiveStatus(r);
-      return (effectiveStatus === 'new' || effectiveStatus === 'review') && r.displayName.trim();
+      return effectiveStatus === 'new' && r.displayName.trim();
     });
+    const skippedReviewRows = rows.filter(r => getEffectiveStatus(r) === 'review');
+    const skippedDuplicateRows = rows.filter(r => getEffectiveStatus(r) === 'duplicate');
 
     if (!toUpdate.length && !toCreate.length) {
-      toast.error('Nothing to import.'); return;
+      toast.error(skippedReviewRows.length || skippedDuplicateRows.length ? 'No safe rows to import.' : 'Nothing to import.'); return;
     }
 
     setImporting(true);
@@ -528,6 +419,11 @@ export default function AdminImport() {
 
       const pts = event.points ?? 1;
       importPoints = pts;
+
+      const { data: latestMembersData } = await supabase
+        .from('members')
+        .select('id, first_name, last_name, college, year, points, events_attended, email');
+      const latestMembers = (latestMembersData ?? matchedMembersSnapshot) as Member[];
 
       // 1. Create new member rows (points/events_attended computed by DB trigger)
       const newNames = toCreate.map(r => {
@@ -565,18 +461,19 @@ export default function AdminImport() {
       ];
 
       if (attendanceRows.length) {
-        const { error } = await supabase
+        const { data: insertedAttendance, error } = await supabase
           .from('member_event_attendance')
-          .upsert(attendanceRows, { onConflict: 'member_id,event_id', ignoreDuplicates: true });
+          .upsert(attendanceRows, { onConflict: 'member_id,event_id', ignoreDuplicates: true })
+          .select('member_id,event_id');
         if (error) throw error;
-        createdAttendanceCount = attendanceRows.length;
+        createdAttendanceCount = insertedAttendance?.length ?? 0;
       }
 
       // 3. Fill missing profile fields on matched members using import data
       const toEnrich = toUpdate
         .map(r => ({
           memberId: r.matchedMember!.id,
-          updates: buildMemberEnrichment(r),
+          updates: buildMemberEnrichment(r, latestMembers),
         }))
         .filter(item => Object.keys(item.updates).length > 0);
       for (const { memberId, updates } of toEnrich) {
@@ -586,6 +483,9 @@ export default function AdminImport() {
           .eq('id', memberId);
       }
 
+      const skippedMsg = skippedReviewRows.length || skippedDuplicateRows.length
+        ? `, skipped ${skippedReviewRows.length + skippedDuplicateRows.length} unsafe/duplicate row${skippedReviewRows.length + skippedDuplicateRows.length !== 1 ? 's' : ''}`
+        : '';
       const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} profile${toEnrich.length !== 1 ? 's' : ''}` : '';
       await recordImportAudit({
         status: 'completed',
@@ -593,8 +493,9 @@ export default function AdminImport() {
         createdMemberIdsByRowId,
         createdMembersCount: newMemberIds.length,
         createdAttendanceCount,
+        enrichedMembersCount: toEnrich.length,
       });
-      toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${toCreate.length} new${enrichMsg}.`);
+      toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${newMemberIds.length} new${enrichMsg}${skippedMsg}.`);
       setStep('done');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -604,6 +505,7 @@ export default function AdminImport() {
         createdMemberIdsByRowId,
         createdMembersCount: Object.keys(createdMemberIdsByRowId).length,
         createdAttendanceCount,
+        enrichedMembersCount: 0,
         errorMessage,
       });
       toast.error(`Import failed: ${errorMessage}`);
@@ -618,6 +520,7 @@ export default function AdminImport() {
     createdMemberIdsByRowId,
     createdMembersCount,
     createdAttendanceCount,
+    enrichedMembersCount,
     errorMessage,
   }: {
     status: ImportJobStatus;
@@ -625,6 +528,7 @@ export default function AdminImport() {
     createdMemberIdsByRowId: Record<string, string>;
     createdMembersCount: number;
     createdAttendanceCount: number;
+    enrichedMembersCount: number;
     errorMessage?: string;
   }) {
     if (!selectedEventId || rows.length === 0) return;
@@ -652,7 +556,7 @@ export default function AdminImport() {
           created_member_id: createdMemberId,
           event_id: selectedEventId,
           attendance_member_id: attendanceMemberId,
-          points_earned: status === 'completed' && attendanceMemberId ? points : null,
+          points_earned: status === 'completed' && attendanceMemberId && (effectiveStatus === 'match' || effectiveStatus === 'new') ? points : null,
           decision: decisionFromRowStatus(effectiveStatus),
           status: 'recorded' as const,
           score: row.score || null,
@@ -660,11 +564,22 @@ export default function AdminImport() {
             original_status: row.status,
             effective_status: effectiveStatus,
             manual_override: row.manualOverride,
+            match_reason: row.reason,
+            final_reason: effectiveStatus === 'review' ? 'skipped_unresolved_review' : row.reason,
+            match_method: row.method,
+            note: row.note,
             match_name: row.matchName,
             name_score: row.nameScore,
             college_match: row.collegeMatch,
             year_match: row.yearMatch,
             invalid_year: row.invalidYear,
+            email_is_school_email: row.emailIsSchoolEmail,
+            email_already_used: row.emailAlreadyUsed,
+            can_force_match: row.canForceMatch,
+            can_mark_new: row.canMarkNew,
+            candidate_member_ids: row.candidateMemberIds,
+            duplicate_row_of: row.duplicateRowOf,
+            enriched_members_count: enrichedMembersCount,
           }),
           error_message: null,
         };
@@ -678,9 +593,12 @@ export default function AdminImport() {
         matched_rows: rows.filter(row => getEffectiveStatus(row) === 'match').length,
         created_members: createdMembersCount,
         created_attendance_count: createdAttendanceCount,
-        skipped_duplicate_rows: rows.filter(row => getEffectiveStatus(row) === 'already').length,
-        review_rows: rows.filter(row => row.status === 'review').length,
-        error_count: errorMessage ? 1 : 0,
+        skipped_duplicate_rows: rows.filter(row => {
+          const effectiveStatus = getEffectiveStatus(row);
+          return effectiveStatus === 'already' || effectiveStatus === 'duplicate';
+        }).length,
+        review_rows: rows.filter(row => getEffectiveStatus(row) === 'review').length,
+        error_count: errorMessage ? rows.length : 0,
         error_message: errorMessage ?? null,
         created_by: authData.user?.id ?? null,
         completed_at: new Date().toISOString(),
@@ -706,11 +624,12 @@ export default function AdminImport() {
     match:    rows.filter(r => getEffectiveStatus(r) === 'match').length,
     new:      rows.filter(r => getEffectiveStatus(r) === 'new').length,
     already:  rows.filter(r => getEffectiveStatus(r) === 'already').length,
+    duplicate: rows.filter(r => getEffectiveStatus(r) === 'duplicate').length,
     review:   rows.filter(r => getEffectiveStatus(r) === 'review').length,
     invalidYear: rows.filter(r => r.invalidYear).length,
-    enrich:   rows.filter(r => getEffectiveStatus(r) === 'match' && hasMemberEnrichment(r)).length,
+    enrich:   rows.filter(r => getEffectiveStatus(r) === 'match' && hasMemberEnrichment(r, matchedMembersSnapshot)).length,
   };
-  const totalNewMembers = summary.new + summary.review;
+  const totalNewMembers = summary.new;
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedTerm = selectedEvent?.academic_term_id ? terms[selectedEvent.academic_term_id] : undefined;
   const selectedEventMissingTerm = !!selectedEvent && !selectedEvent.academic_term_id;
@@ -733,7 +652,7 @@ export default function AdminImport() {
           <div className="mb-8">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Sheet Setup</h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--color-text2)' }}>
-              Paste a Google Sheets CSV link. Matched members get their points updated; unmatched people are added as new members.
+              Paste a Google Sheets CSV link. Safe matched and new rows import after preview; unresolved review rows are skipped until resolved.
             </p>
           </div>
 
@@ -843,8 +762,11 @@ export default function AdminImport() {
               <div className="flex flex-wrap gap-3">
                 <SummaryBadge color="green"  count={summary.match}    label="will update existing member"    plural="will update existing members" />
                 <SummaryBadge color="blue"   count={summary.new}      label="will be added as a new member"  plural="will be added as new members" />
-                <SummaryBadge color="amber"  count={summary.review}   label="added as new, flag as potential duplicate" plural="added as new, flag as potential duplicates" />
+                <SummaryBadge color="amber"  count={summary.review}   label="needs review and will be skipped" plural="need review and will be skipped" />
                 <SummaryBadge color="gray"   count={summary.already}  label="already imported for this event" plural="already imported for this event" />
+                {summary.duplicate > 0 && (
+                  <SummaryBadge color="gray" count={summary.duplicate} label="duplicate CSV row skipped" plural="duplicate CSV rows skipped" />
+                )}
                 {summary.invalidYear > 0 && (
                   <SummaryBadge color="red" count={summary.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
                 )}
@@ -952,7 +874,7 @@ export default function AdminImport() {
                           {effectiveStatus === 'match' && (
                             <span className="inline-flex items-center gap-1">
                               <ActionBadge color="green" label={getActionLabel(row)} />
-                              {hasMemberEnrichment(row) && (
+                              {hasMemberEnrichment(row, matchedMembersSnapshot) && (
                                 <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled during import">✉</span>
                               )}
                             </span>
@@ -966,6 +888,7 @@ export default function AdminImport() {
                             </span>
                           )}
                           {effectiveStatus === 'already' && <ActionBadge color="gray"  label="Skip" />}
+                          {effectiveStatus === 'duplicate' && <ActionBadge color="gray" label="Duplicate" />}
                           {effectiveStatus === 'review' && <ActionBadge color="amber" label="Review" />}
                           {canForceMatch(row) && (
                             <div className="mt-2 flex flex-col gap-1">
@@ -978,7 +901,7 @@ export default function AdminImport() {
                                   Force Match
                                 </button>
                               )}
-                              {row.manualOverride !== 'mark-new' && (
+                              {canMarkAsNew(row) && row.manualOverride !== 'mark-new' && (
                                 <button
                                   type="button"
                                   onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'mark-new' }))}
@@ -998,7 +921,7 @@ export default function AdminImport() {
                               )}
                             </div>
                           )}
-                          {row.status === 'match' && (
+                          {row.status === 'match' && canMarkAsNew(row) && (
                             <div className="mt-2 flex flex-col gap-1">
                               {row.manualOverride !== 'mark-new' ? (
                                 <button
@@ -1048,7 +971,7 @@ export default function AdminImport() {
                                 </span>
                               )}
                               {effectiveStatus === 'review' && (
-                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Similarity {row.score}% — adding as new</div>
+                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">{row.note}</div>
                               )}
                               {forcedMatch && (
                                 <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Forced match — will update existing member</div>
@@ -1056,12 +979,16 @@ export default function AdminImport() {
                               {forcedNew && (
                                 <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Manual override — will create a new member</div>
                               )}
-                              {effectiveStatus === 'match' && hasMemberEnrichment(row) && (
+                              {effectiveStatus === 'match' && hasMemberEnrichment(row, matchedMembersSnapshot) && (
                                 <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Missing profile fields will be merged during import</div>
                               )}
                             </span>
                           ) : isHighConfidenceOverride ? (
                             <span className="text-orange-500 dark:text-orange-400 text-xs italic">match ignored — will create new member</span>
+                          ) : effectiveStatus === 'review' ? (
+                            <span className="text-amber-600 dark:text-amber-400 text-xs italic">{row.note}</span>
+                          ) : effectiveStatus === 'duplicate' ? (
+                            <span className="text-zinc-500 dark:text-zinc-400 text-xs italic">{row.note}</span>
                           ) : (
                             <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
                           )}
@@ -1070,11 +997,13 @@ export default function AdminImport() {
                           {(effectiveStatus === 'match' || effectiveStatus === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
                               effectiveStatus === 'review' ? 'text-amber-600 dark:text-amber-400' :
-                              row.score >= EXACT_MATCH_THRESHOLD ? 'text-emerald-600 dark:text-emerald-400' :
+                              row.method === 'email' || row.method === 'exact_name' ? 'text-emerald-600 dark:text-emerald-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
                           ) : effectiveStatus === 'new' ? (
                             <span className="text-xs text-[var(--color-text3)]">—</span>
+                          ) : effectiveStatus === 'duplicate' ? (
+                            <span className="text-xs text-[var(--color-text3)]">duplicate row</span>
                           ) : (
                             <span className="text-xs text-[var(--color-text3)]">already done</span>
                           )}
@@ -1086,7 +1015,7 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-[var(--color-text3)] dark:text-[var(--color-text3)]">
-                Score = name (60%) + college (25%) + year (15%). ≥75% → exact match. 50-74% → flagged as duplicate but added as new. &lt;50% → new member.
+                Email is checked first. Conflicts and ambiguous names stay in review and are skipped unless explicitly resolved.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
