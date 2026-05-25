@@ -9,6 +9,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import { Event } from '../types';
 import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 
 const pillars = [
   {
@@ -233,6 +234,8 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      <ThisWeekInVSA />
 
       <section className="py-12 sm:py-16 bg-[var(--surface2)]">
         <div className="vsa-container">
