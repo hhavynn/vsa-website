@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
@@ -6,6 +6,7 @@ import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
 import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
+import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../constants/houses';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { supabase } from '../lib/supabase';
@@ -35,6 +36,20 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   other: 'gray',
   external_event: 'gray',
 };
+
+const HOUSE_EMOJI: Record<string, string> = {
+  Bowser: '🐢',
+  'Donkey Kong': '🦍',
+  Boo: '👻',
+  Toad: '🍄',
+};
+
+interface EventMemoryStats {
+  totalPoints: number;
+  memberCount: number;
+  topHouse: string | null;
+  topHouseCount: number;
+}
 
 type ArchiveTermOption = AcademicTerm | { id: 'unassigned'; label: 'Unassigned Dates' };
 
@@ -122,6 +137,122 @@ function EventImage({
   );
 }
 
+function PastEventMemoryCard({
+  event,
+  linkedAlbum,
+  recap,
+  stats,
+  terms,
+}: {
+  event: Event;
+  linkedAlbum?: string;
+  recap?: string;
+  stats?: EventMemoryStats;
+  terms: AcademicTerm[];
+}) {
+  const d = parseISO(event.date);
+  const termCode = getEventTermCode(event, terms);
+  const termLabel = getEventTermLabel(event, terms);
+  const houseKey = stats?.topHouse ? normalizeHouse(stats.topHouse) : null;
+  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : null;
+  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : null;
+  const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '') : '';
+  const hasPoints = event.points > 0;
+  const hasTotalPoints = stats && stats.totalPoints > 0;
+
+  return (
+    <div className="scrapbook-photo overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg">
+      {/* Image with optional gallery overlay */}
+      <div className="relative">
+        <EventImage
+          event={event}
+          className="aspect-[5/3] w-full object-cover"
+          titleClassName="px-5 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[22px]"
+          imageWidth={520}
+          imageHeight={312}
+        />
+        {linkedAlbum && (
+          <a
+            href={linkedAlbum}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm transition-opacity hover:bg-black/80"
+            aria-label={`View photos from ${event.name}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            View Photos
+          </a>
+        )}
+      </div>
+
+      {/* Caption */}
+      <div className="px-3 py-3">
+        {/* Name + date */}
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-sans text-sm font-semibold leading-snug" style={{ color: 'var(--color-text)' }}>
+            {event.name}
+          </span>
+          <span className="shrink-0 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
+            {format(d, 'MMM d, yyyy')}
+          </span>
+        </div>
+
+        {/* Term sticker + type */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">{termCode}</span>
+          <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>{termLabel}</span>
+          <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>·</span>
+          <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+            {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+          </span>
+        </div>
+
+        {/* Public recap highlight */}
+        {recap && (
+          <blockquote
+            className="mt-2.5 border-l-2 pl-2.5 font-serif text-[12px] italic leading-relaxed line-clamp-3"
+            style={{ borderColor: 'var(--accent)', color: 'var(--color-text2)' }}
+          >
+            "{recap}"
+          </blockquote>
+        )}
+
+        {/* Stats row */}
+        {(hasPoints || hasTotalPoints || houseKey) && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            {(hasPoints || hasTotalPoints) && (
+              <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
+                {hasPoints ? `+${event.points} pts each` : ''}
+                {hasPoints && hasTotalPoints ? ' · ' : ''}
+                {hasTotalPoints ? `${stats!.totalPoints.toLocaleString()} total` : ''}
+              </span>
+            )}
+            {houseKey && houseLabel && houseColor && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
+                style={{ background: houseColor }}
+                title={`${houseLabel} had the most members attend`}
+              >
+                {houseEmoji} {houseLabel} led
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Attendance count */}
+        {stats && stats.memberCount > 0 && (
+          <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+            {stats.memberCount} members attended
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Events() {
   const { events, loading, error } = useEvents();
   const { terms } = useAcademicTerms();
@@ -130,6 +261,10 @@ export function Events() {
   // Map of event_id -> google_photos_url for events that have a linked album.
   // Lightweight side fetch so we don't have to grow EventsRepository for this MVP.
   const [linkedAlbums, setLinkedAlbums] = useState<Record<string, string>>({});
+  // Map of event_id -> public_highlight text (only published recaps).
+  const [publishedRecaps, setPublishedRecaps] = useState<Record<string, string>>({});
+  // Map of event_id -> attendance/turnout stats.
+  const [memoryStats, setMemoryStats] = useState<Record<string, EventMemoryStats>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -194,6 +329,84 @@ export function Events() {
         return term ? eventMatchesTerm(event, term, terms) : false;
       })
     : pastEvents;
+
+  // Batch-fetch published recaps + attendance stats for currently visible archived events.
+  // Re-runs when the term/filter selection changes (i.e. when archivedEvents changes).
+  const archivedEventIds = archivedEvents.map((e) => e.id);
+  const archivedEventIdsKey = archivedEventIds.join(',');
+
+  useEffect(() => {
+    if (archivedEventIds.length === 0) return;
+    let cancelled = false;
+
+    // 1. Published recap highlights
+    supabase
+      .from('event_recaps')
+      .select('event_id, public_highlight')
+      .in('event_id', archivedEventIds)
+      .eq('is_public_highlight_published', true)
+      .not('public_highlight', 'is', null)
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setPublishedRecaps((prev) => {
+          const next = { ...prev };
+          for (const row of data as Array<{ event_id: string; public_highlight: string }>) {
+            if (row.event_id && row.public_highlight) next[row.event_id] = row.public_highlight;
+          }
+          return next;
+        });
+      });
+
+    // 2. Attendance stats: total points, member count, top house
+    supabase
+      .from('member_event_attendance')
+      .select('event_id, member_id, points_earned')
+      .in('event_id', archivedEventIds)
+      .then(async ({ data: attendanceRows }) => {
+        if (cancelled || !attendanceRows || attendanceRows.length === 0) return;
+
+        const rows = attendanceRows as Array<{ event_id: string; member_id: string; points_earned: number }>;
+        const uniqueMemberIds = Array.from(new Set(rows.map((r) => r.member_id)));
+
+        const { data: memberRows } = await supabase
+          .from('members')
+          .select('id, house')
+          .in('id', uniqueMemberIds);
+
+        if (cancelled) return;
+
+        const houseByMember = new Map<string, string | null>();
+        for (const m of (memberRows ?? []) as Array<{ id: string; house: string | null }>) {
+          houseByMember.set(m.id, m.house ?? null);
+        }
+
+        // Aggregate per event
+        const agg: Record<string, { totalPoints: number; memberCount: number; houseCounts: Record<string, number> }> = {};
+        for (const r of rows) {
+          if (!agg[r.event_id]) agg[r.event_id] = { totalPoints: 0, memberCount: 0, houseCounts: {} };
+          agg[r.event_id].totalPoints += r.points_earned;
+          agg[r.event_id].memberCount++;
+          const house = houseByMember.get(r.member_id);
+          if (house) agg[r.event_id].houseCounts[house] = (agg[r.event_id].houseCounts[house] ?? 0) + 1;
+        }
+
+        const stats: Record<string, EventMemoryStats> = {};
+        for (const [eventId, data] of Object.entries(agg)) {
+          const sorted = Object.entries(data.houseCounts).sort((a, b) => b[1] - a[1]);
+          stats[eventId] = {
+            totalPoints: data.totalPoints,
+            memberCount: data.memberCount,
+            topHouse: sorted[0]?.[0] ?? null,
+            topHouseCount: sorted[0]?.[1] ?? 0,
+          };
+        }
+
+        setMemoryStats((prev) => ({ ...prev, ...stats }));
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [archivedEventIdsKey]);
 
   if (loading) {
     return (
@@ -392,12 +605,12 @@ export function Events() {
         {pastEvents.length > 0 && (
           <>
             <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
-            <div className="mt-7" style={{ opacity: 0.72 }}>
+            <div className="mt-7">
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <Label className="mb-2">Past Events Archive</Label>
+                  <Label className="mb-2">Memory Wall</Label>
                   <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                    Browse previous events by academic term. Events without a saved term are matched by date when possible.
+                    Browse previous events by academic term. Photo buttons appear when an album is linked.
                   </p>
                 </div>
                 {archiveOptions.length > 0 && (
@@ -433,52 +646,14 @@ export function Events() {
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {archivedEvents.map((event: Event) => (
-                    <div
+                    <PastEventMemoryCard
                       key={event.id}
-                      className="scrapbook-photo overflow-hidden"
-                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-                    >
-                      <EventImage
-                        event={event}
-                        className="aspect-[5/3] w-full object-cover"
-                        titleClassName="px-5 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[22px]"
-                        imageWidth={520}
-                        imageHeight={312}
-                      />
-                      <div className="px-2 py-3">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="font-sans text-sm" style={{ color: 'var(--color-text)' }}>
-                            {event.name}
-                          </span>
-                          <span className="shrink-0 font-mono text-[10px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                            {format(new Date(event.date), 'MMM d')}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                            {getEventTermCode(event, terms)}
-                          </span>
-                          <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                            {getEventTermLabel(event, terms)}
-                          </span>
-                        </div>
-                        {linkedAlbums[event.id] && (
-                          <a
-                            href={linkedAlbums[event.id]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="scrapbook-sticker scrapbook-sticker-coral mt-3 inline-flex items-center gap-1.5"
-                            aria-label={`View photos from ${event.name}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            View Photos
-                          </a>
-                        )}
-                      </div>
-                    </div>
+                      event={event}
+                      linkedAlbum={linkedAlbums[event.id]}
+                      recap={publishedRecaps[event.id]}
+                      stats={memoryStats[event.id]}
+                      terms={terms}
+                    />
                   ))}
                 </div>
               )}
