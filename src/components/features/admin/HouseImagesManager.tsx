@@ -11,6 +11,11 @@ import { supabase } from '../../../lib/supabase';
 import { HousePageAsset } from '../../../types';
 
 type HouseAssetDraft = {
+  house_key: string;
+  display_name: string;
+  description: string;
+  accent_color: string;
+  is_active: boolean;
   image_url: string;
   image_alt: string;
   source_doc_url: string;
@@ -52,6 +57,11 @@ function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['te
 
 function emptyDraft(house: HouseName): HouseAssetDraft {
   return {
+    house_key: house,
+    display_name: HOUSE_LABELS[house],
+    description: '',
+    accent_color: HOUSE_COLORS[house],
+    is_active: true,
     image_url: '',
     image_alt: HOUSE_LABELS[house],
     source_doc_url: '',
@@ -66,6 +76,11 @@ function nullable(value: string) {
 
 function draftFromAsset(house: HouseName, asset?: HousePageAsset): HouseAssetDraft {
   return {
+    house_key: asset?.house_key ?? asset?.house ?? house,
+    display_name: asset?.display_name ?? HOUSE_LABELS[house],
+    description: asset?.description ?? '',
+    accent_color: asset?.accent_color ?? HOUSE_COLORS[house],
+    is_active: asset?.is_active ?? true,
     image_url: asset?.image_url ?? '',
     image_alt: asset?.image_alt ?? HOUSE_LABELS[house],
     source_doc_url: asset?.source_doc_url ?? '',
@@ -176,6 +191,11 @@ export function HouseImagesManager() {
         academic_year_start: selectedYear,
         academic_year_end: selectedYear + 1,
         house,
+        house_key: nullable(draft.house_key) ?? house,
+        display_name: nullable(draft.display_name) ?? HOUSE_LABELS[house],
+        description: nullable(draft.description),
+        accent_color: nullable(draft.accent_color),
+        is_active: draft.is_active,
         image_url: nullable(uploadedUrl ?? draft.image_url),
         image_alt: nullable(draft.image_alt) ?? HOUSE_LABELS[house],
         display_order: HOUSE_OPTIONS.indexOf(house),
@@ -204,6 +224,11 @@ export function HouseImagesManager() {
         academic_year_start: selectedYear,
         academic_year_end: selectedYear + 1,
         house,
+        house_key: nullable(drafts[house]?.house_key ?? '') ?? house,
+        display_name: nullable(drafts[house]?.display_name ?? '') ?? HOUSE_LABELS[house],
+        description: nullable(drafts[house]?.description ?? ''),
+        accent_color: nullable(drafts[house]?.accent_color ?? ''),
+        is_active: drafts[house]?.is_active ?? true,
         image_url: null,
         image_alt: HOUSE_LABELS[house],
         display_order: HOUSE_OPTIONS.indexOf(house),
@@ -311,6 +336,63 @@ export function HouseImagesManager() {
                 </div>
 
                 <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                      Display Name
+                    </label>
+                    <input
+                      value={draft.display_name}
+                      onChange={(event) => updateDraft(house, { display_name: event.target.value })}
+                      className="w-full rounded border px-3 py-2 text-sm"
+                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_110px]">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                        House Key
+                      </label>
+                      <input
+                        value={draft.house_key}
+                        onChange={(event) => updateDraft(house, { house_key: event.target.value })}
+                        className="w-full rounded border px-3 py-2 text-sm"
+                        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                        Accent
+                      </label>
+                      <input
+                        type="color"
+                        value={draft.accent_color || color}
+                        onChange={(event) => updateDraft(house, { accent_color: event.target.value })}
+                        className="h-[38px] w-full rounded border px-2 py-1"
+                        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                      Description
+                    </label>
+                    <textarea
+                      value={draft.description}
+                      onChange={(event) => updateDraft(house, { description: event.target.value })}
+                      rows={2}
+                      className="w-full rounded border px-3 py-2 text-sm"
+                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text2)' }}>
+                    <input
+                      type="checkbox"
+                      checked={draft.is_active}
+                      onChange={(event) => updateDraft(house, { is_active: event.target.checked })}
+                      className="rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]"
+                    />
+                    Active on public House pages and leaderboards
+                  </label>
                   <div>
                     <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
                       Image URL
