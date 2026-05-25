@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import { useQueryClient } from 'react-query';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
@@ -102,6 +103,7 @@ function AcademicTermSelect({
 export default function AdminEvents() {
   const { events, refreshEvents } = useEvents();
   const { terms, loading: termsLoading, error: termsError, refreshTerms } = useAcademicTerms();
+  const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<Event>>(EMPTY_EVENT);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -109,6 +111,7 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
+  const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
   const [copiedCode, setCopiedCode] = useState(false);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
@@ -271,6 +274,7 @@ export default function AdminEvents() {
         imageUrlToRemove = selectedEventOriginalImageUrl;
       }
       const academicTermId = await resolveAcademicTermId(selectedEvent.date, selectedEvent.academic_term_id);
+      const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name, description: selectedEvent.description,
         date: new Date(selectedEvent.date).toISOString(), location: selectedEvent.location,
@@ -282,8 +286,16 @@ export default function AdminEvents() {
       }).eq('id', selectedEvent.id);
       if (error) throw error;
       await removeEventImage(imageUrlToRemove);
-      toast.success('Event updated');
-      setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null); setSelectedEventOriginalImageUrl(null);
+      if (pointsChanged) {
+        // Invalidate cached point totals so Find My Points and leaderboard
+        // show fresh data after the DB trigger has synced attendance rows.
+        queryClient.invalidateQueries(['find-my-points']);
+        toast.success('Event saved — attendance points refreshed.');
+      } else {
+        toast.success('Event updated.');
+      }
+      setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
+      setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalPoints(0);
       refreshTerms();
       refreshEvents();
     } catch (err) {
@@ -334,6 +346,7 @@ export default function AdminEvents() {
               academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
             });
             setSelectedEventOriginalImageUrl(event.image_url ?? null);
+            setSelectedEventOriginalPoints(event.points ?? 0);
             setEditImageFile(null);
             setEditImagePreview(null);
           }}
