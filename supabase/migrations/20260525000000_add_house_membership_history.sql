@@ -143,7 +143,12 @@ create policy "Admins can delete house memberships"
     )
   );
 
-create or replace view public.published_house_page_assets as
+drop view if exists public.published_house_page_assets;
+drop view if exists public.house_yearly_points;
+drop view if exists public.house_all_time_points;
+drop view if exists public.house_recent_activity;
+
+create view public.published_house_page_assets as
 select
   id,
   academic_year_start,
@@ -163,7 +168,7 @@ select
 from public.house_page_assets
 where is_active = true;
 
-create or replace view public.house_yearly_points as
+create view public.house_yearly_points as
 select
   hp.house_key as house,
   hp.id as house_profile_id,
@@ -205,7 +210,7 @@ group by
   t.academic_year_start,
   t.academic_year_end;
 
-create or replace view public.house_all_time_points as
+create view public.house_all_time_points as
 select
   hp.house_key as house,
   hp.id as house_profile_id,
@@ -247,7 +252,7 @@ group by
   t.academic_year_start,
   t.academic_year_end;
 
-create or replace view public.house_recent_activity as
+create view public.house_recent_activity as
 select
   hp.house_key as house,
   hp.id as house_profile_id,
