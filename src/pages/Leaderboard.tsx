@@ -14,6 +14,7 @@ import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
@@ -594,13 +595,23 @@ export function Leaderboard() {
             </div>
           </>
         ) : (
-          <HouseStandingsWall
-            standings={houseStandings}
-            activity={houseActivity}
-            loading={houseLoading}
-            selectedYearLabel={selectedYearLabel}
-            metric={activeTab}
-          />
+          <>
+            <HouseStandingsWall
+              standings={houseStandings}
+              activity={houseActivity}
+              loading={houseLoading}
+              selectedYearLabel={selectedYearLabel}
+              metric={activeTab}
+            />
+            {selectedYear !== null && (
+              <div className="mt-12">
+                <HouseMemberLeaderboard
+                  selectedYear={selectedYear}
+                  selectedYearLabel={selectedYearLabel}
+                />
+              </div>
+            )}
+          </>
         )}
 
         <div className="mt-20">
