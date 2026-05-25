@@ -16,6 +16,7 @@ import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -505,6 +506,19 @@ export function House() {
             </div>
           </div>
         </section>
+
+        {/* ── House Member Rankings ── */}
+        {activeYear && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <HouseMemberLeaderboard
+                selectedYear={activeYear}
+                selectedYearLabel={activeYearLabel}
+                showLeaderboardLink
+              />
+            </div>
+          </section>
+        )}
 
         {/* ── Points explainer + recent activity ── */}
         <section className="program-section">
