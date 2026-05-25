@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { useQuery } from 'react-query';
 import { useEvents } from '../../../hooks/useEvents';
 import { type FindMyPointsEntry } from '../../../hooks/useFindMyPoints';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { supabase } from '../../../lib/supabase';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -119,6 +121,103 @@ function StatBox({
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+// ─── Recent events attended ────────────────────────────────────────────────────
+
+interface AttendedEvent {
+  event_id: string;
+  points_earned: number;
+  name: string;
+  date: string;
+  event_type: string;
+}
+
+function useRecentAttendance(memberId: string) {
+  return useQuery<AttendedEvent[]>({
+    queryKey: ['member-attendance', memberId],
+    enabled: !!memberId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('member_event_attendance')
+        .select('event_id, points_earned, events(id, name, date, event_type)')
+        .eq('member_id', memberId);
+
+      if (error) throw error;
+
+      return ((data ?? []) as any[])
+        .map((row) => {
+          const ev = Array.isArray(row.events) ? row.events[0] : row.events;
+          if (!ev) return null;
+          return {
+            event_id: row.event_id,
+            points_earned: row.points_earned ?? 0,
+            name: ev.name ?? '',
+            date: ev.date ?? '',
+            event_type: ev.event_type ?? 'other',
+          } as AttendedEvent;
+        })
+        .filter((r): r is AttendedEvent => r !== null && r.date !== '')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 4);
+    },
+  });
+}
+
+const TYPE_STICKER: Record<string, string> = {
+  gbm: 'scrapbook-sticker-teal',
+  mixer: 'scrapbook-sticker-coral',
+  vcn: 'scrapbook-sticker-coral',
+  wildn_culture: 'scrapbook-sticker-coral',
+  winter_retreat: 'scrapbook-sticker-coral',
+  other: 'scrapbook-sticker-gold',
+  external_event: 'scrapbook-sticker-gold',
+};
+
+function RecentEventsSection({ memberId }: { memberId: string }) {
+  const { data: attended = [], isLoading } = useRecentAttendance(memberId);
+
+  if (isLoading) {
+    return (
+      <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--text3)' }}>
+          Recent Events
+        </div>
+        <div className="h-4 w-32 animate-pulse rounded" style={{ background: 'var(--border)' }} />
+      </div>
+    );
+  }
+
+  if (attended.length === 0) return null;
+
+  return (
+    <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+      <div className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--text3)' }}>
+        Recent Events
+      </div>
+      <ul className="space-y-1.5">
+        {attended.map((ev) => (
+          <li key={ev.event_id} className="flex items-center gap-2.5">
+            <span className="w-[38px] shrink-0 text-center">
+              <span className="font-serif text-[15px] leading-none" style={{ color: 'var(--text)' }}>
+                {format(parseISO(ev.date), 'd')}
+              </span>
+              <span className="block font-mono text-[9px] uppercase" style={{ color: 'var(--text3)' }}>
+                {format(parseISO(ev.date), 'MMM')}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1 truncate font-sans text-[12px]" style={{ color: 'var(--text2)' }}>
+              {ev.name}
+            </span>
+            <span className={`scrapbook-sticker ${TYPE_STICKER[ev.event_type] ?? 'scrapbook-sticker-gold'} shrink-0 px-2 py-0.5 text-[9px]`}>
+              +{ev.points_earned}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -284,6 +383,9 @@ export function MyVSACard({
               All-time: <span style={{ color: 'var(--text)' }}>{entry.all_time_points.toLocaleString()} pts</span>
             </p>
           )}
+
+          {/* Recent events attended */}
+          <RecentEventsSection memberId={entry.member_id} />
 
           {/* Milestone */}
           {milestone && (
