@@ -4,7 +4,7 @@ import { Input } from '../../ui/Input';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../../../hooks/useLeaderboardYears';
 import { useFindMyPoints, type FindMyPointsEntry, type SelectedYear } from '../../../hooks/useFindMyPoints';
-import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { MyVSACard } from './MyVSACard';
 
 const SearchIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 512 512" fill="currentColor" aria-hidden>
@@ -302,8 +302,9 @@ export function FindMyPoints({ variant = 'panel', className = '', showHeader = t
         ) : showNoResults ? (
           <NoResultsCard query={trimmedQuery} yearLabel={selectedYearLabel} />
         ) : resolvedEntry ? (
-          <ResultCard
+          <MyVSACard
             entry={resolvedEntry}
+            allEntries={entries}
             yearLabel={selectedYearLabel}
             isAllTime={selectedYear === 'all'}
             ambiguous={matches.length > 1}
@@ -412,113 +413,6 @@ function MultipleMatches({
           Showing {matches.length} of {totalCount}. Refine your search to narrow it down.
         </p>
       )}
-    </div>
-  );
-}
-
-function ResultCard({
-  entry,
-  yearLabel,
-  isAllTime,
-  ambiguous,
-  onReset,
-}: {
-  entry: FindMyPointsEntry;
-  yearLabel: string;
-  isAllTime: boolean;
-  ambiguous: boolean;
-  onReset: () => void;
-}) {
-  const houseKey = normalizeHouse(entry.house);
-  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : entry.house;
-  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : 'var(--brand)';
-  const subline = [entry.graduation_year, entry.college].filter(Boolean).join(' • ');
-
-  return (
-    <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-2xl border-4 border-[var(--accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface2)] p-5 sm:p-6 shadow-md">
-        <div className="absolute right-3 top-3">
-          <span className="rounded-full bg-[var(--accent)] px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white">
-            {yearLabel}
-          </span>
-        </div>
-
-        <div className="flex items-start gap-4">
-          <InitialsAvatar name={entry.full_name || 'Member'} size={56} />
-          <div className="min-w-0 flex-1 pr-20 sm:pr-24">
-            <div className="truncate font-serif text-2xl font-bold leading-tight" style={{ color: 'var(--text)' }}>
-              {entry.full_name || 'VSA Member'}
-            </div>
-            {subline && (
-              <div className="mt-1 truncate font-sans text-[12px]" style={{ color: 'var(--text3)' }}>
-                {subline}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label={isAllTime ? 'Points' : `${yearLabel} pts`} value={entry.total_points.toLocaleString()} highlight />
-          <Stat label="Events" value={String(entry.events_attended)} />
-          <Stat label="Rank" value={`#${entry.rank}`} />
-          {entry.house ? (
-            <Stat
-              label="House"
-              value={houseLabel ?? entry.house}
-              accentColor={houseColor}
-            />
-          ) : (
-            <Stat label="All-time" value={entry.all_time_points.toLocaleString()} />
-          )}
-        </dl>
-
-        {!isAllTime && entry.house && entry.all_time_points !== entry.total_points && (
-          <p className="mt-4 font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
-            All-time total: <span style={{ color: 'var(--text)' }}>{entry.all_time_points.toLocaleString()} pts</span>
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface2)] p-4">
-        <p className="font-sans text-xs" style={{ color: 'var(--text2)' }}>
-          Doesn't look right? Let cabinet know and we'll review it.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          {ambiguous && (
-            <button
-              type="button"
-              onClick={onReset}
-              className="rounded-full border-2 border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors hover:border-[var(--brand)]"
-              style={{ color: 'var(--text2)' }}
-            >
-              Not me
-            </button>
-          )}
-          <Link
-            to={CORRECTION_HREF}
-            className="rounded-full border-2 border-[var(--accent)] bg-[var(--accent)] px-4 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
-          >
-            Request correction
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, highlight, accentColor }: { label: string; value: string; highlight?: boolean; accentColor?: string }) {
-  return (
-    <div
-      className={`rounded-xl border-2 p-3 ${highlight ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'border-[var(--border)] bg-[var(--surface)]'}`}
-      style={accentColor ? { borderColor: `${accentColor}55`, background: `${accentColor}10` } : undefined}
-    >
-      <div className="font-mono text-[10px] font-bold uppercase tracking-wider opacity-60">{label}</div>
-      <div
-        className={`mt-1 truncate font-mono ${highlight ? 'text-2xl font-black' : 'text-lg font-black'}`}
-        style={accentColor ? { color: accentColor } : { color: highlight ? 'var(--accent)' : 'var(--text)' }}
-      >
-        {value}
-      </div>
     </div>
   );
 }
