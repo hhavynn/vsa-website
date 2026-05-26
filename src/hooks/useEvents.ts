@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 import { eventsRepository, EventFilters } from '../data/repos/events';
 import { EventWithAttendance } from '../data/repos/events';
 import { CreateEventFormData, UpdateEventFormData } from '../schemas';
@@ -12,6 +12,24 @@ export function useEvents(filters?: EventFilters) {
   });
 
   return { events, loading, error, refreshEvents };
+}
+
+export const EVENTS_PAGE_SIZE = 9;
+
+export function useInfiniteEvents(filters: Omit<EventFilters, 'limit' | 'offset'> = {}) {
+  return useInfiniteQuery<EventWithAttendance[]>({
+    queryKey: ['events', 'infinite', filters],
+    queryFn: ({ pageParam = 0 }) =>
+      eventsRepository.getEvents({
+        ...filters,
+        limit: EVENTS_PAGE_SIZE,
+        offset: pageParam * EVENTS_PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === EVENTS_PAGE_SIZE ? allPages.length : undefined;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 export function useEvent(id: string, userId?: string) {

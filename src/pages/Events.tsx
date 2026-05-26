@@ -11,7 +11,7 @@ import { getAcademicTermMeta } from '../lib/academicTerms';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { useEvents } from '../hooks/useEvents';
+import { useEvents, useInfiniteEvents } from '../hooks/useEvents';
 import { AcademicTerm, Event } from '../types';
 
 type FilterKey = 'all' | Event['event_type'];
@@ -70,10 +70,6 @@ function getEventTerm(event: Event, terms: AcademicTerm[]) {
   if (!inferredTerm) return null;
 
   return terms.find((term) => term.code === inferredTerm.code) ?? null;
-}
-
-function eventMatchesTerm(event: Event, term: AcademicTerm, terms: AcademicTerm[]) {
-  return getEventTerm(event, terms)?.id === term.id;
 }
 
 function getEventTermLabel(event: Event, terms: AcademicTerm[]) {
@@ -210,16 +206,6 @@ function PastEventMemoryCard({
           </span>
         </div>
 
-        {/* Public recap highlight */}
-        {recap && (
-          <blockquote
-            className="mt-2.5 border-l-2 pl-2.5 font-serif text-[12px] italic leading-relaxed line-clamp-3"
-            style={{ borderColor: 'var(--accent)', color: 'var(--color-text2)' }}
-          >
-            "{recap}"
-          </blockquote>
-        )}
-
         {/* Stats row */}
         {(hasPoints || hasTotalPoints || houseKey) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -242,6 +228,16 @@ function PastEventMemoryCard({
           </div>
         )}
 
+        {/* Public recap highlight */}
+        {recap && (
+          <blockquote
+            className="mt-2.5 border-l-2 pl-2.5 font-serif text-[12px] italic leading-relaxed line-clamp-3"
+            style={{ borderColor: 'var(--accent)', color: 'var(--color-text2)' }}
+          >
+            "{recap}"
+          </blockquote>
+        )}
+
         {/* Attendance count */}
         {stats && stats.memberCount > 0 && (
           <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
@@ -254,16 +250,57 @@ function PastEventMemoryCard({
 }
 
 export function Events() {
-  const { events, loading, error } = useEvents();
-  const { terms } = useAcademicTerms();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
-  // Map of event_id -> google_photos_url for events that have a linked album.
-  // Lightweight side fetch so we don't have to grow EventsRepository for this MVP.
+
+  const now = useMemo(() => new Date(), []);
+  const oneDayAgo = useMemo(() => new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), [now]);
+
+  // 1. Fetch upcoming events
+  const { events: upcomingEventsAll, loading: upcomingLoading, error: upcomingError } = useEvents({
+    date_from: oneDayAgo,
+    event_type: activeFilter === 'all' ? undefined : activeFilter,
+    sort_ascending: true
+  });
+
+  const { terms } = useAcademicTerms();
+
+  // 2. Fetch past events (paginated)
+  const archiveTerms = useMemo(
+    () => terms.filter(t => !t.is_active).sort(sortTermsByDateDesc),
+    [terms]
+  );
+  
+  const archiveOptions: ArchiveTermOption[] = useMemo(() => [
+    ...archiveTerms,
+    { id: 'unassigned', label: 'Unassigned Dates' }
+  ], [archiveTerms]);
+
+  const effectiveArchiveTermId =
+    selectedArchiveTermId && archiveOptions.some((term) => term.id === selectedArchiveTermId)
+      ? selectedArchiveTermId
+      : archiveOptions[0]?.id ?? null;
+
+  const {
+    data: pastEventsData,
+    isLoading: pastLoading,
+    error: pastError,
+    hasNextPage: hasMorePast,
+    fetchNextPage: fetchMorePast,
+    isFetchingNextPage: fetchingMorePast
+  } = useInfiniteEvents({
+    date_to: oneDayAgo,
+    event_type: activeFilter === 'all' ? undefined : activeFilter,
+    academic_term_id: effectiveArchiveTermId === 'unassigned' ? null : effectiveArchiveTermId,
+    sort_ascending: false
+  });
+
+  const archivedEvents = useMemo(() => {
+    return pastEventsData?.pages.flatMap(page => page) ?? [];
+  }, [pastEventsData]);
+
   const [linkedAlbums, setLinkedAlbums] = useState<Record<string, string>>({});
-  // Map of event_id -> public_highlight text (only published recaps).
   const [publishedRecaps, setPublishedRecaps] = useState<Record<string, string>>({});
-  // Map of event_id -> attendance/turnout stats.
   const [memoryStats, setMemoryStats] = useState<Record<string, EventMemoryStats>>({});
 
   useEffect(() => {
@@ -278,60 +315,20 @@ export function Events() {
         const map: Record<string, string> = {};
         for (const row of data as Array<{ event_id: string | null; google_photos_url: string | null }>) {
           if (row.event_id && row.google_photos_url && !map[row.event_id]) {
-            // First album per event wins (MVP: single album link).
             map[row.event_id] = row.google_photos_url;
           }
         }
         setLinkedAlbums(map);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const [featured, ...rest] = upcomingEventsAll;
+  const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now.toISOString())?.code);
 
-  const upcomingAll = events
-    .filter((event: Event) => new Date(event.date) >= oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const pastAll = events
-    .filter((event: Event) => new Date(event.date) < oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const filterFn = (event: Event) => activeFilter === 'all' || event.event_type === activeFilter;
-  const upcomingEvents = upcomingAll.filter(filterFn);
-  const pastEvents = pastAll.filter(filterFn);
-  const [featured, ...rest] = upcomingEvents;
-  const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now)?.code);
-
-  const archiveTerms = useMemo(
-    () =>
-      terms
-        .filter((term) => pastAll.some((event) => eventMatchesTerm(event, term, terms)))
-        .sort(sortTermsByDateDesc),
-    [pastAll, terms]
-  );
-  const hasUnassignedPastEvents = pastAll.some((event) => !getEventTerm(event, terms));
-  const archiveOptions: ArchiveTermOption[] = hasUnassignedPastEvents
-    ? [...archiveTerms, { id: 'unassigned', label: 'Unassigned Dates' }]
-    : archiveTerms;
-  const effectiveArchiveTermId =
-    selectedArchiveTermId && archiveOptions.some((term) => term.id === selectedArchiveTermId)
-      ? selectedArchiveTermId
-      : archiveOptions[0]?.id ?? null;
   const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
-  const archivedEvents = effectiveArchiveTermId
-    ? pastEvents.filter((event) => {
-        if (effectiveArchiveTermId === 'unassigned') return !getEventTerm(event, terms);
-        const term = terms.find((item) => item.id === effectiveArchiveTermId);
-        return term ? eventMatchesTerm(event, term, terms) : false;
-      })
-    : pastEvents;
 
   // Batch-fetch published recaps + attendance stats for currently visible archived events.
-  // Re-runs when the term/filter selection changes (i.e. when archivedEvents changes).
   const archivedEventIds = archivedEvents.map((e) => e.id);
   const archivedEventIdsKey = archivedEventIds.join(',');
 
@@ -357,7 +354,7 @@ export function Events() {
         });
       });
 
-    // 2. Attendance stats: total points, member count, top house
+    // 2. Attendance stats
     supabase
       .from('member_event_attendance')
       .select('event_id, member_id, points_earned')
@@ -380,7 +377,6 @@ export function Events() {
           houseByMember.set(m.id, m.house ?? null);
         }
 
-        // Aggregate per event
         const agg: Record<string, { totalPoints: number; memberCount: number; houseCounts: Record<string, number> }> = {};
         for (const r of rows) {
           if (!agg[r.event_id]) agg[r.event_id] = { totalPoints: 0, memberCount: 0, houseCounts: {} };
@@ -408,7 +404,7 @@ export function Events() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archivedEventIdsKey]);
 
-  if (loading) {
+  if (upcomingLoading || (pastLoading && archivedEvents.length === 0)) {
     return (
       <>
         <PageTitle title="Events" />
@@ -417,13 +413,13 @@ export function Events() {
     );
   }
 
-  if (error) {
+  if (upcomingError || pastError) {
     return (
       <>
         <PageTitle title="Events" />
         <div className="mx-auto max-w-4xl px-8 py-20 text-center">
           <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-            Error loading events: {error instanceof Error ? error.message : 'Unknown error'}
+            Error loading events: {(upcomingError as any)?.message || (pastError as any)?.message || 'Unknown error'}
           </p>
         </div>
       </>
@@ -439,7 +435,7 @@ export function Events() {
           <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            Keep up with GBMs, mixers, cultural programs, and VSA traditions. {upcomingAll.length} upcoming / {pastAll.length} past.
+            Keep up with GBMs, mixers, cultural programs, and VSA traditions.
           </p>
           {activeTerm && (
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
@@ -448,17 +444,15 @@ export function Events() {
           )}
 
           <div className="vsa-filter-bar">
-            {FILTERS.filter((filter) => filter.key === 'all' || events.some((event) => event.event_type === filter.key)).map(
-              (filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => setActiveFilter(filter.key)}
-                  className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
-                >
-                  {filter.label}
-                </button>
-              )
-            )}
+            {FILTERS.map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setActiveFilter(filter.key)}
+                className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
+              >
+                {filter.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -592,7 +586,7 @@ export function Events() {
           </>
         )}
 
-        {upcomingEvents.length === 0 && (
+        {upcomingEventsAll.length === 0 && (
           <div
             className="scrapbook-empty mb-10"
           >
@@ -602,48 +596,49 @@ export function Events() {
           </div>
         )}
 
-        {pastEvents.length > 0 && (
-          <>
-            <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
-            <div className="mt-7">
-              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <Label className="mb-2">Memory Wall</Label>
-                  <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                    Browse previous events by academic term. Photo buttons appear when an album is linked.
-                  </p>
-                </div>
-                {archiveOptions.length > 0 && (
-                  <div className="min-w-[220px]">
-                    <label className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                      Term
-                    </label>
-                    <select
-                      value={effectiveArchiveTermId ?? ''}
-                      onChange={(event) => setSelectedArchiveTermId(event.target.value || null)}
-                      className="scrapbook-select"
-                    >
-                      {archiveOptions.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+        {/* Memory Wall / Past Events Section */}
+        <>
+          <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
+          <div className="mt-7">
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <Label className="mb-2">Memory Wall</Label>
+                <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  Browse previous events by academic term. Photo buttons appear when an album is linked.
+                </p>
               </div>
-
-              {archivedEvents.length === 0 ? (
-                <div
-                  className="rounded border p-10 text-center"
-                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-                >
-                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                    No {activeFilter === 'all' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
-                    events found for {selectedArchiveTerm?.label ?? 'this term'}.
-                  </p>
+              {archiveOptions.length > 0 && (
+                <div className="min-w-[220px]">
+                  <label className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                    Term
+                  </label>
+                  <select
+                    value={effectiveArchiveTermId ?? ''}
+                    onChange={(event) => setSelectedArchiveTermId(event.target.value || null)}
+                    className="scrapbook-select"
+                  >
+                    {archiveOptions.map((term) => (
+                      <option key={term.id} value={term.id}>
+                        {term.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
+              )}
+            </div>
+
+            {archivedEvents.length === 0 && !pastLoading ? (
+              <div
+                className="rounded border p-10 text-center"
+                style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+              >
+                <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  No {activeFilter === 'all' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
+                  events found for {selectedArchiveTerm?.label ?? 'this term'}.
+                </p>
+              </div>
+            ) : (
+              <>
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {archivedEvents.map((event: Event) => (
                     <PastEventMemoryCard
@@ -656,10 +651,31 @@ export function Events() {
                     />
                   ))}
                 </div>
-              )}
-            </div>
-          </>
-        )}
+                
+                {hasMorePast && (
+                  <div className="mt-12 flex justify-center">
+                    <button
+                      onClick={() => fetchMorePast()}
+                      disabled={fetchingMorePast}
+                      className="vsa-btn-outline group relative min-w-[200px] overflow-hidden"
+                    >
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {fetchingMorePast ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Loading...
+                          </>
+                        ) : (
+                          'Load More Past Events'
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
       </div>
     </>
   );
