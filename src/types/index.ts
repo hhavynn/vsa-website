@@ -309,3 +309,62 @@ export interface HouseRecentActivity {
   contributing_members: number;
   latest_activity_at: string | null;
 }
+
+export type UVSAConfidenceLevel = 'high' | 'medium' | 'low';
+export type UVSASystemType = 'UC' | 'CSU' | 'Private';
+
+export interface UVSASchool {
+  id: string;
+  school_name: string;
+  short_name: string;
+  slug: string;
+  system_type: UVSASystemType;
+  city: string | null;
+  vsa_name: string | null;
+  instagram_url: string | null;
+  linktree_url: string | null;
+  website_url: string | null;
+  facebook_url: string | null;
+  youtube_url: string | null;
+  tiktok_url: string | null;
+  description: string | null;
+  known_for: string[];
+  recurring_events: string[];
+  logo_url: string | null;
+  image_url: string | null;
+  confidence_level: UVSAConfidenceLevel;
+  verification_notes: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ExternalEventStatus = 'draft' | 'upcoming' | 'past' | 'historical' | 'canceled';
+
+export interface ExternalEvent {
+  id: string;
+  uvsa_school_id: string | null;
+  title: string;
+  event_type: string | null;
+  date: string | null;
+  academic_term_id: string | null;
+  location: string | null;
+  description: string | null;
+  points: number;
+  rsvp_url: string | null;
+  ride_form_url: string | null;
+  instagram_url: string | null;
+  host_info_url: string | null;
+  ride_info: string | null;
+  status: ExternalEventStatus;
+  photo_album_url: string | null;
+  recap: string | null;
+  source_notes: string | null;
+  confidence_level: UVSAConfidenceLevel;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  // Join data
+  uvsa_school?: UVSASchool;
+}
