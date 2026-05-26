@@ -17,7 +17,7 @@ import {
   FaUsers,
   FaTrophy
 } from 'react-icons/fa';
-import { format } from 'date-fns';
+import { formatDateOnly } from '../lib/dateOnly';
 import { ExternalEvent, UVSASchool } from '../types';
 
 // Icon components cast to any to avoid TS JSX errors in some environments
@@ -253,7 +253,7 @@ function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent;
         {!isArchive && event.date && (
           <div className="flex items-center gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
             <CalendarIcon size={14} />
-            <span>{format(new Date(event.date), 'MMMM d, yyyy')}</span>
+            <span>{formatDateOnly(event.date, 'MMMM d, yyyy')}</span>
           </div>
         )}
 
