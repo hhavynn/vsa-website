@@ -27,6 +27,9 @@ function corsHeaders(req: Request) {
 const FALLBACK_MESSAGE =
   "I'm not sure from the approved VSA info I have. Try the Events page, Feedback page, or official VSA channels.";
 
+const PRIVATE_INFO_MESSAGE =
+  "I can't provide check-in codes or private event/admin info. Check official event instructions from VSA at UCSD.";
+
 const RATE_LIMIT_MESSAGE = "You've reached today's Ask VSA limit. Try again later!";
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
@@ -73,6 +76,15 @@ interface SourceChip {
   category: string;
 }
 
+interface PublicEvent {
+  name: string;
+  date: string;
+  location: string | null;
+  event_type: string | null;
+  points: number | null;
+  description: string | null;
+}
+
 function jsonResponse(req: Request, body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -110,8 +122,11 @@ function trimRecentTurns(turns: Array<{ role: "user" | "assistant"; content: str
   return trimmed;
 }
 
-function asksForNextEvent(message: string) {
-  return /\b(next|upcoming|soon|when)\b/i.test(message) && /\b(event|gbm|meeting|social)\b/i.test(message);
+function asksForUpcomingEvents(message: string) {
+  return (
+    /\b(next|upcoming|soon|coming up|happening|when|what's|what is|any)\b/i.test(message) &&
+    /\b(event|events|gbm|meeting|social|program|programs|happening)\b/i.test(message)
+  );
 }
 
 function isSafetyRedirect(message: string) {
@@ -119,7 +134,30 @@ function isSafetyRedirect(message: string) {
 }
 
 function asksForSensitivePrivateInfo(message: string) {
-  return /\b(private|personal|phone number|email|address|attendance|check-?in code|check in code|budget|cabinet-only|drive doc|member data)\b/i.test(message);
+  return /\b(private|personal|phone number|email|address|attendance|check-?in code|check in code|checkin code|budget|cabinet-only|drive doc|member data|admin resource|admin resources)\b/i.test(message);
+}
+
+function expandKnowledgeQuery(message: string, currentPage?: string) {
+  const lower = `${message} ${currentPage ?? ""}`.toLowerCase();
+  const terms = [message, currentPage ?? ""];
+
+  if (/\b(points?|leaderboard|score|earn|credit)\b/.test(lower)) {
+    terms.push("points leaderboard earn points event points points policy corrections");
+  }
+  if (/\b(house|houses|bowser|boo|toad|donkey kong|dk)\b/.test(lower)) {
+    terms.push("house houses house system Bowser Boo Toad Donkey Kong standings assignments");
+  }
+  if (/\b(ace|anh chi em|famil(?:y|ies)|big|bigs|mentor|mentorship)\b/.test(lower)) {
+    terms.push("ACE Anh Chi Em families mentorship bigs lineage");
+  }
+  if (/\b(externals?|uvsa|other schools?|rides?|ride form|linktree|network)\b/.test(lower)) {
+    terms.push("UVSA Network externals external points rides Linktree other schools");
+  }
+  if (asksForUpcomingEvents(message)) {
+    terms.push("events upcoming next event Events page current event details");
+  }
+
+  return terms.filter(Boolean).join(" ");
 }
 
 function buildContext(snippets: KnowledgeSnippet[], eventContext: string | null) {
@@ -203,17 +241,17 @@ async function getRateLimitReason(
 ) {
   const now = Date.now();
   const sessionDay = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 24 * 60 * 60 * 1000));
-  if (sessionDay >= 15) return "session_daily_limit";
+  if (sessionDay >= 5) return "session_daily_limit";
 
-  const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 10 * 60 * 1000));
-  if (sessionBurst >= 6) return "session_10_minute_limit";
+  const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 5 * 60 * 1000));
+  if (sessionBurst >= 2) return "session_5_minute_limit";
 
   if (ipHash) {
     const ipDay = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 24 * 60 * 60 * 1000));
-    if (ipDay >= 100) return "ip_daily_limit";
+    if (ipDay >= 50) return "ip_daily_limit";
 
     const ipHour = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 60 * 60 * 1000));
-    if (ipHour >= 20) return "ip_hourly_limit";
+    if (ipHour >= 10) return "ip_hourly_limit";
   }
 
   return null;
@@ -224,7 +262,7 @@ async function retrieveKnowledge(
   message: string,
   currentPage?: string,
 ) {
-  const query = [message, currentPage ?? ""].filter(Boolean).join(" ");
+  const query = expandKnowledgeQuery(message, currentPage);
   const { data, error } = await supabaseClient.rpc("match_ai_knowledge_base", {
     query_text: query,
     match_limit: 6,
@@ -234,15 +272,93 @@ async function retrieveKnowledge(
   return (data ?? []) as KnowledgeSnippet[];
 }
 
-async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof createClient>) {
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatEventDateTime(value: string) {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 12, 0, 0)
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  const hasTime = !dateOnly && !/t00:00:00(?:\.000)?(?:z|[+-]\d{2}:?\d{2})?$/i.test(value);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(hasTime ? { hour: "numeric", minute: "2-digit", timeZoneName: "short" } : {}),
+  });
+
+  return formatter.format(date);
+}
+
+function eventTypeLabel(value: string | null) {
+  const labels: Record<string, string> = {
+    gbm: "GBM",
+    mixer: "Mixer",
+    vcn: "VCN",
+    vcn_dance_practice: "VCN Dance Practice",
+    wildn_culture: "Wild n' Culture",
+    winter_retreat: "Retreat",
+    external_event: "External",
+    other: "Other",
+  };
+  return value ? labels[value] ?? value.replace(/_/g, " ") : null;
+}
+
+function formatEventLine(event: PublicEvent, index: number) {
+  const details = [
+    `${index + 1}. ${event.name} on ${formatEventDateTime(event.date)}`,
+    event.location ? `at ${event.location}` : null,
+    eventTypeLabel(event.event_type) ? `type: ${eventTypeLabel(event.event_type)}` : null,
+    typeof event.points === "number" && event.points > 0 ? `${event.points} point${event.points === 1 ? "" : "s"}` : null,
+  ].filter(Boolean);
+
+  const description = event.description ? ` ${String(event.description).slice(0, 180)}` : "";
+  return `${details.join("; ")}.${description}`;
+}
+
+function buildUpcomingEventsAnswer(events: PublicEvent[]) {
+  if (events.length === 0) {
+    return "I don't see any upcoming events listed on the website right now. Check the Events page or official VSA channels for updates.";
+  }
+
+  const [nextEvent, ...moreEvents] = events;
+  const nextDetails = [
+    `The next VSA event I found is ${nextEvent.name} on ${formatEventDateTime(nextEvent.date)}${nextEvent.location ? ` at ${nextEvent.location}` : ""}`,
+    typeof nextEvent.points === "number" && nextEvent.points > 0
+      ? `It is worth ${nextEvent.points} point${nextEvent.points === 1 ? "" : "s"}`
+      : null,
+  ].filter(Boolean);
+
+  if (moreEvents.length === 0) {
+    return `${nextDetails.join(". ")}. Check the Events page for the latest details.`;
+  }
+
+  const upcoming = events.slice(0, 3).map(formatEventLine).join("\n");
+  return `Here are the next public VSA events listed:\n${upcoming}\nCheck the Events page for the latest details.`;
+}
+
+async function getUpcomingEvents(supabaseClient: ReturnType<typeof createClient>) {
   const { data, error } = await supabaseClient
     .from("events")
     .select("name, date, location, event_type, points, description")
-    .gte("date", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .gte("date", todayDateOnly())
     .order("date", { ascending: true })
     .limit(3);
 
-  if (error || !data || data.length === 0) return null;
+  if (error || !data) return [];
+  return data as PublicEvent[];
+}
+
+async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof createClient>) {
+  const data = await getUpcomingEvents(supabaseClient);
+
+  if (data.length === 0) return null;
 
   return data
     .map((event: any, index: number) => {
@@ -395,11 +511,34 @@ serve(async (req) => {
         blockedReason: isSafetyRedirect(parsed.message) ? "safety_redirect" : "private_info_request",
         currentPage: parsed.currentPage,
       });
-      return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
+      return jsonResponse(req, {
+        answer: asksForSensitivePrivateInfo(parsed.message) ? PRIVATE_INFO_MESSAGE : FALLBACK_MESSAGE,
+        sources: [],
+        status: "fallback",
+      });
+    }
+
+    if (asksForUpcomingEvents(parsed.message)) {
+      const events = await getUpcomingEvents(supabaseClient);
+      const answer = buildUpcomingEventsAnswer(events);
+      const status: AssistantStatus = events.length > 0 ? "answered" : "fallback";
+      await logUsage(supabaseClient, {
+        sessionIdHash,
+        ipHash,
+        status,
+        messageLength: parsed.message.length,
+        blockedReason: events.length > 0 ? undefined : "no_upcoming_events",
+        currentPage: parsed.currentPage,
+      });
+      return jsonResponse(req, {
+        answer,
+        sources: [{ title: "Events Page", source_url: "/events", category: "events" }],
+        status,
+      });
     }
 
     const snippets = await retrieveKnowledge(supabaseClient, parsed.message, parsed.currentPage);
-    const eventContext = asksForNextEvent(parsed.message)
+    const eventContext = asksForUpcomingEvents(parsed.message)
       ? await getUpcomingEventsContext(supabaseClient)
       : null;
 
