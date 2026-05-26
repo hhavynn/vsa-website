@@ -29,7 +29,7 @@ const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_ur
 
 function resolveImageUrl(image?: string | null) {
   if (!image) return null;
-  return image.startsWith('http') || image.startsWith('data:') ? image : cabinetImage(image);
+  return image.startsWith('http') || image.startsWith('data:') || image.startsWith('/') ? image : cabinetImage(image);
 }
 
 function sortCabinetMembers(a: CabinetMember, b: CabinetMember) {

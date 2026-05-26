@@ -74,7 +74,7 @@ const publicUrl = process.env.PUBLIC_URL || '';
 
 function resolveInternImageUrl(image?: string | null) {
   if (!image) return null;
-  return image.startsWith('http') || image.startsWith('data:') ? image : `${publicUrl}/images/cabinet/${image}`;
+  return image.startsWith('http') || image.startsWith('data:') || image.startsWith('/') ? image : `${publicUrl}/images/cabinet/${image}`;
 }
 
 function InternCard({ intern }: { intern: CabinetIntern }) {
