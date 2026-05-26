@@ -443,9 +443,11 @@ function SchoolCard({ school }: { school: UVSASchool }) {
     <Card className="group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors">
       <div className="flex items-start justify-between">
         <SchoolVisualMark school={school} />
-        <span className="font-sans text-[10px] uppercase tracking-[0.12em] text-[var(--text3)]">
-          {school.city}
-        </span>
+        {school.city && (
+          <span className="font-sans text-[10px] uppercase tracking-[0.12em] text-[var(--text3)]">
+            {school.city}
+          </span>
+        )}
       </div>
 
       <div>
