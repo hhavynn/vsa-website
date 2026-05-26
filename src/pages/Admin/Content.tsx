@@ -84,7 +84,7 @@ export default function AdminContent() {
   });
 
   async function uploadPhoto(file: File): Promise<string> {
-    const preparedFile = await prepareImageForUpload(file, 'homepage');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'homepage');
     const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const { error } = await supabase.storage.from('presidents_images').upload(fileName, preparedFile, {
@@ -92,6 +92,10 @@ export default function AdminContent() {
       contentType: preparedFile.type,
     });
     if (error) throw error;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
 
     const { data } = supabase.storage.from('presidents_images').getPublicUrl(fileName);
     return data.publicUrl;

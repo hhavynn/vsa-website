@@ -106,7 +106,7 @@ export default function AdminGallery() {
   });
 
   async function uploadCoverImage(file: File) {
-    const preparedFile = await prepareImageForUpload(file, 'galleryCover');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'galleryCover');
     const fileName = `${crypto.randomUUID()}.${getUploadExtension(preparedFile)}`;
     const { error } = await supabase.storage
       .from('gallery_images')
@@ -115,6 +115,11 @@ export default function AdminGallery() {
         contentType: preparedFile.type,
       });
     if (error) throw error;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Cover photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
     return data.publicUrl;
   }

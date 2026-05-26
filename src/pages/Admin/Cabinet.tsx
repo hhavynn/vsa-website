@@ -286,7 +286,7 @@ export default function AdminCabinet() {
   });
 
   const uploadImage = async (file: File): Promise<string> => {
-    const preparedFile = await prepareImageForUpload(file, 'cabinet');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'cabinet');
     const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const { error } = await supabase.storage.from('cabinet_images').upload(fileName, preparedFile, {
@@ -294,6 +294,11 @@ export default function AdminCabinet() {
       contentType: preparedFile.type,
     });
     if (error) throw error;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('cabinet_images').getPublicUrl(fileName);
     return data.publicUrl;
   };
