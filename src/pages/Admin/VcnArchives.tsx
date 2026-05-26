@@ -20,6 +20,7 @@ type VCNArchiveFormState = {
   photo_album_url: string;
   album_source: string;
   cover_image_url: string;
+  cover_thumbnail_url: string;
   poster_url: string;
   trailer_url: string;
   photo_credit: string;
@@ -47,6 +48,7 @@ const EMPTY_FORM: VCNArchiveFormState = {
   photo_album_url: '',
   album_source: '',
   cover_image_url: '',
+  cover_thumbnail_url: '',
   poster_url: '',
   trailer_url: '',
   photo_credit: '',
@@ -83,6 +85,7 @@ function formFromArchive(archive: VCNArchive): VCNArchiveFormState {
     photo_album_url: archive.photo_album_url ?? '',
     album_source: archive.album_source ?? '',
     cover_image_url: archive.cover_image_url ?? '',
+    cover_thumbnail_url: archive.cover_thumbnail_url ?? '',
     poster_url: archive.poster_url ?? '',
     trailer_url: archive.trailer_url ?? '',
     photo_credit: archive.photo_credit ?? '',
@@ -112,6 +115,7 @@ function archivePayloadFromForm(form: VCNArchiveFormState): VCNArchiveFormData {
     photo_album_url: toNullable(form.photo_album_url),
     album_source: toNullable(form.album_source),
     cover_image_url: toNullable(form.cover_image_url),
+    cover_thumbnail_url: toNullable(form.cover_thumbnail_url),
     poster_url: toNullable(form.poster_url),
     trailer_url: toNullable(form.trailer_url),
     photo_credit: toNullable(form.photo_credit),
@@ -341,7 +345,14 @@ export default function AdminVcnArchives() {
             </div>
             <div>
               <label className={labelCls}>Cover Image URL</label>
-              <input type="url" value={form.cover_image_url} onChange={(e) => setForm({ ...form, cover_image_url: e.target.value })} className={inputCls} />
+              <input type="url" value={form.cover_image_url} onChange={(e) => setForm({ ...form, cover_image_url: e.target.value, cover_thumbnail_url: '' })} className={inputCls} />
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                Use a smaller cover thumbnail URL when available. Older covers fall back to this original URL.
+              </p>
+            </div>
+            <div>
+              <label className={labelCls}>Cover Thumbnail URL</label>
+              <input type="url" value={form.cover_thumbnail_url} onChange={(e) => setForm({ ...form, cover_thumbnail_url: e.target.value })} className={inputCls} />
             </div>
             <div>
               <label className={labelCls}>Poster URL</label>

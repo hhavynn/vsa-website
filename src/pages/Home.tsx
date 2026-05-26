@@ -9,6 +9,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import { Event } from '../types';
 import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 
 const pillars = [
   {
@@ -73,7 +74,7 @@ function EventRow({ event }: { event: Event }) {
 
 function FeaturedEventHome({ event }: { event: Event }) {
   const d = new Date(event.date);
-  const imageUrl = event.image_url;
+  const imageUrl = event.thumbnail_url || event.image_url;
 
   return (
     <div className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]">
@@ -115,6 +116,7 @@ function FeaturedEventHome({ event }: { event: Event }) {
               alt={event.name}
               className="max-h-[360px] w-full object-contain lg:max-h-none"
               loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="flex aspect-[4/5] items-center justify-center p-8 text-center">
@@ -147,6 +149,7 @@ export function Home() {
   const presidentBodyParagraphs = hasSignatureBlock ? presidentsBody.slice(0, -1) : presidentsBody;
   const signatureName = presidentsContent.names;
   const signatureRole = presidentsContent.role;
+  const presidentsPhotoUrl = presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const sortedUpcoming = events
@@ -233,6 +236,8 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      <ThisWeekInVSA />
 
       <section className="py-12 sm:py-16 bg-[var(--surface2)]">
         <div className="vsa-container">
@@ -332,16 +337,16 @@ export function Home() {
               )}
             </div>
             <div>
-              {presidentsContent.photoUrl ? (
+              {presidentsPhotoUrl ? (
                 <div className="scrapbook-photo rotate-[1.5deg]">
                   <img
-                    src={getSupabaseImageUrl(presidentsContent.photoUrl, {
+                    src={getSupabaseImageUrl(presidentsPhotoUrl, {
                       width: 440,
                       height: 586,
                       resize: 'cover',
                       quality: 74,
                     })}
-                    srcSet={getSupabaseImageSrcSet(presidentsContent.photoUrl, [320, 440, 640], {
+                    srcSet={getSupabaseImageSrcSet(presidentsPhotoUrl, [320, 440, 640], {
                       resize: 'cover',
                       quality: 74,
                     })}

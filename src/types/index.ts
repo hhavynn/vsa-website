@@ -7,7 +7,8 @@ export interface Event {
   points: number;
   event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
   check_in_form_url: string;
-  image_url?: string;
+  image_url?: string | null;
+  thumbnail_url?: string | null;
   check_in_code?: string;
   is_code_expired: boolean;
   academic_term_id?: string | null;
@@ -78,6 +79,7 @@ export interface VCNArchive {
   photo_album_url: string | null;
   album_source: string | null;
   cover_image_url: string | null;
+  cover_thumbnail_url: string | null;
   poster_url: string | null;
   trailer_url: string | null;
   photo_credit: string | null;
@@ -179,11 +181,35 @@ export interface HousePageAsset {
   academic_year_start: number;
   academic_year_end: number;
   house: string;
+  house_key: string;
+  display_name: string;
+  description: string | null;
   image_url: string | null;
+  image_thumbnail_url: string | null;
   image_alt: string | null;
+  cover_image_url: string | null;
+  accent_color: string | null;
   display_order: number;
+  is_active: boolean;
   source_doc_url: string | null;
   internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HouseMembership {
+  id: string;
+  member_id: string;
+  house_profile_id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  effective_start_date: string;
+  effective_end_date: string | null;
+  source: string | null;
+  source_import_id: string | null;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -220,8 +246,31 @@ export interface MemberYearlyPoints {
   events_attended: number;
 }
 
+export interface HouseMemberRankEntry {
+  house: string;
+  house_profile_id: string;
+  display_name: string;
+  image_url: string | null;
+  accent_color: string | null;
+  member_id: string;
+  first_name: string;
+  last_name: string;
+  college: string | null;
+  graduation_year: string | null;
+  academic_year_start: number;
+  academic_year_end: number;
+  total_points: number;
+  events_attended: number;
+  unique_events: number;
+  latest_activity_at: string | null;
+}
+
 export interface HouseYearlyPoints {
   house: string;
+  house_profile_id: string;
+  display_name: string;
+  image_url: string | null;
+  accent_color: string | null;
   academic_year_start: number;
   academic_year_end: number;
   total_points: number;
@@ -234,6 +283,13 @@ export interface HouseYearlyPoints {
 
 export interface HouseAllTimePoints {
   house: string;
+  house_profile_id: string;
+  display_name: string;
+  image_url: string | null;
+  accent_color: string | null;
+  academic_year_start: number;
+  academic_year_end: number;
+  unique_events: number;
   total_points: number;
   events_attended: number;
   unique_members: number;
@@ -243,6 +299,10 @@ export interface HouseAllTimePoints {
 
 export interface HouseRecentActivity {
   house: string;
+  house_profile_id: string;
+  display_name: string;
+  image_url: string | null;
+  accent_color: string | null;
   event_id: string;
   event_name: string;
   event_date: string;
@@ -251,4 +311,63 @@ export interface HouseRecentActivity {
   total_points: number;
   contributing_members: number;
   latest_activity_at: string | null;
+}
+
+export type UVSAConfidenceLevel = 'high' | 'medium' | 'low';
+export type UVSASystemType = 'UC' | 'CSU' | 'Private';
+
+export interface UVSASchool {
+  id: string;
+  school_name: string;
+  short_name: string;
+  slug: string;
+  system_type: UVSASystemType;
+  city: string | null;
+  vsa_name: string | null;
+  instagram_url: string | null;
+  linktree_url: string | null;
+  website_url: string | null;
+  facebook_url: string | null;
+  youtube_url: string | null;
+  tiktok_url: string | null;
+  description: string | null;
+  known_for: string[];
+  recurring_events: string[];
+  logo_url: string | null;
+  image_url: string | null;
+  confidence_level: UVSAConfidenceLevel;
+  verification_notes: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ExternalEventStatus = 'draft' | 'upcoming' | 'past' | 'historical' | 'canceled';
+
+export interface ExternalEvent {
+  id: string;
+  uvsa_school_id: string | null;
+  title: string;
+  event_type: string | null;
+  date: string | null;
+  academic_term_id: string | null;
+  location: string | null;
+  description: string | null;
+  points: number;
+  rsvp_url: string | null;
+  ride_form_url: string | null;
+  instagram_url: string | null;
+  host_info_url: string | null;
+  ride_info: string | null;
+  status: ExternalEventStatus;
+  photo_album_url: string | null;
+  recap: string | null;
+  source_notes: string | null;
+  confidence_level: UVSAConfidenceLevel;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  // Join data
+  uvsa_school?: UVSASchool;
 }

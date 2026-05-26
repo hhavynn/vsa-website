@@ -20,6 +20,10 @@ const NAV_GROUPS = [
     { to: '/admin/years',             label: 'Years & Terms' },
     { to: '/admin/settings',          label: 'Settings' },
   ]},
+  { group: 'UVSA',    items: [
+    { to: '/admin/uvsa-schools',      label: 'Schools' },
+    { to: '/admin/external-events',   label: 'External Events' },
+  ]},
   { group: 'Reports', items: [
     { to: '/admin/analytics',         label: 'Analytics' },
     { to: '/admin/points',            label: 'Points' },

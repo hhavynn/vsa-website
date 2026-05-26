@@ -14,6 +14,7 @@ import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
@@ -109,6 +110,12 @@ interface LeaderboardEntry extends Member {
 
 interface HouseStanding {
   house: string;
+  house_profile_id?: string;
+  display_name?: string;
+  image_url?: string | null;
+  accent_color?: string | null;
+  academic_year_start?: number;
+  academic_year_end?: number;
   rank: number;
   total_points: number;
   events_attended: number;
@@ -324,9 +331,9 @@ export function Leaderboard() {
 
         if (!isCurrentRequest) return;
 
-        const ranked = data
-          .map((house, index) => ({ ...house, rank: index + 1 }))
-          .sort((a, b) => b.total_points - a.total_points)
+          const ranked = data
+            .map((house, index) => ({ ...house, rank: index + 1 }))
+            .sort((a, b) => b.total_points - a.total_points)
           .map((house, index) => ({ ...house, rank: index + 1 }));
 
         setHouseStandings(ranked);
@@ -594,13 +601,23 @@ export function Leaderboard() {
             </div>
           </>
         ) : (
-          <HouseStandingsWall
-            standings={houseStandings}
-            activity={houseActivity}
-            loading={houseLoading}
-            selectedYearLabel={selectedYearLabel}
-            metric={activeTab}
-          />
+          <>
+            <HouseStandingsWall
+              standings={houseStandings}
+              activity={houseActivity}
+              loading={houseLoading}
+              selectedYearLabel={selectedYearLabel}
+              metric={activeTab}
+            />
+            {selectedYear !== null && (
+              <div className="mt-12">
+                <HouseMemberLeaderboard
+                  selectedYear={selectedYear}
+                  selectedYearLabel={selectedYearLabel}
+                />
+              </div>
+            )}
+          </>
         )}
 
         <div className="mt-20">
@@ -742,14 +759,16 @@ function HouseStandingsWall({
       <div className="space-y-8">
         {standings.map((standing, index) => {
           const house = standing.house as HouseName;
-          const label = HOUSE_LABELS[house] ?? standing.house;
-          const color = HOUSE_COLORS[house] ?? 'var(--brand)';
+          const label = standing.display_name ?? HOUSE_LABELS[house] ?? standing.house;
+          const color = standing.accent_color ?? HOUSE_COLORS[house] ?? 'var(--brand)';
           const isFirst = standing.rank === 1;
           const rotation = index % 2 === 0 ? -0.5 : 0.5;
+          const maxPoints = Math.max(standings[0]?.total_points ?? 0, 1);
+          const pct = Math.round((standing.total_points / maxPoints) * 100);
 
           return (
             <div 
-              key={standing.house} 
+              key={standing.house_profile_id ?? `${standing.house}-${standing.academic_year_start ?? 'all'}`}
               className="group relative transition-transform hover:scale-[1.01]"
               style={{ transform: `rotate(${rotation}deg)` }}
             >
@@ -784,7 +803,13 @@ function HouseStandingsWall({
                       <div className="mt-1 flex items-center gap-2 font-mono text-[11px] font-bold opacity-60">
                         <span>{standing.unique_members} MEMBERS</span>
                         <span className="h-1 w-1 rounded-full bg-[var(--text3)]" />
-                        <span>{standing.events_attended} CHECK-INS</span>
+                      <span>{standing.events_attended} CHECK-INS</span>
+                      {standing.academic_year_start && (
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-[var(--text3)]" />
+                          <span>{standing.academic_year_start}-{standing.academic_year_end}</span>
+                        </>
+                      )}
                       </div>
                     </div>
                   </div>
@@ -793,12 +818,12 @@ function HouseStandingsWall({
                   <div className="my-6 flex-1 md:my-0">
                     <div className="mb-2 flex justify-between font-mono text-[10px] font-bold opacity-60">
                       <span>PROGRESS</span>
-                      <span>{Math.round((standing.total_points / standings[0].total_points) * 100)}%</span>
+                      <span>{pct}%</span>
                     </div>
                     <div className="h-4 overflow-hidden rounded-full border-2 border-[var(--border)] bg-[var(--surface2)] p-0.5">
                       <div 
                         className="h-full rounded-full transition-all duration-1000"
-                        style={{ background: color, width: `${(standing.total_points / standings[0].total_points) * 100}%` }}
+                        style={{ background: color, width: `${pct}%` }}
                       />
                     </div>
                   </div>
@@ -855,7 +880,7 @@ function HouseStandingsWall({
                   <div className="h-2 w-2 shrink-0 rounded-full bg-[var(--brand)]" />
                   <div className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>
                     <span style={{ color: HOUSE_COLORS[item.house as HouseName] ?? 'var(--brand)' }} className="font-bold">
-                      {HOUSE_LABELS[item.house as HouseName] ?? item.house}
+                      {item.display_name ?? HOUSE_LABELS[item.house as HouseName] ?? item.house}
                     </span>
                     <span className="mx-2 opacity-60">gained</span>
                     <span className="font-black text-[16px]">{item.total_points}</span>

@@ -55,15 +55,11 @@ const WildNCulture = lazy(() =>
     default: module.WildNCulture,
   }))
 );
-const UVSANetwork = lazy(() =>
-  import("../pages/UVSANetwork").then((module) => ({
-    default: module.UVSANetwork,
-  }))
-);
 const FeedbackPage = lazy(() =>
   import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
 );
 const Points = lazy(() => import("../pages/Points"));
+const UVSANetwork = lazy(() => import("../pages/UVSANetwork"));
 
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
@@ -82,6 +78,8 @@ const AdminPoints = lazy(() => import("../pages/Admin/Points"));
 const AdminAnalytics = lazy(() => import("../pages/Admin/Analytics"));
 const AdminSettings = lazy(() => import("../pages/Admin/Settings"));
 const AdminAceFamilies = lazy(() => import("../pages/Admin/AceFamilies"));
+const AdminUVSASchools = lazy(() => import("../pages/Admin/UVSASchools"));
+const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -175,6 +173,8 @@ export default function AppRoutes() {
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   <Route path="/admin/settings" element={<AdminSettings />} />
                   <Route path="/admin/ace" element={<AdminAceFamilies />} />
+                  <Route path="/admin/uvsa-schools" element={<AdminUVSASchools />} />
+                  <Route path="/admin/external-events" element={<AdminExternalEvents />} />
                 </Route>
               </Route>
 

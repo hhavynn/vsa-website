@@ -1,29 +1,32 @@
-import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
 import { VCNArchive as VCNArchiveEntry } from '../types';
-
-function formatArchiveDate(date: string | null) {
-  if (!date) return null;
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return format(parsed, 'MMMM d, yyyy');
-}
+import { formatDateOnly } from '../lib/dateOnly';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 
 function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
-  const eventDate = formatArchiveDate(entry.event_date);
+  const eventDate = formatDateOnly(entry.event_date, 'MMMM d, yyyy');
   const title = entry.title || `Vietnamese Culture Night ${entry.year}`;
   const hasMedia = !!entry.video_url || !!entry.photo_album_url;
+  const coverUrl = entry.cover_thumbnail_url || entry.cover_image_url;
 
   return (
     <article className="program-poster-card overflow-hidden p-0">
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <div className="relative min-h-[220px] border-b lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-          {entry.cover_image_url ? (
-            <img src={entry.cover_image_url} alt={`${title} cover`} className="h-full min-h-[220px] w-full object-cover" loading="lazy" />
+          {coverUrl ? (
+            <img
+              src={getSupabaseImageUrl(coverUrl, { width: 640, height: 420, resize: 'cover', quality: 72 })}
+              srcSet={getSupabaseImageSrcSet(coverUrl, [360, 640, 820], { resize: 'cover', quality: 72 })}
+              sizes="(min-width: 1024px) 45vw, 100vw"
+              alt={`${title} cover`}
+              className="h-full min-h-[220px] w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
               <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>

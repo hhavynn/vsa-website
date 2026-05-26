@@ -9,10 +9,11 @@ export interface CabinetIntern {
   role: string;
   display_order: number;
   image_url: string | null;
+  thumbnail_url: string | null;
   cabinet_year_id: string | null;
 }
 
-const CABINET_INTERN_FIELDS = 'id, name, role, display_order, image_url, cabinet_year_id, created_at';
+const CABINET_INTERN_FIELDS = 'id, name, role, display_order, image_url, thumbnail_url, cabinet_year_id, created_at';
 
 export function useCurrentCabinetInterns() {
   const { cabinetYears, loading: yearsLoading, error: yearsError } = useCabinetYears();

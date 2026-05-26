@@ -34,7 +34,7 @@ function normalizeEvent(events: ImportJobRecord['events']): ImportJobEventSummar
 export function decisionFromRowStatus(status: string): ImportRowDecision {
   if (status === 'match') return 'matched';
   if (status === 'new') return 'created';
-  if (status === 'already') return 'skipped_duplicate';
+  if (status === 'already' || status === 'duplicate') return 'skipped_duplicate';
   if (status === 'review') return 'review';
   return 'error';
 }

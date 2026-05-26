@@ -1,485 +1,852 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { PageTitle } from '../components/common/PageTitle';
+import React from "react";
+import { PageTitle } from "../components/common/PageTitle";
+import { useUVSASchools } from "../hooks/useUVSASchools";
+import { useExternalEvents } from "../hooks/useExternalEvents";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import {
+  FaGlobe,
+  FaMapMarkerAlt,
+  FaInstagram,
+  FaExternalLinkAlt,
+  FaStar,
+  FaInfoCircle,
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaUsers,
+  FaTrophy,
+} from "react-icons/fa";
+import { formatDateOnly } from "../lib/dateOnly";
+import { ExternalEvent, UVSASchool } from "../types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXTERNAL SHOWCASE DATA
-// UCSD / Wild N' Culture is listed first as our home-hosted external.
-// Order after: larger or more emphasized externals, then others.
-// ─────────────────────────────────────────────────────────────────────────────
+// Icon components cast to any to avoid TS JSX errors in some environments
+const GlobeIcon = FaGlobe as any;
+const MapPinIcon = FaMapMarkerAlt as any;
+const InstagramIcon = FaInstagram as any;
+const ExternalLinkIcon = FaExternalLinkAlt as any;
+const StarIcon = FaStar as any;
+const InfoIcon = FaInfoCircle as any;
+const CalendarIcon = FaCalendarAlt as any;
+const CheckCircleIcon = FaCheckCircle as any;
+const UsersIcon = FaUsers as any;
+const TrophyIcon = FaTrophy as any;
 
-interface ExternalEntry {
-  school: string;
-  shortName: string;
-  fullName?: string;
-  event: string;
-  description: string;
-  points?: number;
-  homeBadge?: boolean;
-  hostedBadge?: boolean;
-}
-
-const EXTERNALS_2025_2026: ExternalEntry[] = [
-  {
-    school: 'UC San Diego',
-    shortName: 'UCSD',
-    event: "Wild N' Culture",
-    description:
-      "UCSD VSA's hosted external brings schools across SoCal together for competition, culture, performance, and community. It is one of our biggest chances to represent VSA at UCSD while welcoming the wider UVSA network to our campus.",
-    points: 5,
-    homeBadge: true,
-    hostedBadge: true,
-  },
-  {
-    school: 'UC Santa Barbara',
-    shortName: 'UCSB',
-    event: 'Pho King',
-    description:
-      'UCSB VSA hosts one of the most popular cooking-themed competitions in SoCal. Teams from across UVSA represent their school in a multi-round challenge that brings out creativity and a lot of crowd energy.',
-    points: 4,
-  },
-  {
-    school: 'UC Irvine',
-    shortName: 'UCI',
-    event: 'Rose Pageant',
-    description:
-      'A pageant and cultural showcase hosted by UCI VSA. Participants represent their schools through performances, interviews, and talent rounds tied to culture and community.',
-    points: 4,
-  },
-  {
-    school: 'UC Riverside',
-    shortName: 'UCR',
-    event: 'Viet Idol',
-    description:
-      'UCR VSA brings the spotlight to student performers from across the UVSA network in a singing competition inspired by the classic talent-show format with a Vietnamese cultural touch.',
-    points: 4,
-  },
-  {
-    school: 'USC',
-    shortName: 'USC',
-    event: 'Finding Yeu',
-    description:
-      'A game-show style competition hosted by USC VSA. Schools send representatives to compete in rounds that mix humor, culture, and quick thinking for their school.',
-    points: 4,
-  },
-  {
-    school: 'CSU Fullerton',
-    shortName: 'CSUF',
-    event: 'Get To The Point',
-    description:
-      'CSUF VSA hosts a fast-paced points-based competition where schools face off across multiple rounds covering trivia, performance, and crowd participation.',
-    points: 4,
-  },
-  {
-    school: 'San Diego State University',
-    shortName: 'SDSU',
-    event: 'Mount Jamprov',
-    description:
-      'An improv-focused competition hosted by SDSU VSA. Schools face off in live comedy rounds with crowd judging and a high-energy atmosphere.',
-    points: 4,
-  },
-  {
-    school: 'CSU Long Beach',
-    shortName: 'CSULB',
-    event: 'Long Beach Lip Sync',
-    description:
-      'A lip sync battle and performance night hosted by CSULB VSA. Schools choreograph and perform for a crowd that decides the winner through sheer noise.',
-    points: 4,
-  },
-  {
-    school: 'Cal Poly Pomona',
-    shortName: 'CPP',
-    event: 'VietWit',
-    description:
-      "CPP VSA's competition mixes wit, wordplay, and cultural knowledge in a fast-paced event where schools send their sharpest representatives.",
-    points: 4,
-  },
-  {
-    school: 'CSU San Marcos',
-    shortName: 'CSUSM',
-    event: "Gettin' Hot",
-    description:
-      'A high-energy competition hosted by CSUSM VSA with a mix of performance, games, and crowd interaction that keeps teams and audiences engaged throughout.',
-    points: 4,
-  },
-  {
-    school: 'Chapman University',
-    shortName: 'Chapman',
-    event: 'Survey Says',
-    description:
-      "Inspired by the classic game show format, Chapman VSA's external has schools compete in survey-style rounds with cultural themes and audience participation.",
-    points: 4,
-  },
-  {
-    school: 'CSU Northridge',
-    shortName: 'CSUN',
-    event: 'Cinemania',
-    description:
-      'A film and culture-themed competition hosted by CSUN VSA. Past editions have involved teams creating or presenting creative projects tied to Vietnamese and Asian American cinema.',
-    points: 4,
-  },
-  {
-    school: 'Cal Poly San Luis Obispo',
-    shortName: 'CPSLO',
-    event: 'Saigon Runway',
-    description:
-      'A fashion and performance show hosted by CPSLO VSA that highlights Vietnamese culture through design, movement, and student creativity.',
-    points: 4,
-  },
+const EXTERNAL_SHOWCASE_ORDER = [
+  "ucsd",
+  "ucsb",
+  "uci",
+  "ucr",
+  "usc",
+  "csuf",
+  "sdsu",
+  "csulb",
+  "cpp",
+  "csusm",
+  "chapman",
+  "csun",
+  "cpslo",
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCHOOLS DATA
-// UCSD is listed first as the home school. Rest follow regional/UVSA order.
-// ─────────────────────────────────────────────────────────────────────────────
+export default function UVSANetwork() {
+  const { schools, loading: schoolsLoading } = useUVSASchools();
+  const { events: upcomingEvents, loading: upcomingLoading } =
+    useExternalEvents({ status: "upcoming" });
+  const { events: pastEvents, loading: pastLoading } = useExternalEvents({
+    status: "past",
+  });
+  const { events: historicalEvents, loading: historicalLoading } =
+    useExternalEvents({ status: "historical" });
 
-interface SchoolEntry {
-  shortName: string;
-  fullName: string;
-  description: string;
-  region: string;
-  homeBadge?: boolean;
-}
-
-const UVSA_SCHOOLS: SchoolEntry[] = [
-  {
-    shortName: 'UCSD',
-    fullName: 'UC San Diego',
-    description:
-      'VSA at UCSD is our home base, hosting Wild N Culture, VCN, House, ACE, retreats, and the points system that keeps members coming back.',
-    region: 'San Diego',
-    homeBadge: true,
-  },
-  {
-    shortName: 'UCSB',
-    fullName: 'UC Santa Barbara',
-    description:
-      'VSA at UCSB is one of the larger chapters in SoCal, known for Pho King and a strong community presence up the coast.',
-    region: 'Santa Barbara',
-  },
-  {
-    shortName: 'UCI',
-    fullName: 'UC Irvine',
-    description:
-      'VSA at UCI hosts Rose Pageant and draws a large crowd from across the network each year.',
-    region: 'Orange County',
-  },
-  {
-    shortName: 'UCR',
-    fullName: 'UC Riverside',
-    description:
-      "VSA at UCR brings the Viet Idol competition to the network and has a consistent presence at UCSD's externals.",
-    region: 'Inland Empire',
-  },
-  {
-    shortName: 'USC',
-    fullName: 'USC',
-    description:
-      "VSA at USC hosts Finding Yeu and is one of the more active private school chapters in SoCal's UVSA circuit.",
-    region: 'Los Angeles',
-  },
-  {
-    shortName: 'CSUF',
-    fullName: 'CSU Fullerton',
-    description:
-      'VSA at CSUF hosts Get To The Point and regularly sends strong teams to externals across the region.',
-    region: 'Orange County',
-  },
-  {
-    shortName: 'SDSU',
-    fullName: 'San Diego State University',
-    description:
-      'VSA at SDSU is our local neighbor, hosting Mount Jamprov and trading teams with UCSD VSA throughout the year.',
-    region: 'San Diego',
-  },
-  {
-    shortName: 'CSULB',
-    fullName: 'CSU Long Beach',
-    description:
-      'VSA at CSULB hosts Long Beach Lip Sync and is a regular presence at UCSD externals including WNC.',
-    region: 'Los Angeles',
-  },
-  {
-    shortName: 'CPP',
-    fullName: 'Cal Poly Pomona',
-    description:
-      'VSA at CPP hosts VietWit and competes across SoCal with a chapter known for quick humor and team energy.',
-    region: 'Inland Empire',
-  },
-  {
-    shortName: 'CSUSM',
-    fullName: 'CSU San Marcos',
-    description:
-      "VSA at CSUSM hosts Gettin' Hot and has been growing its presence in the UVSA network in recent years.",
-    region: 'San Diego',
-  },
-  {
-    shortName: 'Chapman',
-    fullName: 'Chapman University',
-    description:
-      'VSA at Chapman hosts Survey Says and adds a smaller private-school perspective to the broader UVSA community.',
-    region: 'Orange County',
-  },
-  {
-    shortName: 'CSUN',
-    fullName: 'CSU Northridge',
-    description:
-      'VSA at CSUN hosts Cinemania and has a chapter rooted in film and cultural programming.',
-    region: 'Los Angeles',
-  },
-  {
-    shortName: 'CPSLO',
-    fullName: 'Cal Poly San Luis Obispo',
-    description:
-      'VSA at CPSLO hosts Saigon Runway and is the farthest chapter from San Diego, but still a consistent part of the network.',
-    region: 'Central Coast',
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FAQ DATA
-// ─────────────────────────────────────────────────────────────────────────────
-
-const faqs = [
-  {
-    q: 'What is UVSA?',
-    a: 'UVSA (Union of Vietnamese Student Associations) is the regional network that connects Vietnamese Student Associations across Southern California. It coordinates externals, facilitates cross-campus relationships, and helps VSA chapters support each other throughout the year.',
-  },
-  {
-    q: 'What is an external?',
-    a: 'An external is an intercollegiate event hosted by a VSA chapter where students from other schools come to participate or compete. Externals can look like pageants, game shows, talent competitions, showcases, or performance nights, but they are also a way for schools to support each other philanthropy projects and cultural programming.',
-  },
-  {
-    q: 'Do I earn points for attending externals?',
-    a: "Yes. Attending an external earns 4 points by default, which count toward your place on the UCSD VSA leaderboard and your house's total. Wild N' Culture may be worth 5 points because it is a major UCSD-hosted event. Cabinet members and interns do not earn leaderboard points for required work duties at these events.",
-  },
-  {
-    q: 'Can anyone go to an external?',
-    a: 'Usually yes, though some externals require registration in advance or have limited spots for participants. WNC and most others are open to general attendees who just want to watch. Check each school VSA Instagram for details closer to their event date.',
-  },
-  {
-    q: "How do I find out when externals are happening?",
-    a: "External dates are announced through VSA Instagram pages and shared in the UCSD VSA community. Keep an eye on @vsaatucsd and the UCSD VSA Events page for updates on upcoming externals and whether UCSD is sending a team.",
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function UVSANetwork() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const archiveEvents = [...pastEvents, ...historicalEvents];
+  const allPublicEvents = [...upcomingEvents, ...archiveEvents];
+  const featuredEvent = allPublicEvents
+    .filter((event) => event.is_featured)
+    .sort(compareEventsByRecency)[0];
+  const spotlightEvent = featuredEvent || archiveEvents[0];
+  const spotlightLoading = upcomingLoading || pastLoading || historicalLoading;
 
   return (
     <>
       <PageTitle title="SoCal VSA Network" />
 
-      <div className="program-app">
+      {/* 1. Hero / UVSA 101 */}
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">
+            UVSA 101
+          </span>
+          <h1 className="vsa-page-title">
+            SoCal VSA <em>Network</em>
+          </h1>
+          <p
+            className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]"
+            style={{ color: "var(--text2)" }}
+          >
+            13 schools. One community. VSA at UCSD is part of the larger UVSA
+            SoCal network of students across Southern California.
+          </p>
+        </div>
+      </div>
 
-        {/* Hero */}
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">UVSA SoCal</span>
-            <h1 className="program-title">
-              SoCal VSA <span className="program-title-script">Network</span>
-            </h1>
-            <p className="program-hero-meta">
-              13 schools. One community. UCSD VSA is part of a broader network of Vietnamese Student Associations across Southern California.
-            </p>
-            <div className="program-hero-actions">
-              <span className="scrapbook-sticker scrapbook-sticker-coral">Home Base: UCSD</span>
-              <span className="scrapbook-sticker scrapbook-sticker-teal">13 Schools</span>
-              <span className="scrapbook-sticker scrapbook-sticker-gold">UVSA SoCal</span>
+      <div className="vsa-container py-12 space-y-20">
+        <section className="scrapbook-paper p-8 space-y-4">
+          <p
+            className="font-sans text-lg leading-relaxed"
+            style={{ color: "var(--text2)" }}
+          >
+            <span className="font-bold text-[var(--text)]">Externals</span> are
+            events hosted by other VSAs where UCSD members can attend, support,
+            compete, and meet people from other schools. Externals can look like
+            pageants, game shows, talent competitions, showcases, or performance
+            nights, but they are also a way for schools to support each other's
+            philanthropy projects and cultural programming.
+          </p>
+          <p
+            className="font-sans text-sm leading-relaxed"
+            style={{ color: "var(--text3)" }}
+          >
+            Many externals are also tied to philanthropy, culture, or community
+            causes. Some feel like big competitions or showcases, but they still
+            help connect schools and support the values behind UVSA.
+          </p>
+          <div className="pt-4 flex flex-wrap gap-4">
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <UsersIcon size={18} className="text-[var(--brand)]" />
+              <span className="font-sans text-sm font-medium">13 Schools</span>
+            </div>
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <TrophyIcon size={18} className="text-[var(--brand)]" />
+              <span className="font-sans text-sm font-medium">
+                Competitions
+              </span>
+            </div>
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <StarIcon size={18} className="text-[var(--brand)]" />
+              <span className="font-sans text-sm font-medium">
+                VSA Community
+              </span>
             </div>
           </div>
-          <div className="program-watermark">uvsa</div>
         </section>
 
-        {/* UVSA 101 */}
-        <section className="program-section">
-          <div className="program-section-inner program-section-narrow">
-            <div className="program-eyebrow">UVSA 101</div>
-            <p className="program-body">
-              UVSA (Union of Vietnamese Student Associations) is the regional network connecting Vietnamese Student Associations across Southern California. UCSD VSA is one of 13 member schools, each hosting its own events and sending representatives to externals throughout the year.
-            </p>
-            <p className="program-body">
-              The network exists to help chapters support each other, share cultural programming, and build lasting community across campuses. Externals are the most visible part of that connection.
-            </p>
-            <p className="program-body">
-              Many externals are also tied to philanthropy, culture, or community causes. Some feel like big competitions or showcases, but they still help connect schools and support the values behind UVSA.
-            </p>
+        {/* 2. Featured External */}
+        <FeaturedExternalSpotlight
+          event={spotlightEvent}
+          loading={spotlightLoading}
+          isFallback={!featuredEvent}
+        />
+
+        {/* 3. Upcoming Externals */}
+        <section className="space-y-8">
+          <div className="flex items-center gap-4">
+            <CalendarIcon className="text-[var(--brand)]" size={28} />
+            <h2 className="font-serif text-3xl">Upcoming Externals</h2>
           </div>
-        </section>
 
-        {/* What Are Externals */}
-        <section className="program-section">
-          <div className="program-section-inner program-section-narrow">
-            <div className="program-eyebrow">What Are Externals</div>
-            <p className="program-body">
-              Externals can look like pageants, game shows, talent competitions, showcases, or performance nights, but they are also a way for schools to support each other philanthropy projects and cultural programming. UCSD VSA sends teams to externals hosted by other schools and hosts our own each year through Wild N Culture.
-            </p>
-            <p className="program-body">
-              Attending an external earns you points on the UCSD VSA leaderboard. Most externals are worth 4 points. Wild N Culture is worth 5 because it is our own hosted event and one of the bigger nights of the year.
-            </p>
-          </div>
-        </section>
-
-        {/* 2025-2026 External Showcase */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">2025-2026 External Showcase</div>
-            <p className="mb-6 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-              Each school in the UVSA SoCal network hosts its own external during the academic year. UCSD VSA attends many of these and may send a competing team. UCSD hosts Wild N Culture, listed first as our home event.
-            </p>
-
-            <div className="space-y-4">
-              {EXTERNALS_2025_2026.map((ext) => (
+          {upcomingLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
                 <div
-                  key={ext.shortName}
-                  className="program-feature-card"
-                  style={ext.homeBadge ? { borderColor: 'var(--brand)', borderWidth: 2 } : undefined}
-                >
-                  {/* Header row */}
-                  <div className="flex flex-wrap items-start gap-2 mb-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text3)' }}>
-                      {ext.shortName}
-                    </span>
-                    {ext.hostedBadge && (
-                      <span className="scrapbook-sticker scrapbook-sticker-coral px-2 py-0.5 text-[9px]">
-                        Hosted by VSA at UCSD
-                      </span>
-                    )}
-                    {ext.homeBadge && !ext.hostedBadge && (
-                      <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
-                        Home Base
-                      </span>
-                    )}
-                    {ext.points && (
-                      <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">
-                        {ext.points} pts
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Event name */}
-                  <div className="program-card-title mb-1">{ext.event}</div>
-                  <div className="font-sans text-[11px] mb-2" style={{ color: 'var(--color-text3)' }}>
-                    {ext.fullName ?? ext.school}
-                  </div>
-
-                  {/* Description */}
-                  <p className="program-card-copy">{ext.description}</p>
-                </div>
+                  key={i}
+                  className="h-48 rounded-xl bg-[var(--surface)] animate-pulse border"
+                  style={{ borderColor: "var(--border)" }}
+                />
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* Explore the 13 Schools */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">Explore the 13 Schools</div>
-            <p className="mb-6 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-              UCSD is our home base. The other 12 schools make up the rest of the UVSA SoCal network. Each has its own culture, events, and community worth knowing.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {UVSA_SCHOOLS.map((school) => (
-                <div
-                  key={school.shortName}
-                  className="program-feature-card"
-                  style={school.homeBadge ? { borderColor: 'var(--brand)', borderWidth: 2 } : undefined}
-                >
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="font-mono text-[11px] font-black" style={{ color: 'var(--color-text)' }}>
-                      {school.shortName}
-                    </span>
-                    {school.homeBadge && (
-                      <span className="scrapbook-sticker scrapbook-sticker-coral px-2 py-0.5 text-[9px]">
-                        Home Base
-                      </span>
-                    )}
-                    <span className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                      {school.region}
-                    </span>
-                  </div>
-                  <div className="font-sans text-[11px] font-semibold mb-1" style={{ color: 'var(--color-text2)' }}>
-                    {school.fullName}
-                  </div>
-                  <p className="font-sans text-[12px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                    {school.description}
-                  </p>
-                </div>
+          ) : upcomingEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {upcomingEvents.map((event) => (
+                <ExternalEventCard key={event.id} event={event} />
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* External Points Explainer */}
-        <section className="program-section">
-          <div className="program-section-inner program-section-narrow">
-            <div className="program-eyebrow">External Points</div>
-            <div className="scrapbook-note p-5 space-y-3">
-              <p className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                How externals count toward your leaderboard
+          ) : (
+            <div
+              className="scrapbook-note p-10 text-center border-dashed border-2"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <p
+                className="font-serif text-xl italic"
+                style={{ color: "var(--text3)" }}
+              >
+                "2026–2027 externals will be announced after summer ICC
+                planning."
               </p>
-              <ul className="space-y-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+              <p
+                className="mt-2 font-sans text-sm"
+                style={{ color: "var(--text3)" }}
+              >
+                Check back in late Summer for the upcoming season!
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* 4. 2025–2026 External Showcase */}
+        <section className="space-y-8">
+          <div className="flex items-center gap-4">
+            <StarIcon className="text-[var(--brand)]" size={28} />
+            <h2 className="font-serif text-3xl">2025–2026 External Showcase</h2>
+          </div>
+
+          <p className="font-sans text-[var(--text2)] max-w-2xl">
+            A look at the externals from the previous year. UCSD's Wild N'
+            Culture is listed first as our home-hosted event. Many externals
+            also connect to philanthropy and cultural programming at the hosting
+            school.
+          </p>
+
+          {pastLoading || historicalLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="h-64 rounded-xl bg-[var(--surface)] animate-pulse border"
+                  style={{ borderColor: "var(--border)" }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortArchiveEventsUCSDFirst(archiveEvents).map((event) => (
+                <ExternalEventCard key={event.id} event={event} isArchive />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 5. Explore the 13 Schools */}
+        <section className="space-y-8">
+          <div className="flex items-center gap-4">
+            <GlobeIcon className="text-[var(--brand)]" size={28} />
+            <h2 className="font-serif text-3xl">Explore the 13 Schools</h2>
+          </div>
+
+          {schoolsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div
+                  key={i}
+                  className="h-56 rounded-xl bg-[var(--surface)] animate-pulse border"
+                  style={{ borderColor: "var(--border)" }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {schools.map((school) => (
+                <SchoolCard key={school.id} school={school} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 6. How to Attend & Points */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* How to Attend */}
+          <section className="scrapbook-paper p-8 space-y-6">
+            <div className="flex items-center gap-3">
+              <InfoIcon className="text-[var(--brand)]" size={24} />
+              <h2 className="font-serif text-2xl">
+                How to Attend Your First External
+              </h2>
+            </div>
+            <p className="font-sans text-sm text-[var(--text3)] italic">
+              Ride forms are usually posted through the VSA at UCSD Linktree
+              when we coordinate attendance.
+            </p>
+            <ol className="space-y-4 list-none p-0">
+              {[
+                "Find an external you want to attend in the list above.",
+                "Check the host school’s Linktree or Instagram for RSVP/tickets.",
+                "Look for the external ride form in our Linktree for rides.",
+                "Show up respectfully and represent VSA at UCSD well.",
+                "Check in or follow the points proof process if announced.",
+                "Have fun, meet other schools, and bring the energy back to UCSD!",
+              ].map((step, i) => (
+                <li key={i} className="flex gap-4 items-start">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold">
+                    {i + 1}
+                  </span>
+                  <p className="font-sans text-[var(--text2)] leading-tight">
+                    {step}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* Points Explainer */}
+          <section className="scrapbook-paper p-8 space-y-6">
+            <div className="flex items-center gap-3">
+              <StarIcon className="text-[var(--brand)]" size={24} />
+              <h2 className="font-serif text-2xl">External Points Explainer</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-[var(--surface2)] border border-[var(--brand)] border-opacity-20">
+                <p className="font-serif text-xl text-center">
+                  All externals ={" "}
+                  <span className="text-[var(--brand)] font-bold">
+                    4 Points
+                  </span>
+                </p>
+              </div>
+              <ul className="space-y-2 font-sans text-sm text-[var(--text2)] list-disc pl-5">
                 <li>
-                  Attending any UVSA external earns <strong>4 points</strong> on the UCSD VSA leaderboard by default.
+                  Attending any UVSA external earns 4 points on the UCSD VSA
+                  leaderboard by default.
                 </li>
                 <li>
-                  Wild N Culture earns <strong>5 points</strong> because it is a major UCSD-hosted event and one of the biggest nights of the year.
+                  Wild N Culture earns 5 points because it is a major
+                  UCSD-hosted event and one of the biggest nights of the year.
                 </li>
                 <li>
-                  Cabinet members and interns do not earn leaderboard points for required work duties at these events. Attendance as a general member still counts.
+                  Points reward you for representing VSA at UCSD in the wider
+                  UVSA community.
+                </li>
+                <li>
+                  Cabinet and interns do not earn leaderboard points for
+                  required work duties (staffing, shifts, etc.).
                 </li>
               </ul>
-            </div>
-          </div>
-        </section>
 
-        {/* FAQ */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">FAQ</div>
-            <div className="program-faq-card">
-              {faqs.map((faq, i) => (
-                <div key={i} className="program-faq-row">
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="program-faq-button"
-                  >
-                    <span className="program-faq-question">{faq.q}</span>
-                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
-                  </button>
-                  {openFaq === i && (
-                    <div className="program-faq-answer">{faq.a}</div>
-                  )}
+              <div
+                className="pt-4 border-t"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircleIcon size={16} className="text-green-500" />
+                  <h3 className="font-bold text-sm">
+                    Represent UCSD with Pride
+                  </h3>
                 </div>
-              ))}
+                <p
+                  className="font-sans text-xs italic"
+                  style={{ color: "var(--text3)" }}
+                >
+                  Be respectful to host schools, follow event rules, and stay
+                  responsible. Support other VSAs the way we want others to
+                  support us!
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-footer-actions-rich">
-              <Link to="/wild-n-culture" className="vsa-btn-primary font-sans text-sm font-medium">
-                Wild N Culture Info
-              </Link>
-              <Link to="/events" className="vsa-btn-ghost font-sans text-sm">
-                See All Events
-              </Link>
-              <Link to="/get-involved" className="vsa-btn-ghost font-sans text-sm">
-                All Programs
-              </Link>
-            </div>
-          </div>
-        </section>
-
+          </section>
+        </div>
       </div>
     </>
   );
+}
+
+function compareEventsByRecency(a: ExternalEvent, b: ExternalEvent) {
+  const aTime = new Date(a.date || a.created_at || 0).getTime();
+  const bTime = new Date(b.date || b.created_at || 0).getTime();
+  return bTime - aTime;
+}
+
+function sortArchiveEventsUCSDFirst(events: ExternalEvent[]): ExternalEvent[] {
+  return [...events].sort((a, b) => {
+    const aIndex = EXTERNAL_SHOWCASE_ORDER.indexOf(a.uvsa_school?.slug || "");
+    const bIndex = EXTERNAL_SHOWCASE_ORDER.indexOf(b.uvsa_school?.slug || "");
+    if (aIndex !== -1 || bIndex !== -1) {
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      if (aIndex !== bIndex) return aIndex - bIndex;
+    }
+    return compareEventsByRecency(a, b);
+  });
+}
+
+function FeaturedExternalSpotlight({
+  event,
+  loading,
+  isFallback,
+}: {
+  event?: ExternalEvent;
+  loading: boolean;
+  isFallback: boolean;
+}) {
+  if (loading) {
+    return (
+      <section
+        className="rounded border bg-[var(--color-surface)] p-6 shadow-sm"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <div className="h-5 w-40 animate-pulse rounded bg-[var(--surface2)]" />
+        <div className="mt-5 h-8 w-3/4 animate-pulse rounded bg-[var(--surface2)]" />
+        <div className="mt-4 h-20 animate-pulse rounded bg-[var(--surface2)]" />
+      </section>
+    );
+  }
+
+  const school = event?.uvsa_school;
+  const title = event?.title || "2025-2026 External Showcase";
+  const hostName = school?.short_name || "SoCal VSA Network";
+  const eventType = event?.event_type || "Season archive";
+  const description =
+    event?.description ||
+    "Explore the externals UCSD VSA attended and supported across the SoCal VSA network last season.";
+  const pointsNote =
+    event?.points && event.points !== 4
+      ? `${event.points} points when announced by VSA at UCSD.`
+      : null;
+
+  return (
+    <section
+      className="overflow-hidden rounded border bg-[var(--color-surface)] shadow-sm"
+      style={{ borderColor: "var(--border)" }}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="p-6 sm:p-8 space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              label={isFallback ? "External Spotlight" : "Featured External"}
+              color="yellow"
+            />
+            <Badge label={hostName} color="gray" />
+            <span className="font-sans text-xs uppercase tracking-[0.14em] text-[var(--text3)]">
+              {eventType}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="font-serif text-3xl leading-tight sm:text-4xl">
+              {title}
+            </h2>
+            <p
+              className="max-w-3xl font-sans text-sm leading-7 sm:text-base"
+              style={{ color: "var(--text2)" }}
+            >
+              {description}
+            </p>
+          </div>
+
+          {pointsNote && (
+            <p className="inline-flex rounded bg-[var(--surface2)] px-3 py-2 font-sans text-xs font-medium text-[var(--text2)]">
+              {pointsNote}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {school?.linktree_url && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  window.open(
+                    school.linktree_url!,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                Host Linktree <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+            {event?.host_info_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  window.open(
+                    event.host_info_url!,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                View Event Info <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+            {event?.instagram_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  window.open(
+                    event.instagram_url!,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                View IG Post <InstagramIcon size={12} />
+              </Button>
+            )}
+            {event?.rsvp_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  window.open(event.rsvp_url!, "_blank", "noopener,noreferrer")
+                }
+              >
+                RSVP <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div
+          className="min-h-[180px] border-t p-6 lg:border-l lg:border-t-0 flex items-center justify-center"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <SchoolVisualMark
+            school={school}
+            fallbackLabel={hostName}
+            size="lg"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExternalEventCard({
+  event,
+  isArchive = false,
+}: {
+  event: ExternalEvent;
+  isArchive?: boolean;
+}) {
+  const schoolName = event.uvsa_school?.short_name || "Unknown School";
+  const isUCSD = event.uvsa_school?.slug === "ucsd";
+  const isSpecialPointEvent = isUCSD && event.points > 4;
+
+  return (
+    <Card className="flex flex-col h-full overflow-hidden transition-all hover:translate-y-[-4px] hover:shadow-lg">
+      <div className="p-5 flex-grow space-y-4">
+        <div className="flex flex-wrap justify-between items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge label={schoolName} color="gray" className="font-bold" />
+            {isUCSD && <Badge label="Hosted by VSA at UCSD" color="yellow" />}
+          </div>
+          {isSpecialPointEvent && (
+            <Badge label={`${event.points} pts`} color="yellow" />
+          )}
+        </div>
+
+        <h3 className="font-serif text-xl leading-tight line-clamp-2">
+          {event.title}
+        </h3>
+
+        {event.event_type && (
+          <p
+            className="font-sans text-xs uppercase tracking-wider font-semibold"
+            style={{ color: "var(--brand)" }}
+          >
+            {event.event_type}
+          </p>
+        )}
+
+        <p
+          className="font-sans text-sm line-clamp-3"
+          style={{ color: "var(--text2)" }}
+        >
+          {event.description}
+        </p>
+
+        {!isArchive && event.date && (
+          <div
+            className="flex items-center gap-2 font-sans text-xs"
+            style={{ color: "var(--text3)" }}
+          >
+            <CalendarIcon size={14} />
+            <span>{formatDateOnly(event.date, "MMMM d, yyyy")}</span>
+          </div>
+        )}
+
+        {!isArchive && event.location && (
+          <div
+            className="flex items-center gap-2 font-sans text-xs"
+            style={{ color: "var(--text3)" }}
+          >
+            <MapPinIcon size={14} />
+            <span>{event.location}</span>
+          </div>
+        )}
+      </div>
+
+      <div
+        className="p-4 bg-[var(--surface)] border-t flex flex-wrap gap-2"
+        style={{ borderColor: "var(--border)" }}
+      >
+        {event.rsvp_url && (
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex-1 min-w-[96px] text-xs gap-1"
+            onClick={() =>
+              window.open(event.rsvp_url!, "_blank", "noopener,noreferrer")
+            }
+          >
+            RSVP <ExternalLinkIcon size={12} />
+          </Button>
+        )}
+        {event.host_info_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-[118px] text-xs gap-1"
+            onClick={() =>
+              window.open(event.host_info_url!, "_blank", "noopener,noreferrer")
+            }
+          >
+            View Info <ExternalLinkIcon size={12} />
+          </Button>
+        )}
+        {event.instagram_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-[104px] text-xs gap-1"
+            onClick={() =>
+              window.open(event.instagram_url!, "_blank", "noopener,noreferrer")
+            }
+          >
+            IG Post <InstagramIcon size={12} />
+          </Button>
+        )}
+        {event.uvsa_school?.linktree_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-[110px] text-xs gap-1"
+            onClick={() =>
+              window.open(
+                event.uvsa_school!.linktree_url!,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+          >
+            Linktree <ExternalLinkIcon size={12} />
+          </Button>
+        )}
+        {isArchive &&
+          !event.rsvp_url &&
+          !event.host_info_url &&
+          !event.instagram_url &&
+          !event.uvsa_school?.linktree_url && (
+            <p
+              className="font-sans text-[10px] italic uppercase tracking-widest text-center w-full"
+              style={{ color: "var(--text3)" }}
+            >
+              {event.status === "historical"
+                ? "Historical Highlight"
+                : "Past Event"}
+            </p>
+          )}
+      </div>
+    </Card>
+  );
+}
+
+function SchoolCard({ school }: { school: UVSASchool }) {
+  const isHomeSchool = school.slug === "ucsd";
+  return (
+    <Card
+      className={`group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors${isHomeSchool ? " border-[var(--brand)]" : ""}`}
+    >
+      <div className="flex items-start justify-between">
+        <SchoolVisualMark school={school} />
+        {school.city && (
+          <span className="font-sans text-[10px] uppercase tracking-[0.12em] text-[var(--text3)]">
+            {school.city}
+          </span>
+        )}
+      </div>
+
+      <div>
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <h3 className="font-serif text-lg leading-tight group-hover:text-[var(--brand)] transition-colors">
+            {school.short_name}
+          </h3>
+          {isHomeSchool && <Badge label="Home Base" color="yellow" />}
+        </div>
+        <p className="font-sans text-xs" style={{ color: "var(--text3)" }}>
+          {school.vsa_name}
+        </p>
+      </div>
+
+      <div
+        className="flex items-center gap-1 font-sans text-xs"
+        style={{ color: "var(--text2)" }}
+      >
+        <MapPinIcon size={12} />
+        <span>{school.city}</span>
+      </div>
+
+      <div className="flex-grow">
+        {school.description && (
+          <p
+            className="font-sans text-xs line-clamp-2"
+            style={{ color: "var(--text2)" }}
+          >
+            {school.description}
+          </p>
+        )}
+      </div>
+
+      <div
+        className="flex flex-wrap gap-2 pt-2 border-t"
+        style={{ borderColor: "var(--border)" }}
+      >
+        {school.linktree_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-[10px] h-7 px-2 gap-1"
+            onClick={() =>
+              window.open(school.linktree_url!, "_blank", "noopener,noreferrer")
+            }
+          >
+            Linktree <ExternalLinkIcon size={10} />
+          </Button>
+        )}
+        {school.instagram_url && (
+          <button
+            className="p-1.5 rounded-md hover:bg-[var(--surface2)] text-[var(--text3)] hover:text-[var(--text)] transition-colors"
+            onClick={() =>
+              window.open(
+                school.instagram_url!,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+            title="Instagram"
+          >
+            <InstagramIcon size={14} />
+          </button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function SchoolVisualMark({
+  school,
+  fallbackLabel = "VSA",
+  size = "md",
+}: {
+  school?: UVSASchool;
+  fallbackLabel?: string;
+  size?: "md" | "lg";
+}) {
+  const label = school?.short_name || fallbackLabel;
+  const palette = getSchoolBadgePalette(school);
+  const sizeClass = size === "lg" ? "h-32 w-32" : "h-14 w-14";
+  const textClass = size === "lg" ? "text-2xl" : "text-sm";
+  const logoUrl = getSafeLogoUrl(school?.logo_url);
+
+  if (logoUrl) {
+    return (
+      <div
+        className={`${sizeClass} shrink-0 rounded-lg border bg-[var(--surface2)] p-2 shadow-sm`}
+        style={{ borderColor: "var(--border)" }}
+        aria-label={`${label} official school logo`}
+      >
+        <img
+          src={logoUrl}
+          alt={`${label} logo`}
+          className="h-full w-full object-contain"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClass} shrink-0 rounded-lg border border-dashed p-1 shadow-sm`}
+      style={{
+        borderColor: palette.border,
+        background: palette.paper,
+        transform: size === "lg" ? "rotate(-2deg)" : undefined,
+      }}
+      aria-label={`${label} generated mark`}
+    >
+      <div
+        className="flex h-full w-full flex-col items-center justify-center rounded-md border text-center font-sans uppercase"
+        style={{
+          borderColor: palette.innerBorder,
+          background: palette.background,
+          color: palette.text,
+        }}
+      >
+        <span
+          className={`${textClass} font-black leading-none tracking-[0.04em]`}
+        >
+          {formatBadgeInitials(label)}
+        </span>
+        <span
+          className="mt-1 h-0.5 w-6 rounded-full opacity-70"
+          style={{ background: palette.text }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function formatBadgeInitials(label: string) {
+  return (
+    label
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 6)
+      .toUpperCase() || "VSA"
+  );
+}
+
+function getSchoolBadgePalette(school?: UVSASchool) {
+  const slugHash = hashString(school?.slug || school?.short_name || "vsa");
+  const hue = slugHash % 360;
+
+  return {
+    paper: `hsl(${hue} 42% 96%)`,
+    background: `linear-gradient(145deg, hsl(${hue} 58% 38%), hsl(${(hue + 18) % 360} 54% 28%))`,
+    border: `hsl(${hue} 35% 62%)`,
+    innerBorder: `hsl(${hue} 48% 72% / 0.78)`,
+    text: "hsl(42 46% 96%)",
+  };
+}
+
+function hashString(value: string) {
+  return (
+    value.split("").reduce((hash, char) => {
+      return ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+    }, 0) >>> 0
+  );
+}
+
+function getSafeLogoUrl(url?: string | null) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    const isSupabaseStorage =
+      parsed.hostname.includes("supabase.co") &&
+      parsed.pathname.includes("/storage/");
+
+    if (parsed.protocol !== "https:" || isSupabaseStorage) {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
 }

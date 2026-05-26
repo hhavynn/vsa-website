@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
 import { PageTitle } from '../components/common/PageTitle';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
+import { useEvents } from '../hooks/useEvents';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -21,6 +24,28 @@ import { PointsExplainer } from '../components/features/points/PointsExplainer';
 const APPLICATIONS_OPEN = false;
 const APPLICATION_LINK = '';
 const CYCLE_LABEL = '';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOUSE PERSONALITY — Flavor copy per house. Update each cycle as needed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HOUSE_TAGLINES: Record<HouseName, string> = {
+  Bowser: 'Big boss energy. Show up, dominate, repeat.',
+  'Donkey Kong': 'Loud, wild, and impossible to ignore.',
+  Boo: "Silent… until it's time to go off.",
+  Toad: 'Small but mighty. Always ahead of the curve.',
+};
+
+const HOUSE_EMOJI: Record<HouseName, string> = {
+  Bowser: '🐢',
+  'Donkey Kong': '🦍',
+  Boo: '👻',
+  Toad: '🍄',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATIC DATA
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface HouseData {
   house: HouseName;
@@ -63,6 +88,10 @@ const faqs = [
   { q: 'When do sign-ups or applications open?', a: "Sign-up timelines are announced at the start of each year through VSA's official channels. Follow @vsaatucsd on Instagram to stay up to date." },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
 }
@@ -70,25 +99,68 @@ function getCurrentAcademicYearStart() {
 function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
   if (activeTermYear) return activeTermYear;
-
   const currentYear = getCurrentAcademicYearStart();
   if (currentYear) return currentYear;
-
   return terms[0]?.academic_year_start ?? null;
 }
 
 function assetMapByHouse(assets: HousePageAsset[]) {
   return assets.reduce((map, asset) => {
-    map.set(asset.house, asset);
+    map.set(asset.house_key ?? asset.house, asset);
     return map;
   }, new Map<string, HousePageAsset>());
 }
 
+function getHouseLabel(house: string, asset?: HousePageAsset | null, displayName?: string | null) {
+  return displayName || asset?.display_name || HOUSE_LABELS[house as HouseName] || house;
+}
+
+function getHouseColor(house: string, asset?: HousePageAsset | null, accentColor?: string | null) {
+  return accentColor || asset?.accent_color || HOUSE_COLORS[house as HouseName] || 'var(--brand)';
+}
+
+interface AutoBadges {
+  mostEvents: HouseYearlyPoints | null;
+  mostMembers: HouseYearlyPoints | null;
+  mostEfficient: HouseYearlyPoints | null;
+}
+
+function computeBadges(standings: HouseYearlyPoints[]): AutoBadges {
+  if (standings.length === 0) return { mostEvents: null, mostMembers: null, mostEfficient: null };
+  const withPoints = standings.filter((s) => s.total_points > 0);
+  if (withPoints.length === 0) return { mostEvents: null, mostMembers: null, mostEfficient: null };
+
+  const mostEvents = [...withPoints].sort((a, b) => b.events_attended - a.events_attended)[0] ?? null;
+  const mostMembers = [...withPoints].sort((a, b) => b.unique_members - a.unique_members)[0] ?? null;
+  const withEfficiency = withPoints.filter((s) => (s.average_points_per_member ?? 0) > 0);
+  const mostEfficient = withEfficiency.length > 0
+    ? [...withEfficiency].sort((a, b) => (b.average_points_per_member ?? 0) - (a.average_points_per_member ?? 0))[0]
+    : null;
+
+  return { mostEvents, mostMembers, mostEfficient };
+}
+
+const EVENT_TYPE_SHORT: Record<string, string> = {
+  gbm: 'GBM',
+  mixer: 'Mixer',
+  winter_retreat: 'Retreat',
+  vcn: 'VCN',
+  wildn_culture: 'Wild n\' Culture',
+  external_event: 'External',
+  other: 'Event',
+};
+
+const RANK_MEDALS = ['🥇', '🥈', '🥉', '4️⃣'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
-  const { yearsWithData } = useLeaderboardYears();
   const { content: cycleContent } = useProgramContent('house');
+  const { events } = useEvents();
   const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
   const [standingsLoading, setStandingsLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState<HouseRecentActivity[]>([]);
@@ -97,10 +169,18 @@ export function House() {
 
   const activeYear = resolveHouseYear(terms);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
-  const hasAnyLeaderboardData = yearsWithData.length > 0;
-  const hasSelectedYearData = activeYear ? yearsWithData.includes(activeYear) : false;
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
   const houseAssetsByName = assetMapByHouse(houseAssets);
+  const displayedHouses = houseAssets.length > 0
+    ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
+    : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
+
+  // Upcoming events (next ~2 weeks, all types)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const upcomingEvents = events
+    .filter((e) => new Date(e.date) >= oneDayAgo)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 4);
 
   useEffect(() => {
     let isMounted = true;
@@ -140,11 +220,18 @@ export function House() {
     return () => { isMounted = false; };
   }, [activeYear]);
 
+  const hasLiveStandings = standings.length > 0 && standings.some((s) => s.total_points > 0);
+  const leader = hasLiveStandings ? standings[0] : null;
+  const maxPoints = hasLiveStandings ? standings[0].total_points : 1;
+  const badges = computeBadges(standings);
+
   return (
     <>
       <PageTitle title="House Program" />
 
       <div className="program-app">
+
+        {/* ── Hero ── */}
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">
@@ -165,11 +252,17 @@ export function House() {
                 <span className="scrapbook-sticker scrapbook-sticker-teal">Applications Open · {CYCLE_LABEL}</span>
               )}
               {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>}
+              {leader && (
+                <span className="scrapbook-sticker scrapbook-sticker-coral">
+                  {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
+                </span>
+              )}
             </div>
           </div>
           <div className="program-watermark">houses</div>
         </section>
 
+        {/* ── Program callout ── */}
         {(cycleContent || (APPLICATIONS_OPEN && APPLICATION_LINK)) && (
           <section className="program-section">
             <div className="program-section-inner">
@@ -181,7 +274,9 @@ export function House() {
                 />
               ) : (
                 <div className="scrapbook-note flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}</div>
+                  <div className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}
+                  </div>
                   <a href={APPLICATION_LINK} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
                     Apply Now →
                   </a>
@@ -191,6 +286,7 @@ export function House() {
           </section>
         )}
 
+        {/* ── About ── */}
         <section className="program-section">
           <div className="program-section-inner program-section-narrow">
             <div className="program-eyebrow">About the Program</div>
@@ -200,51 +296,119 @@ export function House() {
           </div>
         </section>
 
+        {/* ── Four House Cards ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="program-eyebrow">The Four Houses</div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {HOUSES.map(({ house }) => {
-                const asset = houseAssetsByName.get(house);
-                const color = HOUSE_COLORS[house];
+              {displayedHouses.map(({ house, asset }) => {
+                const color = getHouseColor(house, asset);
+                const standing = standings.find((s) => s.house === house);
+                const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
+                const emoji = HOUSE_EMOJI[house as HouseName] ?? '';
+                const label = getHouseLabel(house, asset, standing?.display_name);
+                const imageUrl = asset?.image_thumbnail_url || asset?.image_url;
+                const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';
+
                 return (
-                  <div key={house} className="program-feature-card overflow-hidden p-0" style={{ borderColor: `${color}55` }}>
+                  <div
+                    key={house}
+                    className="program-feature-card overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    style={{ borderColor: `${color}55` }}
+                  >
+                    {/* Image area */}
                     <div
                       className="relative aspect-[4/3] overflow-hidden"
                       style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
                     >
-                      {asset?.image_url ? (
+                      {imageUrl ? (
                         <img
-                          src={getSupabaseImageUrl(asset.image_url, {
-                            width: 520,
-                            height: 390,
-                            resize: 'cover',
-                            quality: 72,
-                          })}
-                          srcSet={getSupabaseImageSrcSet(asset.image_url, [320, 520, 720], {
-                            resize: 'cover',
-                            quality: 72,
-                          })}
+                          src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
+                          srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
                           sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                          alt={asset.image_alt || HOUSE_LABELS[house]}
+                          alt={asset.image_alt || label}
                           className="h-full w-full object-cover"
                           loading="lazy"
                           decoding="async"
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
-                          <div
-                            className="grid h-16 w-16 place-items-center rounded-full border font-serif text-2xl italic"
-                            style={{ borderColor: `${color}66`, color, background: 'var(--color-surface)' }}
-                          >
-                            {house === 'Donkey Kong' ? 'DK' : house.slice(0, 2).toUpperCase()}
+                          <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                      )}
+
+                      {/* Rank badge overlay */}
+                      {rank !== null && (
+                        <div
+                          className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black text-white shadow-md"
+                          style={{ background: color }}
+                        >
+                          #{rank}
+                        </div>
+                      )}
+
+                      {/* Points overlay */}
+                      {standing && standing.total_points > 0 && (
+                        <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
+                          <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">pts</div>
+                          <div className="font-mono text-lg font-black leading-none text-white">
+                            {standing.total_points.toLocaleString()}
                           </div>
                         </div>
                       )}
                     </div>
+
+                    {/* Card body */}
                     <div className="p-4">
-                      <div className="program-card-title">{HOUSE_LABELS[house]}</div>
-                      <div className="mt-2 h-1.5 rounded-full" style={{ background: color }} />
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{emoji}</span>
+                        <div className="program-card-title leading-tight">{label}</div>
+                      </div>
+
+                      <p className="mt-1.5 font-sans text-[12px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                        {tagline}
+                      </p>
+
+                      {/* Live mini stats */}
+                      {standing && standing.total_points > 0 ? (
+                        <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
+                          <div className="text-center">
+                            <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
+                            <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.events_attended}</div>
+                            <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>check-ins</div>
+                          </div>
+                          {standing.average_points_per_member !== null && (
+                            <div className="text-center">
+                              <div className="font-mono text-[14px] font-black" style={{ color }}>
+                                {Math.round(standing.average_points_per_member)}
+                              </div>
+                              <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
+                          <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                            Season not yet started
+                          </p>
+                        </div>
+                      )}
+
+                      {/* House color bar */}
+                      <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
+                        {hasLiveStandings && standing && (
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
+                              background: color,
+                            }}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -253,53 +417,138 @@ export function House() {
           </div>
         </section>
 
+        {/* ── Live Standings ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="program-eyebrow mb-0">House Standings{activeYearLabel ? ` / ${activeYearLabel}` : ''}</div>
+              <div className="program-eyebrow mb-0">
+                Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
+              </div>
               <Link to="/leaderboard" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
                 Full Leaderboard →
               </Link>
             </div>
+
             <div className="program-scoreboard-card">
               {standingsLoading ? (
-                <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>Loading house standings...</div>
+                <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  Loading standings...
+                </div>
               ) : standings.length === 0 ? (
                 <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  <p style={{ color: 'var(--color-text2)' }}>
-                    House standings will appear after House Reveal assignments are imported.
-                  </p>
-                  {activeYearLabel && (
-                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                      No house points are recorded for {activeYearLabel}{hasAnyLeaderboardData && !hasSelectedYearData ? ' yet' : ''}.
-                    </p>
+                  {houseAssets.length > 0 ? (
+                    <>
+                      <p style={{ color: 'var(--color-text2)' }}>
+                        House profiles exist, but no members have been assigned yet.
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                        Import house assignments or use the Legacy Backfill tool in Admin Houses to restore standings with an effective start date.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ color: 'var(--color-text2)' }}>
+                        No house profiles exist for this year yet. Create house profiles before importing memberships.
+                      </p>
+                      {activeYearLabel && (
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                          No house points recorded for {activeYearLabel}.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (
-                standings.map((standing, index) => (
-                  <div key={standing.house} className="program-scoreboard-row">
-                    <div className="program-rank">#{index + 1}</div>
-                    <div>
-                      <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                        {HOUSE_LABELS[standing.house as keyof typeof HOUSE_LABELS] ?? standing.house}
+                <>
+                  {standings.map((standing, index) => {
+                    const asset = houseAssetsByName.get(standing.house);
+                    const houseKey = standing.house as HouseName;
+                    const color = getHouseColor(standing.house, asset, standing.accent_color);
+                    const label = getHouseLabel(standing.house, asset, standing.display_name);
+                    const emoji = HOUSE_EMOJI[houseKey] ?? '';
+                    const pct = maxPoints > 0 ? Math.round((standing.total_points / maxPoints) * 100) : 0;
+                    const houseBadges: string[] = [];
+                    if (badges.mostEvents?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Events');
+                    if (badges.mostMembers?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Members');
+                    if (badges.mostEfficient?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Efficient');
+
+                    return (
+                      <div
+                        key={standing.house_profile_id ?? standing.house}
+                        className="group border-b last:border-0"
+                        style={{ borderColor: 'var(--color-border)' }}
+                      >
+                        <div className="flex items-center gap-3 px-4 py-4 sm:gap-4">
+                          {/* Rank medal */}
+                          <div className="flex w-10 shrink-0 items-center justify-center">
+                            <span className="text-xl" title={`#${index + 1}`}>{RANK_MEDALS[index] ?? `#${index + 1}`}</span>
+                          </div>
+
+                          {/* House info + progress */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
+                                {emoji} {label}
+                              </span>
+                              {houseBadges.map((badge) => (
+                                <span
+                                  key={badge}
+                                  className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
+                                  style={{ background: color }}
+                                >
+                                  {badge}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                              {standing.unique_members} members · {standing.events_attended} check-ins
+                            </div>
+                            {/* Progress bar */}
+                            <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'var(--color-border)' }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${pct}%`, background: color }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Points */}
+                          <div className="shrink-0 text-right">
+                            <div className="font-serif leading-none" style={{ fontSize: 26, color: 'var(--color-text)' }}>
+                              {standing.total_points.toLocaleString()}
+                            </div>
+                            <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
+                              pts
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                        {standing.unique_members} contributing members · {standing.events_attended} check-ins
-                      </div>
-                    </div>
-                    <div className="text-right font-serif" style={{ fontSize: 26, color: 'var(--color-text)' }}>
-                      {standing.total_points}
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                </>
               )}
             </div>
           </div>
         </section>
 
+        {/* ── House Member Rankings ── */}
+        {activeYear && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <HouseMemberLeaderboard
+                selectedYear={activeYear}
+                selectedYearLabel={activeYearLabel}
+                showLeaderboardLink
+              />
+            </div>
+          </section>
+        )}
+
+        {/* ── Points explainer + recent activity ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <PointsExplainer />
+
             {(recentActivityLoading || recentActivity.length > 0) && (
               <div className="mt-8">
                 <div className="program-eyebrow">Recent House Activity</div>
@@ -309,33 +558,51 @@ export function House() {
                       Loading activity...
                     </div>
                   ) : (
-                    recentActivity.map((activity, i) => (
-                      <div
-                        key={`${activity.event_id}-${activity.house}`}
-                        className={`flex items-center justify-between p-3 text-xs ${i !== recentActivity.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800/50' : ''}`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ background: HOUSE_COLORS[activity.house as HouseName] || 'var(--brand)' }}
-                            />
-                            <span className="truncate font-bold" style={{ color: 'var(--color-text)' }}>
-                              {HOUSE_LABELS[activity.house as keyof typeof HOUSE_LABELS] || activity.house}
-                            </span>
+                    recentActivity.map((activity, i) => {
+                      const houseKey = activity.house as HouseName;
+                      const asset = houseAssetsByName.get(activity.house);
+                      const color = getHouseColor(activity.house, asset, activity.accent_color);
+                      const label = getHouseLabel(activity.house, asset, activity.display_name);
+                      const emoji = HOUSE_EMOJI[houseKey] ?? '';
+                      return (
+                        <div
+                          key={`${activity.event_id}-${activity.house}`}
+                          className={`flex items-center gap-3 px-4 py-3 ${i !== recentActivity.length - 1 ? 'border-b' : ''}`}
+                          style={{ borderColor: 'var(--color-border)' }}
+                        >
+                          {/* House color dot */}
+                          <div
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: color }}
+                          />
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-sans text-[12px] font-bold" style={{ color: 'var(--color-text)' }}>
+                                {emoji} {label}
+                              </span>
+                            </div>
+                            <div className="truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                              {activity.event_name}
+                              {activity.event_date && (
+                                <span> · {format(parseISO(activity.event_date), 'MMM d')}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="mt-0.5 truncate" style={{ color: 'var(--color-text3)' }}>
-                            {activity.event_name}
+
+                          {/* Points earned */}
+                          <div className="shrink-0 text-right">
+                            <div className="font-mono text-sm font-black" style={{ color }}>
+                              +{activity.total_points}
+                            </div>
+                            <div className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
+                              {activity.contributing_members} members
+                            </div>
                           </div>
                         </div>
-                        <div className="shrink-0 text-right">
-                          <div className="font-mono font-bold text-brand-600 dark:text-brand-400">+{activity.total_points}</div>
-                          <div className="text-[10px]" style={{ color: 'var(--color-text3)' }}>
-                            {activity.contributing_members} members
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -343,12 +610,75 @@ export function House() {
           </div>
         </section>
 
+        {/* ── Upcoming Events ── */}
+        {upcomingEvents.length > 0 && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+                <div className="program-eyebrow mb-0">Earn Points at These Events</div>
+                <Link to="/events" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  All Events →
+                </Link>
+              </div>
+              <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                Every VSA event is a chance to climb the board. Show up and earn points for your house.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {upcomingEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="scrapbook-note flex items-start gap-4 px-4 py-4"
+                  >
+                    {/* Date stamp */}
+                    <div className="w-12 shrink-0 text-center">
+                      <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                        {format(parseISO(event.date), 'MMM')}
+                      </div>
+                      <div className="font-serif text-[28px] leading-none" style={{ color: 'var(--color-text)' }}>
+                        {format(parseISO(event.date), 'd')}
+                      </div>
+                    </div>
+
+                    {/* Event info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
+                          {EVENT_TYPE_SHORT[event.event_type] ?? EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+                        </span>
+                        {event.points > 0 && (
+                          <span className="scrapbook-sticker scrapbook-sticker-coral px-2 py-0.5 text-[9px]">
+                            +{event.points} pts
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
+                        {event.name}
+                      </div>
+                      {event.location && (
+                        <div className="mt-0.5 truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                          📍 {event.location} · {format(parseISO(event.date), 'h:mm a')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-center">
+                <Link to="/events" className="vsa-btn-ghost font-sans text-sm">
+                  See All Upcoming Events →
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── House Parents ── */}
         {HOUSE_PARENTS.length > 0 && (
           <section className="program-section">
             <div className="program-section-inner">
               <div className="program-eyebrow">House Parents</div>
               <div className="program-four-grid">
-                {HOUSE_PARENTS.map(hp => (
+                {HOUSE_PARENTS.map((hp) => (
                   <div key={hp.name} className="program-feature-card">
                     {hp.photo && <img src={hp.photo} alt={hp.name} className="mb-3 aspect-square w-full rounded object-cover" loading="lazy" />}
                     <div className="program-card-title">{hp.emoji ? `${hp.emoji} ` : ''}{hp.name}</div>
@@ -361,13 +691,16 @@ export function House() {
           </section>
         )}
 
+        {/* ── How It Works ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="program-eyebrow">How It Works</div>
             <div className="program-step-grid">
               {steps.map((step) => (
                 <div key={step.num} className="program-step-card program-feature-card">
-                  <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>{step.num}</div>
+                  <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>
+                    {step.num}
+                  </div>
                   <div className="program-card-title">{step.title}</div>
                   <p className="program-card-copy">{step.desc}</p>
                 </div>
@@ -376,17 +709,19 @@ export function House() {
           </div>
         </section>
 
+        {/* ── What You'll Do ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="program-eyebrow">What You'll Do</div>
             <div className="flex flex-wrap gap-2">
-              {eventTypes.map(e => (
+              {eventTypes.map((e) => (
                 <span key={e} className="scrapbook-sticker">{e}</span>
               ))}
             </div>
           </div>
         </section>
 
+        {/* ── FAQ ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="program-eyebrow">FAQ</div>
@@ -401,9 +736,7 @@ export function House() {
                     <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
                   </button>
                   {openFaq === i && (
-                    <div className="program-faq-answer">
-                      {faq.a}
-                    </div>
+                    <div className="program-faq-answer">{faq.a}</div>
                   )}
                 </div>
               ))}
@@ -411,6 +744,7 @@ export function House() {
           </div>
         </section>
 
+        {/* ── Footer ── */}
         <section className="program-section">
           <div className="program-section-inner">
             <div className="program-footer-actions-rich">
@@ -423,6 +757,7 @@ export function House() {
             </div>
           </div>
         </section>
+
       </div>
     </>
   );

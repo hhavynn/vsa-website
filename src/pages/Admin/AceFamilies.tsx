@@ -16,7 +16,7 @@ import {
 } from '../../data/repos/aceFamilies';
 import { AceFamily, AceFamilyMember } from '../../types';
 import { ImportPlan, buildImportPlan, validateJson } from '../../lib/aceFamilyImport';
-import { extractSupabasePublicObjectName } from '../../lib/imageUpload';
+import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../lib/imageUpload';
 import { supabase } from '../../lib/supabase';
 
 const inputCls =
@@ -455,7 +455,11 @@ export default function AdminAceFamilies() {
       setSavingFamily(true);
       let coverUrl = familyDraft.cover_image_url.trim();
       if (coverFile) {
-        coverUrl = await aceFamiliesRepository.uploadImage(coverFile, 'family');
+        const { file: prepared, reduction, wasCompressed } = await prepareImageForUpload(coverFile, 'aceCover');
+        coverUrl = await aceFamiliesRepository.uploadImage(prepared, 'family');
+        if (wasCompressed && reduction > 10) {
+          toast.success(`Cover optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+        }
       }
 
       const payload: AceFamilyFormData = {
@@ -542,8 +546,12 @@ export default function AdminAceFamilies() {
       setSavingMemberId(id);
       let finalPatch = patch;
       if (file) {
-        const url = await aceFamiliesRepository.uploadImage(file, 'member');
+        const { file: prepared, reduction, wasCompressed } = await prepareImageForUpload(file, 'aceMember');
+        const url = await aceFamiliesRepository.uploadImage(prepared, 'member');
         finalPatch = { ...patch, photo_url: url };
+        if (wasCompressed && reduction > 10) {
+          toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+        }
       }
       await aceFamiliesRepository.updateMember(id, finalPatch);
       if (file) {

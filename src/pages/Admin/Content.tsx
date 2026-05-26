@@ -24,6 +24,8 @@ export default function AdminContent() {
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
+  const [originalPhotoThumbnailUrl, setOriginalPhotoThumbnailUrl] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -44,12 +46,17 @@ export default function AdminContent() {
         }
 
         if (data && isMounted) {
+          const loadedPhotoUrl = data.presidents_photo_url || '';
+          const loadedPhotoThumbnailUrl = data.presidents_photo_thumbnail_url || '';
           setForm({
             names: data.presidents_names || DEFAULT_PRESIDENTS_CONTENT.names,
             role: data.presidents_role || DEFAULT_PRESIDENTS_CONTENT.role,
             message: data.presidents_message || DEFAULT_PRESIDENTS_CONTENT.message,
-            photoUrl: data.presidents_photo_url || '',
+            photoUrl: loadedPhotoUrl,
+            photoThumbnailUrl: loadedPhotoThumbnailUrl,
           });
+          setOriginalPhotoUrl(loadedPhotoUrl);
+          setOriginalPhotoThumbnailUrl(loadedPhotoThumbnailUrl);
         }
       } catch (error) {
         console.error(error);
@@ -83,18 +90,37 @@ export default function AdminContent() {
     maxSize: 10 * 1024 * 1024,
   });
 
-  async function uploadPhoto(file: File): Promise<string> {
-    const preparedFile = await prepareImageForUpload(file, 'homepage');
-    const fileExt = getUploadExtension(preparedFile);
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+  async function uploadPhoto(file: File): Promise<{ photoUrl: string; photoThumbnailUrl: string }> {
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'homepage');
+    const { file: thumbnailFile } = await prepareImageForUpload(file, 'homepageThumbnail');
+    const uploadId = crypto.randomUUID();
+    const fileName = `${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `thumbs/${uploadId}.${getUploadExtension(thumbnailFile)}`;
     const { error } = await supabase.storage.from('presidents_images').upload(fileName, preparedFile, {
       cacheControl: '31536000',
       contentType: preparedFile.type,
     });
     if (error) throw error;
 
+    const { error: thumbnailError } = await supabase.storage.from('presidents_images').upload(thumbnailName, thumbnailFile, {
+      cacheControl: '31536000',
+      contentType: thumbnailFile.type,
+    });
+    if (thumbnailError) {
+      await supabase.storage.from('presidents_images').remove([fileName]);
+      throw thumbnailError;
+    }
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('presidents_images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: thumbnailData } = supabase.storage.from('presidents_images').getPublicUrl(thumbnailName);
+    return {
+      photoUrl: data.publicUrl,
+      photoThumbnailUrl: thumbnailData.publicUrl,
+    };
   }
 
   async function removePresidentsImage(url?: string | null) {
@@ -107,13 +133,15 @@ export default function AdminContent() {
 
     try {
       setSaving(true);
-      const oldPhotoUrl = form.photoUrl;
-      const photoUrl = photoFile ? await uploadPhoto(photoFile) : form.photoUrl.trim();
+      const uploadedPhoto = photoFile ? await uploadPhoto(photoFile) : null;
+      const photoUrl = uploadedPhoto?.photoUrl ?? form.photoUrl.trim();
+      const photoThumbnailUrl = uploadedPhoto?.photoThumbnailUrl ?? (photoUrl ? form.photoThumbnailUrl.trim() : '');
       const savedContent: PresidentsContent = {
         names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
         role: form.role.trim() || DEFAULT_PRESIDENTS_CONTENT.role,
         message: form.message.trim() || DEFAULT_PRESIDENTS_CONTENT.message,
         photoUrl,
+        photoThumbnailUrl,
       };
       const { error } = await supabase.from('homepage_content').upsert(
         {
@@ -122,15 +150,19 @@ export default function AdminContent() {
           presidents_role: savedContent.role,
           presidents_message: savedContent.message,
           presidents_photo_url: photoUrl || null,
+          presidents_photo_thumbnail_url: photoThumbnailUrl || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }
       );
 
       if (error) throw error;
-      if (photoFile) await removePresidentsImage(oldPhotoUrl);
+      if (photoFile || photoUrl !== originalPhotoUrl) await removePresidentsImage(originalPhotoUrl);
+      if (photoFile || photoThumbnailUrl !== originalPhotoThumbnailUrl) await removePresidentsImage(originalPhotoThumbnailUrl);
 
       setForm(savedContent);
+      setOriginalPhotoUrl(savedContent.photoUrl);
+      setOriginalPhotoThumbnailUrl(savedContent.photoThumbnailUrl);
       setPhotoFile(null);
       setPhotoPreview('');
       queryClient.setQueryData(PRESIDENTS_CONTENT_QUERY_KEY, savedContent);
@@ -144,7 +176,7 @@ export default function AdminContent() {
     }
   }
 
-  const previewPhoto = photoPreview || form.photoUrl;
+  const previewPhoto = photoPreview || form.photoThumbnailUrl || form.photoUrl;
   const previewParagraphs = splitPresidentsMessage(form.message);
 
   const fieldStyle = { borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' };
@@ -193,7 +225,10 @@ export default function AdminContent() {
 
           <div>
             <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Photo URL</label>
-            <input type="url" value={form.photoUrl} onChange={(e) => { setForm({ ...form, photoUrl: e.target.value }); setPhotoFile(null); setPhotoPreview(''); }} className={inputCls} style={fieldStyle} placeholder="https://..." disabled={loading} />
+            <input type="url" value={form.photoUrl} onChange={(e) => { setForm({ ...form, photoUrl: e.target.value, photoThumbnailUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }} className={inputCls} style={fieldStyle} placeholder="https://..." disabled={loading} />
+            <p className="font-sans text-xs mt-2" style={{ color: 'var(--color-text3)' }}>
+              New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+            </p>
           </div>
 
           <div>
@@ -212,7 +247,7 @@ export default function AdminContent() {
             </div>
             {previewPhoto && (
               <button type="button" className="mt-1.5 font-sans text-xs text-red-500 hover:text-red-400" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => { setForm({ ...form, photoUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}>
+                onClick={() => { setForm({ ...form, photoUrl: '', photoThumbnailUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}>
                 Remove photo
               </button>
             )}

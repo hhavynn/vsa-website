@@ -13,7 +13,13 @@ interface GalleryAlbum {
   date: string;
   google_photos_url: string;
   cover_image_url: string | null;
+  cover_thumbnail_url: string | null;
   event_id: string | null;
+}
+
+interface UploadedGalleryCover {
+  imageUrl: string;
+  thumbnailUrl: string;
 }
 
 interface EventOption {
@@ -48,7 +54,7 @@ export default function AdminGallery() {
   const fetchAlbums = async () => {
     const { data, error } = await supabase
       .from('gallery_events')
-      .select('id, title, description, date, google_photos_url, cover_image_url, event_id')
+      .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id')
       .order('date', { ascending: false });
     if (!error) setAlbums((data ?? []) as GalleryAlbum[]);
   };
@@ -105,9 +111,12 @@ export default function AdminGallery() {
     maxSize: 10 * 1024 * 1024,
   });
 
-  async function uploadCoverImage(file: File) {
-    const preparedFile = await prepareImageForUpload(file, 'galleryCover');
-    const fileName = `${crypto.randomUUID()}.${getUploadExtension(preparedFile)}`;
+  async function uploadCoverImage(file: File): Promise<UploadedGalleryCover> {
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'galleryCover');
+    const { file: thumbnailFile } = await prepareImageForUpload(file, 'galleryCoverThumbnail');
+    const uploadId = crypto.randomUUID();
+    const fileName = `${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `thumbs/${uploadId}.${getUploadExtension(thumbnailFile)}`;
     const { error } = await supabase.storage
       .from('gallery_images')
       .upload(fileName, preparedFile, {
@@ -115,8 +124,28 @@ export default function AdminGallery() {
         contentType: preparedFile.type,
       });
     if (error) throw error;
+
+    const { error: thumbnailError } = await supabase.storage
+      .from('gallery_images')
+      .upload(thumbnailName, thumbnailFile, {
+        cacheControl: '31536000',
+        contentType: thumbnailFile.type,
+      });
+    if (thumbnailError) {
+      await supabase.storage.from('gallery_images').remove([fileName]);
+      throw thumbnailError;
+    }
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Cover photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('gallery_images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: thumbnailData } = supabase.storage.from('gallery_images').getPublicUrl(thumbnailName);
+    return {
+      imageUrl: data.publicUrl,
+      thumbnailUrl: thumbnailData.publicUrl,
+    };
   }
 
   async function removeGalleryImage(url?: string | null) {
@@ -161,10 +190,15 @@ export default function AdminGallery() {
 
       // Upload new cover if one was selected
       let coverImageUrl = albumToEdit.cover_image_url;
+      let coverThumbnailUrl = albumToEdit.cover_thumbnail_url;
       let coverImageToRemove: string | null = null;
+      let coverThumbnailToRemove: string | null = null;
       if (editCoverFile) {
-        coverImageUrl = await uploadCoverImage(editCoverFile);
+        const uploadedCover = await uploadCoverImage(editCoverFile);
+        coverImageUrl = uploadedCover.imageUrl;
+        coverThumbnailUrl = uploadedCover.thumbnailUrl;
         coverImageToRemove = albumToEdit.cover_image_url;
+        coverThumbnailToRemove = albumToEdit.cover_thumbnail_url;
       }
 
       const nextEventId = editForm.event_id ? editForm.event_id : null;
@@ -177,17 +211,19 @@ export default function AdminGallery() {
           date: eventDate,
           google_photos_url: editForm.google_photos_url,
           cover_image_url: coverImageUrl,
+          cover_thumbnail_url: coverThumbnailUrl,
           event_id: nextEventId,
         })
         .eq('id', albumToEdit.id);
       if (updateErr) throw updateErr;
       await removeGalleryImage(coverImageToRemove);
+      await removeGalleryImage(coverThumbnailToRemove);
 
       toast.success('Album updated!');
       setAlbums(prev =>
         prev.map(a =>
           a.id === albumToEdit.id
-            ? { ...a, ...editForm, date: eventDate, cover_image_url: coverImageUrl, event_id: nextEventId }
+            ? { ...a, ...editForm, date: eventDate, cover_image_url: coverImageUrl, cover_thumbnail_url: coverThumbnailUrl, event_id: nextEventId }
             : a
         )
       );
@@ -220,8 +256,11 @@ export default function AdminGallery() {
       setUploading(true);
 
       let coverImageUrl: string | null = null;
+      let coverThumbnailUrl: string | null = null;
       if (coverFile) {
-        coverImageUrl = await uploadCoverImage(coverFile);
+        const uploadedCover = await uploadCoverImage(coverFile);
+        coverImageUrl = uploadedCover.imageUrl;
+        coverThumbnailUrl = uploadedCover.thumbnailUrl;
       }
 
       const { error } = await supabase.from('gallery_events').insert([{
@@ -231,6 +270,7 @@ export default function AdminGallery() {
         date: eventDate,
         google_photos_url: form.google_photos_url,
         cover_image_url: coverImageUrl,
+        cover_thumbnail_url: coverThumbnailUrl,
         event_id: form.event_id ? form.event_id : null,
         images: [],                 // legacy column — no longer used
       }]);
@@ -255,6 +295,7 @@ export default function AdminGallery() {
     try {
       // Delete cover from storage if it was uploaded
       await removeGalleryImage(albumToDelete.cover_image_url);
+      await removeGalleryImage(albumToDelete.cover_thumbnail_url);
       const { error } = await supabase
         .from('gallery_events')
         .delete()
@@ -378,6 +419,9 @@ export default function AdminGallery() {
               {/* Cover photo upload */}
               <div>
                 <label className={labelCls}>Cover Photo <span className="font-normal" style={{ color: 'var(--color-text3)' }}>(optional but recommended)</span></label>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                </p>
                 {coverPreview ? (
                   <div className="mt-2 relative inline-block">
                     <img
@@ -449,9 +493,9 @@ export default function AdminGallery() {
                   <div key={album.id} className="flex flex-col overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
                     {/* Cover */}
                     <div className="relative h-36" style={{ background: 'var(--color-surface2)' }}>
-                      {album.cover_image_url ? (
+                      {(album.cover_thumbnail_url || album.cover_image_url) ? (
                         <img
-                          src={album.cover_image_url}
+                          src={album.cover_thumbnail_url || album.cover_image_url || ''}
                           alt={album.title}
                           className="w-full h-full object-cover"
                         />
@@ -591,13 +635,16 @@ export default function AdminGallery() {
                   Cover Photo
                   <span className="ml-1 font-normal" style={{ color: 'var(--color-text3)' }}>(leave empty to keep current)</span>
                 </label>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                </p>
 
                 {/* Show current cover if no new one staged */}
-                {!editCoverPreview && albumToEdit.cover_image_url && (
+                {!editCoverPreview && (albumToEdit.cover_thumbnail_url || albumToEdit.cover_image_url) && (
                   <div className="mt-2 mb-3">
                     <p className="mb-1.5 text-xs" style={{ color: 'var(--color-text3)' }}>Current</p>
                     <img
-                      src={albumToEdit.cover_image_url}
+                      src={albumToEdit.cover_thumbnail_url || albumToEdit.cover_image_url || ''}
                       alt={albumToEdit.title}
                       className="w-full h-36 object-cover rounded border border-zinc-700"
                     />

@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { HouseAllTimePoints, HouseRecentActivity, HouseYearlyPoints, MemberYearlyPoints } from '../../types';
+import { HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity, HouseYearlyPoints, MemberYearlyPoints } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export class LeaderboardRepository {
@@ -65,6 +65,53 @@ export class LeaderboardRepository {
       if (error) throw error;
       return (data ?? []) as HouseRecentActivity[];
     }, 'Failed to fetch recent house activity');
+  }
+
+  async getHouseMemberRankings(academicYearStart: number | 'all'): Promise<Map<string, HouseMemberRankEntry[]>> {
+    return withErrorHandling(async () => {
+      const query = academicYearStart === 'all'
+        ? supabase
+          .from('house_member_all_time_points')
+          .select('*')
+          .order('academic_year_start', { ascending: false })
+          .order('total_points', { ascending: false })
+        : supabase
+          .from('house_member_yearly_points')
+          .select('*')
+          .eq('academic_year_start', academicYearStart)
+          .order('total_points', { ascending: false });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const byHouse = new Map<string, HouseMemberRankEntry[]>();
+      for (const m of (data ?? []) as any[]) {
+        const house = m.house_profile_id || m.house;
+        if (!house) continue;
+        const entry: HouseMemberRankEntry = {
+          house: m.house ?? '',
+          house_profile_id: m.house_profile_id ?? '',
+          display_name: m.display_name ?? m.house ?? '',
+          image_url: m.image_url ?? null,
+          accent_color: m.accent_color ?? null,
+          member_id: m.member_id,
+          first_name: m.first_name ?? '',
+          last_name: m.last_name ?? '',
+          college: m.college ?? null,
+          graduation_year: m.graduation_year ?? null,
+          academic_year_start: m.academic_year_start,
+          academic_year_end: m.academic_year_end,
+          total_points: m.total_points ?? 0,
+          events_attended: m.events_attended ?? 0,
+          unique_events: m.unique_events ?? 0,
+          latest_activity_at: m.latest_activity_at ?? null,
+        };
+        const arr = byHouse.get(house) ?? [];
+        arr.push(entry);
+        byHouse.set(house, arr);
+      }
+      return byHouse;
+    }, 'Failed to fetch house member rankings');
   }
 
   async getYearsWithData(): Promise<number[]> {

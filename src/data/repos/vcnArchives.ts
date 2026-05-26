@@ -9,7 +9,7 @@ export class VCNArchivesRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('published_vcn_archives')
-        .select('id, year, title, annual_number, theme_name, event_date, event_time, venue, description, video_url, photo_album_url, album_source, cover_image_url, poster_url, trailer_url, photo_credit, is_published, is_featured, is_current, ticket_status, ticket_url, ticket_note, display_order, created_at, updated_at')
+        .select('id, year, title, annual_number, theme_name, event_date, event_time, venue, description, video_url, photo_album_url, album_source, cover_image_url, cover_thumbnail_url, poster_url, trailer_url, photo_credit, is_published, is_featured, is_current, ticket_status, ticket_url, ticket_note, display_order, created_at, updated_at')
         .eq('is_published', true)
         .order('display_order', { ascending: true })
         .order('year', { ascending: false });
@@ -27,7 +27,7 @@ export class VCNArchivesRepository {
     try {
       const { data, error } = await supabase
         .from('published_vcn_archives')
-        .select('id, year, title, annual_number, theme_name, event_date, event_time, venue, description, video_url, photo_album_url, album_source, cover_image_url, poster_url, trailer_url, photo_credit, is_published, is_featured, is_current, ticket_status, ticket_url, ticket_note, display_order, created_at, updated_at')
+        .select('id, year, title, annual_number, theme_name, event_date, event_time, venue, description, video_url, photo_album_url, album_source, cover_image_url, cover_thumbnail_url, poster_url, trailer_url, photo_credit, is_published, is_featured, is_current, ticket_status, ticket_url, ticket_note, display_order, created_at, updated_at')
         .eq('is_published', true)
         .order('is_current', { ascending: false })
         .order('is_featured', { ascending: false })

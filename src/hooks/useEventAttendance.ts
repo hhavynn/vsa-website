@@ -220,6 +220,7 @@ export function useEventAttendance() {
             event_type,
             check_in_form_url,
             image_url,
+            thumbnail_url,
             check_in_code,
             is_code_expired
           )

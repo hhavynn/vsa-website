@@ -16,6 +16,7 @@ interface CabinetMember {
   category: string;
   display_order: number;
   image_url: string | null;
+  thumbnail_url: string | null;
   year: string | null;
   college: string | null;
   major: string | null;
@@ -33,6 +34,7 @@ const EMPTY_MEMBER: Partial<CabinetMember> = {
   category: 'General Board',
   display_order: 0,
   image_url: '',
+  thumbnail_url: '',
   year: '',
   college: '',
   major: '',
@@ -82,6 +84,11 @@ const ROLE_SUGGESTIONS = ['Historian', 'Public Relations Chair'];
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
 const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
+
+type UploadedCabinetImage = {
+  imageUrl: string;
+  thumbnailUrl: string;
+};
 
 function CabinetYearSelect({
   value,
@@ -151,6 +158,8 @@ export default function AdminCabinet() {
   const [selectedAdminYearId, setSelectedAdminYearId] = useState<string | null>(null);
 
   const [selectedMember, setSelectedMember] = useState<CabinetMember | null>(null);
+  const [selectedMemberOriginalImageUrl, setSelectedMemberOriginalImageUrl] = useState<string | null>(null);
+  const [selectedMemberOriginalThumbnailUrl, setSelectedMemberOriginalThumbnailUrl] = useState<string | null>(null);
   const [newMember, setNewMember] = useState<Partial<CabinetMember>>(EMPTY_MEMBER);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -285,17 +294,37 @@ export default function AdminCabinet() {
     maxSize: 8 * 1024 * 1024,
   });
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const preparedFile = await prepareImageForUpload(file, 'cabinet');
-    const fileExt = getUploadExtension(preparedFile);
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+  const uploadImage = async (file: File): Promise<UploadedCabinetImage> => {
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'cabinet');
+    const { file: thumbnailFile } = await prepareImageForUpload(file, 'cabinetThumbnail');
+    const uploadId = crypto.randomUUID();
+    const fileName = `${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `thumbs/${uploadId}.${getUploadExtension(thumbnailFile)}`;
     const { error } = await supabase.storage.from('cabinet_images').upload(fileName, preparedFile, {
       cacheControl: '31536000',
       contentType: preparedFile.type,
     });
     if (error) throw error;
+
+    const { error: thumbnailError } = await supabase.storage.from('cabinet_images').upload(thumbnailName, thumbnailFile, {
+      cacheControl: '31536000',
+      contentType: thumbnailFile.type,
+    });
+    if (thumbnailError) {
+      await supabase.storage.from('cabinet_images').remove([fileName]);
+      throw thumbnailError;
+    }
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('cabinet_images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: thumbnailData } = supabase.storage.from('cabinet_images').getPublicUrl(thumbnailName);
+    return {
+      imageUrl: data.publicUrl,
+      thumbnailUrl: thumbnailData.publicUrl,
+    };
   };
 
   async function removeCabinetImage(url?: string | null) {
@@ -312,11 +341,12 @@ export default function AdminCabinet() {
 
     try {
       setUploading(true);
-      const imageUrl = imageFile ? await uploadImage(imageFile) : null;
+      const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
 
       const { error } = await supabase.from('cabinet_members').insert([{
         ...newMember,
-        image_url: imageUrl,
+        image_url: uploadedImage?.imageUrl ?? null,
+        thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
         cabinet_year_id: resolveCabinetYearId(newMember.cabinet_year_id),
       }]);
 
@@ -343,10 +373,19 @@ export default function AdminCabinet() {
     try {
       setUploading(true);
       let imageUrl = selectedMember.image_url;
+      let thumbnailUrl = selectedMember.thumbnail_url;
       let imageUrlToRemove: string | null = null;
+      let thumbnailUrlToRemove: string | null = null;
       if (editImageFile) {
-        imageUrlToRemove = selectedMember.image_url;
-        imageUrl = await uploadImage(editImageFile);
+        imageUrlToRemove = selectedMemberOriginalImageUrl;
+        thumbnailUrlToRemove = selectedMemberOriginalThumbnailUrl;
+        const uploadedImage = await uploadImage(editImageFile);
+        imageUrl = uploadedImage.imageUrl;
+        thumbnailUrl = uploadedImage.thumbnailUrl;
+      } else if (!imageUrl && selectedMemberOriginalImageUrl) {
+        imageUrlToRemove = selectedMemberOriginalImageUrl;
+        thumbnailUrlToRemove = selectedMemberOriginalThumbnailUrl;
+        thumbnailUrl = null;
       }
 
       const { error } = await supabase.from('cabinet_members').update({
@@ -361,17 +400,21 @@ export default function AdminCabinet() {
         pronouns: selectedMember.pronouns,
         favorite_snack: selectedMember.favorite_snack,
         fun_fact: selectedMember.fun_fact,
-        image_url: imageUrl,
+        image_url: imageUrl || null,
+        thumbnail_url: imageUrl ? thumbnailUrl : null,
         cabinet_year_id: resolveCabinetYearId(selectedMember.cabinet_year_id),
       }).eq('id', selectedMember.id);
 
       if (error) throw error;
       await removeCabinetImage(imageUrlToRemove);
+      await removeCabinetImage(thumbnailUrlToRemove);
 
       toast.success('Member updated');
       setEditImageFile(null);
       setEditImagePreview(null);
       setSelectedMember(null);
+      setSelectedMemberOriginalImageUrl(null);
+      setSelectedMemberOriginalThumbnailUrl(null);
       fetchMembers();
     } catch (err) {
       console.error('Error updating member:', err);
@@ -387,6 +430,7 @@ export default function AdminCabinet() {
       const { error } = await supabase.from('cabinet_members').delete().eq('id', memberToDelete.id);
       if (error) throw error;
       await removeCabinetImage(memberToDelete.image_url);
+      await removeCabinetImage(memberToDelete.thumbnail_url);
       toast.success(`${memberToDelete.name} removed`);
       fetchMembers();
     } catch (err) {
@@ -521,6 +565,9 @@ export default function AdminCabinet() {
               </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                </p>
                 <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
                   <input {...getInputProps()} />
                   {imagePreview ? (
@@ -576,8 +623,8 @@ export default function AdminCabinet() {
                             <span className="font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>{m.display_order}</span>
                             <button onClick={() => moveMember(m, 'down')} disabled={idx === categoryMembers.length - 1} className="text-xs leading-none transition-colors disabled:opacity-20" style={{ color: 'var(--color-text3)' }}>▼</button>
                           </div>
-                          {m.image_url ? (
-                            <img src={m.image_url} alt={m.name} className="h-12 w-12 shrink-0 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
+                          {(m.thumbnail_url || m.image_url) ? (
+                            <img src={m.thumbnail_url || m.image_url || ''} alt={m.name} className="h-12 w-12 shrink-0 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
                           ) : (
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text2)' }}>
                               {m.name.charAt(0)}
@@ -592,7 +639,17 @@ export default function AdminCabinet() {
                           </div>
                         </div>
                         <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
-                          <button onClick={() => setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) })} className="flex-1 rounded border bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] sm:flex-none" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Edit</button>
+                          <button
+                            onClick={() => {
+                              setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) });
+                              setSelectedMemberOriginalImageUrl(m.image_url ?? null);
+                              setSelectedMemberOriginalThumbnailUrl(m.thumbnail_url ?? null);
+                            }}
+                            className="flex-1 rounded border bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] sm:flex-none"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                          >
+                            Edit
+                          </button>
                           <button onClick={() => setMemberToDelete(m)} className="flex-1 rounded border border-red-900/30 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white sm:flex-none">Remove</button>
                         </div>
                       </div>
@@ -663,10 +720,13 @@ export default function AdminCabinet() {
               </div>
               <div>
                 <label className={labelCls}>Profile Photo</label>
+                <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                </p>
                 {selectedMember.image_url && !editImagePreview && (
                   <div className="mb-4 mt-2 flex items-center gap-4">
                     <img src={selectedMember.image_url} alt="Current" className="h-20 w-20 rounded-full border object-cover shadow-sm" style={{ borderColor: 'var(--color-border)' }} />
-                    <button type="button" className="text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedMember({...selectedMember, image_url: ''})}>Remove image</button>
+                    <button type="button" className="text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedMember({...selectedMember, image_url: '', thumbnail_url: null})}>Remove image</button>
                   </div>
                 )}
                 <div {...getEditRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>

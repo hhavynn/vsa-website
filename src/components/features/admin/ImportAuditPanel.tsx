@@ -48,6 +48,13 @@ function decisionClass(decision: ImportRowDecision): string {
   return classes[decision];
 }
 
+function formatMatchReason(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+  const details = value as Record<string, unknown>;
+  const reason = details.final_reason ?? details.match_reason;
+  return typeof reason === 'string' ? reason.replace(/_/g, ' ') : '';
+}
+
 function statusClass(status: ImportJobWithEvent['status']): string {
   return status === 'completed'
     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
@@ -215,7 +222,12 @@ export function ImportAuditPanel() {
                                 {row.points_earned ?? '-'}
                               </td>
                               <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--color-text2)]">
-                                {row.score !== null ? `${row.score}%` : '-'}
+                                <div>{row.score !== null ? `${row.score}%` : '-'}</div>
+                                {formatMatchReason(row.match_details) && (
+                                  <div className="mt-0.5 max-w-[180px] truncate text-[10px] text-[var(--color-text3)]">
+                                    {formatMatchReason(row.match_details)}
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ))}
