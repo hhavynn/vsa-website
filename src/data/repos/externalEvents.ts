@@ -36,11 +36,13 @@ export class ExternalEventsRepository {
         query = query.eq('is_featured', filters.is_featured);
       }
 
-      // Order: upcoming first (by date), then past (by date descending)
-      // Actually, standard is date ascending for upcoming, date descending for past.
-      // For a mixed list, we'll just do date descending or date ascending.
-      // Let's do date descending (most recent first) for the showcase.
-      query = query.order('date', { ascending: false, nullsFirst: false });
+      // Order: upcoming first (nearest date first), then others (most recent date first)
+      if (filters.status === 'upcoming') {
+        query = query.order('date', { ascending: true, nullsFirst: false });
+      } else {
+        query = query.order('date', { ascending: false, nullsFirst: false });
+      }
+      
       query = query.order('created_at', { ascending: false });
 
       if (filters.limit) {
