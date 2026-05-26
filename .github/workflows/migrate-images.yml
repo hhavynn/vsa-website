@@ -1,0 +1,42 @@
+name: Migrate Supabase images to static assets
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # daily at 8am UTC (midnight PT)
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migration (all categories)
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run migrate:images:apply
+
+      - name: Commit and push new images if any
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/images/
+          if git diff --cached --quiet; then
+            echo "No new images to commit."
+          else
+            git commit -m "chore: migrate new Supabase images to static assets [skip ci]"
+            git push
+          fi
