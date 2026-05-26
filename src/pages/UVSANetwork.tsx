@@ -50,8 +50,8 @@ export default function UVSANetwork() {
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">UVSA 101</span>
           <h1 className="vsa-page-title">SoCal VSA <em>Network</em></h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            UCSD VSA is part of a larger <span className="font-bold text-[var(--brand)]">UVSA SoCal</span> network. 
-            We aren't just one school—we're part of a massive community of students across Southern California!
+            VSA at UCSD is part of the larger UVSA SoCal network. 
+            We are one school in a wider community of students across Southern California.
           </p>
         </div>
       </div>
@@ -73,7 +73,7 @@ export default function UVSANetwork() {
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]" style={{ borderColor: 'var(--border)' }}>
               <StarIcon size={18} className="text-[var(--brand)]" />
-              <span className="font-sans text-sm font-medium">4 Points Each</span>
+              <span className="font-sans text-sm font-medium">VSA Community</span>
             </div>
           </div>
         </section>
@@ -160,12 +160,15 @@ export default function UVSANetwork() {
             <InfoIcon className="text-[var(--brand)]" size={24} />
             <h2 className="font-serif text-2xl">How to Attend Your First External</h2>
           </div>
+          <p className="font-sans text-sm text-[var(--text3)] italic">
+            Ride forms are usually posted through the VSA at UCSD Linktree when we coordinate attendance.
+          </p>
           <ol className="space-y-4 list-none p-0">
             {[
               "Find an external you want to attend in the list above.",
               "Check the host school’s Linktree or Instagram for RSVP/tickets.",
-              "Watch UCSD VSA channels (Discord/IG) for ride & coordination info.",
-              "Show up respectfully and represent UCSD VSA well.",
+              "Look for the external ride form in our Linktree for rides.",
+              "Show up respectfully and represent VSA at UCSD well.",
               "Check in or follow the points proof process if announced.",
               "Have fun, meet other schools, and bring the energy back to UCSD!"
             ].map((step, i) => (
@@ -193,7 +196,7 @@ export default function UVSANetwork() {
             </div>
             <ul className="space-y-2 font-sans text-sm text-[var(--text2)] list-disc pl-5">
               <li>UCSD major events like WNC may be worth 5 points.</li>
-              <li>Points reward you for representing UCSD VSA in the wider UVSA community.</li>
+              <li>Points reward you for representing VSA at UCSD in the wider UVSA community.</li>
               <li>Cabinet and interns do not earn leaderboard points for required work duties (staffing, shifts, etc.).</li>
             </ul>
             
@@ -227,10 +230,12 @@ function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent;
             color="gray"
             className="font-bold"
           />
-          <Badge 
-            label={`${event.points} pts`} 
-            color={event.points >= 5 ? 'yellow' : 'gray'}
-          />
+          {!isArchive && (
+            <Badge 
+              label={`${event.points} pts`} 
+              color={event.points >= 5 ? 'yellow' : 'gray'}
+            />
+          )}
         </div>
         
         <h3 className="font-serif text-xl leading-tight line-clamp-2">{event.title}</h3>

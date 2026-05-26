@@ -119,22 +119,24 @@ create policy "Admins can manage external events"
   );
 
 -- 6. Seed UVSA Schools
-insert into public.uvsa_schools (school_name, short_name, slug, system_type, city, vsa_name, linktree_url, sort_order)
+insert into public.uvsa_schools (school_name, short_name, slug, system_type, city, vsa_name, linktree_url, instagram_url, sort_order)
 values
-  ('University of Southern California', 'USC', 'usc', 'Private', 'Los Angeles', 'USC VSA', 'https://linktr.ee/uscvsa', 1),
-  ('Chapman University', 'Chapman', 'chapman', 'Private', 'Orange', 'Chapman VSA', 'https://linktr.ee/chapmanvsa', 2),
-  ('University of California, Riverside', 'UCR', 'ucr', 'UC', 'Riverside', 'UCR VSA', 'https://linktr.ee/ucrvsa', 3),
-  ('University of California, Irvine', 'UCI', 'uci', 'UC', 'Irvine', 'VSA UCI', 'https://linktr.ee/vsauci', 4),
-  ('University of California, San Diego', 'UCSD', 'ucsd', 'UC', 'La Jolla', 'UCSD VSA', 'https://linktr.ee/vsaatucsd', 5),
-  ('University of California, Santa Barbara', 'UCSB', 'ucsb', 'UC', 'Santa Barbara', 'UCSB VSA', 'https://linktr.ee/ucsbvsa', 6),
-  ('California State University, Fullerton', 'CSUF', 'csuf', 'CSU', 'Fullerton', 'CSUF VSA', 'https://linktr.ee/CSUFVSA', 7),
-  ('California State University, Northridge', 'CSUN', 'csun', 'CSU', 'Northridge', 'CSUN VSA', 'https://linktr.ee/csunvsa2023', 8),
-  ('California State University, San Marcos', 'CSUSM', 'csusm', 'CSU', 'San Marcos', 'CSUSM VSA', 'https://linktr.ee/csusmvsa', 9),
-  ('California Polytechnic State University, San Luis Obispo', 'CPSLO', 'cpslo', 'CSU', 'San Luis Obispo', 'CPSLO VSA', 'https://linktr.ee/cptvsa', 10),
-  ('California State Polytechnic University, Pomona', 'CPP', 'cpp', 'CSU', 'Pomona', 'CPP VSA', 'https://linktr.ee/vsacpp', 11),
-  ('California State University, Long Beach', 'CSULB', 'csulb', 'CSU', 'Long Beach', 'CSULB VSA', 'https://linktr.ee/lbvsa1', 12),
-  ('San Diego State University', 'SDSU', 'sdsu', 'CSU', 'San Diego', 'SDSU VSA', 'https://linktr.ee/sdsuvsa', 13)
-on conflict (slug) do nothing;
+  ('University of Southern California', 'USC', 'usc', 'Private', 'Los Angeles', 'USC VSA', 'https://linktr.ee/uscvsa', 'https://instagram.com/uscvsa', 1),
+  ('Chapman University', 'Chapman', 'chapman', 'Private', 'Orange', 'Chapman VSA', 'https://linktr.ee/chapmanvsa', 'https://instagram.com/chapmanvsa', 2),
+  ('University of California, Riverside', 'UCR', 'ucr', 'UC', 'Riverside', 'UCR VSA', 'https://linktr.ee/ucrvsa', 'https://instagram.com/ucrvsa', 3),
+  ('University of California, Irvine', 'UCI', 'uci', 'UC', 'Irvine', 'VSA UCI', 'https://linktr.ee/vsauci', 'https://instagram.com/vsauci', 4),
+  ('University of California, San Diego', 'UCSD', 'ucsd', 'UC', 'La Jolla', 'UCSD VSA', 'https://linktr.ee/vsaatucsd', 'https://instagram.com/vsaatucsd', 5),
+  ('University of California, Santa Barbara', 'UCSB', 'ucsb', 'UC', 'Santa Barbara', 'UCSB VSA', 'https://linktr.ee/ucsbvsa', 'https://instagram.com/ucsbvsa', 6),
+  ('California State University, Fullerton', 'CSUF', 'csuf', 'CSU', 'Fullerton', 'CSUF VSA', 'https://linktr.ee/CSUFVSA', 'https://instagram.com/CSUFVSA', 7),
+  ('California State University, Northridge', 'CSUN', 'csun', 'CSU', 'Northridge', 'CSUN VSA', 'https://linktr.ee/csunvsa2023', 'https://instagram.com/csunvsa2023', 8),
+  ('California State University, San Marcos', 'CSUSM', 'csusm', 'CSU', 'San Marcos', 'CSUSM VSA', 'https://linktr.ee/csusmvsa', 'https://instagram.com/csusmvsa', 9),
+  ('California Polytechnic State University, San Luis Obispo', 'CPSLO', 'cpslo', 'CSU', 'San Luis Obispo', 'CPSLO VSA', 'https://linktr.ee/cptvsa', 'https://instagram.com/cptvsa', 10),
+  ('California State Polytechnic University, Pomona', 'CPP', 'cpp', 'CSU', 'Pomona', 'CPP VSA', 'https://linktr.ee/vsacpp', 'https://instagram.com/vsacpp', 11),
+  ('California State University, Long Beach', 'CSULB', 'csulb', 'CSU', 'Long Beach', 'CSULB VSA', 'https://linktr.ee/lbvsa1', 'https://instagram.com/lbvsa', 12),
+  ('San Diego State University', 'SDSU', 'sdsu', 'CSU', 'San Diego', 'SDSU VSA', 'https://linktr.ee/sdsuvsa', 'https://instagram.com/sdsuvsa', 13)
+on conflict (slug) do update set 
+  instagram_url = excluded.instagram_url,
+  linktree_url = excluded.linktree_url;
 
 -- 7. Seed External Showcase Events (2025-2026)
 do $$
