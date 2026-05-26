@@ -57,6 +57,7 @@ const programs = [
 const extraLinks = [
   { label: 'VCN Current Show', link: '/vcn/current' },
   { label: 'VCN Archive', link: '/vcn/archive' },
+  { label: 'SoCal VSA Network', link: '/uvsa-network' },
   { label: 'Leaderboard', link: '/leaderboard' },
 ];
 
