@@ -8,7 +8,6 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { useEvents } from '../hooks/useEvents';
@@ -160,7 +159,6 @@ const RANK_MEDALS = ['🥇', '🥈', '🥉', '4️⃣'];
 export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
-  const { yearsWithData } = useLeaderboardYears();
   const { content: cycleContent } = useProgramContent('house');
   const { events } = useEvents();
   const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
@@ -171,8 +169,6 @@ export function House() {
 
   const activeYear = resolveHouseYear(terms);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
-  const hasAnyLeaderboardData = yearsWithData.length > 0;
-  const hasSelectedYearData = activeYear ? yearsWithData.includes(activeYear) : false;
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
   const houseAssetsByName = assetMapByHouse(houseAssets);
   const displayedHouses = houseAssets.length > 0
@@ -439,13 +435,26 @@ export function House() {
                 </div>
               ) : standings.length === 0 ? (
                 <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  <p style={{ color: 'var(--color-text2)' }}>
-                    House standings will appear after House Reveal assignments are imported.
-                  </p>
-                  {activeYearLabel && (
-                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                      No house points recorded for {activeYearLabel}{hasAnyLeaderboardData && !hasSelectedYearData ? ' yet' : ''}.
-                    </p>
+                  {houseAssets.length > 0 ? (
+                    <>
+                      <p style={{ color: 'var(--color-text2)' }}>
+                        House profiles exist, but no members have been assigned yet.
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                        Import house assignments or use the Legacy Backfill tool in Admin Houses to restore standings with an effective start date.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ color: 'var(--color-text2)' }}>
+                        No house profiles exist for this year yet. Create house profiles before importing memberships.
+                      </p>
+                      {activeYearLabel && (
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                          No house points recorded for {activeYearLabel}.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (

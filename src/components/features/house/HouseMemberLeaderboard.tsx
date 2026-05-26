@@ -106,6 +106,9 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
               No active house member rankings for this period yet.
             </p>
+            <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+              House member rankings appear once members are assigned to houses for this year.
+            </p>
           </div>
         )}
 
