@@ -271,6 +271,7 @@ async function compressToWebP(
   quality: number,
 ): Promise<Buffer> {
   return sharp(buffer)
+    .rotate()  // auto-correct EXIF orientation before any processing
     .resize(maxWidth, maxHeight, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality })
     .toBuffer();
