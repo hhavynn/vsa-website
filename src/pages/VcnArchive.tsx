@@ -16,7 +16,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <div className="relative min-h-[220px] border-b lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
           {entry.cover_image_url ? (
-            <img src={entry.cover_image_url} alt={`${title} cover`} className="h-full min-h-[220px] w-full object-cover" loading="lazy" />
+            <img src={entry.cover_image_url} alt={`${title} cover`} className="h-full min-h-[220px] w-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
               <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>

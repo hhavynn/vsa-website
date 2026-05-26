@@ -302,7 +302,13 @@ function SchoolCard({ school }: { school: UVSASchool }) {
       <div className="flex items-start justify-between">
         <div className="w-12 h-12 rounded-full bg-[var(--surface2)] flex items-center justify-center border" style={{ borderColor: 'var(--border)' }}>
           {school.logo_url ? (
-            <img src={school.logo_url} alt={school.short_name} className="w-8 h-8 object-contain" />
+            <img 
+              src={school.logo_url} 
+              alt={school.short_name} 
+              className="w-8 h-8 object-contain" 
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <GlobeIcon className="text-[var(--brand)]" size={24} />
           )}

@@ -174,7 +174,13 @@ export function VCNCurrent() {
               <div className={currentVcn.posterUrl && currentVcn.trailerUrl ? 'grid gap-5 md:grid-cols-2' : 'grid gap-5'}>
                 {currentVcn.posterUrl && (
                   <div className="program-poster-card">
-                    <img src={currentVcn.posterUrl} alt={`VCN ${currentVcn.year} poster`} className="w-full object-cover" />
+                    <img 
+                      src={currentVcn.posterUrl} 
+                      alt={`VCN ${currentVcn.year} poster`} 
+                      className="w-full object-cover" 
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                 )}
                 {currentVcn.trailerUrl && (

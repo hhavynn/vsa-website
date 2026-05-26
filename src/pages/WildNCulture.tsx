@@ -57,11 +57,11 @@ const whatToExpect = [
 ];
 
 const faqs = [
-  { q: "What is Wild N' Culture?", a: "Wild N' Culture (WNC) is UCSD VSA's annual intercollegiate comedy competition — inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture. Schools face off in a series of live improv-style games and roast battles judged by the crowd and guest judges." },
+  { q: "What is Wild N' Culture?", a: "Wild N' Culture (WNC) is UCSD VSA's annual intercollegiate comedy competition - inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture. Schools face off in a series of live improv-style games and roast battles judged by the crowd and guest judges." },
   { q: 'Which schools participate?', a: "Participating schools vary each year. WNC brings together Vietnamese Student Associations and student groups from across Southern California and UC campuses. Follow @vsaatucsd for each year's lineup." },
   { q: 'How is the winner decided?', a: 'Schools earn points through game rounds. A combination of judge scoring and crowd energy typically determines the winner, though the exact format may vary by year.' },
   { q: 'Is the event free?', a: "WNC is typically a ticketed event. Ticket prices and availability are announced each year through VSA's Instagram and the event's page." },
-  { q: "Can anyone attend?", a: "Yes — WNC is open to everyone. You don't need to be a VSA member or affiliated with a participating school to come and enjoy the show." },
+  { q: "Can anyone attend?", a: "Yes - WNC is open to everyone. You don't need to be a VSA member or affiliated with a participating school to come and enjoy the show." },
 ];
 
 export function WildNCulture() {

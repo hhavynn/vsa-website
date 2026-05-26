@@ -15,6 +15,8 @@ export interface EventFilters {
   date_to?: string;
   limit?: number;
   offset?: number;
+  sort_by?: 'date' | 'name' | 'created_at';
+  sort_ascending?: boolean;
 }
 
 export interface EventStats {
@@ -44,7 +46,9 @@ export class EventsRepository {
       if (filters.date_to) eventsQuery = eventsQuery.lte('date', filters.date_to);
 
       // Order by date
-      eventsQuery = eventsQuery.order('date', { ascending: true });
+      const sortBy = filters.sort_by || 'date';
+      const ascending = filters.sort_ascending !== undefined ? filters.sort_ascending : true;
+      eventsQuery = eventsQuery.order(sortBy, { ascending });
 
       // Apply pagination
       if (filters.limit) eventsQuery = eventsQuery.limit(filters.limit);
