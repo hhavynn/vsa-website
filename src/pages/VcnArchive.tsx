@@ -1,20 +1,13 @@
-import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
 import { VCNArchive as VCNArchiveEntry } from '../types';
-
-function formatArchiveDate(date: string | null) {
-  if (!date) return null;
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return format(parsed, 'MMMM d, yyyy');
-}
+import { formatDateOnly } from '../lib/dateOnly';
 
 function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
-  const eventDate = formatArchiveDate(entry.event_date);
+  const eventDate = formatDateOnly(entry.event_date, 'MMMM d, yyyy');
   const title = entry.title || `Vietnamese Culture Night ${entry.year}`;
   const hasMedia = !!entry.video_url || !!entry.photo_album_url;
 

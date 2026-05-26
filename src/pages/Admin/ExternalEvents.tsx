@@ -16,7 +16,7 @@ import {
   FaCalendarAlt, 
   FaMapMarkerAlt 
 } from 'react-icons/fa';
-import { format } from 'date-fns';
+import { formatDateOnly } from '../../lib/dateOnly';
 
 // Icon components cast to any to avoid TS JSX errors
 const PlusIcon = FaPlus as any;
@@ -287,7 +287,7 @@ export default function AdminExternalEvents() {
                   <span className="font-medium text-[var(--text2)]">{event.uvsa_school?.short_name}</span>
                   {event.date && (
                     <span className="flex items-center gap-1">
-                      <CalendarIcon size={12} /> {format(new Date(event.date), 'MMM d, yyyy')}
+                      <CalendarIcon size={12} /> {formatDateOnly(event.date, 'MMM d, yyyy')}
                     </span>
                   )}
                   {event.location && (
