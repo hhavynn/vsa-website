@@ -5,6 +5,7 @@ import { BackToTop } from './BackToTop';
 import { Suspense } from 'react';
 import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
+import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 
 export function Layout() {
   const location = useLocation();
@@ -32,6 +33,7 @@ export function Layout() {
 
       <Footer />
       <BackToTop />
+      <VsaAiAssistant />
     </div>
   );
 }
