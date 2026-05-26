@@ -55,6 +55,11 @@ const WildNCulture = lazy(() =>
     default: module.WildNCulture,
   }))
 );
+const UVSANetwork = lazy(() =>
+  import("../pages/UVSANetwork").then((module) => ({
+    default: module.UVSANetwork,
+  }))
+);
 const FeedbackPage = lazy(() =>
   import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
 );
@@ -140,6 +145,7 @@ export default function AppRoutes() {
               <Route path="/vcn/current" element={<VcnCurrent />} />
               <Route path="/vcn/archive" element={<VcnArchive />} />
               <Route path="/wild-n-culture" element={<WildNCulture />} />
+              <Route path="/uvsa-network" element={<UVSANetwork />} />
               <Route path="/signin" element={<Navigate to="/admin/login" replace />} />
               <Route path="/admin/login" element={<SignIn />} />
 
