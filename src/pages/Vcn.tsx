@@ -17,7 +17,7 @@ const committees = [
 ];
 
 const faqs = [
-  { q: 'What is VCN?', a: "Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. It celebrates Vietnamese culture through storytelling, dance, theatre, and performance — all built and performed by UCSD students." },
+  { q: 'What is VCN?', a: "Vietnamese Culture Night (VCN) is VSA at UCSD's large annual cultural production. It celebrates Vietnamese culture through storytelling, dance, theatre, and performance — all built and performed by UCSD students." },
   { q: 'What can I expect at the show?', a: "A VCN show typically includes a narrative stage production alongside multiple dance performances. Each year's show brings a new theme, story, and lineup of performances. The specific format and content vary by year." },
   { q: 'Is the show free?', a: 'Admission details vary by year. Follow @vsaatucsd on Instagram or check the current year\'s VCN page for the latest ticketing information.' },
   { q: 'How can I get involved?', a: 'Students can participate on stage through dance or acting, or contribute behind the scenes through committees like props and stage management. Opportunities are announced each production cycle.' },
@@ -42,7 +42,7 @@ export function VCN() {
               Vietnamese Culture <span className="program-title-script">Night</span>
             </h1>
             <p className="program-hero-meta">
-              UCSD VSA's annual student-led cultural production, told through story, dance, theatre, and community.
+              VSA at UCSD's annual student-led cultural production, told through story, dance, theatre, and community.
             </p>
             <div className="program-hero-actions">
               <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
@@ -62,7 +62,7 @@ export function VCN() {
             <div className="program-two-grid items-start md:gap-10">
               <div>
                 <p className="program-body">
-                Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
+                Vietnamese Culture Night (VCN) is VSA at UCSD's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
                 </p>
                 <p className="program-body">
                 VCN is fully student-led: from the creative vision to the choreography, props, costumes, and show-day execution, every part of the production is built and performed by UCSD students.

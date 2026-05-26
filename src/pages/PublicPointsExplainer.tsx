@@ -23,7 +23,7 @@ export function PublicPointsExplainer() {
             <div className="relative z-10">
               <h1 className="vsa-page-title mb-4">Points Guide</h1>
               <p className="max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-                Everything you need to know about earning points, house competition, and tracking your involvement with UCSD VSA.
+                Everything you need to know about earning points, house competition, and tracking your involvement with VSA at UCSD.
               </p>
             </div>
           </div>

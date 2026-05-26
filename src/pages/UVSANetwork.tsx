@@ -198,7 +198,7 @@ export default function UVSANetwork() {
             <em>SoCal.</em>
           </h2>
           <p className="max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            Every time UCSD VSA shows up at an external, we add to the energy of the whole network. Be respectful to host schools, follow event rules, and stay responsible. Support other VSAs the way we want others to support us.
+            Every time VSA at UCSD shows up at an external, we add to the energy of the whole network. Be respectful to host schools, follow event rules, and stay responsible. Support other VSAs the way we want others to support us.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {['Be respectful', 'Follow event rules', 'Stay responsible', 'Support each other'].map(tag => (
@@ -250,7 +250,7 @@ function FeaturedExternalSpotlight({
   const title = event?.title || '2025-2026 External Showcase';
   const hostName = school?.short_name || 'SoCal VSA Network';
   const eventType = event?.event_type || 'Season Archive';
-  const description = event?.description || 'Explore the externals UCSD VSA attended and supported across the SoCal VSA network last season.';
+  const description = event?.description || 'Explore the externals VSA at UCSD attended and supported across the SoCal VSA network last season.';
 
   return (
     <div className="scrapbook-paper overflow-hidden p-6 sm:p-8">

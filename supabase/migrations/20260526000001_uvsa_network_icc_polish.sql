@@ -1,6 +1,7 @@
 -- Migration: UVSA Network ICC feedback polish
 -- Reorders schools so UCSD appears first (sort_order = 1) as the home school.
 -- Also updates the WNC event description to reflect its home-hosted role.
+-- Standardizes UCSD vsa_name to "VSA at UCSD" (official wording).
 
 -- 1. Reorder schools: UCSD first, then by ICC-preferred emphasis order
 update public.uvsa_schools set sort_order = 1  where slug = 'ucsd';
@@ -19,6 +20,11 @@ update public.uvsa_schools set sort_order = 13 where slug = 'cpslo';
 
 -- 2. Strengthen Wild N' Culture description to reflect its home-hosted role
 update public.external_events
-set description = 'UCSD VSA''s hosted external brings schools across SoCal together for competition, culture, performance, and community. It is one of our biggest chances to represent VSA at UCSD while welcoming the wider UVSA network to our campus.'
+set description = 'VSA at UCSD''s hosted external brings schools across SoCal together for competition, culture, performance, and community. It is one of our biggest chances to represent VSA at UCSD while welcoming the wider UVSA network to our campus.'
 where title ilike '%Wild N%Culture%'
   and uvsa_school_id = (select id from public.uvsa_schools where slug = 'ucsd');
+
+-- 3. Standardize UCSD school vsa_name to official wording
+update public.uvsa_schools
+set vsa_name = 'VSA at UCSD'
+where slug = 'ucsd';

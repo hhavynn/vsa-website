@@ -186,7 +186,7 @@ export function Internship() {
           <div className="program-section-inner program-section-narrow">
             <div className="program-eyebrow">About the Program</div>
             <p className="program-body">
-              The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
+              The VSA at UCSD Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
             </p>
           </div>
         </section>

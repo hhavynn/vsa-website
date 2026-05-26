@@ -30,7 +30,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
           ) : (
             <div className="flex h-full min-h-[220px] flex-col justify-between p-6">
               <div className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-                UCSD VSA
+                VSA at UCSD
               </div>
               <div>
                 <div className="font-serif text-[58px] italic leading-none tracking-[-0.04em]" style={{ color: 'var(--color-text)' }}>

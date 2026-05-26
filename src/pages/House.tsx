@@ -240,7 +240,7 @@ export function House() {
               House <span className="program-title-script">Program</span>
             </h1>
             <p className="program-hero-meta">
-              Year-long community competition inside UCSD VSA. Get sorted, meet your house, show up for events, and help your team climb the board.
+              Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for events, and help your team climb the board.
             </p>
             <div className="program-hero-actions">
               {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (

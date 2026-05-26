@@ -119,7 +119,7 @@ export function VCNCurrent() {
               {currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
             </h1>
             <p className="program-hero-meta">
-              UCSD VSA · VCN {currentVcn.year}
+              VSA at UCSD · VCN {currentVcn.year}
               {currentVcn.date && (
                 <span className="block pt-2 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                   {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}

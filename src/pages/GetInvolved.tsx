@@ -40,7 +40,7 @@ const programs = [
     id: 'wnc',
     tag: 'Showcase',
     title: "Wild N' Culture",
-    description: "Join the crowd for UCSD VSA's intercollegiate comedy competition and keep up with each year's event updates.",
+    description: "Join the crowd for VSA at UCSD's intercollegiate comedy competition and keep up with each year's event updates.",
     link: '/wild-n-culture',
     details: ['Comedy Night', 'Campus Teams', 'Crowd Energy'],
   },
