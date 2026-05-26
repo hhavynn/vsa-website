@@ -203,7 +203,7 @@ export default function AdminEvents() {
   });
 
   async function uploadImage(file: File): Promise<string> {
-    const preparedFile = await prepareImageForUpload(file, 'event');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'event');
     const fileExt = getUploadExtension(preparedFile);
     const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const { error } = await supabase.storage.from('event_images').upload(fileName, preparedFile, {
@@ -211,6 +211,11 @@ export default function AdminEvents() {
       contentType: preparedFile.type,
     });
     if (error) throw error;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('event_images').getPublicUrl(fileName);
     return data.publicUrl;
   }

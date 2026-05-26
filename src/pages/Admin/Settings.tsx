@@ -40,7 +40,7 @@ export default function AdminSettings() {
   });
 
   async function uploadLogo(file: File): Promise<string> {
-    const preparedFile = await prepareImageForUpload(file, 'logo');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'logo');
     const ext = getUploadExtension(preparedFile);
     const fileName = `logo-${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from('site_assets').upload(fileName, preparedFile, {
@@ -49,6 +49,11 @@ export default function AdminSettings() {
       contentType: preparedFile.type,
     });
     if (error) throw error;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`Logo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('site_assets').getPublicUrl(fileName);
     return data.publicUrl;
   }

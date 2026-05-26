@@ -66,47 +66,84 @@ async function loadImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
   return createImageBitmapFallback(file);
 }
 
-export async function prepareImageForUpload(file: File, preset: ImageUploadPreset): Promise<File> {
+export type PreparedFile = {
+  file: File;
+  originalSize: number;
+  compressedSize: number;
+  reduction: number;
+  wasCompressed: boolean;
+};
+
+export async function prepareImageForUpload(file: File, preset: ImageUploadPreset): Promise<PreparedFile> {
   const options = PRESETS[preset];
+  const originalSize = file.size;
+
+  const result: PreparedFile = {
+    file,
+    originalSize,
+    compressedSize: originalSize,
+    reduction: 0,
+    wasCompressed: false,
+  };
 
   if (file.size > options.maxInputBytes) {
     throw new Error(`Image is too large. Max upload size is ${Math.round(options.maxInputBytes / MB)} MB.`);
   }
 
   if (!isRasterImage(file)) {
-    return file;
+    return result;
   }
 
-  const image = await loadImage(file);
-  const sourceWidth = image.width;
-  const sourceHeight = image.height;
-  const scale = Math.min(1, options.maxWidth / sourceWidth, options.maxHeight / sourceHeight);
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
+  try {
+    const image = await loadImage(file);
+    const sourceWidth = image.width;
+    const sourceHeight = image.height;
+    
+    // Calculate new dimensions
+    const scale = Math.min(1, options.maxWidth / sourceWidth, options.maxHeight / sourceHeight);
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Could not compress image.');
-  context.drawImage(image, 0, 0, width, height);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not get canvas context.');
+    
+    context.drawImage(image, 0, 0, width, height);
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, options.outputType, options.quality);
-  });
-  if (!blob) throw new Error('Could not compress image.');
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, options.outputType, options.quality);
+    });
 
-  if ('close' in image && typeof image.close === 'function') {
-    image.close();
+    if ('close' in image && typeof image.close === 'function') {
+      image.close();
+    }
+
+    if (!blob) throw new Error('Could not generate blob.');
+
+    // Only use compressed if it's actually smaller
+    if (blob.size < file.size) {
+      const compressedFile = new File(
+        [blob],
+        `${file.name.replace(/\.[^.]+$/, '')}.${fileExtensionForMime(options.outputType)}`,
+        { type: options.outputType, lastModified: Date.now() },
+      );
+
+      return {
+        file: compressedFile,
+        originalSize,
+        compressedSize: blob.size,
+        reduction: Math.round(((originalSize - blob.size) / originalSize) * 100),
+        wasCompressed: true,
+      };
+    }
+
+    return result;
+  } catch (err) {
+    console.warn('Image compression failed, uploading original:', err);
+    return result;
   }
-
-  const compressed = new File(
-    [blob],
-    `${file.name.replace(/\.[^.]+$/, '')}.${fileExtensionForMime(options.outputType)}`,
-    { type: options.outputType, lastModified: Date.now() },
-  );
-
-  return compressed.size < file.size ? compressed : file;
 }
 
 export function getUploadExtension(file: File) {

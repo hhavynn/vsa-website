@@ -53,7 +53,7 @@ export function Avatar({ size = 'md', showUploadButton = false, className = '', 
         throw new Error('You must select an image to upload.');
       }
 
-      const file = await prepareImageForUpload(event.target.files[0], 'avatar');
+      const { file } = await prepareImageForUpload(event.target.files[0], 'avatar');
       const fileExt = getUploadExtension(file);
       const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 

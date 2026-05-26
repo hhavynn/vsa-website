@@ -157,7 +157,7 @@ export function HouseImagesManager() {
   }
 
   async function uploadHouseImage(house: HouseName, file: File) {
-    const preparedFile = await prepareImageForUpload(file, 'house');
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'house');
     const fileExt = getUploadExtension(preparedFile);
     const fileName = `${selectedYear}/${house.toLowerCase().replace(/\s+/g, '-')}-${crypto.randomUUID()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, preparedFile, {
@@ -165,6 +165,11 @@ export function HouseImagesManager() {
       contentType: preparedFile.type,
     });
     if (uploadError) throw uploadError;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`${HOUSE_LABELS[house]} image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
     const { data } = supabase.storage.from('house_images').getPublicUrl(fileName);
     return data.publicUrl;
   }

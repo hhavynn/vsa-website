@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { AceFamily, AceFamilyMember } from '../../types';
 import { withErrorHandling } from '../errors';
 import { ImportPlan } from '../../lib/aceFamilyImport';
-import { getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
+import { getUploadExtension } from '../../lib/imageUpload';
 
 export type AceFamilyFormData = Omit<AceFamily, 'id' | 'created_at' | 'updated_at'>;
 export type AceFamilyMemberFormData = Omit<AceFamilyMember, 'id' | 'created_at' | 'updated_at'>;
@@ -221,12 +221,11 @@ export class AceFamiliesRepository {
   }
 
   async uploadImage(file: File, prefix: 'family' | 'member'): Promise<string> {
-    const preparedFile = await prepareImageForUpload(file, prefix === 'family' ? 'aceCover' : 'aceMember');
-    const fileExt = getUploadExtension(preparedFile);
+    const fileExt = getUploadExtension(file);
     const fileName = `${prefix}/${crypto.randomUUID()}.${fileExt}`;
-    const { error } = await supabase.storage.from('ace_family_images').upload(fileName, preparedFile, {
+    const { error } = await supabase.storage.from('ace_family_images').upload(fileName, file, {
       cacheControl: '31536000',
-      contentType: preparedFile.type,
+      contentType: file.type,
     });
     if (error) throw error;
     const { data } = supabase.storage.from('ace_family_images').getPublicUrl(fileName);
