@@ -99,16 +99,18 @@ function EventImage({
   imageHeight?: number;
   priority?: boolean;
 }) {
-  if (event.image_url) {
+  const imageUrl = event.thumbnail_url || event.image_url;
+
+  if (imageUrl) {
     return (
       <img
-        src={getSupabaseImageUrl(event.image_url, {
+        src={getSupabaseImageUrl(imageUrl, {
           width: imageWidth,
           height: imageHeight,
           resize: 'cover',
           quality: 72,
         })}
-        srcSet={getSupabaseImageSrcSet(event.image_url, [Math.round(imageWidth / 2), imageWidth], {
+        srcSet={getSupabaseImageSrcSet(imageUrl, [Math.round(imageWidth / 2), imageWidth], {
           resize: 'cover',
           quality: 72,
         })}

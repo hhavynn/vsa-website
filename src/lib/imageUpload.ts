@@ -1,10 +1,15 @@
 export type ImageUploadPreset =
   | 'avatar'
   | 'cabinet'
+  | 'cabinetThumbnail'
   | 'event'
+  | 'eventThumbnail'
   | 'galleryCover'
+  | 'galleryCoverThumbnail'
   | 'homepage'
+  | 'homepageThumbnail'
   | 'house'
+  | 'houseThumbnail'
   | 'logo'
   | 'aceCover'
   | 'aceMember';
@@ -22,10 +27,15 @@ const MB = 1024 * 1024;
 const PRESETS: Record<ImageUploadPreset, CompressionOptions> = {
   avatar: { maxWidth: 512, maxHeight: 512, quality: 0.78, maxInputBytes: 5 * MB, outputType: 'image/webp' },
   cabinet: { maxWidth: 900, maxHeight: 900, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },
+  cabinetThumbnail: { maxWidth: 420, maxHeight: 420, quality: 0.76, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   event: { maxWidth: 1600, maxHeight: 1000, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  eventThumbnail: { maxWidth: 720, maxHeight: 720, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   galleryCover: { maxWidth: 1400, maxHeight: 900, quality: 0.76, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  galleryCoverThumbnail: { maxWidth: 720, maxHeight: 480, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   homepage: { maxWidth: 1200, maxHeight: 1600, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  homepageThumbnail: { maxWidth: 520, maxHeight: 700, quality: 0.76, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   house: { maxWidth: 1400, maxHeight: 1000, quality: 0.76, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  houseThumbnail: { maxWidth: 640, maxHeight: 480, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   logo: { maxWidth: 512, maxHeight: 512, quality: 0.82, maxInputBytes: 5 * MB, outputType: 'image/webp' },
   aceCover: { maxWidth: 1200, maxHeight: 500, quality: 0.76, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   aceMember: { maxWidth: 700, maxHeight: 700, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },

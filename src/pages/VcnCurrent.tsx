@@ -3,6 +3,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
 import { formatDateOnly } from '../lib/dateOnly';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
+import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { ProgramContentStatus, VCNArchive } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ function currentFromArchive(archive: VCNArchive | null) {
     ticketStatus: archive.ticket_status ?? 'hidden',
     ticketLink: archive.ticket_url ?? '',
     ticketNote: archive.ticket_note ?? '',
-    posterUrl: archive.poster_url || archive.cover_image_url || '',
+    posterUrl: archive.poster_url || archive.cover_thumbnail_url || archive.cover_image_url || '',
     trailerUrl: archive.trailer_url || '',
     dances: VCN_CURRENT.dances,
     sponsors: VCN_CURRENT.sponsors,
@@ -175,7 +176,9 @@ export function VCNCurrent() {
                 {currentVcn.posterUrl && (
                   <div className="program-poster-card">
                     <img 
-                      src={currentVcn.posterUrl} 
+                      src={getSupabaseImageUrl(currentVcn.posterUrl, { width: 720, resize: 'contain', quality: 74 })}
+                      srcSet={getSupabaseImageSrcSet(currentVcn.posterUrl, [360, 720, 960], { resize: 'contain', quality: 74 })}
+                      sizes="(min-width: 768px) 50vw, 100vw"
                       alt={`VCN ${currentVcn.year} poster`} 
                       className="w-full object-cover" 
                       loading="lazy"

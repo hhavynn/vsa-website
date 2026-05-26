@@ -79,89 +79,93 @@ export default function Gallery() {
         ) : (
           <>
             <div className="gallery-memory-wall">
-              {albums.map((album, index) => (
-                <a
-                  key={album.id}
-                  href={album.google_photos_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="gallery-memory-card group block"
-                  style={getAlbumStyle(index)}
-                >
-                  <div className="gallery-memory-image relative">
-                    {album.cover_image_url ? (
-                      <>
-                        <AlbumFallback />
-                        <img
-                          src={getSupabaseImageUrl(album.cover_image_url, {
-                            width: 520,
-                            height: 330,
-                            resize: 'cover',
-                            quality: 72,
-                          })}
-                          srcSet={getSupabaseImageSrcSet(album.cover_image_url, [360, 520, 720], {
-                            resize: 'cover',
-                            quality: 72,
-                          })}
-                          sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                          alt={album.title}
-                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                          decoding="async"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </>
-                    ) : (
-                      <AlbumFallback />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
-                      <span className="font-sans text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        View Full Album
-                      </span>
-                    </div>
-                  </div>
+              {albums.map((album, index) => {
+                const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
 
-                  <div className="gallery-memory-caption">
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="scrapbook-sticker scrapbook-sticker-gold">
-                        {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
-                      </span>
-                      {album.event && (
-                        <span
-                          className="scrapbook-sticker scrapbook-sticker-coral"
-                          title={`From event: ${album.event.name}`}
-                        >
-                          From event
-                        </span>
+                return (
+                  <a
+                    key={album.id}
+                    href={album.google_photos_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gallery-memory-card group block"
+                    style={getAlbumStyle(index)}
+                  >
+                    <div className="gallery-memory-image relative">
+                      {coverUrl ? (
+                        <>
+                          <AlbumFallback />
+                          <img
+                            src={getSupabaseImageUrl(coverUrl, {
+                              width: 520,
+                              height: 330,
+                              resize: 'cover',
+                              quality: 72,
+                            })}
+                            srcSet={getSupabaseImageSrcSet(coverUrl, [360, 520, 720], {
+                              resize: 'cover',
+                              quality: 72,
+                            })}
+                            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            alt={album.title}
+                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            decoding="async"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <AlbumFallback />
                       )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
+                        <span className="font-sans text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                          View Full Album
+                        </span>
+                      </div>
                     </div>
-                    <h3 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
-                      {album.title}
-                    </h3>
-                    {album.description && (
-                      <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
-                        {album.description}
-                      </p>
-                    )}
-                    {album.event && (
-                      <p
-                        className="mt-2 truncate font-mono text-[10px] uppercase tracking-[0.08em]"
-                        style={{ color: 'var(--text3)' }}
-                      >
-                        Related event / {album.event.name}
-                      </p>
-                    )}
-                    <div className="mt-3 flex items-center justify-between gap-4">
-                      <span className="scrapbook-caption" style={{ color: 'var(--text3)' }}>Album</span>
-                      <span className="scrapbook-sticker scrapbook-sticker-teal">
-                        Google Photos
-                      </span>
+
+                    <div className="gallery-memory-caption">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span className="scrapbook-sticker scrapbook-sticker-gold">
+                          {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                        </span>
+                        {album.event && (
+                          <span
+                            className="scrapbook-sticker scrapbook-sticker-coral"
+                            title={`From event: ${album.event.name}`}
+                          >
+                            From event
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
+                        {album.title}
+                      </h3>
+                      {album.description && (
+                        <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
+                          {album.description}
+                        </p>
+                      )}
+                      {album.event && (
+                        <p
+                          className="mt-2 truncate font-mono text-[10px] uppercase tracking-[0.08em]"
+                          style={{ color: 'var(--text3)' }}
+                        >
+                          Related event / {album.event.name}
+                        </p>
+                      )}
+                      <div className="mt-3 flex items-center justify-between gap-4">
+                        <span className="scrapbook-caption" style={{ color: 'var(--text3)' }}>Album</span>
+                        <span className="scrapbook-sticker scrapbook-sticker-teal">
+                          Google Photos
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </a>
-              ))}
+                  </a>
+                );
+              })}
             </div>
 
             {hasNextPage && (

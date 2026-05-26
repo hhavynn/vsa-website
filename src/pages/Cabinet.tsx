@@ -12,6 +12,7 @@ interface CabinetMember {
   category: string;
   display_order: number;
   image_url: string | null;
+  thumbnail_url: string | null;
   year: string | null;
   college: string | null;
   major: string | null;
@@ -24,7 +25,7 @@ interface CabinetMember {
 
 const publicUrl = process.env.PUBLIC_URL || '';
 const cabinetImage = (fileName: string) => `${publicUrl}/images/cabinet/${fileName}`;
-const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, created_at';
+const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_url, thumbnail_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, created_at';
 
 function resolveImageUrl(image?: string | null) {
   if (!image) return null;
@@ -49,6 +50,10 @@ function groupByRole(members: CabinetMember[]) {
 
 function formatMeta(member: CabinetMember) {
   return [member.year, member.college, member.major].filter(Boolean).slice(0, 3).join(' / ');
+}
+
+function getCabinetPhotoUrl(member: CabinetMember) {
+  return member.thumbnail_url || member.image_url;
 }
 
 function rolePriority(role: string) {
@@ -254,7 +259,7 @@ function ExecutiveRolePanel({
             style={{ borderColor: 'var(--color-border2)' }}
           >
             <div className={`flex gap-4 ${isSingle ? 'items-center' : 'flex-col sm:flex-row sm:items-start'}`}>
-              <Avatar image={member.image_url} name={member.name} size={isSingle ? 64 : 56} />
+              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={isSingle ? 64 : 56} />
               <div className="min-w-0 flex-1">
                 <p className="font-sans text-[14.5px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
@@ -333,7 +338,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
               <div className="relative shrink-0">
-                <Avatar image={member.image_url} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
+                <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
                 {isPresident && (
                   <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
                     <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
@@ -420,7 +425,7 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
             style={{ borderColor: 'var(--color-border2)' }}
           >
             <div className="flex items-start gap-4">
-              <Avatar image={member.image_url} name={member.name} size={60} />
+              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={60} />
               <div className="min-w-0 flex-1">
                 <p className="font-serif text-[16px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
@@ -465,7 +470,7 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
       <div className="flex items-start gap-3">
-        <Avatar image={member.image_url} name={member.name} size={44} />
+        <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={44} />
         <div className="min-w-0">
           <p className="font-sans text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>
             {member.name}
@@ -497,7 +502,7 @@ function RookieTile({ member }: { member: CabinetMember }) {
       style={{ background: 'var(--color-surface)' }}
     >
       <div className="mx-auto mb-2 w-fit">
-        <Avatar image={member.image_url} name={member.name} size={56} />
+        <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={56} />
       </div>
       <p className="truncate font-serif text-[13px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
         {member.name}

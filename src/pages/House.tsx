@@ -307,6 +307,7 @@ export function House() {
                 const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
                 const emoji = HOUSE_EMOJI[house as HouseName] ?? '';
                 const label = getHouseLabel(house, asset, standing?.display_name);
+                const imageUrl = asset?.image_thumbnail_url || asset?.image_url;
                 const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';
 
                 return (
@@ -320,10 +321,10 @@ export function House() {
                       className="relative aspect-[4/3] overflow-hidden"
                       style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
                     >
-                      {asset?.image_url ? (
+                      {imageUrl ? (
                         <img
-                          src={getSupabaseImageUrl(asset.image_url, { width: 520, height: 390, resize: 'cover', quality: 72 })}
-                          srcSet={getSupabaseImageSrcSet(asset.image_url, [320, 520, 720], { resize: 'cover', quality: 72 })}
+                          src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
+                          srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
                           sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
                           alt={asset.image_alt || label}
                           className="h-full w-full object-cover"

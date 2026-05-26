@@ -17,6 +17,7 @@ type HouseAssetDraft = {
   accent_color: string;
   is_active: boolean;
   image_url: string;
+  image_thumbnail_url: string;
   image_alt: string;
   source_doc_url: string;
   internal_notes: string;
@@ -63,6 +64,7 @@ function emptyDraft(house: HouseName): HouseAssetDraft {
     accent_color: HOUSE_COLORS[house],
     is_active: true,
     image_url: '',
+    image_thumbnail_url: '',
     image_alt: HOUSE_LABELS[house],
     source_doc_url: '',
     internal_notes: '',
@@ -82,6 +84,7 @@ function draftFromAsset(house: HouseName, asset?: HousePageAsset): HouseAssetDra
     accent_color: asset?.accent_color ?? HOUSE_COLORS[house],
     is_active: asset?.is_active ?? true,
     image_url: asset?.image_url ?? '',
+    image_thumbnail_url: asset?.image_thumbnail_url ?? '',
     image_alt: asset?.image_alt ?? HOUSE_LABELS[house],
     source_doc_url: asset?.source_doc_url ?? '',
     internal_notes: asset?.internal_notes ?? '',
@@ -158,20 +161,36 @@ export function HouseImagesManager() {
 
   async function uploadHouseImage(house: HouseName, file: File) {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'house');
-    const fileExt = getUploadExtension(preparedFile);
-    const fileName = `${selectedYear}/${house.toLowerCase().replace(/\s+/g, '-')}-${crypto.randomUUID()}.${fileExt}`;
+    const { file: thumbnailFile } = await prepareImageForUpload(file, 'houseThumbnail');
+    const uploadId = crypto.randomUUID();
+    const houseSlug = house.toLowerCase().replace(/\s+/g, '-');
+    const fileName = `${selectedYear}/${houseSlug}-${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `${selectedYear}/thumbs/${houseSlug}-${uploadId}.${getUploadExtension(thumbnailFile)}`;
     const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, preparedFile, {
       cacheControl: '31536000',
       contentType: preparedFile.type,
     });
     if (uploadError) throw uploadError;
 
+    const { error: thumbnailError } = await supabase.storage.from('house_images').upload(thumbnailName, thumbnailFile, {
+      cacheControl: '31536000',
+      contentType: thumbnailFile.type,
+    });
+    if (thumbnailError) {
+      await supabase.storage.from('house_images').remove([fileName]);
+      throw thumbnailError;
+    }
+
     if (wasCompressed && reduction > 10) {
       toast.success(`${HOUSE_LABELS[house]} image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
     }
 
     const { data } = supabase.storage.from('house_images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: thumbnailData } = supabase.storage.from('house_images').getPublicUrl(thumbnailName);
+    return {
+      imageUrl: data.publicUrl,
+      thumbnailUrl: thumbnailData.publicUrl,
+    };
   }
 
   async function removeHouseImage(url?: string | null) {
@@ -190,7 +209,10 @@ export function HouseImagesManager() {
       const file = files[house];
       const draft = drafts[house] ?? emptyDraft(house);
       const oldImageUrl = draft.image_url;
-      const uploadedUrl = file ? await uploadHouseImage(house, file) : null;
+      const oldThumbnailUrl = draft.image_thumbnail_url;
+      const uploadedImage = file ? await uploadHouseImage(house, file) : null;
+      const imageUrl = uploadedImage?.imageUrl ?? draft.image_url;
+      const imageThumbnailUrl = uploadedImage?.thumbnailUrl ?? draft.image_thumbnail_url;
 
       await houseAssetsRepository.upsertAsset({
         academic_year_start: selectedYear,
@@ -201,14 +223,16 @@ export function HouseImagesManager() {
         description: nullable(draft.description),
         accent_color: nullable(draft.accent_color),
         is_active: draft.is_active,
-        image_url: nullable(uploadedUrl ?? draft.image_url),
+        image_url: nullable(imageUrl),
+        image_thumbnail_url: nullable(imageThumbnailUrl),
         image_alt: nullable(draft.image_alt) ?? HOUSE_LABELS[house],
         display_order: HOUSE_OPTIONS.indexOf(house),
         source_doc_url: nullable(draft.source_doc_url),
         internal_notes: nullable(draft.internal_notes),
       });
 
-      if (uploadedUrl) await removeHouseImage(oldImageUrl);
+      if (uploadedImage) await removeHouseImage(oldImageUrl);
+      if (uploadedImage) await removeHouseImage(oldThumbnailUrl);
       setHouseFile(house, null);
       toast.success(`${HOUSE_LABELS[house]} image saved.`);
       await refetch();
@@ -235,11 +259,14 @@ export function HouseImagesManager() {
         accent_color: nullable(drafts[house]?.accent_color ?? ''),
         is_active: drafts[house]?.is_active ?? true,
         image_url: null,
+        image_thumbnail_url: null,
         image_alt: HOUSE_LABELS[house],
         display_order: HOUSE_OPTIONS.indexOf(house),
         source_doc_url: nullable(drafts[house]?.source_doc_url ?? ''),
         internal_notes: nullable(drafts[house]?.internal_notes ?? ''),
       });
+      await removeHouseImage(drafts[house]?.image_url);
+      await removeHouseImage(drafts[house]?.image_thumbnail_url);
       setHouseFile(house, null);
       toast.success(`${HOUSE_LABELS[house]} image cleared.`);
       await refetch();
@@ -258,7 +285,7 @@ export function HouseImagesManager() {
           <div>
             <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>House Page Images</h2>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-              Set the public image for each House. Uploads use the house_images storage bucket, pasted URLs stay where they are.
+              Set the public image for each House. Uploads create a smaller public thumbnail; pasted URLs stay where they are. Older images may still use original URLs until thumbnails are regenerated.
             </p>
           </div>
           <div className="w-full max-w-xs">
@@ -289,7 +316,7 @@ export function HouseImagesManager() {
       <div className="grid gap-5 lg:grid-cols-2">
         {HOUSE_OPTIONS.map((house) => {
           const draft = drafts[house] ?? emptyDraft(house);
-          const previewUrl = previews[house] ?? draft.image_url;
+          const previewUrl = previews[house] ?? (draft.image_thumbnail_url || draft.image_url);
           const color = HOUSE_COLORS[house];
           const saving = savingHouse === house;
 
@@ -405,7 +432,7 @@ export function HouseImagesManager() {
                     <input
                       type="url"
                       value={draft.image_url}
-                      onChange={(event) => updateDraft(house, { image_url: event.target.value })}
+                      onChange={(event) => updateDraft(house, { image_url: event.target.value, image_thumbnail_url: '' })}
                       className="w-full rounded border px-3 py-2 text-sm"
                       placeholder="https://..."
                       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}

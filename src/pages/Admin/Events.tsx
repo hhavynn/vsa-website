@@ -21,6 +21,11 @@ const EMPTY_EVENT: Partial<Event> = {
   academic_term_id: null,
 };
 
+type UploadedEventImage = {
+  imageUrl: string;
+  thumbnailUrl: string;
+};
+
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)]';
 const labelCls = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
@@ -111,6 +116,7 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
+  const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
   const [copiedCode, setCopiedCode] = useState(false);
@@ -202,22 +208,37 @@ export default function AdminEvents() {
     onDrop: onEditDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1, maxSize: 10 * 1024 * 1024,
   });
 
-  async function uploadImage(file: File): Promise<string> {
+  async function uploadImage(file: File): Promise<UploadedEventImage> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'event');
-    const fileExt = getUploadExtension(preparedFile);
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const { file: thumbnailFile } = await prepareImageForUpload(file, 'eventThumbnail');
+    const uploadId = crypto.randomUUID();
+    const fileName = `${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `thumbs/${uploadId}.${getUploadExtension(thumbnailFile)}`;
     const { error } = await supabase.storage.from('event_images').upload(fileName, preparedFile, {
       cacheControl: '31536000',
       contentType: preparedFile.type,
     });
     if (error) throw error;
 
+    const { error: thumbnailError } = await supabase.storage.from('event_images').upload(thumbnailName, thumbnailFile, {
+      cacheControl: '31536000',
+      contentType: thumbnailFile.type,
+    });
+    if (thumbnailError) {
+      await supabase.storage.from('event_images').remove([fileName]);
+      throw thumbnailError;
+    }
+
     if (wasCompressed && reduction > 10) {
       toast.success(`Image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
     }
 
     const { data } = supabase.storage.from('event_images').getPublicUrl(fileName);
-    return data.publicUrl;
+    const { data: thumbnailData } = supabase.storage.from('event_images').getPublicUrl(thumbnailName);
+    return {
+      imageUrl: data.publicUrl,
+      thumbnailUrl: thumbnailData.publicUrl,
+    };
   }
 
   async function removeEventImage(url?: string | null) {
@@ -230,14 +251,15 @@ export default function AdminEvents() {
     if (!newEvent.name || !newEvent.description || !newEvent.date || !newEvent.location) return;
     try {
       setUploading(true);
-      const imageUrl = imageFile ? await uploadImage(imageFile) : null;
+      const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const academicTermId = await resolveAcademicTermId(newEvent.date, newEvent.academic_term_id);
       const { error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
         date: new Date(newEvent.date!).toISOString(), location: newEvent.location,
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
-        points: newEvent.points, image_url: imageUrl,
+        points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
+        thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
         check_in_code: checkInCode, is_code_expired: false,
         academic_term_id: academicTermId,
       }]);
@@ -257,6 +279,7 @@ export default function AdminEvents() {
       const { error } = await supabase.from('events').delete().eq('id', eventToDelete.id);
       if (error) throw error;
       await removeEventImage(eventToDelete.image_url);
+      await removeEventImage(eventToDelete.thumbnail_url);
       toast.success(`"${eventToDelete.name}" deleted`);
       refreshEvents();
       if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
@@ -271,12 +294,19 @@ export default function AdminEvents() {
     try {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
+      let thumbnailUrl = selectedEvent.thumbnail_url ?? null;
       let imageUrlToRemove: string | null = null;
+      let thumbnailUrlToRemove: string | null = null;
       if (editImageFile) {
-        imageUrl = await uploadImage(editImageFile);
+        const uploadedImage = await uploadImage(editImageFile);
+        imageUrl = uploadedImage.imageUrl;
+        thumbnailUrl = uploadedImage.thumbnailUrl;
         imageUrlToRemove = selectedEventOriginalImageUrl;
+        thumbnailUrlToRemove = selectedEventOriginalThumbnailUrl;
       } else if (!imageUrl && selectedEventOriginalImageUrl) {
         imageUrlToRemove = selectedEventOriginalImageUrl;
+        thumbnailUrlToRemove = selectedEventOriginalThumbnailUrl;
+        thumbnailUrl = null;
       }
       const academicTermId = await resolveAcademicTermId(selectedEvent.date, selectedEvent.academic_term_id);
       const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;
@@ -284,13 +314,14 @@ export default function AdminEvents() {
         name: selectedEvent.name, description: selectedEvent.description,
         date: new Date(selectedEvent.date).toISOString(), location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
-        image_url: imageUrl, check_in_code: selectedEvent.check_in_code,
+        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null, check_in_code: selectedEvent.check_in_code,
         is_code_expired: selectedEvent.is_code_expired,
         check_in_form_url: selectedEvent.check_in_form_url || '',
         academic_term_id: academicTermId,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
       await removeEventImage(imageUrlToRemove);
+      await removeEventImage(thumbnailUrlToRemove);
       if (pointsChanged) {
         // Invalidate cached point totals so Find My Points and leaderboard
         // show fresh data after the DB trigger has synced attendance rows.
@@ -300,7 +331,7 @@ export default function AdminEvents() {
         toast.success('Event updated.');
       }
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
-      setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalPoints(0);
+      setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
       refreshTerms();
       refreshEvents();
     } catch (err) {
@@ -351,6 +382,7 @@ export default function AdminEvents() {
               academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
             });
             setSelectedEventOriginalImageUrl(event.image_url ?? null);
+            setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
             setSelectedEventOriginalPoints(event.points ?? 0);
             setEditImageFile(null);
             setEditImagePreview(null);
@@ -421,6 +453,9 @@ export default function AdminEvents() {
                 <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={4} required placeholder="Describe the event." /></div>
                 <div>
                   <label className={labelCls}>Image</label>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                    New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                  </p>
                   <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
                     <input {...getInputProps()} />
                     {imagePreview
@@ -514,10 +549,13 @@ export default function AdminEvents() {
                 </div>
                 <div>
                   <label className={labelCls}>Image</label>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                    New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                  </p>
                   {selectedEvent.image_url && !editImagePreview && (
                     <div className="mb-4 mt-2">
                       <img src={selectedEvent.image_url} alt={selectedEvent.name} className="h-48 w-full rounded border object-cover shadow-sm sm:w-auto sm:min-w-[320px]" style={{ borderColor: 'var(--color-border)' }} />
-                      <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedEvent({...selectedEvent, image_url: ''})}>Remove image</button>
+                      <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedEvent({...selectedEvent, image_url: '', thumbnail_url: null})}>Remove image</button>
                     </div>
                   )}
                   <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
