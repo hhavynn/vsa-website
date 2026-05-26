@@ -5,12 +5,14 @@ export interface PresidentsContent {
   role: string;
   message: string;
   photoUrl: string;
+  photoThumbnailUrl: string;
 }
 
 export const DEFAULT_PRESIDENTS_CONTENT: PresidentsContent = {
   names: 'Gracie Nguyen & Phuong Le',
   role: 'Co-Presidents | VSA at UC San Diego',
   photoUrl: '',
+  photoThumbnailUrl: '',
   message: `Hello and welcome to the VSA family! 💕
 
 We’re Gracie and Phuong, and we’re beyond excited to serve as your Co-Presidents this year! Over the summer, our passionate cabinet has been planning a year full of fun, meaningful, and memorable events that we’re so excited to share with you.

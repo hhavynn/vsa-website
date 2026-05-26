@@ -10,6 +10,8 @@ export interface EventCardProps {
 }
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
+  const imageUrl = event.thumbnail_url || event.image_url;
+
   const handleSaveToCalendar = () => {
     if (!event.date) return;
     const startDate = new Date(event.date);
@@ -38,15 +40,15 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
     <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden flex flex-col h-full hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
       {/* Image */}
       <div className="relative h-44 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-        {event.image_url ? (
+        {imageUrl ? (
           <img
-            src={getSupabaseImageUrl(event.image_url, {
+            src={getSupabaseImageUrl(imageUrl, {
               width: 520,
               height: 330,
               resize: 'cover',
               quality: 72,
             })}
-            srcSet={getSupabaseImageSrcSet(event.image_url, [320, 520, 720], {
+            srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], {
               resize: 'cover',
               quality: 72,
             })}

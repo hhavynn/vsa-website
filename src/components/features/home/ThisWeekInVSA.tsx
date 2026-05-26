@@ -239,6 +239,7 @@ interface GalleryAlbum {
   date: string;
   google_photos_url: string;
   cover_image_url: string | null;
+  cover_thumbnail_url: string | null;
 }
 
 function LatestGalleryCard() {
@@ -247,7 +248,7 @@ function LatestGalleryCard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('gallery_events')
-        .select('id, title, date, google_photos_url, cover_image_url')
+        .select('id, title, date, google_photos_url, cover_image_url, cover_thumbnail_url')
         .not('google_photos_url', 'is', null)
         .order('date', { ascending: false })
         .limit(1)
@@ -287,9 +288,9 @@ function LatestGalleryCard() {
             className="scrapbook-photo group relative block overflow-hidden"
             style={{ transform: 'rotate(-1deg)' }}
           >
-            {album.cover_image_url ? (
+            {(album.cover_thumbnail_url || album.cover_image_url) ? (
               <img
-                src={getSupabaseImageUrl(album.cover_image_url, { width: 480, height: 300, resize: 'cover', quality: 72 })}
+                src={getSupabaseImageUrl(album.cover_thumbnail_url || album.cover_image_url, { width: 480, height: 300, resize: 'cover', quality: 72 })}
                 alt={album.title}
                 className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 loading="lazy"

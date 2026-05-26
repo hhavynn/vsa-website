@@ -14,6 +14,7 @@ export function normalizePresidentsContent(row: any): PresidentsContent {
     role: row?.presidents_role || DEFAULT_PRESIDENTS_CONTENT.role,
     message: row?.presidents_message || DEFAULT_PRESIDENTS_CONTENT.message,
     photoUrl: row?.presidents_photo_url || '',
+    photoThumbnailUrl: row?.presidents_photo_thumbnail_url || '',
   };
 }
 

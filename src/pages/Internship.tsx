@@ -79,7 +79,7 @@ function resolveInternImageUrl(image?: string | null) {
 
 function InternCard({ intern }: { intern: CabinetIntern }) {
   const imageSize = 360;
-  const imageUrl = resolveInternImageUrl(intern.image_url);
+  const imageUrl = resolveInternImageUrl(intern.thumbnail_url || intern.image_url);
 
   return (
     <article className="program-poster-card min-w-0">

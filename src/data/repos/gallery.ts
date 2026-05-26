@@ -14,6 +14,7 @@ export interface GalleryAlbum {
   date: string;
   google_photos_url: string;
   cover_image_url: string | null;
+  cover_thumbnail_url: string | null;
   event_id: string | null;
   event: RelatedEvent | null;
 }
@@ -31,7 +32,7 @@ export class GalleryRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('gallery_events')
-        .select('id, title, description, date, google_photos_url, cover_image_url, event_id, event:events(id, name, date)')
+        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date)')
         .not('google_photos_url', 'is', null)
         .order('date', { ascending: false });
 

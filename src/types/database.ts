@@ -124,6 +124,7 @@ export interface Database {
           category: string;
           display_order: number;
           image_url: string | null;
+          thumbnail_url: string | null;
           year: string | null;
           college: string | null;
           major: string | null;
@@ -142,6 +143,7 @@ export interface Database {
           category: string;
           display_order?: number;
           image_url?: string | null;
+          thumbnail_url?: string | null;
           year?: string | null;
           college?: string | null;
           major?: string | null;
@@ -160,6 +162,7 @@ export interface Database {
           category?: string;
           display_order?: number;
           image_url?: string | null;
+          thumbnail_url?: string | null;
           year?: string | null;
           college?: string | null;
           major?: string | null;
@@ -356,6 +359,7 @@ export interface Database {
           event_type: SiteEventType;
           check_in_form_url: string;
           image_url: string | null;
+          thumbnail_url: string | null;
           check_in_code: string | null;
           is_code_expired: boolean;
           academic_term_id: string | null;
@@ -372,6 +376,7 @@ export interface Database {
           event_type?: SiteEventType;
           check_in_form_url?: string;
           image_url?: string | null;
+          thumbnail_url?: string | null;
           check_in_code?: string | null;
           is_code_expired?: boolean;
           academic_term_id?: string | null;
@@ -388,6 +393,7 @@ export interface Database {
           event_type?: SiteEventType;
           check_in_form_url?: string;
           image_url?: string | null;
+          thumbnail_url?: string | null;
           check_in_code?: string | null;
           is_code_expired?: boolean;
           academic_term_id?: string | null;
@@ -446,6 +452,7 @@ export interface Database {
           images: string[];
           google_photos_url: string | null;
           cover_image_url: string | null;
+          cover_thumbnail_url: string | null;
           event_id: string | null;
           created_at: string;
           updated_at: string | null;
@@ -459,6 +466,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          cover_thumbnail_url?: string | null;
           event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
@@ -472,6 +480,7 @@ export interface Database {
           images?: string[];
           google_photos_url?: string | null;
           cover_image_url?: string | null;
+          cover_thumbnail_url?: string | null;
           event_id?: string | null;
           created_at?: string;
           updated_at?: string | null;
@@ -492,6 +501,7 @@ export interface Database {
           photo_album_url: string | null;
           album_source: string | null;
           cover_image_url: string | null;
+          cover_thumbnail_url: string | null;
           poster_url: string | null;
           trailer_url: string | null;
           photo_credit: string | null;
@@ -521,6 +531,7 @@ export interface Database {
           photo_album_url?: string | null;
           album_source?: string | null;
           cover_image_url?: string | null;
+          cover_thumbnail_url?: string | null;
           poster_url?: string | null;
           trailer_url?: string | null;
           photo_credit?: string | null;
@@ -550,6 +561,7 @@ export interface Database {
           photo_album_url?: string | null;
           album_source?: string | null;
           cover_image_url?: string | null;
+          cover_thumbnail_url?: string | null;
           poster_url?: string | null;
           trailer_url?: string | null;
           photo_credit?: string | null;
@@ -794,6 +806,7 @@ export interface Database {
           display_name: string;
           description: string | null;
           image_url: string | null;
+          image_thumbnail_url: string | null;
           image_alt: string | null;
           cover_image_url: string | null;
           accent_color: string | null;
@@ -813,6 +826,7 @@ export interface Database {
           display_name?: string;
           description?: string | null;
           image_url?: string | null;
+          image_thumbnail_url?: string | null;
           image_alt?: string | null;
           cover_image_url?: string | null;
           accent_color?: string | null;
@@ -832,6 +846,7 @@ export interface Database {
           display_name?: string;
           description?: string | null;
           image_url?: string | null;
+          image_thumbnail_url?: string | null;
           image_alt?: string | null;
           cover_image_url?: string | null;
           accent_color?: string | null;
@@ -900,6 +915,7 @@ export interface Database {
           presidents_role: string;
           presidents_message: string;
           presidents_photo_url: string | null;
+          presidents_photo_thumbnail_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -909,6 +925,7 @@ export interface Database {
           presidents_role: string;
           presidents_message: string;
           presidents_photo_url?: string | null;
+          presidents_photo_thumbnail_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -918,6 +935,7 @@ export interface Database {
           presidents_role?: string;
           presidents_message?: string;
           presidents_photo_url?: string | null;
+          presidents_photo_thumbnail_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1266,6 +1284,7 @@ export interface Database {
           display_name: string;
           description: string | null;
           image_url: string | null;
+          image_thumbnail_url: string | null;
           image_alt: string | null;
           cover_image_url: string | null;
           accent_color: string | null;
@@ -1290,6 +1309,7 @@ export interface Database {
           photo_album_url: string | null;
           album_source: string | null;
           cover_image_url: string | null;
+          cover_thumbnail_url: string | null;
           poster_url: string | null;
           trailer_url: string | null;
           photo_credit: string | null;

@@ -7,7 +7,8 @@ export interface Event {
   points: number;
   event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
   check_in_form_url: string;
-  image_url?: string;
+  image_url?: string | null;
+  thumbnail_url?: string | null;
   check_in_code?: string;
   is_code_expired: boolean;
   academic_term_id?: string | null;
@@ -78,6 +79,7 @@ export interface VCNArchive {
   photo_album_url: string | null;
   album_source: string | null;
   cover_image_url: string | null;
+  cover_thumbnail_url: string | null;
   poster_url: string | null;
   trailer_url: string | null;
   photo_credit: string | null;
@@ -183,6 +185,7 @@ export interface HousePageAsset {
   display_name: string;
   description: string | null;
   image_url: string | null;
+  image_thumbnail_url: string | null;
   image_alt: string | null;
   cover_image_url: string | null;
   accent_color: string | null;
