@@ -8,7 +8,6 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { useEvents } from '../hooks/useEvents';
