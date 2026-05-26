@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.22.4";
 
+// Required Supabase secrets:
+// supabase secrets set GEMINI_API_KEY="..."
+// supabase secrets set GEMINI_MODEL="gemini-3.1-flash-lite"
+// Deploy with: supabase functions deploy vsa-ai-assistant
+
 const allowedOrigins = new Set([
   "https://www.vsaatucsd.com",
   "https://vsaatucsd.com",
@@ -23,6 +28,8 @@ const FALLBACK_MESSAGE =
   "I'm not sure from the approved VSA info I have. Try the Events page, Feedback page, or official VSA channels.";
 
 const RATE_LIMIT_MESSAGE = "You've reached today's Ask VSA limit. Try again later!";
+
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 const SYSTEM_PROMPT = `You are the VSA AI Assistant for VSA at UCSD.
 
@@ -111,6 +118,10 @@ function isSafetyRedirect(message: string) {
   return /\b(medical|legal|lawyer|attorney|emergency|911|diagnosis|therapy|financial advice|tax advice)\b/i.test(message);
 }
 
+function asksForSensitivePrivateInfo(message: string) {
+  return /\b(private|personal|phone number|email|address|attendance|check-?in code|check in code|budget|cabinet-only|drive doc|member data)\b/i.test(message);
+}
+
 function buildContext(snippets: KnowledgeSnippet[], eventContext: string | null) {
   const snippetContext = snippets
     .map((snippet, index) => {
@@ -192,14 +203,14 @@ async function getRateLimitReason(
 ) {
   const now = Date.now();
   const sessionDay = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 24 * 60 * 60 * 1000));
-  if (sessionDay >= 12) return "session_daily_limit";
+  if (sessionDay >= 5) return "session_daily_limit";
 
   const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 5 * 60 * 1000));
-  if (sessionBurst >= 4) return "session_5_minute_limit";
+  if (sessionBurst >= 2) return "session_5_minute_limit";
 
   if (ipHash) {
     const ipDay = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 24 * 60 * 60 * 1000));
-    if (ipDay >= 40) return "ip_daily_limit";
+    if (ipDay >= 50) return "ip_daily_limit";
 
     const ipHour = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 60 * 60 * 1000));
     if (ipHour >= 10) return "ip_hourly_limit";
@@ -248,7 +259,7 @@ async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof create
     .join("\n");
 }
 
-async function callOpenAI({
+async function callGemini({
   apiKey,
   model,
   message,
@@ -261,34 +272,38 @@ async function callOpenAI({
   context: string;
   recentTurns: Array<{ role: "user" | "assistant"; content: string }>;
 }) {
-  const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    {
-      role: "user",
-      content: `Approved context:\n${context}\n\nUser question:\n${message}`,
-    },
-  ];
-
-  if (recentTurns.length > 0) {
-    messages.splice(1, 0, {
-      role: "system",
-      content: `Recent conversation context, for reference only. Do not answer from this unless it is supported by approved context:\n${recentTurns
+  const contextParts = [
+    recentTurns.length > 0
+      ? `Recent conversation context, for reference only. Do not answer from this unless it is supported by approved context:\n${recentTurns
         .map((turn) => `${turn.role}: ${turn.content}`)
-        .join("\n")}`,
-    });
-  }
+        .join("\n")}`
+      : "",
+    `Approved context:\n${context}`,
+    `User question:\n${message}`,
+  ].filter(Boolean);
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      "x-goog-api-key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.1,
-      max_tokens: 220,
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: contextParts.join("\n\n") }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 220,
+      },
     }),
   });
 
@@ -302,7 +317,8 @@ async function callOpenAI({
   }
 
   const body = await response.json();
-  return body.choices?.[0]?.message?.content?.trim() || FALLBACK_MESSAGE;
+  const parts = body.candidates?.[0]?.content?.parts ?? [];
+  return parts.map((part: { text?: string }) => part.text ?? "").join("").trim() || FALLBACK_MESSAGE;
 }
 
 serve(async (req) => {
@@ -370,13 +386,13 @@ serve(async (req) => {
       );
     }
 
-    if (isSafetyRedirect(parsed.message)) {
+    if (isSafetyRedirect(parsed.message) || asksForSensitivePrivateInfo(parsed.message)) {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
         status: "fallback",
         messageLength: parsed.message.length,
-        blockedReason: "safety_redirect",
+        blockedReason: isSafetyRedirect(parsed.message) ? "safety_redirect" : "private_info_request",
         currentPage: parsed.currentPage,
       });
       return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
@@ -387,7 +403,7 @@ serve(async (req) => {
       ? await getUpcomingEventsContext(supabaseClient)
       : null;
 
-    if (snippets.length === 0 && !eventContext) {
+    if (snippets.length === 0) {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
@@ -399,7 +415,7 @@ serve(async (req) => {
       return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
     }
 
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
       await logUsage(supabaseClient, {
         sessionIdHash,
@@ -407,7 +423,7 @@ serve(async (req) => {
         status: "error",
         messageLength: parsed.message.length,
         matchedKnowledgeIds: snippets.map((snippet) => snippet.id),
-        blockedReason: "missing_openai_api_key",
+        blockedReason: "missing_gemini_api_key",
         currentPage: parsed.currentPage,
       });
       return jsonResponse(
@@ -423,9 +439,9 @@ serve(async (req) => {
 
     const recentTurns = trimRecentTurns(parsed.recentTurns);
     const context = buildContext(snippets, eventContext);
-    const answer = await callOpenAI({
+    const answer = await callGemini({
       apiKey,
-      model: Deno.env.get("OPENAI_MODEL") ?? "gpt-4o-mini",
+      model: Deno.env.get("GEMINI_MODEL") ?? DEFAULT_GEMINI_MODEL,
       message: parsed.message,
       context,
       recentTurns,
