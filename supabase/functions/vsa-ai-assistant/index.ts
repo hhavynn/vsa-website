@@ -203,17 +203,17 @@ async function getRateLimitReason(
 ) {
   const now = Date.now();
   const sessionDay = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 24 * 60 * 60 * 1000));
-  if (sessionDay >= 5) return "session_daily_limit";
+  if (sessionDay >= 15) return "session_daily_limit";
 
-  const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 5 * 60 * 1000));
-  if (sessionBurst >= 2) return "session_5_minute_limit";
+  const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 10 * 60 * 1000));
+  if (sessionBurst >= 6) return "session_10_minute_limit";
 
   if (ipHash) {
     const ipDay = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 24 * 60 * 60 * 1000));
-    if (ipDay >= 50) return "ip_daily_limit";
+    if (ipDay >= 100) return "ip_daily_limit";
 
     const ipHour = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 60 * 60 * 1000));
-    if (ipHour >= 10) return "ip_hourly_limit";
+    if (ipHour >= 20) return "ip_hourly_limit";
   }
 
   return null;
