@@ -90,7 +90,7 @@ export const PointsExplainer: React.FC = () => {
                   House Competition
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
-                  Every point you earn also goes toward your House's total. Compete together for the top spot on the leaderboard and the end-of-year reward!
+                  Every event you attend adds 1 point to your House's total, regardless of individual point values. Compete together for the top spot and the end-of-year reward!
                 </p>
               </div>
             </div>
