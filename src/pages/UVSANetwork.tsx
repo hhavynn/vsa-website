@@ -65,8 +65,11 @@ export default function UVSANetwork() {
       <div className="vsa-container py-12 space-y-20">
         <section className="scrapbook-paper p-8 space-y-4">
           <p className="font-sans text-lg leading-relaxed" style={{ color: 'var(--text2)' }}>
-            <span className="font-bold text-[var(--text)]">Externals</span> are events hosted by other VSAs where UCSD members can attend, support, compete, and meet people from other schools. 
-            Whether it's a skit competition, a dance battle, or a cultural showcase, externals are the best way to see the "VSA world" beyond our own campus.
+            <span className="font-bold text-[var(--text)]">Externals</span> are events hosted by other VSAs where UCSD members can attend, support, compete, and meet people from other schools.
+            Externals can look like pageants, game shows, talent competitions, showcases, or performance nights, but they are also a way for schools to support each other's philanthropy projects and cultural programming.
+          </p>
+          <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+            Many externals are tied to philanthropy, culture, or community causes. Some feel like big competitions, but they still help connect schools and support the values behind UVSA.
           </p>
           <div className="pt-4 flex flex-wrap gap-4">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]" style={{ borderColor: 'var(--border)' }}>
@@ -128,8 +131,7 @@ export default function UVSANetwork() {
         </div>
         
         <p className="font-sans text-[var(--text2)] max-w-2xl">
-          Take a look at the events we attended and supported in the previous year. 
-          Each school brings its own unique flavor to the network!
+          A look at the externals from the previous year. UCSD's Wild N' Culture is listed first as our home-hosted event. Many externals also connect to philanthropy and cultural programming at the hosting school.
         </p>
 
         {pastLoading || historicalLoading ? (
@@ -138,7 +140,7 @@ export default function UVSANetwork() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {archiveEvents.map(event => (
+            {sortArchiveEventsUCSDFirst(archiveEvents).map(event => (
               <ExternalEventCard key={event.id} event={event} isArchive />
             ))}
           </div>
@@ -235,6 +237,16 @@ function compareEventsByRecency(a: ExternalEvent, b: ExternalEvent) {
   const aTime = new Date(a.date || a.created_at || 0).getTime();
   const bTime = new Date(b.date || b.created_at || 0).getTime();
   return bTime - aTime;
+}
+
+function sortArchiveEventsUCSDFirst(events: ExternalEvent[]): ExternalEvent[] {
+  return [...events].sort((a, b) => {
+    const aIsUCSD = a.uvsa_school?.slug === 'ucsd';
+    const bIsUCSD = b.uvsa_school?.slug === 'ucsd';
+    if (aIsUCSD && !bIsUCSD) return -1;
+    if (!aIsUCSD && bIsUCSD) return 1;
+    return compareEventsByRecency(a, b);
+  });
 }
 
 function FeaturedExternalSpotlight({
@@ -342,19 +354,25 @@ function FeaturedExternalSpotlight({
 
 function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent; isArchive?: boolean }) {
   const schoolName = event.uvsa_school?.short_name || 'Unknown School';
-  
+  const isUCSD = event.uvsa_school?.slug === 'ucsd';
+
   return (
     <Card className="flex flex-col h-full overflow-hidden transition-all hover:translate-y-[-4px] hover:shadow-lg">
       <div className="p-5 flex-grow space-y-4">
-        <div className="flex justify-between items-start gap-2">
-          <Badge 
-            label={schoolName} 
-            color="gray"
-            className="font-bold"
-          />
+        <div className="flex flex-wrap justify-between items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              label={schoolName}
+              color="gray"
+              className="font-bold"
+            />
+            {isUCSD && (
+              <Badge label="Hosted by VSA at UCSD" color="yellow" />
+            )}
+          </div>
           {!isArchive && (
-            <Badge 
-              label={`${event.points} pts`} 
+            <Badge
+              label={`${event.points} pts`}
               color={event.points >= 5 ? 'yellow' : 'gray'}
             />
           )}
@@ -439,8 +457,9 @@ function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent;
 }
 
 function SchoolCard({ school }: { school: UVSASchool }) {
+  const isHomeSchool = school.slug === 'ucsd';
   return (
-    <Card className="group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors">
+    <Card className={`group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors${isHomeSchool ? ' border-[var(--brand)]' : ''}`}>
       <div className="flex items-start justify-between">
         <SchoolVisualMark school={school} />
         {school.city && (
@@ -451,7 +470,12 @@ function SchoolCard({ school }: { school: UVSASchool }) {
       </div>
 
       <div>
-        <h3 className="font-serif text-lg leading-tight group-hover:text-[var(--brand)] transition-colors">{school.short_name}</h3>
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <h3 className="font-serif text-lg leading-tight group-hover:text-[var(--brand)] transition-colors">{school.short_name}</h3>
+          {isHomeSchool && (
+            <Badge label="Home Base" color="yellow" />
+          )}
+        </div>
         <p className="font-sans text-xs" style={{ color: 'var(--text3)' }}>{school.vsa_name}</p>
       </div>
 
