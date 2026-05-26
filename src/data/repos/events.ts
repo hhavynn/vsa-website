@@ -54,26 +54,11 @@ export class EventsRepository {
       if (eventsError) throw eventsError;
       if (!events) throw new NotFoundError('No events found');
 
-      // Step 2: fetch attendance rows for the returned events and compute counts client-side.
-      const eventIds = events.map((e: any) => e.id).filter(Boolean);
-      let attendanceRows: Array<{ event_id: string }> = [];
-      if (eventIds.length) {
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from('event_attendance')
-          .select('event_id')
-          .in('event_id', eventIds as unknown as string[]);
-        if (attendanceError) throw attendanceError;
-        attendanceRows = attendanceData || [];
-      }
-
-      const countsMap: Record<string, number> = {};
-      for (const row of attendanceRows) {
-        countsMap[row.event_id] = (countsMap[row.event_id] || 0) + 1;
-      }
-
+      // Note: We no longer fetch attendance rows here to avoid large egress payloads.
+      // attendance_count is not used on list views.
       return events.map((event: any) => ({
         ...event,
-        attendance_count: countsMap[event.id] || 0,
+        attendance_count: 0,
       }));
     }, 'Failed to fetch events');
   }
