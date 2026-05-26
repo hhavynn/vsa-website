@@ -39,6 +39,12 @@ export default function UVSANetwork() {
   const { events: historicalEvents, loading: historicalLoading } = useExternalEvents({ status: 'historical' });
 
   const archiveEvents = [...pastEvents, ...historicalEvents];
+  const allPublicEvents = [...upcomingEvents, ...archiveEvents];
+  const featuredEvent = allPublicEvents
+    .filter(event => event.is_featured)
+    .sort(compareEventsByRecency)[0];
+  const spotlightEvent = featuredEvent || archiveEvents[0];
+  const spotlightLoading = upcomingLoading || pastLoading || historicalLoading;
 
   return (
     <>
@@ -78,7 +84,14 @@ export default function UVSANetwork() {
           </div>
         </section>
 
-      {/* 2. Upcoming Externals */}
+      {/* 2. Featured External */}
+      <FeaturedExternalSpotlight
+        event={spotlightEvent}
+        loading={spotlightLoading}
+        isFallback={!featuredEvent}
+      />
+
+      {/* 3. Upcoming Externals */}
       <section className="space-y-8">
         <div className="flex items-center gap-4">
           <CalendarIcon className="text-[var(--brand)]" size={28} />
@@ -107,7 +120,7 @@ export default function UVSANetwork() {
         )}
       </section>
 
-      {/* 3. 2025–2026 External Showcase */}
+      {/* 4. 2025–2026 External Showcase */}
       <section className="space-y-8">
         <div className="flex items-center gap-4">
           <StarIcon className="text-[var(--brand)]" size={28} />
@@ -132,7 +145,7 @@ export default function UVSANetwork() {
         )}
       </section>
 
-      {/* 4. Explore the 13 Schools */}
+      {/* 5. Explore the 13 Schools */}
       <section className="space-y-8">
         <div className="flex items-center gap-4">
           <GlobeIcon className="text-[var(--brand)]" size={28} />
@@ -152,7 +165,7 @@ export default function UVSANetwork() {
         )}
       </section>
 
-      {/* 5. How to Attend & Points */}
+      {/* 6. How to Attend & Points */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* How to Attend */}
         <section className="scrapbook-paper p-8 space-y-6">
@@ -218,6 +231,115 @@ export default function UVSANetwork() {
 );
 }
 
+function compareEventsByRecency(a: ExternalEvent, b: ExternalEvent) {
+  const aTime = new Date(a.date || a.created_at || 0).getTime();
+  const bTime = new Date(b.date || b.created_at || 0).getTime();
+  return bTime - aTime;
+}
+
+function FeaturedExternalSpotlight({
+  event,
+  loading,
+  isFallback,
+}: {
+  event?: ExternalEvent;
+  loading: boolean;
+  isFallback: boolean;
+}) {
+  if (loading) {
+    return (
+      <section className="rounded border bg-[var(--color-surface)] p-6 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+        <div className="h-5 w-40 animate-pulse rounded bg-[var(--surface2)]" />
+        <div className="mt-5 h-8 w-3/4 animate-pulse rounded bg-[var(--surface2)]" />
+        <div className="mt-4 h-20 animate-pulse rounded bg-[var(--surface2)]" />
+      </section>
+    );
+  }
+
+  const school = event?.uvsa_school;
+  const title = event?.title || '2025-2026 External Showcase';
+  const hostName = school?.short_name || 'SoCal VSA Network';
+  const eventType = event?.event_type || 'Season archive';
+  const description = event?.description || 'Explore the externals UCSD VSA attended and supported across the SoCal VSA network last season.';
+  const pointsNote = event?.points && event.points !== 4
+    ? `${event.points} points when announced by VSA at UCSD.`
+    : null;
+
+  return (
+    <section className="overflow-hidden rounded border bg-[var(--color-surface)] shadow-sm" style={{ borderColor: 'var(--border)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="p-6 sm:p-8 space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge label={isFallback ? 'External Spotlight' : 'Featured External'} color="yellow" />
+            <Badge label={hostName} color="gray" />
+            <span className="font-sans text-xs uppercase tracking-[0.14em] text-[var(--text3)]">{eventType}</span>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="font-serif text-3xl leading-tight sm:text-4xl">{title}</h2>
+            <p className="max-w-3xl font-sans text-sm leading-7 sm:text-base" style={{ color: 'var(--text2)' }}>
+              {description}
+            </p>
+          </div>
+
+          {pointsNote && (
+            <p className="inline-flex rounded bg-[var(--surface2)] px-3 py-2 font-sans text-xs font-medium text-[var(--text2)]">
+              {pointsNote}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {school?.linktree_url && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1"
+                onClick={() => window.open(school.linktree_url!, '_blank', 'noopener,noreferrer')}
+              >
+                Host Linktree <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+            {event?.host_info_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => window.open(event.host_info_url!, '_blank', 'noopener,noreferrer')}
+              >
+                View Event Info <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+            {event?.instagram_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => window.open(event.instagram_url!, '_blank', 'noopener,noreferrer')}
+              >
+                View IG Post <InstagramIcon size={12} />
+              </Button>
+            )}
+            {event?.rsvp_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => window.open(event.rsvp_url!, '_blank', 'noopener,noreferrer')}
+              >
+                RSVP <ExternalLinkIcon size={12} />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="min-h-[180px] border-t p-6 lg:border-l lg:border-t-0 flex items-center justify-center" style={{ borderColor: 'var(--border)' }}>
+          <SchoolVisualMark school={school} fallbackLabel={hostName} size="lg" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent; isArchive?: boolean }) {
   const schoolName = event.uvsa_school?.short_name || 'Unknown School';
   
@@ -265,28 +387,48 @@ function ExternalEventCard({ event, isArchive = false }: { event: ExternalEvent;
         )}
       </div>
 
-      <div className="p-4 bg-[var(--surface)] border-t flex gap-2" style={{ borderColor: 'var(--border)' }}>
+      <div className="p-4 bg-[var(--surface)] border-t flex flex-wrap gap-2" style={{ borderColor: 'var(--border)' }}>
         {event.rsvp_url && (
           <Button 
             variant="primary" 
             size="sm" 
-            className="flex-1 text-xs gap-1"
-            onClick={() => window.open(event.rsvp_url!, '_blank')}
+            className="flex-1 min-w-[96px] text-xs gap-1"
+            onClick={() => window.open(event.rsvp_url!, '_blank', 'noopener,noreferrer')}
           >
             RSVP <ExternalLinkIcon size={12} />
+          </Button>
+        )}
+        {event.host_info_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-[118px] text-xs gap-1"
+            onClick={() => window.open(event.host_info_url!, '_blank', 'noopener,noreferrer')}
+          >
+            View Info <ExternalLinkIcon size={12} />
           </Button>
         )}
         {event.instagram_url && (
           <Button 
             variant="outline" 
             size="sm" 
-            className="flex-1 text-xs gap-1"
-            onClick={() => window.open(event.instagram_url!, '_blank')}
+            className="flex-1 min-w-[104px] text-xs gap-1"
+            onClick={() => window.open(event.instagram_url!, '_blank', 'noopener,noreferrer')}
           >
-            IG <InstagramIcon size={12} />
+            IG Post <InstagramIcon size={12} />
           </Button>
         )}
-        {isArchive && !event.rsvp_url && !event.instagram_url && (
+        {event.uvsa_school?.linktree_url && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-[110px] text-xs gap-1"
+            onClick={() => window.open(event.uvsa_school!.linktree_url!, '_blank', 'noopener,noreferrer')}
+          >
+            Linktree <ExternalLinkIcon size={12} />
+          </Button>
+        )}
+        {isArchive && !event.rsvp_url && !event.host_info_url && !event.instagram_url && !event.uvsa_school?.linktree_url && (
           <p className="font-sans text-[10px] italic uppercase tracking-widest text-center w-full" style={{ color: 'var(--text3)' }}>
             {event.status === 'historical' ? 'Historical Highlight' : 'Past Event'}
           </p>
@@ -300,20 +442,12 @@ function SchoolCard({ school }: { school: UVSASchool }) {
   return (
     <Card className="group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors">
       <div className="flex items-start justify-between">
-        <div className="w-12 h-12 rounded-full bg-[var(--surface2)] flex items-center justify-center border" style={{ borderColor: 'var(--border)' }}>
-          {school.logo_url ? (
-            <img 
-              src={school.logo_url} 
-              alt={school.short_name} 
-              className="w-8 h-8 object-contain" 
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <GlobeIcon className="text-[var(--brand)]" size={24} />
-          )}
-        </div>
-        <Badge label={school.system_type} color={school.system_type === 'UC' ? 'blue' : school.system_type === 'CSU' ? 'red' : 'gray'} />
+        <SchoolVisualMark school={school} />
+        {school.city && (
+          <span className="font-sans text-[10px] uppercase tracking-[0.12em] text-[var(--text3)]">
+            {school.city}
+          </span>
+        )}
       </div>
 
       <div>
@@ -340,7 +474,7 @@ function SchoolCard({ school }: { school: UVSASchool }) {
             variant="outline" 
             size="sm" 
             className="text-[10px] h-7 px-2 gap-1"
-            onClick={() => window.open(school.linktree_url!, '_blank')}
+            onClick={() => window.open(school.linktree_url!, '_blank', 'noopener,noreferrer')}
           >
             Linktree <ExternalLinkIcon size={10} />
           </Button>
@@ -348,7 +482,7 @@ function SchoolCard({ school }: { school: UVSASchool }) {
         {school.instagram_url && (
           <button 
             className="p-1.5 rounded-md hover:bg-[var(--surface2)] text-[var(--text3)] hover:text-[var(--text)] transition-colors"
-            onClick={() => window.open(school.instagram_url!, '_blank')}
+            onClick={() => window.open(school.instagram_url!, '_blank', 'noopener,noreferrer')}
             title="Instagram"
           >
             <InstagramIcon size={14} />
@@ -357,4 +491,108 @@ function SchoolCard({ school }: { school: UVSASchool }) {
       </div>
     </Card>
   );
+}
+
+function SchoolVisualMark({
+  school,
+  fallbackLabel = 'VSA',
+  size = 'md',
+}: {
+  school?: UVSASchool;
+  fallbackLabel?: string;
+  size?: 'md' | 'lg';
+}) {
+  const label = school?.short_name || fallbackLabel;
+  const palette = getSchoolBadgePalette(school);
+  const sizeClass = size === 'lg' ? 'h-32 w-32' : 'h-14 w-14';
+  const textClass = size === 'lg' ? 'text-2xl' : 'text-sm';
+  const logoUrl = getSafeLogoUrl(school?.logo_url);
+
+  if (logoUrl) {
+    return (
+      <div
+        className={`${sizeClass} shrink-0 rounded-lg border bg-[var(--surface2)] p-2 shadow-sm`}
+        style={{ borderColor: 'var(--border)' }}
+        aria-label={`${label} official school logo`}
+      >
+        <img
+          src={logoUrl}
+          alt={`${label} logo`}
+          className="h-full w-full object-contain"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClass} shrink-0 rounded-lg border border-dashed p-1 shadow-sm`}
+      style={{
+        borderColor: palette.border,
+        background: palette.paper,
+        transform: size === 'lg' ? 'rotate(-2deg)' : undefined,
+      }}
+      aria-label={`${label} generated mark`}
+    >
+      <div
+        className="flex h-full w-full flex-col items-center justify-center rounded-md border text-center font-sans uppercase"
+        style={{
+          borderColor: palette.innerBorder,
+          background: palette.background,
+          color: palette.text,
+        }}
+      >
+        <span className={`${textClass} font-black leading-none tracking-[0.04em]`}>
+          {formatBadgeInitials(label)}
+        </span>
+        <span className="mt-1 h-0.5 w-6 rounded-full opacity-70" style={{ background: palette.text }} />
+      </div>
+    </div>
+  );
+}
+
+function formatBadgeInitials(label: string) {
+  return label
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, 6)
+    .toUpperCase() || 'VSA';
+}
+
+function getSchoolBadgePalette(school?: UVSASchool) {
+  const slugHash = hashString(school?.slug || school?.short_name || 'vsa');
+  const hue = slugHash % 360;
+
+  return {
+    paper: `hsl(${hue} 42% 96%)`,
+    background: `linear-gradient(145deg, hsl(${hue} 58% 38%), hsl(${(hue + 18) % 360} 54% 28%))`,
+    border: `hsl(${hue} 35% 62%)`,
+    innerBorder: `hsl(${hue} 48% 72% / 0.78)`,
+    text: 'hsl(42 46% 96%)',
+  };
+}
+
+function hashString(value: string) {
+  return value.split('').reduce((hash, char) => {
+    return ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+  }, 0) >>> 0;
+}
+
+function getSafeLogoUrl(url?: string | null) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    const isSupabaseStorage = parsed.hostname.includes('supabase.co') && parsed.pathname.includes('/storage/');
+
+    if (parsed.protocol !== 'https:' || isSupabaseStorage) {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
 }

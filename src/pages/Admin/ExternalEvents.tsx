@@ -119,6 +119,9 @@ export default function AdminExternalEvents() {
             External Events
           </h1>
           <p className="font-sans text-sm text-[var(--color-text3)]">{events.length} events managed</p>
+          <p className="max-w-2xl font-sans text-xs leading-5 text-[var(--color-text3)]">
+            Use an Instagram post or Linktree URL instead of uploading flyer images. This keeps the site lightweight. Ride forms are coordinated outside the website for now.
+          </p>
         </div>
         <Button onClick={handleAdd} className="flex gap-2">
           <PlusIcon size={18} /> Add Event
@@ -213,20 +216,37 @@ export default function AdminExternalEvents() {
 
             <div className="space-y-4">
               <div>
-                <label className={labelCls}>RSVP / Source URL</label>
+                <label className={labelCls}>RSVP URL</label>
                 <input
                   className={inputCls}
                   value={formData.rsvp_url || ''}
                   onChange={e => setFormData({ ...formData, rsvp_url: e.target.value })}
+                  placeholder="Optional RSVP or ticket link"
                 />
               </div>
               <div>
-                <label className={labelCls}>Instagram URL</label>
+                <label className={labelCls}>Instagram Post URL</label>
                 <input
                   className={inputCls}
                   value={formData.instagram_url || ''}
                   onChange={e => setFormData({ ...formData, instagram_url: e.target.value })}
+                  placeholder="Outbound post link, not an embedded flyer"
                 />
+                <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
+                  Link to the host's post instead of uploading or embedding flyer media.
+                </p>
+              </div>
+              <div>
+                <label className={labelCls}>Host Info URL / Linktree</label>
+                <input
+                  className={inputCls}
+                  value={formData.host_info_url || ''}
+                  onChange={e => setFormData({ ...formData, host_info_url: e.target.value })}
+                  placeholder="Host Linktree, event page, or source link"
+                />
+                <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
+                  Public event cards use this as a lightweight outbound source link.
+                </p>
               </div>
               <div>
                 <label className={labelCls}>Description</label>
@@ -253,8 +273,11 @@ export default function AdminExternalEvents() {
                   className={`${inputCls} h-16 text-xs`}
                   value={formData.source_notes || ''}
                   onChange={e => setFormData({ ...formData, source_notes: e.target.value })}
-                  placeholder="Verification notes, source of info, etc."
+                  placeholder="Verification notes, media policy context, source of info, etc."
                 />
+              </div>
+              <div className="rounded border bg-[var(--color-surface2)] p-3 font-sans text-xs leading-5 text-[var(--color-text3)]" style={{ borderColor: 'var(--border)' }}>
+                Flyers should not be uploaded to Supabase for now. Add outbound Instagram, Linktree, or host event URLs above. Ride forms are not managed on the website.
               </div>
             </div>
           </div>
