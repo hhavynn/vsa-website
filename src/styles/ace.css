@@ -730,6 +730,207 @@
 /* ─────────────────────────────────────────────────────────────────
    CONTAINER QUERIES — desktop layout kicks in when ace-app is wide.
    ───────────────────────────────────────────────────────────────── */
+/* ── Fams tab section ────────────────────────────────────────────── */
+.ace-app .ace-famtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Tab bar */
+.ace-app .ace-famtabs-bar {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+  scrollbar-width: none;
+}
+.ace-app .ace-famtabs-bar::-webkit-scrollbar { display: none; }
+
+.ace-app .ace-famtabs-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: "DM Sans", sans-serif;
+  transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
+}
+.ace-app .ace-famtabs-tab:last-child { border-right: 0; }
+.ace-app .ace-famtabs-tab:hover { background: var(--surface); color: var(--text); }
+.ace-app .ace-famtabs-tab.is-active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+.ace-app .ace-famtabs-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+}
+.ace-app .ace-famtabs-tab-teal.is-active::after  { background: var(--brand); }
+.ace-app .ace-famtabs-tab-coral.is-active::after { background: var(--accent); }
+.ace-app .ace-famtabs-tab-gold.is-active::after  { background: var(--gold); }
+
+.ace-app .ace-famtabs-tab-viet {
+  font-family: "DM Serif Display", serif;
+  font-style: italic;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* Panel */
+.ace-app .ace-famtabs-panel { padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+
+.ace-app .ace-famtabs-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.ace-app .ace-famtabs-cover {
+  flex-shrink: 0;
+  width: 80px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.ace-app .ace-famtabs-cover > * { width: 100%; height: 100%; }
+
+.ace-app .ace-famtabs-panel-name {
+  font-family: "DM Serif Display", serif;
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.ace-app .ace-famtabs-panel-name-teal  { color: var(--brand-strong); }
+.ace-app .ace-famtabs-panel-name-coral { color: var(--accent-strong); }
+.ace-app .ace-famtabs-panel-name-gold  { color: var(--gold-strong); }
+.ace-app.is-dark .ace-famtabs-panel-name-teal  { color: var(--brand); }
+.ace-app.is-dark .ace-famtabs-panel-name-coral { color: var(--accent); }
+.ace-app.is-dark .ace-famtabs-panel-name-gold  { color: var(--gold); }
+.ace-app .ace-famtabs-panel-viet {
+  font-family: "DM Serif Display", serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.ace-app .ace-famtabs-panel-meta {
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--text-3); text-transform: uppercase;
+  display: flex; gap: 6px; align-items: center;
+}
+
+/* Subsections */
+.ace-app .ace-famtabs-subsection {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 18px;
+}
+.ace-app .ace-famtabs-sub-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3);
+  margin-bottom: 14px;
+}
+
+/* Fam heads grid */
+.ace-app .ace-famheads-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ace-app .ace-famhead-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  flex: 1;
+  min-width: 180px;
+}
+.ace-app .ace-famhead-avatar {
+  width: 46px; height: 46px; border-radius: 14px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "DM Serif Display", serif; font-style: italic; font-size: 20px;
+  color: #fff; font-weight: 400;
+  overflow: hidden;
+}
+.ace-app .ace-famhead-avatar-teal  { background: var(--brand);  border: 2px solid var(--brand-strong); }
+.ace-app .ace-famhead-avatar-coral { background: var(--accent); border: 2px solid var(--accent-strong); }
+.ace-app .ace-famhead-avatar-gold  { background: var(--gold);   border: 2px solid var(--gold-strong); }
+.ace-app .ace-famhead-avatar.is-placeholder {
+  background: var(--surface-2);
+  border-style: dashed;
+  color: var(--text-3);
+}
+.ace-app .ace-famhead-photo {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.ace-app .ace-famhead-name {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  font-family: "DM Sans", sans-serif;
+}
+.ace-app .ace-famhead-role {
+  margin-top: 3px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: 0.06em;
+  color: var(--text-3); text-transform: uppercase;
+}
+
+/* Family tree states */
+.ace-app .ace-famtree-ready {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 16px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-2);
+  flex-wrap: wrap;
+}
+.ace-app .ace-famtree-ready-text {
+  margin: 0; flex: 1; min-width: 160px;
+  font-size: 13.5px; color: var(--text-2); line-height: 1.5;
+}
+.ace-app .ace-famtree-btn { flex-shrink: 0; }
+
+.ace-app .ace-famtree-placeholder {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 28px 20px; text-align: center;
+  border-radius: 10px;
+  border: 1.5px dashed var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text-3);
+}
+.ace-app .ace-famtree-placeholder-icon { opacity: 0.45; }
+.ace-app .ace-famtree-placeholder-text {
+  font-size: 13.5px; font-weight: 600; color: var(--text-2);
+}
+.ace-app .ace-famtree-placeholder-sub {
+  font-size: 12px; color: var(--text-3); line-height: 1.5; max-width: 32ch;
+}
+
 @container ace (min-width: 760px) {
   .ace-app .ace-breadcrumb { padding: 18px 32px 0; }
   .ace-app .ace-section { padding: 56px 64px; }
@@ -747,6 +948,10 @@
   .ace-app .ace-cta-body { flex: 1; }
 
   .ace-app .ace-fam-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .ace-app .ace-famtabs-panel { padding: 28px; }
+  .ace-app .ace-famtabs-tab { padding: 13px 20px; font-size: 14px; }
+  .ace-app .ace-famheads-grid { flex-wrap: nowrap; }
+  .ace-app .ace-famhead-card { min-width: 0; }
   .ace-app .ace-steps { grid-template-columns: repeat(4, 1fr); gap: 16px; }
 
   .ace-app .ace-sheet-backdrop { padding: 24px; }
