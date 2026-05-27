@@ -173,10 +173,19 @@ export function Home() {
     <>
       <PageTitle title="Home" />
 
-      <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden">
+      <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16">
+        {/* Tape accent for the whole board */}
+        <div className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20" 
+             style={{ 
+               background: 'repeating-linear-gradient(-45deg, var(--tape-gold) 0 10px, rgba(255,255,255,0.1) 10px 14px)',
+               transform: 'rotate(-0.5deg)',
+               borderRadius: '2px'
+             }} 
+        />
+        
         <div className="vsa-container relative z-10 w-full">
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
-            <div className="scrapbook-paper flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+            <div className="scrapbook-paper flex flex-col justify-center p-6 sm:p-8 lg:p-10 scrapbook-rotate-sm-left">
               <span className="scrapbook-pin" aria-hidden />
               <div className="vsa-animate-slide-up mb-6 flex items-center gap-3 font-sans text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
                 <span className="h-[1.5px] w-8 bg-[var(--brand)]" />
@@ -244,7 +253,7 @@ export function Home() {
                   decoding="async"
                 />
               </div>
-              <p className="scrapbook-sticker scrapbook-sticker-gold mt-8 text-center">
+              <p className="scrapbook-sticker scrapbook-sticker-gold mt-8 text-center scrapbook-rotate-sm-right">
                 Est. 1977 / Nonprofit / Open to all UCSD students
               </p>
             </div>
@@ -257,7 +266,7 @@ export function Home() {
       <RevealOnScrollWrapper>
         <section className="py-12 sm:py-16 bg-[var(--surface2)]">
           <div className="vsa-container">
-            <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10 lg:p-12">
+            <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10 lg:p-12 scrapbook-rotate-sm-right">
               <span className="scrapbook-pin" aria-hidden />
               <div className="grid gap-10 lg:grid-cols-[1fr_0.5fr] lg:items-center">
                 <div>
@@ -278,11 +287,11 @@ export function Home() {
                   </div>
                 </div>
                 <div className="relative hidden lg:block">
-                  <div className="scrapbook-note rotate-[-2deg] p-6 text-center">
+                  <div className="scrapbook-note rotate-[-2deg] p-6 text-center shadow-lg">
                     <div className="mb-2 font-serif text-3xl" style={{ color: 'var(--brand)' }}>8</div>
                     <div className="font-sans text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text3)' }}>Ways to Connect</div>
                   </div>
-                  <div className="absolute -bottom-4 -right-4 scrapbook-note rotate-[4deg] p-4 text-center">
+                  <div className="absolute -bottom-4 -right-4 scrapbook-note rotate-[4deg] p-4 text-center shadow-md">
                     <svg viewBox="0 0 20 20" fill="currentColor" className="mx-auto h-6 w-6 text-green-500">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -298,7 +307,8 @@ export function Home() {
         <section className="vsa-section scrapbook-board">
           <div className="vsa-container">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-              <div>
+              <div className="relative">
+                <span className="scrapbook-pin -left-4 top-0 hidden lg:block" aria-hidden />
                 <div className="vsa-section-label">Events</div>
                 <h2 className="vsa-section-title">
                   Upcoming
@@ -314,14 +324,20 @@ export function Home() {
                   Upcoming
                 </div>
                 {!featured ? (
-                  <div className="scrapbook-empty font-sans text-sm" style={{ color: 'var(--text3)' }}>
+                  <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
                     No upcoming events posted yet.
                   </div>
                 ) : (
-                  <div className="flex flex-col">
-                    <FeaturedEventHome event={featured} />
+                  <div className="flex flex-col gap-4">
+                    <div className="scrapbook-rotate-sm-right">
+                      <FeaturedEventHome event={featured} />
+                    </div>
                     <div className="space-y-3">
-                      {rest.slice(0, 2).map((event) => <EventRow key={event.id} event={event} />)}
+                      {rest.slice(0, 2).map((event, idx) => (
+                        <div key={event.id} className={idx % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}>
+                          <EventRow event={event} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -335,7 +351,7 @@ export function Home() {
         <section className="vsa-message-section scrapbook-board">
           <div className="vsa-container">
             <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-start">
-              <div className="scrapbook-paper p-6 sm:p-8">
+              <div className="scrapbook-paper p-6 sm:p-8 scrapbook-rotate-sm-left">
                 <span className="scrapbook-pin" aria-hidden />
                 <div className="vsa-section-label">Presidents</div>
                 <h2 className="vsa-section-title max-w-[720px]">

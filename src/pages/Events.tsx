@@ -143,12 +143,14 @@ function PastEventMemoryCard({
   recap,
   stats,
   terms,
+  index,
 }: {
   event: Event;
   linkedAlbum?: string;
   recap?: string;
   stats?: EventMemoryStats;
   terms: AcademicTerm[];
+  index: number;
 }) {
   const d = parseISO(event.date);
   const termCode = getEventTermCode(event, terms);
@@ -160,11 +162,14 @@ function PastEventMemoryCard({
   const hasPoints = event.points > 0;
   const hasTotalPoints = stats && stats.totalPoints > 0;
 
+  // Deterministic rotation
+  const rotationClass = index % 3 === 0 ? 'scrapbook-rotate-sm-left' : index % 3 === 1 ? 'scrapbook-rotate-sm-right' : '';
+
   return (
     <motion.div 
       whileHover={{ y: -4, rotate: 0 }}
       transition={{ duration: 0.2 }}
-      className="scrapbook-photo overflow-hidden transition-all hover:shadow-lg"
+      className={`scrapbook-photo overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
     >
       {/* Image with optional gallery overlay */}
       <div className="relative">
@@ -541,6 +546,7 @@ export function Events() {
                   className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_200px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
+                  <span className="scrapbook-pin" aria-hidden />
                   <div className="relative order-1 bg-[var(--color-surface2)] p-2 sm:order-none">
                     <EventImage
                       event={event}
@@ -651,7 +657,7 @@ export function Events() {
             ) : (
               <RevealOnScrollWrapper>
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {archivedEvents.map((event: Event) => (
+                  {archivedEvents.map((event: Event, index: number) => (
                     <PastEventMemoryCard
                       key={event.id}
                       event={event}
@@ -659,6 +665,7 @@ export function Events() {
                       recap={publishedRecaps[event.id]}
                       stats={memoryStats[event.id]}
                       terms={terms}
+                      index={index}
                     />
                   ))}
                 </div>

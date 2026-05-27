@@ -456,12 +456,18 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
   );
 }
 
-function CompactMemberCard({ member }: { member: CabinetMember }) {
+function CompactMemberCard({ member, index }: { member: CabinetMember; index?: number }) {
+  // Deterministic rotation
+  const rotationClass = typeof index === 'number' ? (index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right') : '';
+
   return (
-    <article
-      className="scrapbook-paper p-4"
+    <motion.article
+      variants={itemVariants}
+      whileHover={{ y: -3 }}
+      className={`scrapbook-paper p-4 transition-all scrapbook-hover-tilt ${rotationClass}`}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
+      <span className="scrapbook-pin" aria-hidden />
       <div className="flex items-start gap-3">
         <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={44} />
         <div className="min-w-0">
@@ -484,7 +490,7 @@ function CompactMemberCard({ member }: { member: CabinetMember }) {
           "{member.fun_fact}"
         </div>
       )}
-    </article>
+    </motion.article>
   );
 }
 
@@ -805,10 +811,8 @@ export function Cabinet() {
                 viewport={{ once: true }}
                 className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
               >
-                {other.map((member) => (
-                  <motion.div key={member.id} variants={itemVariants}>
-                    <CompactMemberCard member={member} />
-                  </motion.div>
+                {other.map((member, index) => (
+                  <CompactMemberCard key={member.id} member={member} index={index} />
                 ))}
               </motion.div>
             </section>

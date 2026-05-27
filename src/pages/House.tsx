@@ -301,7 +301,7 @@ export function House() {
           <div className="program-section-inner">
             <div className="program-eyebrow">The Four Houses</div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {displayedHouses.map(({ house, asset }) => {
+              {displayedHouses.map(({ house, asset }, index) => {
                 const color = getHouseColor(house, asset);
                 const standing = standings.find((s) => s.house === house);
                 const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
@@ -310,12 +310,16 @@ export function House() {
                 const imageUrl = asset?.image_thumbnail_url || asset?.image_url;
                 const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';
 
+                // Deterministic rotation
+                const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
+
                 return (
                   <div
                     key={house}
-                    className="program-feature-card overflow-hidden p-0 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    className={`program-feature-card overflow-hidden p-0 transition-all scrapbook-hover-tilt ${rotationClass}`}
                     style={{ borderColor: `${color}55` }}
                   >
+                    <span className="scrapbook-pin" aria-hidden />
                     {/* Image area */}
                     <div
                       className="relative aspect-[4/3] overflow-hidden"
