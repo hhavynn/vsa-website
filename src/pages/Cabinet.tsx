@@ -1,42 +1,20 @@
-import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
-import { supabase } from '../lib/supabase';
 import { useCabinetYears } from '../hooks/useCabinetYears';
+import { useCabinetMemberYearIds, useCabinetMembers, type CabinetMemberRaw } from '../hooks/useCabinet';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
-interface CabinetMember {
-  id: string;
-  name: string;
-  role: string;
-  category: string;
-  display_order: number;
-  image_url: string | null;
-  thumbnail_url: string | null;
-  year: string | null;
-  college: string | null;
-  major: string | null;
-  minor: string | null;
-  pronouns: string | null;
-  favorite_snack: string | null;
-  fun_fact: string | null;
-  cabinet_year_id: string | null;
-}
+type CabinetMember = CabinetMemberRaw;
 
 const publicUrl = process.env.PUBLIC_URL || '';
 const cabinetImage = (fileName: string) => `${publicUrl}/images/cabinet/${fileName}`;
-const CABINET_MEMBER_FIELDS = 'id, name, role, category, display_order, image_url, thumbnail_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, created_at';
 
 function resolveImageUrl(image?: string | null) {
   if (!image) return null;
   return image.startsWith('http') || image.startsWith('data:') || image.startsWith('/') ? image : cabinetImage(image);
 }
 
-function sortCabinetMembers(a: CabinetMember, b: CabinetMember) {
-  const byDisplayOrder = (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER);
-  if (byDisplayOrder !== 0) return byDisplayOrder;
-  return a.name.localeCompare(b.name);
-}
 
 function groupByRole(members: CabinetMember[]) {
   const groups = new Map<string, CabinetMember[]>();
@@ -523,34 +501,11 @@ function RookieTile({ member }: { member: CabinetMember }) {
 
 export function Cabinet() {
   const { cabinetYears } = useCabinetYears();
-  const [members, setMembers] = useState<CabinetMember[]>([]);
-  const [loadingYearIds, setLoadingYearIds] = useState(true);
-  const [loadingMembers, setLoadingMembers] = useState(false);
-  const [memberCabinetYearIds, setMemberCabinetYearIds] = useState<string[]>([]);
-  const [hasLegacyMembers, setHasLegacyMembers] = useState(false);
   const [selectedCabinetYearId, setSelectedCabinetYearId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    supabase
-      .from('cabinet_members')
-      .select('cabinet_year_id')
-      .then(({ data, error }) => {
-        if (!isMounted) return;
-        if (!error && data) {
-          const yearIds = new Set<string>();
-          let hasNullYear = false;
-          data.forEach((member) => {
-            if (member.cabinet_year_id) yearIds.add(member.cabinet_year_id);
-            else hasNullYear = true;
-          });
-          setMemberCabinetYearIds(Array.from(yearIds));
-          setHasLegacyMembers(hasNullYear);
-        }
-        setLoadingYearIds(false);
-      });
-    return () => { isMounted = false; };
-  }, []);
+  const { data: yearIdsData, isLoading: loadingYearIds } = useCabinetMemberYearIds();
+  const memberCabinetYearIds = yearIdsData?.yearIds ?? [];
+  const hasLegacyMembers = yearIdsData?.hasLegacyMembers ?? false;
 
   const cabinetYearsWithMembers = useMemo(
     () => cabinetYears.filter((year) => memberCabinetYearIds.includes(year.id)),
@@ -577,51 +532,10 @@ export function Cabinet() {
     publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
   const shouldIncludeLegacyMembers = !!effectiveCabinetYearId && currentCabinetYear?.id === effectiveCabinetYearId;
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadMembersForSelectedYear() {
-      if (!effectiveCabinetYearId) {
-        setMembers([]);
-        setLoadingMembers(false);
-        return;
-      }
-
-      setLoadingMembers(true);
-      const selectedYearQuery = supabase
-        .from('cabinet_members')
-        .select(CABINET_MEMBER_FIELDS)
-        .eq('cabinet_year_id', effectiveCabinetYearId)
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      const [selectedYearResult, legacyResult] = await Promise.all([
-        selectedYearQuery,
-        shouldIncludeLegacyMembers
-          ? supabase
-              .from('cabinet_members')
-              .select(CABINET_MEMBER_FIELDS)
-              .is('cabinet_year_id', null)
-              .order('display_order', { ascending: true })
-              .order('created_at', { ascending: true })
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-
-      if (!isMounted) return;
-      if (selectedYearResult.error || legacyResult.error) {
-        setMembers([]);
-      } else {
-        const nextMembers = [
-          ...((selectedYearResult.data ?? []) as CabinetMember[]),
-          ...((legacyResult.data ?? []) as CabinetMember[]),
-        ].sort(sortCabinetMembers);
-        setMembers(nextMembers);
-      }
-      setLoadingMembers(false);
-    }
-
-    loadMembersForSelectedYear();
-    return () => { isMounted = false; };
-  }, [effectiveCabinetYearId, shouldIncludeLegacyMembers]);
+  const { data: members = [], isLoading: loadingMembers } = useCabinetMembers(
+    effectiveCabinetYearId,
+    shouldIncludeLegacyMembers,
+  );
 
   const execBoard = members.filter((member) => member.category === 'Executive Board');
   const genBoard = members.filter((member) => member.category === 'General Board');
