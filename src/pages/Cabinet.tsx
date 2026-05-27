@@ -504,12 +504,11 @@ export function Cabinet() {
   const [selectedCabinetYearId, setSelectedCabinetYearId] = useState<string | null>(null);
 
   const { data: yearIdsData, isLoading: loadingYearIds } = useCabinetMemberYearIds();
-  const memberCabinetYearIds = yearIdsData?.yearIds ?? [];
   const hasLegacyMembers = yearIdsData?.hasLegacyMembers ?? false;
 
   const cabinetYearsWithMembers = useMemo(
-    () => cabinetYears.filter((year) => memberCabinetYearIds.includes(year.id)),
-    [cabinetYears, memberCabinetYearIds]
+    () => cabinetYears.filter((year) => yearIdsData?.yearIds?.includes(year.id) ?? false),
+    [cabinetYears, yearIdsData]
   );
   const currentCabinetYear =
     cabinetYears.find((year) => year.is_active) ??
