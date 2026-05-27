@@ -150,8 +150,9 @@ export function GetInvolved() {
               <Link
                 key={program.id}
                 to={program.link}
-                className="scrapbook-paper group flex min-h-full flex-col items-start gap-4 p-5 transition-transform duration-150 hover:-translate-y-1 sm:p-6"
+                className={`scrapbook-paper group flex min-h-full flex-col items-start gap-4 p-5 transition-transform duration-150 scrapbook-hover-tilt sm:p-6 ${index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}`}
               >
+                <span className="scrapbook-pin" aria-hidden />
                 <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
                   <div className="w-[28px] shrink-0 pt-1">
                     <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>

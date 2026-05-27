@@ -507,6 +507,29 @@
     text-transform: uppercase;
   }
 
+  /* Shared rotation utilities */
+  .scrapbook-rotate-sm-left { transform: rotate(-0.8deg); }
+  .scrapbook-rotate-sm-right { transform: rotate(0.8deg); }
+  .scrapbook-rotate-md-left { transform: rotate(-1.5deg); }
+  .scrapbook-rotate-md-right { transform: rotate(1.5deg); }
+
+  .scrapbook-hover-tilt:hover {
+    transform: translateY(-4px) rotate(0deg) !important;
+    box-shadow: var(--paper-shadow-hover);
+    z-index: 10;
+  }
+
+  /* Tape variants */
+  .scrapbook-tape-teal::before {
+    background: repeating-linear-gradient(45deg, var(--tape-teal) 0 9px, rgba(255, 255, 255, 0.2) 9px 13px);
+  }
+  .scrapbook-tape-coral::before {
+    background: repeating-linear-gradient(-45deg, var(--tape-coral) 0 9px, rgba(255, 255, 255, 0.18) 9px 13px);
+  }
+  .scrapbook-tape-gold::before {
+    background: repeating-linear-gradient(45deg, var(--tape-gold) 0 9px, rgba(255, 255, 255, 0.18) 9px 13px);
+  }
+
   /* Cabinet yearbook wall — staggered 12-col grid, mirrors gallery-memory-wall */
   .cabinet-wall {
     display: grid;

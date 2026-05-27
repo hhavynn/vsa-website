@@ -4,7 +4,6 @@ import { useUVSASchools } from "../hooks/useUVSASchools";
 import { useExternalEvents } from "../hooks/useExternalEvents";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
 import {
   FaGlobe,
   FaMapMarkerAlt,
@@ -165,8 +164,8 @@ export default function UVSANetwork() {
             </div>
           ) : upcomingEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingEvents.map((event) => (
-                <ExternalEventCard key={event.id} event={event} />
+              {upcomingEvents.map((event, index) => (
+                <ExternalEventCard key={event.id} event={event} index={index} />
               ))}
             </div>
           ) : (
@@ -217,8 +216,8 @@ export default function UVSANetwork() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortArchiveEventsUCSDFirst(archiveEvents).map((event) => (
-                <ExternalEventCard key={event.id} event={event} isArchive />
+              {sortArchiveEventsUCSDFirst(archiveEvents).map((event, index) => (
+                <ExternalEventCard key={event.id} event={event} isArchive index={index} />
               ))}
             </div>
           )}
@@ -243,8 +242,8 @@ export default function UVSANetwork() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {schools.map((school) => (
-                <SchoolCard key={school.id} school={school} />
+              {schools.map((school, index) => (
+                <SchoolCard key={school.id} school={school} index={index} />
               ))}
             </div>
           )}
@@ -517,16 +516,22 @@ function FeaturedExternalSpotlight({
 function ExternalEventCard({
   event,
   isArchive = false,
+  index = 0,
 }: {
   event: ExternalEvent;
   isArchive?: boolean;
+  index?: number;
 }) {
   const schoolName = event.uvsa_school?.short_name || "Unknown School";
   const isUCSD = event.uvsa_school?.slug === "ucsd";
   const isSpecialPointEvent = isUCSD && event.points > 4;
 
+  // Deterministic rotation
+  const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
+
   return (
-    <Card className="flex flex-col h-full overflow-hidden transition-all hover:translate-y-[-4px] hover:shadow-lg">
+    <div className={`scrapbook-paper h-full overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}>
+      <span className="scrapbook-pin" aria-hidden />
       <div className="p-5 flex-grow space-y-4">
         <div className="flex flex-wrap justify-between items-start gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -649,17 +654,19 @@ function ExternalEventCard({
                 : "Past Event"}
             </p>
           )}
-      </div>
-    </Card>
-  );
-}
+          </div>
+          </div>
+          );
+          }
 
-function SchoolCard({ school }: { school: UVSASchool }) {
-  const isHomeSchool = school.slug === "ucsd";
+          function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number }) {  const isHomeSchool = school.slug === "ucsd";
+  const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-right' : 'scrapbook-rotate-sm-left';
+
   return (
-    <Card
-      className={`group p-5 flex flex-col h-full space-y-4 hover:border-[var(--brand)] transition-colors${isHomeSchool ? " border-[var(--brand)]" : ""}`}
+    <div
+      className={`scrapbook-paper group p-5 flex flex-col h-full space-y-4 transition-all scrapbook-hover-tilt ${rotationClass} ${isHomeSchool ? " border-[var(--brand)] ring-1 ring-[var(--brand)]" : ""}`}
     >
+      <span className="scrapbook-pin" aria-hidden />
       <div className="flex items-start justify-between">
         <SchoolVisualMark school={school} />
         {school.city && (
@@ -732,7 +739,7 @@ function SchoolCard({ school }: { school: UVSASchool }) {
           </button>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
 
