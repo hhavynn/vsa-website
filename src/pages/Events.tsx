@@ -13,6 +13,8 @@ import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents, useInfiniteEvents } from '../hooks/useEvents';
 import { AcademicTerm, Event } from '../types';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { motion } from 'framer-motion';
 
 type FilterKey = 'all' | Event['event_type'];
 
@@ -164,7 +166,11 @@ function PastEventMemoryCard({
   const rotationClass = index % 3 === 0 ? 'scrapbook-rotate-sm-left' : index % 3 === 1 ? 'scrapbook-rotate-sm-right' : '';
 
   return (
-    <div className={`scrapbook-photo overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}>
+    <motion.div 
+      whileHover={{ y: -4, rotate: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`scrapbook-photo overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
+    >
       {/* Image with optional gallery overlay */}
       <div className="relative">
         <EventImage
@@ -252,7 +258,7 @@ function PastEventMemoryCard({
           </p>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -468,7 +474,9 @@ export function Events() {
         {featured && (
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
-            <div
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
               className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
               style={{ borderColor: 'var(--color-border)' }}
             >
@@ -523,7 +531,7 @@ export function Events() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </>
         )}
 
@@ -532,8 +540,9 @@ export function Events() {
             <Label className="mb-0">All Upcoming</Label>
             <div className="mt-5 mb-10 grid gap-4">
               {rest.map((event: Event) => (
-                <div
+                <motion.div
                   key={event.id}
+                  whileHover={{ y: -2 }}
                   className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_200px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
@@ -588,7 +597,7 @@ export function Events() {
                   <div className="order-4 flex items-start pt-1 sm:col-span-2 sm:order-none lg:col-auto lg:justify-end">
                     <AddToCalendarButton event={event} align="right" />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </>
@@ -646,7 +655,7 @@ export function Events() {
                 </p>
               </div>
             ) : (
-              <>
+              <RevealOnScrollWrapper>
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {archivedEvents.map((event: Event, index: number) => (
                     <PastEventMemoryCard
@@ -681,7 +690,7 @@ export function Events() {
                     </button>
                   </div>
                 )}
-              </>
+              </RevealOnScrollWrapper>
             )}
           </div>
         </>

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type Role = 'user' | 'assistant';
 type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
@@ -257,13 +258,18 @@ export function VsaAiAssistant() {
 
   return (
     <div className="fixed bottom-5 left-4 z-50 sm:left-5">
-      {isOpen && (
-        <section
-          id="vsa-ai-assistant-panel"
-          className="fixed inset-x-3 bottom-[86px] flex max-h-[75dvh] flex-col overflow-hidden rounded-[1.35rem] border bg-[var(--color-surface)] shadow-[0_22px_70px_rgba(15,23,42,0.28)] sm:inset-x-auto sm:left-5 sm:w-[380px] sm:max-h-[560px]"
-          style={{ borderColor: 'var(--color-border)' }}
-          aria-label="VSA AI Assistant chat panel"
-        >
+      <AnimatePresence>
+        {isOpen && (
+          <motion.section
+            id="vsa-ai-assistant-panel"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="fixed inset-x-3 bottom-[86px] flex max-h-[75dvh] flex-col overflow-hidden rounded-[1.35rem] border bg-[var(--color-surface)] shadow-[0_22px_70px_rgba(15,23,42,0.28)] sm:inset-x-auto sm:left-5 sm:w-[380px] sm:max-h-[560px]"
+            style={{ borderColor: 'var(--color-border)' }}
+            aria-label="VSA AI Assistant chat panel"
+          >
           <div
             className="relative overflow-hidden border-b px-4 py-3.5"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
@@ -309,7 +315,13 @@ export function VsaAiAssistant() {
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4" aria-live="polite">
             {messages.length === 0 ? (
               <div className="space-y-4 py-1">
-                <div className="rounded-2xl border border-dashed p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="rounded-2xl border border-dashed p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]" 
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
+                >
                   <div className="mb-3 inline-flex items-center gap-2 rounded-full border px-2.5 py-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400" style={{ borderColor: 'var(--color-border)' }}>
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
                     Public VSA helper
@@ -320,11 +332,16 @@ export function VsaAiAssistant() {
                   <p className="mt-1 font-sans text-xs leading-5" style={{ color: 'var(--color-text3)' }}>
                     If I do not have approved info, I will say so.
                   </p>
-                </div>
+                </motion.div>
                 <div className="flex flex-wrap gap-2">
-                  {STARTER_QUESTIONS.map((question) => (
-                    <button
+                  {STARTER_QUESTIONS.map((question, idx) => (
+                    <motion.button
                       key={question}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.15 + idx * 0.03 }}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
                       type="button"
                       onClick={() => sendMessage(question)}
                       disabled={loading}
@@ -332,14 +349,20 @@ export function VsaAiAssistant() {
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
                     >
                       {question}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
                 {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <motion.div 
+                    key={message.id} 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
                     <div className={`max-w-[88%] ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
                       <div
                         className={`rounded-2xl px-3.5 py-2.5 font-sans text-sm leading-6 ${
@@ -401,7 +424,7 @@ export function VsaAiAssistant() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {loading && (
                   <div className="flex justify-start">
@@ -449,26 +472,31 @@ export function VsaAiAssistant() {
                 className="min-h-[44px] flex-1 resize-none rounded-xl border bg-[var(--color-input)] px-3 py-2 font-sans text-sm leading-5 text-[var(--color-text)] placeholder:text-[var(--color-text3)] outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 dark:focus:border-brand-400"
                 style={{ borderColor: 'var(--color-border)' }}
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={loading || input.trim().length === 0}
                 className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
                 aria-label="Send Ask VSA message"
               >
                 <SendIcon />
-              </button>
+              </motion.button>
             </div>
             <div className="mt-1 text-right font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
               {input.length}/{MAX_INPUT_LENGTH}
             </div>
           </form>
-        </section>
-      )}
+          </motion.section>
+        )}
+      </AnimatePresence>
 
-      <button
+      <motion.button
+        whileHover={{ y: -2, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
+        className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
         style={{ borderColor: 'var(--color-border)' }}
         aria-expanded={isOpen}
         aria-controls="vsa-ai-assistant-panel"
@@ -480,7 +508,7 @@ export function VsaAiAssistant() {
         </span>
         <span className="hidden sm:inline">Ask VSA</span>
         <span className="sm:hidden">Ask</span>
-      </button>
+      </motion.button>
     </div>
   );
 }

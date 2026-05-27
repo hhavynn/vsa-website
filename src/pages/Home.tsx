@@ -10,6 +10,8 @@ import { Event } from '../types';
 import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
+import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { motion } from 'framer-motion';
 
 const pillars = [
   {
@@ -44,7 +46,11 @@ function EventRow({ event }: { event: Event }) {
   const d = new Date(event.date);
 
   return (
-    <div className="vsa-event-row scrapbook-note px-4 py-4">
+    <motion.div 
+      whileHover={{ y: -2, scale: 1.01 }}
+      transition={{ duration: 0.2 }}
+      className="vsa-event-row scrapbook-note px-4 py-4"
+    >
       <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--border)' }}>
         <div className="font-sans text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
           {format(d, 'MMM')}
@@ -68,7 +74,7 @@ function EventRow({ event }: { event: Event }) {
         color={TYPE_COLOR[event.event_type] ?? 'gray'}
         className="hidden sm:inline-flex"
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -77,7 +83,12 @@ function FeaturedEventHome({ event }: { event: Event }) {
   const imageUrl = event.thumbnail_url || event.image_url;
 
   return (
-    <div className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]">
+    <motion.div 
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
+    >
       <div className="flex flex-col justify-center p-6 sm:p-8 lg:border-r" style={{ borderColor: 'var(--border)' }}>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <Badge
@@ -129,7 +140,7 @@ function FeaturedEventHome({ event }: { event: Event }) {
           <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{format(d, 'MMM')}</div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -199,13 +210,17 @@ export function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {pillars.map((pillar, idx) => (
-                    <div
+                    <motion.div
                       key={pillar.label}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.45 + idx * 0.08 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
                       className={`scrapbook-note flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3 ${idx % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}`}
                     >
                       <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
                       <span className="font-sans text-[13px] font-semibold leading-none" style={{ color: 'var(--text)' }}>{pillar.label}</span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
@@ -248,144 +263,150 @@ export function Home() {
 
       <ThisWeekInVSA />
 
-      <section className="py-12 sm:py-16 bg-[var(--surface2)]">
-        <div className="vsa-container">
-          <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10 lg:p-12 scrapbook-rotate-sm-right">
-            <span className="scrapbook-pin" aria-hidden />
-            <div className="grid gap-10 lg:grid-cols-[1fr_0.5fr] lg:items-center">
-              <div>
-                <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Start Your Journey</span>
-                <h2 className="vsa-section-title mb-6">
-                  New to VSA?
-                  <br />
-                  <span className="italic" style={{ color: 'var(--brand)' }}>Begin here.</span>
-                </h2>
-                <p className="max-w-xl font-sans text-base leading-relaxed" style={{ color: 'var(--text2)' }}>
-                  We\'ve put together a friendly "Passport" checklist to help you navigate our programs, 
-                  meet new people, and make the most of your time with us.
-                </p>
-                <div className="mt-8">
-                  <Link to="/get-involved" className="vsa-btn-primary">
-                    View the Checklist -&gt;
-                  </Link>
-                </div>
-              </div>
-              <div className="relative hidden lg:block">
-                <div className="scrapbook-note rotate-[-2deg] p-6 text-center shadow-lg">
-                  <div className="mb-2 font-serif text-3xl" style={{ color: 'var(--brand)' }}>8</div>
-                  <div className="font-sans text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text3)' }}>Ways to Connect</div>
-                </div>
-                <div className="absolute -bottom-4 -right-4 scrapbook-note rotate-[4deg] p-4 text-center shadow-md">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="mx-auto h-6 w-6 text-green-500">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="vsa-section scrapbook-board">
-        <div className="vsa-container">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-            <div className="relative">
-              <span className="scrapbook-pin -left-4 top-0 hidden lg:block" aria-hidden />
-              <div className="vsa-section-label">Events</div>
-              <h2 className="vsa-section-title">
-                Upcoming
-                <br />
-                <em>events.</em>
-              </h2>
-              <div className="mt-7">
-                <Link to="/events" className="vsa-btn-primary">See All Events</Link>
-              </div>
-            </div>
-            <div>
-              <div className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
-                Upcoming
-              </div>
-              {!featured ? (
-                <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
-                  No upcoming events posted yet.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="scrapbook-rotate-sm-right">
-                    <FeaturedEventHome event={featured} />
-                  </div>
-                  <div className="space-y-3">
-                    {rest.slice(0, 2).map((event, idx) => (
-                      <div key={event.id} className={idx % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}>
-                        <EventRow event={event} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="vsa-message-section scrapbook-board">
-        <div className="vsa-container">
-          <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-start">
-            <div className="scrapbook-paper p-6 sm:p-8 scrapbook-rotate-sm-left">
+      <RevealOnScrollWrapper>
+        <section className="py-12 sm:py-16 bg-[var(--surface2)]">
+          <div className="vsa-container">
+            <div className="scrapbook-paper relative overflow-hidden p-6 sm:p-10 lg:p-12 scrapbook-rotate-sm-right">
               <span className="scrapbook-pin" aria-hidden />
-              <div className="vsa-section-label">Presidents</div>
-              <h2 className="vsa-section-title max-w-[720px]">
-                {presidentsHeading}
-              </h2>
-              <div className="mt-8 grid gap-5 md:grid-cols-2">
-                {presidentBodyParagraphs.map((paragraph, index) => (
-                  <p key={`${paragraph.slice(0, 24)}-${index}`} className="whitespace-pre-line font-sans text-sm leading-[1.9]" style={{ color: 'var(--text2)' }}>
-                    {paragraph}
+              <div className="grid gap-10 lg:grid-cols-[1fr_0.5fr] lg:items-center">
+                <div>
+                  <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Start Your Journey</span>
+                  <h2 className="vsa-section-title mb-6">
+                    New to VSA?
+                    <br />
+                    <span className="italic" style={{ color: 'var(--brand)' }}>Begin here.</span>
+                  </h2>
+                  <p className="max-w-xl font-sans text-base leading-relaxed" style={{ color: 'var(--text2)' }}>
+                    We've put together a friendly "Passport" checklist to help you navigate our programs, 
+                    meet new people, and make the most of your time with us.
                   </p>
-                ))}
-              </div>
-              {hasSignatureBlock && (
-                <div className="mt-7 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-                  <div className="font-sans text-sm" style={{ color: 'var(--text3)' }}>{signatureLines[0]}</div>
-                  <div className="mt-1 font-serif text-xl italic" style={{ color: 'var(--accent)' }}>{signatureName}</div>
-                  <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>{signatureRole}</div>
+                  <div className="mt-8">
+                    <Link to="/get-involved" className="vsa-btn-primary">
+                      View the Checklist -&gt;
+                    </Link>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div>
-              {presidentsPhotoUrl ? (
-                <div className="scrapbook-photo rotate-[1.5deg]">
-                  <img
-                    src={getSupabaseImageUrl(presidentsPhotoUrl, {
-                      width: 440,
-                      height: 586,
-                      resize: 'cover',
-                      quality: 74,
-                    })}
-                    srcSet={getSupabaseImageSrcSet(presidentsPhotoUrl, [320, 440, 640], {
-                      resize: 'cover',
-                      quality: 74,
-                    })}
-                    sizes="(min-width: 1024px) 220px, 70vw"
-                    alt={presidentsContent.names}
-                    className="aspect-[3/4] w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                <div className="relative hidden lg:block">
+                  <div className="scrapbook-note rotate-[-2deg] p-6 text-center shadow-lg">
+                    <div className="mb-2 font-serif text-3xl" style={{ color: 'var(--brand)' }}>8</div>
+                    <div className="font-sans text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text3)' }}>Ways to Connect</div>
+                  </div>
+                  <div className="absolute -bottom-4 -right-4 scrapbook-note rotate-[4deg] p-4 text-center shadow-md">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="mx-auto h-6 w-6 text-green-500">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
-              ) : (
-                <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
-                  <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>G + P</span>
-                </div>
-              )}
-              <div className="mt-3 border-t py-3" style={{ borderColor: 'var(--border)' }}>
-                <div className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>{presidentsContent.names}</div>
-                <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]" style={{ color: 'var(--text3)' }}>{presidentsContent.role}</div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </RevealOnScrollWrapper>
+
+      <RevealOnScrollWrapper>
+        <section className="vsa-section scrapbook-board">
+          <div className="vsa-container">
+            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+              <div className="relative">
+                <span className="scrapbook-pin -left-4 top-0 hidden lg:block" aria-hidden />
+                <div className="vsa-section-label">Events</div>
+                <h2 className="vsa-section-title">
+                  Upcoming
+                  <br />
+                  <em>events.</em>
+                </h2>
+                <div className="mt-7">
+                  <Link to="/events" className="vsa-btn-primary">See All Events</Link>
+                </div>
+              </div>
+              <div>
+                <div className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
+                  Upcoming
+                </div>
+                {!featured ? (
+                  <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
+                    No upcoming events posted yet.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="scrapbook-rotate-sm-right">
+                      <FeaturedEventHome event={featured} />
+                    </div>
+                    <div className="space-y-3">
+                      {rest.slice(0, 2).map((event, idx) => (
+                        <div key={event.id} className={idx % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}>
+                          <EventRow event={event} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </RevealOnScrollWrapper>
+
+      <RevealOnScrollWrapper>
+        <section className="vsa-message-section scrapbook-board">
+          <div className="vsa-container">
+            <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-start">
+              <div className="scrapbook-paper p-6 sm:p-8 scrapbook-rotate-sm-left">
+                <span className="scrapbook-pin" aria-hidden />
+                <div className="vsa-section-label">Presidents</div>
+                <h2 className="vsa-section-title max-w-[720px]">
+                  {presidentsHeading}
+                </h2>
+                <div className="mt-8 grid gap-5 md:grid-cols-2">
+                  {presidentBodyParagraphs.map((paragraph, index) => (
+                    <p key={`${paragraph.slice(0, 24)}-${index}`} className="whitespace-pre-line font-sans text-sm leading-[1.9]" style={{ color: 'var(--text2)' }}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+                {hasSignatureBlock && (
+                  <div className="mt-7 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+                    <div className="font-sans text-sm" style={{ color: 'var(--text3)' }}>{signatureLines[0]}</div>
+                    <div className="mt-1 font-serif text-xl italic" style={{ color: 'var(--accent)' }}>{signatureName}</div>
+                    <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>{signatureRole}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                {presidentsPhotoUrl ? (
+                  <div className="scrapbook-photo rotate-[1.5deg]">
+                    <img
+                      src={getSupabaseImageUrl(presidentsPhotoUrl, {
+                        width: 440,
+                        height: 586,
+                        resize: 'cover',
+                        quality: 74,
+                      })}
+                      srcSet={getSupabaseImageSrcSet(presidentsPhotoUrl, [320, 440, 640], {
+                        resize: 'cover',
+                        quality: 74,
+                      })}
+                      sizes="(min-width: 1024px) 220px, 70vw"
+                      alt={presidentsContent.names}
+                      className="aspect-[3/4] w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ) : (
+                  <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
+                    <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>G + P</span>
+                  </div>
+                )}
+                <div className="mt-3 border-t py-3" style={{ borderColor: 'var(--border)' }}>
+                  <div className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>{presidentsContent.names}</div>
+                  <div className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]" style={{ color: 'var(--text3)' }}>{presidentsContent.role}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </RevealOnScrollWrapper>
     </>
   );
 }

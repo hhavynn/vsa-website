@@ -18,6 +18,8 @@ import {
 } from "react-icons/fa";
 import { formatDateOnly } from "../lib/dateOnly";
 import { ExternalEvent, UVSASchool } from "../types";
+import { motion } from "framer-motion";
+import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
 
 // Icon components cast to any to avoid TS JSX errors in some environments
 const GlobeIcon = FaGlobe as any;
@@ -46,6 +48,21 @@ const EXTERNAL_SHOWCASE_ORDER = [
   "csun",
   "cpslo",
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function UVSANetwork() {
   const { schools, loading: schoolsLoading } = useUVSASchools();
@@ -89,61 +106,65 @@ export default function UVSANetwork() {
       </div>
 
       <div className="vsa-container py-12 space-y-20">
-        <section className="scrapbook-paper p-8 space-y-4">
-          <p
-            className="font-sans text-lg leading-relaxed"
-            style={{ color: "var(--text2)" }}
-          >
-            <span className="font-bold text-[var(--text)]">Externals</span> are
-            events hosted by other VSAs where UCSD members can attend, support,
-            compete, and meet people from other schools. Externals can look like
-            pageants, game shows, talent competitions, showcases, or performance
-            nights, but they are also a way for schools to support each other's
-            philanthropy projects and cultural programming.
-          </p>
-          <p
-            className="font-sans text-sm leading-relaxed"
-            style={{ color: "var(--text3)" }}
-          >
-            Many externals are also tied to philanthropy, culture, or community
-            causes. Some feel like big competitions or showcases, but they still
-            help connect schools and support the values behind UVSA.
-          </p>
-          <div className="pt-4 flex flex-wrap gap-4">
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
-              style={{ borderColor: "var(--border)" }}
+        <RevealOnScrollWrapper>
+          <section className="scrapbook-paper p-8 space-y-4">
+            <p
+              className="font-sans text-lg leading-relaxed"
+              style={{ color: "var(--text2)" }}
             >
-              <UsersIcon size={18} className="text-[var(--brand)]" />
-              <span className="font-sans text-sm font-medium">13 Schools</span>
-            </div>
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
-              style={{ borderColor: "var(--border)" }}
+              <span className="font-bold text-[var(--text)]">Externals</span> are
+              events hosted by other VSAs where UCSD members can attend, support,
+              compete, and meet people from other schools. Externals can look like
+              pageants, game shows, talent competitions, showcases, or performance
+              nights, but they are also a way for schools to support each other's
+              philanthropy projects and cultural programming.
+            </p>
+            <p
+              className="font-sans text-sm leading-relaxed"
+              style={{ color: "var(--text3)" }}
             >
-              <TrophyIcon size={18} className="text-[var(--brand)]" />
-              <span className="font-sans text-sm font-medium">
-                Competitions
-              </span>
+              Many externals are also tied to philanthropy, culture, or community
+              causes. Some feel like big competitions or showcases, but they still
+              help connect schools and support the values behind UVSA.
+            </p>
+            <div className="pt-4 flex flex-wrap gap-4">
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <UsersIcon size={18} className="text-[var(--brand)]" />
+                <span className="font-sans text-sm font-medium">13 Schools</span>
+              </div>
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <TrophyIcon size={18} className="text-[var(--brand)]" />
+                <span className="font-sans text-sm font-medium">
+                  Competitions
+                </span>
+              </div>
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <StarIcon size={18} className="text-[var(--brand)]" />
+                <span className="font-sans text-sm font-medium">
+                  VSA Community
+                </span>
+              </div>
             </div>
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <StarIcon size={18} className="text-[var(--brand)]" />
-              <span className="font-sans text-sm font-medium">
-                VSA Community
-              </span>
-            </div>
-          </div>
-        </section>
+          </section>
+        </RevealOnScrollWrapper>
 
         {/* 2. Featured External */}
-        <FeaturedExternalSpotlight
-          event={spotlightEvent}
-          loading={spotlightLoading}
-          isFallback={!featuredEvent}
-        />
+        <RevealOnScrollWrapper>
+          <FeaturedExternalSpotlight
+            event={spotlightEvent}
+            loading={spotlightLoading}
+            isFallback={!featuredEvent}
+          />
+        </RevealOnScrollWrapper>
 
         {/* 3. Upcoming Externals */}
         <section className="space-y-8">
@@ -163,11 +184,17 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : upcomingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
               {upcomingEvents.map((event, index) => (
                 <ExternalEventCard key={event.id} event={event} index={index} />
               ))}
-            </div>
+            </motion.div>
           ) : (
             <div
               className="scrapbook-note p-10 text-center border-dashed border-2"
@@ -215,11 +242,17 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
               {sortArchiveEventsUCSDFirst(archiveEvents).map((event, index) => (
                 <ExternalEventCard key={event.id} event={event} isArchive index={index} />
               ))}
-            </div>
+            </motion.div>
           )}
         </section>
 
@@ -241,104 +274,114 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
               {schools.map((school, index) => (
                 <SchoolCard key={school.id} school={school} index={index} />
               ))}
-            </div>
+            </motion.div>
           )}
         </section>
 
         {/* 6. How to Attend & Points */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* How to Attend */}
-          <section className="scrapbook-paper p-8 space-y-6">
-            <div className="flex items-center gap-3">
-              <InfoIcon className="text-[var(--brand)]" size={24} />
-              <h2 className="font-serif text-2xl">
-                How to Attend Your First External
-              </h2>
-            </div>
-            <p className="font-sans text-sm text-[var(--text3)] italic">
-              Ride forms are usually posted through the VSA at UCSD Linktree
-              when we coordinate attendance.
-            </p>
-            <ol className="space-y-4 list-none p-0">
-              {[
-                "Find an external you want to attend in the list above.",
-                "Check the host school’s Linktree or Instagram for RSVP/tickets.",
-                "Look for the external ride form in our Linktree for rides.",
-                "Show up respectfully and represent VSA at UCSD well.",
-                "Check in or follow the points proof process if announced.",
-                "Have fun, meet other schools, and bring the energy back to UCSD!",
-              ].map((step, i) => (
-                <li key={i} className="flex gap-4 items-start">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold">
-                    {i + 1}
-                  </span>
-                  <p className="font-sans text-[var(--text2)] leading-tight">
-                    {step}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </section>
+          <RevealOnScrollWrapper>
+            <section className="scrapbook-paper p-8 space-y-6">
+              <div className="flex items-center gap-3">
+                <InfoIcon className="text-[var(--brand)]" size={24} />
+                <h2 className="font-serif text-2xl">
+                  How to Attend Your First External
+                </h2>
+              </div>
+              <p className="font-sans text-sm text-[var(--text3)] italic">
+                Ride forms are usually posted through the VSA at UCSD Linktree
+                when we coordinate attendance.
+              </p>
+              <ol className="space-y-4 list-none p-0">
+                {[
+                  "Find an external you want to attend in the list above.",
+                  "Check the host school’s Linktree or Instagram for RSVP/tickets.",
+                  "Look for the external ride form in our Linktree for rides.",
+                  "Show up respectfully and represent VSA at UCSD well.",
+                  "Check in or follow the points proof process if announced.",
+                  "Have fun, meet other schools, and bring the energy back to UCSD!",
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-4 items-start">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold">
+                      {i + 1}
+                    </span>
+                    <p className="font-sans text-[var(--text2)] leading-tight">
+                      {step}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </RevealOnScrollWrapper>
 
           {/* Points Explainer */}
-          <section className="scrapbook-paper p-8 space-y-6">
-            <div className="flex items-center gap-3">
-              <StarIcon className="text-[var(--brand)]" size={24} />
-              <h2 className="font-serif text-2xl">External Points Explainer</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-[var(--surface2)] border border-[var(--brand)] border-opacity-20">
-                <p className="font-serif text-xl text-center">
-                  All externals ={" "}
-                  <span className="text-[var(--brand)] font-bold">
-                    4 Points
-                  </span>
-                </p>
+          <RevealOnScrollWrapper>
+            <section className="scrapbook-paper p-8 space-y-6">
+              <div className="flex items-center gap-3">
+                <StarIcon className="text-[var(--brand)]" size={24} />
+                <h2 className="font-serif text-2xl">External Points Explainer</h2>
               </div>
-              <ul className="space-y-2 font-sans text-sm text-[var(--text2)] list-disc pl-5">
-                <li>
-                  Attending any UVSA external earns 4 points on the UCSD VSA
-                  leaderboard by default.
-                </li>
-                <li>
-                  Wild N Culture earns 5 points because it is a major
-                  UCSD-hosted event and one of the biggest nights of the year.
-                </li>
-                <li>
-                  Points reward you for representing VSA at UCSD in the wider
-                  UVSA community.
-                </li>
-                <li>
-                  Cabinet and interns do not earn leaderboard points for
-                  required work duties (staffing, shifts, etc.).
-                </li>
-              </ul>
-
-              <div
-                className="pt-4 border-t"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircleIcon size={16} className="text-green-500" />
-                  <h3 className="font-bold text-sm">
-                    Represent UCSD with Pride
-                  </h3>
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-[var(--surface2)] border border-[var(--brand)] border-opacity-20">
+                  <p className="font-serif text-xl text-center">
+                    All externals ={" "}
+                    <span className="text-[var(--brand)] font-bold">
+                      4 Points
+                    </span>
+                  </p>
                 </div>
-                <p
-                  className="font-sans text-xs italic"
-                  style={{ color: "var(--text3)" }}
+                <ul className="space-y-2 font-sans text-sm text-[var(--text2)] list-disc pl-5">
+                  <li>
+                    Attending any UVSA external earns 4 points on the UCSD VSA
+                    leaderboard by default.
+                  </li>
+                  <li>
+                    Wild N Culture earns 5 points because it is a major
+                    UCSD-hosted event and one of the biggest nights of the year.
+                  </li>
+                  <li>
+                    Points reward you for representing VSA at UCSD in the wider
+                    UVSA community.
+                  </li>
+                  <li>
+                    Cabinet and interns do not earn leaderboard points for
+                    required work duties (staffing, shifts, etc.).
+                  </li>
+                </ul>
+
+                <div
+                  className="pt-4 border-t"
+                  style={{ borderColor: "var(--border)" }}
                 >
-                  Be respectful to host schools, follow event rules, and stay
-                  responsible. Support other VSAs the way we want others to
-                  support us!
-                </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircleIcon size={16} className="text-green-500" />
+                    <h3 className="font-bold text-sm">
+                      Represent UCSD with Pride
+                    </h3>
+                  </div>
+                  <p
+                    className="font-sans text-xs italic"
+                    style={{ color: "var(--text3)" }}
+                  >
+                    Be respectful to host schools, follow event rules, and stay
+                    responsible. Support other VSAs the way we want others to
+                    support us!
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </RevealOnScrollWrapper>
         </div>
       </div>
     </>
@@ -530,7 +573,11 @@ function ExternalEventCard({
   const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
 
   return (
-    <div className={`scrapbook-paper h-full overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}>
+    <motion.div 
+      variants={itemVariants}
+      whileHover={{ y: -4 }}
+      className={`scrapbook-paper h-full overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
+    >
       <span className="scrapbook-pin" aria-hidden />
       <div className="p-5 flex-grow space-y-4">
         <div className="flex flex-wrap justify-between items-start gap-2">
@@ -654,16 +701,19 @@ function ExternalEventCard({
                 : "Past Event"}
             </p>
           )}
-          </div>
-          </div>
-          );
-          }
+      </div>
+    </motion.div>
+  );
+}
 
-          function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number }) {  const isHomeSchool = school.slug === "ucsd";
+function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number }) {
+  const isHomeSchool = school.slug === "ucsd";
   const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-right' : 'scrapbook-rotate-sm-left';
 
   return (
-    <div
+    <motion.div
+      variants={itemVariants}
+      whileHover={{ y: -4 }}
       className={`scrapbook-paper group p-5 flex flex-col h-full space-y-4 transition-all scrapbook-hover-tilt ${rotationClass} ${isHomeSchool ? " border-[var(--brand)] ring-1 ring-[var(--brand)]" : ""}`}
     >
       <span className="scrapbook-pin" aria-hidden />
@@ -739,7 +789,7 @@ function ExternalEventCard({
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

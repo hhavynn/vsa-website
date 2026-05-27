@@ -4,6 +4,7 @@ import { useCabinetYears } from '../hooks/useCabinetYears';
 import { useCabinetMemberYearIds, useCabinetMembers, type CabinetMemberRaw } from '../hooks/useCabinet';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
+import { motion } from 'framer-motion';
 
 type CabinetMember = CabinetMemberRaw;
 
@@ -15,6 +16,20 @@ function resolveImageUrl(image?: string | null) {
   return image.startsWith('http') || image.startsWith('data:') || image.startsWith('/') ? image : cabinetImage(image);
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 function groupByRole(members: CabinetMember[]) {
   const groups = new Map<string, CabinetMember[]>();
@@ -446,7 +461,9 @@ function CompactMemberCard({ member, index }: { member: CabinetMember; index?: n
   const rotationClass = typeof index === 'number' ? (index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right') : '';
 
   return (
-    <article
+    <motion.article
+      variants={itemVariants}
+      whileHover={{ y: -3 }}
       className={`scrapbook-paper p-4 transition-all scrapbook-hover-tilt ${rotationClass}`}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
@@ -473,7 +490,7 @@ function CompactMemberCard({ member, index }: { member: CabinetMember; index?: n
           "{member.fun_fact}"
         </div>
       )}
-    </article>
+    </motion.article>
   );
 }
 
@@ -647,27 +664,41 @@ export function Cabinet() {
               </div>
 
               {/* 1. Executive Leads (Priority 0 - Presidents) */}
-              <div className="mb-10">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="mb-10"
+              >
                 {allExecRoles
                   .filter(([role]) => rolePriority(role) === 0)
                   .map(([role, roleMembers]) => (
-                    <div
+                    <motion.div
                       key={role}
+                      variants={itemVariants}
                       className="cabinet-card mx-auto"
                       style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
                     >
                       <ExecutiveFeaturePanel role={role} members={roleMembers} />
-                    </div>
+                    </motion.div>
                   ))}
-              </div>
+              </motion.div>
 
               {/* 2. Supporting Executive Roles (VPs, ICC, Sec, Treas) */}
-              <div className="cabinet-wall">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="cabinet-wall"
+              >
                 {allExecRoles
                   .filter(([role]) => rolePriority(role) > 0)
                   .map(([role, roleMembers], idx) => (
-                    <div
+                    <motion.div
                       key={role}
+                      variants={itemVariants}
                       className="cabinet-card"
                       style={cabCardStyle(idx, SUPPORTING_EXEC_PATTERNS, allExecRoles.length - 1)}
                     >
@@ -676,9 +707,9 @@ export function Cabinet() {
                       ) : (
                         <ExecutiveRolePanel role={role} members={roleMembers} />
                       )}
-                    </div>
+                    </motion.div>
                   ))}
-              </div>
+              </motion.div>
             </section>
           )}
 
@@ -702,17 +733,24 @@ export function Cabinet() {
                 </div>
               </div>
 
-              <div className="cabinet-wall">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="cabinet-wall"
+              >
                 {generalRoles.map(([role, roleMembers], idx) => (
-                  <div
+                  <motion.div
                     key={role}
+                    variants={itemVariants}
                     className="cabinet-card"
                     style={cabCardStyle(idx, DEPT_PATTERNS, generalRoles.length)}
                   >
                     <DeptSpreadCard role={role} members={roleMembers} />
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </section>
           )}
 
@@ -736,17 +774,24 @@ export function Cabinet() {
                 </div>
               </div>
 
-              <div className="cabinet-wall">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="cabinet-wall"
+              >
                 {interns.map((member, idx) => (
-                  <div
+                  <motion.div
                     key={member.id}
+                    variants={itemVariants}
                     className="cabinet-card"
                     style={cabCardStyle(idx, INTERN_PATTERNS, interns.length)}
                   >
                     <RookieTile member={member} />
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </section>
           )}
 
@@ -759,11 +804,17 @@ export function Cabinet() {
                   Additional contributors and specialty roles supporting the organization across the year.
                 </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              >
                 {other.map((member, index) => (
                   <CompactMemberCard key={member.id} member={member} index={index} />
                 ))}
-              </div>
+              </motion.div>
             </section>
           )}
         </div>

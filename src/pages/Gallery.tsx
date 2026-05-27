@@ -5,6 +5,22 @@ import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 const albumPatterns = [
   { rotate: '-1.4deg', offset: '0px', height: '236px', span: 4, tape: 'var(--tape-gold)', tapeX: '48%', tapeRotate: '-2deg' },
@@ -78,18 +94,26 @@ export default function Gallery() {
           </div>
         ) : (
           <>
-            <div className="gallery-memory-wall">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: '-20px' }}
+              className="gallery-memory-wall"
+            >
               {albums.map((album, index) => {
                 const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
 
                 return (
-                  <a
+                  <motion.a
                     key={album.id}
+                    variants={itemVariants}
                     href={album.google_photos_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="gallery-memory-card group block"
+                    className="gallery-memory-card group block transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl"
                     style={getAlbumStyle(index)}
+                    whileHover={{ y: -4 }}
                   >
                     <div className="gallery-memory-image relative">
                       {coverUrl ? (
@@ -163,10 +187,10 @@ export default function Gallery() {
                         </span>
                       </div>
                     </div>
-                  </a>
+                  </motion.a>
                 );
               })}
-            </div>
+            </motion.div>
 
             {hasNextPage && (
               <div className="mt-16 flex justify-center">
