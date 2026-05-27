@@ -441,12 +441,16 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
   );
 }
 
-function CompactMemberCard({ member }: { member: CabinetMember }) {
+function CompactMemberCard({ member, index }: { member: CabinetMember; index?: number }) {
+  // Deterministic rotation
+  const rotationClass = typeof index === 'number' ? (index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right') : '';
+
   return (
     <article
-      className="scrapbook-paper p-4"
+      className={`scrapbook-paper p-4 transition-all scrapbook-hover-tilt ${rotationClass}`}
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
+      <span className="scrapbook-pin" aria-hidden />
       <div className="flex items-start gap-3">
         <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={44} />
         <div className="min-w-0">
@@ -756,8 +760,8 @@ export function Cabinet() {
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {other.map((member) => (
-                  <CompactMemberCard key={member.id} member={member} />
+                {other.map((member, index) => (
+                  <CompactMemberCard key={member.id} member={member} index={index} />
                 ))}
               </div>
             </section>
