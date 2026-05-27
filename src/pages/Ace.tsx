@@ -21,6 +21,14 @@ import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
 import '../styles/ace.css';
 
+// Members whose role_label contains these strings are treated as fam heads.
+const FAM_HEAD_KEYWORDS = ['fam head', 'family head', 'head'];
+function isFamHead(roleLabel: string | null): boolean {
+  if (!roleLabel) return false;
+  const lower = roleLabel.toLowerCase();
+  return FAM_HEAD_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 const ROLES = [
   { role: 'Big',    viet: 'Anh / Chị',  desc: 'A supportive VSA member who helps guide and welcome their Little into the community. Think of your Big as an older sibling, mentor, or trusted friend.' },
   { role: 'Little', viet: 'Em',         desc: 'Someone who receives support and guidance from their Big. As a Little, you gain a built-in support system and a connection to an entire fam.' },
@@ -62,6 +70,7 @@ export function Ace() {
 
   const [openFamId, setOpenFamId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number>(-1);
+  const [selectedFamTab, setSelectedFamTab] = useState<string | null>(null);
 
   const membersByFamily = useMemo(() => {
     const map = new Map<string, AceFamilyMember[]>();
@@ -195,7 +204,7 @@ export function Ace() {
           </section>
         )}
 
-        {/* Fam grid */}
+        {/* Fam tabs */}
         <section className="ace-section">
           <div className="ace-eyebrow">ACE Fams</div>
           {activeFams.length === 0 ? (
@@ -203,19 +212,13 @@ export function Ace() {
               Active ACE fams will appear here once they're published.
             </div>
           ) : (
-            <div className="ace-fam-grid">
-              {activeFams.map((f) => (
-                <FamCard
-                  key={f.family.id}
-                  family={f.family}
-                  accent={f.accent}
-                  viet={f.viet}
-                  memberCount={f.members.length}
-                  gens={f.gens}
-                  onOpen={() => setOpenFamId(f.family.id)}
-                />
-              ))}
-            </div>
+            <FamsTabSection
+              activeFams={activeFams}
+              selectedId={selectedFamTab ?? activeFams[0].family.id}
+              onSelect={setSelectedFamTab}
+              onOpenSheet={(id) => setOpenFamId(id)}
+              dark={dark}
+            />
           )}
         </section>
 
@@ -351,5 +354,168 @@ function FamCard({ family, accent, viet, memberCount, gens, isGraveyard = false,
         </div>
       </div>
     </button>
+  );
+}
+
+// ── Fams Tab Section ──────────────────────────────────────────────
+
+interface FamsTabSectionProps {
+  activeFams: FamDerived[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  onOpenSheet: (id: string) => void;
+  dark: boolean;
+}
+
+function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _dark }: FamsTabSectionProps) {
+  const selected = activeFams.find((f) => f.family.id === selectedId) ?? activeFams[0];
+  const { family, accent, viet, members } = selected;
+  const displayName = getDisplayFamName(family.name);
+
+  const famHeads = members.filter((m) => isFamHead(m.role_label));
+  const hasTree = members.length > 0;
+
+  return (
+    <div className="ace-famtabs">
+      {/* Tab bar */}
+      <div className="ace-famtabs-bar" role="tablist" aria-label="ACE Families">
+        {activeFams.map((f) => {
+          const name = getDisplayFamName(f.family.name);
+          const active = f.family.id === selectedId;
+          return (
+            <button
+              key={f.family.id}
+              role="tab"
+              aria-selected={active}
+              className={`ace-famtabs-tab ace-famtabs-tab-${f.accent} ${active ? 'is-active' : ''}`}
+              onClick={() => onSelect(f.family.id)}
+              type="button"
+            >
+              {name}
+              {f.viet && <span className="ace-famtabs-tab-viet">{f.viet}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Panel */}
+      <div className="ace-famtabs-panel" role="tabpanel">
+        {/* Panel header */}
+        <div className="ace-famtabs-panel-head">
+          <div className="ace-famtabs-cover">
+            <FamCover
+              pattern={patternForFamily(family)}
+              accent={accent}
+              imageUrl={family.cover_image_url}
+              alt={displayName}
+            />
+          </div>
+          <div className="ace-famtabs-panel-title">
+            <div className={`ace-famtabs-panel-name ace-famtabs-panel-name-${accent}`}>{displayName}</div>
+            {viet && <div className="ace-famtabs-panel-viet">{viet}</div>}
+            <div className="ace-famtabs-panel-meta">
+              {members.length} member{members.length === 1 ? '' : 's'}
+              {members.length > 0 && (
+                <>
+                  <span className="ace-fam-meta-sep">·</span>
+                  {generationDepth(members)} gen{generationDepth(members) === 1 ? '' : 's'}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Fam heads */}
+        <div className="ace-famtabs-subsection">
+          <div className="ace-famtabs-sub-label">Fam Head{famHeads.length !== 1 ? 's' : ''}</div>
+          <div className="ace-famheads-grid">
+            {famHeads.length > 0 ? (
+              famHeads.map((m) => (
+                <FamHeadCard
+                  key={m.id}
+                  name={m.name}
+                  photoUrl={m.photo_url ?? null}
+                  roleLabel={m.role_label}
+                  accent={accent}
+                />
+              ))
+            ) : (
+              <>
+                <FamHeadCard name={null} photoUrl={null} roleLabel={null} accent={accent} />
+                <FamHeadCard name={null} photoUrl={null} roleLabel={null} accent={accent} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Family tree */}
+        <div className="ace-famtabs-subsection">
+          <div className="ace-famtabs-sub-label">Family Tree</div>
+          {hasTree ? (
+            <div className="ace-famtree-ready">
+              <p className="ace-famtree-ready-text">
+                This family's tree has {members.length} member{members.length === 1 ? '' : 's'} across {generationDepth(members)} generation{generationDepth(members) === 1 ? '' : 's'}.
+              </p>
+              <button
+                className={`ace-btn ace-btn-secondary ace-famtree-btn`}
+                onClick={() => onOpenSheet(family.id)}
+                type="button"
+              >
+                View Family Tree
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="ace-famtree-placeholder">
+              <svg className="ace-famtree-placeholder-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                <circle cx="5" cy="16" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                <circle cx="19" cy="16" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M12 7.5V11M12 11H6.5M12 11H17.5M6.5 11V13.5M17.5 11V13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <div className="ace-famtree-placeholder-text">Family tree not prepared yet</div>
+              <div className="ace-famtree-placeholder-sub">Check back soon — this fam's lineage is on its way.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface FamHeadCardProps {
+  name: string | null;
+  photoUrl: string | null;
+  roleLabel: string | null;
+  accent: FamAccent;
+}
+
+function FamHeadCard({ name, photoUrl, roleLabel, accent }: FamHeadCardProps) {
+  const initials = name
+    ? name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : null;
+
+  return (
+    <div className="ace-famhead-card">
+      <div className={`ace-famhead-avatar ace-famhead-avatar-${accent} ${!name ? 'is-placeholder' : ''}`}>
+        {photoUrl ? (
+          <img src={photoUrl} alt={name ?? ''} className="ace-famhead-photo" />
+        ) : initials ? (
+          <span>{initials}</span>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        )}
+      </div>
+      <div className="ace-famhead-info">
+        <div className="ace-famhead-name">{name ?? 'TBD'}</div>
+        {roleLabel && <div className="ace-famhead-role">{roleLabel}</div>}
+        {!name && <div className="ace-famhead-role">Fam Head · To be announced</div>}
+      </div>
+    </div>
   );
 }
