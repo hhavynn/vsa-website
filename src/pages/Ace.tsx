@@ -15,7 +15,6 @@ import {
   getDisplayFamName,
   isDeadFam,
   patternForFamily,
-  vietForFamily,
 } from '../lib/aceFamilyAdapter';
 import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
@@ -51,6 +50,17 @@ const FAQS = [
   { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
 ];
 
+const ACTIVE_FAM_SLOTS = [
+  { name: 'Sweatpants', slug: 'sweatpants' },
+  { name: 'Sunshine', slug: 'sunshine' },
+  { name: 'Underwater', slug: 'underwater' },
+  { name: 'Down', slug: 'down' },
+  { name: 'Moon', slug: 'moon' },
+  { name: 'Cross', slug: 'cross' },
+  { name: 'Bang Mi', slug: 'bang-mi' },
+  { name: 'NSF', slug: 'nsf' },
+];
+
 interface FamDerived {
   family: AceFamily;
   accent: FamAccent;
@@ -58,6 +68,35 @@ interface FamDerived {
   members: AceFamilyMember[];
   gens: number;
   isDead: boolean;
+  isPlaceholder?: boolean;
+}
+
+function createPlaceholderFam(slot: number, name: string, slug: string): FamDerived {
+  const id = `placeholder-active-fam-${slug}`;
+  const family: AceFamily = {
+    id,
+    academic_year_start: null,
+    academic_year_end: null,
+    name,
+    slug,
+    cover_image_url: null,
+    theme_color: null,
+    description: 'Coming soon',
+    display_order: slot,
+    is_published: true,
+    created_at: '',
+    updated_at: '',
+  };
+
+  return {
+    family,
+    accent: accentFromThemeColor(null, id),
+    viet: null,
+    members: [],
+    gens: 0,
+    isDead: false,
+    isPlaceholder: true,
+  };
 }
 
 export function Ace() {
@@ -88,7 +127,7 @@ export function Ace() {
       return {
         family: f,
         accent: accentFromThemeColor(f.theme_color, f.id),
-        viet: vietForFamily(f, i),
+        viet: null,
         members,
         gens: generationDepth(members),
         isDead: isDeadFam(f.name),
@@ -96,7 +135,16 @@ export function Ace() {
     });
   }, [families, membersByFamily]);
 
-  const activeFams = useMemo(() => derivedFams.filter((f) => !f.isDead), [derivedFams]);
+  const activeFams = useMemo(() => {
+    const live = derivedFams.filter((f) => !f.isDead);
+    const liveBySlug = new Map(live.map((f) => [f.family.slug.toLowerCase(), f]));
+    const slotted = ACTIVE_FAM_SLOTS.map((slot, i) =>
+      liveBySlug.get(slot.slug) ?? createPlaceholderFam(i + 1, slot.name, slot.slug),
+    );
+    const extras = live.filter((f) => !ACTIVE_FAM_SLOTS.some((slot) => slot.slug === f.family.slug.toLowerCase()));
+
+    return [...slotted, ...extras];
+  }, [derivedFams]);
   const graveyardFams = useMemo(() => derivedFams.filter((f) => f.isDead), [derivedFams]);
 
   const openFam = openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
@@ -369,7 +417,7 @@ interface FamsTabSectionProps {
 
 function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _dark }: FamsTabSectionProps) {
   const selected = activeFams.find((f) => f.family.id === selectedId) ?? activeFams[0];
-  const { family, accent, viet, members } = selected;
+  const { family, accent, viet, members, isPlaceholder } = selected;
   const displayName = getDisplayFamName(family.name);
 
   const famHeads = members.filter((m) => isFamHead(m.role_label));
@@ -475,8 +523,14 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
                 <circle cx="19" cy="16" r="2.5" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M12 7.5V11M12 11H6.5M12 11H17.5M6.5 11V13.5M17.5 11V13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-              <div className="ace-famtree-placeholder-text">Family tree not prepared yet</div>
-              <div className="ace-famtree-placeholder-sub">Check back soon — this fam's lineage is on its way.</div>
+              <div className="ace-famtree-placeholder-text">
+                {isPlaceholder ? 'TBD - coming soon' : 'Family tree not prepared yet'}
+              </div>
+              <div className="ace-famtree-placeholder-sub">
+                {isPlaceholder
+                  ? 'This fam slot is saved while the full lineup gets added.'
+                  : "Check back soon - this fam's lineage is on its way."}
+              </div>
             </div>
           )}
         </div>
