@@ -30,7 +30,7 @@ const whatYouDo = [
   { title: 'Cabinet Interviews', desc: 'Connect one-on-one with cabinet members to learn what each role does, how they lead, and what the day-to-day looks like behind the scenes.' },
   { title: 'Shadow Cabinet Positions', desc: 'Work directly with cabinet to learn planning, operations, communication, and event execution. Shadowing helps you figure out where you want to grow.' },
   { title: 'Support VSA Programming', desc: 'Help with event production, logistics, promotion, and execution across cultural, social, and community-focused VSA programming.' },
-  { title: 'Lead an Intern Project', desc: 'Collaborate with your fellow interns on a major team initiative — such as an intern-led fundraiser — from idea to execution.' },
+  { title: 'Lead an Intern Project', desc: 'Collaborate with your fellow interns on a team project, such as an intern-led fundraiser, from idea to execution.' },
   { title: "Learn VSA's Systems", desc: "Get hands-on with the tools and processes that keep VSA running: shared drives, calendars, planning forms, reimbursements, and cross-team communication." },
 ];
 
@@ -50,7 +50,7 @@ const shadowAreas = [
 ];
 
 const faqs = [
-  { q: 'Who should apply?', a: 'Students who want to grow as leaders, get more involved in VSA, build community, and learn how a student organization runs behind the scenes. You do not need prior experience — the program is designed to teach and mentor you.' },
+  { q: 'Who should apply?', a: 'Students who want to get more involved in VSA, meet cabinet, and learn how a student organization runs behind the scenes. You do not need prior experience. The program is built to teach and mentor you.' },
   { q: 'How much time does it take?', a: 'Expect roughly 4–8 hours per week, depending on the time of quarter and upcoming events. The program spans Fall, Winter, and Spring quarters, so the commitment varies throughout the year.' },
   { q: 'What will I actually do?', a: 'Attend meetings and events, build relationships with cabinet through one-on-one interviews, shadow cabinet positions to learn how VSA operates, help support event production and logistics, and collaborate with fellow interns on a team-led project.' },
   { q: 'What skills will I build?', a: 'Leadership, communication, teamwork, event planning, logistics, professionalism, and cultural engagement. Interns also gain practical experience with the organizational systems VSA uses day to day.' },
@@ -186,7 +186,7 @@ export function Internship() {
           <div className="program-section-inner program-section-narrow">
             <div className="program-eyebrow">About the Program</div>
             <p className="program-body">
-              The UCSD VSA Internship Program is a year-long leadership development experience within the Vietnamese Student Association. It gives students the opportunity to grow as leaders, contribute directly to the VSA community, and learn how the organization operates behind the scenes.
+              The VSA at UCSD Intern Program is for students who want to get more involved, learn how cabinet works, and help with events throughout the year.
             </p>
           </div>
         </section>

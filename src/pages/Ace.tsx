@@ -29,24 +29,24 @@ function isFamHead(roleLabel: string | null): boolean {
 }
 
 const ROLES = [
-  { role: 'Big',    viet: 'Anh / Chị',  desc: 'A supportive VSA member who helps guide and welcome their Little into the community. Think of your Big as an older sibling, mentor, or trusted friend.' },
-  { role: 'Little', viet: 'Em',         desc: 'Someone who receives support and guidance from their Big. As a Little, you gain a built-in support system and a connection to an entire fam.' },
+  { role: 'Big',    viet: 'Anh / Chị',  desc: 'A VSA member who helps welcome their Little and show them around the org. Think older sibling, mentor, or trusted friend.' },
+  { role: 'Little', viet: 'Em',         desc: 'Someone paired with a Big during their VSA experience. As a Little, you get a built-in person to ask questions and hang out with.' },
   { role: 'Fam',    viet: 'Gia Đình',   desc: 'The family line built through the Big/Little system. When a Big picks up a Little and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
 ];
 
 const STEPS = [
-  { n: '01', t: 'Attend VSA Events',     d: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open — details are announced each cycle.' },
+  { n: '01', t: 'Attend VSA Events',     d: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open. Details are announced each cycle.' },
   { n: '02', t: 'Meet the Community',    d: 'Connect with potential Bigs or Littles at VSA events, Welcome Week activities, and ACE-hosted socials and mixers throughout the quarter.' },
   { n: '03', t: 'Apply When Ready',      d: 'When applications open, Littles share their intro materials and Bigs submit a profile. Application timelines and materials are announced each cycle.' },
-  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Your Big is revealed! You’re officially part of a fam — with connections to a multi-generation lineage and seasonal programming throughout the year.' },
+  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Your Big is revealed! You are officially part of a fam, with connections to a multi-generation lineage and events throughout the year.' },
 ];
 
 const FAQS = [
-  { q: 'What is a Big?',                          a: 'A Big (Anh/Chị) is a supportive VSA member who helps guide and welcome their Little into the community. Think of a Big as an older sibling, mentor, or trusted friend.' },
-  { q: 'What is a Little?',                       a: 'A Little (Em) is someone who receives support and guidance from their Big during their VSA experience. As a Little, you gain a built-in support system and a connection to a fam.' },
+  { q: 'What is a Big?',                          a: 'A Big (Anh/Chị) is a VSA member who helps welcome their Little and show them around the org. Think of a Big as an older sibling, mentor, or trusted friend.' },
+  { q: 'What is a Little?',                       a: 'A Little (Em) is someone paired with a Big during their VSA experience. As a Little, you get a built-in person to ask questions and a connection to a fam.' },
   { q: 'What is a Fam?',                          a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
-  { q: 'Do requirements change each cycle?',       a: 'Yes — eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
+  { q: 'Do requirements change each cycle?',       a: 'Yes. Eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
   { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
 ];
 
@@ -200,7 +200,7 @@ export function Ace() {
         <section className="ace-section">
           <div className="ace-eyebrow">What is ACE?</div>
           <p className="ace-body">
-            ACE stands for <span className="ace-body-strong">Anh Chị Em</span> — Vietnamese for "older brother, older sister, younger sibling." It is VSA's Big/Little family program built to help members find mentorship, community, and a family away from home.
+            ACE stands for <span className="ace-body-strong">Anh Chị Em</span>, Vietnamese for "older brother, older sister, younger sibling." It is VSA’s Big/Little program, where members get paired into ACE fams and meet people across the org.
           </p>
         </section>
 

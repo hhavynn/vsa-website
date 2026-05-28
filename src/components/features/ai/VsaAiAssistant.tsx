@@ -308,7 +308,7 @@ export function VsaAiAssistant() {
               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
             >
               <InfoDotIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
-              <p>AI answers use approved public VSA info. For official updates, check VSA channels.</p>
+              <p>Ask VSA uses approved public VSA website info. For official updates, check VSA channels.</p>
             </div>
           </div>
 

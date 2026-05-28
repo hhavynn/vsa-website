@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 
 const highlights = [
-  { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances spanning a range of styles — from traditional Vietnamese dance to contemporary choreography.' },
-  { title: 'Narrative Stage Production', desc: 'A student-produced play or theatrical performance that explores themes of Vietnamese identity, family, tradition, and the Vietnamese-American experience.' },
-  { title: 'Cultural Storytelling', desc: 'VCN is built around stories — personal, cultural, and generational — told through performance, art, and community.' },
-  { title: 'Student-Led Production', desc: 'Every element of VCN is conceived, built, and executed by UCSD students — on stage and behind the scenes.' },
+  { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances, from traditional Vietnamese dance to contemporary choreography.' },
+  { title: 'Narrative Stage Production', desc: 'A student-produced play or theatrical performance that explores Vietnamese identity, family, tradition, and the Vietnamese-American experience.' },
+  { title: 'Cultural Storytelling', desc: 'VCN is built around personal, cultural, and generational stories told through performance, art, and community.' },
+  { title: 'Student-Led Production', desc: 'Every element of VCN is planned, built, and executed by UCSD students on stage and behind the scenes.' },
 ];
 
 const committees = [
@@ -17,7 +17,7 @@ const committees = [
 ];
 
 const faqs = [
-  { q: 'What is VCN?', a: "Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. It celebrates Vietnamese culture through storytelling, dance, theatre, and performance — all built and performed by UCSD students." },
+  { q: 'What is VCN?', a: "Vietnamese Culture Night (VCN) is VSA at UCSD's large annual culture show. It celebrates Vietnamese culture through storytelling, dance, theatre, and performance, all built and performed by UCSD students." },
   { q: 'What can I expect at the show?', a: "A VCN show typically includes a narrative stage production alongside multiple dance performances. Each year's show brings a new theme, story, and lineup of performances. The specific format and content vary by year." },
   { q: 'Is the show free?', a: 'Admission details vary by year. Follow @vsaatucsd on Instagram or check the current year\'s VCN page for the latest ticketing information.' },
   { q: 'How can I get involved?', a: 'Students can participate on stage through dance or acting, or contribute behind the scenes through committees like props and stage management. Opportunities are announced each production cycle.' },
@@ -42,7 +42,7 @@ export function VCN() {
               Vietnamese Culture <span className="program-title-script">Night</span>
             </h1>
             <p className="program-hero-meta">
-              UCSD VSA's annual student-led cultural production, told through story, dance, theatre, and community.
+              VSA at UCSD’s annual culture show, built by students through acting, dance, and behind-the-scenes production.
             </p>
             <div className="program-hero-actions">
               <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
@@ -62,14 +62,14 @@ export function VCN() {
             <div className="program-two-grid items-start md:gap-10">
               <div>
                 <p className="program-body">
-                Vietnamese Culture Night (VCN) is UCSD VSA's large annual cultural production. Each year, students come together to celebrate Vietnamese culture through performance and storytelling — creating an evening that honors tradition, explores identity, and invites the broader community in.
+                Vietnamese Culture Night (VCN) is VSA at UCSD's large annual culture show. Each year, students come together to celebrate Vietnamese culture through performance and storytelling while inviting the broader community in.
                 </p>
                 <p className="program-body">
                 VCN is fully student-led: from the creative vision to the choreography, props, costumes, and show-day execution, every part of the production is built and performed by UCSD students.
                 </p>
               </div>
               <blockquote className="program-rich-card font-serif italic leading-[1.2]" style={{ fontSize: 24, color: 'var(--color-text)' }}>
-              "A celebration of Vietnamese culture — built by students, for the community."
+              "A celebration of Vietnamese culture, built by students for the community."
               </blockquote>
             </div>
           </div>

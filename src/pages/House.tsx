@@ -81,7 +81,7 @@ const eventTypes = [
 
 const faqs = [
   { q: 'What is the House Program?', a: "The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships throughout the year." },
-  { q: 'Do I need to already know people in VSA to join?', a: "Not at all. The program is specifically designed to help members meet new people and feel more connected — especially if you are newer to VSA or looking for a tighter-knit community within the organization." },
+  { q: 'Do I need to already know people in VSA to join?', a: "Not at all. The program is meant to help members meet new people and feel more connected, especially if you are newer to VSA or looking for a smaller group within the org." },
   { q: 'What kinds of events are part of the program?', a: 'Events vary by house and cycle but may include house reveals, meet-and-greets, bonding socials, study jams, beach outings, karaoke, DIY activities, movie nights, inter-house collaborations, and competitions.' },
   { q: 'What do House Parents do?', a: 'House Parents lead their house throughout the year. They plan socials and bonding activities, communicate with members, encourage participation, and help create a welcoming environment for everyone in the house.' },
   { q: 'Is there competition between houses?', a: 'Yes. Houses earn points through participation in events and activities across the year. At the end of the year, the house with the most points receives a special reward.' },
@@ -240,7 +240,7 @@ export function House() {
               House <span className="program-title-script">Program</span>
             </h1>
             <p className="program-hero-meta">
-              Year-long community competition inside UCSD VSA. Get sorted, meet your house, show up for events, and help your team climb the board.
+              Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.
             </p>
             <div className="program-hero-actions">
               {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
@@ -446,13 +446,13 @@ export function House() {
                         House profiles exist, but no members have been assigned yet.
                       </p>
                       <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                        Import house assignments or use the Legacy Backfill tool in Admin Houses to restore standings with an effective start date.
+                        House standings are still being updated for this year. Check back soon.
                       </p>
                     </>
                   ) : (
                     <>
                       <p style={{ color: 'var(--color-text2)' }}>
-                        No house profiles exist for this year yet. Create house profiles before importing memberships.
+                        House standings are still being updated for this year. Check back soon.
                       </p>
                       {activeYearLabel && (
                         <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
@@ -625,7 +625,7 @@ export function House() {
                 </Link>
               </div>
               <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                Every VSA event is a chance to climb the board. Show up and earn points for your house.
+                Qualifying events can help your House score when you are an active House member. Check the event details for points.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {upcomingEvents.map((event) => (

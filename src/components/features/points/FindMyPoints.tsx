@@ -501,7 +501,7 @@ function MultipleMatches({
         </p>
       </div>
       <p className="mb-4 font-sans text-xs" style={{ color: "var(--text3)" }}>
-        Pick the one that's you. We don't show emails — use class year or
+        Pick the one that's you. We do not show emails, so use class year or
         college to tell yourself apart.
       </p>
       <ul className="space-y-2">
@@ -562,7 +562,7 @@ function TrustNote() {
         className="font-sans text-[11px] leading-[1.6]"
         style={{ color: "var(--text3)" }}
       >
-        Points refresh after admin imports — give it 24–48 hours after an event.
+        Points refresh after updates. Give it 24-48 hours after an event.
         Yearly totals only count events assigned to an academic term (Fall /
         Winter / Spring).
       </div>

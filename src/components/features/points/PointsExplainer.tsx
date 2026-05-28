@@ -62,7 +62,7 @@ export const PointsExplainer: React.FC = () => {
             <StickerBadge rotation={1} color="primary">VSA GUIDE</StickerBadge>
           </div>
           
-          <h2 className="vsa-section-title mb-8">Earn Points, Build Community</h2>
+          <h2 className="vsa-section-title mb-8">Earn Points, Show Up</h2>
           
           <div className="grid gap-x-12 gap-y-10 md:grid-cols-2">
             {/* Participation */}
@@ -90,7 +90,7 @@ export const PointsExplainer: React.FC = () => {
                   House Competition
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
-                  Every point you earn also goes toward your House's total. Compete together for the top spot on the leaderboard and the end-of-year reward!
+                  If you are actively in a House when you attend a qualifying event, your points can also help your House climb the leaderboard.
                 </p>
               </div>
             </div>
@@ -105,7 +105,7 @@ export const PointsExplainer: React.FC = () => {
                   Academic Terms
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
-                  Yearly points are tracked within specific academic terms. Only events assigned to a term (Fall, Winter, Spring) count toward the yearly leaderboard.
+                  Yearly leaderboards are based on events assigned to the academic year. House standings have extra rules: points only count while you are an active House member, and they are not added retroactively.
                 </p>
               </div>
             </div>
@@ -121,6 +121,7 @@ export const PointsExplainer: React.FC = () => {
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
                   Points are manually verified and synced by our cabinet team. It may take 24-48 hours after an event for your points to reflect on the public leaderboard.
+                  Cabinet and interns do not earn points for required duties like staffing, setup, cleanup, or assigned shifts. They can still earn points when they attend as regular members.
                 </p>
               </div>
             </div>
