@@ -658,7 +658,7 @@ export function Cabinet() {
                     Leadership
                   </h2>
                   <p className="mt-1.5 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                    The core leadership team guiding VSA strategy, operations, and the rhythm of the year.
+                    The people planning events, coordinating programs, and keeping VSA running week to week.
                   </p>
                 </div>
               </div>

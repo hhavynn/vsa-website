@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
               <span className="italic" style={{ color: 'var(--brand)' }}>VSA</span> at UCSD
             </div>
             <p className="mt-3 max-w-sm font-sans text-[13px] leading-[1.7]" style={{ color: 'var(--text3)' }}>
-              Vietnamese Student Association at UC San Diego. Promoting and preserving Vietnamese culture since 1977. Open to all students.
+              Vietnamese Student Association at UC San Diego. Sharing Vietnamese culture, building community, and welcoming all students since 1977.
             </p>
             <div className="mt-5 flex gap-2">
               {socialLinks.map((link) => (

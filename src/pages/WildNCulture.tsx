@@ -57,7 +57,7 @@ const whatToExpect = [
 ];
 
 const faqs = [
-  { q: "What is Wild N' Culture?", a: "Wild N' Culture (WNC) is UCSD VSA's annual intercollegiate comedy competition - inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture. Schools face off in a series of live improv-style games and roast battles judged by the crowd and guest judges." },
+  { q: "What is Wild N' Culture?", a: "Wild N' Culture (WNC) is VSA at UCSD's annual intercollegiate comedy competition, inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture. Schools face off in live improv-style games and roast battles judged by the crowd and guest judges." },
   { q: 'Which schools participate?', a: "Participating schools vary each year. WNC brings together Vietnamese Student Associations and student groups from across Southern California and UC campuses. Follow @vsaatucsd for each year's lineup." },
   { q: 'How is the winner decided?', a: 'Schools earn points through game rounds. A combination of judge scoring and crowd energy typically determines the winner, though the exact format may vary by year.' },
   { q: 'Is the event free?', a: "WNC is typically a ticketed event. Ticket prices and availability are announced each year through VSA's Instagram and the event's page." },
@@ -84,7 +84,7 @@ export function WildNCulture() {
               Wild N' <span className="program-title-script">Culture</span>
             </h1>
             <p className="program-hero-meta">
-              Annual intercollegiate comedy competition · UCSD VSA
+              Annual intercollegiate comedy competition · VSA at UCSD
             </p>
             {(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) && (
               <div className="program-hero-actions">
@@ -136,10 +136,10 @@ export function WildNCulture() {
           <div className="program-section-inner program-section-narrow">
             <div className="program-eyebrow">About WNC</div>
             <p className="program-body">
-              Wild N' Culture is UCSD VSA's annual intercollegiate comedy competition. Inspired by Wild 'N Out, it brings together Vietnamese Student Associations and Asian American student groups from across Southern California for a night of live improv-style games, roast battles, and pure crowd energy.
+              Wild N' Culture is VSA at UCSD's annual intercollegiate comedy competition. Inspired by Wild 'N Out, it brings together Vietnamese Student Associations and Asian American student groups from across Southern California for live improv-style games, roast battles, and crowd energy.
             </p>
             <p className="program-body">
-              WNC is more than a competition — it's a celebration of shared culture, community, and the kind of chaotic fun that only a packed auditorium can produce.
+              WNC is also a night for shared culture, school pride, and the kind of chaotic fun that only a packed auditorium can produce.
             </p>
           </div>
         </section>

@@ -204,8 +204,8 @@ export default function UVSANetwork() {
                 className="font-serif text-xl italic"
                 style={{ color: "var(--text3)" }}
               >
-                "2026–2027 externals will be announced after summer ICC
-                planning."
+                "Upcoming externals will be added once they are confirmed by
+                VSA at UCSD and the host schools."
               </p>
               <p
                 className="mt-2 font-sans text-sm"
@@ -300,14 +300,14 @@ export default function UVSANetwork() {
                 </h2>
               </div>
               <p className="font-sans text-sm text-[var(--text3)] italic">
-                Ride forms are usually posted through the VSA at UCSD Linktree
-                when we coordinate attendance.
+                If VSA at UCSD is coordinating attendance, ride forms are
+                usually posted through our Linktree.
               </p>
               <ol className="space-y-4 list-none p-0">
                 {[
                   "Find an external you want to attend in the list above.",
                   "Check the host school’s Linktree or Instagram for RSVP/tickets.",
-                  "Look for the external ride form in our Linktree for rides.",
+                  "If VSA at UCSD is coordinating attendance, ride forms are usually posted through our Linktree.",
                   "Show up respectfully and represent VSA at UCSD well.",
                   "Check in or follow the points proof process if announced.",
                   "Have fun, meet other schools, and bring the energy back to UCSD!",
@@ -343,8 +343,8 @@ export default function UVSANetwork() {
                 </div>
                 <ul className="space-y-2 font-sans text-sm text-[var(--text2)] list-disc pl-5">
                   <li>
-                    Attending any UVSA external earns 4 points on the UCSD VSA
-                    leaderboard by default.
+                    Approved externals generally count for 4 points on the VSA
+                    at UCSD leaderboard.
                   </li>
                   <li>
                     Wild N Culture earns 5 points because it is a major
@@ -435,7 +435,7 @@ function FeaturedExternalSpotlight({
   const eventType = event?.event_type || "Season archive";
   const description =
     event?.description ||
-    "Explore the externals UCSD VSA attended and supported across the SoCal VSA network last season.";
+    "Explore the externals VSA at UCSD attended and supported across the SoCal VSA network last season.";
   const pointsNote =
     event?.points && event.points !== 4
       ? `${event.points} points when announced by VSA at UCSD.`

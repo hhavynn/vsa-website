@@ -40,7 +40,7 @@ const programs = [
     id: 'wnc',
     tag: 'Showcase',
     title: "Wild N' Culture",
-    description: "Join the crowd for UCSD VSA's intercollegiate comedy competition and keep up with each year's event updates.",
+    description: "Join the crowd for VSA at UCSD's intercollegiate comedy competition and keep up with each year's event updates.",
     link: '/wild-n-culture',
     details: ['Comedy Night', 'Campus Teams', 'Crowd Energy'],
   },
@@ -71,7 +71,7 @@ export function GetInvolved() {
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">Choose Your Path</span>
           <h1 className="vsa-page-title">Get <em>Involved</em></h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            Find your place in VSA through mentorship, houses, leadership, performances, events, and campus-wide traditions.
+            Not sure where to start? Try an event, join a program, or explore what VSA does throughout the year.
           </p>
         </div>
       </div>
@@ -90,8 +90,8 @@ export function GetInvolved() {
                 <em>Passport.</em>
               </h2>
               <p className="max-w-[58ch] font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-                Welcome to the family! Whether you just joined or are looking to get more active, this checklist guides you through the core VSA experience.
-                There is no single "right way" to be in VSA, explore at your own pace and find what resonates with you.
+                New here or trying to get more involved? Use this checklist as a starting point.
+                Try what sounds fun, skip what does not, and go at your own pace.
               </p>
 
               <div className="mt-6 rounded-lg border p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
