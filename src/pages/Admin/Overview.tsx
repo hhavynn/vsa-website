@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
@@ -19,6 +19,19 @@ interface OverviewStats {
   galleryAlbumsMissingCover: number;
 }
 
+interface AdminToolCard {
+  to: string;
+  label: string;
+  desc: string;
+  keywords: string[];
+}
+
+interface AdminToolGroup {
+  title: string;
+  intro: string;
+  tools: AdminToolCard[];
+}
+
 const DEFAULT_STATS: OverviewStats = {
   members: 0,
   events: 0,
@@ -35,16 +48,145 @@ const DEFAULT_STATS: OverviewStats = {
   galleryAlbumsMissingCover: 0,
 };
 
-const QUICK_LINKS = [
-  { to: '/admin/events', label: 'Events', desc: 'Create events, assign academic terms, manage images, forms, points, and check-in codes.' },
-  { to: '/admin/cabinet', label: 'Cabinet', desc: 'Add board members, assign cabinet years, upload photos, and keep public leadership pages current.' },
-  { to: '/admin/years', label: 'Years & Terms', desc: 'Create quarters and cabinet years, then choose which ones are active/current.' },
-  { to: '/admin/gallery', label: 'Gallery', desc: 'Add Google Photos albums and cover images for the public gallery.' },
-  { to: '/admin/content', label: 'Homepage Content', desc: 'Update the presidents message and homepage photo without changing code.' },
-  { to: '/admin/members', label: 'Members', desc: 'Search, edit, merge, and export the member directory used by points tools.' },
-  { to: '/admin/houses', label: 'Houses', desc: 'Import House Reveal assignments and assign members to houses without changing attendance.' },
-  { to: '/admin/import', label: 'Import', desc: 'Match attendance sheets against member records before awarding points.' },
-  { to: '/admin/feedback', label: 'Feedback', desc: 'Triage bugs, feature requests, and user suggestions.' },
+const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
+  {
+    title: 'Member Experience',
+    intro: 'Edit the pages and programs members interact with most.',
+    tools: [
+      {
+        to: '/admin/events',
+        label: 'Events & Recaps',
+        desc: 'Edit upcoming events, dates, locations, point values, event images, and recap notes.',
+        keywords: ['events', 'event recaps', 'recaps', 'dates', 'locations', 'points', 'images', 'check in'],
+      },
+      {
+        to: '/admin/houses',
+        label: 'Houses',
+        desc: 'Manage house assignments, house images, and House Reveal backfill tools.',
+        keywords: ['houses', 'house', 'assignments', 'reveal', 'membership'],
+      },
+      {
+        to: '/admin/ace',
+        label: 'ACE Families',
+        desc: 'Manage ACE family groups and member relationships.',
+        keywords: ['ace', 'families', 'family', 'members'],
+      },
+      {
+        to: '/admin/uvsa-schools',
+        label: 'UVSA School Cards',
+        desc: 'Manage SoCal VSA school cards shown on the UVSA Network page.',
+        keywords: ['uvsa', 'schools', 'externals', 'network', 'socal'],
+      },
+      {
+        to: '/admin/external-events',
+        label: 'External Events',
+        desc: 'Manage UVSA and partner events promoted outside regular VSA programming.',
+        keywords: ['external', 'externals', 'uvsa', 'events', 'partner'],
+      },
+    ],
+  },
+  {
+    title: 'Content & Media',
+    intro: 'Keep public site content, photos, archives, and resources current.',
+    tools: [
+      {
+        to: '/admin/content',
+        label: 'Homepage Content',
+        desc: 'Update homepage copy, featured photos, and program content without changing code.',
+        keywords: ['homepage', 'home', 'content', 'copy', 'photos', 'programs'],
+      },
+      {
+        to: '/admin/cabinet',
+        label: 'Cabinet',
+        desc: 'Update cabinet profiles, photos, roles, and cabinet years shown on the public Cabinet page.',
+        keywords: ['cabinet', 'profiles', 'board', 'officers', 'photos'],
+      },
+      {
+        to: '/admin/gallery',
+        label: 'Gallery',
+        desc: 'Upload gallery drops and connect memories to events with albums and cover images.',
+        keywords: ['gallery', 'photos', 'albums', 'memories', 'media'],
+      },
+      {
+        to: '/admin/vcn',
+        label: 'VCN Archives',
+        desc: 'Manage VCN archive entries, media links, and source notes.',
+        keywords: ['vcn', 'archives', 'archive', 'media', 'culture night'],
+      },
+      {
+        to: '/admin/resources',
+        label: 'Resources Index',
+        desc: 'Maintain admin-only Drive, form, and doc links for cabinet work.',
+        keywords: ['resources', 'source of truth', 'drive', 'forms', 'docs', 'index', 'ai', 'assistant'],
+      },
+      {
+        to: '/admin/settings',
+        label: 'Site Settings',
+        desc: 'Adjust existing site-wide admin settings and public content switches.',
+        keywords: ['settings', 'site settings', 'config', 'site'],
+      },
+    ],
+  },
+  {
+    title: 'Points & Attendance',
+    intro: 'Work with members, attendance files, point records, and data cleanup.',
+    tools: [
+      {
+        to: '/admin/import',
+        label: 'Attendance Imports & Audit Logs',
+        desc: 'Import attendance sheets, review matches, and check completed or failed import records.',
+        keywords: ['attendance', 'imports', 'import', 'audit', 'logs', 'sheets'],
+      },
+      {
+        to: '/admin/members',
+        label: 'Members',
+        desc: 'Manage members, aliases, exports, and records used by attendance and points tools.',
+        keywords: ['members', 'member', 'aliases', 'records', 'attendance', 'points'],
+      },
+      {
+        to: '/admin/points',
+        label: 'Points Tools',
+        desc: 'Review point records and jump to related member, import, event, and merge tools.',
+        keywords: ['points', 'leaderboard', 'find my points', 'records', 'tools'],
+      },
+      {
+        to: '/admin/merge-suggestions',
+        label: 'Merge Review',
+        desc: 'Review duplicate member suggestions so point records stay clean.',
+        keywords: ['merge', 'duplicates', 'members', 'cleanup', 'data health'],
+      },
+      {
+        to: '/admin/years',
+        label: 'Years & Terms',
+        desc: 'Manage academic terms and cabinet years used by events, archives, and points.',
+        keywords: ['years', 'terms', 'quarters', 'academic', 'cabinet years'],
+      },
+    ],
+  },
+  {
+    title: 'System',
+    intro: 'Check site health, feedback, diagnostics, and admin operations.',
+    tools: [
+      {
+        to: '/admin',
+        label: 'Data Health Warnings',
+        desc: 'Check missing event terms, incomplete upcoming event info, and gallery cover issues.',
+        keywords: ['data health', 'warnings', 'diagnostics', 'missing', 'issues'],
+      },
+      {
+        to: '/admin/analytics',
+        label: 'Analytics',
+        desc: 'Review existing admin analytics and high-level site activity signals.',
+        keywords: ['analytics', 'reports', 'activity', 'diagnostics'],
+      },
+      {
+        to: '/admin/feedback',
+        label: 'Feedback',
+        desc: 'Triage bugs, feature requests, and user suggestions from the public feedback form.',
+        keywords: ['feedback', 'bugs', 'requests', 'support', 'suggestions'],
+      },
+    ],
+  },
 ];
 
 function StatCard({ label, value, detail }: { label: string; value: number; detail: string }) {
@@ -84,9 +226,34 @@ function HealthWarning({ count, label, to, critical = false }: { count: number; 
   );
 }
 
+function ToolCard({ tool }: { tool: AdminToolCard }) {
+  return (
+    <Link
+      to={tool.to}
+      className="group flex h-full flex-col rounded-lg border p-4 transition-colors hover:bg-[var(--color-surface2)] sm:p-5"
+      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-sans text-[15px] font-semibold leading-tight" style={{ color: 'var(--color-text)' }}>
+          {tool.label}
+        </h3>
+        <span className="mt-0.5 shrink-0 rounded-full bg-[var(--color-surface2)] p-2 text-brand-600 transition-transform group-hover:translate-x-1 dark:text-brand-400">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-3.5 w-3.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+          </svg>
+        </span>
+      </div>
+      <p className="mt-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+        {tool.desc}
+      </p>
+    </Link>
+  );
+}
+
 export default function AdminOverview() {
   const [stats, setStats] = useState<OverviewStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function loadOverview() {
@@ -144,17 +311,46 @@ export default function AdminOverview() {
     loadOverview();
   }, []);
 
+  const filteredGroups = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return ADMIN_TOOL_GROUPS;
+
+    return ADMIN_TOOL_GROUPS
+      .map(group => ({
+        ...group,
+        tools: group.tools.filter(tool => {
+          const haystack = [
+            group.title,
+            group.intro,
+            tool.label,
+            tool.desc,
+            ...tool.keywords,
+          ].join(' ').toLowerCase();
+
+          return haystack.includes(query);
+        }),
+      }))
+      .filter(group => group.tools.length > 0);
+  }, [searchTerm]);
+
+  const visibleToolCount = filteredGroups.reduce((count, group) => count + group.tools.length, 0);
+
   return (
     <div className="flex-1 overflow-y-auto">
-      <PageTitle title="Admin Overview" />
+      <PageTitle title="Admin Dashboard" />
 
       <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
-          Overview
-        </h1>
-        <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-          High-level status across members, events, and incoming admin work.
-        </p>
+        <div className="max-w-5xl">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
+            Admin dashboard
+          </p>
+          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+            What are you trying to edit?
+          </h1>
+          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            Jump into the existing VSA admin tools by topic, or search for the thing you need to update.
+          </p>
+        </div>
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8">
@@ -174,103 +370,121 @@ export default function AdminOverview() {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <div className="border-b px-5 py-4 sm:px-6 sm:py-5" style={{ borderColor: 'var(--color-border)' }}>
-                  <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-                    Quick Actions
-                  </h2>
+              <div className="space-y-6">
+                <div className="scrapbook-paper p-5 sm:p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+                        Admin tools
+                      </h2>
+                      <p className="mt-1 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                        Search by page, task, or keyword like events, gallery, cabinet, points, houses, imports, externals, or ai.
+                      </p>
+                    </div>
+                    <div className="w-full md:max-w-xs">
+                      <label htmlFor="admin-tool-search" className="sr-only">
+                        Search admin tools
+                      </label>
+                      <input
+                        id="admin-tool-search"
+                        type="search"
+                        value={searchTerm}
+                        onChange={event => setSearchTerm(event.target.value)}
+                        placeholder="Search admin tools..."
+                        className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none transition-colors placeholder:text-[var(--color-text3)] focus:border-[var(--accent)] focus:bg-[var(--color-surface)]"
+                        style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                      />
+                      <p className="mt-2 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                        Showing {visibleToolCount} existing admin {visibleToolCount === 1 ? 'page' : 'pages'}.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                  {QUICK_LINKS.map((link) => (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      className="group flex flex-col items-start justify-between gap-2 px-5 py-4 transition-colors hover:bg-[var(--color-surface2)] sm:flex-row sm:items-center sm:px-6"
-                    >
-                      <div>
-                        <p className="font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>
-                          {link.label}
-                        </p>
+
+                {filteredGroups.length === 0 ? (
+                  <div className="scrapbook-paper p-8 text-center" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                    <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+                      No admin tools found
+                    </h2>
+                    <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                      Try events, gallery, cabinet, points, houses, attendance, imports, externals, homepage, or settings.
+                    </p>
+                  </div>
+                ) : (
+                  filteredGroups.map(group => (
+                    <section key={group.title} className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                      <div className="border-b px-5 py-4 sm:px-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                        <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+                          {group.title}
+                        </h2>
                         <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                          {link.desc}
+                          {group.intro}
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-[var(--color-surface)] p-2 text-brand-600 transition-transform group-hover:translate-x-1 dark:text-brand-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
+                      <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+                        {group.tools.map(tool => (
+                          <ToolCard key={tool.to} tool={tool} />
+                        ))}
+                      </div>
+                    </section>
+                  ))
+                )}
               </div>
 
-              <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                <span className="scrapbook-pin" aria-hidden />
-                <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-                  Attention
-                </h2>
-                <div className="mt-6 space-y-6">
-                  <div>
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
-                      Pending Feedback
-                    </p>
-                    <p className="mt-2 font-serif text-[42px] leading-none text-[var(--accent)]">
-                      {stats.pendingFeedback}
-                    </p>
-                  </div>
-                  <div className="border-t pt-5" style={{ borderColor: 'var(--color-border)' }}>
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
-                      Merge Exclusions
-                    </p>
-                    <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                      <span className="font-semibold text-[var(--color-text)]">{stats.mergeCandidates}</span> merge exclusions are stored. Review duplicates from the merge screen when needed.
-                    </p>
-                  </div>
-                  </div>
-                  </div>
-
-                  <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                  <div className="flex items-center justify-between">
+              <div className="space-y-6">
+                <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <span className="scrapbook-pin" aria-hidden />
                   <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-                    Data Health
+                    Attention
                   </h2>
-                  {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) > 0 && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                      {stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover}
-                    </span>
-                  )}
+                  <div className="mt-6 space-y-6">
+                    <div>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+                        Pending Feedback
+                      </p>
+                      <p className="mt-2 font-serif text-[42px] leading-none text-[var(--accent)]">
+                        {stats.pendingFeedback}
+                      </p>
+                    </div>
+                    <div className="border-t pt-5" style={{ borderColor: 'var(--color-border)' }}>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+                        Merge Exclusions
+                      </p>
+                      <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                        <span className="font-semibold text-[var(--color-text)]">{stats.mergeCandidates}</span> merge exclusions are stored. Review duplicates from the merge screen when needed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+                      Data Health
+                    </h2>
+                    {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) > 0 && (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                        {stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover}
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-6 space-y-3">
-                  {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) === 0 ? (
-                    <p className="font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                      All systems normal. No critical data issues detected.
-                    </p>
-                  ) : (
-                    <>
-                      <HealthWarning 
-                        count={stats.eventsMissingTerms} 
-                        label="events missing terms" 
-                        to="/admin/events" 
-                        critical={true} 
-                      />
-                      <HealthWarning 
-                        count={stats.upcomingEventsMissingInfo} 
-                        label="upcoming events need info" 
-                        to="/admin/events" 
-                      />
-                      <HealthWarning 
-                        count={stats.galleryAlbumsMissingCover} 
-                        label="albums missing covers" 
-                        to="/admin/gallery" 
-                      />
-                    </>
-                  )}
+                    {(stats.eventsMissingTerms + stats.upcomingEventsMissingInfo + stats.galleryAlbumsMissingCover) === 0 ? (
+                      <p className="font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                        All systems normal. No critical data issues detected.
+                      </p>
+                    ) : (
+                      <>
+                        <HealthWarning count={stats.eventsMissingTerms} label="events missing terms" to="/admin/events" critical={true} />
+                        <HealthWarning count={stats.upcomingEventsMissingInfo} label="upcoming events need info" to="/admin/events" />
+                        <HealthWarning count={stats.galleryAlbumsMissingCover} label="albums missing covers" to="/admin/gallery" />
+                      </>
+                    )}
                   </div>
-                  </div>
-                  </div>
-
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

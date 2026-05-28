@@ -3,32 +3,32 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useEffect } from 'react';
 
 const NAV_GROUPS = [
-  { group: null,      items: [{ to: '/admin',                   label: 'Overview' }] },
-  { group: 'Data',    items: [
-    { to: '/admin/members',           label: 'Members' },
-    { to: '/admin/houses',            label: 'Houses' },
-    { to: '/admin/events',            label: 'Events' },
-    { to: '/admin/import',            label: 'Import' },
+  { group: null, items: [{ to: '/admin', label: 'Dashboard' }] },
+  { group: 'Member Experience', items: [
+    { to: '/admin/events', label: 'Events' },
+    { to: '/admin/houses', label: 'Houses' },
+    { to: '/admin/ace', label: 'ACE Families' },
+    { to: '/admin/uvsa-schools', label: 'UVSA Schools' },
+    { to: '/admin/external-events', label: 'External Events' },
   ]},
-  { group: 'Content', items: [
-    { to: '/admin/resources',         label: 'Resources' },
-    { to: '/admin/cabinet',           label: 'Cabinet' },
-    { to: '/admin/ace',               label: 'ACE Fams' },
-    { to: '/admin/vcn',               label: 'VCN Archives' },
-    { to: '/admin/gallery',           label: 'Gallery' },
-    { to: '/admin/content',           label: 'Content' },
-    { to: '/admin/years',             label: 'Years & Terms' },
-    { to: '/admin/settings',          label: 'Settings' },
+  { group: 'Content & Media', items: [
+    { to: '/admin/content', label: 'Homepage Content' },
+    { to: '/admin/cabinet', label: 'Cabinet' },
+    { to: '/admin/gallery', label: 'Gallery' },
+    { to: '/admin/vcn', label: 'VCN Archives' },
+    { to: '/admin/resources', label: 'Resources Index' },
+    { to: '/admin/settings', label: 'Site Settings' },
   ]},
-  { group: 'UVSA',    items: [
-    { to: '/admin/uvsa-schools',      label: 'Schools' },
-    { to: '/admin/external-events',   label: 'External Events' },
+  { group: 'Points & Attendance', items: [
+    { to: '/admin/import', label: 'Attendance Imports' },
+    { to: '/admin/members', label: 'Members' },
+    { to: '/admin/points', label: 'Points Tools' },
+    { to: '/admin/merge-suggestions', label: 'Merge Review' },
+    { to: '/admin/years', label: 'Years & Terms' },
   ]},
-  { group: 'Reports', items: [
-    { to: '/admin/analytics',         label: 'Analytics' },
-    { to: '/admin/points',            label: 'Points' },
-    { to: '/admin/feedback',          label: 'Feedback' },
-    { to: '/admin/merge-suggestions', label: 'Merge' },
+  { group: 'System', items: [
+    { to: '/admin/analytics', label: 'Analytics' },
+    { to: '/admin/feedback', label: 'Feedback' },
   ]},
 ];
 
