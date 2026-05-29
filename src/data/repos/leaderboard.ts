@@ -41,6 +41,20 @@ export class LeaderboardRepository {
     }, 'Failed to fetch yearly house standings');
   }
 
+  async getTopYearlyHouseStandings(academicYearStart: number, limit: number = 3): Promise<HouseYearlyPoints[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('house_yearly_points')
+        .select('house, house_profile_id, display_name, image_url, accent_color, academic_year_start, academic_year_end, total_points, events_attended, unique_events, unique_members, average_points_per_member, latest_activity_at')
+        .eq('academic_year_start', academicYearStart)
+        .order('total_points', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []) as HouseYearlyPoints[];
+    }, 'Failed to fetch top yearly house standings');
+  }
+
   async getAllTimeHouseLeaderboard(): Promise<HouseAllTimePoints[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase

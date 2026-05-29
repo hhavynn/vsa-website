@@ -1,14 +1,16 @@
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { useQuery } from 'react-query';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
-import { useEvents } from '../hooks/useEvents';
 import { usePresidentsContent } from '../hooks/usePresidentsContent';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import { Event } from '../types';
+import { eventsRepository, PublicEventPreview } from '../data/repos/events';
 import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { parseDateOnly } from '../lib/dateOnly';
+import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../lib/eventTime';
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion } from 'framer-motion';
@@ -42,8 +44,22 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   external_event: 'gray',
 };
 
-function EventRow({ event }: { event: Event }) {
-  const d = new Date(event.date);
+function getTodayDateOnly(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getEventTimeLabel(event: Pick<PublicEventPreview, 'start_time' | 'end_time'>): string | null {
+  if (event.start_time && event.end_time) return formatEventTimeRange(event.start_time, event.end_time);
+  if (event.start_time) return formatEventTime(event.start_time);
+  return null;
+}
+
+function EventRow({ event }: { event: PublicEventPreview }) {
+  const d = parseDateOnly(event.date);
 
   return (
     <motion.div 
@@ -53,10 +69,10 @@ function EventRow({ event }: { event: Event }) {
     >
       <div className="border-r pr-4 text-center" style={{ borderColor: 'var(--border)' }}>
         <div className="font-sans text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
-          {format(d, 'MMM')}
+          {d ? format(d, 'MMM') : ''}
         </div>
         <div className="font-serif text-[32px] leading-[1.1]" style={{ color: 'var(--text)' }}>
-          {format(d, 'd')}
+          {d ? format(d, 'd') : ''}
         </div>
       </div>
       <div className="min-w-0">
@@ -78,9 +94,10 @@ function EventRow({ event }: { event: Event }) {
   );
 }
 
-function FeaturedEventHome({ event }: { event: Event }) {
-  const d = new Date(event.date);
+function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
+  const d = parseDateOnly(event.date);
   const imageUrl = event.thumbnail_url || event.image_url;
+  const timeLabel = getEventTimeLabel(event);
 
   return (
     <motion.div 
@@ -96,15 +113,16 @@ function FeaturedEventHome({ event }: { event: Event }) {
             color={TYPE_COLOR[event.event_type] ?? 'gray'}
           />
           <span className="font-mono text-[10px] uppercase tracking-[.04em]" style={{ color: 'var(--text3)' }}>
-            {format(d, 'MMM d / h:mm a')}
+            {formatEventDateRange(event.date, event.end_date)}
+            {timeLabel ? ` / ${timeLabel}` : ''}
           </span>
         </div>
         <h3 className="mb-2 line-clamp-2 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]" style={{ color: 'var(--text)' }}>
           {event.name}
         </h3>
-        {event.description && (
-          <p className="mb-4 line-clamp-3 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
-            {event.description}
+        {event.points > 0 && (
+          <p className="mb-4 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
+            {event.points} points available.
           </p>
         )}
         {event.location && (
@@ -136,8 +154,8 @@ function FeaturedEventHome({ event }: { event: Event }) {
           )}
         </div>
         <div className="absolute top-4 right-4 rounded-lg border bg-white/80 px-2.5 py-2 text-center shadow-sm backdrop-blur-md dark:bg-zinc-900/80" style={{ borderColor: 'var(--border)' }}>
-          <div className="font-serif text-2xl leading-none" style={{ color: 'var(--text)' }}>{format(d, 'd')}</div>
-          <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{format(d, 'MMM')}</div>
+          <div className="font-serif text-2xl leading-none" style={{ color: 'var(--text)' }}>{d ? format(d, 'd') : ''}</div>
+          <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{d ? format(d, 'MMM') : ''}</div>
         </div>
       </div>
     </motion.div>
@@ -145,9 +163,16 @@ function FeaturedEventHome({ event }: { event: Event }) {
 }
 
 export function Home() {
-  const { events } = useEvents();
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
+  const today = getTodayDateOnly();
+  const { data: upcomingEvents = [] } = useQuery<PublicEventPreview[]>({
+    queryKey: ['home', 'upcoming-events-section', today],
+    queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const logoSrc = siteSettings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo.jpg`;
   const presidentParagraphs = splitPresidentsMessage(presidentsContent.message);
   const [presidentsHeading, ...presidentsBody] = presidentParagraphs;
@@ -162,12 +187,7 @@ export function Home() {
   const signatureRole = presidentsContent.role;
   const presidentsPhotoUrl = presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
 
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const sortedUpcoming = events
-    .filter((event) => new Date(event.date) >= oneDayAgo)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  const [featured, ...rest] = sortedUpcoming.slice(0, 4);
+  const [featured, ...rest] = upcomingEvents;
 
   return (
     <>

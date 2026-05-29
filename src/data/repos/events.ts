@@ -8,6 +8,21 @@ export interface EventWithAttendance extends Event {
   user_attended?: boolean;
 }
 
+export type PublicEventPreview = Pick<
+  Event,
+  | 'id'
+  | 'name'
+  | 'date'
+  | 'start_time'
+  | 'end_time'
+  | 'end_date'
+  | 'location'
+  | 'points'
+  | 'event_type'
+  | 'image_url'
+  | 'thumbnail_url'
+>;
+
 export interface EventFilters {
   event_type?: Event['event_type'];
   academic_term_id?: string | null;
@@ -251,6 +266,20 @@ export class EventsRepository {
       date_from: new Date().toISOString(),
       limit,
     });
+  }
+
+  async getPublicUpcomingPreview(dateFrom: string, limit: number = 4): Promise<PublicEventPreview[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url')
+        .gte('date', dateFrom)
+        .order('date', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []) as PublicEventPreview[];
+    }, 'Failed to fetch upcoming event previews');
   }
 
   /**
