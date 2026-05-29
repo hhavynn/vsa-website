@@ -194,6 +194,9 @@ export interface HousePageAsset {
   accent_color: string | null;
   display_order: number;
   is_active: boolean;
+  house_parent_image_url: string | null;
+  house_parent_heading: string | null;
+  house_parent_body: string | null;
   source_doc_url: string | null;
   internal_notes: string | null;
   created_at: string;
