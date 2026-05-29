@@ -200,20 +200,22 @@ const CATEGORIES: Record<string, CategoryConfig> = {
 
   houses: {
     table: 'house_page_assets',
-    select: 'id, house, academic_year_start, image_url, image_thumbnail_url, cover_image_url',
+    select: 'id, house, house_key, academic_year_start, image_url, image_thumbnail_url, cover_image_url, house_parent_image_url',
     imageFields: [
       { name: 'image_url', suffix: '' },
       { name: 'image_thumbnail_url', suffix: '_thumb' },
       { name: 'cover_image_url', suffix: '_cover' },
+      { name: 'house_parent_image_url', suffix: '_parent' },
     ],
     getSlug: (row) => {
       const year = row['academic_year_start'] ? String(row['academic_year_start']) : 'unknown';
-      const house = row['house'] ? slugify(String(row['house'])) : idSuffix(row);
+      const houseIdentifier = row['house_key'] || row['house'] || idSuffix(row);
+      const house = slugify(String(houseIdentifier));
       return `${year}_${house}`;
     },
     outputDir: 'public/images/houses',
     maxWidth: 1200,
-    maxHeight: 1200,
+    maxHeight: 1500,
     quality: 80,
   },
 

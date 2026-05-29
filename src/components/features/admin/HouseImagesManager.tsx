@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
+import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
 import { houseAssetsRepository } from '../../../data/repos/houseAssets';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
@@ -15,6 +16,7 @@ type HouseAssetDraft = {
   display_name: string;
   description: string;
   accent_color: string;
+  emoji: string;
   is_active: boolean;
   image_url: string;
   image_thumbnail_url: string;
@@ -51,19 +53,32 @@ function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['te
   const years = new Map<number, { start: number; label: string; isActive: boolean }>();
   const currentYear = getCurrentAcademicYearStart();
 
+  // 1. Add current year
   years.set(currentYear, {
     start: currentYear,
     label: formatAcademicYear(currentYear),
     isActive: false,
   });
 
+  // 2. Add years from active terms
   terms.forEach((term) => {
     const existing = years.get(term.academic_year_start);
     years.set(term.academic_year_start, {
       start: term.academic_year_start,
-      label: `${term.academic_year_start}-${term.academic_year_end}`,
+      label: formatAcademicYear(term.academic_year_start),
       isActive: term.is_active || existing?.isActive || false,
     });
+  });
+
+  // 3. Add verified legacy years from static archive
+  getVerifiedLegacyHouseYears().forEach((legacy) => {
+    if (!years.has(legacy.startYear)) {
+      years.set(legacy.startYear, {
+        start: legacy.startYear,
+        label: legacy.academicYear,
+        isActive: false,
+      });
+    }
   });
 
   return Array.from(years.values()).sort((a, b) => b.start - a.start);
@@ -76,6 +91,7 @@ function emptyDraft(houseKey: string = ''): HouseAssetDraft {
     display_name: HOUSE_LABELS[houseName] || houseKey,
     description: '',
     accent_color: HOUSE_COLORS[houseName] || '#10b981',
+    emoji: '',
     is_active: true,
     image_url: '',
     image_thumbnail_url: '',
@@ -100,6 +116,7 @@ function draftFromAsset(asset: HousePageAsset): HouseAssetDraft {
     display_name: asset.display_name || asset.house,
     description: asset.description || '',
     accent_color: asset.accent_color || HOUSE_COLORS[asset.house as HouseName] || '#10b981',
+    emoji: asset.emoji || '',
     is_active: asset.is_active ?? true,
     image_url: asset.image_url || '',
     image_thumbnail_url: asset.image_thumbnail_url || '',
@@ -112,6 +129,7 @@ function draftFromAsset(asset: HousePageAsset): HouseAssetDraft {
     internal_notes: asset.internal_notes || '',
   };
 }
+
 
 export function HouseImagesManager() {
   const { terms } = useAcademicTerms();
@@ -465,7 +483,7 @@ export function HouseImagesManager() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
                         Display Name
@@ -497,6 +515,18 @@ export function HouseImagesManager() {
                         />
                       </div>
                     </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                        Emoji / Icon
+                      </label>
+                      <input
+                        value={draft.emoji}
+                        onChange={(event) => updateDraft(asset.id, { emoji: event.target.value })}
+                        placeholder="e.g. 🐢"
+                        className="w-full rounded border px-3 py-2 text-sm"
+                        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -511,6 +541,10 @@ export function HouseImagesManager() {
                       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
                     />
                   </div>
+
+                  <p className="text-[10px] italic" style={{ color: 'var(--color-text3)' }}>
+                    Images are compressed before upload. Static migration can move them to <code className="bg-zinc-100 px-1 dark:bg-zinc-800">/images/houses/...</code> later to reduce Supabase egress.
+                  </p>
 
                   <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text2)' }}>
                     <input
@@ -690,6 +724,19 @@ export function HouseImagesManager() {
                   onChange={(e) => setNewHouseDraft({ ...newHouseDraft, accent_color: e.target.value })}
                   className="h-10 w-full rounded border p-1"
                   style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                  Emoji / Icon
+                </label>
+                <input
+                  placeholder="e.g. 🐢"
+                  value={newHouseDraft.emoji}
+                  onChange={(e) => setNewHouseDraft({ ...newHouseDraft, emoji: e.target.value })}
+                  className="w-full rounded border px-3 py-2 text-sm"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
                 />
               </div>
 

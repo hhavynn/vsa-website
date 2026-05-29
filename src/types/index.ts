@@ -192,6 +192,7 @@ export interface HousePageAsset {
   image_alt: string | null;
   cover_image_url: string | null;
   accent_color: string | null;
+  emoji: string | null;
   display_order: number;
   is_active: boolean;
   house_parent_image_url: string | null;
