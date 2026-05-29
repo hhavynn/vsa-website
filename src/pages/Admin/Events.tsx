@@ -209,6 +209,8 @@ export default function AdminEvents() {
   });
 
   async function uploadImage(file: File): Promise<UploadedEventImage> {
+    // Admin browser uploads go to Supabase Storage. Moving permanent images into
+    // /public/images is a separate deploy-time workflow; browsers cannot write there.
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'event');
     const { file: thumbnailFile } = await prepareImageForUpload(file, 'eventThumbnail');
     const uploadId = crypto.randomUUID();
@@ -454,7 +456,7 @@ export default function AdminEvents() {
                 <div>
                   <label className={labelCls}>Image</label>
                   <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                    New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                    Images are compressed before upload to keep the site fast. New uploads also create a smaller public thumbnail.
                   </p>
                   <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
                     <input {...getInputProps()} />
@@ -550,7 +552,7 @@ export default function AdminEvents() {
                 <div>
                   <label className={labelCls}>Image</label>
                   <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                    New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
+                    Images are compressed before upload to keep the site fast. New uploads also create a smaller public thumbnail.
                   </p>
                   {selectedEvent.image_url && !editImagePreview && (
                     <div className="mb-4 mt-2">
