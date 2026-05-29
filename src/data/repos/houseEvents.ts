@@ -2,7 +2,9 @@ import { supabase } from '../../lib/supabase';
 import { HouseEvent } from '../../types';
 import { withErrorHandling } from '../errors';
 
-export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house'>;
+export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
+  house_ids?: string[];
+};
 
 const PUBLIC_FIELDS = [
   'id',
@@ -25,15 +27,25 @@ const PUBLIC_FIELDS = [
   'is_published',
   'created_at',
   'updated_at',
+  'houses:house_event_houses(house:house_page_assets(*))',
 ].join(',');
 
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
+      // Find event IDs associated with this house
+      const { data: associations } = await supabase
+        .from('house_event_houses')
+        .select('house_event_id')
+        .eq('house_page_asset_id', houseProfileId);
+
+      const eventIds = (associations ?? []).map((a) => a.house_event_id);
+      if (eventIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
-        .eq('house_profile_id', houseProfileId)
+        .in('id', eventIds)
         .eq('is_published', true)
         .gte('event_date', today)
         .order('event_date', { ascending: true })
@@ -41,16 +53,25 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []) as unknown as HouseEvent[];
+      return this.mapRelations(data);
     }, 'Failed to fetch upcoming house events');
   }
 
   async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
+      // Find event IDs associated with this house
+      const { data: associations } = await supabase
+        .from('house_event_houses')
+        .select('house_event_id')
+        .eq('house_page_asset_id', houseProfileId);
+
+      const eventIds = (associations ?? []).map((a) => a.house_event_id);
+      if (eventIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
-        .eq('house_profile_id', houseProfileId)
+        .in('id', eventIds)
         .eq('is_published', true)
         .lt('event_date', today)
         .order('event_date', { ascending: false })
@@ -58,7 +79,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []) as unknown as HouseEvent[];
+      return this.mapRelations(data);
     }, 'Failed to fetch past house events');
   }
 
@@ -74,7 +95,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []) as unknown as HouseEvent[];
+      return this.mapRelations(data);
     }, 'Failed to fetch upcoming house event previews');
   }
 
@@ -82,7 +103,10 @@ export class HouseEventsRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('house_events')
-        .select('*')
+        .select(`
+          *,
+          houses:house_event_houses(house:house_page_assets(*))
+        `)
         .order('event_date', { ascending: false })
         .order('start_time', { ascending: false });
 
@@ -90,12 +114,13 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as unknown as HouseEvent[];
+      return this.mapRelations(data);
     }, 'Failed to fetch admin house events');
   }
 
-  async createEvent(event: HouseEventFormData): Promise<HouseEvent> {
+  async createEvent(formData: HouseEventFormData): Promise<HouseEvent> {
     return withErrorHandling(async () => {
+      const { house_ids, ...event } = formData;
       const { data, error } = await supabase
         .from('house_events')
         .insert(event)
@@ -103,12 +128,26 @@ export class HouseEventsRepository {
         .single();
 
       if (error) throw error;
-      return data as HouseEvent;
+      const newEvent = data as HouseEvent;
+
+      if (house_ids && house_ids.length > 0) {
+        const associations = house_ids.map((houseId) => ({
+          house_event_id: newEvent.id,
+          house_page_asset_id: houseId,
+        }));
+        const { error: assocError } = await supabase
+          .from('house_event_houses')
+          .insert(associations);
+        if (assocError) throw assocError;
+      }
+
+      return newEvent;
     }, 'Failed to create house event');
   }
 
-  async updateEvent(id: string, event: Partial<HouseEventFormData>): Promise<HouseEvent> {
+  async updateEvent(id: string, formData: Partial<HouseEventFormData>): Promise<HouseEvent> {
     return withErrorHandling(async () => {
+      const { house_ids, ...event } = formData;
       const { data, error } = await supabase
         .from('house_events')
         .update(event)
@@ -117,7 +156,29 @@ export class HouseEventsRepository {
         .single();
 
       if (error) throw error;
-      return data as HouseEvent;
+      const updatedEvent = data as HouseEvent;
+
+      if (house_ids !== undefined) {
+        // Sync associations
+        const { error: deleteError } = await supabase
+          .from('house_event_houses')
+          .delete()
+          .eq('house_event_id', id);
+        if (deleteError) throw deleteError;
+
+        if (house_ids.length > 0) {
+          const associations = house_ids.map((houseId) => ({
+            house_event_id: id,
+            house_page_asset_id: houseId,
+          }));
+          const { error: assocError } = await supabase
+            .from('house_event_houses')
+            .insert(associations);
+          if (assocError) throw assocError;
+        }
+      }
+
+      return updatedEvent;
     }, 'Failed to update house event');
   }
 
@@ -126,6 +187,14 @@ export class HouseEventsRepository {
       const { error } = await supabase.from('house_events').delete().eq('id', id);
       if (error) throw error;
     }, 'Failed to delete house event');
+  }
+
+  private mapRelations(data: any[] | null): HouseEvent[] {
+    if (!data) return [];
+    return data.map((item) => ({
+      ...item,
+      houses: (item.houses || []).map((h: any) => h.house).filter(Boolean),
+    }));
   }
 }
 

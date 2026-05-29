@@ -56,8 +56,8 @@ export function HouseEventCard({
   house,
   isUpcoming,
 }: HouseEventCardProps) {
+  const eventHouses = event.houses && event.houses.length > 0 ? event.houses : [house];
   const color = house.accent_color || HOUSE_COLORS[house.house as HouseName] || 'var(--brand)';
-  const houseLabel = house.display_name || HOUSE_LABELS[house.house as HouseName] || house.house_key || house.house;
   const imageUrl = event.image_thumbnail_url || event.image_url || house.image_thumbnail_url || house.image_url;
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
 
@@ -88,12 +88,21 @@ export function HouseEventCard({
         <div className="flex min-w-0 flex-col p-5 sm:p-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">House Event</span>
-            <span
-              className="rounded-sm px-[7px] py-[2px] font-mono text-[10px] font-bold uppercase tracking-wider text-white"
-              style={{ background: color }}
-            >
-              {houseLabel}
-            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {eventHouses.map((h) => {
+                const hColor = h.accent_color || HOUSE_COLORS[h.house as HouseName] || 'var(--brand)';
+                const hLabel = h.display_name || HOUSE_LABELS[h.house as HouseName] || h.house_key || h.house;
+                return (
+                  <span
+                    key={h.id}
+                    className="rounded-sm px-[7px] py-[2px] font-mono text-[10px] font-bold uppercase tracking-wider text-white"
+                    style={{ background: hColor }}
+                  >
+                    {hLabel}
+                  </span>
+                );
+              })}
+            </div>
           </div>
 
           <h3 className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
@@ -121,7 +130,7 @@ export function HouseEventCard({
           <div className="mt-6 flex flex-wrap items-center gap-3">
             {isUpcoming && event.google_calendar_enabled && (
               <a
-                href={buildHouseEventCalendarUrl(event, houseLabel)}
+                href={buildHouseEventCalendarUrl(event, eventHouses.map(h => h.display_name || h.house_key).join(' + '))}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-[var(--color-surface2)]"

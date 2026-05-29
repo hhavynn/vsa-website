@@ -20,7 +20,7 @@ const labelCls = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-[v
 
 type HouseEventDraft = {
   id?: string;
-  house_profile_id: string;
+  house_profile_ids: string[];
   title: string;
   description: string;
   event_date: string;
@@ -69,7 +69,7 @@ function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['te
 
 function emptyDraft(): HouseEventDraft {
   return {
-    house_profile_id: '',
+    house_profile_ids: [],
     title: '',
     description: '',
     event_date: '',
@@ -89,7 +89,7 @@ function emptyDraft(): HouseEventDraft {
 function draftFromEvent(event: HouseEvent): HouseEventDraft {
   return {
     id: event.id,
-    house_profile_id: event.house_profile_id,
+    house_profile_ids: event.houses?.map((h) => h.id) || [event.house_profile_id],
     title: event.title,
     description: event.description ?? '',
     event_date: event.event_date,
@@ -122,7 +122,7 @@ function getHouseColor(asset?: HousePageAsset) {
 }
 
 function validateDraft(draft: HouseEventDraft) {
-  if (!draft.house_profile_id) return 'Choose a House.';
+  if (draft.house_profile_ids.length === 0) return 'Choose at least one House.';
   if (!draft.title.trim()) return 'Title is required.';
   if (!draft.event_date) return 'Date is required.';
   const hasStart = !!draft.start_time;
@@ -147,7 +147,7 @@ export function HouseEventsManager() {
     if (selectedYear === null) setSelectedYear(defaultAcademicYearStart(terms));
   }, [selectedYear, terms]);
 
-  const { assets: houseProfiles, loading: profilesLoading } = useAdminHouseAssets(selectedYear);
+  const { assets: houseProfiles } = useAdminHouseAssets(selectedYear);
   const profilesById = useMemo(() => new Map(houseProfiles.map((asset) => [asset.id, asset])), [houseProfiles]);
 
   const {
@@ -163,10 +163,10 @@ export function HouseEventsManager() {
   });
 
   useEffect(() => {
-    if (!draft.house_profile_id && houseProfiles[0]) {
-      setDraft((current) => ({ ...current, house_profile_id: houseProfiles[0].id }));
+    if (draft.house_profile_ids.length === 0 && houseProfiles[0] && !editingEvent) {
+      setDraft((current) => ({ ...current, house_profile_ids: [houseProfiles[0].id] }));
     }
-  }, [draft.house_profile_id, houseProfiles]);
+  }, [draft.house_profile_ids.length, houseProfiles, editingEvent]);
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -185,7 +185,7 @@ export function HouseEventsManager() {
   function resetForm() {
     setDraft({
       ...emptyDraft(),
-      house_profile_id: houseProfiles[0]?.id ?? '',
+      house_profile_ids: houseProfiles[0] ? [houseProfiles[0].id] : [],
     });
     setEditingEvent(null);
     setImageFile(null);
@@ -239,12 +239,13 @@ export function HouseEventsManager() {
   }
 
   function toPayload(uploadedImage?: UploadedHouseEventImage | null): HouseEventFormData {
-    const profile = profilesById.get(draft.house_profile_id);
-    if (!profile) throw new Error('House profile not found.');
+    const primaryProfile = profilesById.get(draft.house_profile_ids[0]);
+    if (!primaryProfile) throw new Error('Primary House profile not found.');
     return {
-      house_profile_id: profile.id,
-      academic_year_start: profile.academic_year_start,
-      academic_year_end: profile.academic_year_end,
+      house_profile_id: primaryProfile.id,
+      house_ids: draft.house_profile_ids,
+      academic_year_start: primaryProfile.academic_year_start,
+      academic_year_end: primaryProfile.academic_year_end,
       title: draft.title.trim(),
       slug: houseSlugFromKey(draft.title),
       description: nullable(draft.description),
@@ -270,15 +271,15 @@ export function HouseEventsManager() {
       return;
     }
 
-    const profile = profilesById.get(draft.house_profile_id);
-    if (!profile) {
-      toast.error('Choose a valid House.');
+    const primaryProfile = profilesById.get(draft.house_profile_ids[0]);
+    if (!primaryProfile) {
+      toast.error('Choose at least one valid House.');
       return;
     }
 
     setSaving(true);
     try {
-      const uploadedImage = imageFile ? await uploadImage(imageFile, profile) : null;
+      const uploadedImage = imageFile ? await uploadImage(imageFile, primaryProfile) : null;
       const payload = toPayload(uploadedImage);
 
       if (editingEvent) {
@@ -320,6 +321,15 @@ export function HouseEventsManager() {
     }
   }
 
+  function toggleHouse(id: string) {
+    setDraft((prev) => {
+      const next = prev.house_profile_ids.includes(id)
+        ? prev.house_profile_ids.filter((h) => h !== id)
+        : [...prev.house_profile_ids, id];
+      return { ...prev, house_profile_ids: next };
+    });
+  }
+
   const today = getLosAngelesDateOnly();
   const upcomingEvents = events.filter((event) => event.event_date >= today);
   const pastEvents = events.filter((event) => event.event_date < today);
@@ -331,7 +341,7 @@ export function HouseEventsManager() {
           {editingEvent ? 'Edit House Event' : 'Create House Event'}
         </h2>
         <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-          These events appear on public House pages only. They do not change attendance, points, or leaderboard calculations.
+          These events appear on public House pages. Collab events appear on all hosting House pages.
         </p>
 
         <div className="mt-6 space-y-5">
@@ -342,7 +352,7 @@ export function HouseEventsManager() {
               onChange={(event) => {
                 const nextYear = Number(event.target.value);
                 setSelectedYear(nextYear);
-                setDraft({ ...emptyDraft(), house_profile_id: '' });
+                setDraft({ ...emptyDraft(), house_profile_ids: [] });
                 setEditingEvent(null);
               }}
               className={inputCls}
@@ -354,18 +364,37 @@ export function HouseEventsManager() {
           </div>
 
           <div>
-            <label className={labelCls}>House *</label>
-            <select
-              value={draft.house_profile_id}
-              onChange={(event) => setDraft({ ...draft, house_profile_id: event.target.value })}
-              className={inputCls}
-              required
-              disabled={profilesLoading || houseProfiles.length === 0}
-            >
-              {houseProfiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>{getHouseLabel(profile)}</option>
-              ))}
-            </select>
+            <label className={labelCls}>Hosting House(s) *</label>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>Select multiple for collab events.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {houseProfiles.map((profile) => {
+                const isSelected = draft.house_profile_ids.includes(profile.id);
+                const color = getHouseColor(profile);
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => toggleHouse(profile.id)}
+                    className={`flex items-center gap-2 rounded border px-3 py-2 text-left transition-all ${isSelected ? 'shadow-sm' : 'opacity-60'}`}
+                    style={{
+                      borderColor: isSelected ? color : 'var(--color-border)',
+                      background: isSelected ? `${color}11` : 'transparent',
+                    }}
+                  >
+                    <div
+                      className={`h-3 w-3 rounded-full border ${isSelected ? '' : 'bg-transparent'}`}
+                      style={{
+                        backgroundColor: isSelected ? color : 'transparent',
+                        borderColor: isSelected ? color : 'var(--color-text3)',
+                      }}
+                    />
+                    <span className="truncate font-sans text-[13px] font-medium" style={{ color: isSelected ? 'var(--color-text)' : 'var(--color-text2)' }}>
+                      {getHouseLabel(profile)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
             {houseProfiles.length === 0 && (
               <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                 Create House profiles in the House Page Images tab before adding House events.
@@ -498,8 +527,9 @@ export function HouseEventsManager() {
                     </div>
                     <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                       {(groupedEvents as HouseEvent[]).map((event) => {
-                        const profile = profilesById.get(event.house_profile_id);
-                        const color = getHouseColor(profile);
+                        const eventHouses = event.houses || [];
+                        const primaryHouse = eventHouses[0] || profilesById.get(event.house_profile_id);
+                        const color = getHouseColor(primaryHouse);
                         const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
                         return (
                           <div key={event.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
@@ -508,9 +538,17 @@ export function HouseEventsManager() {
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
-                                  {getHouseLabel(profile)}
-                                </span>
+                                {eventHouses.length > 0 ? (
+                                  eventHouses.map((h) => (
+                                    <span key={h.id} className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: getHouseColor(h) }}>
+                                      {getHouseLabel(h)}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
+                                    {getHouseLabel(primaryHouse)}
+                                  </span>
+                                )}
                                 {!event.is_published && <span className="rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>Draft</span>}
                               </div>
                               <p className="mt-1 truncate font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</p>
@@ -559,3 +597,4 @@ export function HouseEventsManager() {
     </div>
   );
 }
+
