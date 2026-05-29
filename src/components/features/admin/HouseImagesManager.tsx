@@ -20,6 +20,9 @@ type HouseAssetDraft = {
   image_thumbnail_url: string;
   image_alt: string;
   cover_image_url: string;
+  house_parent_image_url: string;
+  house_parent_heading: string;
+  house_parent_body: string;
   source_doc_url: string;
   internal_notes: string;
 };
@@ -27,6 +30,10 @@ type HouseAssetDraft = {
 type UploadedHouseImage = {
   imageUrl: string;
   thumbnailUrl: string;
+};
+
+type UploadedHouseParentImage = {
+  imageUrl: string;
 };
 
 function getCurrentAcademicYearStart() {
@@ -74,6 +81,9 @@ function emptyDraft(houseKey: string = ''): HouseAssetDraft {
     image_thumbnail_url: '',
     image_alt: HOUSE_LABELS[houseName] || houseKey,
     cover_image_url: '',
+    house_parent_image_url: '',
+    house_parent_heading: '',
+    house_parent_body: '',
     source_doc_url: '',
     internal_notes: '',
   };
@@ -95,6 +105,9 @@ function draftFromAsset(asset: HousePageAsset): HouseAssetDraft {
     image_thumbnail_url: asset.image_thumbnail_url || '',
     image_alt: asset.image_alt || asset.display_name || asset.house,
     cover_image_url: asset.cover_image_url || '',
+    house_parent_image_url: asset.house_parent_image_url || '',
+    house_parent_heading: asset.house_parent_heading || '',
+    house_parent_body: asset.house_parent_body || '',
     source_doc_url: asset.source_doc_url || '',
     internal_notes: asset.internal_notes || '',
   };
@@ -107,6 +120,8 @@ export function HouseImagesManager() {
   const [drafts, setDrafts] = useState<Record<string, HouseAssetDraft>>({});
   const [files, setFiles] = useState<Record<string, File>>({});
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [parentFiles, setParentFiles] = useState<Record<string, File>>({});
+  const [parentPreviews, setParentPreviews] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newHouseDraft, setNewHouseDraft] = useState<HouseAssetDraft>(() => emptyDraft());
@@ -123,7 +138,14 @@ export function HouseImagesManager() {
     });
     setDrafts(nextDrafts);
     setFiles({});
+    setParentFiles({});
     setPreviews((current) => {
+      Object.values(current).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+      return {};
+    });
+    setParentPreviews((current) => {
       Object.values(current).forEach((url) => {
         if (url) URL.revokeObjectURL(url);
       });
@@ -136,8 +158,11 @@ export function HouseImagesManager() {
       Object.values(previews).forEach((url) => {
         if (url) URL.revokeObjectURL(url);
       });
+      Object.values(parentPreviews).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
     };
-  }, [previews]);
+  }, [previews, parentPreviews]);
 
   function updateDraft(id: string, patch: Partial<HouseAssetDraft>) {
     setDrafts((current) => ({
@@ -158,6 +183,23 @@ export function HouseImagesManager() {
     });
 
     setPreviews((current) => {
+      if (current[id]) URL.revokeObjectURL(current[id]);
+      const next = { ...current };
+      if (file) next[id] = URL.createObjectURL(file);
+      else delete next[id];
+      return next;
+    });
+  }
+
+  function setHouseParentFile(id: string, file: File | null) {
+    setParentFiles((current) => {
+      const next = { ...current };
+      if (file) next[id] = file;
+      else delete next[id];
+      return next;
+    });
+
+    setParentPreviews((current) => {
       if (current[id]) URL.revokeObjectURL(current[id]);
       const next = { ...current };
       if (file) next[id] = URL.createObjectURL(file);
@@ -201,6 +243,26 @@ export function HouseImagesManager() {
     };
   }
 
+  async function uploadHouseParentImage(houseKey: string, file: File): Promise<UploadedHouseParentImage> {
+    const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'homepage');
+    const uploadId = crypto.randomUUID();
+    const houseSlug = houseKey.toLowerCase().replace(/\s+/g, '-');
+    const fileName = `house-parents/${selectedYear}/${houseSlug}-${uploadId}.${getUploadExtension(preparedFile)}`;
+
+    const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, preparedFile, {
+      cacheControl: '31536000',
+      contentType: preparedFile.type,
+    });
+    if (uploadError) throw uploadError;
+
+    if (wasCompressed && reduction > 10) {
+      toast.success(`${houseKey} House Parent graphic optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+    }
+
+    const { data } = supabase.storage.from('house_images').getPublicUrl(fileName);
+    return { imageUrl: data.publicUrl };
+  }
+
   async function removeHouseImage(url?: string | null) {
     const objectName = extractSupabasePublicObjectName(url, 'house_images');
     if (objectName) await supabase.storage.from('house_images').remove([objectName]);
@@ -214,13 +276,16 @@ export function HouseImagesManager() {
     try {
       setSavingId(id);
       const file = files[id];
+      const parentFile = parentFiles[id];
       const draft = drafts[id];
       const oldImageUrl = asset.image_url;
       const oldThumbnailUrl = asset.image_thumbnail_url;
       const uploadedImage = file ? await uploadHouseImage(draft.house_key || asset.house, file) : null;
+      const uploadedParentImage = parentFile ? await uploadHouseParentImage(draft.house_key || asset.house, parentFile) : null;
       
       const imageUrl = uploadedImage?.imageUrl ?? draft.image_url;
       const imageThumbnailUrl = uploadedImage?.thumbnailUrl ?? draft.image_thumbnail_url;
+      const houseParentImageUrl = uploadedParentImage?.imageUrl ?? draft.house_parent_image_url;
 
       await houseAssetsRepository.upsertAsset({
         id,
@@ -236,6 +301,9 @@ export function HouseImagesManager() {
         image_thumbnail_url: nullable(imageThumbnailUrl),
         image_alt: nullable(draft.image_alt) ?? draft.display_name,
         cover_image_url: nullable(draft.cover_image_url),
+        house_parent_image_url: nullable(houseParentImageUrl),
+        house_parent_heading: nullable(draft.house_parent_heading),
+        house_parent_body: nullable(draft.house_parent_body),
         display_order: asset.display_order,
         source_doc_url: nullable(draft.source_doc_url),
         internal_notes: nullable(draft.internal_notes),
@@ -246,6 +314,7 @@ export function HouseImagesManager() {
         await removeHouseImage(oldThumbnailUrl);
       }
       setHouseFile(id, null);
+      setHouseParentFile(id, null);
       toast.success(`${draft.display_name} saved.`);
       await refetch();
     } catch (err) {
@@ -278,6 +347,9 @@ export function HouseImagesManager() {
         image_thumbnail_url: null,
         image_alt: newHouseDraft.display_name,
         cover_image_url: null,
+        house_parent_image_url: nullable(newHouseDraft.house_parent_image_url),
+        house_parent_heading: nullable(newHouseDraft.house_parent_heading),
+        house_parent_body: nullable(newHouseDraft.house_parent_body),
         display_order: assets.length,
         source_doc_url: null,
         internal_notes: null,
@@ -341,6 +413,7 @@ export function HouseImagesManager() {
         {assets.map((asset) => {
           const draft = drafts[asset.id] || draftFromAsset(asset);
           const previewUrl = previews[asset.id] ?? (draft.image_thumbnail_url || draft.image_url);
+          const parentPreviewUrl = parentPreviews[asset.id] ?? draft.house_parent_image_url;
           const color = draft.accent_color;
           const saving = savingId === asset.id;
 
@@ -448,6 +521,83 @@ export function HouseImagesManager() {
                     />
                     Published and active for this year
                   </label>
+
+                  <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Meet the House Parents</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                        Use the House Parent announcement graphic here. Images are compressed before upload.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-[150px_minmax(0,1fr)]">
+                      <div>
+                        <div
+                          className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded border p-2"
+                          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+                        >
+                          {parentPreviewUrl ? (
+                            <img src={parentPreviewUrl} alt={`${draft.display_name} House Parent announcement`} className="max-h-full max-w-full object-contain" />
+                          ) : (
+                            <span className="px-3 text-center font-serif text-lg italic" style={{ color: 'var(--color-border)' }}>Parents</span>
+                          )}
+                        </div>
+                        <label
+                          htmlFor={`house-parent-image-${asset.id}`}
+                          className="mt-3 block cursor-pointer rounded border px-3 py-2 text-center text-[11px] font-medium"
+                          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                        >
+                          {parentPreviewUrl ? 'Change Graphic' : 'Upload Graphic'}
+                        </label>
+                        <input
+                          id={`house-parent-image-${asset.id}`}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="sr-only"
+                          onChange={(event) => setHouseParentFile(asset.id, event.target.files?.[0] ?? null)}
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                            Optional Heading
+                          </label>
+                          <input
+                            value={draft.house_parent_heading}
+                            onChange={(event) => updateDraft(asset.id, { house_parent_heading: event.target.value })}
+                            placeholder="Meet the House Parents"
+                            className="w-full rounded border px-3 py-2 text-sm"
+                            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                            Optional Caption
+                          </label>
+                          <textarea
+                            value={draft.house_parent_body}
+                            onChange={(event) => updateDraft(asset.id, { house_parent_body: event.target.value })}
+                            rows={3}
+                            placeholder="Names, short intro, or parent note."
+                            className="w-full rounded border px-3 py-2 text-sm"
+                            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                        {parentPreviewUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateDraft(asset.id, { house_parent_image_url: '' });
+                              setHouseParentFile(asset.id, null);
+                            }}
+                            className="rounded border px-3 py-2 text-[11px] font-medium"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                          >
+                            Clear House Parent Graphic
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="flex flex-wrap gap-3 pt-1">
                     <button

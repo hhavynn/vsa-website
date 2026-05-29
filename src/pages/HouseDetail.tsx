@@ -42,6 +42,46 @@ function getHouseColor(asset: HousePageAsset) {
   return asset.accent_color || HOUSE_COLORS[asset.house as HouseName] || 'var(--brand)';
 }
 
+function HouseParentsSection({ house, label, color }: { house: HousePageAsset; label: string; color: string }) {
+  const parentImage = house.house_parent_image_url;
+  const heading = house.house_parent_heading || 'Meet the House Parents';
+  const body = house.house_parent_body || 'The people helping lead this House through the year.';
+
+  return (
+    <RevealOnScrollWrapper>
+      <section id="house-parents" className="scroll-mt-24">
+        <div className="mb-8">
+          <Label className="mb-2">House Parents</Label>
+          <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>{heading}</h2>
+          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            {body}
+          </p>
+        </div>
+
+        <div className="scrapbook-paper mx-auto max-w-3xl overflow-hidden p-4 sm:p-5" style={{ borderColor: `${color}55` }}>
+          {parentImage ? (
+            <div className="rounded border p-3" style={{ borderColor: `${color}33`, background: 'var(--color-surface2)' }}>
+              <img
+                src={getSupabaseImageUrl(parentImage, { width: 1100, height: 1500, resize: 'contain', quality: 78 })}
+                alt={`${label} House Parent announcement`}
+                className="mx-auto max-h-[78vh] w-full object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          ) : (
+            <div className="rounded border px-6 py-12 text-center" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+              <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                House Parent announcements will show up here soon.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+    </RevealOnScrollWrapper>
+  );
+}
+
 export function HouseDetail() {
   const { yearSlug, houseSlug = '' } = useParams();
   const { terms, loading: termsLoading } = useAcademicTerms();
@@ -183,6 +223,10 @@ export function HouseDetail() {
       </div>
 
       <div className="vsa-container py-12 lg:py-16">
+        <HouseParentsSection house={house} label={label} color={color} />
+
+        <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />
+
         <RevealOnScrollWrapper>
           <section id="upcoming-events" className="scroll-mt-24">
             <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
