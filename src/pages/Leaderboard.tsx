@@ -12,6 +12,7 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
+import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
@@ -415,6 +416,8 @@ export function Leaderboard() {
     selectedYear === 'all'
       ? 'All-Time'
       : academicYears.find((year) => year.year === selectedYear)?.label || (selectedYear ? `${selectedYear}-${selectedYear + 1}` : '');
+  const summerBreak = isSummerBreak();
+  const summerPointsMessage = getSummerBreakMessage('points');
 
   return (
     <>
@@ -496,6 +499,12 @@ export function Leaderboard() {
 
       <div className="vsa-container pt-8">
         <FindMyPoints variant="panel" />
+        {summerBreak && (
+          <div className="mt-4 rounded border px-4 py-3 font-sans text-xs leading-relaxed" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text3)' }}>
+            <span className="font-semibold" style={{ color: 'var(--text)' }}>{summerPointsMessage.title}.</span>{' '}
+            {summerPointsMessage.body}
+          </div>
+        )}
       </div>
 
       <div className="vsa-container py-8">
