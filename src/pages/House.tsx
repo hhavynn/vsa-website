@@ -719,7 +719,7 @@ export function House() {
                 const color = getHouseColor(house, asset);
                 const standing = standings.find((s) => s.house === house);
                 const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
-                const emoji = HOUSE_EMOJI[house as HouseName] ?? '';
+                const emoji = asset?.emoji || HOUSE_EMOJI[house as HouseName] || '';
                 const label = getHouseLabel(house, asset, standing?.display_name);
                 const imageUrl = asset?.image_thumbnail_url || asset?.image_url;
                 const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';

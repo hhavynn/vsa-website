@@ -116,6 +116,7 @@ interface HouseStanding {
   display_name?: string;
   image_url?: string | null;
   accent_color?: string | null;
+  emoji?: string | null;
   academic_year_start?: number;
   academic_year_end?: number;
   rank: number;
@@ -819,7 +820,7 @@ function HouseStandingsWall({
 
                     <div className="min-w-0">
                       <h4 className="truncate font-serif text-2xl font-bold sm:text-3xl" style={{ color: 'var(--text)' }}>
-                        {label}
+                        {standing.emoji ? `${standing.emoji} ` : ''}{label}
                       </h4>
                       <div className="mt-1 flex items-center gap-2 font-mono text-[11px] font-bold opacity-60">
                         <span>{standing.unique_members} MEMBERS</span>

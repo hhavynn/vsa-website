@@ -60,7 +60,7 @@ export class HouseAssetsRepository {
             ...asset,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: 'academic_year_start,house' },
+          { onConflict: 'academic_year_start,house_key' },
         )
         .select('*')
         .single();

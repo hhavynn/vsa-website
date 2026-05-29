@@ -200,7 +200,7 @@ export function HouseDetail() {
                 {rank && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
                 {standing && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>
-              <h1 className="vsa-page-title">{label}</h1>
+              <h1 className="vsa-page-title">{house.emoji ? `${house.emoji} ` : ''}{label}</h1>
               <p className="mt-5 max-w-2xl font-sans text-[16px] leading-[1.75]" style={{ color: 'var(--text2)' }}>
                 {house.description || 'Join your fellow house members for socials, bonding events, and activities throughout the year.'}
               </p>

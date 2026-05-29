@@ -41,7 +41,9 @@
     "lint": "eslint src/**/*.{ts,tsx}",
     "format": "prettier --write src/**/*.{ts,tsx}",
     "migrate:images:dry": "tsx scripts/migrate-supabase-images-to-public.ts",
-    "migrate:images:apply": "tsx scripts/migrate-supabase-images-to-public.ts --apply"
+    "migrate:images:apply": "tsx scripts/migrate-supabase-images-to-public.ts --apply",
+    "migrate:house-assets:dry": "tsx scripts/migrate-supabase-images-to-public.ts --category houses",
+    "migrate:house-assets:apply": "tsx scripts/migrate-supabase-images-to-public.ts --category houses --apply"
   },
   "eslintConfig": {
     "extends": [
