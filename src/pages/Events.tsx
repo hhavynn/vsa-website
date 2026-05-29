@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns';
-import { formatEventTimeRange } from '../lib/eventTime';
+import { formatEventDateRange, formatEventTimeRange } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
@@ -495,7 +495,9 @@ export function Events() {
                   <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                     {featured.start_time && featured.end_time
                       ? `${format(new Date(featured.date), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
-                      : format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
+                      : featured.end_date && featured.end_date !== featured.date.slice(0, 10)
+                        ? formatEventDateRange(featured.date, featured.end_date)
+                        : format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
                   </span>
                 </div>
                 <h2 className="mb-4 font-serif text-[32px] leading-[1.05] tracking-[-0.03em] sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
@@ -588,7 +590,9 @@ export function Events() {
                       <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                         {event.start_time && event.end_time
                           ? `${format(new Date(event.date), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
-                          : format(new Date(event.date), 'MMM d / h:mm a')}
+                          : event.end_date && event.end_date !== event.date.slice(0, 10)
+                            ? formatEventDateRange(event.date, event.end_date)
+                            : format(new Date(event.date), 'MMM d / h:mm a')}
                       </span>
                     </div>
                     <h3 className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>

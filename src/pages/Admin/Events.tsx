@@ -19,7 +19,7 @@ import { isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
   event_type: 'other', check_in_form_url: '', points: 0,
-  academic_term_id: null, start_time: null, end_time: null,
+  academic_term_id: null, start_time: null, end_time: null, end_date: null,
 };
 
 type UploadedEventImage = {
@@ -162,20 +162,29 @@ export default function AdminEvents() {
 
   const handleNewEventDateChange = (dateValue: string) => {
     const suggestedTerm = findTermForDate(dateValue, terms);
-    setNewEvent({
-      ...newEvent,
+    setNewEvent((prev) => ({
+      ...prev,
       date: dateValue,
       academic_term_id: suggestedTerm?.id ?? null,
-    });
+      // Auto-populate end_date to match start date; user can override for multi-day events
+      end_date: dateValue || null,
+    }));
   };
 
   const handleSelectedEventDateChange = (dateValue: string) => {
     if (!selectedEvent) return;
     const suggestedTerm = findTermForDate(dateValue, terms);
-    setSelectedEvent({
-      ...selectedEvent,
-      date: dateValue,
-      academic_term_id: suggestedTerm?.id ?? null,
+    setSelectedEvent((prev) => {
+      if (!prev) return prev;
+      const prevDateOnly = prev.date ? prev.date.slice(0, 10) : null;
+      // Only auto-update end_date if it was matching the old start date (or unset)
+      const shouldAutoUpdate = !prev.end_date || prev.end_date === prevDateOnly;
+      return {
+        ...prev,
+        date: dateValue,
+        academic_term_id: suggestedTerm?.id ?? null,
+        end_date: shouldAutoUpdate ? (dateValue || null) : prev.end_date,
+      };
     });
   };
 
@@ -288,6 +297,7 @@ export default function AdminEvents() {
         academic_term_id: academicTermId,
         start_time: newEvent.start_time || null,
         end_time: newEvent.end_time || null,
+        end_date: newEvent.end_date || null,
       }]);
       if (error) throw error;
       toast.success('Event created');
@@ -354,6 +364,7 @@ export default function AdminEvents() {
         academic_term_id: academicTermId,
         start_time: selectedEvent.start_time || null,
         end_time: selectedEvent.end_time || null,
+        end_date: selectedEvent.end_date || null,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
       await removeEventImage(imageUrlToRemove);
@@ -468,7 +479,17 @@ export default function AdminEvents() {
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
                   <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
-                  <div><label className={labelCls}>Date *</label><input type="date" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Start date *</label>
+                      <input type="date" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required />
+                    </div>
+                    <div>
+                      <label className={labelCls}>End date</label>
+                      <input type="date" value={newEvent.end_date ?? ''} min={newEvent.date || undefined} onChange={e => setNewEvent({...newEvent, end_date: e.target.value || null})} className={inputCls} />
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>Leave as start date for single-day events.</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Start time</label>
@@ -561,7 +582,17 @@ export default function AdminEvents() {
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
                   <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
-                  <div><label className={labelCls}>Date *</label><input type="date" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Start date *</label>
+                      <input type="date" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required />
+                    </div>
+                    <div>
+                      <label className={labelCls}>End date</label>
+                      <input type="date" value={selectedEvent.end_date ?? formatDateForInput(selectedEvent.date)} min={formatDateForInput(selectedEvent.date) || undefined} onChange={e => setSelectedEvent({...selectedEvent, end_date: e.target.value || null})} className={inputCls} />
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>Leave as start date for single-day events.</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Start time</label>

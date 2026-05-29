@@ -59,13 +59,48 @@ export function buildGcalTimedDates(eventDate: string, startTime: string, endTim
 /**
  * Build a Google Calendar `dates` param for an all-day (date-only) event.
  * Accepts an ISO datetime string and uses a 2-hour default duration.
+ * If endDate is provided and differs from the start, it spans multiple days.
  */
-export function buildGcalAllDayDates(isoDate: string): string {
+export function buildGcalAllDayDates(isoDate: string, endDate?: string | null): string {
+  const startDay = dateToPart(extractDateOnly(isoDate));
+  if (endDate) {
+    const endDay = dateToPart(endDate);
+    if (endDay !== startDay) {
+      // Google Calendar all-day end is exclusive, so add 1 day
+      const endDateObj = new Date(`${endDate}T00:00:00`);
+      endDateObj.setDate(endDateObj.getDate() + 1);
+      const exclusiveEndDay = dateToPart(endDateObj.toISOString().slice(0, 10));
+      return `${startDay}/${exclusiveEndDay}`;
+    }
+  }
   // Use Date object for UTC conversion — ISO full timestamps are unambiguous.
   const start = new Date(isoDate);
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
   const fmt = (d: Date) => d.toISOString().replace(/[-:]|\.\d+/g, '');
   return `${fmt(start)}/${fmt(end)}`;
+}
+
+/**
+ * Format a date range for display. Returns e.g. "Feb 14 – 16" or "Feb 14" for same-day.
+ * isoDate is a full ISO timestamp; endDate is "YYYY-MM-DD" or null.
+ */
+export function formatEventDateRange(isoDate: string, endDate?: string | null): string {
+  const startStr = isoDate.slice(0, 10); // "YYYY-MM-DD"
+  if (!endDate || endDate === startStr) {
+    const [y, mo, d] = startStr.split('-').map(Number);
+    const date = new Date(y, mo - 1, d);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const [sy, smo, sd] = startStr.split('-').map(Number);
+  const [ey, emo, ed] = endDate.split('-').map(Number);
+  const start = new Date(sy, smo - 1, sd);
+  const end = new Date(ey, emo - 1, ed);
+  const startFmt = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (smo === emo && sy === ey) {
+    return `${startFmt} – ${ed}`;
+  }
+  const endFmt = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${startFmt} – ${endFmt}`;
 }
 
 /**

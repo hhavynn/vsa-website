@@ -10,7 +10,7 @@ function googleUrl(event: Event) {
     url.searchParams.set('dates', buildGcalTimedDates(event.date, event.start_time, event.end_time));
     url.searchParams.set('ctz', 'America/Los_Angeles');
   } else {
-    url.searchParams.set('dates', buildGcalAllDayDates(event.date));
+    url.searchParams.set('dates', buildGcalAllDayDates(event.date, event.end_date));
   }
 
   if (event.description) url.searchParams.set('details', event.description);
