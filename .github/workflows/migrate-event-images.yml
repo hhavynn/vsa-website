@@ -20,6 +20,14 @@ on:
         required: false
         default: "20"
         type: string
+  repository_dispatch:
+    types: [event-image-migration-requested]
+
+# Prevent duplicate migrations for the same event. Different events run independently.
+# Falls back to 'batch' for manual runs with no event_id.
+concurrency:
+  group: event-image-migration-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.event_id || inputs.event_id || 'batch' }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -40,28 +48,41 @@ jobs:
         run: npm ci
 
       - name: Guard — apply mode must run on main
-        if: ${{ inputs.apply == 'true' && github.ref != 'refs/heads/main' }}
+        # repository_dispatch always runs in apply mode; manual apply= true also guarded here.
+        if: ${{ (inputs.apply == 'true' || github.event_name == 'repository_dispatch') && github.ref != 'refs/heads/main' }}
         run: |
           echo "ERROR: Apply mode is only allowed on the main branch."
           echo "Current ref: ${{ github.ref }}"
           echo "Updating DB URLs before the files are deployed on main can temporarily"
-          echo "break production event images. Re-run this workflow from main."
+          echo "break production event images."
           exit 1
 
       - name: Build migration args
         id: args
         run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            EVENT_ID="${{ github.event.client_payload.event_id }}"
+            APPLY_MODE="true"
+            LIMIT="1"
+          else
+            EVENT_ID="${{ inputs.event_id }}"
+            APPLY_MODE="${{ inputs.apply }}"
+            LIMIT="${{ inputs.limit || '20' }}"
+          fi
+
           ARGS="--category events"
-          if [ -n "${{ inputs.event_id }}" ]; then
-            ARGS="$ARGS --event-id ${{ inputs.event_id }}"
+          if [ -n "$EVENT_ID" ]; then
+            ARGS="$ARGS --event-id $EVENT_ID"
           fi
-          if [ -n "${{ inputs.limit }}" ]; then
-            ARGS="$ARGS --limit ${{ inputs.limit }}"
+          if [ -n "$LIMIT" ]; then
+            ARGS="$ARGS --limit $LIMIT"
           fi
-          if [ "${{ inputs.apply }}" = "true" ]; then
+          if [ "$APPLY_MODE" = "true" ]; then
             ARGS="$ARGS --apply"
           fi
+
           echo "MIGRATION_ARGS=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "APPLY_MODE=$APPLY_MODE" >> "$GITHUB_OUTPUT"
 
       - name: Run migration
         env:
@@ -70,7 +91,7 @@ jobs:
         run: npx tsx scripts/migrate-supabase-images-to-public.ts ${{ steps.args.outputs.MIGRATION_ARGS }}
 
       - name: Commit and push migrated images
-        if: ${{ inputs.apply == 'true' }}
+        if: ${{ steps.args.outputs.APPLY_MODE == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
