@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
@@ -167,6 +168,8 @@ function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
 export function Leaderboard() {
   const { terms, loading: termsLoading } = useAcademicTerms();
   const { yearsWithData, loading: yearsWithDataLoading } = useLeaderboardYears();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [byPoints, setByPoints] = useState<LeaderboardEntry[]>([]);
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [houseStandings, setHouseStandings] = useState<HouseStanding[]>([]);
@@ -174,11 +177,36 @@ export function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [houseLoading, setHouseLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'individual' | 'houses'>('individual');
+  const [activeView, setActiveView] = useState<'individual' | 'houses'>(
+    (searchParams.get('view') === 'houses' ? 'houses' : 'individual')
+  );
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
+
+  // Sync state with URL view parameter
+  const setView = (view: 'individual' | 'houses') => {
+    setActiveView(view);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (view === 'houses') {
+        next.set('view', 'houses');
+      } else {
+        next.delete('view');
+      }
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'houses' && activeView !== 'houses') {
+      setActiveView('houses');
+    } else if (!view && activeView !== 'individual') {
+      setActiveView('individual');
+    }
+  }, [searchParams, activeView]);
 
   const academicYears = useMemo<AcademicYearOption[]>(() => {
     const years = new Map<number, AcademicYearOption>();
@@ -465,7 +493,7 @@ export function Leaderboard() {
               {(['individual', 'houses'] as const).map((view) => (
                 <button
                   key={view}
-                  onClick={() => setActiveView(view)}
+                  onClick={() => setView(view)}
                   className={`vsa-filter-btn px-6 py-2.5 font-bold transition-all ${activeView === view ? 'active scale-105 shadow-md' : ''}`}
                 >
                   {view === 'individual' ? 'Individual' : 'House'}
