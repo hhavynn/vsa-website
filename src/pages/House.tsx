@@ -4,22 +4,17 @@ import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
-import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
-import { eventsRepository, PublicEventPreview } from '../data/repos/events';
-import { galleryRepository, GalleryAlbum } from '../data/repos/gallery';
+import { houseEventsRepository } from '../data/repos/houseEvents';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { getAcademicTermMeta, formatAcademicYear, parseYearSlug, getYearSlug } from '../lib/academicTerms';
+import { getAcademicTermMeta, formatAcademicYear, parseYearSlug } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
-import { formatEventTime } from '../lib/eventTime';
+import { formatEventTimeRange } from '../lib/eventTime';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
-import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
-import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
-import { PointsExplainer } from '../components/features/points/PointsExplainer';
-import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
+import { HouseEvent, HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
@@ -74,24 +69,17 @@ const HOUSE_PARENTS: HouseParent[] = [
 ];
 
 const steps = [
-  { num: '01', title: 'Join the Program', desc: "Sign up when applications or sign-ups open each year. Check VSA's Instagram for the latest announcements." },
-  { num: '02', title: 'Get Sorted', desc: 'You are placed into one of four houses. A house reveal kicks off the year and introduces you to your new community.' },
-  { num: '03', title: 'Meet Your House', desc: 'Connect with your House Parents and fellow house members through socials, bonding events, and activities throughout the year.' },
-  { num: '04', title: 'Earn Points & Compete', desc: "Show up, participate, and earn points for your house. The house with the most points at year's end wins a special reward." },
-];
-
-const eventTypes = [
-  'House Reveal', 'Meet & Greet', 'Game Nights', 'Study Jams',
-  'Beach Outings', 'Karaoke', 'House Dinners', 'DIY Activities',
-  'Movie Nights', 'Inter-House Collabs', 'Competitions', 'End-of-Year Celebration',
+  { num: '01', title: 'Join the Program', desc: "Sign up when applications or sign-ups open each year." },
+  { num: '02', title: 'Get Sorted', desc: 'House Reveal introduces you to your House for the year.' },
+  { num: '03', title: 'Meet Your House', desc: 'House Parents and socials help you find your smaller VSA crew.' },
+  { num: '04', title: 'Earn Points', desc: 'Check in at qualifying events to help your House climb the board.' },
 ];
 
 const faqs = [
-  { q: 'What is the House Program?', a: "The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships throughout the year." },
   { q: 'Do I need to already know people in VSA to join?', a: "Not at all. The program is meant to help members meet new people and feel more connected, especially if you are newer to VSA or looking for a smaller group within the org." },
-  { q: 'What kinds of events are part of the program?', a: 'Events vary by house and cycle but may include house reveals, meet-and-greets, bonding socials, study jams, beach outings, karaoke, DIY activities, movie nights, inter-house collaborations, and competitions.' },
+  { q: 'What kinds of events are part of the program?', a: 'Events vary by house and cycle but may include reveals, bonding socials, study jams, karaoke, movie nights, and inter-House collaborations.' },
   { q: 'What do House Parents do?', a: 'House Parents lead their house throughout the year. They plan socials and bonding activities, communicate with members, encourage participation, and help create a welcoming environment for everyone in the house.' },
-  { q: 'Is there competition between houses?', a: 'Yes. Houses earn points through participation in events and activities across the year. At the end of the year, the house with the most points receives a special reward.' },
+  { q: 'How do House points work?', a: 'House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.' },
   { q: 'When do sign-ups or applications open?', a: "Sign-up timelines are announced at the start of each year through VSA's official channels. Follow @vsaatucsd on Instagram to stay up to date." },
 ];
 
@@ -151,16 +139,6 @@ function computeBadges(standings: HouseYearlyPoints[]): AutoBadges {
   return { mostEvents, mostMembers, mostEfficient };
 }
 
-const EVENT_TYPE_SHORT: Record<string, string> = {
-  gbm: 'GBM',
-  mixer: 'Mixer',
-  winter_retreat: 'Retreat',
-  vcn: 'VCN',
-  wildn_culture: 'Wild n\' Culture',
-  external_event: 'External',
-  other: 'Event',
-};
-
 const RANK_MEDALS = ['🥇', '🥈', '🥉', '4️⃣'];
 
 function getTodayDateOnly(): string {
@@ -182,7 +160,7 @@ function HousePulseCard({
 }) {
   return (
     <div className="scrapbook-paper flex min-h-[280px] flex-col p-5 sm:p-6">
-      <div className="program-eyebrow mb-3">{title}</div>
+      <h3 className="program-eyebrow mb-3">{title}</h3>
       <div className="min-h-0 flex-1">{children}</div>
       {footer && <div className="mt-5 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>{footer}</div>}
     </div>
@@ -221,7 +199,7 @@ function RecentActivityPulse({
   return (
     <HousePulseCard
       title="Recent activity"
-      footer={<Link to="/leaderboard?view=houses" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">See full standings</Link>}
+      footer={<Link to="/leaderboard?view=houses" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">Full leaderboard →</Link>}
     >
       {loading ? (
         <PulseLoading />
@@ -246,75 +224,6 @@ function RecentActivityPulse({
                     {item.contributing_members > 0 ? ` / ${item.contributing_members} members` : ''}
                   </p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </HousePulseCard>
-  );
-}
-
-function HouseShoutoutsPulse({
-  standings,
-  loading,
-  hasLiveStandings,
-  assetsByHouse,
-}: {
-  standings: HouseYearlyPoints[];
-  loading: boolean;
-  hasLiveStandings: boolean;
-  assetsByHouse: Map<string, HousePageAsset>;
-}) {
-  const withPoints = standings.filter((standing) => standing.total_points > 0);
-  const leader = withPoints[0] ?? null;
-  const second = withPoints[1] ?? null;
-  const mostMembers = withPoints.length > 0 ? [...withPoints].sort((a, b) => b.unique_members - a.unique_members)[0] : null;
-
-  const shoutouts = [
-    leader && {
-      label: 'Currently leading',
-      house: leader,
-      detail: `${leader.total_points.toLocaleString()} points on the board`,
-    },
-    second && leader && {
-      label: leader.total_points === second.total_points ? 'Tied near the top' : 'Close behind',
-      house: second,
-      detail: leader.total_points === second.total_points
-        ? `${second.total_points.toLocaleString()} points`
-        : `${(leader.total_points - second.total_points).toLocaleString()} points back`,
-    },
-    mostMembers && {
-      label: 'Showing up deep',
-      house: mostMembers,
-      detail: `${mostMembers.unique_members.toLocaleString()} members have contributed`,
-    },
-  ].filter(Boolean) as Array<{ label: string; house: HouseYearlyPoints; detail: string }>;
-
-  return (
-    <HousePulseCard title="House shoutouts">
-      {loading ? (
-        <PulseLoading />
-      ) : !hasLiveStandings || shoutouts.length === 0 ? (
-        <PulseEmpty>House shoutouts are coming soon.</PulseEmpty>
-      ) : (
-        <div className="space-y-3">
-          {shoutouts.slice(0, 3).map((shoutout) => {
-            const asset = assetsByHouse.get(shoutout.house.house);
-            const color = getHouseColor(shoutout.house.house, asset, shoutout.house.accent_color);
-            const label = getHouseLabel(shoutout.house.house, asset, shoutout.house.display_name);
-            const emoji = HOUSE_EMOJI[shoutout.house.house as HouseName] ?? '';
-            return (
-              <div key={`${shoutout.label}-${shoutout.house.house}`} className="rounded-lg border p-3" style={{ borderColor: `${color}66`, background: `${color}12` }}>
-                <div className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
-                  {shoutout.label}
-                </div>
-                <div className="mt-1 font-serif text-xl leading-tight" style={{ color: 'var(--color-text)' }}>
-                  {emoji} {label}
-                </div>
-                <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-                  {shoutout.detail}
-                </p>
               </div>
             );
           })}
@@ -378,70 +287,13 @@ function LatestShowingPulse({
   );
 }
 
-function HouseMemoriesPulse({
-  albums,
-  loading,
-}: {
-  albums: GalleryAlbum[];
-  loading: boolean;
-}) {
-  return (
-    <HousePulseCard
-      title="Latest House memories"
-      footer={<Link to="/gallery" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">See gallery</Link>}
-    >
-      {loading ? (
-        <PulseLoading />
-      ) : albums.length === 0 ? (
-        <PulseEmpty>Photos and recaps will appear here after events are added.</PulseEmpty>
-      ) : (
-        <div className="space-y-4">
-          {albums.slice(0, 2).map((album) => {
-            const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
-            return (
-              <Link key={album.id} to="/gallery" className="group grid gap-3 sm:grid-cols-[120px_1fr]">
-                <div className="scrapbook-photo overflow-hidden">
-                  {coverUrl ? (
-                    <img
-                      src={getSupabaseImageUrl(coverUrl, { width: 320, height: 220, resize: 'cover', quality: 72 })}
-                      alt={album.title}
-                      className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <div className="flex aspect-[4/3] items-center justify-center" style={{ background: 'var(--color-surface2)' }}>
-                      <span className="font-serif text-xl italic" style={{ color: 'var(--color-text3)' }}>VSA</span>
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                    {formatDateOnly(album.date, 'MMM d, yyyy')}
-                  </div>
-                  <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {album.title}
-                  </div>
-                  <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                    Recent VSA memories from events Houses show up to.
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </HousePulseCard>
-  );
-}
-
 function HouseLegacyPreview() {
   const archiveYears = getLegacyHouseArchiveYears();
   const verifiedYears = getVerifiedLegacyHouseYears();
-  const previewYears = archiveYears.slice(0, 4);
+  const previewYears = archiveYears.filter((entry) => entry.status !== 'current').slice(0, 2);
 
   return (
-    <section className="program-section">
+    <section id="archive" className="program-section scroll-mt-24">
       <div className="program-section-inner">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
           <div>
@@ -503,30 +355,19 @@ function HouseLegacyPreview() {
 }
 
 function HousePulseSection({
-  standings,
-  standingsLoading,
-  hasLiveStandings,
   recentActivity,
   recentActivityLoading,
-  memories,
-  memoriesLoading,
   assetsByHouse,
 }: {
-  standings: HouseYearlyPoints[];
-  standingsLoading: boolean;
-  hasLiveStandings: boolean;
   recentActivity: HouseRecentActivity[];
   recentActivityLoading: boolean;
-  memories: GalleryAlbum[];
-  memoriesLoading: boolean;
   assetsByHouse: Map<string, HousePageAsset>;
 }) {
   return (
-    <section className="program-section" aria-labelledby="house-pulse-title">
+    <section id="activity" className="program-section scroll-mt-24" aria-labelledby="house-pulse-title">
       <div className="program-section-inner">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="program-eyebrow">House Pulse</div>
             <h2 id="house-pulse-title" className="font-serif text-4xl leading-none tracking-[-0.03em] sm:text-5xl" style={{ color: 'var(--color-text)' }}>
               House Pulse
             </h2>
@@ -538,12 +379,83 @@ function HousePulseSection({
 
         <div className="grid gap-5 lg:grid-cols-2">
           <RecentActivityPulse activity={recentActivity} loading={recentActivityLoading} assetsByHouse={assetsByHouse} />
-          <HouseShoutoutsPulse standings={standings} loading={standingsLoading} hasLiveStandings={hasLiveStandings} assetsByHouse={assetsByHouse} />
           <LatestShowingPulse activity={recentActivity} loading={recentActivityLoading} assetsByHouse={assetsByHouse} />
-          <HouseMemoriesPulse albums={memories} loading={memoriesLoading} />
         </div>
       </div>
     </section>
+  );
+}
+
+function HouseAnchorNav() {
+  const items = [
+    { href: '#houses', label: 'Houses' },
+    { href: '#standings', label: 'Standings' },
+    { href: '#activity', label: 'Activity' },
+    { href: '#archive', label: 'Archive' },
+  ];
+
+  return (
+    <nav className="program-section py-0" aria-label="House page sections">
+      <div className="program-section-inner">
+        <div className="flex gap-2 overflow-x-auto rounded-full border p-1" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          {items.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="shrink-0 rounded-full px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-[var(--color-surface2)]"
+              style={{ color: 'var(--color-text2)' }}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function getHouseEventHousesLabel(event: HouseEvent) {
+  const houses = event.houses && event.houses.length > 0 ? event.houses : [];
+  if (houses.length === 0) return 'House event';
+  return houses.map((house) => house.display_name || house.house_key || house.house).join(' + ');
+}
+
+function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
+  const housesLabel = getHouseEventHousesLabel(event);
+  const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : '';
+  const house = event.houses?.[0];
+  const color = house?.accent_color || HOUSE_COLORS[house?.house as HouseName] || 'var(--brand)';
+
+  return (
+    <div className="scrapbook-note flex items-start gap-4 px-4 py-4">
+      <div className="w-12 shrink-0 text-center">
+        <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+          {formatDateOnly(event.event_date, 'MMM')}
+        </div>
+        <div className="font-serif text-[28px] leading-none" style={{ color: 'var(--color-text)' }}>
+          {formatDateOnly(event.event_date, 'd')}
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
+            House Event
+          </span>
+          <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
+            {housesLabel}
+          </span>
+        </div>
+        <div className="mt-1.5 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
+          {event.title}
+        </div>
+        {(event.location || timeLabel) && (
+          <div className="mt-0.5 truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+            {[event.location, timeLabel].filter(Boolean).join(' / ')}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -560,7 +472,6 @@ export function House() {
   const [standingsLoading, setStandingsLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState<HouseRecentActivity[]>([]);
   const [recentActivityLoading, setRecentActivityLoading] = useState(true);
-  const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
   const today = getTodayDateOnly();
 
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
@@ -568,26 +479,13 @@ export function House() {
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
   const isArchive = activeYear !== null && activeYear !== activeTermYear;
 
-  const { data: availableYears = [] } = useQuery({
-    queryKey: ['house-years-with-data'],
-    queryFn: () => leaderboardRepository.getYearsWithData(),
-    staleTime: 60 * 60 * 1000,
-  });
-
-  const { data: upcomingEvents = [] } = useQuery<PublicEventPreview[]>({
-    queryKey: ['house', 'upcoming-event-preview', today],
-    queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
+  const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
+    queryKey: ['house', 'upcoming-house-event-preview', today],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(today, 3),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !isArchive,
-  });
-  const { data: memoryAlbums = [], isLoading: memoriesLoading } = useQuery<GalleryAlbum[]>({
-    queryKey: ['house', 'memory-albums'],
-    queryFn: () => galleryRepository.getAlbums({ limit: 3 }),
-    staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
@@ -683,22 +581,13 @@ export function House() {
                   ← Back to Current Year
                 </Link>
               )}
-              {!isArchive && cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
-                <span className="scrapbook-sticker scrapbook-sticker-teal">
-                  {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
-                </span>
-              )}
-              {!cycleContent && APPLICATIONS_OPEN && CYCLE_LABEL && (
-                <span className="scrapbook-sticker scrapbook-sticker-teal">Applications Open · {CYCLE_LABEL}</span>
-              )}
               {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>}
-              {leader && (
+              {summerBreak && !isArchive ? (
+                <span className="scrapbook-sticker scrapbook-sticker-gold">Summer break</span>
+              ) : leader && (
                 <span className="scrapbook-sticker scrapbook-sticker-coral">
                   {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
                 </span>
-              )}
-              {summerBreak && (
-                <span className="scrapbook-sticker scrapbook-sticker-gold">Summer break</span>
               )}
             </div>
           </div>
@@ -729,8 +618,10 @@ export function House() {
           </section>
         )}
 
+        {!isArchive && <HouseAnchorNav />}
+
         {/* ── About ── */}
-        <section className="program-section">
+        <section id="houses" className="program-section scroll-mt-24">
           <div className="program-section-inner program-section-narrow">
             <div className="program-eyebrow">About the Program</div>
             <p className="program-body">
@@ -870,7 +761,7 @@ export function House() {
                         className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
                         style={{ color }}
                       >
-                        View House page →
+                        Explore →
                       </span>
                     </div>
                   </Link>
@@ -880,12 +771,58 @@ export function House() {
           </div>
         </section>
 
-        {/* ── Live Standings ── */}
+        {/* ── How It Works ── */}
         <section className="program-section">
           <div className="program-section-inner">
+            <div className="program-eyebrow">How It Works</div>
+            <div className="program-step-grid">
+              {steps.map((step) => (
+                <div key={step.num} className="program-step-card program-feature-card">
+                  <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>
+                    {step.num}
+                  </div>
+                  <div className="program-card-title">{step.title}</div>
+                  <p className="program-card-copy">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">FAQ</div>
+            <div className="program-faq-card">
+              {faqs.map((faq, i) => (
+                <div key={i} className="program-faq-row">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="program-faq-button"
+                  >
+                    <span className="program-faq-question">{faq.q}</span>
+                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="program-faq-answer">{faq.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Live Standings ── */}
+        <section id="standings" className="program-section scroll-mt-24">
+          <div className="program-section-inner">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="program-eyebrow mb-0">
-                Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
+              <div>
+                <div className="program-eyebrow mb-1">
+                  Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
+                </div>
+                <p className="max-w-xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                  House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.
+                </p>
               </div>
               <div className="flex items-center gap-4">
                 <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
@@ -893,11 +830,17 @@ export function House() {
                     ? "Totals reflect official public count for the year" 
                     : "House points = qualifying event attendance count"}
                 </span>
-                <Link 
-                  to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"} 
+                <Link
+                  to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"}
                   className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
                 >
                   Full Leaderboard →
+                </Link>
+                <Link
+                  to="/leaderboard?view=houses"
+                  className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                >
+                  Full member rankings →
                 </Link>
               </div>
             </div>
@@ -1021,124 +964,42 @@ export function House() {
         </section>
 
         <HousePulseSection
-          standings={standings}
-          standingsLoading={standingsLoading}
-          hasLiveStandings={hasLiveStandings}
           recentActivity={recentActivity}
           recentActivityLoading={recentActivityLoading}
-          memories={memoryAlbums}
-          memoriesLoading={memoriesLoading}
           assetsByHouse={houseAssetsByName}
         />
 
-        {/* ── House Member Rankings ── */}
-        {activeYear && (
+        {/* ── Upcoming House Events ── */}
+        {!isArchive && (
           <section className="program-section">
             <div className="program-section-inner">
-              <HouseMemberLeaderboard
-                selectedYear={activeYear}
-                selectedYearLabel={activeYearLabel}
-                showLeaderboardLink
-              />
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+                <div className="program-eyebrow mb-0">Upcoming House Events</div>
+                <Link to="/events" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  See all events →
+                </Link>
+              </div>
+              <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                Check in at qualifying events to earn points for your House.
+              </p>
+              {upcomingHouseEvents.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {upcomingHouseEvents.map((event) => (
+                    <HouseEventPreviewCard key={event.id} event={event} />
+                  ))}
+                </div>
+              ) : (
+                <div className="scrapbook-empty py-8 text-center">
+                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    Check back for upcoming House hangouts.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
         )}
 
         <HouseLegacyPreview />
-
-        {/* ── Archive Browsing ── */}
-        {availableYears.length > 1 && (
-          <section className="program-section">
-            <div className="program-section-inner">
-              <div className="program-eyebrow">Relive the Memories</div>
-              <div className="flex flex-wrap gap-3">
-                {availableYears.map((year) => {
-                  const isCurrent = year === activeYear;
-                  return (
-                    <Link
-                      key={year}
-                      to={year === activeTermYear ? '/house' : `/house/archive/${getYearSlug(year)}`}
-                      className={`vsa-btn-ghost text-xs ${isCurrent ? 'opacity-50 pointer-events-none' : ''}`}
-                    >
-                      {formatAcademicYear(year)} {year === activeTermYear ? '(Current)' : 'Archive'}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ── Points explainer ── */}
-        {!isArchive && (
-          <section className="program-section">
-            <div className="program-section-inner">
-              <PointsExplainer />
-            </div>
-          </section>
-        )}
-
-        {/* ── Upcoming Events ── */}
-        {upcomingEvents.length > 0 && (
-          <section className="program-section">
-            <div className="program-section-inner">
-              <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-                <div className="program-eyebrow mb-0">Earn Points at These Events</div>
-                <Link to="/events" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
-                  All Events →
-                </Link>
-              </div>
-              <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                Qualifying events can help your House score when you are an active House member. Check the event details for points.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {upcomingEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="scrapbook-note flex items-start gap-4 px-4 py-4"
-                  >
-                    {/* Date stamp */}
-                    <div className="w-12 shrink-0 text-center">
-                      <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                        {formatDateOnly(event.date, 'MMM')}
-                      </div>
-                      <div className="font-serif text-[28px] leading-none" style={{ color: 'var(--color-text)' }}>
-                        {formatDateOnly(event.date, 'd')}
-                      </div>
-                    </div>
-
-                    {/* Event info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
-                          {EVENT_TYPE_SHORT[event.event_type] ?? EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
-                        </span>
-                        {event.points > 0 && (
-                          <span className="scrapbook-sticker scrapbook-sticker-coral px-2 py-0.5 text-[9px]">
-                            +{event.points} pts
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1.5 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
-                        {event.name}
-                      </div>
-                      {event.location && (
-                        <div className="mt-0.5 truncate font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                          📍 {event.location}{event.start_time ? ` / ${formatEventTime(event.start_time)}` : ''}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 text-center">
-                <Link to="/events" className="vsa-btn-ghost font-sans text-sm">
-                  See All Upcoming Events →
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* ── House Parents ── */}
         {HOUSE_PARENTS.length > 0 && (
@@ -1158,59 +1019,6 @@ export function House() {
             </div>
           </section>
         )}
-
-        {/* ── How It Works ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">How It Works</div>
-            <div className="program-step-grid">
-              {steps.map((step) => (
-                <div key={step.num} className="program-step-card program-feature-card">
-                  <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>
-                    {step.num}
-                  </div>
-                  <div className="program-card-title">{step.title}</div>
-                  <p className="program-card-copy">{step.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── What You'll Do ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">What You'll Do</div>
-            <div className="flex flex-wrap gap-2">
-              {eventTypes.map((e) => (
-                <span key={e} className="scrapbook-sticker">{e}</span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── FAQ ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">FAQ</div>
-            <div className="program-faq-card">
-              {faqs.map((faq, i) => (
-                <div key={i} className="program-faq-row">
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="program-faq-button"
-                  >
-                    <span className="program-faq-question">{faq.q}</span>
-                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
-                  </button>
-                  {openFaq === i && (
-                    <div className="program-faq-answer">{faq.a}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* ── Footer ── */}
         <section className="program-section">

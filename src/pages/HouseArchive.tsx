@@ -106,19 +106,21 @@ export function HouseArchive() {
       </div>
 
       <main className="vsa-container py-12 lg:py-16">
-        <section className="mb-12">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <Label className="mb-2">Current Era</Label>
-              <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
-                Where the archive is now
-              </h2>
+        <section className="mb-10 rounded border p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+          <div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
+              Current year / {currentEra.academicYear}
             </div>
-            <Link to="/house" className="vsa-btn-ghost font-sans text-sm">
-              See current standings
-            </Link>
+            <h2 className="mt-2 font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+              {currentEra.title}
+            </h2>
+            <p className="mt-1 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              {currentEra.note}
+            </p>
           </div>
-          <ArchiveYearCard entry={currentEra} featured />
+          <Link to="/house" className="vsa-btn-primary mt-5 inline-flex shrink-0 font-sans text-sm sm:mt-0">
+            View current House year
+          </Link>
         </section>
 
         <section>
