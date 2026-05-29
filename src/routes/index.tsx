@@ -147,6 +147,8 @@ export default function AppRoutes() {
               <Route path="/house/archive" element={<HouseArchive />} />
               <Route path="/house/archive/:yearSlug" element={<House />} />
               <Route path="/house/archive/:yearSlug/:houseSlug" element={<HouseDetail />} />
+              <Route path="/house/year/:yearSlug" element={<House />} />
+              <Route path="/house/year/:yearSlug/:houseSlug" element={<HouseDetail />} />
               <Route path="/house/:houseSlug" element={<HouseDetail />} />
               <Route path="/house-system" element={<House />} />
               <Route path="/intern-program" element={<Internship />} />

@@ -18,6 +18,7 @@ import { HouseEvent, HousePageAsset, HouseRecentActivity, HouseYearlyPoints } fr
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
+import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -477,7 +478,11 @@ export function House() {
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
   const activeYear = resolveHouseYear(terms, yearSlug);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
-  const isArchive = activeYear !== null && activeYear !== activeTermYear;
+
+  // Determine the "real" current year even when terms haven't loaded yet
+  const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
+  const isArchive = activeYear !== null && activeYear < currentYear;
+  const isFutureYear = activeYear !== null && activeYear > currentYear;
 
   const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
     queryKey: ['house', 'upcoming-house-event-preview', today],
@@ -485,16 +490,27 @@ export function House() {
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    enabled: !isArchive,
+    enabled: !isArchive && !isFutureYear,
+  });
+
+  const { data: archiveEvents = [], isLoading: archiveEventsLoading } = useQuery<HouseEvent[]>({
+    queryKey: ['house', 'archive-events-for-year', activeYear],
+    queryFn: () => houseEventsRepository.getPublicEventsForYear(activeYear!, 12),
+    staleTime: 10 * 60 * 1000,
+    cacheTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled: isArchive && activeYear !== null,
   });
 
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
   const houseAssetsByName = assetMapByHouse(houseAssets);
-  const displayedHouses = houseAssets.length > 0
-    ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
-    : isArchive 
-      ? [] 
-      : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
+  const displayedHouses = isFutureYear
+    ? []
+    : houseAssets.length > 0
+      ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
+      : isArchive
+        ? []
+        : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
 
   useEffect(() => {
     let isMounted = true;
@@ -552,7 +568,64 @@ export function House() {
   const summerBreak = isSummerBreak();
   const summerHouseMessage = getSummerBreakMessage('house');
 
-  const showSummerTransition = summerBreak && !isArchive && houseAssets.length === 0;
+  const showSummerTransition = summerBreak && !isArchive && !isFutureYear && houseAssets.length === 0;
+
+  // Future year — show a coming-soon placeholder instead of the normal page
+  if (isFutureYear && activeYear !== null) {
+    return (
+      <>
+        <PageTitle title={`House Program ${activeYearLabel}`} />
+        <div className="program-app">
+          <section className="program-hero">
+            <div className="program-hero-grain" />
+            <div className="program-hero-inner">
+              <span className="program-hero-kicker">Coming Fall {activeYear + 1}</span>
+              <h1 className="program-title">
+                House <span className="program-title-script">{activeYearLabel}</span>
+              </h1>
+              <p className="program-hero-meta">
+                House apps, House Reveal, and the new Houses for {activeYearLabel} will all be announced in fall. Check back once the new school year kicks off.
+              </p>
+              <div className="program-hero-actions">
+                <span className="scrapbook-sticker scrapbook-sticker-gold">Coming Fall {activeYear + 1}</span>
+              </div>
+            </div>
+            <div className="program-watermark">houses</div>
+          </section>
+
+          {/* Year selector */}
+          <div className="program-section py-4">
+            <div className="program-section-inner">
+              <HouseYearSelector activeStartYear={activeYear} />
+            </div>
+          </div>
+
+          {/* Placeholder card */}
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="scrapbook-paper mx-auto max-w-xl p-8 text-center">
+                <span className="scrapbook-sticker mb-6 inline-block">🏠</span>
+                <h2 className="mt-4 font-serif text-[28px] leading-tight" style={{ color: 'var(--color-text)' }}>
+                  {activeYearLabel} Houses haven't been revealed yet
+                </h2>
+                <p className="mt-4 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  Follow <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a> on Instagram to find out when House apps open.
+                </p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  <Link to="/house" className="vsa-btn-primary font-sans text-sm">
+                    View 2025-2026 Houses →
+                  </Link>
+                  <Link to="/house/archive" className="vsa-btn-ghost font-sans text-sm">
+                    Explore House Archive
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -593,6 +666,13 @@ export function House() {
           </div>
           <div className="program-watermark">houses</div>
         </section>
+
+        {/* ── Year Selector ── */}
+        <div className="program-section py-4">
+          <div className="program-section-inner">
+            <HouseYearSelector activeStartYear={activeYear} />
+          </div>
+        </div>
 
         {/* ── Program callout ── */}
         {(cycleContent || (APPLICATIONS_OPEN && APPLICATION_LINK)) && (
@@ -647,8 +727,8 @@ export function House() {
                 // Deterministic rotation
                 const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
 
-                const detailHref = isArchive 
-                  ? `/house/archive/${activeYearLabel}/${houseSlugFromKey(asset?.house_key || asset?.house || label)}`
+                const detailHref = isArchive
+                  ? `/house/year/${activeYearLabel}/${houseSlugFromKey(asset?.house_key || asset?.house || label)}`
                   : getHousePagePath({
                     house_key: asset?.house_key ?? house,
                     house: asset?.house ?? house,
@@ -968,6 +1048,42 @@ export function House() {
           recentActivityLoading={recentActivityLoading}
           assetsByHouse={houseAssetsByName}
         />
+
+        {/* ── Archive Events ── */}
+        {isArchive && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="program-eyebrow mb-1">House Events / {activeYearLabel}</div>
+                  <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
+                    Events from {activeYearLabel}
+                  </h2>
+                  <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                    House events that ran during the {activeYearLabel} school year.
+                  </p>
+                </div>
+              </div>
+              {archiveEventsLoading ? (
+                <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  Loading events…
+                </div>
+              ) : archiveEvents.length === 0 ? (
+                <div className="scrapbook-empty py-8 text-center">
+                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    No published House events found for {activeYearLabel}.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {archiveEvents.map((event) => (
+                    <HouseEventPreviewCard key={event.id} event={event} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ── Upcoming House Events ── */}
         {!isArchive && (
