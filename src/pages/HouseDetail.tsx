@@ -90,7 +90,13 @@ export function HouseDetail() {
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
   const activeYear = resolveHouseYear(terms, yearSlug);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
-  const isArchive = activeYear !== null && activeYear !== activeTermYear;
+
+  // Distinguish past archive years from the current year
+  const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
+  const isArchive = activeYear !== null && activeYear < currentYear;
+
+  // Back-link destination: year overview for archive, current overview otherwise
+  const backHref = isArchive ? `/house/year/${activeYearLabel}` : '/house';
   const today = getLosAngelesDateOnly();
 
   const { data: houses = [], isLoading: housesLoading } = useQuery({
@@ -162,7 +168,7 @@ export function HouseDetail() {
             This House may not be configured for the current year yet, or the URL might be incorrect.
           </p>
           <div className="mt-8">
-            <Link to="/house" className="vsa-btn-primary">
+            <Link to={backHref} className="vsa-btn-primary">
               Back to House Program
             </Link>
           </div>
@@ -183,7 +189,7 @@ export function HouseDetail() {
       <PageTitle title={`${label} House`} />
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
-          <Link to="/house" className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <Link to={backHref} className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
             ← Back to House Program
           </Link>
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
@@ -322,7 +328,7 @@ export function HouseDetail() {
         </RevealOnScrollWrapper>
 
         <div className="mt-20 text-center">
-          <Link to="/house" className="vsa-btn-ghost inline-flex items-center gap-2 font-sans text-sm">
+          <Link to={backHref} className="vsa-btn-ghost inline-flex items-center gap-2 font-sans text-sm">
             ← View All Houses
           </Link>
         </div>

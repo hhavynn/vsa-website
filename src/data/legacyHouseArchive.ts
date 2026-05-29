@@ -84,6 +84,11 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     note: 'A rare three-House year instead of the usual four.',
     status: 'verified',
     detail: 'This year stands out because it used exactly three Houses, making it one of the stranger shapes in the archive.',
+    currentHouseLinks: {
+      'Badtz-maru': '/house/year/2024-2025/badtz-maru',
+      Keroppi: '/house/year/2024-2025/keroppi',
+      Kuromi: '/house/year/2024-2025/kuromi',
+    },
   },
   {
     academicYear: '2025-2026',
