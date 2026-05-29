@@ -22,6 +22,7 @@ import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
+import { getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -431,6 +432,73 @@ function HouseMemoriesPulse({
         </div>
       )}
     </HousePulseCard>
+  );
+}
+
+function HouseLegacyPreview() {
+  const archiveYears = getLegacyHouseArchiveYears();
+  const verifiedYears = getVerifiedLegacyHouseYears();
+  const previewYears = archiveYears.slice(0, 4);
+
+  return (
+    <section className="program-section">
+      <div className="program-section-inner">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+          <div>
+            <div className="program-eyebrow">House Legacy</div>
+            <h2 className="font-serif text-[34px] leading-tight sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
+              Houses reset every year, but the lore sticks around.
+            </h2>
+            <p className="mt-4 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              Every year brings a new theme. Here is a look back at the House eras we could verify from the archives.
+            </p>
+            <p className="mt-3 max-w-xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+              {verifiedYears.length} confirmed eras, one archive gap, and a few names older members might remember.
+            </p>
+            <Link to="/house/archive" className="vsa-btn-primary mt-6 inline-flex font-sans text-sm">
+              Explore House Archive
+            </Link>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {previewYears.map((entry) => (
+              <Link
+                key={entry.academicYear}
+                to="/house/archive"
+                className="scrapbook-paper group p-4 transition-transform hover:-translate-y-1"
+                style={{ borderColor: entry.status === 'unconfirmed' ? 'var(--tape-gold)' : 'var(--color-border)' }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
+                    {entry.academicYear}
+                  </span>
+                  <span className="scrapbook-sticker px-2 py-0.5 text-[9px]">
+                    {entry.status === 'current' ? 'Current' : entry.status === 'unconfirmed' ? 'Mystery' : 'Verified'}
+                  </span>
+                </div>
+                <h3 className="mt-3 font-serif text-xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                  {entry.title}
+                </h3>
+                <p className="mt-1 font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                  {entry.theme}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {entry.houses.length > 0 ? (
+                    entry.houses.slice(0, 4).map((house) => (
+                      <span key={house} className="rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-wide" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
+                        {house}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>No confirmed Houses yet</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -975,6 +1043,8 @@ export function House() {
             </div>
           </section>
         )}
+
+        <HouseLegacyPreview />
 
         {/* ── Archive Browsing ── */}
         {availableYears.length > 1 && (

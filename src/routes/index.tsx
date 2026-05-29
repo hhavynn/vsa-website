@@ -36,6 +36,9 @@ const Ace = lazy(() =>
 const House = lazy(() =>
   import("../pages/House").then((module) => ({ default: module.House }))
 );
+const HouseArchive = lazy(() =>
+  import("../pages/HouseArchive").then((module) => ({ default: module.HouseArchive }))
+);
 const HouseDetail = lazy(() =>
   import("../pages/HouseDetail").then((module) => ({ default: module.HouseDetail }))
 );
@@ -141,6 +144,7 @@ export default function AppRoutes() {
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/ace" element={<Ace />} />
               <Route path="/house" element={<House />} />
+              <Route path="/house/archive" element={<HouseArchive />} />
               <Route path="/house/archive/:yearSlug" element={<House />} />
               <Route path="/house/archive/:yearSlug/:houseSlug" element={<HouseDetail />} />
               <Route path="/house/:houseSlug" element={<HouseDetail />} />
