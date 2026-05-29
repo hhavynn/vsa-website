@@ -270,7 +270,7 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
                     </span>
                   </div>
                   <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--text3)' }}>
-                    {standing.total_points.toLocaleString()} pts
+                    {standing.total_points.toLocaleString()} house pts
                   </span>
                 </div>
               );

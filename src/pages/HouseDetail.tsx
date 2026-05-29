@@ -122,7 +122,7 @@ export function HouseDetail() {
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>
                 {rank && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
-                {standing && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} pts</span>}
+                {standing && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>
               <h1 className="vsa-page-title">{label}</h1>
               <p className="mt-5 max-w-2xl font-sans text-[16px] leading-[1.75]" style={{ color: 'var(--text2)' }}>

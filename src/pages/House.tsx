@@ -697,7 +697,7 @@ export function House() {
                       {/* Points overlay */}
                       {standing && standing.total_points > 0 && (
                         <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
-                          <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">pts</div>
+                          <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">house pts</div>
                           <div className="font-mono text-lg font-black leading-none text-white">
                             {standing.total_points.toLocaleString()}
                           </div>
@@ -723,14 +723,10 @@ export function House() {
                             <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
                             <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
                           </div>
-                          <div className="text-center">
-                            <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.events_attended}</div>
-                            <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>check-ins</div>
-                          </div>
                           {standing.average_points_per_member !== null && (
                             <div className="text-center">
                               <div className="font-mono text-[14px] font-black" style={{ color }}>
-                                {Math.round(standing.average_points_per_member)}
+                                {standing.average_points_per_member.toFixed(1)}
                               </div>
                               <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
                             </div>
@@ -777,9 +773,14 @@ export function House() {
               <div className="program-eyebrow mb-0">
                 Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
               </div>
-              <Link to="/leaderboard" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
-                Full Leaderboard →
-              </Link>
+              <div className="flex items-center gap-4">
+                <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
+                  House points = qualifying event attendance count
+                </span>
+                <Link to="/leaderboard" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                  Full Leaderboard →
+                </Link>
+              </div>
             </div>
 
             <div className="program-scoreboard-card">

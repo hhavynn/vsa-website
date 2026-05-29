@@ -244,7 +244,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                                 {member.total_points.toLocaleString()}
                               </div>
                               <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                                {member.events_attended} events
+                                {member.total_points === 1 ? 'check-in' : 'check-ins'}
                               </div>
                             </div>
                           </div>

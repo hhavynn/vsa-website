@@ -90,7 +90,7 @@ export const PointsExplainer: React.FC = () => {
                   House Competition
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
-                  If you are actively in a House when you attend a qualifying event, your points can also help your House climb the leaderboard.
+                  If you are actively in a House when you attend a qualifying event, you also earn points for your House. For House rankings, each qualifying check-in counts as exactly 1 point toward your House total, regardless of the event's individual point value.
                 </p>
               </div>
             </div>
@@ -105,7 +105,7 @@ export const PointsExplainer: React.FC = () => {
                   Academic Terms
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
-                  Yearly leaderboards are based on events assigned to the academic year. House standings have extra rules: points only count while you are an active House member, and they are not added retroactively.
+                  Yearly leaderboards are based on events assigned to the academic year. House standings have extra rules: points only count while you are an active House member, and they are not added retroactively. For 2025-2026, House points start after the House Reveal on Nov 8, 2025.
                 </p>
               </div>
             </div>
