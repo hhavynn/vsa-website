@@ -5,6 +5,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
+import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -69,6 +70,8 @@ export default function Gallery() {
   const albums = useMemo(() => {
     return data?.pages.flatMap(page => page) ?? [];
   }, [data]);
+  const useSummerGalleryEmptyState = shouldUseSummerEmptyState(albums.length > 0);
+  const summerGalleryMessage = getSummerBreakMessage('gallery');
 
   if (loading) return <PageLoader message="Loading gallery..." />;
   if (error) return <PageError message="Failed to load gallery" />;
@@ -90,7 +93,21 @@ export default function Gallery() {
       <div className="vsa-container py-10">
         {albums.length === 0 ? (
           <div className="scrapbook-empty">
-            <p className="font-sans text-sm" style={{ color: 'var(--text3)' }}>No albums yet. Check back soon.</p>
+            {useSummerGalleryEmptyState ? (
+              <div className="mx-auto max-w-xl space-y-3 text-center">
+                <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                  {summerGalleryMessage.badge}
+                </span>
+                <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--text)' }}>
+                  {summerGalleryMessage.title}
+                </p>
+                <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+                  {summerGalleryMessage.body}
+                </p>
+              </div>
+            ) : (
+              <p className="font-sans text-sm" style={{ color: 'var(--text3)' }}>No albums yet. Check back soon.</p>
+            )}
           </div>
         ) : (
           <>

@@ -20,6 +20,7 @@ import { formatDateOnly } from "../lib/dateOnly";
 import { ExternalEvent, UVSASchool } from "../types";
 import { motion } from "framer-motion";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
+import { getSummerBreakMessage, shouldUseSummerEmptyState } from "../utils/seasonalState";
 
 // Icon components cast to any to avoid TS JSX errors in some environments
 const GlobeIcon = FaGlobe as any;
@@ -81,6 +82,8 @@ export default function UVSANetwork() {
     .sort(compareEventsByRecency)[0];
   const spotlightEvent = featuredEvent || archiveEvents[0];
   const spotlightLoading = upcomingLoading || pastLoading || historicalLoading;
+  const useSummerExternalsEmptyState = shouldUseSummerEmptyState(upcomingEvents.length > 0);
+  const summerExternalsMessage = getSummerBreakMessage("externals");
 
   return (
     <>
@@ -200,19 +203,48 @@ export default function UVSANetwork() {
               className="scrapbook-note p-10 text-center border-dashed border-2"
               style={{ borderColor: "var(--border)" }}
             >
-              <p
-                className="font-serif text-xl italic"
-                style={{ color: "var(--text3)" }}
-              >
-                "Upcoming externals will be added once they are confirmed by
-                VSA at UCSD and the host schools."
-              </p>
-              <p
-                className="mt-2 font-sans text-sm"
-                style={{ color: "var(--text3)" }}
-              >
-                Check back in late Summer for the upcoming season!
-              </p>
+              {useSummerExternalsEmptyState ? (
+                <div className="mx-auto max-w-2xl space-y-3">
+                  <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                    {summerExternalsMessage.badge}
+                  </span>
+                  <p
+                    className="font-serif text-2xl leading-tight"
+                    style={{ color: "var(--text)" }}
+                  >
+                    {summerExternalsMessage.title}
+                  </p>
+                  <p
+                    className="font-sans text-sm leading-relaxed"
+                    style={{ color: "var(--text3)" }}
+                  >
+                    {summerExternalsMessage.body}
+                  </p>
+                  <p
+                    className="font-sans text-xs italic"
+                    style={{ color: "var(--text3)" }}
+                  >
+                    If VSA at UCSD is coordinating attendance, ride forms are
+                    usually posted through our Linktree.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p
+                    className="font-serif text-xl italic"
+                    style={{ color: "var(--text3)" }}
+                  >
+                    "Upcoming externals will be added once they are confirmed by
+                    VSA at UCSD and the host schools."
+                  </p>
+                  <p
+                    className="mt-2 font-sans text-sm"
+                    style={{ color: "var(--text3)" }}
+                  >
+                    Check back soon for the upcoming season.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </section>

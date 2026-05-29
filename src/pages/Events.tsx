@@ -10,6 +10,7 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../constants/houses';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents, useInfiniteEvents } from '../hooks/useEvents';
@@ -342,6 +343,8 @@ export function Events() {
   }, []);
 
   const [featured, ...rest] = upcomingEventsAll;
+  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(upcomingEventsAll.length > 0);
+  const summerEventsMessage = getSummerBreakMessage('events');
   const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now.toISOString())?.code);
 
   const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
@@ -623,16 +626,35 @@ export function Events() {
           <div
             className="scrapbook-empty mb-10"
           >
-            <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-              No upcoming events - check back soon.
-            </p>
+            {useSummerUpcomingEmptyState ? (
+              <div className="mx-auto max-w-xl space-y-3 text-center">
+                <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                  {summerEventsMessage.badge}
+                </span>
+                <div>
+                  <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                    {summerEventsMessage.title}
+                  </p>
+                  <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                    {summerEventsMessage.body}
+                  </p>
+                </div>
+                <a href="#memory-wall" className="inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  View past events
+                </a>
+              </div>
+            ) : (
+              <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                No upcoming events posted yet. Check back soon.
+              </p>
+            )}
           </div>
         )}
 
         {/* Memory Wall / Past Events Section */}
         <>
           <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
-          <div className="mt-7">
+          <div id="memory-wall" className="mt-7 scroll-mt-24">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <Label className="mb-2">Memory Wall</Label>

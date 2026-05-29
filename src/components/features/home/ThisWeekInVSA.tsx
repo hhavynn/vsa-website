@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase';
 import { formatDateOnly } from '../../../lib/dateOnly';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
 import { Event, HouseYearlyPoints } from '../../../types';
@@ -74,6 +75,8 @@ function NextEventCard() {
   const nextEvent = events[0] ?? null;
   const otherEvents = events.slice(1, 3);
   const timeLabel = nextEvent ? getEventTimeLabel(nextEvent) : null;
+  const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(nextEvent));
+  const summerMessage = getSummerBreakMessage('homepage');
 
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
@@ -96,12 +99,29 @@ function NextEventCard() {
         <CardSkeleton />
       ) : !nextEvent ? (
         <div className="flex flex-1 flex-col justify-center">
-          <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-            No upcoming events listed yet. Check back soon or follow VSA channels for updates.
+          {useSummerEmptyState && (
+            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+              {summerMessage.badge}
+            </span>
+          )}
+          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
+            {useSummerEmptyState ? summerMessage.title : 'No upcoming events listed yet'}
           </p>
-          <Link to="/events" className="mt-4 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-            See events
-          </Link>
+          <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+            {useSummerEmptyState
+              ? summerMessage.body
+              : 'Check back soon or follow VSA channels for updates.'}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {useSummerEmptyState && (
+              <Link to="/points" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                Find My Points
+              </Link>
+            )}
+            <Link to="/events" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+              {useSummerEmptyState ? 'View past events' : 'See events'}
+            </Link>
+          </div>
         </div>
       ) : (
         <>
@@ -160,6 +180,8 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
   });
 
   const hasStandings = standings.some((house) => house.total_points > 0);
+  const useSummerEmptyState = shouldUseSummerEmptyState(hasStandings);
+  const summerMessage = getSummerBreakMessage('houseStandings');
 
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
@@ -178,8 +200,16 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
         <CardSkeleton />
       ) : !hasStandings ? (
         <div className="flex flex-1 flex-col justify-center">
+          {useSummerEmptyState && (
+            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+              {summerMessage.badge}
+            </span>
+          )}
+          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
+            {useSummerEmptyState ? summerMessage.title : 'House standings are still being updated'}
+          </p>
           <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-            House standings are still being updated. Check back soon.
+            {useSummerEmptyState ? summerMessage.body : 'Check back soon.'}
           </p>
           <Link to="/leaderboard?view=houses" className="mt-4 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             Full standings
@@ -292,6 +322,8 @@ function LatestMemoryCard() {
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(memory));
+  const summerMessage = getSummerBreakMessage('gallery');
 
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
@@ -307,8 +339,16 @@ function LatestMemoryCard() {
         <CardSkeleton />
       ) : !memory ? (
         <div className="flex flex-1 flex-col justify-center">
+          {useSummerEmptyState && (
+            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+              {summerMessage.badge}
+            </span>
+          )}
+          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
+            {useSummerEmptyState ? summerMessage.title : 'New photos and recaps soon'}
+          </p>
           <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-            New photos and recaps will show up here after events.
+            {useSummerEmptyState ? summerMessage.body : 'New photos and recaps will show up here after events.'}
           </p>
           <Link to="/gallery" className="mt-4 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             See memories

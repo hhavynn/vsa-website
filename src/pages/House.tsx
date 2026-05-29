@@ -11,6 +11,7 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTime } from '../lib/eventTime';
+import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
@@ -551,6 +552,8 @@ export function House() {
   const leader = hasLiveStandings ? standings[0] : null;
   const maxPoints = hasLiveStandings ? standings[0].total_points : 1;
   const badges = computeBadges(standings);
+  const summerBreak = isSummerBreak();
+  const summerHouseMessage = getSummerBreakMessage('house');
 
   return (
     <>
@@ -583,6 +586,9 @@ export function House() {
                 <span className="scrapbook-sticker scrapbook-sticker-coral">
                   {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
                 </span>
+              )}
+              {summerBreak && (
+                <span className="scrapbook-sticker scrapbook-sticker-gold">Summer break</span>
               )}
             </div>
           </div>
@@ -767,7 +773,19 @@ export function House() {
                 </div>
               ) : standings.length === 0 ? (
                 <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  {houseAssets.length > 0 ? (
+                  {summerBreak ? (
+                    <div className="mx-auto max-w-xl space-y-2 text-center">
+                      <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                        {summerHouseMessage.badge}
+                      </span>
+                      <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                        {summerHouseMessage.title}
+                      </p>
+                      <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                        {summerHouseMessage.body}
+                      </p>
+                    </div>
+                  ) : houseAssets.length > 0 ? (
                     <>
                       <p style={{ color: 'var(--color-text2)' }}>
                         House profiles exist, but no members have been assigned yet.
@@ -791,6 +809,13 @@ export function House() {
                 </div>
               ) : (
                 <>
+                  {summerBreak && (
+                    <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+                      <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                        Summer note: House activity is paused until the next school year.
+                      </p>
+                    </div>
+                  )}
                   {standings.map((standing, index) => {
                     const asset = houseAssetsByName.get(standing.house);
                     const houseKey = standing.house as HouseName;

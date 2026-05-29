@@ -11,6 +11,7 @@ import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { parseDateOnly } from '../lib/dateOnly';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../lib/eventTime';
+import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion } from 'framer-motion';
@@ -188,6 +189,8 @@ export function Home() {
   const presidentsPhotoUrl = presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
 
   const [featured, ...rest] = upcomingEvents;
+  const useSummerEventsEmptyState = shouldUseSummerEmptyState(upcomingEvents.length > 0);
+  const summerEventsMessage = getSummerBreakMessage('events');
 
   return (
     <>
@@ -345,7 +348,31 @@ export function Home() {
                 </div>
                 {!featured ? (
                   <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
-                    No upcoming events posted yet.
+                    {useSummerEventsEmptyState ? (
+                      <div className="space-y-3">
+                        <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                          {summerEventsMessage.badge}
+                        </span>
+                        <div>
+                          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
+                            {summerEventsMessage.title}
+                          </p>
+                          <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+                            {summerEventsMessage.body}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <Link to="/events" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                            View past events
+                          </Link>
+                          <Link to="/points" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                            Find My Points
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      'No upcoming events posted yet.'
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
