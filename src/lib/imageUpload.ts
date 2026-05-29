@@ -28,7 +28,7 @@ const PRESETS: Record<ImageUploadPreset, CompressionOptions> = {
   avatar: { maxWidth: 512, maxHeight: 512, quality: 0.78, maxInputBytes: 5 * MB, outputType: 'image/webp' },
   cabinet: { maxWidth: 900, maxHeight: 900, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   cabinetThumbnail: { maxWidth: 420, maxHeight: 420, quality: 0.76, maxInputBytes: 8 * MB, outputType: 'image/webp' },
-  event: { maxWidth: 1600, maxHeight: 1000, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  event: { maxWidth: 1200, maxHeight: 1200, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   eventThumbnail: { maxWidth: 720, maxHeight: 720, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   galleryCover: { maxWidth: 1400, maxHeight: 900, quality: 0.76, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   galleryCoverThumbnail: { maxWidth: 720, maxHeight: 480, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
@@ -74,6 +74,12 @@ async function loadImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
     return createImageBitmap(file);
   }
   return createImageBitmapFallback(file);
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: CompressionOptions['outputType'], quality: number) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
 }
 
 export type PreparedFile = {
@@ -122,9 +128,12 @@ export async function prepareImageForUpload(file: File, preset: ImageUploadPrese
     
     context.drawImage(image, 0, 0, width, height);
 
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, options.outputType, options.quality);
-    });
+    let outputType = options.outputType;
+    let blob = await canvasToBlob(canvas, outputType, options.quality);
+    if (!blob && options.outputType === 'image/webp') {
+      outputType = 'image/jpeg';
+      blob = await canvasToBlob(canvas, outputType, options.quality);
+    }
 
     if ('close' in image && typeof image.close === 'function') {
       image.close();
@@ -136,8 +145,8 @@ export async function prepareImageForUpload(file: File, preset: ImageUploadPrese
     if (blob.size < file.size) {
       const compressedFile = new File(
         [blob],
-        `${file.name.replace(/\.[^.]+$/, '')}.${fileExtensionForMime(options.outputType)}`,
-        { type: options.outputType, lastModified: Date.now() },
+        `${file.name.replace(/\.[^.]+$/, '')}.${fileExtensionForMime(outputType)}`,
+        { type: outputType, lastModified: Date.now() },
       );
 
       return {
