@@ -324,35 +324,35 @@ export function Leaderboard() {
     let isCurrentRequest = true;
 
     const loadHouseStandings = async () => {
-      try {
-        setHouseLoading(true);
-        const data = selectedYear === 'all'
-          ? await leaderboardRepository.getAllTimeHouseLeaderboard()
-          : await leaderboardRepository.getYearlyHouseLeaderboard(selectedYear);
+    try {
+    setHouseLoading(true);
+    const data = selectedYear === 'all'
+      ? await leaderboardRepository.getAllTimeHouseLeaderboard()
+      : await leaderboardRepository.getYearlyHouseLeaderboard(selectedYear);
 
-        if (!isCurrentRequest) return;
+    if (!isCurrentRequest) return;
 
-          const ranked = data
-            .map((house, index) => ({ ...house, rank: index + 1 }))
-            .sort((a, b) => b.total_points - a.total_points)
-          .map((house, index) => ({ ...house, rank: index + 1 }));
+    // Sort by house points (attendance-count)
+    const ranked = data
+      .sort((a, b) => b.total_points - a.total_points)
+      .map((house, index) => ({ ...house, rank: index + 1 }));
 
-        setHouseStandings(ranked);
+    setHouseStandings(ranked);
 
-        if (selectedYear === 'all') {
-          setHouseActivity([]);
-        } else {
-          const activity = await leaderboardRepository.getRecentHouseActivity(selectedYear, 8);
-          if (isCurrentRequest) setHouseActivity(activity);
-        }
-      } catch {
-        if (isCurrentRequest) {
-          setHouseStandings([]);
-          setHouseActivity([]);
-        }
-      } finally {
-        if (isCurrentRequest) setHouseLoading(false);
-      }
+    if (selectedYear === 'all') {
+      setHouseActivity([]);
+    } else {
+      const activity = await leaderboardRepository.getRecentHouseActivity(selectedYear, 8);
+      if (isCurrentRequest) setHouseActivity(activity);
+    }
+    } catch {
+    if (isCurrentRequest) {
+      setHouseStandings([]);
+      setHouseActivity([]);
+    }
+    } finally {
+    if (isCurrentRequest) setHouseLoading(false);
+    }
     };
 
     loadHouseStandings();
@@ -844,7 +844,7 @@ function HouseStandingsWall({
                       style={{ borderColor: `${color}40`, background: `${color}08` }}
                     >
                       <div className="font-mono text-[10px] font-bold uppercase tracking-wider opacity-60">
-                        TOTAL POINTS
+                        HOUSE POINTS
                       </div>
                       <div className="font-mono text-4xl font-black sm:text-5xl" style={{ color }}>
                         {standing.total_points.toLocaleString()}
@@ -858,7 +858,7 @@ function HouseStandingsWall({
                   <div className="flex flex-wrap items-center gap-6 text-[11px] font-bold text-[var(--text3)]">
                     <div className="flex items-center gap-2">
                       <TrendUpIcon className="h-3 w-3 text-[var(--brand)]" />
-                      <span>AVG PER MEMBER: <span className="text-[var(--text)]">{standing.average_points_per_member?.toFixed(1) ?? '0.0'}</span></span>
+                      <span>AVG CHECK-INS PER MEMBER: <span className="text-[var(--text)]">{standing.average_points_per_member?.toFixed(1) ?? '0.0'}</span></span>
                     </div>
                     {isFirst && (
                       <div className="flex items-center gap-1.5 rounded-full bg-[var(--gold-t)]/10 px-3 py-1 text-[var(--gold-t)]">
@@ -893,7 +893,7 @@ function HouseStandingsWall({
                     </span>
                     <span className="mx-2 opacity-60">gained</span>
                     <span className="font-black text-[16px]">{item.total_points}</span>
-                    <span className="mx-2 opacity-60">points from</span>
+                    <span className="mx-2 opacity-60">house points from</span>
                     <span className="italic">{item.event_name}</span>
                   </div>
                   <div className="shrink-0 font-mono text-[10px] font-bold opacity-40">
