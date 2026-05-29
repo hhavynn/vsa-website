@@ -3,60 +3,78 @@
 
 do $$
 begin
-  -- 1. Ensure 2025-2026 Houses use consistent lowercase house_key for reliable slugging.
-  update public.house_page_assets set house_key = 'bowser' where academic_year_start = 2025 and lower(house) = 'bowser';
-  update public.house_page_assets set house_key = 'donkey-kong' where academic_year_start = 2025 and (lower(house) = 'donkey kong' or house = 'donkey-kong');
-  update public.house_page_assets set house_key = 'boo' where academic_year_start = 2025 and lower(house) = 'boo';
-  update public.house_page_assets set house_key = 'toad' where academic_year_start = 2025 and lower(house) = 'toad';
-
-  -- 2. Restore images and taglines for 2025-2026.
-  -- We use the static assets that were already migrated to the repo.
+  -- 1. Ensure 2025-2026 Houses exist with consistent lowercase house_key and correct labels.
+  -- We use the original display names (capitalized) for the 'house' column to match old constraints,
+  -- and predictable lowercase 'house_key' for slugging.
   
   -- Bowser
-  update public.house_page_assets
+  insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, description, accent_color, image_url, emoji, display_order, is_active)
+  values (2025, 2026, 'Bowser', 'bowser', 'Bowser', 'Big boss energy. Show up, dominate, repeat.', '#f97316', '/images/houses/2025_bowser.webp', '🐢', 0, true)
+  on conflict (academic_year_start, house) do update
   set
-    image_url = coalesce(image_url, '/images/houses/2025_bowser.webp'),
-    description = coalesce(description, 'Big boss energy. Show up, dominate, repeat.'),
-    emoji = coalesce(emoji, '🐢'),
-    accent_color = coalesce(accent_color, '#f97316'),
-    is_active = true
-  where academic_year_start = 2025 and house_key = 'bowser';
+    house_key = 'bowser',
+    display_name = 'Bowser',
+    image_url = case 
+      when house_page_assets.image_url is null or house_page_assets.image_url = '' then '/images/houses/2025_bowser.webp' 
+      else house_page_assets.image_url 
+    end,
+    description = coalesce(house_page_assets.description, excluded.description),
+    emoji = coalesce(house_page_assets.emoji, excluded.emoji),
+    accent_color = coalesce(house_page_assets.accent_color, excluded.accent_color),
+    is_active = true;
 
   -- Donkey Kong
-  update public.house_page_assets
+  insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, description, accent_color, image_url, emoji, display_order, is_active)
+  values (2025, 2026, 'Donkey Kong', 'donkey-kong', 'Donkey Kong', 'Loud, wild, and impossible to ignore.', '#eab308', '/images/houses/2025_donkey-kong.webp', '🦍', 1, true)
+  on conflict (academic_year_start, house) do update
   set
-    image_url = coalesce(image_url, '/images/houses/2025_donkey-kong.webp'),
-    description = coalesce(description, 'Loud, wild, and impossible to ignore.'),
-    emoji = coalesce(emoji, '🦍'),
-    accent_color = coalesce(accent_color, '#eab308'),
-    is_active = true
-  where academic_year_start = 2025 and house_key = 'donkey-kong';
+    house_key = 'donkey-kong',
+    display_name = 'Donkey Kong',
+    image_url = case 
+      when house_page_assets.image_url is null or house_page_assets.image_url = '' then '/images/houses/2025_donkey-kong.webp' 
+      else house_page_assets.image_url 
+    end,
+    description = coalesce(house_page_assets.description, excluded.description),
+    emoji = coalesce(house_page_assets.emoji, excluded.emoji),
+    accent_color = coalesce(house_page_assets.accent_color, excluded.accent_color),
+    is_active = true;
 
   -- Boo
-  update public.house_page_assets
+  insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, description, accent_color, image_url, emoji, display_order, is_active)
+  values (2025, 2026, 'Boo', 'boo', 'Boo', 'Silent… until it''s time to go off.', '#94a3b8', '/images/houses/2025_boo.webp', '👻', 2, true)
+  on conflict (academic_year_start, house) do update
   set
-    image_url = coalesce(image_url, '/images/houses/2025_boo.webp'),
-    description = coalesce(description, 'Silent… until it''s time to go off.'),
-    emoji = coalesce(emoji, '👻'),
-    accent_color = coalesce(accent_color, '#94a3b8'),
-    is_active = true
-  where academic_year_start = 2025 and house_key = 'boo';
+    house_key = 'boo',
+    display_name = 'Boo',
+    image_url = case 
+      when house_page_assets.image_url is null or house_page_assets.image_url = '' then '/images/houses/2025_boo.webp' 
+      else house_page_assets.image_url 
+    end,
+    description = coalesce(house_page_assets.description, excluded.description),
+    emoji = coalesce(house_page_assets.emoji, excluded.emoji),
+    accent_color = coalesce(house_page_assets.accent_color, excluded.accent_color),
+    is_active = true;
 
   -- Toad
-  update public.house_page_assets
+  insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, description, accent_color, image_url, emoji, display_order, is_active)
+  values (2025, 2026, 'Toad', 'toad', 'Toad', 'Small but mighty. Always ahead of the curve.', '#ef4444', '/images/houses/2025_toad.webp', '🍄', 3, true)
+  on conflict (academic_year_start, house) do update
   set
-    image_url = coalesce(image_url, '/images/houses/2025_toad.webp'),
-    description = coalesce(description, 'Small but mighty. Always ahead of the curve.'),
-    emoji = coalesce(emoji, '🍄'),
-    accent_color = coalesce(accent_color, '#ef4444'),
-    is_active = true
-  where academic_year_start = 2025 and house_key = 'toad';
+    house_key = 'toad',
+    display_name = 'Toad',
+    image_url = case 
+      when house_page_assets.image_url is null or house_page_assets.image_url = '' then '/images/houses/2025_toad.webp' 
+      else house_page_assets.image_url 
+    end,
+    description = coalesce(house_page_assets.description, excluded.description),
+    emoji = coalesce(house_page_assets.emoji, excluded.emoji),
+    accent_color = coalesce(house_page_assets.accent_color, excluded.accent_color),
+    is_active = true;
 
-  -- 3. Cleanup: If any rows still exist for 2025 that aren't the official four, deactivate them.
-  -- We don't delete them yet to be safe, but we hide them from the public view.
-  update public.house_page_assets
-  set is_active = false
+  -- 2. Secondary cleanup: Ensure no duplicates with lowercase 'house' names if they were created by mistake
+  update public.house_page_assets set is_active = false
   where academic_year_start = 2025
+    and house not in ('Bowser', 'Donkey Kong', 'Boo', 'Toad')
     and house_key not in ('bowser', 'donkey-kong', 'boo', 'toad');
 
 end $$;
