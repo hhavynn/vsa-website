@@ -28,7 +28,7 @@ const PRESETS: Record<ImageUploadPreset, CompressionOptions> = {
   avatar: { maxWidth: 512, maxHeight: 512, quality: 0.78, maxInputBytes: 5 * MB, outputType: 'image/webp' },
   cabinet: { maxWidth: 900, maxHeight: 900, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   cabinetThumbnail: { maxWidth: 420, maxHeight: 420, quality: 0.76, maxInputBytes: 8 * MB, outputType: 'image/webp' },
-  event: { maxWidth: 1200, maxHeight: 1200, quality: 0.8, maxInputBytes: 10 * MB, outputType: 'image/webp' },
+  event: { maxWidth: 1200, maxHeight: 1200, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   eventThumbnail: { maxWidth: 720, maxHeight: 720, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   galleryCover: { maxWidth: 1400, maxHeight: 900, quality: 0.76, maxInputBytes: 10 * MB, outputType: 'image/webp' },
   galleryCoverThumbnail: { maxWidth: 720, maxHeight: 480, quality: 0.74, maxInputBytes: 10 * MB, outputType: 'image/webp' },

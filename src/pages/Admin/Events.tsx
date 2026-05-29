@@ -209,8 +209,9 @@ export default function AdminEvents() {
   });
 
   async function uploadImage(file: File): Promise<UploadedEventImage> {
-    // Admin browser uploads go to Supabase Storage. Moving permanent images into
-    // /public/images is a separate deploy-time workflow; browsers cannot write there.
+    // Admin browser uploads go to Supabase Storage. Moving permanent/static
+    // images into /public/images is a separate deploy-time migration workflow;
+    // the browser cannot write directly into deployed /public.
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'event');
     const { file: thumbnailFile } = await prepareImageForUpload(file, 'eventThumbnail');
     const uploadId = crypto.randomUUID();
