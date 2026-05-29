@@ -240,9 +240,7 @@ It will **not** dispatch for:
 
 ### Manual test payloads
 
-Use these curl examples to test the Edge Function without uploading real images:
-
-**Should return `triggered: true`:**
+#### Unix (curl)
 ```bash
 curl -X POST https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration \
   -H "Content-Type: application/json" \
@@ -257,6 +255,29 @@ curl -X POST https://<project-ref>.supabase.co/functions/v1/trigger-event-image-
     },
     "old_record": null
   }'
+```
+
+#### PowerShell
+```powershell
+$params = @{
+    Uri = "https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration"
+    Method = "Post"
+    Headers = @{
+        "Content-Type" = "application/json"
+        "x-image-migration-secret" = "<your-secret>"
+    }
+    Body = (@{
+        type = "INSERT"
+        table = "events"
+        record = @{
+            id = "test-event-uuid"
+            name = "Test Event"
+            image_url = "https://abc.supabase.co/storage/v1/object/public/event_images/test.jpg"
+        }
+        old_record = $null
+    } | ConvertTo-Json -Depth 10)
+}
+Invoke-RestMethod @params
 ```
 
 **Should return `triggered: false` (unchanged URL):**
