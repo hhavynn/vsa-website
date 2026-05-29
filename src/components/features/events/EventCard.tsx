@@ -3,6 +3,7 @@ import { Event } from '../../../types';
 import { CountdownTimer } from '../../common/CountdownTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { buildGcalAllDayDates, buildGcalTimedDates, formatEventTimeRange } from '../../../lib/eventTime';
 
 export interface EventCardProps {
   event: Event;
@@ -14,13 +15,15 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
 
   const handleSaveToCalendar = () => {
     if (!event.date) return;
-    const startDate = new Date(event.date);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-    const fmt = (d: Date) => d.toISOString().replace(/[-:]|\.\d+/g, '');
     const url = new URL('https://calendar.google.com/calendar/render');
     url.searchParams.append('action', 'TEMPLATE');
     url.searchParams.append('text', event.name);
-    url.searchParams.append('dates', `${fmt(startDate)}/${fmt(endDate)}`);
+    if (event.start_time && event.end_time) {
+      url.searchParams.append('dates', buildGcalTimedDates(event.date, event.start_time, event.end_time));
+      url.searchParams.append('ctz', 'America/Los_Angeles');
+    } else {
+      url.searchParams.append('dates', buildGcalAllDayDates(event.date));
+    }
     url.searchParams.append('details', event.description);
     url.searchParams.append('location', event.location || '');
     window.open(url.toString(), '_blank');
@@ -31,7 +34,11 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
   if (event.date) {
     const dateObj = new Date(event.date);
     if (!isNaN(dateObj.getTime())) {
-      dateString = format(dateObj, 'MMM d, yyyy • h:mm a');
+      const datePart = format(dateObj, 'MMM d, yyyy');
+      const timePart = event.start_time && event.end_time
+        ? formatEventTimeRange(event.start_time, event.end_time)
+        : format(dateObj, 'h:mm a');
+      dateString = `${datePart} • ${timePart}`;
       isUpcoming = dateObj > new Date();
     }
   }
