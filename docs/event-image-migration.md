@@ -107,3 +107,155 @@ Once the DB `image_url` fields are updated to `/images/events/...`, the Supabase
 ## Relationship to the daily migration workflow
 
 A separate `migrate-images.yml` workflow runs daily and applies all categories automatically. This `migrate-event-images.yml` workflow is for on-demand, targeted event migrations with dry-run safety built in. If you run both, the daily workflow will skip already-migrated images (local paths are not re-downloaded).
+
+---
+
+## Phase 3: Automatic trigger from Supabase
+
+When Phase 3 is enabled, uploading or changing an event image in the admin dashboard automatically triggers the migration — no manual workflow run needed.
+
+### How it works
+
+```
+Admin uploads event image
+  → image lands in Supabase Storage
+  → DB row updated (image_url = Supabase Storage URL)
+  → Supabase Database Webhook fires
+  → Edge Function: trigger-event-image-migration
+      → verifies shared secret
+      → checks image URL changed + is Supabase Storage
+      → POSTs repository_dispatch to GitHub
+  → GitHub Action: migrate-event-images.yml
+      → runs migration for that specific event in apply mode
+      → writes public/images/events/<slug>.webp
+      → updates DB image_url to /images/events/...
+      → commits + pushes to main
+  → Vercel redeploys → image served as static asset
+```
+
+### Required Supabase Edge Function secrets
+
+Set these in the Supabase Dashboard under **Project Settings → Edge Functions**:
+
+| Secret | Purpose |
+|---|---|
+| `IMAGE_MIGRATION_WEBHOOK_SECRET` | Shared secret between the DB webhook and the Edge Function |
+| `GITHUB_REPOSITORY` | Repo in `owner/repo` format, e.g. `hhavynn/vsa-website` |
+| `GITHUB_DISPATCH_TOKEN` | Fine-grained PAT with `contents: write` on this repo (to trigger `repository_dispatch`) |
+| `GITHUB_DISPATCH_EVENT_TYPE` | Optional. Default: `event-image-migration-requested` |
+
+### Required GitHub secrets (already set for Phase 2)
+
+| Secret | Purpose |
+|---|---|
+| `REACT_APP_SUPABASE_URL` | Read event rows |
+| `SUPABASE_SERVICE_ROLE_KEY` | Update DB rows (bypasses RLS) |
+
+### Supabase Dashboard setup
+
+1. **Deploy the Edge Function:**
+   ```bash
+   supabase functions deploy trigger-event-image-migration
+   ```
+
+2. **Set Edge Function secrets** (Supabase Dashboard → Edge Functions → trigger-event-image-migration → Secrets):
+   - `IMAGE_MIGRATION_WEBHOOK_SECRET` — any strong random string (e.g. `openssl rand -hex 32`)
+   - `GITHUB_REPOSITORY` — e.g. `hhavynn/vsa-website`
+   - `GITHUB_DISPATCH_TOKEN` — fine-grained PAT (see below)
+   - `GITHUB_DISPATCH_EVENT_TYPE` — optional, leave unset to use default
+
+3. **Create the GitHub PAT:**
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+   - Repository access: `hhavynn/vsa-website`
+   - Permissions: **Contents → Read and write** (required for `repository_dispatch`)
+   - Copy the token and set as `GITHUB_DISPATCH_TOKEN` in step 2
+
+4. **Create Database Webhook** (Supabase Dashboard → Database → Webhooks → Create new webhook):
+   - Name: `event-image-migration`
+   - Table: `events`
+   - Events: **INSERT**, **UPDATE**
+   - Method: `POST`
+   - URL: your Edge Function endpoint
+     ```
+     https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration
+     ```
+   - Headers:
+     ```
+     x-image-migration-secret: <same value as IMAGE_MIGRATION_WEBHOOK_SECRET>
+     ```
+
+5. **Test by uploading a new event image** in the admin dashboard. Check:
+   - Edge Function logs (Supabase Dashboard → Edge Functions → Logs)
+   - GitHub Actions run (repository → Actions → Migrate event images to static assets)
+   - Confirm `triggered: true` in function response
+   - Confirm migration run completed on main
+   - Confirm `/images/events/...` URL appears in DB
+
+### What does NOT trigger dispatch
+
+The Edge Function only dispatches when:
+- Operation is `INSERT` or `UPDATE`
+- `image_url` is present and points to Supabase Storage
+- `image_url` is different from the previous value (for UPDATE)
+
+It will **not** dispatch for:
+- Title, date, location, or description changes
+- Empty image URL
+- Image already at `/images/...`
+- Invalid secret
+- DELETE operations
+
+### Manual test payloads
+
+Use these curl examples to test the Edge Function without uploading real images:
+
+**Should return `triggered: true`:**
+```bash
+curl -X POST https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration \
+  -H "Content-Type: application/json" \
+  -H "x-image-migration-secret: <your-secret>" \
+  -d '{
+    "type": "INSERT",
+    "table": "events",
+    "record": {
+      "id": "test-event-uuid",
+      "name": "Test Event",
+      "image_url": "https://abc.supabase.co/storage/v1/object/public/event_images/test.jpg"
+    },
+    "old_record": null
+  }'
+```
+
+**Should return `triggered: false` (unchanged URL):**
+```bash
+curl -X POST https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration \
+  -H "Content-Type: application/json" \
+  -H "x-image-migration-secret: <your-secret>" \
+  -d '{
+    "type": "UPDATE",
+    "table": "events",
+    "record": {
+      "id": "test-event-uuid",
+      "image_url": "https://abc.supabase.co/storage/v1/object/public/event_images/test.jpg"
+    },
+    "old_record": {
+      "image_url": "https://abc.supabase.co/storage/v1/object/public/event_images/test.jpg"
+    }
+  }'
+```
+
+**Should return `401` (wrong secret):**
+```bash
+curl -X POST https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration \
+  -H "Content-Type: application/json" \
+  -H "x-image-migration-secret: wrong-secret" \
+  -d '{"type":"INSERT","record":{"id":"x","image_url":"https://abc.supabase.co/storage/..."}}'
+```
+
+### Cautions
+
+- Run the manual workflow dry-run before enabling this automation to verify migration behavior.
+- Keep old Supabase files until the migration completes and the Vercel deploy is verified.
+- If multiple image edits happen quickly for the same event, the `concurrency` group in the workflow prevents duplicate runs.
+- This does not run for non-image event edits (title, date, description, etc.).
+- The Edge Function does not process images directly — it only validates and dispatches.
