@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
 import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
 import { HOUSE_LABELS, HouseName, normalizeHouse } from '../../constants/houses';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
@@ -31,7 +32,7 @@ interface Member {
 
 type SheetFormat = 'wide' | 'long';
 type RowStatus = 'match' | 'review' | 'unmatched' | 'invalid';
-type AdminHouseTab = 'assignments' | 'backfill' | 'images';
+type AdminHouseTab = 'assignments' | 'backfill' | 'images' | 'events';
 
 interface BackfillPreview {
   totalMembersWithHouse: number;
@@ -721,6 +722,7 @@ export default function AdminHouses() {
               ['assignments', 'Assignment Import'],
               ['backfill', 'Legacy Backfill'],
               ['images', 'House Page Images'],
+              ['events', 'House Events'],
             ] as const).map(([tab, label], index) => (
               <button
                 key={tab}
@@ -1085,6 +1087,8 @@ export default function AdminHouses() {
       </div>
       ) : activeTab === 'images' ? (
         <HouseImagesManager />
+      ) : activeTab === 'events' ? (
+        <HouseEventsManager />
       ) : null}
     </>
   );

@@ -200,6 +200,30 @@ export interface HousePageAsset {
   updated_at: string;
 }
 
+export interface HouseEvent {
+  id: string;
+  house_profile_id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  title: string;
+  slug: string | null;
+  description: string | null;
+  event_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  image_url: string | null;
+  image_thumbnail_url: string | null;
+  gallery_url: string | null;
+  recap_url: string | null;
+  rsvp_url: string | null;
+  google_calendar_enabled: boolean;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  house?: HousePageAsset;
+}
+
 export interface HouseMembership {
   id: string;
   member_id: string;

@@ -2,6 +2,7 @@ import { type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
+import { houseEventsRepository } from '../../../data/repos/houseEvents';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { galleryRepository } from '../../../data/repos/gallery';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
@@ -10,9 +11,10 @@ import { formatDateOnly } from '../../../lib/dateOnly';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
+import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
-import { Event, HouseYearlyPoints } from '../../../types';
+import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
 
 function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'coral' | 'gold'; position?: 'top' | 'top-left' | 'top-right' }) {
   const colorVar = color === 'teal' ? 'var(--tape-teal)' : color === 'coral' ? 'var(--tape-coral)' : 'var(--tape-gold)';
@@ -71,11 +73,20 @@ function NextEventCard() {
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const todayDateOnly = getLosAngelesDateOnly();
+  const { data: houseEvents = [] } = useQuery<HouseEvent[]>({
+    queryKey: ['home', 'upcoming-house-event-preview', todayDateOnly],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 1),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const nextEvent = events[0] ?? null;
+  const nextHouseEvent = houseEvents[0] ?? null;
   const otherEvents = events.slice(1, 3);
   const timeLabel = nextEvent ? getEventTimeLabel(nextEvent) : null;
-  const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(nextEvent));
+  const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(nextEvent || nextHouseEvent));
   const summerMessage = getSummerBreakMessage('homepage');
 
   return (
@@ -108,10 +119,22 @@ function NextEventCard() {
             {useSummerEmptyState ? summerMessage.title : 'No upcoming events listed yet'}
           </p>
           <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-            {useSummerEmptyState
+            {nextHouseEvent
+              ? 'No all-VSA event is posted next, but there is a House event coming up.'
+              : useSummerEmptyState
               ? summerMessage.body
               : 'Check back soon or follow VSA channels for updates.'}
           </p>
+          {nextHouseEvent && (
+            <Link to="/house-system" className="mt-4 rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
+              <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
+                House event / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
+              </div>
+              <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
+                {nextHouseEvent.title}
+              </div>
+            </Link>
+          )}
           <div className="mt-4 flex flex-wrap gap-3">
             {useSummerEmptyState && (
               <Link to="/points" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
@@ -155,6 +178,17 @@ function NextEventCard() {
                 </div>
               ))}
             </div>
+          )}
+
+          {nextHouseEvent && (
+            <Link to="/house-system" className="rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
+              <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
+                Next House event / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
+              </div>
+              <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
+                {nextHouseEvent.title}
+              </div>
+            </Link>
           )}
 
           <Link to="/events" className="mt-auto font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
