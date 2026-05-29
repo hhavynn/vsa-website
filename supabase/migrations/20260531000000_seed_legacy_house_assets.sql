@@ -5,6 +5,35 @@ do $$
 begin
   -- CLEANUP: Remove any incorrect House profiles from verified years.
   -- This ensures each legacy year shows exactly its verified Houses.
+  -- We must first delete dependent data due to "on delete restrict" constraints.
+  
+  -- 1. Delete incorrect house memberships
+  delete from public.house_memberships
+  where house_profile_id in (
+    select id from public.house_page_assets
+    where (academic_year_start = 2018 and house_key not in ('flash', 'iron', 'loki', 'light'))
+       or (academic_year_start = 2019 and house_key not in ('gucci', 'cdg', 'supreme', 'ysl'))
+       or (academic_year_start = 2021 and house_key not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+       or (academic_year_start = 2022 and house_key not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+       or (academic_year_start = 2023 and house_key not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+       or (academic_year_start = 2024 and house_key not in ('badtz-maru', 'keroppi', 'kuromi'))
+       or (academic_year_start = 2025 and house_key not in ('bowser', 'donkey-kong', 'boo', 'toad'))
+  );
+
+  -- 2. Delete incorrect house events
+  delete from public.house_events
+  where house_profile_id in (
+    select id from public.house_page_assets
+    where (academic_year_start = 2018 and house_key not in ('flash', 'iron', 'loki', 'light'))
+       or (academic_year_start = 2019 and house_key not in ('gucci', 'cdg', 'supreme', 'ysl'))
+       or (academic_year_start = 2021 and house_key not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+       or (academic_year_start = 2022 and house_key not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+       or (academic_year_start = 2023 and house_key not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+       or (academic_year_start = 2024 and house_key not in ('badtz-maru', 'keroppi', 'kuromi'))
+       or (academic_year_start = 2025 and house_key not in ('bowser', 'donkey-kong', 'boo', 'toad'))
+  );
+
+  -- 3. Finally delete the incorrect house profiles
   delete from public.house_page_assets
   where (academic_year_start = 2018 and house_key not in ('flash', 'iron', 'loki', 'light'))
      or (academic_year_start = 2019 and house_key not in ('gucci', 'cdg', 'supreme', 'ysl'))
