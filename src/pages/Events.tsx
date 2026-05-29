@@ -93,6 +93,8 @@ function EventImage({
   imageWidth = 720,
   imageHeight = 432,
   priority = false,
+  resize = 'cover',
+  sizes = '(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw',
 }: {
   event: Event;
   className: string;
@@ -100,6 +102,8 @@ function EventImage({
   imageWidth?: number;
   imageHeight?: number;
   priority?: boolean;
+  resize?: 'cover' | 'contain';
+  sizes?: string;
 }) {
   const imageUrl = event.thumbnail_url || event.image_url;
 
@@ -109,14 +113,14 @@ function EventImage({
         src={getSupabaseImageUrl(imageUrl, {
           width: imageWidth,
           height: imageHeight,
-          resize: 'cover',
+          resize,
           quality: 72,
         })}
         srcSet={getSupabaseImageSrcSet(imageUrl, [Math.round(imageWidth / 2), imageWidth], {
-          resize: 'cover',
+          resize,
           quality: 72,
         })}
-        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+        sizes={sizes}
         alt={event.name}
         className={className}
         loading={priority ? 'eager' : 'lazy'}
@@ -477,7 +481,7 @@ export function Events() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
+              className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
               style={{ borderColor: 'var(--color-border)' }}
             >
               <span className="scrapbook-pin" aria-hidden />
@@ -508,14 +512,16 @@ export function Events() {
                 <AddToCalendarButton event={featured} variant="ghost" align="left" />
               </div>
 
-              <div className="relative flex flex-col justify-center bg-[var(--color-surface2)] p-6 sm:p-10 lg:p-12">
-                <div className="scrapbook-photo relative mx-auto w-full max-w-[400px] rotate-[1deg] transition-transform hover:rotate-0">
+              <div className="relative flex min-h-[320px] flex-col justify-center bg-[var(--color-surface2)] p-4 sm:min-h-[380px] sm:p-6 lg:min-h-[460px] lg:p-7">
+                <div className="scrapbook-photo relative mx-auto flex h-full min-h-[280px] w-full max-w-none rotate-[1deg] items-center justify-center overflow-hidden bg-[var(--color-surface)] transition-transform hover:rotate-0 sm:min-h-[340px] lg:min-h-[400px]">
                   <EventImage
                     event={featured}
-                    className="max-h-[340px] w-full object-contain lg:max-h-none"
+                    className="h-full w-full object-contain"
                     titleClassName="px-8 text-center font-serif italic leading-[1.04] tracking-[-0.03em] text-[38px]"
-                    imageWidth={800}
-                    imageHeight={1000}
+                    imageWidth={1100}
+                    imageHeight={900}
+                    resize="contain"
+                    sizes="(min-width: 1024px) 48vw, 100vw"
                     priority
                   />
                 </div>
@@ -543,21 +549,22 @@ export function Events() {
                 <motion.div
                   key={event.id}
                   whileHover={{ y: -2 }}
-                  className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_200px_minmax(0,1fr)_auto]"
+                  className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[104px_minmax(0,1fr)] lg:grid-cols-[88px_240px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <span className="scrapbook-pin" aria-hidden />
-                  <div className="relative order-1 bg-[var(--color-surface2)] p-2 sm:order-none">
+                  <div className="relative order-1 overflow-hidden rounded bg-[var(--color-surface2)] p-2 sm:order-2">
                     <EventImage
                       event={event}
-                      className="aspect-[4/5] max-h-[280px] w-full object-contain sm:max-h-none"
+                      className="aspect-[4/3] max-h-[260px] w-full object-cover sm:max-h-none"
                       titleClassName="px-4 text-center font-serif italic leading-[1.08] tracking-[-0.03em] text-[24px]"
-                      imageWidth={400}
-                      imageHeight={500}
+                      imageWidth={560}
+                      imageHeight={420}
+                      sizes="(min-width: 1024px) 240px, 100vw"
                     />
                   </div>
 
-                  <div className="order-2 border-b pb-4 text-center sm:order-none sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4" style={{ borderColor: 'var(--color-border)' }}>
+                  <div className="order-2 border-b pb-4 text-center sm:order-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4" style={{ borderColor: 'var(--color-border)' }}>
                     <div className="font-mono text-[10px] uppercase tracking-[.08em]" style={{ color: 'var(--color-text3)' }}>
                       {format(new Date(event.date), 'MMM')}
                     </div>
@@ -569,7 +576,7 @@ export function Events() {
                     </div>
                   </div>
 
-                  <div className="order-3 min-w-0 sm:col-span-2 sm:order-none lg:col-auto lg:py-1">
+                  <div className="order-3 min-w-0 sm:col-span-2 sm:order-3 lg:col-auto lg:py-1">
                     <div className="mb-3 flex flex-wrap items-center gap-3">
                       <Badge
                         label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
@@ -594,7 +601,7 @@ export function Events() {
                     )}
                   </div>
 
-                  <div className="order-4 flex items-start pt-1 sm:col-span-2 sm:order-none lg:col-auto lg:justify-end">
+                  <div className="order-4 flex items-start pt-1 sm:col-span-2 sm:order-4 lg:col-auto lg:justify-end">
                     <AddToCalendarButton event={event} align="right" />
                   </div>
                 </motion.div>
