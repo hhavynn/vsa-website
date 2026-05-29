@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
@@ -8,7 +8,7 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { eventsRepository, PublicEventPreview } from '../data/repos/events';
 import { galleryRepository, GalleryAlbum } from '../data/repos/gallery';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { getAcademicTermMeta, formatAcademicYear } from '../lib/academicTerms';
+import { getAcademicTermMeta, formatAcademicYear, parseYearSlug, getYearSlug } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTime } from '../lib/eventTime';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
@@ -20,7 +20,8 @@ import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImag
 import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
-import { getHousePagePath } from '../utils/houseSlug';
+import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
+import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -101,7 +102,11 @@ function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
 }
 
-function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
+function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms'], yearSlug?: string) {
+  if (yearSlug) {
+    const parsed = parseYearSlug(yearSlug);
+    if (parsed) return parsed;
+  }
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
   if (activeTermYear) return activeTermYear;
   const currentYear = getCurrentAcademicYearStart();
@@ -479,6 +484,7 @@ function HousePulseSection({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function House() {
+  const { yearSlug } = useParams();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('house');
@@ -488,12 +494,25 @@ export function House() {
   const [recentActivityLoading, setRecentActivityLoading] = useState(true);
   const statusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
   const today = getTodayDateOnly();
+
+  const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
+  const activeYear = resolveHouseYear(terms, yearSlug);
+  const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
+  const isArchive = activeYear !== null && activeYear !== activeTermYear;
+
+  const { data: availableYears = [] } = useQuery({
+    queryKey: ['house-years-with-data'],
+    queryFn: () => leaderboardRepository.getYearsWithData(),
+    staleTime: 60 * 60 * 1000,
+  });
+
   const { data: upcomingEvents = [] } = useQuery<PublicEventPreview[]>({
     queryKey: ['house', 'upcoming-event-preview', today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled: !isArchive,
   });
   const { data: memoryAlbums = [], isLoading: memoriesLoading } = useQuery<GalleryAlbum[]>({
     queryKey: ['house', 'memory-albums'],
@@ -503,13 +522,13 @@ export function House() {
     refetchOnWindowFocus: false,
   });
 
-  const activeYear = resolveHouseYear(terms);
-  const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
   const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
   const houseAssetsByName = assetMapByHouse(houseAssets);
   const displayedHouses = houseAssets.length > 0
     ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
-    : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
+    : isArchive 
+      ? [] 
+      : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
 
   useEffect(() => {
     let isMounted = true;
@@ -523,11 +542,22 @@ export function House() {
       setRecentActivityLoading(true);
       
       try {
-        const [standingsData, activityData] = await Promise.all([
+        const [rawStandings, activityData] = await Promise.all([
           leaderboardRepository.getYearlyHouseLeaderboard(activeYear),
           leaderboardRepository.getRecentHouseActivity(activeYear, 6)
         ]);
         
+        // Apply official public point overrides for 2025-2026
+        const standingsData = rawStandings.map((s) => ({
+          ...s,
+          total_points: getPublicHousePoints({
+            houseKey: s.house,
+            houseName: s.display_name,
+            academicYearStart: s.academic_year_start,
+            calculatedPoints: s.total_points,
+          }),
+        })).sort((a, b) => b.total_points - a.total_points);
+
         if (isMounted) {
           setStandings(standingsData);
           setRecentActivity(activityData);
@@ -556,9 +586,11 @@ export function House() {
   const summerBreak = isSummerBreak();
   const summerHouseMessage = getSummerBreakMessage('house');
 
+  const showSummerTransition = summerBreak && !isArchive && houseAssets.length === 0;
+
   return (
     <>
-      <PageTitle title="House Program" />
+      <PageTitle title={isArchive ? `House Archive ${activeYearLabel}` : 'House Program'} />
 
       <div className="program-app">
 
@@ -566,15 +598,24 @@ export function House() {
         <section className="program-hero">
           <div className="program-hero-grain" />
           <div className="program-hero-inner">
-            <span className="program-hero-kicker">House Board</span>
+            <span className="program-hero-kicker">
+              {isArchive ? `Archived / ${activeYearLabel}` : 'House Board'}
+            </span>
             <h1 className="program-title">
-              House <span className="program-title-script">Program</span>
+              House <span className="program-title-script">{isArchive ? 'Archive' : 'Program'}</span>
             </h1>
             <p className="program-hero-meta">
-              Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.
+              {isArchive 
+                ? `Exploring the memories, standings, and houses from the ${activeYearLabel} school year.`
+                : 'Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.'}
             </p>
             <div className="program-hero-actions">
-              {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
+              {isArchive && (
+                <Link to="/house" className="scrapbook-sticker scrapbook-sticker-gold">
+                  ← Back to Current Year
+                </Link>
+              )}
+              {!isArchive && cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
                 <span className="scrapbook-sticker scrapbook-sticker-teal">
                   {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
                 </span>
@@ -647,14 +688,18 @@ export function House() {
                 // Deterministic rotation
                 const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
 
+                const detailHref = isArchive 
+                  ? `/house/archive/${activeYearLabel}/${houseSlugFromKey(asset?.house_key || asset?.house || label)}`
+                  : getHousePagePath({
+                    house_key: asset?.house_key ?? house,
+                    house: asset?.house ?? house,
+                    display_name: label,
+                  });
+
                 return (
                   <Link
                     key={house}
-                    to={getHousePagePath({
-                      house_key: asset?.house_key ?? house,
-                      house: asset?.house ?? house,
-                      display_name: label,
-                    })}
+                    to={detailHref}
                     className={`program-feature-card block overflow-hidden p-0 transition-all scrapbook-hover-tilt hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${rotationClass}`}
                     style={{ 
                       borderColor: `${color}55`,
@@ -662,6 +707,7 @@ export function House() {
                     } as any}
                     aria-label={`View ${label} house page`}
                   >
+
                     <span className="scrapbook-pin" aria-hidden />
                     {/* Image area */}
                     <div
@@ -775,9 +821,14 @@ export function House() {
               </div>
               <div className="flex items-center gap-4">
                 <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
-                  House points = qualifying event attendance count
+                  {isHousePointOverrideActive(activeYear) 
+                    ? "Totals reflect official public count for the year" 
+                    : "House points = qualifying event attendance count"}
                 </span>
-                <Link to="/leaderboard" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                <Link 
+                  to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"} 
+                  className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                >
                   Full Leaderboard →
                 </Link>
               </div>
@@ -790,16 +841,13 @@ export function House() {
                 </div>
               ) : standings.length === 0 ? (
                 <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  {summerBreak ? (
+                  {showSummerTransition ? (
                     <div className="mx-auto max-w-xl space-y-2 text-center">
-                      <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
-                        {summerHouseMessage.badge}
-                      </span>
                       <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
                         {summerHouseMessage.title}
                       </p>
                       <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                        {summerHouseMessage.body}
+                        New standings will appear once fall events start.
                       </p>
                     </div>
                   ) : houseAssets.length > 0 ? (
@@ -826,7 +874,7 @@ export function House() {
                 </div>
               ) : (
                 <>
-                  {summerBreak && (
+                  {summerBreak && !isArchive && (
                     <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
                       <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
                         Summer note: House activity is paused until the next school year.
@@ -928,12 +976,37 @@ export function House() {
           </section>
         )}
 
+        {/* ── Archive Browsing ── */}
+        {availableYears.length > 1 && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">Relive the Memories</div>
+              <div className="flex flex-wrap gap-3">
+                {availableYears.map((year) => {
+                  const isCurrent = year === activeYear;
+                  return (
+                    <Link
+                      key={year}
+                      to={year === activeTermYear ? '/house' : `/house/archive/${getYearSlug(year)}`}
+                      className={`vsa-btn-ghost text-xs ${isCurrent ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      {formatAcademicYear(year)} {year === activeTermYear ? '(Current)' : 'Archive'}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ── Points explainer ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <PointsExplainer />
-          </div>
-        </section>
+        {!isArchive && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <PointsExplainer />
+            </div>
+          </section>
+        )}
 
         {/* ── Upcoming Events ── */}
         {upcomingEvents.length > 0 && (

@@ -9,6 +9,7 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { getPublicHousePoints } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
@@ -324,35 +325,46 @@ export function Leaderboard() {
     let isCurrentRequest = true;
 
     const loadHouseStandings = async () => {
-    try {
-    setHouseLoading(true);
-    const data = selectedYear === 'all'
-      ? await leaderboardRepository.getAllTimeHouseLeaderboard()
-      : await leaderboardRepository.getYearlyHouseLeaderboard(selectedYear);
+      try {
+        setHouseLoading(true);
+        const data = selectedYear === 'all'
+          ? await leaderboardRepository.getAllTimeHouseLeaderboard()
+          : await leaderboardRepository.getYearlyHouseLeaderboard(selectedYear);
 
-    if (!isCurrentRequest) return;
+        if (!isCurrentRequest) return;
 
-    // Sort by house points (attendance-count)
-    const ranked = data
-      .sort((a, b) => b.total_points - a.total_points)
-      .map((house, index) => ({ ...house, rank: index + 1 }));
+        // Apply official public point overrides for 2025-2026
+        const standingsWithOverrides = data.map((s) => ({
+          ...s,
+          total_points: getPublicHousePoints({
+            houseKey: s.house,
+            houseName: s.display_name,
+            academicYearStart: s.academic_year_start,
+            calculatedPoints: s.total_points,
+          }),
+        }));
 
-    setHouseStandings(ranked);
+        // Sort by house points
+        const ranked = standingsWithOverrides
+          .sort((a, b) => b.total_points - a.total_points)
+          .map((house, index) => ({ ...house, rank: index + 1 }));
 
-    if (selectedYear === 'all') {
-      setHouseActivity([]);
-    } else {
-      const activity = await leaderboardRepository.getRecentHouseActivity(selectedYear, 8);
-      if (isCurrentRequest) setHouseActivity(activity);
-    }
-    } catch {
-    if (isCurrentRequest) {
-      setHouseStandings([]);
-      setHouseActivity([]);
-    }
-    } finally {
-    if (isCurrentRequest) setHouseLoading(false);
-    }
+        setHouseStandings(ranked);
+
+        if (selectedYear === 'all') {
+          setHouseActivity([]);
+        } else {
+          const activity = await leaderboardRepository.getRecentHouseActivity(selectedYear, 8);
+          if (isCurrentRequest) setHouseActivity(activity);
+        }
+      } catch {
+        if (isCurrentRequest) {
+          setHouseStandings([]);
+          setHouseActivity([]);
+        }
+      } finally {
+        if (isCurrentRequest) setHouseLoading(false);
+      }
     };
 
     loadHouseStandings();

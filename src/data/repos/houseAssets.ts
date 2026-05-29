@@ -2,7 +2,9 @@ import { supabase } from '../../lib/supabase';
 import { HousePageAsset } from '../../types';
 import { withErrorHandling } from '../errors';
 
-export type HousePageAssetFormData = Omit<HousePageAsset, 'id' | 'created_at' | 'updated_at'>;
+export type HousePageAssetFormData = Omit<HousePageAsset, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+};
 
 function normalizeAssets(data: HousePageAsset[]): HousePageAsset[] {
   return data
