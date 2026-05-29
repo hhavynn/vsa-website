@@ -1,72 +1,54 @@
 import { Link, useLocation } from 'react-router-dom';
 import { memo, useMemo } from 'react';
+import { GetInvolvedDropdown } from './GetInvolvedDropdown';
 
 interface NavItem {
   path: string;
   label: string;
 }
 
-interface NavLinksProps {
-  isMobile?: boolean;
-  className?: string;
-  onLinkClick?: () => void;
-}
+// Desktop-only flat nav items. "Home" is intentionally omitted — the logo
+// handles home navigation. "Get Involved" is handled by GetInvolvedDropdown.
+const FLAT_NAV_ITEMS: NavItem[] = [
+  { path: '/events',       label: 'Events' },
+  { path: '/leaderboard',  label: 'Leaderboard' },
+  { path: '/gallery',      label: 'Gallery' },
+  { path: '/cabinet',      label: 'Cabinet' },
+  { path: '/uvsa-network', label: 'Network' },
+];
 
-export const NavLinks = memo(function NavLinks({ isMobile = false, className = '', onLinkClick }: NavLinksProps) {
+export const NavLinks = memo(function NavLinks() {
   const location = useLocation();
 
-  const navItems: NavItem[] = useMemo(() => [
-    { path: '/', label: 'Home' },
-    { path: '/events', label: 'Events' },
-    { path: '/leaderboard', label: 'Leaderboard' },
-    { path: '/gallery', label: 'Gallery' },
-    { path: '/cabinet', label: 'Cabinet' },
-    { path: '/uvsa-network', label: 'UVSA Network' },
-    { path: '/get-involved', label: 'Get Involved' },
-  ], []);
+  const isActive = useMemo(
+    () => (path: string) => {
+      if (path === '/') return location.pathname === '/';
+      return location.pathname === path || location.pathname.startsWith(path + '/');
+    },
+    [location.pathname]
+  );
 
-  const isActive = (item: NavItem | string) => {
-    if (typeof item === 'string') return location.pathname === item;
-    if (item.path === '/') return location.pathname === '/';
-    return location.pathname === item.path;
-  };
-
-  const closeAll = () => {
-    onLinkClick?.();
-  };
-
-  const linkBase = 'font-sans text-[13px] font-semibold transition-colors duration-150';
-  const activeLink = 'text-[var(--brand)] bg-[var(--surface2)] border-[var(--border2)]';
-  const inactiveLink = 'text-[var(--text2)] border-transparent hover:text-[var(--text)] hover:bg-[var(--surface2)] hover:border-[var(--border)]';
-
-  if (isMobile) {
-    return (
-      <div className={`space-y-0.5 ${className}`}>
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={closeAll}
-            className={`block rounded-lg border px-3 py-2.5 ${linkBase} ${isActive(item) ? activeLink : inactiveLink}`}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    );
-  }
+  const linkBase =
+    'font-sans text-[13px] font-semibold transition-colors duration-150 rounded-lg border px-3 py-1.5';
+  const activeLink =
+    'text-[var(--brand)] bg-[var(--surface2)] border-[var(--border2)]';
+  const inactiveLink =
+    'text-[var(--text2)] border-transparent hover:text-[var(--text)] hover:bg-[var(--surface2)] hover:border-[var(--border)]';
 
   return (
-    <div className={`hidden items-center gap-1 md:flex ${className}`}>
-      {navItems.map((item) => (
+    <div className="hidden items-center gap-1 md:flex">
+      {FLAT_NAV_ITEMS.map((item) => (
         <Link
           key={item.path}
           to={item.path}
-          className={`rounded-lg border px-3 py-1.5 ${linkBase} ${isActive(item) ? activeLink : inactiveLink}`}
+          className={`${linkBase} ${isActive(item.path) ? activeLink : inactiveLink}`}
         >
           {item.label}
         </Link>
       ))}
+
+      {/* Get Involved — separate component with flyout dropdown */}
+      <GetInvolvedDropdown />
     </div>
   );
 });
