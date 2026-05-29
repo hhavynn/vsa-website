@@ -276,10 +276,11 @@ function PastEventMemoryCard({
 }
 
 function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: HousePageAsset }) {
-  const label = house?.display_name || house?.house || 'House';
-  const color = house?.accent_color || HOUSE_COLORS[house?.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
-  const imageUrl = event.image_thumbnail_url || event.image_url || house?.image_thumbnail_url || house?.image_url;
-  const href = house ? `/house/${houseSlugFromKey(house.house_key || house.house || label)}` : '/house';
+  const eventHouses = event.houses && event.houses.length > 0 ? event.houses : house ? [house] : [];
+  const primaryHouse = eventHouses[0] || house;
+  const color = primaryHouse?.accent_color || HOUSE_COLORS[primaryHouse?.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
+  const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
+  const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
 
   return (
     <Link to={href} className="scrapbook-paper group grid gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[120px_minmax(0,1fr)]" style={{ borderColor: `${color}55` }}>
@@ -301,9 +302,13 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">House event</span>
-          <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
-            {label}
-          </span>
+          <div className="flex flex-wrap gap-1">
+            {eventHouses.map((h) => (
+              <span key={h.id} className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: h.accent_color || HOUSE_COLORS[h.house as keyof typeof HOUSE_COLORS] || 'var(--brand)' }}>
+                {h.display_name || h.house}
+              </span>
+            ))}
+          </div>
         </div>
         <h3 className="truncate font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</h3>
         <p className="mt-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>

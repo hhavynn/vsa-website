@@ -222,6 +222,7 @@ export interface HouseEvent {
   created_at: string;
   updated_at: string;
   house?: HousePageAsset;
+  houses?: HousePageAsset[];
 }
 
 export interface HouseMembership {

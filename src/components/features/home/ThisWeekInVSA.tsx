@@ -128,7 +128,9 @@ function NextEventCard() {
           {nextHouseEvent && (
             <Link to="/house-system" className="mt-4 rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
               <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
-                House event / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
+                {nextHouseEvent.houses && nextHouseEvent.houses.length > 1
+                  ? `${nextHouseEvent.houses.map(h => h.display_name || h.house).join(' + ')} event`
+                  : 'House event'} / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
               </div>
               <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
                 {nextHouseEvent.title}
