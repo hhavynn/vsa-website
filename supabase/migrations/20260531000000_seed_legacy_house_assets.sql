@@ -3,6 +3,44 @@
 
 do $$
 begin
+  -- CLEANUP: Remove any incorrect House profiles from verified legacy years (2018-2024).
+  -- This ensures each legacy year shows exactly its verified Houses.
+  -- Note: We use lower() to handle potential case-sensitivity issues with legacy keys.
+  -- 2025-2026 is EXCLUDED from this destructive cleanup to protect current year data.
+  
+  -- 1. Delete incorrect house memberships for legacy years
+  delete from public.house_memberships
+  where house_profile_id in (
+    select id from public.house_page_assets
+    where (academic_year_start = 2018 and lower(house_key) not in ('flash', 'iron', 'loki', 'light'))
+       or (academic_year_start = 2019 and lower(house_key) not in ('gucci', 'cdg', 'supreme', 'ysl'))
+       or (academic_year_start = 2021 and lower(house_key) not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+       or (academic_year_start = 2022 and lower(house_key) not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+       or (academic_year_start = 2023 and lower(house_key) not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+       or (academic_year_start = 2024 and lower(house_key) not in ('badtz-maru', 'keroppi', 'kuromi'))
+  );
+
+  -- 2. Delete incorrect house events for legacy years
+  delete from public.house_events
+  where house_profile_id in (
+    select id from public.house_page_assets
+    where (academic_year_start = 2018 and lower(house_key) not in ('flash', 'iron', 'loki', 'light'))
+       or (academic_year_start = 2019 and lower(house_key) not in ('gucci', 'cdg', 'supreme', 'ysl'))
+       or (academic_year_start = 2021 and lower(house_key) not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+       or (academic_year_start = 2022 and lower(house_key) not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+       or (academic_year_start = 2023 and lower(house_key) not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+       or (academic_year_start = 2024 and lower(house_key) not in ('badtz-maru', 'keroppi', 'kuromi'))
+  );
+
+  -- 3. Finally delete the incorrect house profiles for legacy years
+  delete from public.house_page_assets
+  where (academic_year_start = 2018 and lower(house_key) not in ('flash', 'iron', 'loki', 'light'))
+     or (academic_year_start = 2019 and lower(house_key) not in ('gucci', 'cdg', 'supreme', 'ysl'))
+     or (academic_year_start = 2021 and lower(house_key) not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+     or (academic_year_start = 2022 and lower(house_key) not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+     or (academic_year_start = 2023 and lower(house_key) not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+     or (academic_year_start = 2024 and lower(house_key) not in ('badtz-maru', 'keroppi', 'kuromi'));
+
   -- 2018-2019: Superhero Era
   insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, accent_color, display_order)
   values
