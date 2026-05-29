@@ -23,16 +23,28 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     note: 'The earliest House system we could verify in the archives.',
     status: 'verified',
     detail: 'Some Houses were styled like crews or families, which makes this era feel like the first recovered chapter of VSA House lore.',
+    currentHouseLinks: {
+      Flash: '/house/year/2018-2019/flash',
+      Iron: '/house/year/2018-2019/iron',
+      Loki: '/house/year/2018-2019/loki',
+      Light: '/house/year/2018-2019/light',
+    },
   },
   {
     academicYear: '2019-2020',
     startYear: 2019,
     title: 'Streetwear Era',
     theme: 'Designers / streetwear',
-    houses: ['Gucci', 'CDG', 'Supreme', 'YSL'],
+    houses: ['Gucci', 'Comme des Garçons', 'Supreme', 'Yves Saint Laurent'],
     note: 'This year had a full House Spirit Week, with Gucci taking the top spot.',
     status: 'verified',
     detail: 'Gucci won House Spirit Week 2020 with 414 points, giving this era one of the clearest recovered competition moments.',
+    currentHouseLinks: {
+      Gucci: '/house/year/2019-2020/gucci',
+      'Comme des Garçons': '/house/year/2019-2020/cdg',
+      Supreme: '/house/year/2019-2020/supreme',
+      'Yves Saint Laurent': '/house/year/2019-2020/ysl',
+    },
   },
   {
     academicYear: '2020-2021',
@@ -53,6 +65,12 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     note: 'A mythology-inspired House year, with some records using Turtle instead of Tortoise.',
     status: 'verified',
     detail: 'This era brought the House system back with a mythical theme and a reveal tied to the Four Holy Beasts.',
+    currentHouseLinks: {
+      Phoenix: '/house/year/2021-2022/phoenix',
+      Unicorn: '/house/year/2021-2022/unicorn',
+      Dragon: '/house/year/2021-2022/dragon',
+      Tortoise: '/house/year/2021-2022/tortoise',
+    },
   },
   {
     academicYear: '2022-2023',
@@ -63,6 +81,12 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     note: 'A starter Pokemon-themed House year revealed in Fall 2022.',
     status: 'verified',
     detail: 'This year leaned into a familiar starter lineup, which made the House identities easy to remember and easy to root for.',
+    currentHouseLinks: {
+      Squirtle: '/house/year/2022-2023/squirtle',
+      Pikachu: '/house/year/2022-2023/pikachu',
+      Bulbasaur: '/house/year/2022-2023/bulbasaur',
+      Charmander: '/house/year/2022-2023/charmander',
+    },
   },
   {
     academicYear: '2023-2024',
@@ -74,6 +98,12 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     status: 'verified',
     detail: 'Some old planning files reused earlier templates, so this archive follows the year confirmed by active records.',
     caution: 'Designer Houses belong to 2019-2020, not this year.',
+    currentHouseLinks: {
+      'Ca Phe Sua Da': '/house/year/2023-2024/ca-phe-sua-da',
+      'Banana Milk': '/house/year/2023-2024/banana-milk',
+      Matcha: '/house/year/2023-2024/matcha',
+      Yakult: '/house/year/2023-2024/yakult',
+    },
   },
   {
     academicYear: '2024-2025',
