@@ -11,8 +11,18 @@
  *   npm run migrate:images:apply -- --category cabinet --limit 1
  *   npm run migrate:images:dry                         # scan all categories
  *   npm run migrate:images:apply -- --overwrite        # re-download existing
+ *   npm run migrate:images:dry -- --category events --event-id <uuid>
+ *   npm run migrate:images:apply -- --category events --event-id <uuid>
  *
  * Supported categories: cabinet, events, gallery, houses, home
+ *
+ * Flags:
+ *   --apply          Execute writes and DB updates (default: dry run)
+ *   --overwrite      Re-download even if local file already exists
+ *   --category       Migrate one category only
+ *   --limit          Max rows to process
+ *   --event-id       Filter to a single event (events category only)
+ *   --force-apply    Override branch guard (use with care)
  *
  * Env (reads from .env.local):
  *   REACT_APP_SUPABASE_URL           required
@@ -58,6 +68,7 @@ function getArg(flag: string): string | undefined {
 
 const ARG_CATEGORY = getArg('--category');
 const ARG_LIMIT = getArg('--limit') ? parseInt(getArg('--limit')!, 10) : undefined;
+const ARG_EVENT_ID = getArg('--event-id');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -306,6 +317,10 @@ async function migrateCategory(
 
   // Fetch rows from DB
   let query = supabase.from(config.table).select(config.select);
+  if (ARG_EVENT_ID && categoryName === 'events') {
+    query = (query as ReturnType<typeof supabase.from>).eq('id', ARG_EVENT_ID);
+    log(`  Event ID filter: ${ARG_EVENT_ID}`);
+  }
   if (limit) query = (query as ReturnType<typeof supabase.from>).limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`DB fetch failed for ${config.table}: ${error.message}`);
@@ -546,6 +561,24 @@ async function main(): Promise<void> {
         ' Add SUPABASE_SERVICE_ROLE_KEY to .env.local for full write access.\n',
       'warn',
     );
+  }
+
+  // Safety guard: applying DB URL changes before files are deployed on main
+  // can temporarily break production images. Refuse apply unless on main in CI,
+  // or the operator explicitly passes --force-apply.
+  if (APPLY && !rawArgs.includes('--force-apply')) {
+    const githubRef = process.env['GITHUB_REF'];
+    const isCI = Boolean(process.env['CI'] || process.env['GITHUB_ACTIONS']);
+    if (isCI && githubRef && githubRef !== 'refs/heads/main') {
+      log(
+        `ERROR: --apply is only allowed on the main branch in CI.\n` +
+          `  Current ref: ${githubRef}\n` +
+          `  Updating DB before files land on main can break production image URLs.\n` +
+          `  Re-run the workflow on main, or pass --force-apply to override.`,
+        'error',
+      );
+      process.exit(1);
+    }
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
