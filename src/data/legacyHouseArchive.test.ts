@@ -21,7 +21,7 @@ describe('legacy House archive data', () => {
   });
 
   it('keeps the designer Houses in 2019-2020', () => {
-    expect(getLegacyHouseArchiveByYear('2019-2020')?.houses).toEqual(['Gucci', 'CDG', 'Supreme', 'YSL']);
+    expect(getLegacyHouseArchiveByYear('2019-2020')?.houses).toEqual(['Gucci', 'Comme des Garçons', 'Supreme', 'Yves Saint Laurent']);
   });
 
   it('keeps 2023-2024 as the beverage year', () => {
