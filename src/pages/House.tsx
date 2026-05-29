@@ -648,10 +648,19 @@ export function House() {
                 const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
 
                 return (
-                  <div
+                  <Link
                     key={house}
-                    className={`program-feature-card overflow-hidden p-0 transition-all scrapbook-hover-tilt ${rotationClass}`}
-                    style={{ borderColor: `${color}55` }}
+                    to={getHousePagePath({
+                      house_key: asset?.house_key ?? house,
+                      house: asset?.house ?? house,
+                      display_name: label,
+                    })}
+                    className={`program-feature-card block overflow-hidden p-0 transition-all scrapbook-hover-tilt hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${rotationClass}`}
+                    style={{ 
+                      borderColor: `${color}55`,
+                      '--tw-ring-color': color 
+                    } as any}
+                    aria-label={`View ${label} house page`}
                   >
                     <span className="scrapbook-pin" aria-hidden />
                     {/* Image area */}
@@ -747,19 +756,14 @@ export function House() {
                           />
                         )}
                       </div>
-                      <Link
-                        to={getHousePagePath({
-                          house_key: asset?.house_key ?? house,
-                          house: asset?.house ?? house,
-                          display_name: label,
-                        })}
-                        className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider"
+                      <span
+                        className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
                         style={{ color }}
                       >
-                        View House page
-                      </Link>
+                        View House page →
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
