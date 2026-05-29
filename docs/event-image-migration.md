@@ -1,15 +1,25 @@
 # Event Image Migration
-
-Migrates event images from Supabase Storage to repo-hosted `/public/images/events/` files so Vercel serves them as static assets.
+Migrates event and House event images from Supabase Storage to repo-hosted `/public/images/events/` and `/public/images/house-events/` files so Vercel serves them as static assets.
 
 ## Why two steps?
 
 **Admin uploads still go to Supabase first.** The browser cannot write directly into the Vercel `/public` directory — those files must live in the repo and be deployed through Vercel's build pipeline. So the flow is:
 
 1. Admin uploads → Supabase Storage (immediate, no deploy needed)
-2. Migration workflow → downloads those images, optimizes them, writes to `public/images/events/`, commits, and pushes to `main`
-3. Vercel redeploys `main` → image is now served from `/images/events/...`
-4. DB row is updated to point at `/images/events/...` instead of the Supabase URL
+2. Migration workflow → downloads those images, optimizes them, writes to `public/images/events/` or `public/images/house-events/`, commits, and pushes to `main`
+3. Vercel redeploys `main` → image is now served from `/images/events/...` or `/images/house-events/...`
+4. DB row is updated to point at the local path instead of the Supabase URL
+
+### Categories
+
+1.  **events**: Standard VSA events (table: `events`). Files saved to `public/images/events/`.
+2.  **house-events**: House-specific events (table: `house_events`). Files saved to `public/images/house-events/`.
+3.  **cabinet**: Cabinet member profiles.
+4.  **gallery**: Gallery event covers.
+5.  **houses**: House page assets (cover images, etc.).
+6.  **home**: Homepage content (presidents' photo).
+
+## Usage
 
 This is intentional. Supabase Storage acts as a staging buffer; the migration workflow is what graduates images into the repo's static asset tree.
 
@@ -40,6 +50,12 @@ npm run migrate:images:dry -- --category events
 
 # Single event, dry run
 npm run migrate:images:dry -- --category events --event-id <uuid>
+
+# House events, dry run
+npm run migrate:images:dry -- --category house-events
+
+# Single House event, dry run
+npm run migrate:images:dry -- --category house-events --house-event-id <uuid>
 
 # Limit rows
 npm run migrate:images:dry -- --category events --limit 5
@@ -190,6 +206,23 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
    - Confirm `triggered: true` in function response
    - Confirm migration run completed on main
    - Confirm `/images/events/...` URL appears in DB
+
+### House Event Automation
+
+Repeat the setup steps for `house_events`:
+
+1.  **Deploy the Edge Function:**
+    ```bash
+    supabase functions deploy trigger-house-event-image-migration
+    ```
+2.  **Set Edge Function secrets** (same as above, but for `trigger-house-event-image-migration`).
+3.  **Create Database Webhook**:
+    - Name: `house-event-image-migration`
+    - Table: `house_events`
+    - Events: **INSERT**, **UPDATE**
+    - Method: `POST`
+    - URL: `https://<project-ref>.supabase.co/functions/v1/trigger-house-event-image-migration`
+    - Headers: `x-image-migration-secret: <your-secret>`
 
 ### What does NOT trigger dispatch
 

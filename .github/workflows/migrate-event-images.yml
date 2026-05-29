@@ -3,6 +3,14 @@ name: Migrate event images to static assets
 on:
   workflow_dispatch:
     inputs:
+      category:
+        description: "Image category to migrate"
+        required: true
+        default: "events"
+        type: choice
+        options:
+          - "events"
+          - "house-events"
       apply:
         description: "Apply changes (download images, update DB). Default false = dry run."
         required: true
@@ -12,7 +20,11 @@ on:
           - "false"
           - "true"
       event_id:
-        description: "Optional: migrate a single event by UUID (leave blank for all events)"
+        description: "Optional: migrate a single event by UUID (events category only)"
+        required: false
+        type: string
+      house_event_id:
+        description: "Optional: migrate a single House event by UUID (house-events category only)"
         required: false
         type: string
       limit:
@@ -21,12 +33,12 @@ on:
         default: "20"
         type: string
   repository_dispatch:
-    types: [event-image-migration-requested]
+    types: [event-image-migration-requested, house-event-image-migration-requested]
 
 # Prevent duplicate migrations for the same event. Different events run independently.
 # Falls back to 'batch' for manual runs with no event_id.
 concurrency:
-  group: event-image-migration-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.event_id || inputs.event_id || 'batch' }}
+  group: event-image-migration-${{ github.event_name == 'repository_dispatch' && (github.event.client_payload.event_id || github.event.client_payload.house_event_id) || inputs.event_id || inputs.house_event_id || 'batch' }}
   cancel-in-progress: false
 
 permissions:
@@ -61,18 +73,25 @@ jobs:
         id: args
         run: |
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            CATEGORY="${{ github.event.client_payload.category || 'events' }}"
             EVENT_ID="${{ github.event.client_payload.event_id }}"
+            HOUSE_EVENT_ID="${{ github.event.client_payload.house_event_id }}"
             APPLY_MODE="true"
             LIMIT="1"
           else
+            CATEGORY="${{ inputs.category }}"
             EVENT_ID="${{ inputs.event_id }}"
+            HOUSE_EVENT_ID="${{ inputs.house_event_id }}"
             APPLY_MODE="${{ inputs.apply }}"
             LIMIT="${{ inputs.limit || '20' }}"
           fi
 
-          ARGS="--category events"
+          ARGS="--category $CATEGORY"
           if [ -n "$EVENT_ID" ]; then
             ARGS="$ARGS --event-id $EVENT_ID"
+          fi
+          if [ -n "$HOUSE_EVENT_ID" ]; then
+            ARGS="$ARGS --house-event-id $HOUSE_EVENT_ID"
           fi
           if [ -n "$LIMIT" ]; then
             ARGS="$ARGS --limit $LIMIT"
@@ -83,6 +102,7 @@ jobs:
 
           echo "MIGRATION_ARGS=$ARGS" >> "$GITHUB_OUTPUT"
           echo "APPLY_MODE=$APPLY_MODE" >> "$GITHUB_OUTPUT"
+          echo "CATEGORY=$CATEGORY" >> "$GITHUB_OUTPUT"
 
       - name: Run migration
         env:
@@ -95,10 +115,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/images/events/
+          
+          # Stage specific category directory
+          if [ "${{ steps.args.outputs.CATEGORY }}" = "house-events" ]; then
+            git add public/images/house-events/
+          else
+            git add public/images/events/
+          fi
+          
           if git diff --cached --quiet; then
             echo "No new image files to commit."
           else
-            git commit -m "chore: migrate event images to static assets [skip ci]"
+            git commit -m "chore: migrate ${{ steps.args.outputs.CATEGORY }} images to static assets [skip ci]"
             git push
           fi

@@ -13,8 +13,10 @@
  *   npm run migrate:images:apply -- --overwrite        # re-download existing
  *   npm run migrate:images:dry -- --category events --event-id <uuid>
  *   npm run migrate:images:apply -- --category events --event-id <uuid>
+ *   npm run migrate:images:dry -- --category house-events --house-event-id <uuid>
+ *   npm run migrate:images:apply -- --category house-events --house-event-id <uuid>
  *
- * Supported categories: cabinet, events, gallery, houses, home
+ * Supported categories: cabinet, events, gallery, houses, home, house-events
  *
  * Flags:
  *   --apply          Execute writes and DB updates (default: dry run)
@@ -22,6 +24,7 @@
  *   --category       Migrate one category only
  *   --limit          Max rows to process
  *   --event-id       Filter to a single event (events category only)
+ *   --house-event-id Filter to a single house event (house-events category only)
  *   --force-apply    Override branch guard (use with care)
  *
  * Env (reads from .env.local):
@@ -69,6 +72,7 @@ function getArg(flag: string): string | undefined {
 const ARG_CATEGORY = getArg('--category');
 const ARG_LIMIT = getArg('--limit') ? parseInt(getArg('--limit')!, 10) : undefined;
 const ARG_EVENT_ID = getArg('--event-id');
+const ARG_HOUSE_EVENT_ID = getArg('--house-event-id');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -226,6 +230,24 @@ const CATEGORIES: Record<string, CategoryConfig> = {
     maxHeight: 800,
     quality: 80,
   },
+
+  'house-events': {
+    table: 'house_events',
+    select: 'id, title, slug, image_url, image_thumbnail_url',
+    imageFields: [
+      { name: 'image_url', suffix: '' },
+      { name: 'image_thumbnail_url', suffix: '_thumb' },
+    ],
+    getSlug: (row) => {
+      const titleSlug = row['slug'] ? String(row['slug']) : slugify(String(row['title'] ?? ''));
+      const id = idSuffix(row);
+      return id && titleSlug ? `${id}-${titleSlug}` : (id || titleSlug || 'unknown');
+    },
+    outputDir: 'public/images/house-events',
+    maxWidth: 1200,
+    maxHeight: 1200,
+    quality: 80,
+  },
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -317,10 +339,16 @@ async function migrateCategory(
 
   // Fetch rows from DB
   let query = supabase.from(config.table).select(config.select);
+
+  // Apply ID filters
   if (ARG_EVENT_ID && categoryName === 'events') {
     query = (query as ReturnType<typeof supabase.from>).eq('id', ARG_EVENT_ID);
     log(`  Event ID filter: ${ARG_EVENT_ID}`);
+  } else if (ARG_HOUSE_EVENT_ID && categoryName === 'house-events') {
+    query = (query as ReturnType<typeof supabase.from>).eq('id', ARG_HOUSE_EVENT_ID);
+    log(`  House Event ID filter: ${ARG_HOUSE_EVENT_ID}`);
   }
+
   if (limit) query = (query as ReturnType<typeof supabase.from>).limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`DB fetch failed for ${config.table}: ${error.message}`);
