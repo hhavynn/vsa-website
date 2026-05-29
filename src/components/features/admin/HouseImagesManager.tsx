@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { HOUSE_COLORS, HOUSE_LABELS, HOUSE_OPTIONS, HouseName } from '../../../constants/houses';
+import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { houseAssetsRepository } from '../../../data/repos/houseAssets';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
@@ -19,8 +19,14 @@ type HouseAssetDraft = {
   image_url: string;
   image_thumbnail_url: string;
   image_alt: string;
+  cover_image_url: string;
   source_doc_url: string;
   internal_notes: string;
+};
+
+type UploadedHouseImage = {
+  imageUrl: string;
+  thumbnailUrl: string;
 };
 
 function getCurrentAcademicYearStart() {
@@ -56,16 +62,18 @@ function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['te
   return Array.from(years.values()).sort((a, b) => b.start - a.start);
 }
 
-function emptyDraft(house: HouseName): HouseAssetDraft {
+function emptyDraft(houseKey: string = ''): HouseAssetDraft {
+  const houseName = houseKey as HouseName;
   return {
-    house_key: house,
-    display_name: HOUSE_LABELS[house],
+    house_key: houseKey,
+    display_name: HOUSE_LABELS[houseName] || houseKey,
     description: '',
-    accent_color: HOUSE_COLORS[house],
+    accent_color: HOUSE_COLORS[houseName] || '#10b981',
     is_active: true,
     image_url: '',
     image_thumbnail_url: '',
-    image_alt: HOUSE_LABELS[house],
+    image_alt: HOUSE_LABELS[houseName] || houseKey,
+    cover_image_url: '',
     source_doc_url: '',
     internal_notes: '',
   };
@@ -76,18 +84,19 @@ function nullable(value: string) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function draftFromAsset(house: HouseName, asset?: HousePageAsset): HouseAssetDraft {
+function draftFromAsset(asset: HousePageAsset): HouseAssetDraft {
   return {
-    house_key: asset?.house_key ?? asset?.house ?? house,
-    display_name: asset?.display_name ?? HOUSE_LABELS[house],
-    description: asset?.description ?? '',
-    accent_color: asset?.accent_color ?? HOUSE_COLORS[house],
-    is_active: asset?.is_active ?? true,
-    image_url: asset?.image_url ?? '',
-    image_thumbnail_url: asset?.image_thumbnail_url ?? '',
-    image_alt: asset?.image_alt ?? HOUSE_LABELS[house],
-    source_doc_url: asset?.source_doc_url ?? '',
-    internal_notes: asset?.internal_notes ?? '',
+    house_key: asset.house_key || asset.house,
+    display_name: asset.display_name || asset.house,
+    description: asset.description || '',
+    accent_color: asset.accent_color || HOUSE_COLORS[asset.house as HouseName] || '#10b981',
+    is_active: asset.is_active ?? true,
+    image_url: asset.image_url || '',
+    image_thumbnail_url: asset.image_thumbnail_url || '',
+    image_alt: asset.image_alt || asset.display_name || asset.house,
+    cover_image_url: asset.cover_image_url || '',
+    source_doc_url: asset.source_doc_url || '',
+    internal_notes: asset.internal_notes || '',
   };
 }
 
@@ -95,12 +104,12 @@ export function HouseImagesManager() {
   const { terms } = useAcademicTerms();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const { assets, loading, error, refetch } = useAdminHouseAssets(selectedYear);
-  const [drafts, setDrafts] = useState<Record<HouseName, HouseAssetDraft>>(() => (
-    HOUSE_OPTIONS.reduce((acc, house) => ({ ...acc, [house]: emptyDraft(house) }), {} as Record<HouseName, HouseAssetDraft>)
-  ));
-  const [files, setFiles] = useState<Partial<Record<HouseName, File>>>({});
-  const [previews, setPreviews] = useState<Partial<Record<HouseName, string>>>({});
-  const [savingHouse, setSavingHouse] = useState<HouseName | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, HouseAssetDraft>>({});
+  const [files, setFiles] = useState<Record<string, File>>({});
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newHouseDraft, setNewHouseDraft] = useState<HouseAssetDraft>(() => emptyDraft());
   const academicYearOptions = useMemo(() => buildAcademicYearOptions(terms), [terms]);
 
   useEffect(() => {
@@ -108,13 +117,11 @@ export function HouseImagesManager() {
   }, [selectedYear, terms]);
 
   useEffect(() => {
-    const assetsByHouse = new Map(assets.map((asset) => [asset.house, asset]));
-    setDrafts(
-      HOUSE_OPTIONS.reduce((acc, house) => ({
-        ...acc,
-        [house]: draftFromAsset(house, assetsByHouse.get(house)),
-      }), {} as Record<HouseName, HouseAssetDraft>),
-    );
+    const nextDrafts: Record<string, HouseAssetDraft> = {};
+    assets.forEach((asset) => {
+      nextDrafts[asset.id] = draftFromAsset(asset);
+    });
+    setDrafts(nextDrafts);
     setFiles({});
     setPreviews((current) => {
       Object.values(current).forEach((url) => {
@@ -132,40 +139,41 @@ export function HouseImagesManager() {
     };
   }, [previews]);
 
-  function updateDraft(house: HouseName, patch: Partial<HouseAssetDraft>) {
+  function updateDraft(id: string, patch: Partial<HouseAssetDraft>) {
     setDrafts((current) => ({
       ...current,
-      [house]: {
-        ...current[house],
+      [id]: {
+        ...current[id],
         ...patch,
       },
     }));
   }
 
-  function setHouseFile(house: HouseName, file: File | null) {
+  function setHouseFile(id: string, file: File | null) {
     setFiles((current) => {
       const next = { ...current };
-      if (file) next[house] = file;
-      else delete next[house];
+      if (file) next[id] = file;
+      else delete next[id];
       return next;
     });
 
     setPreviews((current) => {
-      if (current[house]) URL.revokeObjectURL(current[house] as string);
+      if (current[id]) URL.revokeObjectURL(current[id]);
       const next = { ...current };
-      if (file) next[house] = URL.createObjectURL(file);
-      else delete next[house];
+      if (file) next[id] = URL.createObjectURL(file);
+      else delete next[id];
       return next;
     });
   }
 
-  async function uploadHouseImage(house: HouseName, file: File) {
+  async function uploadHouseImage(houseKey: string, file: File): Promise<UploadedHouseImage> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'house');
     const { file: thumbnailFile } = await prepareImageForUpload(file, 'houseThumbnail');
     const uploadId = crypto.randomUUID();
-    const houseSlug = house.toLowerCase().replace(/\s+/g, '-');
-    const fileName = `${selectedYear}/${houseSlug}-${uploadId}.${getUploadExtension(preparedFile)}`;
-    const thumbnailName = `${selectedYear}/thumbs/${houseSlug}-${uploadId}.${getUploadExtension(thumbnailFile)}`;
+    const houseSlug = houseKey.toLowerCase().replace(/\s+/g, '-');
+    const fileName = `houses/${selectedYear}/${houseSlug}-${uploadId}.${getUploadExtension(preparedFile)}`;
+    const thumbnailName = `houses/${selectedYear}/thumbs/${houseSlug}-${uploadId}.${getUploadExtension(thumbnailFile)}`;
+    
     const { error: uploadError } = await supabase.storage.from('house_images').upload(fileName, preparedFile, {
       cacheControl: '31536000',
       contentType: preparedFile.type,
@@ -182,7 +190,7 @@ export function HouseImagesManager() {
     }
 
     if (wasCompressed && reduction > 10) {
-      toast.success(`${HOUSE_LABELS[house]} image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
+      toast.success(`${houseKey} image optimized (reduced by ${reduction}%)`, { icon: '⚡' });
     }
 
     const { data } = supabase.storage.from('house_images').getPublicUrl(fileName);
@@ -198,83 +206,91 @@ export function HouseImagesManager() {
     if (objectName) await supabase.storage.from('house_images').remove([objectName]);
   }
 
-  async function saveAsset(house: HouseName) {
-    if (!selectedYear) {
-      toast.error('Choose an academic year first.');
-      return;
-    }
+  async function saveAsset(id: string) {
+    if (!selectedYear) return;
+    const asset = assets.find(a => a.id === id);
+    if (!asset) return;
 
     try {
-      setSavingHouse(house);
-      const file = files[house];
-      const draft = drafts[house] ?? emptyDraft(house);
-      const oldImageUrl = draft.image_url;
-      const oldThumbnailUrl = draft.image_thumbnail_url;
-      const uploadedImage = file ? await uploadHouseImage(house, file) : null;
+      setSavingId(id);
+      const file = files[id];
+      const draft = drafts[id];
+      const oldImageUrl = asset.image_url;
+      const oldThumbnailUrl = asset.image_thumbnail_url;
+      const uploadedImage = file ? await uploadHouseImage(draft.house_key || asset.house, file) : null;
+      
       const imageUrl = uploadedImage?.imageUrl ?? draft.image_url;
       const imageThumbnailUrl = uploadedImage?.thumbnailUrl ?? draft.image_thumbnail_url;
 
       await houseAssetsRepository.upsertAsset({
+        id,
         academic_year_start: selectedYear,
         academic_year_end: selectedYear + 1,
-        house,
-        house_key: nullable(draft.house_key) ?? house,
-        display_name: nullable(draft.display_name) ?? HOUSE_LABELS[house],
+        house: asset.house,
+        house_key: nullable(draft.house_key) ?? asset.house,
+        display_name: nullable(draft.display_name) ?? asset.display_name,
         description: nullable(draft.description),
         accent_color: nullable(draft.accent_color),
         is_active: draft.is_active,
         image_url: nullable(imageUrl),
         image_thumbnail_url: nullable(imageThumbnailUrl),
-        image_alt: nullable(draft.image_alt) ?? HOUSE_LABELS[house],
-        display_order: HOUSE_OPTIONS.indexOf(house),
+        image_alt: nullable(draft.image_alt) ?? draft.display_name,
+        cover_image_url: nullable(draft.cover_image_url),
+        display_order: asset.display_order,
         source_doc_url: nullable(draft.source_doc_url),
         internal_notes: nullable(draft.internal_notes),
       });
 
-      if (uploadedImage) await removeHouseImage(oldImageUrl);
-      if (uploadedImage) await removeHouseImage(oldThumbnailUrl);
-      setHouseFile(house, null);
-      toast.success(`${HOUSE_LABELS[house]} image saved.`);
+      if (uploadedImage) {
+        await removeHouseImage(oldImageUrl);
+        await removeHouseImage(oldThumbnailUrl);
+      }
+      setHouseFile(id, null);
+      toast.success(`${draft.display_name} saved.`);
       await refetch();
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to save ${HOUSE_LABELS[house]} image.`);
+      toast.error(`Failed to save changes.`);
     } finally {
-      setSavingHouse(null);
+      setSavingId(null);
     }
   }
 
-  async function clearAsset(house: HouseName) {
+  async function handleAddHouse() {
     if (!selectedYear) return;
+    if (!newHouseDraft.house_key.trim()) {
+      toast.error('House Key is required.');
+      return;
+    }
 
     try {
-      setSavingHouse(house);
+      setSavingId('new');
       await houseAssetsRepository.upsertAsset({
         academic_year_start: selectedYear,
         academic_year_end: selectedYear + 1,
-        house,
-        house_key: nullable(drafts[house]?.house_key ?? '') ?? house,
-        display_name: nullable(drafts[house]?.display_name ?? '') ?? HOUSE_LABELS[house],
-        description: nullable(drafts[house]?.description ?? ''),
-        accent_color: nullable(drafts[house]?.accent_color ?? ''),
-        is_active: drafts[house]?.is_active ?? true,
+        house: newHouseDraft.house_key,
+        house_key: newHouseDraft.house_key,
+        display_name: newHouseDraft.display_name,
+        description: nullable(newHouseDraft.description),
+        accent_color: nullable(newHouseDraft.accent_color),
+        is_active: newHouseDraft.is_active,
         image_url: null,
         image_thumbnail_url: null,
-        image_alt: HOUSE_LABELS[house],
-        display_order: HOUSE_OPTIONS.indexOf(house),
-        source_doc_url: nullable(drafts[house]?.source_doc_url ?? ''),
-        internal_notes: nullable(drafts[house]?.internal_notes ?? ''),
+        image_alt: newHouseDraft.display_name,
+        cover_image_url: null,
+        display_order: assets.length,
+        source_doc_url: null,
+        internal_notes: null,
       });
-      await removeHouseImage(drafts[house]?.image_url);
-      await removeHouseImage(drafts[house]?.image_thumbnail_url);
-      setHouseFile(house, null);
-      toast.success(`${HOUSE_LABELS[house]} image cleared.`);
+      toast.success('House profile created.');
+      setNewHouseDraft(emptyDraft());
+      setShowAddForm(false);
       await refetch();
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to clear ${HOUSE_LABELS[house]} image.`);
+      toast.error('Failed to create house.');
     } finally {
-      setSavingHouse(null);
+      setSavingId(null);
     }
   }
 
@@ -283,53 +299,66 @@ export function HouseImagesManager() {
       <div className="mb-5 rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>House Page Images</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>House Page Images & Profiles</h2>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-              Set the public image for each House. Uploads create a smaller public thumbnail; pasted URLs stay where they are. Older images may still use original URLs until thumbnails are regenerated.
+              Manage House identities for each school year. Profiles created here appear on public House pages and standings.
             </p>
           </div>
-          <div className="w-full max-w-xs">
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-              Academic Year
-            </label>
-            <select
-              value={selectedYear ?? ''}
-              onChange={(event) => setSelectedYear(Number(event.target.value))}
-              className="w-full rounded border px-3 py-2 text-sm"
-              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+          <div className="flex items-end gap-3">
+            <div className="w-full max-w-xs text-right">
+              <label className="mb-1 block text-right text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                Viewing Year
+              </label>
+              <select
+                value={selectedYear ?? ''}
+                onChange={(event) => setSelectedYear(Number(event.target.value))}
+                className="w-full rounded border px-3 py-2 text-sm"
+                style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+              >
+                {academicYearOptions.map((year) => (
+                  <option key={year.start} value={year.start}>
+                    {`${year.label}${year.isActive ? ' (Active)' : ''}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="vsa-btn-primary px-4 py-2 text-xs"
             >
-              {academicYearOptions.map((year) => (
-                <option key={year.start} value={year.start}>
-                  {`${year.label}${year.isActive ? ' (Active)' : ''}`}
-                </option>
-              ))}
-            </select>
+              + Add House
+            </button>
           </div>
         </div>
         {error && (
           <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
-            House image assets could not be loaded. Apply the house_page_assets migration before editing.
+            House image assets could not be loaded.
           </p>
         )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        {HOUSE_OPTIONS.map((house) => {
-          const draft = drafts[house] ?? emptyDraft(house);
-          const previewUrl = previews[house] ?? (draft.image_thumbnail_url || draft.image_url);
-          const color = HOUSE_COLORS[house];
-          const saving = savingHouse === house;
+        {assets.map((asset) => {
+          const draft = drafts[asset.id] || draftFromAsset(asset);
+          const previewUrl = previews[asset.id] ?? (draft.image_thumbnail_url || draft.image_url);
+          const color = draft.accent_color;
+          const saving = savingId === asset.id;
 
           return (
-            <div key={house} className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <div key={asset.id} className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex items-center justify-between gap-4 border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
                 <div>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{HOUSE_LABELS[house]}</h3>
-                  <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text3)' }}>
-                    {selectedYear ? formatAcademicYear(selectedYear) : 'Choose a year'}
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{draft.display_name}</h3>
+                  <p className="mt-0.5 text-[10px] font-mono uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
+                    {draft.house_key}
                   </p>
                 </div>
-                <span className="h-3 w-3 rounded-full" style={{ background: color }} />
+                <div className="flex items-center gap-3">
+                  {!draft.is_active && (
+                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-zinc-500">Archived</span>
+                  )}
+                  <span className="h-3 w-3 rounded-full" style={{ background: color }} />
+                </div>
               </div>
 
               <div className="grid gap-5 p-5 md:grid-cols-[180px_minmax(0,1fr)]">
@@ -339,141 +368,201 @@ export function HouseImagesManager() {
                     style={{ borderColor: 'var(--color-border)', background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
                   >
                     {previewUrl ? (
-                      <img src={previewUrl} alt={draft.image_alt || HOUSE_LABELS[house]} className="h-full w-full object-cover" />
+                      <img src={previewUrl} alt={draft.image_alt} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
-                        <div
-                          className="grid h-14 w-14 place-items-center rounded-full border font-serif text-xl"
-                          style={{ borderColor: `${color}66`, color, background: 'var(--color-surface)' }}
-                        >
-                          {house === 'Donkey Kong' ? 'DK' : house.slice(0, 2).toUpperCase()}
-                        </div>
+                        <span className="font-serif text-3xl italic" style={{ color: 'var(--color-border)' }}>VSA</span>
                       </div>
                     )}
                   </div>
                   <label
-                    htmlFor={`house-image-${house}`}
+                    htmlFor={`house-image-${asset.id}`}
                     className="mt-3 block cursor-pointer rounded border px-3 py-2 text-center text-xs font-medium"
                     style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                   >
-                    Upload Image
+                    {previewUrl ? 'Change Image' : 'Upload Image'}
                   </label>
                   <input
-                    id={`house-image-${house}`}
+                    id={`house-image-${asset.id}`}
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="sr-only"
-                    onChange={(event) => setHouseFile(house, event.target.files?.[0] ?? null)}
+                    onChange={(event) => setHouseFile(asset.id, event.target.files?.[0] ?? null)}
                   />
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                      Display Name
-                    </label>
-                    <input
-                      value={draft.display_name}
-                      onChange={(event) => updateDraft(house, { display_name: event.target.value })}
-                      className="w-full rounded border px-3 py-2 text-sm"
-                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_110px]">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                        House Key
+                        Display Name
                       </label>
                       <input
-                        value={draft.house_key}
-                        onChange={(event) => updateDraft(house, { house_key: event.target.value })}
+                        value={draft.display_name}
+                        onChange={(event) => updateDraft(asset.id, { display_name: event.target.value })}
                         className="w-full rounded border px-3 py-2 text-sm"
                         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                        Accent
+                        Accent Color
                       </label>
-                      <input
-                        type="color"
-                        value={draft.accent_color || color}
-                        onChange={(event) => updateDraft(house, { accent_color: event.target.value })}
-                        className="h-[38px] w-full rounded border px-2 py-1"
-                        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
-                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={draft.accent_color}
+                          onChange={(event) => updateDraft(asset.id, { accent_color: event.target.value })}
+                          className="h-[38px] w-12 rounded border p-1"
+                          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+                        />
+                        <input
+                          value={draft.accent_color}
+                          onChange={(event) => updateDraft(asset.id, { accent_color: event.target.value })}
+                          className="flex-1 rounded border px-3 py-2 text-sm"
+                          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                        />
+                      </div>
                     </div>
                   </div>
+
                   <div>
                     <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
                       Description
                     </label>
                     <textarea
                       value={draft.description}
-                      onChange={(event) => updateDraft(house, { description: event.target.value })}
+                      onChange={(event) => updateDraft(asset.id, { description: event.target.value })}
                       rows={2}
                       className="w-full rounded border px-3 py-2 text-sm"
                       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
                     />
                   </div>
+
                   <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text2)' }}>
                     <input
                       type="checkbox"
                       checked={draft.is_active}
-                      onChange={(event) => updateDraft(house, { is_active: event.target.checked })}
+                      onChange={(event) => updateDraft(asset.id, { is_active: event.target.checked })}
                       className="rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]"
                     />
-                    Active on public House pages and leaderboards
+                    Published and active for this year
                   </label>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                      Image URL
-                    </label>
-                    <input
-                      type="url"
-                      value={draft.image_url}
-                      onChange={(event) => updateDraft(house, { image_url: event.target.value, image_thumbnail_url: '' })}
-                      className="w-full rounded border px-3 py-2 text-sm"
-                      placeholder="https://..."
-                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                      Alt Text
-                    </label>
-                    <input
-                      value={draft.image_alt}
-                      onChange={(event) => updateDraft(house, { image_alt: event.target.value })}
-                      className="w-full rounded border px-3 py-2 text-sm"
-                      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
-                    />
-                  </div>
+
                   <div className="flex flex-wrap gap-3 pt-1">
                     <button
                       type="button"
-                      onClick={() => saveAsset(house)}
-                      disabled={saving || loading || !selectedYear}
+                      onClick={() => saveAsset(asset.id)}
+                      disabled={saving || loading}
                       className="rounded bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-40"
                     >
-                      {saving ? 'Saving...' : 'Save Image'}
+                      {saving ? 'Saving...' : 'Save Profile'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => clearAsset(house)}
-                      disabled={saving || loading || !selectedYear || !previewUrl}
-                      className="rounded border px-4 py-2 text-xs font-medium disabled:opacity-40"
-                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-                    >
-                      Clear Image
-                    </button>
+                    {previewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateDraft(asset.id, { image_url: '', image_thumbnail_url: '' });
+                          setHouseFile(asset.id, null);
+                        }}
+                        className="rounded border px-4 py-2 text-xs font-medium"
+                        style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                      >
+                        Clear Image
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           );
         })}
+        {assets.length === 0 && !loading && (
+          <div className="col-span-2 py-12 text-center">
+            <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+              No House profiles found for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.
+            </p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="mt-4 text-xs font-semibold text-brand-600"
+            >
+              Add the first House profile →
+            </button>
+          </div>
+        )}
       </div>
+
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="scrapbook-paper w-full max-w-md p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+            <h2 className="font-serif text-xl font-bold">New House Profile</h2>
+            <p className="mt-2 text-xs" style={{ color: 'var(--color-text2)' }}>
+              Create a house identity for the {selectedYear ? formatAcademicYear(selectedYear) : ''} year.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                  House Key *
+                </label>
+                <input
+                  placeholder="e.g. Bowser"
+                  value={newHouseDraft.house_key}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewHouseDraft({ ...newHouseDraft, house_key: val, display_name: val, image_alt: val });
+                  }}
+                  className="w-full rounded border px-3 py-2 text-sm"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                />
+                <p className="mt-1 text-[10px]" style={{ color: 'var(--color-text3)' }}>This is the unique identifier for this house this year.</p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                  Display Name
+                </label>
+                <input
+                  value={newHouseDraft.display_name}
+                  onChange={(e) => setNewHouseDraft({ ...newHouseDraft, display_name: e.target.value })}
+                  className="w-full rounded border px-3 py-2 text-sm"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                  Accent Color
+                </label>
+                <input
+                  type="color"
+                  value={newHouseDraft.accent_color}
+                  onChange={(e) => setNewHouseDraft({ ...newHouseDraft, accent_color: e.target.value })}
+                  className="h-10 w-full rounded border p-1"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleAddHouse}
+                  disabled={savingId === 'new'}
+                  className="vsa-btn-primary flex-1 py-2 text-xs"
+                >
+                  {savingId === 'new' ? 'Creating...' : 'Create Profile'}
+                </button>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="flex-1 rounded border px-4 py-2 text-xs font-semibold"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

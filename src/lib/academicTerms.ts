@@ -41,6 +41,25 @@ export function formatAcademicYear(startYear: number): string {
   return `${startYear}-${startYear + 1}`;
 }
 
+/**
+ * Converts a slug like "2025-2026" to its start year 2025.
+ */
+export function parseYearSlug(slug: string | null | undefined): number | null {
+  if (!slug) return null;
+  const match = slug.match(/^(\d{4})-\d{4}$/);
+  if (match) return Number(match[1]);
+  const single = slug.match(/^(\d{4})$/);
+  if (single) return Number(single[1]);
+  return null;
+}
+
+/**
+ * Returns the year slug for a given start year.
+ */
+export function getYearSlug(startYear: number): string {
+  return formatAcademicYear(startYear);
+}
+
 export function getAcademicTermCode(quarter: AcademicQuarter, calendarYear: number): string {
   return `${QUARTER_PREFIX[quarter]}${String(calendarYear).slice(-2)}`;
 }

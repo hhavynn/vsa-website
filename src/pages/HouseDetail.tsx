@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
+import { useMemo } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
@@ -7,7 +8,7 @@ import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { formatAcademicYear, getAcademicTermMeta } from '../lib/academicTerms';
+import { formatAcademicYear, getAcademicTermMeta, parseYearSlug } from '../lib/academicTerms';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset } from '../types';
 import { matchesHouseSlug } from '../utils/houseSlug';
@@ -15,11 +16,22 @@ import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { Label } from '../components/ui/Label';
 import { HouseEventCard } from '../components/features/house/HouseEventCard';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
+import { getPublicHousePoints } from '../utils/housePublicPointOverrides';
 
-function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms']) {
+function getCurrentAcademicYearStart() {
+  return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+}
+
+function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms'], yearSlug?: string) {
+  if (yearSlug) {
+    const parsed = parseYearSlug(yearSlug);
+    if (parsed) return parsed;
+  }
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
   if (activeTermYear) return activeTermYear;
-  return getAcademicTermMeta(new Date())?.academicYearStart ?? terms[0]?.academic_year_start ?? null;
+  const currentYear = getCurrentAcademicYearStart();
+  if (currentYear) return currentYear;
+  return terms[0]?.academic_year_start ?? null;
 }
 
 function getHouseLabel(asset: HousePageAsset) {
@@ -31,10 +43,13 @@ function getHouseColor(asset: HousePageAsset) {
 }
 
 export function HouseDetail() {
-  const { houseSlug = '' } = useParams();
+  const { yearSlug, houseSlug = '' } = useParams();
   const { terms, loading: termsLoading } = useAcademicTerms();
-  const activeYear = resolveHouseYear(terms);
+  
+  const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
+  const activeYear = resolveHouseYear(terms, yearSlug);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
+  const isArchive = activeYear !== null && activeYear !== activeTermYear;
   const today = getLosAngelesDateOnly();
 
   const { data: houses = [], isLoading: housesLoading } = useQuery({
@@ -52,7 +67,7 @@ export function HouseDetail() {
     matchesHouseSlug(asset.display_name, houseSlug)
   ) ?? null;
 
-  const { data: standings = [] } = useQuery({
+  const { data: rawStandings = [] } = useQuery({
     queryKey: ['house-detail', 'standings', activeYear],
     queryFn: () => activeYear ? leaderboardRepository.getYearlyHouseLeaderboard(activeYear) : Promise.resolve([]),
     enabled: activeYear !== null,
@@ -60,6 +75,18 @@ export function HouseDetail() {
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const standings = useMemo(() => {
+    return rawStandings.map((s) => ({
+      ...s,
+      total_points: getPublicHousePoints({
+        houseKey: s.house,
+        houseName: s.display_name,
+        academicYearStart: s.academic_year_start,
+        calculatedPoints: s.total_points,
+      }),
+    })).sort((a, b) => b.total_points - a.total_points);
+  }, [rawStandings]);
 
   const { data: upcomingEvents = [], isLoading: upcomingLoading } = useQuery({
     queryKey: ['house-detail', 'upcoming-events', house?.id, today],
@@ -121,6 +148,7 @@ export function HouseDetail() {
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>
+                {isArchive && <span className="scrapbook-sticker scrapbook-sticker-gold">Archive</span>}
                 {rank && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
                 {standing && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>

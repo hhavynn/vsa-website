@@ -1,4 +1,4 @@
-import { type CSSProperties } from 'react';
+import { type CSSProperties, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
@@ -8,6 +8,7 @@ import { galleryRepository } from '../../../data/repos/gallery';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { supabase } from '../../../lib/supabase';
 import { formatDateOnly } from '../../../lib/dateOnly';
+import { getPublicHousePoints } from '../../../utils/housePublicPointOverrides';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
@@ -203,7 +204,7 @@ function NextEventCard() {
 }
 
 function HouseStandingsCard({ academicYearStart }: { academicYearStart: number | null }) {
-  const { data: standings = [], isLoading } = useQuery<HouseYearlyPoints[]>({
+  const { data: rawStandings = [], isLoading } = useQuery<HouseYearlyPoints[]>({
     queryKey: ['home', 'house-standings-preview', academicYearStart],
     queryFn: () =>
       academicYearStart
@@ -214,6 +215,18 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const standings = useMemo(() => {
+    return rawStandings.map((s) => ({
+      ...s,
+      total_points: getPublicHousePoints({
+        houseKey: s.house,
+        houseName: s.display_name,
+        academicYearStart,
+        calculatedPoints: s.total_points,
+      }),
+    })).sort((a, b) => b.total_points - a.total_points);
+  }, [rawStandings, academicYearStart]);
 
   const hasStandings = standings.some((house) => house.total_points > 0);
   const useSummerEmptyState = shouldUseSummerEmptyState(hasStandings);

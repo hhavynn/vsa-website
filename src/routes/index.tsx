@@ -141,6 +141,8 @@ export default function AppRoutes() {
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/ace" element={<Ace />} />
               <Route path="/house" element={<House />} />
+              <Route path="/house/archive/:yearSlug" element={<House />} />
+              <Route path="/house/archive/:yearSlug/:houseSlug" element={<HouseDetail />} />
               <Route path="/house/:houseSlug" element={<HouseDetail />} />
               <Route path="/house-system" element={<House />} />
               <Route path="/intern-program" element={<Internship />} />
