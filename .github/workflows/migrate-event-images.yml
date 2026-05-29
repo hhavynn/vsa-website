@@ -1,0 +1,83 @@
+name: Migrate event images to static assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply changes (download images, update DB). Default false = dry run."
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      event_id:
+        description: "Optional: migrate a single event by UUID (leave blank for all events)"
+        required: false
+        type: string
+      limit:
+        description: "Max number of event rows to process (default: 20)"
+        required: false
+        default: "20"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Guard — apply mode must run on main
+        if: ${{ inputs.apply == 'true' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "ERROR: Apply mode is only allowed on the main branch."
+          echo "Current ref: ${{ github.ref }}"
+          echo "Updating DB URLs before the files are deployed on main can temporarily"
+          echo "break production event images. Re-run this workflow from main."
+          exit 1
+
+      - name: Build migration args
+        id: args
+        run: |
+          ARGS="--category events"
+          if [ -n "${{ inputs.event_id }}" ]; then
+            ARGS="$ARGS --event-id ${{ inputs.event_id }}"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit ${{ inputs.limit }}"
+          fi
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            ARGS="$ARGS --apply"
+          fi
+          echo "MIGRATION_ARGS=$ARGS" >> "$GITHUB_OUTPUT"
+
+      - name: Run migration
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/migrate-supabase-images-to-public.ts ${{ steps.args.outputs.MIGRATION_ARGS }}
+
+      - name: Commit and push migrated images
+        if: ${{ inputs.apply == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/images/events/
+          if git diff --cached --quiet; then
+            echo "No new image files to commit."
+          else
+            git commit -m "chore: migrate event images to static assets [skip ci]"
+            git push
+          fi
