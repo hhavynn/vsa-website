@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
@@ -84,6 +84,7 @@ function HouseParentsSection({ house, label, color }: { house: HousePageAsset; l
 
 export function HouseDetail() {
   const { yearSlug, houseSlug = '' } = useParams();
+  const [showAllPastEvents, setShowAllPastEvents] = useState(false);
   const { terms, loading: termsLoading } = useAcademicTerms();
   
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
@@ -161,7 +162,7 @@ export function HouseDetail() {
             This House may not be configured for the current year yet, or the URL might be incorrect.
           </p>
           <div className="mt-8">
-            <Link to="/house-system" className="vsa-btn-primary">
+            <Link to="/house" className="vsa-btn-primary">
               Back to House Program
             </Link>
           </div>
@@ -175,13 +176,14 @@ export function HouseDetail() {
   const standing = standings.find((item) => item.house_profile_id === house.id || item.house === house.house_key);
   const rank = standing ? standings.findIndex((item) => item.house_profile_id === standing.house_profile_id) + 1 : null;
   const heroImage = house.image_thumbnail_url || house.image_url;
+  const visiblePastEvents = showAllPastEvents ? pastEvents : pastEvents.slice(0, 8);
 
   return (
     <>
       <PageTitle title={`${label} House`} />
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
-          <Link to="/house-system" className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <Link to="/house" className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
             ← Back to House Program
           </Link>
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
@@ -223,9 +225,22 @@ export function HouseDetail() {
       </div>
 
       <div className="vsa-container py-12 lg:py-16">
-        <HouseParentsSection house={house} label={label} color={color} />
-
-        <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />
+        {standing && (
+          <div className="mb-12 grid gap-3 sm:grid-cols-3">
+            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Rank</div>
+              <div className="mt-1 font-serif text-2xl" style={{ color }}>#{rank}</div>
+            </div>
+            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Points</div>
+              <div className="mt-1 font-serif text-2xl" style={{ color }}>{standing.total_points.toLocaleString()}</div>
+            </div>
+            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Members</div>
+              <div className="mt-1 font-serif text-2xl" style={{ color }}>{standing.unique_members.toLocaleString()}</div>
+            </div>
+          </div>
+        )}
 
         <RevealOnScrollWrapper>
           <section id="upcoming-events" className="scroll-mt-24">
@@ -260,6 +275,10 @@ export function HouseDetail() {
 
           <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />
 
+          <HouseParentsSection house={house} label={label} color={color} />
+
+          <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />
+
           <section id="past-events" className="scroll-mt-24">
             <div className="mb-8">
               <Label className="mb-2">Memory Board</Label>
@@ -280,17 +299,30 @@ export function HouseDetail() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-6">
-                {pastEvents.map((event) => (
+              <>
+                <div className="grid gap-6">
+                  {visiblePastEvents.map((event) => (
                   <HouseEventCard key={event.id} event={event} house={house} isUpcoming={false} />
-                ))}
-              </div>
+                  ))}
+                </div>
+                {!showAllPastEvents && pastEvents.length > visiblePastEvents.length && (
+                  <div className="mt-6 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPastEvents(true)}
+                      className="vsa-btn-ghost font-sans text-sm"
+                    >
+                      Show more past events
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </RevealOnScrollWrapper>
 
         <div className="mt-20 text-center">
-          <Link to="/house-system" className="vsa-btn-ghost inline-flex items-center gap-2 font-sans text-sm">
+          <Link to="/house" className="vsa-btn-ghost inline-flex items-center gap-2 font-sans text-sm">
             ← View All Houses
           </Link>
         </div>
