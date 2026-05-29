@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns';
+import { formatEventTimeRange } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
@@ -492,7 +493,9 @@ export function Events() {
                     color={TYPE_COLOR[featured.event_type] ?? 'gray'}
                   />
                   <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                    {format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
+                    {featured.start_time && featured.end_time
+                      ? `${format(new Date(featured.date), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
+                      : format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
                   </span>
                 </div>
                 <h2 className="mb-4 font-serif text-[32px] leading-[1.05] tracking-[-0.03em] sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
@@ -583,7 +586,9 @@ export function Events() {
                         color={TYPE_COLOR[event.event_type] ?? 'gray'}
                       />
                       <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
-                        {format(new Date(event.date), 'MMM d / h:mm a')}
+                        {event.start_time && event.end_time
+                          ? `${format(new Date(event.date), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
+                          : format(new Date(event.date), 'MMM d / h:mm a')}
                       </span>
                     </div>
                     <h3 className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>

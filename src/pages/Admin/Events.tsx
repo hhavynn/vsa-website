@@ -14,11 +14,12 @@ import { EventRecapEditor } from '../../components/features/admin/EventRecapEdit
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
+import { isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
   event_type: 'other', check_in_form_url: '', points: 0,
-  academic_term_id: null,
+  academic_term_id: null, start_time: null, end_time: null,
 };
 
 type UploadedEventImage = {
@@ -131,9 +132,16 @@ export default function AdminEvents() {
     const y = date.getFullYear();
     const mo = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
+  };
+
+  const formatStartTimeForInput = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     const h = String(date.getHours()).padStart(2, '0');
     const mi = String(date.getMinutes()).padStart(2, '0');
-    return `${y}-${mo}-${d}T${h}:${mi}`;
+    return `${h}:${mi}`;
   };
 
   const getTermLabel = (termId?: string | null, dateString?: string | null) => {
@@ -169,6 +177,14 @@ export default function AdminEvents() {
       date: dateValue,
       academic_term_id: suggestedTerm?.id ?? null,
     });
+  };
+
+  const validateEventTimes = (startTime?: string | null, endTime?: string | null): string | null => {
+    const hasStart = !!startTime;
+    const hasEnd = !!endTime;
+    if (hasStart !== hasEnd) return 'Please add both a start and end time, or leave both empty.';
+    if (hasStart && hasEnd && !isEndAfterStart(startTime!, endTime!)) return 'End time must be after start time.';
+    return null;
   };
 
   const now = new Date();
@@ -252,19 +268,26 @@ export default function AdminEvents() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.name || !newEvent.description || !newEvent.date || !newEvent.location) return;
+    const timeError = validateEventTimes(newEvent.start_time, newEvent.end_time);
+    if (timeError) { toast.error(timeError); return; }
     try {
       setUploading(true);
       const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const academicTermId = await resolveAcademicTermId(newEvent.date, newEvent.academic_term_id);
+      // Combine date + start_time into a full local datetime for the date column.
+      const startTime = newEvent.start_time || '00:00';
+      const isoDate = new Date(`${newEvent.date}T${startTime}`).toISOString();
+      const academicTermId = await resolveAcademicTermId(isoDate, newEvent.academic_term_id);
       const { error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
-        date: new Date(newEvent.date!).toISOString(), location: newEvent.location,
+        date: isoDate, location: newEvent.location,
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
         points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
         check_in_code: checkInCode, is_code_expired: false,
         academic_term_id: academicTermId,
+        start_time: newEvent.start_time || null,
+        end_time: newEvent.end_time || null,
       }]);
       if (error) throw error;
       toast.success('Event created');
@@ -294,6 +317,8 @@ export default function AdminEvents() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
+    const timeError = validateEventTimes(selectedEvent.start_time, selectedEvent.end_time);
+    if (timeError) { toast.error(timeError); return; }
     try {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
@@ -311,16 +336,24 @@ export default function AdminEvents() {
         thumbnailUrlToRemove = selectedEventOriginalThumbnailUrl;
         thumbnailUrl = null;
       }
-      const academicTermId = await resolveAcademicTermId(selectedEvent.date, selectedEvent.academic_term_id);
+      // Rebuild date ISO from date-only + start_time (date input returns "YYYY-MM-DD").
+      const dateOnly = selectedEvent.date.slice(0, 10);
+      const startTimePart = selectedEvent.start_time || '00:00';
+      const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEvent.date)
+        ? new Date(`${dateOnly}T${startTimePart}`).toISOString()
+        : new Date(selectedEvent.date).toISOString();
+      const academicTermId = await resolveAcademicTermId(isoDate, selectedEvent.academic_term_id);
       const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name, description: selectedEvent.description,
-        date: new Date(selectedEvent.date).toISOString(), location: selectedEvent.location,
+        date: isoDate, location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
         image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null, check_in_code: selectedEvent.check_in_code,
         is_code_expired: selectedEvent.is_code_expired,
         check_in_form_url: selectedEvent.check_in_form_url || '',
         academic_term_id: academicTermId,
+        start_time: selectedEvent.start_time || null,
+        end_time: selectedEvent.end_time || null,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
       await removeEventImage(imageUrlToRemove);
@@ -435,7 +468,17 @@ export default function AdminEvents() {
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
                   <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
-                  <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div><label className={labelCls}>Date *</label><input type="date" value={newEvent.date} onChange={e => handleNewEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Start time</label>
+                      <input type="time" value={newEvent.start_time ?? ''} onChange={e => setNewEvent({...newEvent, start_time: e.target.value || null})} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>End time</label>
+                      <input type="time" value={newEvent.end_time ?? ''} onChange={e => setNewEvent({...newEvent, end_time: e.target.value || null})} className={inputCls} />
+                    </div>
+                  </div>
                   <div>
                     <label className={labelCls}>Event Type *</label>
                     <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
@@ -518,7 +561,18 @@ export default function AdminEvents() {
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
                   <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
-                  <div><label className={labelCls}>Date & Time *</label><input type="datetime-local" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div><label className={labelCls}>Date *</label><input type="date" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Start time</label>
+                      <input type="time" value={timeToInputValue(selectedEvent.start_time) || formatStartTimeForInput(selectedEvent.date)} onChange={e => setSelectedEvent({...selectedEvent, start_time: e.target.value || null})} className={inputCls} />
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>Used for the public event page and Google Calendar.</p>
+                    </div>
+                    <div>
+                      <label className={labelCls}>End time</label>
+                      <input type="time" value={timeToInputValue(selectedEvent.end_time)} onChange={e => setSelectedEvent({...selectedEvent, end_time: e.target.value || null})} className={inputCls} />
+                    </div>
+                  </div>
                   <div>
                     <label className={labelCls}>Event Type *</label>
                     <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>

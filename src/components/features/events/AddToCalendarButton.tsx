@@ -1,19 +1,18 @@
 import { Event } from '../../../types';
-
-function toICSDate(d: Date) {
-  return d.toISOString().replace(/[-:]|\.\d+/g, '');
-}
-
-function eventEnd(event: Event) {
-  return new Date(new Date(event.date).getTime() + 2 * 60 * 60 * 1000);
-}
+import { buildGcalAllDayDates, buildGcalTimedDates } from '../../../lib/eventTime';
 
 function googleUrl(event: Event) {
-  const start = new Date(event.date);
   const url = new URL('https://calendar.google.com/calendar/render');
   url.searchParams.set('action', 'TEMPLATE');
   url.searchParams.set('text', event.name);
-  url.searchParams.set('dates', `${toICSDate(start)}/${toICSDate(eventEnd(event))}`);
+
+  if (event.start_time && event.end_time) {
+    url.searchParams.set('dates', buildGcalTimedDates(event.date, event.start_time, event.end_time));
+    url.searchParams.set('ctz', 'America/Los_Angeles');
+  } else {
+    url.searchParams.set('dates', buildGcalAllDayDates(event.date));
+  }
+
   if (event.description) url.searchParams.set('details', event.description);
   if (event.location)    url.searchParams.set('location', event.location);
   return url.toString();

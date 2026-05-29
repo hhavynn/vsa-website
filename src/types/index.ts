@@ -3,6 +3,8 @@ export interface Event {
   name: string;
   description: string;
   date: string;
+  start_time?: string | null;
+  end_time?: string | null;
   location: string;
   points: number;
   event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
