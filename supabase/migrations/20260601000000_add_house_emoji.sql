@@ -5,7 +5,9 @@ alter table public.house_page_assets
   add column if not exists emoji text;
 
 -- Update the published view to include the emoji column
-create or replace view public.published_house_page_assets as
+drop view if exists public.published_house_page_assets;
+
+create view public.published_house_page_assets as
 select
   id,
   academic_year_start,
