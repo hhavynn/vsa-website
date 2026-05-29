@@ -908,6 +908,74 @@ export interface Database {
           updated_at?: string;
         };
       };
+      house_events: {
+        Row: {
+          id: string;
+          house_profile_id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          title: string;
+          slug: string | null;
+          description: string | null;
+          event_date: string;
+          start_time: string | null;
+          end_time: string | null;
+          location: string | null;
+          image_url: string | null;
+          image_thumbnail_url: string | null;
+          gallery_url: string | null;
+          recap_url: string | null;
+          rsvp_url: string | null;
+          google_calendar_enabled: boolean;
+          is_published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          house_profile_id: string;
+          academic_year_start: number;
+          academic_year_end: number;
+          title: string;
+          slug?: string | null;
+          description?: string | null;
+          event_date: string;
+          start_time?: string | null;
+          end_time?: string | null;
+          location?: string | null;
+          image_url?: string | null;
+          image_thumbnail_url?: string | null;
+          gallery_url?: string | null;
+          recap_url?: string | null;
+          rsvp_url?: string | null;
+          google_calendar_enabled?: boolean;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          house_profile_id?: string;
+          academic_year_start?: number;
+          academic_year_end?: number;
+          title?: string;
+          slug?: string | null;
+          description?: string | null;
+          event_date?: string;
+          start_time?: string | null;
+          end_time?: string | null;
+          location?: string | null;
+          image_url?: string | null;
+          image_thumbnail_url?: string | null;
+          gallery_url?: string | null;
+          recap_url?: string | null;
+          rsvp_url?: string | null;
+          google_calendar_enabled?: boolean;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       homepage_content: {
         Row: {
           id: string;

@@ -20,6 +20,7 @@ import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImag
 import { HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
+import { getHousePagePath } from '../utils/houseSlug';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
@@ -746,6 +747,17 @@ export function House() {
                           />
                         )}
                       </div>
+                      <Link
+                        to={getHousePagePath({
+                          house_key: asset?.house_key ?? house,
+                          house: asset?.house ?? house,
+                          display_name: label,
+                        })}
+                        className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color }}
+                      >
+                        View House page
+                      </Link>
                     </div>
                   </div>
                 );

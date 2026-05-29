@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { formatEventDateRange, formatEventTimeRange } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLoader } from '../components/common/PageLoader';
@@ -8,15 +9,21 @@ import { Label } from '../components/ui/Label';
 import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../constants/houses';
+import { houseAssetsRepository } from '../data/repos/houseAssets';
+import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
+import { formatDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
+import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { houseSlugFromKey } from '../utils/houseSlug';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useEvents, useInfiniteEvents } from '../hooks/useEvents';
-import { AcademicTerm, Event } from '../types';
+import { AcademicTerm, Event, HouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion } from 'framer-motion';
+import { useQuery } from 'react-query';
 
 type FilterKey = 'all' | Event['event_type'];
 
@@ -268,6 +275,48 @@ function PastEventMemoryCard({
   );
 }
 
+function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: HousePageAsset }) {
+  const label = house?.display_name || house?.house || 'House';
+  const color = house?.accent_color || HOUSE_COLORS[house?.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
+  const imageUrl = event.image_thumbnail_url || event.image_url || house?.image_thumbnail_url || house?.image_url;
+  const href = house ? `/house/${houseSlugFromKey(house.house_key || house.house || label)}` : '/house';
+
+  return (
+    <Link to={href} className="scrapbook-paper group grid gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[120px_minmax(0,1fr)]" style={{ borderColor: `${color}55` }}>
+      <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
+        {imageUrl ? (
+          <img
+            src={getSupabaseImageUrl(imageUrl, { width: 320, height: 220, resize: 'cover', quality: 72 })}
+            alt={event.title}
+            className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] items-center justify-center">
+            <span className="font-serif text-2xl italic" style={{ color }}>VSA</span>
+          </div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">House event</span>
+          <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
+            {label}
+          </span>
+        </div>
+        <h3 className="truncate font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</h3>
+        <p className="mt-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+          {formatDateOnly(event.event_date, 'MMM d, yyyy')}
+        </p>
+        {event.location && (
+          <p className="mt-2 truncate font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{event.location}</p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export function Events() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
@@ -346,6 +395,24 @@ export function Events() {
   const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(upcomingEventsAll.length > 0);
   const summerEventsMessage = getSummerBreakMessage('events');
   const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now.toISOString())?.code);
+  const activeYear = activeTerm?.academic_year_start ?? null;
+  const todayDateOnly = getLosAngelesDateOnly();
+  const { data: houseEventPreviews = [] } = useQuery<HouseEvent[]>({
+    queryKey: ['events-page', 'house-event-previews', todayDateOnly],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 4),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: houseAssets = [] } = useQuery<HousePageAsset[]>({
+    queryKey: ['events-page', 'house-assets', activeYear],
+    queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
+    enabled: activeYear !== null,
+    staleTime: 10 * 60 * 1000,
+    cacheTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const houseAssetsById = useMemo(() => new Map(houseAssets.map((asset) => [asset.id, asset])), [houseAssets]);
 
   const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
 
@@ -649,6 +716,27 @@ export function Events() {
               </p>
             )}
           </div>
+        )}
+
+        {houseEventPreviews.length > 0 && (
+          <section className="mb-10">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <Label className="mb-2">Upcoming House Events</Label>
+                <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  House-specific hangouts and socials are separate from all-VSA events.
+                </p>
+              </div>
+              <Link to="/house-system" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                See Houses
+              </Link>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {houseEventPreviews.map((event) => (
+                <HouseEventPreviewCard key={event.id} event={event} house={houseAssetsById.get(event.house_profile_id)} />
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Memory Wall / Past Events Section */}
