@@ -3,6 +3,17 @@
 
 do $$
 begin
+  -- CLEANUP: Remove any incorrect House profiles from verified years.
+  -- This ensures each legacy year shows exactly its verified Houses.
+  delete from public.house_page_assets
+  where (academic_year_start = 2018 and house_key not in ('flash', 'iron', 'loki', 'light'))
+     or (academic_year_start = 2019 and house_key not in ('gucci', 'cdg', 'supreme', 'ysl'))
+     or (academic_year_start = 2021 and house_key not in ('phoenix', 'unicorn', 'dragon', 'tortoise'))
+     or (academic_year_start = 2022 and house_key not in ('squirtle', 'pikachu', 'bulbasaur', 'charmander'))
+     or (academic_year_start = 2023 and house_key not in ('ca-phe-sua-da', 'banana-milk', 'matcha', 'yakult'))
+     or (academic_year_start = 2024 and house_key not in ('badtz-maru', 'keroppi', 'kuromi'))
+     or (academic_year_start = 2025 and house_key not in ('bowser', 'donkey-kong', 'boo', 'toad'));
+
   -- 2018-2019: Superhero Era
   insert into public.house_page_assets (academic_year_start, academic_year_end, house, house_key, display_name, accent_color, display_order)
   values
