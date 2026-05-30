@@ -5,6 +5,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
 import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
 import { HOUSE_LABELS, HouseName, normalizeHouse } from '../../constants/houses';
+import { getVerifiedLegacyHouseYears } from '../../data/legacyHouseArchive';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import {
@@ -74,15 +75,35 @@ function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['te
 function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['terms']) {
   const years = new Map<number, { start: number; label: string; isActive: boolean }>();
   const currentYear = getCurrentAcademicYearStart();
-  years.set(currentYear, { start: currentYear, label: formatAcademicYear(currentYear), isActive: false });
+
+  // 1. Add current year
+  years.set(currentYear, {
+    start: currentYear,
+    label: formatAcademicYear(currentYear),
+    isActive: false,
+  });
+
+  // 2. Add years from active terms
   terms.forEach((term) => {
     const existing = years.get(term.academic_year_start);
     years.set(term.academic_year_start, {
       start: term.academic_year_start,
-      label: `${term.academic_year_start}-${term.academic_year_end}`,
+      label: formatAcademicYear(term.academic_year_start),
       isActive: term.is_active || existing?.isActive || false,
     });
   });
+
+  // 3. Add verified legacy years from static archive
+  getVerifiedLegacyHouseYears().forEach((legacy) => {
+    if (!years.has(legacy.startYear)) {
+      years.set(legacy.startYear, {
+        start: legacy.startYear,
+        label: legacy.academicYear,
+        isActive: false,
+      });
+    }
+  });
+
   return Array.from(years.values()).sort((a, b) => b.start - a.start);
 }
 
@@ -1086,9 +1107,15 @@ export default function AdminHouses() {
         </div>
       </div>
       ) : activeTab === 'images' ? (
-        <HouseImagesManager />
+        <HouseImagesManager 
+          selectedYear={selectedYear} 
+          onYearChange={setSelectedYear} 
+        />
       ) : activeTab === 'events' ? (
-        <HouseEventsManager />
+        <HouseEventsManager 
+          selectedYear={selectedYear} 
+          onYearChange={setSelectedYear} 
+        />
       ) : null}
     </>
   );

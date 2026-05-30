@@ -81,13 +81,6 @@ function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['te
   return Array.from(years.values()).sort((a, b) => b.start - a.start);
 }
 
-function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  return terms.find((term) => term.is_active)?.academic_year_start
-    ?? getCurrentAcademicYearStart()
-    ?? terms[0]?.academic_year_start
-    ?? null;
-}
-
 function emptyDraft(): HouseEventDraft {
   return {
     house_profile_ids: [],
@@ -153,20 +146,20 @@ function validateDraft(draft: HouseEventDraft) {
   return null;
 }
 
-export function HouseEventsManager() {
+export interface HouseEventsManagerProps {
+  selectedYear: number | null;
+  onYearChange: (year: number) => void;
+}
+
+export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsManagerProps) {
   const { terms } = useAcademicTerms();
   const academicYearOptions = useMemo(() => buildAcademicYearOptions(terms), [terms]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [draft, setDraft] = useState<HouseEventDraft>(() => emptyDraft());
   const [editingEvent, setEditingEvent] = useState<HouseEvent | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState<HouseEvent | null>(null);
-
-  useEffect(() => {
-    if (selectedYear === null) setSelectedYear(defaultAcademicYearStart(terms));
-  }, [selectedYear, terms]);
 
   const { assets: houseProfiles } = useAdminHouseAssets(selectedYear);
   const profilesById = useMemo(() => new Map(houseProfiles.map((asset) => [asset.id, asset])), [houseProfiles]);
@@ -372,7 +365,7 @@ export function HouseEventsManager() {
               value={selectedYear ?? ''}
               onChange={(event) => {
                 const nextYear = Number(event.target.value);
-                setSelectedYear(nextYear);
+                onYearChange(nextYear);
                 setDraft({ ...emptyDraft(), house_profile_ids: [] });
                 setEditingEvent(null);
               }}
