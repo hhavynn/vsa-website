@@ -42,13 +42,6 @@ function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? new Date().getFullYear();
 }
 
-function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  return terms.find((term) => term.is_active)?.academic_year_start
-    ?? getCurrentAcademicYearStart()
-    ?? terms[0]?.academic_year_start
-    ?? null;
-}
-
 function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['terms']) {
   const years = new Map<number, { start: number; label: string; isActive: boolean }>();
   const currentYear = getCurrentAcademicYearStart();
@@ -131,9 +124,13 @@ function draftFromAsset(asset: HousePageAsset): HouseAssetDraft {
 }
 
 
-export function HouseImagesManager() {
+export interface HouseImagesManagerProps {
+  selectedYear: number | null;
+  onYearChange: (year: number) => void;
+}
+
+export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesManagerProps) {
   const { terms } = useAcademicTerms();
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const { assets, loading, error, refetch } = useAdminHouseAssets(selectedYear);
   const [drafts, setDrafts] = useState<Record<string, HouseAssetDraft>>({});
   const [files, setFiles] = useState<Record<string, File>>({});
@@ -144,10 +141,6 @@ export function HouseImagesManager() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newHouseDraft, setNewHouseDraft] = useState<HouseAssetDraft>(() => emptyDraft());
   const academicYearOptions = useMemo(() => buildAcademicYearOptions(terms), [terms]);
-
-  useEffect(() => {
-    if (selectedYear === null) setSelectedYear(defaultAcademicYearStart(terms));
-  }, [selectedYear, terms]);
 
   useEffect(() => {
     const nextDrafts: Record<string, HouseAssetDraft> = {};
@@ -401,7 +394,7 @@ export function HouseImagesManager() {
               </label>
               <select
                 value={selectedYear ?? ''}
-                onChange={(event) => setSelectedYear(Number(event.target.value))}
+                onChange={(event) => onYearChange(Number(event.target.value))}
                 className="w-full rounded border px-3 py-2 text-sm"
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
               >
