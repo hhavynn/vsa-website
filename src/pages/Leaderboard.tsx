@@ -9,7 +9,7 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { getPublicHousePoints } from '../utils/housePublicPointOverrides';
+import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
@@ -328,11 +328,34 @@ export function Leaderboard() {
     const loadHouseStandings = async () => {
       try {
         setHouseLoading(true);
-        const data = selectedYear === 'all'
+        const rawData = selectedYear === 'all'
           ? await leaderboardRepository.getAllTimeHouseLeaderboard()
           : await leaderboardRepository.getYearlyHouseLeaderboard(selectedYear);
 
         if (!isCurrentRequest) return;
+
+        // When the DB has no calculated standings for an override year, inject
+        // official placeholder rows so getPublicHousePoints can fill in the totals.
+        const data =
+          rawData.length === 0 &&
+          selectedYear !== 'all' &&
+          isHousePointOverrideActive(selectedYear as number)
+            ? (['Bowser', 'Donkey Kong', 'Toad', 'Boo'] as HouseName[]).map((houseName) => ({
+                house: houseName,
+                house_profile_id: '',
+                display_name: houseName,
+                image_url: null as null,
+                accent_color: HOUSE_COLORS[houseName] as string | null,
+                academic_year_start: selectedYear as number,
+                academic_year_end: (selectedYear as number) + 1,
+                total_points: 0,
+                events_attended: 0,
+                unique_events: 0,
+                unique_members: 0,
+                average_points_per_member: null as null,
+                latest_activity_at: null as null,
+              }))
+            : rawData;
 
         // Apply official public point overrides for 2025-2026
         const standingsWithOverrides = data.map((s) => ({

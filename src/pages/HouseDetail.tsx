@@ -10,13 +10,13 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta, parseYearSlug } from '../lib/academicTerms';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
-import { HousePageAsset } from '../types';
+import { HousePageAsset, HouseYearlyPoints } from '../types';
 import { matchesHouseSlug } from '../utils/houseSlug';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { Label } from '../components/ui/Label';
 import { HouseEventCard } from '../components/features/house/HouseEventCard';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { getPublicHousePoints } from '../utils/housePublicPointOverrides';
+import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 
 function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
@@ -124,8 +124,41 @@ export function HouseDetail() {
     refetchOnWindowFocus: false,
   });
 
-  const standings = useMemo(() => {
-    return rawStandings.map((s) => ({
+  const standings = useMemo((): HouseYearlyPoints[] => {
+    // When the DB has no calculated standings for an override year, inject
+    // official placeholder rows keyed to the loaded house assets.
+    const base: HouseYearlyPoints[] =
+      rawStandings.length === 0 &&
+      typeof activeYear === 'number' &&
+      isHousePointOverrideActive(activeYear) &&
+      houses.length > 0
+        ? houses.flatMap((asset) => {
+            const pts = getPublicHousePoints({
+              houseKey: asset.house_key ?? asset.house,
+              houseName: asset.house,
+              academicYearStart: activeYear,
+              calculatedPoints: 0,
+            });
+            if (!pts) return [];
+            return [{
+              house: asset.house_key ?? asset.house,
+              house_profile_id: asset.id,
+              display_name: asset.display_name ?? asset.house,
+              image_url: asset.image_url ?? null,
+              accent_color: asset.accent_color ?? null,
+              academic_year_start: activeYear,
+              academic_year_end: activeYear + 1,
+              total_points: pts,
+              events_attended: 0,
+              unique_events: 0,
+              unique_members: 0,
+              average_points_per_member: null,
+              latest_activity_at: null,
+            } as HouseYearlyPoints];
+          })
+        : rawStandings;
+
+    return base.map((s) => ({
       ...s,
       total_points: getPublicHousePoints({
         houseKey: s.house,
@@ -134,7 +167,7 @@ export function HouseDetail() {
         calculatedPoints: s.total_points,
       }),
     })).sort((a, b) => b.total_points - a.total_points);
-  }, [rawStandings]);
+  }, [rawStandings, activeYear, houses]);
 
   const { data: upcomingEvents = [], isLoading: upcomingLoading } = useQuery({
     queryKey: ['house-detail', 'upcoming-events', house?.id, today],

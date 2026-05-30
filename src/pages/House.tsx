@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
@@ -584,10 +584,43 @@ export function House() {
     return () => { isMounted = false; };
   }, [activeYear]);
 
-  const hasLiveStandings = standings.length > 0 && standings.some((s) => s.total_points > 0);
-  const leader = hasLiveStandings ? standings[0] : null;
-  const maxPoints = hasLiveStandings ? standings[0].total_points : 1;
-  const badges = computeBadges(standings);
+  // When the DB returns no calculated standings for an override year, inject
+  // official placeholder rows keyed to the published house assets so that
+  // getPublicHousePoints can fill in the correct totals.
+  const displayStandings = useMemo<HouseYearlyPoints[]>(() => {
+    if (standingsLoading || standings.length > 0) return standings;
+    if (!isHousePointOverrideActive(activeYear)) return standings;
+    const fallback = houseAssets.flatMap((asset) => {
+      const pts = getPublicHousePoints({
+        houseKey: asset.house_key ?? asset.house,
+        houseName: asset.house,
+        academicYearStart: activeYear,
+        calculatedPoints: 0,
+      });
+      if (!pts) return [];
+      return [{
+        house: asset.house_key ?? asset.house,
+        house_profile_id: asset.id,
+        display_name: asset.display_name ?? asset.house,
+        image_url: asset.image_url ?? null,
+        accent_color: asset.accent_color ?? null,
+        academic_year_start: activeYear!,
+        academic_year_end: (activeYear ?? 0) + 1,
+        total_points: pts,
+        events_attended: 0,
+        unique_events: 0,
+        unique_members: 0,
+        average_points_per_member: null,
+        latest_activity_at: null,
+      } as HouseYearlyPoints];
+    }).sort((a, b) => b.total_points - a.total_points);
+    return fallback.length > 0 ? fallback : standings;
+  }, [standings, standingsLoading, houseAssets, activeYear]);
+
+  const hasLiveStandings = displayStandings.length > 0 && displayStandings.some((s) => s.total_points > 0);
+  const leader = hasLiveStandings ? displayStandings[0] : null;
+  const maxPoints = hasLiveStandings ? displayStandings[0].total_points : 1;
+  const badges = computeBadges(displayStandings);
   const summerBreak = isSummerBreak();
   const summerHouseMessage = getSummerBreakMessage('house');
 
@@ -973,7 +1006,7 @@ export function House() {
                   <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     Loading standings...
                   </div>
-                ) : standings.length === 0 ? (
+                ) : displayStandings.length === 0 ? (
                   <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     {showSummerTransition ? (
                       <div className="mx-auto max-w-xl space-y-2 text-center">
@@ -1015,7 +1048,7 @@ export function House() {
                         </p>
                       </div>
                     )}
-                    {standings.map((standing, index) => {
+                    {displayStandings.map((standing, index) => {
                       const asset = houseAssetsByName.get(standing.house);
                       const houseKey = standing.house as HouseName;
                       const color = getHouseColor(standing.house, asset, standing.accent_color);
