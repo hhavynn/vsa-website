@@ -33,25 +33,31 @@ const PUBLIC_FIELDS = [
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
-      // Find event IDs associated with this house
+      // Find event IDs associated with this house via join table
       const { data: associations } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
-      const eventIds = (associations ?? []).map((a) => a.house_event_id);
-      if (eventIds.length === 0) return [];
+      const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
-        .in('id', eventIds)
         .eq('is_published', true)
         .gte('event_date', today)
         .order('event_date', { ascending: true })
         .order('start_time', { ascending: true })
         .limit(limit);
 
+      // Filter by either direct house_profile_id OR join table associations
+      if (associatedEventIds.length > 0) {
+        query = query.or(`house_profile_id.eq.${houseProfileId},id.in.(${associatedEventIds.join(',')})`);
+      } else {
+        query = query.eq('house_profile_id', houseProfileId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return this.mapRelations(data);
     }, 'Failed to fetch upcoming house events');
@@ -59,25 +65,31 @@ export class HouseEventsRepository {
 
   async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
-      // Find event IDs associated with this house
+      // Find event IDs associated with this house via join table
       const { data: associations } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
-      const eventIds = (associations ?? []).map((a) => a.house_event_id);
-      if (eventIds.length === 0) return [];
+      const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
-        .in('id', eventIds)
         .eq('is_published', true)
         .lt('event_date', today)
         .order('event_date', { ascending: false })
         .order('start_time', { ascending: false })
         .limit(limit);
 
+      // Filter by either direct house_profile_id OR join table associations
+      if (associatedEventIds.length > 0) {
+        query = query.or(`house_profile_id.eq.${houseProfileId},id.in.(${associatedEventIds.join(',')})`);
+      } else {
+        query = query.eq('house_profile_id', houseProfileId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return this.mapRelations(data);
     }, 'Failed to fetch past house events');
@@ -99,9 +111,26 @@ export class HouseEventsRepository {
     }, 'Failed to fetch house events for year');
   }
 
-  async getPublicUpcomingPreview(today: string, limit = 4): Promise<HouseEvent[]> {
+  async getPublicPastEventsForYear(today: string, academicYearStart: number, limit = 4): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
+        .from('house_events')
+        .select(PUBLIC_FIELDS)
+        .eq('is_published', true)
+        .eq('academic_year_start', academicYearStart)
+        .lt('event_date', today)
+        .order('event_date', { ascending: false })
+        .order('start_time', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return this.mapRelations(data);
+    }, 'Failed to fetch past house events for year');
+  }
+
+  async getPublicUpcomingPreview(today: string, academicYearStart?: number | null, limit = 4): Promise<HouseEvent[]> {
+    return withErrorHandling(async () => {
+      let query = supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
         .eq('is_published', true)
@@ -110,6 +139,11 @@ export class HouseEventsRepository {
         .order('start_time', { ascending: true })
         .limit(limit);
 
+      if (academicYearStart) {
+        query = query.eq('academic_year_start', academicYearStart);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return this.mapRelations(data);
     }, 'Failed to fetch upcoming house event previews');

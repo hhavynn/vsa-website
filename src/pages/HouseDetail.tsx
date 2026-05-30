@@ -94,6 +94,7 @@ export function HouseDetail() {
   // Distinguish past archive years from the current year
   const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
   const isArchive = activeYear !== null && activeYear < currentYear;
+  const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
 
   // Back-link destination: year overview for archive, current overview otherwise
   const backHref = isArchive ? `/house/year/${activeYearLabel}` : '/house';
@@ -289,12 +290,12 @@ export function HouseDetail() {
 
           <section id="past-events" className="scroll-mt-24">
             <div className="mb-8">
-              <Label className="mb-2">{isArchive ? 'Event Archive' : 'Memory Board'}</Label>
+              <Label className="mb-2">{isLegacyArchive ? 'Event Archive' : 'Memory Board'}</Label>
               <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
-                {isArchive ? 'Archived House Events' : 'Past House Events'}
+                {isLegacyArchive ? 'Archived House Events' : 'Past House Events'}
               </h2>
               <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                {isArchive
+                {isLegacyArchive
                   ? `Events and recaps from the ${activeYearLabel} ${label} House year.`
                   : 'Recaps and memories from our previous socials.'}
               </p>
@@ -305,9 +306,9 @@ export function HouseDetail() {
                 Loading events...
               </div>
             ) : pastEvents.length === 0 ? (
-              <div className="scrapbook-empty py-12 text-center">
+              <div className={`scrapbook-empty ${isLegacyArchive ? 'py-8' : 'py-12'} text-center`}>
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  {isArchive
+                  {isLegacyArchive
                     ? 'No archived events have been added for this House yet.'
                     : "Past events will appear here once we've had our first hangout."}
                 </p>

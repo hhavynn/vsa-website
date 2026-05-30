@@ -426,6 +426,7 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : '';
   const house = event.houses?.[0];
   const color = house?.accent_color || HOUSE_COLORS[house?.house as HouseName] || 'var(--brand)';
+  const imageUrl = event.image_thumbnail_url || event.image_url;
 
   return (
     <div className="scrapbook-note flex items-start gap-4 px-4 py-4">
@@ -437,6 +438,17 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
           {formatDateOnly(event.event_date, 'd')}
         </div>
       </div>
+
+      {imageUrl && (
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded border scrapbook-photo-sm" style={{ borderColor: 'var(--color-border)' }}>
+          <img
+            src={getSupabaseImageUrl(imageUrl, { width: 128, height: 128, resize: 'cover', quality: 70 })}
+            alt={event.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -482,15 +494,26 @@ export function House() {
   // Determine the "real" current year even when terms haven't loaded yet
   const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
   const isArchive = activeYear !== null && activeYear < currentYear;
+  const isPastYear = activeYear !== null && activeYear === currentYear - 1;
+  const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
   const isFutureYear = activeYear !== null && activeYear > currentYear;
 
   const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
-    queryKey: ['house', 'upcoming-house-event-preview', today],
-    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(today, 3),
+    queryKey: ['house', 'upcoming-house-event-preview', today, activeYear],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(today, activeYear, 3),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !isArchive && !isFutureYear,
+  });
+
+  const { data: pastHouseEvents = [] } = useQuery<HouseEvent[]>({
+    queryKey: ['house', 'past-house-event-preview', today, activeYear],
+    queryFn: () => houseEventsRepository.getPublicPastEventsForYear(today, activeYear!, 4),
+    staleTime: 10 * 60 * 1000,
+    cacheTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled: !isArchive && !isFutureYear && activeYear !== null,
   });
 
   const { data: archiveEvents = [], isLoading: archiveEventsLoading } = useQuery<HouseEvent[]>({
@@ -711,6 +734,11 @@ export function House() {
                 ? `The House Program in ${activeYearLabel} was a year-long community experience. Members were placed into houses to participate in socials, bonding activities, and VSA events, building friendships and competing for the top spot on the leaderboard.`
                 : 'The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.'}
             </p>
+            {isLegacyArchive && !archiveEventsLoading && archiveEvents.length === 0 && (
+              <p className="mt-4 font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>
+                No event archive has been added for this year yet.
+              </p>
+            )}
           </div>
         </section>
 
@@ -1068,17 +1096,21 @@ export function House() {
         )}
 
         {/* ── Archive Events ── */}
-        {isArchive && (
+        {isArchive && (archiveEvents.length > 0 || isPastYear || archiveEventsLoading) && (
           <section className="program-section">
             <div className="program-section-inner">
               <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <div className="program-eyebrow mb-1">House Events / {activeYearLabel}</div>
+                  <div className="program-eyebrow mb-1">
+                    {isLegacyArchive ? 'Archived House Events' : `House Events / ${activeYearLabel}`}
+                  </div>
                   <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
                     Events from {activeYearLabel}
                   </h2>
                   <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                    House events that ran during the {activeYearLabel} school year.
+                    {isLegacyArchive 
+                      ? `Events saved from the ${activeYearLabel} House year.`
+                      : `House events that ran during the ${activeYearLabel} school year.`}
                   </p>
                 </div>
               </div>
@@ -1129,6 +1161,25 @@ export function House() {
                   </p>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Recent House Events (Current Year) ── */}
+        {!isArchive && pastHouseEvents.length > 0 && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+                <div className="program-eyebrow mb-0">Recent House Events</div>
+              </div>
+              <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                Recaps and memories from our latest socials.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pastHouseEvents.map((event) => (
+                  <HouseEventPreviewCard key={event.id} event={event} />
+                ))}
+              </div>
             </div>
           </section>
         )}

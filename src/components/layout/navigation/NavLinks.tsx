@@ -14,7 +14,7 @@ const FLAT_NAV_ITEMS: NavItem[] = [
   { path: '/leaderboard',  label: 'Leaderboard' },
   { path: '/gallery',      label: 'Gallery' },
   { path: '/cabinet',      label: 'Cabinet' },
-  { path: '/uvsa-network', label: 'Network' },
+  { path: '/uvsa-network', label: 'UVSA' },
 ];
 
 export const NavLinks = memo(function NavLinks() {
