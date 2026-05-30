@@ -66,10 +66,17 @@ function getCurrentAcademicYearStart() {
 }
 
 function defaultAcademicYearStart(terms: ReturnType<typeof useAcademicTerms>['terms']) {
-  return terms.find((term) => term.is_active)?.academic_year_start
-    ?? getCurrentAcademicYearStart()
-    ?? terms[0]?.academic_year_start
-    ?? null;
+  // 1. Try active term
+  const activeTerm = terms.find((term) => term.is_active);
+  if (activeTerm) return activeTerm.academic_year_start;
+
+  // 2. Try most recent term
+  if (terms.length > 0) {
+    return Math.max(...terms.map(t => t.academic_year_start));
+  }
+
+  // 3. Fallback to calendar year
+  return getCurrentAcademicYearStart();
 }
 
 function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['terms']) {
