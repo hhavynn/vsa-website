@@ -26,12 +26,12 @@ interface AssistantResponse {
 }
 
 const STARTER_QUESTIONS = [
-  'How do I earn points?',
-  'What is House?',
+  'How do I get involved?',
+  'How do points work?',
+  'What are Houses?',
   'What is ACE?',
-  'How do I go to externals?',
-  'When is the next event?',
-  'How do I join VSA?',
+  'Where can I find upcoming events?',
+  'What are externals?',
 ];
 
 const MAX_MESSAGES = 12;
