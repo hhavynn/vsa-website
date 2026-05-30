@@ -482,6 +482,8 @@ export function House() {
   // Determine the "real" current year even when terms haven't loaded yet
   const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
   const isArchive = activeYear !== null && activeYear < currentYear;
+  const isPastYear = activeYear !== null && activeYear === currentYear - 1;
+  const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
   const isFutureYear = activeYear !== null && activeYear > currentYear;
 
   const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
@@ -711,6 +713,11 @@ export function House() {
                 ? `The House Program in ${activeYearLabel} was a year-long community experience. Members were placed into houses to participate in socials, bonding activities, and VSA events, building friendships and competing for the top spot on the leaderboard.`
                 : 'The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.'}
             </p>
+            {isLegacyArchive && !archiveEventsLoading && archiveEvents.length === 0 && (
+              <p className="mt-4 font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>
+                No event archive has been added for this year yet.
+              </p>
+            )}
           </div>
         </section>
 
@@ -1068,17 +1075,21 @@ export function House() {
         )}
 
         {/* ── Archive Events ── */}
-        {isArchive && (
+        {isArchive && (archiveEvents.length > 0 || isPastYear || archiveEventsLoading) && (
           <section className="program-section">
             <div className="program-section-inner">
               <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <div className="program-eyebrow mb-1">House Events / {activeYearLabel}</div>
+                  <div className="program-eyebrow mb-1">
+                    {isLegacyArchive ? 'Archived House Events' : `House Events / ${activeYearLabel}`}
+                  </div>
                   <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
                     Events from {activeYearLabel}
                   </h2>
                   <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                    House events that ran during the {activeYearLabel} school year.
+                    {isLegacyArchive 
+                      ? `Events saved from the ${activeYearLabel} House year.`
+                      : `House events that ran during the ${activeYearLabel} school year.`}
                   </p>
                 </div>
               </div>
