@@ -197,8 +197,8 @@ export function HouseDetail() {
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>
                 {isArchive && <span className="scrapbook-sticker scrapbook-sticker-gold">Archive</span>}
-                {rank && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
-                {standing && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
+                {rank && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
+                {standing && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>
               <h1 className="vsa-page-title">{house.emoji ? `${house.emoji} ` : ''}{label}</h1>
               <p className="mt-5 max-w-2xl font-sans text-[16px] leading-[1.75]" style={{ color: 'var(--text2)' }}>
@@ -207,7 +207,7 @@ export function HouseDetail() {
               <div className="mt-6">
                 <span className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider" style={{ borderColor: `${color}66`, color }}>
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-                  House Community
+                  {isArchive ? `${activeYearLabel} House` : 'House Community'}
                 </span>
               </div>
             </div>
@@ -231,7 +231,7 @@ export function HouseDetail() {
       </div>
 
       <div className="vsa-container py-12 lg:py-16">
-        {standing && (
+        {standing && !isArchive && (
           <div className="mb-12 grid gap-3 sm:grid-cols-3">
             <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Rank</div>
@@ -249,37 +249,39 @@ export function HouseDetail() {
         )}
 
         <RevealOnScrollWrapper>
-          <section id="upcoming-events" className="scroll-mt-24">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <Label className="mb-2">House Calendar</Label>
-                <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>Upcoming House Events</h2>
-                <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                  Hangouts and socials exclusive to {label} members.
-                </p>
+          {!isArchive && (
+            <section id="upcoming-events" className="scroll-mt-24">
+              <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <Label className="mb-2">House Calendar</Label>
+                  <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>Upcoming House Events</h2>
+                  <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                    Hangouts and socials exclusive to {label} members.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {upcomingLoading ? (
-              <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                Loading upcoming events...
-              </div>
-            ) : upcomingEvents.length === 0 ? (
-              <div className="scrapbook-empty py-12 text-center">
-                <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  No upcoming events for {label} just yet. Check back soon!
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {upcomingEvents.map((event) => (
-                  <HouseEventCard key={event.id} event={event} house={house} isUpcoming />
-                ))}
-              </div>
-            )}
-          </section>
+              {upcomingLoading ? (
+                <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  Loading upcoming events...
+                </div>
+              ) : upcomingEvents.length === 0 ? (
+                <div className="scrapbook-empty py-12 text-center">
+                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    No upcoming events for {label} just yet. Check back soon!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-6">
+                  {upcomingEvents.map((event) => (
+                    <HouseEventCard key={event.id} event={event} house={house} isUpcoming />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
-          <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />
+          {!isArchive && <div className="my-16 border-t" style={{ borderColor: 'var(--color-border)' }} />}
 
           <HouseParentsSection house={house} label={label} color={color} />
 
@@ -287,21 +289,27 @@ export function HouseDetail() {
 
           <section id="past-events" className="scroll-mt-24">
             <div className="mb-8">
-              <Label className="mb-2">Memory Board</Label>
-              <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>Past House Events</h2>
+              <Label className="mb-2">{isArchive ? 'Event Archive' : 'Memory Board'}</Label>
+              <h2 className="font-serif text-[32px] leading-tight" style={{ color: 'var(--color-text)' }}>
+                {isArchive ? 'Archived House Events' : 'Past House Events'}
+              </h2>
               <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                Recaps and memories from our previous socials.
+                {isArchive
+                  ? `Events and recaps from the ${activeYearLabel} ${label} House year.`
+                  : 'Recaps and memories from our previous socials.'}
               </p>
             </div>
 
             {pastLoading ? (
               <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                Loading past events...
+                Loading events...
               </div>
             ) : pastEvents.length === 0 ? (
               <div className="scrapbook-empty py-12 text-center">
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  Past events will appear here once we've had our first hangout.
+                  {isArchive
+                    ? 'No archived events have been added for this House yet.'
+                    : "Past events will appear here once we've had our first hangout."}
                 </p>
               </div>
             ) : (
