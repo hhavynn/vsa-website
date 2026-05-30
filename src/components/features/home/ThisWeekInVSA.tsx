@@ -8,13 +8,13 @@ import { galleryRepository } from '../../../data/repos/gallery';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { supabase } from '../../../lib/supabase';
 import { formatDateOnly } from '../../../lib/dateOnly';
-import { getPublicHousePoints } from '../../../utils/housePublicPointOverrides';
+import { getPublicHousePoints, isHousePointOverrideActive } from '../../../utils/housePublicPointOverrides';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../constants/houses';
 import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
 
 function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'coral' | 'gold'; position?: 'top' | 'top-left' | 'top-right' }) {
@@ -217,7 +217,29 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
   });
 
   const standings = useMemo(() => {
-    return rawStandings.map((s) => ({
+    // When the DB has no standings for an override year, inject official placeholder rows
+    const base: HouseYearlyPoints[] =
+      rawStandings.length === 0 &&
+      typeof academicYearStart === 'number' &&
+      isHousePointOverrideActive(academicYearStart)
+        ? (['Bowser', 'Donkey Kong', 'Toad', 'Boo'] as HouseName[]).map((houseName) => ({
+            house: houseName,
+            house_profile_id: '',
+            display_name: houseName,
+            image_url: null,
+            accent_color: HOUSE_COLORS[houseName] as string | null,
+            academic_year_start: academicYearStart,
+            academic_year_end: academicYearStart + 1,
+            total_points: 0,
+            events_attended: 0,
+            unique_events: 0,
+            unique_members: 0,
+            average_points_per_member: null,
+            latest_activity_at: null,
+          }))
+        : rawStandings;
+
+    return base.map((s) => ({
       ...s,
       total_points: getPublicHousePoints({
         houseKey: s.house,
