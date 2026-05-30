@@ -99,9 +99,26 @@ export class HouseEventsRepository {
     }, 'Failed to fetch house events for year');
   }
 
-  async getPublicUpcomingPreview(today: string, limit = 4): Promise<HouseEvent[]> {
+  async getPublicPastEventsForYear(today: string, academicYearStart: number, limit = 4): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
+        .from('house_events')
+        .select(PUBLIC_FIELDS)
+        .eq('is_published', true)
+        .eq('academic_year_start', academicYearStart)
+        .lt('event_date', today)
+        .order('event_date', { ascending: false })
+        .order('start_time', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return this.mapRelations(data);
+    }, 'Failed to fetch past house events for year');
+  }
+
+  async getPublicUpcomingPreview(today: string, academicYearStart?: number | null, limit = 4): Promise<HouseEvent[]> {
+    return withErrorHandling(async () => {
+      let query = supabase
         .from('house_events')
         .select(PUBLIC_FIELDS)
         .eq('is_published', true)
@@ -110,6 +127,11 @@ export class HouseEventsRepository {
         .order('start_time', { ascending: true })
         .limit(limit);
 
+      if (academicYearStart) {
+        query = query.eq('academic_year_start', academicYearStart);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return this.mapRelations(data);
     }, 'Failed to fetch upcoming house event previews');
