@@ -703,9 +703,13 @@ export function House() {
         {/* ── About ── */}
         <section id="houses" className="program-section scroll-mt-24">
           <div className="program-section-inner program-section-narrow">
-            <div className="program-eyebrow">About the Program</div>
+            <div className="program-eyebrow">
+              {isArchive ? `About ${activeYearLabel}` : 'About the Program'}
+            </div>
             <p className="program-body">
-              The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.
+              {isArchive
+                ? `The House Program in ${activeYearLabel} was a year-long community experience. Members were placed into houses to participate in socials, bonding activities, and VSA events, building friendships and competing for the top spot on the leaderboard.`
+                : 'The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.'}
             </p>
           </div>
         </section>
@@ -713,7 +717,9 @@ export function House() {
         {/* ── Four House Cards ── */}
         <section className="program-section">
           <div className="program-section-inner">
-            <div className="program-eyebrow">The Four Houses</div>
+            <div className="program-eyebrow">
+              {isArchive ? `${activeYearLabel} Houses` : 'The Four Houses'}
+            </div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {displayedHouses.map(({ house, asset }, index) => {
                 const color = getHouseColor(house, asset);
@@ -770,7 +776,7 @@ export function House() {
                       )}
 
                       {/* Rank badge overlay */}
-                      {rank !== null && (
+                      {rank !== null && !isArchive && (
                         <div
                           className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black text-white shadow-md"
                           style={{ background: color }}
@@ -780,7 +786,7 @@ export function House() {
                       )}
 
                       {/* Points overlay */}
-                      {standing && standing.total_points > 0 && (
+                      {standing && standing.total_points > 0 && !isArchive && (
                         <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
                           <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">house pts</div>
                           <div className="font-mono text-lg font-black leading-none text-white">
@@ -802,46 +808,50 @@ export function House() {
                       </p>
 
                       {/* Live mini stats */}
-                      {standing && standing.total_points > 0 ? (
-                        <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                          <div className="text-center">
-                            <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
-                            <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
-                          </div>
-                          {standing.average_points_per_member !== null && (
-                            <div className="text-center">
-                              <div className="font-mono text-[14px] font-black" style={{ color }}>
-                                {standing.average_points_per_member.toFixed(1)}
+                      {!isArchive && (
+                        <>
+                          {standing && standing.total_points > 0 ? (
+                            <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
+                              <div className="text-center">
+                                <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
+                                <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
                               </div>
-                              <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
+                              {standing.average_points_per_member !== null && (
+                                <div className="text-center">
+                                  <div className="font-mono text-[14px] font-black" style={{ color }}>
+                                    {standing.average_points_per_member.toFixed(1)}
+                                  </div>
+                                  <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
+                              <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                                Season not yet started
+                              </p>
                             </div>
                           )}
-                        </div>
-                      ) : (
-                        <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                          <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                            Season not yet started
-                          </p>
-                        </div>
-                      )}
 
-                      {/* House color bar */}
-                      <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
-                        {hasLiveStandings && standing && (
-                          <div
-                            className="h-full rounded-full transition-all duration-700"
-                            style={{
-                              width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
-                              background: color,
-                            }}
-                          />
-                        )}
-                      </div>
+                          {/* House color bar */}
+                          <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
+                            {hasLiveStandings && standing && (
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{
+                                  width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
+                                  background: color,
+                                }}
+                              />
+                            )}
+                          </div>
+                        </>
+                      )}
                       <span
                         className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
                         style={{ color }}
                       >
-                        Explore →
+                        {isArchive ? 'View Archive →' : 'Explore →'}
                       </span>
                     </div>
                   </Link>
@@ -852,202 +862,210 @@ export function House() {
         </section>
 
         {/* ── How It Works ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">How It Works</div>
-            <div className="program-step-grid">
-              {steps.map((step) => (
-                <div key={step.num} className="program-step-card program-feature-card">
-                  <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>
-                    {step.num}
+        {!isArchive && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">How It Works</div>
+              <div className="program-step-grid">
+                {steps.map((step) => (
+                  <div key={step.num} className="program-step-card program-feature-card">
+                    <div className="program-step-number mb-3 font-serif leading-none" style={{ fontSize: 34, color: 'var(--color-text3)' }}>
+                      {step.num}
+                    </div>
+                    <div className="program-card-title">{step.title}</div>
+                    <p className="program-card-copy">{step.desc}</p>
                   </div>
-                  <div className="program-card-title">{step.title}</div>
-                  <p className="program-card-copy">{step.desc}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── FAQ ── */}
-        <section className="program-section">
-          <div className="program-section-inner">
-            <div className="program-eyebrow">FAQ</div>
-            <div className="program-faq-card">
-              {faqs.map((faq, i) => (
-                <div key={i} className="program-faq-row">
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="program-faq-button"
-                  >
-                    <span className="program-faq-question">{faq.q}</span>
-                    <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
-                  </button>
-                  {openFaq === i && (
-                    <div className="program-faq-answer">{faq.a}</div>
-                  )}
-                </div>
-              ))}
+        {!isArchive && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">FAQ</div>
+              <div className="program-faq-card">
+                {faqs.map((faq, i) => (
+                  <div key={i} className="program-faq-row">
+                    <button
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className="program-faq-button"
+                    >
+                      <span className="program-faq-question">{faq.q}</span>
+                      <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
+                    </button>
+                    {openFaq === i && (
+                      <div className="program-faq-answer">{faq.a}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── Live Standings ── */}
-        <section id="standings" className="program-section scroll-mt-24">
-          <div className="program-section-inner">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="program-eyebrow mb-1">
-                  Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
+        {!isArchive && (
+          <section id="standings" className="program-section scroll-mt-24">
+            <div className="program-section-inner">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="program-eyebrow mb-1">
+                    Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
+                  </div>
+                  <p className="max-w-xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                    House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.
+                  </p>
                 </div>
-                <p className="max-w-xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                  House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.
-                </p>
+                <div className="flex items-center gap-4">
+                  <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
+                    {isHousePointOverrideActive(activeYear) 
+                      ? "Totals reflect official public count for the year" 
+                      : "House points = qualifying event attendance count"}
+                  </span>
+                  <Link
+                    to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"}
+                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                  >
+                    Full Leaderboard →
+                  </Link>
+                  <Link
+                    to="/leaderboard?view=houses"
+                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                  >
+                    Full member rankings →
+                  </Link>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
-                  {isHousePointOverrideActive(activeYear) 
-                    ? "Totals reflect official public count for the year" 
-                    : "House points = qualifying event attendance count"}
-                </span>
-                <Link
-                  to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"}
-                  className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
-                >
-                  Full Leaderboard →
-                </Link>
-                <Link
-                  to="/leaderboard?view=houses"
-                  className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
-                >
-                  Full member rankings →
-                </Link>
-              </div>
-            </div>
 
-            <div className="program-scoreboard-card">
-              {standingsLoading ? (
-                <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  Loading standings...
-                </div>
-              ) : standings.length === 0 ? (
-                <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  {showSummerTransition ? (
-                    <div className="mx-auto max-w-xl space-y-2 text-center">
-                      <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
-                        {summerHouseMessage.title}
-                      </p>
-                      <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                        New standings will appear once fall events start.
-                      </p>
-                    </div>
-                  ) : houseAssets.length > 0 ? (
-                    <>
-                      <p style={{ color: 'var(--color-text2)' }}>
-                        House profiles exist, but no members have been assigned yet.
-                      </p>
-                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                        House standings are still being updated for this year. Check back soon.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ color: 'var(--color-text2)' }}>
-                        House standings are still being updated for this year. Check back soon.
-                      </p>
-                      {activeYearLabel && (
-                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                          No house points recorded for {activeYearLabel}.
+              <div className="program-scoreboard-card">
+                {standingsLoading ? (
+                  <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    Loading standings...
+                  </div>
+                ) : standings.length === 0 ? (
+                  <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                    {showSummerTransition ? (
+                      <div className="mx-auto max-w-xl space-y-2 text-center">
+                        <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                          {summerHouseMessage.title}
                         </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {summerBreak && !isArchive && (
-                    <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
-                      <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                        Summer note: House activity is paused until the next school year.
-                      </p>
-                    </div>
-                  )}
-                  {standings.map((standing, index) => {
-                    const asset = houseAssetsByName.get(standing.house);
-                    const houseKey = standing.house as HouseName;
-                    const color = getHouseColor(standing.house, asset, standing.accent_color);
-                    const label = getHouseLabel(standing.house, asset, standing.display_name);
-                    const emoji = HOUSE_EMOJI[houseKey] ?? '';
-                    const pct = maxPoints > 0 ? Math.round((standing.total_points / maxPoints) * 100) : 0;
-                    const houseBadges: string[] = [];
-                    if (badges.mostEvents?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Events');
-                    if (badges.mostMembers?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Members');
-                    if (badges.mostEfficient?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Efficient');
+                        <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                          New standings will appear once fall events start.
+                        </p>
+                      </div>
+                    ) : houseAssets.length > 0 ? (
+                      <>
+                        <p style={{ color: 'var(--color-text2)' }}>
+                          House profiles exist, but no members have been assigned yet.
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                          House standings are still being updated for this year. Check back soon.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ color: 'var(--color-text2)' }}>
+                          House standings are still being updated for this year. Check back soon.
+                        </p>
+                        {activeYearLabel && (
+                          <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+                            No house points recorded for {activeYearLabel}.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {summerBreak && !isArchive && (
+                      <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
+                        <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                          Summer note: House activity is paused until the next school year.
+                        </p>
+                      </div>
+                    )}
+                    {standings.map((standing, index) => {
+                      const asset = houseAssetsByName.get(standing.house);
+                      const houseKey = standing.house as HouseName;
+                      const color = getHouseColor(standing.house, asset, standing.accent_color);
+                      const label = getHouseLabel(standing.house, asset, standing.display_name);
+                      const emoji = HOUSE_EMOJI[houseKey] ?? '';
+                      const pct = maxPoints > 0 ? Math.round((standing.total_points / maxPoints) * 100) : 0;
+                      const houseBadges: string[] = [];
+                      if (badges.mostEvents?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Events');
+                      if (badges.mostMembers?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Members');
+                      if (badges.mostEfficient?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Efficient');
 
-                    return (
-                      <div
-                        key={standing.house_profile_id ?? standing.house}
-                        className="group border-b last:border-0"
-                        style={{ borderColor: 'var(--color-border)' }}
-                      >
-                        <div className="flex items-center gap-3 px-4 py-4 sm:gap-4">
-                          {/* Rank medal */}
-                          <div className="flex w-10 shrink-0 items-center justify-center">
-                            <span className="text-xl" title={`#${index + 1}`}>{RANK_MEDALS[index] ?? `#${index + 1}`}</span>
-                          </div>
+                      return (
+                        <div
+                          key={standing.house_profile_id ?? standing.house}
+                          className="group border-b last:border-0"
+                          style={{ borderColor: 'var(--color-border)' }}
+                        >
+                          <div className="flex items-center gap-3 px-4 py-4 sm:gap-4">
+                            {/* Rank medal */}
+                            <div className="flex w-10 shrink-0 items-center justify-center">
+                              <span className="text-xl" title={`#${index + 1}`}>{RANK_MEDALS[index] ?? `#${index + 1}`}</span>
+                            </div>
 
-                          {/* House info + progress */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
-                                {emoji} {label}
-                              </span>
-                              {houseBadges.map((badge) => (
-                                <span
-                                  key={badge}
-                                  className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
-                                  style={{ background: color }}
-                                >
-                                  {badge}
+                            {/* House info + progress */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
+                                  {emoji} {label}
                                 </span>
-                              ))}
+                                {houseBadges.map((badge) => (
+                                  <span
+                                    key={badge}
+                                    className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
+                                    style={{ background: color }}
+                                  >
+                                    {badge}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                                {standing.unique_members} members · {standing.events_attended} check-ins
+                              </div>
+                              {/* Progress bar */}
+                              <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'var(--color-border)' }}>
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ width: `${pct}%`, background: color }}
+                                />
+                              </div>
                             </div>
-                            <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                              {standing.unique_members} members · {standing.events_attended} check-ins
-                            </div>
-                            {/* Progress bar */}
-                            <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'var(--color-border)' }}>
-                              <div
-                                className="h-full rounded-full transition-all duration-700"
-                                style={{ width: `${pct}%`, background: color }}
-                              />
-                            </div>
-                          </div>
 
-                          {/* Points */}
-                          <div className="shrink-0 text-right">
-                            <div className="font-serif leading-none" style={{ fontSize: 26, color: 'var(--color-text)' }}>
-                              {standing.total_points.toLocaleString()}
-                            </div>
-                            <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
-                              pts
+                            {/* Points */}
+                            <div className="shrink-0 text-right">
+                              <div className="font-serif leading-none" style={{ fontSize: 26, color: 'var(--color-text)' }}>
+                                {standing.total_points.toLocaleString()}
+                              </div>
+                              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
+                                pts
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
+                      );
+                    })}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <HousePulseSection
-          recentActivity={recentActivity}
-          recentActivityLoading={recentActivityLoading}
-          assetsByHouse={houseAssetsByName}
-        />
+        {!isArchive && (
+          <HousePulseSection
+            recentActivity={recentActivity}
+            recentActivityLoading={recentActivityLoading}
+            assetsByHouse={houseAssetsByName}
+          />
+        )}
 
         {/* ── Archive Events ── */}
         {isArchive && (
