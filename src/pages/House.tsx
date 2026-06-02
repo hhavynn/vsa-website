@@ -20,6 +20,9 @@ import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/house
 import { getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PROGRAM CONFIG — Update this section each year.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -485,6 +488,7 @@ export function House() {
   const [standingsLoading, setStandingsLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState<HouseRecentActivity[]>([]);
   const [recentActivityLoading, setRecentActivityLoading] = useState(true);
+  const [isDegradedMode, setIsDegradedMode] = useState(false);
   const today = getTodayDateOnly();
 
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
@@ -573,6 +577,9 @@ export function House() {
         if (isMounted) {
           setStandings([]);
           setRecentActivity([]);
+          if (isSupabaseUnavailable(err)) {
+            setIsDegradedMode(true);
+          }
         }
       } finally {
         if (isMounted) {
@@ -706,6 +713,7 @@ export function House() {
   return (
     <>
       <PageTitle title={isArchive ? `House Archive ${activeYearLabel}` : 'House Program'} />
+      {isDegradedMode && <DegradedModeBanner sourceName="house" />}
 
       <div className="program-app">
 

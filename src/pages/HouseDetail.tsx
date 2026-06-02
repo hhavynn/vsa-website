@@ -18,6 +18,9 @@ import { HouseEventCard } from '../components/features/house/HouseEventCard';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+
 function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
 }
@@ -179,7 +182,7 @@ export function HouseDetail() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: pastEvents = [], isLoading: pastLoading } = useQuery({
+  const { data: pastEvents = [], isLoading: pastLoading, error: pastError } = useQuery({
     queryKey: ['house-detail', 'past-events', house?.id, today],
     queryFn: () => house ? houseEventsRepository.getPublicPastForHouse(house.id, today, 24) : Promise.resolve([]),
     enabled: !!house,
@@ -187,6 +190,8 @@ export function HouseDetail() {
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const isDegraded = isSupabaseUnavailable(pastError);
 
   if (termsLoading || housesLoading) {
     return <PageLoader message="Loading House page..." />;
@@ -241,6 +246,7 @@ export function HouseDetail() {
   return (
     <>
       <PageTitle title={`${label} House`} />
+      {isDegraded && <DegradedModeBanner sourceName="house" />}
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
           <Link to={backHref} className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">

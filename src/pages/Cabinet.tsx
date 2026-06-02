@@ -6,6 +6,9 @@ import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYea
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { motion } from 'framer-motion';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+
 type CabinetMember = CabinetMemberRaw;
 
 const publicUrl = process.env.PUBLIC_URL || '';
@@ -552,10 +555,12 @@ export function Cabinet() {
     publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
   const shouldIncludeLegacyMembers = !!effectiveCabinetYearId && currentCabinetYear?.id === effectiveCabinetYearId;
 
-  const { data: members = [], isLoading: loadingMembers } = useCabinetMembers(
+  const { data: members = [], isLoading: loadingMembers, error: membersError } = useCabinetMembers(
     effectiveCabinetYearId,
     shouldIncludeLegacyMembers,
   );
+
+  const isDegraded = isSupabaseUnavailable(membersError);
 
   const execBoard = members.filter((member) => member.category === 'Executive Board');
   const genBoard = members.filter((member) => member.category === 'General Board');
@@ -572,6 +577,7 @@ export function Cabinet() {
   return (
     <>
       <PageTitle title="Cabinet" />
+      {isDegraded && <DegradedModeBanner sourceName="cabinet" />}
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

@@ -18,6 +18,11 @@ import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
+import { FALLBACK_HOUSE_STANDINGS_2025_2026 } from '../config/publicFallbackContent';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +179,8 @@ export function Leaderboard() {
   const [houseActivity, setHouseActivity] = useState<HouseRecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [houseLoading, setHouseLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown | null>(null);
+  const [isDegradedMode, setIsDegradedMode] = useState(false);
   const [activeView, setActiveView] = useState<'individual' | 'houses'>('individual');
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
@@ -268,8 +274,9 @@ export function Leaderboard() {
           .sort((a, b) => b.events_attended - a.events_attended)
           .map((member, index) => ({ ...member, rank: index + 1 }))
       );
-    } catch {
-      setError('Failed to load leaderboard.');
+    } catch (err) {
+      setError(err);
+      if (isSupabaseUnavailable(err)) setIsDegradedMode(true);
     } finally {
       setLoading(false);
     }
@@ -310,8 +317,11 @@ export function Leaderboard() {
             .map((member, index) => ({ ...member, rank: index + 1 }))
         );
         setError(null);
-      } catch {
-        if (isCurrentRequest) setError('Failed to load leaderboard.');
+      } catch (err) {
+        if (isCurrentRequest) {
+          setError(err);
+          if (isSupabaseUnavailable(err)) setIsDegradedMode(true);
+        }
       } finally {
         if (isCurrentRequest) setLoading(false);
       }
@@ -381,9 +391,33 @@ export function Leaderboard() {
           const activity = await leaderboardRepository.getRecentHouseActivity(selectedYear, 8);
           if (isCurrentRequest) setHouseActivity(activity);
         }
-      } catch {
+      } catch (err) {
         if (isCurrentRequest) {
-          setHouseStandings([]);
+          setError(err);
+          if (isSupabaseUnavailable(err)) {
+            setIsDegradedMode(true);
+            
+            // Fallback for 2025-2026 if live query fails
+            if (selectedYear === 2025) {
+              const fallbackStandings: HouseStanding[] = FALLBACK_HOUSE_STANDINGS_2025_2026.map((s, idx) => ({
+                house: s.name.toLowerCase().replace(/\s+/g, '-'),
+                display_name: s.name,
+                emoji: s.emoji,
+                total_points: s.points,
+                accent_color: s.accentColor,
+                rank: idx + 1,
+                events_attended: 0,
+                unique_members: 0,
+                average_points_per_member: null,
+                latest_activity_at: null,
+              }));
+              setHouseStandings(fallbackStandings);
+            } else {
+              setHouseStandings([]);
+            }
+          } else {
+            setHouseStandings([]);
+          }
           setHouseActivity([]);
         }
       } finally {
@@ -440,10 +474,12 @@ export function Leaderboard() {
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
   if ((waitingForInitialYear || loading) && selectedYear === null) return <PageLoader message="Loading leaderboard..." />;
-  if (error) {
+  if (error && !isDegradedMode) {
     return (
       <div className="mx-auto max-w-4xl px-8 py-20 text-center">
-        <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>{error}</p>
+        <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+          {(error as any)?.message || String(error)}
+        </p>
       </div>
     );
   }
@@ -458,6 +494,7 @@ export function Leaderboard() {
   return (
     <>
       <PageTitle title="Leaderboard" />
+      {isDegradedMode && <DegradedModeBanner sourceName="leaderboard" />}
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
@@ -566,9 +603,16 @@ export function Leaderboard() {
 
               {filteredEntries.length === 0 ? (
                 <div className="scrapbook-empty">
-                  <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                    {searchTerm ? 'No matching members found.' : `No activity recorded for ${selectedYearLabel} yet.`}
-                  </p>
+                  {isDegradedMode ? (
+                    <ContentUnavailableState
+                      title="Individual standings unavailable"
+                      message="We're having trouble loading the live member leaderboard. Your points are still being tracked safely in the database."
+                    />
+                  ) : (
+                    <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                      {searchTerm ? 'No matching members found.' : `No activity recorded for ${selectedYearLabel} yet.`}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">

@@ -9,6 +9,8 @@ import {
   type SelectedYear,
 } from "../../../hooks/useFindMyPoints";
 import { MyVSACard } from "./MyVSACard";
+import { isSupabaseUnavailable } from "../../../utils/isSupabaseUnavailable";
+import { FALLBACK_POINTS } from "../../../config/publicFallbackContent";
 
 const SearchIcon = ({ className }: { className?: string }) => (
   <svg
@@ -381,7 +383,9 @@ export function FindMyPoints({
             className="scrapbook-empty text-sm"
             style={{ color: "var(--text3)" }}
           >
-            Couldn't load points right now. Please try again in a moment.
+            {isSupabaseUnavailable(error)
+              ? FALLBACK_POINTS.message
+              : "Couldn't load points right now. Please try again in a moment."}
           </div>
         ) : initializing || loadingState ? (
           <div

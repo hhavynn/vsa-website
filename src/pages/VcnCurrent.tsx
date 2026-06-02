@@ -6,6 +6,11 @@ import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { ProgramContentStatus, VCNArchive } from '../types';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
+import { FALLBACK_LINKS } from '../config/publicFallbackContent';
+
 const VCN_PLACEHOLDER = {
   active: false,
   year: '',
@@ -58,8 +63,28 @@ function currentFromArchive(archive: VCNArchive | null) {
 }
 
 export function VCNCurrent() {
-  const { archive } = useCurrentVcnArchive();
+  const { archive, error } = useCurrentVcnArchive();
   const currentVcn = currentFromArchive(archive);
+
+  const isDegraded = isSupabaseUnavailable(error);
+
+  if (isDegraded) {
+    return (
+      <>
+        <PageTitle title="VCN — This Year's Show" />
+        <DegradedModeBanner sourceName="vcn" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="VCN info temporarily unavailable"
+            message="We're having trouble loading the latest VCN show details. Check @vsaatucsd on Instagram for the latest production updates."
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
+        </div>
+      </>
+    );
+  }
+
   const ticketStatusLabel = PROGRAM_STATUS_LABELS[currentVcn.ticketStatus];
   const canShowTicketButton =
     !!currentVcn.ticketLink && (currentVcn.ticketStatus === 'open' || currentVcn.ticketStatus === 'active');

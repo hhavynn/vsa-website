@@ -22,6 +22,11 @@ import { motion } from "framer-motion";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from "../utils/seasonalState";
 
+import { isSupabaseUnavailable } from "../utils/isSupabaseUnavailable";
+import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
+import { ContentUnavailableState } from "../components/common/ContentUnavailableState";
+import { FALLBACK_UVSA_NETWORK, FALLBACK_LINKS } from "../config/publicFallbackContent";
+
 // Icon components cast to any to avoid TS JSX errors in some environments
 const GlobeIcon = FaGlobe as any;
 const MapPinIcon = FaMapMarkerAlt as any;
@@ -66,14 +71,19 @@ const itemVariants = {
 };
 
 export default function UVSANetwork() {
-  const { schools, loading: schoolsLoading } = useUVSASchools();
-  const { events: upcomingEvents, loading: upcomingLoading } =
+  const { schools, loading: schoolsLoading, error: schoolsError } = useUVSASchools();
+  const { events: upcomingEvents, loading: upcomingLoading, error: upcomingError } =
     useExternalEvents({ status: "upcoming" });
-  const { events: pastEvents, loading: pastLoading } = useExternalEvents({
+  const { events: pastEvents, loading: pastLoading, error: pastError } = useExternalEvents({
     status: "past",
   });
-  const { events: historicalEvents, loading: historicalLoading } =
+  const { events: historicalEvents, loading: historicalLoading, error: historicalError } =
     useExternalEvents({ status: "historical" });
+
+  const isDegraded = isSupabaseUnavailable(schoolsError) || 
+                     isSupabaseUnavailable(upcomingError) || 
+                     isSupabaseUnavailable(pastError) || 
+                     isSupabaseUnavailable(historicalError);
 
   const archiveEvents = [...pastEvents, ...historicalEvents];
   const allPublicEvents = [...upcomingEvents, ...archiveEvents];
@@ -84,6 +94,23 @@ export default function UVSANetwork() {
   const spotlightLoading = upcomingLoading || pastLoading || historicalLoading;
   const useSummerExternalsEmptyState = shouldUseSummerEmptyState(upcomingEvents.length > 0);
   const summerExternalsMessage = getSummerBreakMessage("externals");
+
+  if (isDegraded) {
+    return (
+      <>
+        <PageTitle title="SoCal VSA Network" />
+        <DegradedModeBanner sourceName="uvsa-network" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="External info temporarily unavailable"
+            message={FALLBACK_UVSA_NETWORK.message}
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

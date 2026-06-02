@@ -1,11 +1,18 @@
 import { PageTitle } from '../components/common/PageTitle';
 import { FindMyPoints } from '../components/features/points/FindMyPoints';
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { useFindMyPoints } from '../hooks/useFindMyPoints';
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 
 export default function Points() {
+  const { error } = useFindMyPoints('all'); // Check all-time to see if service is up
+  const isDegraded = isSupabaseUnavailable(error);
+
   return (
     <>
       <PageTitle title="Points Lookup" />
+      {isDegraded && <DegradedModeBanner sourceName="points" />}
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

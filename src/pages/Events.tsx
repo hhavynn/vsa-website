@@ -25,6 +25,11 @@ import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrappe
 import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
+import { FALLBACK_EVENTS, FALLBACK_LINKS } from '../config/publicFallbackContent';
+
 type FilterKey = 'all' | Event['event_type'];
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -506,6 +511,25 @@ export function Events() {
     );
   }
 
+  const isDegraded = isSupabaseUnavailable(upcomingError) || isSupabaseUnavailable(pastError);
+
+  if (isDegraded) {
+    return (
+      <>
+        <PageTitle title="Events" />
+        <DegradedModeBanner sourceName="events" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title={FALLBACK_EVENTS.title}
+            message={FALLBACK_EVENTS.message}
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
+        </div>
+      </>
+    );
+  }
+
   if (upcomingError || pastError) {
     return (
       <>
@@ -522,6 +546,7 @@ export function Events() {
   return (
     <>
       <PageTitle title="Events" />
+      {/* Degraded mode check again here in case of partial failure if we still want to show what we have */}
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

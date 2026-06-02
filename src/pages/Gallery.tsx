@@ -8,6 +8,11 @@ import { useGallery, useGalleryStats } from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { motion } from 'framer-motion';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
+import { FALLBACK_GALLERY, FALLBACK_LINKS } from '../config/publicFallbackContent';
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -73,12 +78,33 @@ export default function Gallery() {
   const useSummerGalleryEmptyState = shouldUseSummerEmptyState(albums.length > 0);
   const summerGalleryMessage = getSummerBreakMessage('gallery');
 
+  const isDegraded = isSupabaseUnavailable(error);
+
   if (loading) return <PageLoader message="Loading gallery..." />;
+  
+  if (isDegraded) {
+    return (
+      <>
+        <PageTitle title="Gallery" />
+        <DegradedModeBanner sourceName="gallery" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="Gallery temporarily unavailable"
+            message={FALLBACK_GALLERY.message}
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
+        </div>
+      </>
+    );
+  }
+
   if (error) return <PageError message="Failed to load gallery" />;
 
   return (
     <>
       <PageTitle title="Gallery" />
+      {/* Degraded mode banner already handled above with full page fallback */}
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

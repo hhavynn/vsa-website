@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 
 type Role = 'user' | 'assistant';
 type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
@@ -199,7 +200,7 @@ export function VsaAiAssistant() {
       const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
       const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
       if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Ask VSA is taking a quick break. Try again soon.');
+        throw new Error(FALLBACK_ASK_VSA.message);
       }
 
       const response = await fetch(`${supabaseUrl}/functions/v1/vsa-ai-assistant`, {
@@ -220,7 +221,7 @@ export function VsaAiAssistant() {
       const data = (await response.json().catch(() => null)) as AssistantResponse | null;
 
       if (!response.ok && response.status !== 429) {
-        throw new Error('Ask VSA is taking a quick break. Try again soon.');
+        throw new Error(FALLBACK_ASK_VSA.message);
       }
 
       const assistantMessage: ChatMessage = {
@@ -230,18 +231,18 @@ export function VsaAiAssistant() {
           data?.answer ||
           (response.status === 429
             ? "You've reached today's Ask VSA limit. Try again later!"
-            : 'Ask VSA is taking a quick break. Try again soon.'),
+            : FALLBACK_ASK_VSA.message),
         sources: data?.sources ?? [],
         status: data?.status ?? (response.status === 429 ? 'rate_limited' : 'error'),
       };
 
       setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
     } catch (error) {
-      const fallback = error instanceof Error ? error.message : 'Ask VSA is taking a quick break. Try again soon.';
+      const fallback = error instanceof Error ? error.message : FALLBACK_ASK_VSA.message;
       const assistantMessage: ChatMessage = {
         id: createMessageId(),
         role: 'assistant',
-        content: 'Ask VSA is taking a quick break. Try again soon.',
+        content: FALLBACK_ASK_VSA.message,
         status: 'error',
       };
       setErrorText(fallback);
