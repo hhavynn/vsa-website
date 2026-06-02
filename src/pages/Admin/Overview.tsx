@@ -17,6 +17,31 @@ interface OverviewStats {
   eventsMissingTerms: number;
   upcomingEventsMissingInfo: number;
   galleryAlbumsMissingCover: number;
+  // New Health Checks
+  eventsPublished: number;
+  eventsDraft: number;
+  eventsUpcomingPublished: number;
+  eventsMissingImage: number;
+  eventsMissingLocation: number;
+  housesCurrentCount: number;
+  housesMissingImage: number;
+  housesMissingParents: number;
+  galleryCount: number;
+  galleryMissingCover: number;
+  galleryMissingPhotosUrl: number;
+  cabinetActiveYear: { id: string; label: string } | null;
+  cabinetMembersActiveYear: number;
+  cabinetMissingImage: number;
+  cabinetMissingRole: number;
+  vcnCurrentPublishedExists: boolean;
+  vcnArchiveCount: number;
+  vcnMissingMedia: number;
+  programContentMissing: number;
+  aiTableExists: boolean;
+  aiSnippetsActive: number;
+  aiSnippetsInactive: number;
+  aiLastVerifiedAt: string | null;
+  storageUrlsCount: number;
 }
 
 interface AdminToolCard {
@@ -47,6 +72,30 @@ const DEFAULT_STATS: OverviewStats = {
   eventsMissingTerms: 0,
   upcomingEventsMissingInfo: 0,
   galleryAlbumsMissingCover: 0,
+  eventsPublished: 0,
+  eventsDraft: 0,
+  eventsUpcomingPublished: 0,
+  eventsMissingImage: 0,
+  eventsMissingLocation: 0,
+  housesCurrentCount: 0,
+  housesMissingImage: 0,
+  housesMissingParents: 0,
+  galleryCount: 0,
+  galleryMissingCover: 0,
+  galleryMissingPhotosUrl: 0,
+  cabinetActiveYear: null,
+  cabinetMembersActiveYear: 0,
+  cabinetMissingImage: 0,
+  cabinetMissingRole: 0,
+  vcnCurrentPublishedExists: false,
+  vcnArchiveCount: 0,
+  vcnMissingMedia: 0,
+  programContentMissing: 0,
+  aiTableExists: false,
+  aiSnippetsActive: 0,
+  aiSnippetsInactive: 0,
+  aiLastVerifiedAt: null,
+  storageUrlsCount: 0,
 };
 
 const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
@@ -275,6 +324,55 @@ function ToolCard({ tool }: { tool: AdminToolCard }) {
   );
 }
 
+
+function HealthGroupCard({ title, to, children }: { title: string; to?: string; children: React.ReactNode }) {
+  return (
+    <div className="scrapbook-paper overflow-hidden bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+        <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>{title}</h3>
+        {to && (
+          <Link to={to} className="font-sans text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-400">
+            View details →
+          </Link>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="space-y-3">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HealthItem({ label, value, status, to }: { label: string; value: React.ReactNode; status?: 'good' | 'warning' | 'error' | 'neutral'; to?: string }) {
+  let statusColor = 'text-[var(--color-text3)]';
+  let dotColor = 'bg-gray-400';
+  
+  if (status === 'good') {
+    statusColor = 'text-green-600 dark:text-green-400';
+    dotColor = 'bg-green-500';
+  } else if (status === 'warning') {
+    statusColor = 'text-amber-600 dark:text-amber-400';
+    dotColor = 'bg-amber-500';
+  } else if (status === 'error') {
+    statusColor = 'text-red-600 dark:text-red-400';
+    dotColor = 'bg-red-500';
+  }
+
+  const content = (
+    <div className={`flex items-center justify-between group ${to ? 'cursor-pointer hover:bg-[var(--color-surface)] p-2 -mx-2 rounded transition-colors' : ''}`}>
+      <div className="flex items-center gap-2">
+        <div className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
+        <span className="font-sans text-[13px]" style={{ color: 'var(--color-text2)' }}>{label}</span>
+      </div>
+      <span className={`font-mono text-[12px] font-bold ${statusColor}`}>{value}</span>
+    </div>
+  );
+
+  return to ? <Link to={to} className="block">{content}</Link> : content;
+}
+
 export default function AdminOverview() {
   const [stats, setStats] = useState<OverviewStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
@@ -315,6 +413,101 @@ export default function AdminOverview() {
         supabase.from('gallery_events').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
       ]);
 
+      // Content Health Queries
+      const [
+        eventsPublishedRes,
+        eventsDraftRes,
+        eventsUpcomingPublishedRes,
+        eventsMissingImageRes,
+        eventsMissingLocationRes,
+      ] = await Promise.all([
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', true),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', false),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', true).gte('date', nowIso),
+        supabase.from('events').select('*', { count: 'exact', head: true }).is('image_url', null),
+        supabase.from('events').select('*', { count: 'exact', head: true }).or('location.is.null,location.eq.""'),
+      ]);
+
+      const [
+        housesCurrentRes,
+        housesMissingImageRes,
+        housesMissingParentsRes,
+      ] = await Promise.all([
+        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).eq('academic_year_start', 2025),
+        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).is('image_url', null),
+        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).or('house_parent_heading.is.null,house_parent_image_url.is.null'),
+      ]);
+
+      const [
+        galleryCountRes,
+        galleryMissingCoverRes,
+        galleryMissingPhotosRes,
+      ] = await Promise.all([
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }),
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).or('google_photos_url.is.null,google_photos_url.eq.""'),
+      ]);
+
+      const cabinetActiveYearRes = await supabase.from('cabinet_years').select('id, label').eq('is_active', true).maybeSingle();
+      const activeCabinetYearId = cabinetActiveYearRes.data?.id;
+      const activeCabinetYearLabel = cabinetActiveYearRes.data?.label;
+
+      const [
+        cabinetMembersRes,
+        cabinetMissingImageRes,
+        cabinetMissingRoleRes,
+      ] = await Promise.all([
+        activeCabinetYearId ? supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).eq('cabinet_year_id', activeCabinetYearId) : { data: null, error: null, count: 0 },
+        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).is('image_url', null),
+        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).or('role.is.null,role.eq.""'),
+      ]);
+
+      const [
+        vcnPublishedRes,
+        vcnArchiveRes,
+        vcnMissingMediaRes,
+      ] = await Promise.all([
+        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }).eq('is_current', true).eq('is_published', true),
+        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }),
+        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
+      ]);
+
+      const programContentRes = await supabase.from('program_content').select('*', { count: 'exact', head: true }).or('is_published.eq.false,status.eq.hidden');
+
+      const [
+        aiActiveRes,
+        aiInactiveRes,
+        aiLastVerifiedRes,
+      ] = await Promise.allSettled([
+        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_active', false),
+        supabase.from('ai_knowledge_base' as any).select('last_verified_at').order('last_verified_at', { ascending: false }).limit(1),
+      ]);
+      
+      let aiTableExists = true;
+      let aiSnippetsActive = 0;
+      let aiSnippetsInactive = 0;
+      let aiLastVerifiedAt = null;
+
+      if (aiActiveRes.status === 'rejected' || (aiActiveRes.status === 'fulfilled' && (aiActiveRes.value as any).error)) {
+        aiTableExists = false;
+      } else {
+        aiSnippetsActive = (aiActiveRes as any).value?.count ?? 0;
+        aiSnippetsInactive = (aiInactiveRes as any).value?.count ?? 0;
+        aiLastVerifiedAt = (aiLastVerifiedRes as any).value?.data?.[0]?.last_verified_at ?? null;
+      }
+
+      const storageRes = await Promise.all([
+        supabase.from('events').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
+        supabase.from('house_events').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
+        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
+        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).ilike('cover_image_url', '%supabase.co/storage%'),
+        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
+        supabase.from('site_settings').select('*', { count: 'exact', head: true }).ilike('logo_url', '%supabase.co/storage%'),
+      ]);
+
+      const storageCount = storageRes.reduce((acc, curr) => acc + (curr.count || 0), 0);
+
       setStats({
         members: membersResult.count ?? 0,
         events: eventsResult.count ?? 0,
@@ -329,6 +522,30 @@ export default function AdminOverview() {
         eventsMissingTerms: missingTermsResult.count ?? 0,
         upcomingEventsMissingInfo: upcomingMissingInfoResult.count ?? 0,
         galleryAlbumsMissingCover: missingGalleryCoverResult.count ?? 0,
+        eventsPublished: eventsPublishedRes.count ?? 0,
+        eventsDraft: eventsDraftRes.count ?? 0,
+        eventsUpcomingPublished: eventsUpcomingPublishedRes.count ?? 0,
+        eventsMissingImage: eventsMissingImageRes.count ?? 0,
+        eventsMissingLocation: eventsMissingLocationRes.count ?? 0,
+        housesCurrentCount: housesCurrentRes.count ?? 0,
+        housesMissingImage: housesMissingImageRes.count ?? 0,
+        housesMissingParents: housesMissingParentsRes.count ?? 0,
+        galleryCount: galleryCountRes.count ?? 0,
+        galleryMissingCover: galleryMissingCoverRes.count ?? 0,
+        galleryMissingPhotosUrl: galleryMissingPhotosRes.count ?? 0,
+        cabinetActiveYear: activeCabinetYearId ? { id: activeCabinetYearId, label: activeCabinetYearLabel! } : null,
+        cabinetMembersActiveYear: cabinetMembersRes.count ?? 0,
+        cabinetMissingImage: cabinetMissingImageRes.count ?? 0,
+        cabinetMissingRole: cabinetMissingRoleRes.count ?? 0,
+        vcnCurrentPublishedExists: (vcnPublishedRes.count ?? 0) > 0,
+        vcnArchiveCount: vcnArchiveRes.count ?? 0,
+        vcnMissingMedia: vcnMissingMediaRes.count ?? 0,
+        programContentMissing: programContentRes.count ?? 0,
+        aiTableExists,
+        aiSnippetsActive,
+        aiSnippetsInactive,
+        aiLastVerifiedAt,
+        storageUrlsCount: storageCount,
       });
       setLoading(false);
     }
@@ -510,6 +727,74 @@ export default function AdminOverview() {
                 </div>
               </div>
             </div>
+
+            <div className="mt-10 space-y-6">
+              <div className="scrapbook-paper p-5 sm:p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+                  Content Health Dashboard
+                </h2>
+                <p className="mt-1 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                  Quickly see what public content is missing, stale, hidden, broken, or still using legacy storage.
+                </p>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <HealthGroupCard title="Events" to="/admin/events">
+                  <HealthItem label="Published events" value={stats.eventsPublished} status="good" />
+                  <HealthItem label="Draft events" value={stats.eventsDraft} status={stats.eventsDraft > 0 ? 'warning' : 'neutral'} />
+                  <HealthItem label="Upcoming published" value={stats.eventsUpcomingPublished} status={stats.eventsUpcomingPublished > 0 ? 'good' : 'warning'} />
+                  <HealthItem label="Missing image" value={stats.eventsMissingImage} status={stats.eventsMissingImage > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Missing location" value={stats.eventsMissingLocation} status={stats.eventsMissingLocation > 0 ? 'warning' : 'good'} />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Houses" to="/admin/houses">
+                  <HealthItem label="Current House profiles (2025)" value={stats.housesCurrentCount} status={stats.housesCurrentCount === 0 ? 'error' : 'good'} />
+                  <HealthItem label="Missing House images" value={stats.housesMissingImage} status={stats.housesMissingImage > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Missing House parents" value={stats.housesMissingParents} status={stats.housesMissingParents > 0 ? 'warning' : 'good'} />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Gallery" to="/admin/gallery">
+                  <HealthItem label="Total albums" value={stats.galleryCount} status="neutral" />
+                  <HealthItem label="Missing cover image" value={stats.galleryMissingCover} status={stats.galleryMissingCover > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Missing Photos URL" value={stats.galleryMissingPhotosUrl} status={stats.galleryMissingPhotosUrl > 0 ? 'warning' : 'good'} />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Cabinet" to="/admin/cabinet">
+                  <HealthItem label="Active cabinet year" value={stats.cabinetActiveYear?.label || 'None'} status={stats.cabinetActiveYear ? 'good' : 'error'} />
+                  <HealthItem label="Members in active year" value={stats.cabinetMembersActiveYear} status={stats.cabinetMembersActiveYear > 0 ? 'good' : 'warning'} />
+                  <HealthItem label="Members missing image" value={stats.cabinetMissingImage} status={stats.cabinetMissingImage > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Members missing role" value={stats.cabinetMissingRole} status={stats.cabinetMissingRole > 0 ? 'warning' : 'good'} />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="VCN" to="/admin/vcn">
+                  <HealthItem label="Current published exists" value={stats.vcnCurrentPublishedExists ? 'Yes' : 'No'} status={stats.vcnCurrentPublishedExists ? 'good' : 'warning'} />
+                  <HealthItem label="Archive count" value={stats.vcnArchiveCount} status="neutral" />
+                  <HealthItem label="Missing cover media" value={stats.vcnMissingMedia} status={stats.vcnMissingMedia > 0 ? 'warning' : 'good'} />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Program Content" to="/admin/content">
+                  <HealthItem label="Missing / inactive content" value={stats.programContentMissing} status={stats.programContentMissing > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Get Involved, ACE, Intern, House, WNC" value="Monitored" status="neutral" />
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Ask VSA AI" to={stats.aiTableExists ? "/admin/ai-knowledge" : "/admin/resources"}>
+                  {stats.aiTableExists ? (
+                    <>
+                      <HealthItem label="Active snippets" value={stats.aiSnippetsActive} status="good" />
+                      <HealthItem label="Inactive snippets" value={stats.aiSnippetsInactive} status="neutral" />
+                      <HealthItem label="Latest verification" value={stats.aiLastVerifiedAt ? new Date(stats.aiLastVerifiedAt).toLocaleDateString() : 'Never'} status={stats.aiLastVerifiedAt ? 'good' : 'warning'} />
+                    </>
+                  ) : (
+                    <HealthItem label="AI Table exists" value="No" status="warning" />
+                  )}
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Storage / Egress">
+                  <HealthItem label="Supabase Storage URLs" value={stats.storageUrlsCount} status={stats.storageUrlsCount > 0 ? 'warning' : 'good'} />
+                  <HealthItem label="Images to migrate" value="View queries" status="neutral" />
+                </HealthGroupCard>
+              </div>
+            </div>
+
           </div>
         )}
       </div>
