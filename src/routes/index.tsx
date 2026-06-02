@@ -86,6 +86,7 @@ const AdminSettings = lazy(() => import("../pages/Admin/Settings"));
 const AdminAceFamilies = lazy(() => import("../pages/Admin/AceFamilies"));
 const AdminUVSASchools = lazy(() => import("../pages/Admin/UVSASchools"));
 const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
+const AdminAiKnowledge = lazy(() => import("../pages/Admin/AiKnowledge"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -188,6 +189,7 @@ export default function AppRoutes() {
                   <Route path="/admin/ace" element={<AdminAceFamilies />} />
                   <Route path="/admin/uvsa-schools" element={<AdminUVSASchools />} />
                   <Route path="/admin/external-events" element={<AdminExternalEvents />} />
+                  <Route path="/admin/ai-knowledge" element={<AdminAiKnowledge />} />
                 </Route>
               </Route>
 
