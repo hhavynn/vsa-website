@@ -462,7 +462,7 @@ export function Home() {
                   </div>
                 ) : (
                   <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
-                    <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>G + P</span>
+                    <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>A + H</span>
                   </div>
                 )}
                 <div className="mt-3 border-t py-3" style={{ borderColor: 'var(--border)' }}>
