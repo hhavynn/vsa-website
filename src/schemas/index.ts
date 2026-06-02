@@ -14,6 +14,7 @@ export const EventSchema = z.object({
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
   check_in_code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters').optional(),
   is_code_expired: z.boolean().default(false),
+  is_published: z.boolean().default(true),
   academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
 
@@ -74,6 +75,7 @@ export const AdminEventUpdateSchema = z.object({
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
   check_in_code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters').optional(),
   is_code_expired: z.boolean().optional(),
+  is_published: z.boolean().optional(),
   academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
 

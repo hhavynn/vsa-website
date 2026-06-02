@@ -12,7 +12,7 @@ const NAV_GROUPS = [
     { to: '/admin/external-events', label: 'External Events' },
   ]},
   { group: 'Content & Media', items: [
-    { to: '/admin/content', label: 'Homepage Content' },
+    { to: '/admin/content', label: 'Homepage & Programs' },
     { to: '/admin/cabinet', label: 'Cabinet' },
     { to: '/admin/gallery', label: 'Gallery' },
     { to: '/admin/vcn', label: 'VCN Archives' },

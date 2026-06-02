@@ -261,6 +261,7 @@ async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof create
   const { data, error } = await supabaseClient
     .from("events")
     .select("name, date, location, event_type, points, description")
+    .eq("is_published", true)
     .gte("date", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     .order("date", { ascending: true })
     .limit(3);

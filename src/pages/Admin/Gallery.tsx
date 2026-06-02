@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { formatDateOnly, toDateOnlyString } from '../../lib/dateOnly';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -321,7 +322,9 @@ export default function AdminGallery() {
       <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="mb-4 sm:mb-0">
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Gallery</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Manage public photo albums</p>
+          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            Add Google Photos albums, recap links, and cover images for the public <Link to="/gallery" className="font-semibold text-[var(--brand)] hover:underline">Gallery</Link>. Linked albums also add photo buttons to matching past events.
+          </p>
         </div>
         <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
           {(['create', 'manage'] as const).map((tab, i) => (
@@ -485,7 +488,7 @@ export default function AdminGallery() {
                 <svg className="mx-auto mb-3 h-12 w-12" style={{ color: 'var(--color-text3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p>No albums yet. Add one to get started.</p>
+                <p>No gallery albums found. Add a Google Photos album with a public share link, then upload a cover image when one is available.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

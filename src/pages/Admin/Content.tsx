@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from 'react-query';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
@@ -186,8 +187,10 @@ export default function AdminContent() {
       <PageTitle title="Admin Content" />
 
       <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Content</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>Edit the presidents message plus volatile program links, dates, and statuses.</p>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Homepage & Program Content</h1>
+        <p className="mt-1 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+          Edit the presidents message on <Link to="/" className="font-semibold text-[var(--brand)] hover:underline">the homepage</Link>, plus program links, dates, and status text used by pages like Get Involved, VCN, WNC, and Intern Program.
+        </p>
       </div>
 
       <div style={{ padding: '24px 28px' }}>
@@ -197,6 +200,12 @@ export default function AdminContent() {
           className="border rounded p-6 space-y-5"
           style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
         >
+          <div>
+            <h2 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Homepage Presidents Message</h2>
+            <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+              This card updates the public homepage message and photo. Program content settings below update their own public pages.
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Presidents *</label>

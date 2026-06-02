@@ -29,6 +29,10 @@ export function useEventAttendance() {
         console.error('Code expired');
         throw new Error('Check-in code has expired');
       }
+      if (!event.is_published) {
+        console.error('Event is not published');
+        throw new Error('This event is not open for check-in');
+      }
       if (event.check_in_code !== code) {
         console.error('Invalid code');
         throw new Error('Invalid check-in code');
@@ -222,7 +226,8 @@ export function useEventAttendance() {
             image_url,
             thumbnail_url,
             check_in_code,
-            is_code_expired
+            is_code_expired,
+            is_published
           )
         `)
         .eq('user_id', userId)

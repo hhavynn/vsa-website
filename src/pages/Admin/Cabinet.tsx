@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useDropzone } from 'react-dropzone';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
@@ -465,7 +466,9 @@ export default function AdminCabinet() {
       <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="mb-4 sm:mb-0">
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Cabinet</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Manage the cabinet directory</p>
+          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            Manage names, roles, photos, bios, and cabinet years for the public <Link to="/cabinet" className="font-semibold text-[var(--brand)] hover:underline">Cabinet</Link> page. Archive years should stay tied to their own cabinet year.
+          </p>
         </div>
         <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
           {(['manage', 'create'] as const).map((tab, i) => (
@@ -594,15 +597,18 @@ export default function AdminCabinet() {
                   disabled={uploading}
                   className="vsa-btn-primary py-2 text-xs disabled:opacity-50"
                 >
-                  {uploading ? 'Migrating...' : 'Run Initial Data Migration'}
+                  {uploading ? 'Migrating...' : 'Advanced: Run Initial Data Migration'}
                 </button>
               )}
             </div>
+            <p className="-mt-3 mb-6 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+              Showing members for {selectedAdminYear?.label ?? 'the selected cabinet year'}. Use the Cabinet Year selector above before adding or moving members.
+            </p>
             {loading ? (
               <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading...</p>
             ) : filteredMembers.length === 0 && !loading ? (
               <p className="py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
-                No members for {selectedAdminYear?.label ?? 'this cabinet year'} yet. Switch to "Add Member" to create one.
+                No cabinet members found for {selectedAdminYear?.label ?? 'this cabinet year'}. Switch to "Add Member" to create one, or verify the selected cabinet year if this should be an archive.
               </p>
             ) : CATEGORIES.map(category => {
               const categoryMembers = filteredMembers.filter(m => m.category === category);

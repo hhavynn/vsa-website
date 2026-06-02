@@ -95,7 +95,7 @@ function getCurrentAcademicYearStart() {
 function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms'], yearSlug?: string) {
   if (yearSlug) {
     const parsed = parseYearSlug(yearSlug);
-    if (parsed) return parsed;
+    return parsed ?? null;
   }
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start;
   if (activeTermYear) return activeTermYear;
@@ -488,6 +488,7 @@ export function House() {
   const today = getTodayDateOnly();
 
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
+  const invalidYearSlug = !!yearSlug && parseYearSlug(yearSlug) === null;
   const activeYear = resolveHouseYear(terms, yearSlug);
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
 
@@ -504,7 +505,7 @@ export function House() {
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    enabled: !isArchive && !isFutureYear,
+    enabled: !invalidYearSlug && !isArchive && !isFutureYear && activeYear !== null,
   });
 
   const { data: pastHouseEvents = [] } = useQuery<HouseEvent[]>({
@@ -538,7 +539,7 @@ export function House() {
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
-      if (!activeYear) {
+      if (invalidYearSlug || !activeYear) {
         setStandingsLoading(false);
         setRecentActivityLoading(false);
         return;
@@ -582,7 +583,7 @@ export function House() {
     }
     loadData();
     return () => { isMounted = false; };
-  }, [activeYear]);
+  }, [activeYear, invalidYearSlug]);
 
   // When the DB returns no calculated standings for an override year, inject
   // official placeholder rows keyed to the published house assets so that
@@ -625,6 +626,25 @@ export function House() {
   const summerHouseMessage = getSummerBreakMessage('house');
 
   const showSummerTransition = summerBreak && !isArchive && !isFutureYear && houseAssets.length === 0;
+
+  if (invalidYearSlug) {
+    return (
+      <>
+        <PageTitle title="House Year Not Found" />
+        <div className="vsa-container py-24 text-center">
+          <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">404</span>
+          <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House year not found</h1>
+          <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+            This House archive year is not available. Choose a year from the House archive instead.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link to="/house" className="vsa-btn-primary">Current Houses</Link>
+            <Link to="/house/archive" className="vsa-btn-ghost">House Archive</Link>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Future year — show a coming-soon placeholder instead of the normal page
   if (isFutureYear && activeYear !== null) {

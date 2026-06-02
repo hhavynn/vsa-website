@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
@@ -204,8 +205,8 @@ export default function AdminVcnArchives() {
       <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>VCN Archives</h1>
-          <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
-            {archives.length} entries, {publishedCount} published
+          <p className="mt-1 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            {archives.length} entries, {publishedCount} published. Published entries appear on <Link to="/vcn/archive" className="font-semibold text-[var(--brand)] hover:underline">/vcn/archive</Link>; the one marked Current powers <Link to="/vcn/current" className="font-semibold text-[var(--brand)] hover:underline">/vcn/current</Link>.
           </p>
         </div>
         <button
@@ -227,7 +228,7 @@ export default function AdminVcnArchives() {
 
           {archives.length === 0 ? (
             <div className="px-5 py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
-              No VCN archive entries yet.
+              No VCN archive entries found. Create a row, publish it when ready, and mark one entry as Current before this year's public VCN page should show production details.
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>

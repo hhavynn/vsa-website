@@ -382,9 +382,9 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       <div className="mb-5 rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>House Page Images & Profiles</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>House Profiles, Images & Parents</h2>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-              Manage House identities for each school year. Profiles created here appear on public House pages and standings.
+              Edit the House names, descriptions, colors, logos, profile images, and House parent section for the selected year. These profiles appear on /house, year archive pages, House detail pages, and House standings.
             </p>
           </div>
           <div className="flex items-end gap-3">
@@ -657,7 +657,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
         {assets.length === 0 && !loading && (
           <div className="col-span-2 py-12 text-center">
             <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-              No House profiles found for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.
+              No House profiles found for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. Add profiles or restore the seeded House assets before editing images, parents, assignments, or House events.
             </p>
             <button
               onClick={() => setShowAddForm(true)}
