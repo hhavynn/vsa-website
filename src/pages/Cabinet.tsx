@@ -1,8 +1,10 @@
-import { type CSSProperties, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { useCabinetYears } from '../hooks/useCabinetYears';
 import { useCabinetMemberYearIds, useCabinetMembers, type CabinetMemberRaw } from '../hooks/useCabinet';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
+import { CabinetYear } from '../types';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { motion } from 'framer-motion';
 
@@ -50,6 +52,35 @@ function formatMeta(member: CabinetMember) {
 
 function getCabinetPhotoUrl(member: CabinetMember) {
   return member.thumbnail_url || member.image_url;
+}
+
+function normalizeCabinetYearQuery(value: string | null | undefined) {
+  if (!value) return '';
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ');
+  const range = normalized.match(/\b(\d{4})\s*-\s*(\d{4})\b/);
+  if (range) return `${range[1]}-${range[2]}`;
+  return normalized.replace(/\s*cabinet\s*/g, '').trim();
+}
+
+function cabinetYearQueryValue(year: CabinetYear) {
+  const slug = normalizeCabinetYearQuery(year.slug);
+  if (slug) return slug;
+  return `${year.start_year}-${year.end_year}`;
+}
+
+function cabinetYearMatchesQuery(year: CabinetYear, query: string) {
+  const normalizedQuery = normalizeCabinetYearQuery(query);
+  if (!normalizedQuery) return false;
+  return [
+    cabinetYearQueryValue(year),
+    year.slug,
+    year.label,
+    `${year.start_year}-${year.end_year}`,
+  ].some((value) => normalizeCabinetYearQuery(value) === normalizedQuery);
 }
 
 function rolePriority(role: string) {
@@ -524,8 +555,10 @@ function RookieTile({ member }: { member: CabinetMember }) {
 }
 
 export function Cabinet() {
-  const { cabinetYears } = useCabinetYears();
-  const [selectedCabinetYearId, setSelectedCabinetYearId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedYear = searchParams.get('year')?.trim() || null;
+  const { cabinetYears, loading: loadingCabinetYears } = useCabinetYears();
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   const { data: yearIdsData, isLoading: loadingYearIds } = useCabinetMemberYearIds();
   const hasLegacyMembers = yearIdsData?.hasLegacyMembers ?? false;
@@ -547,13 +580,71 @@ export function Cabinet() {
     },
     [cabinetYears, cabinetYearsWithMembers, currentCabinetYear, hasLegacyMembers]
   );
+
+  const requestedCabinetYear = useMemo(() => {
+    if (!requestedYear || normalizeCabinetYearQuery(requestedYear) === 'current') return null;
+    return publicCabinetYears.find((year) => cabinetYearMatchesQuery(year, requestedYear)) ?? null;
+  }, [publicCabinetYears, requestedYear]);
+
+  const isCurrentYearQuery = !!requestedYear && normalizeCabinetYearQuery(requestedYear) === 'current';
+  const isInvalidYearQuery =
+    !!requestedYear &&
+    !isCurrentYearQuery &&
+    !requestedCabinetYear &&
+    !loadingCabinetYears;
+  const isResolvingYearQuery =
+    !!requestedYear &&
+    !isCurrentYearQuery &&
+    !requestedCabinetYear &&
+    loadingCabinetYears;
+
   const effectiveCabinetYearId =
-    selectedCabinetYearId && publicCabinetYears.some((year) => year.id === selectedCabinetYearId)
-      ? selectedCabinetYearId
-      : currentCabinetYear?.id ?? publicCabinetYears[0]?.id ?? null;
+    isInvalidYearQuery || isResolvingYearQuery
+      ? null
+      : requestedCabinetYear?.id ?? currentCabinetYear?.id ?? publicCabinetYears[0]?.id ?? null;
   const selectedCabinetYear =
-    publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
+    isInvalidYearQuery || isResolvingYearQuery
+      ? null
+      : publicCabinetYears.find((year) => year.id === effectiveCabinetYearId) ?? currentCabinetYear ?? publicCabinetYears[0] ?? null;
   const shouldIncludeLegacyMembers = !!effectiveCabinetYearId && currentCabinetYear?.id === effectiveCabinetYearId;
+
+  useEffect(() => {
+    if (!requestedYear || !currentCabinetYear) return;
+    const matchedYear = isCurrentYearQuery
+      ? currentCabinetYear
+      : publicCabinetYears.find((year) => cabinetYearMatchesQuery(year, requestedYear));
+
+    if (matchedYear?.id !== currentCabinetYear.id) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('year');
+    setSearchParams(nextParams, { replace: true });
+  }, [currentCabinetYear, isCurrentYearQuery, publicCabinetYears, requestedYear, searchParams, setSearchParams]);
+
+  function handleCabinetYearChange(yearId: string) {
+    const nextParams = new URLSearchParams(searchParams);
+    const nextYear = publicCabinetYears.find((year) => year.id === yearId) ?? null;
+
+    if (!nextYear || nextYear.id === currentCabinetYear?.id) {
+      nextParams.delete('year');
+    } else {
+      nextParams.set('year', cabinetYearQueryValue(nextYear));
+    }
+
+    setCopyStatus('idle');
+    setSearchParams(nextParams);
+  }
+
+  async function copyCurrentLink() {
+    if (typeof window === 'undefined' || !navigator.clipboard) return;
+    setCopyStatus('idle');
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+  }
 
   const { data: members = [], isLoading: loadingMembers, error: membersError } = useCabinetMembers(
     effectiveCabinetYearId,
@@ -573,10 +664,13 @@ export function Cabinet() {
   const generalRoles = groupByRole(genBoard);
   const { featured: featuredExecRoles, supporting: supportingExecRoles } = splitExecutiveRoles(execRoles);
   const allExecRoles = [...featuredExecRoles, ...supportingExecRoles];
+  const isViewingArchive = !!selectedCabinetYear && selectedCabinetYear.id !== currentCabinetYear?.id;
+  const selectedYearRange = formatCabinetYearRange(selectedCabinetYear);
+  const selectorValue = selectedCabinetYear?.id ?? (isInvalidYearQuery ? '__not_found__' : '');
 
   return (
     <>
-      <PageTitle title="Cabinet" />
+      <PageTitle title={isInvalidYearQuery ? 'Cabinet Year Not Found' : 'Cabinet'} />
       {isDegraded && <DegradedModeBanner sourceName="cabinet" />}
 
       <div className="vsa-page-hero">
@@ -586,18 +680,48 @@ export function Cabinet() {
           <div className="mt-4 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_320px] lg:items-end">
             <div>
               <h1 className="vsa-page-title">
-                Cabinet <em>{formatCabinetYearRange(selectedCabinetYear)}</em>
+                {isInvalidYearQuery ? (
+                  <>
+                    Cabinet year <em>not found</em>
+                  </>
+                ) : isResolvingYearQuery ? (
+                  <>
+                    Cabinet <em>Archive</em>
+                  </>
+                ) : isViewingArchive ? (
+                  <>
+                    Cabinet <em>Archive</em>
+                  </>
+                ) : (
+                  <>
+                    Current <em>Cabinet</em>
+                  </>
+                )}
               </h1>
               <p className="mt-4 max-w-2xl font-sans text-sm leading-relaxed sm:text-[15px]" style={{ color: 'var(--text2)' }}>
-                The team behind VSA at UCSD. Meet the people planning events, building community,
-                producing programs, and shaping the year from the inside out.
+                {isInvalidYearQuery
+                  ? 'Cabinet year not found. Choose another Cabinet year below or return to the current Cabinet.'
+                  : isResolvingYearQuery
+                    ? `Looking up the ${requestedYear} Cabinet archive.`
+                  : isViewingArchive
+                    ? `Viewing ${selectedYearRange} Cabinet. Browse the people who shaped that year of VSA at UCSD.`
+                    : 'The current team behind VSA at UCSD. Meet the people planning events, building community, producing programs, and shaping the year from the inside out.'}
               </p>
               <p className="mt-3 font-sans text-xs uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
-                {selectedCabinetYear?.label ?? 'Current Cabinet'}
-                {selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''}
-                {' / '}
-                {members.length} members
+                {isInvalidYearQuery
+                  ? `Requested year: ${requestedYear}`
+                  : isResolvingYearQuery
+                    ? `Requested year: ${requestedYear}`
+                  : `${isViewingArchive ? 'Cabinet Archive' : 'Current Cabinet'} / ${selectedYearRange}${selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''} / ${members.length} members`}
               </p>
+              {isInvalidYearQuery && (
+                <Link
+                  to="/cabinet"
+                  className="mt-5 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  View current Cabinet
+                </Link>
+              )}
               {publicCabinetYears.length > 0 && (
                 <div className="mt-5 max-w-xs">
                   <label
@@ -607,16 +731,31 @@ export function Cabinet() {
                     Cabinet Year
                   </label>
                   <select
-                    value={effectiveCabinetYearId ?? ''}
-                    onChange={(event) => setSelectedCabinetYearId(event.target.value || null)}
+                    value={selectorValue}
+                    onChange={(event) => handleCabinetYearChange(event.target.value)}
                     className="scrapbook-select"
                   >
+                    {isInvalidYearQuery && (
+                      <option value="__not_found__" disabled>
+                        Cabinet year not found
+                      </option>
+                    )}
                     {publicCabinetYears.map((year) => (
                       <option key={year.id} value={year.id}>
-                        {year.label}
+                        {formatCabinetYearRange(year)}{year.id === currentCabinetYear?.id ? ' (current)' : ' archive'}
                       </option>
                     ))}
                   </select>
+                  {!isInvalidYearQuery && (
+                    <button
+                      type="button"
+                      onClick={copyCurrentLink}
+                      className="mt-2 rounded border px-3 py-1.5 font-sans text-[12px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+                    >
+                      {copyStatus === 'copied' ? 'Link copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy link'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -630,9 +769,29 @@ export function Cabinet() {
         </div>
       </div>
 
-      {loadingYearIds || loadingMembers ? (
+      {loadingCabinetYears || loadingYearIds || loadingMembers ? (
         <div className="flex justify-center px-5 py-24 sm:px-8 lg:px-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-brand-600" />
+        </div>
+      ) : isInvalidYearQuery ? (
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
+          <div
+            className="scrapbook-empty p-12 text-center"
+            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+          >
+            <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+              Cabinet year not found.
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              Choose another Cabinet year above, or view the current Cabinet to see the active board.
+            </p>
+            <Link
+              to="/cabinet"
+              className="mt-6 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              View current Cabinet
+            </Link>
+          </div>
         </div>
       ) : members.length === 0 ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
