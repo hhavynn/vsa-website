@@ -491,9 +491,9 @@ export default function AdminOverview() {
         aiInactiveRes,
         aiLastVerifiedRes,
       ] = await Promise.allSettled([
-        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_active', false),
-        supabase.from('ai_knowledge_base' as any).select('last_verified_at').order('last_verified_at', { ascending: false }).limit(1),
+        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_public', true).eq('is_active', true),
+        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_public', true).eq('is_active', false),
+        supabase.from('ai_knowledge_base' as any).select('last_verified_at').eq('is_public', true).order('last_verified_at', { ascending: false }).limit(1),
       ]);
       
       let aiTableExists = true;
