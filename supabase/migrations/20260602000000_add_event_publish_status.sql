@@ -13,3 +13,16 @@ create policy "Events are viewable by everyone"
   on public.events
   for select
   using (is_published = true);
+
+drop policy if exists "Admins can view all events" on public.events;
+create policy "Admins can view all events"
+  on public.events
+  for select
+  using (
+    exists (
+      select 1
+      from public.user_profiles
+      where id = auth.uid()
+        and is_admin = true
+    )
+  );
