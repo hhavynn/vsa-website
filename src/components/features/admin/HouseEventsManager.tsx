@@ -355,7 +355,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
           {editingEvent ? 'Edit House Event' : 'Create House Event'}
         </h2>
         <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-          These events appear on public House pages. Collab events appear on all hosting House pages.
+          Published House events appear on public House pages for the selected year. Collab events appear on every hosting House page.
         </p>
 
         <div className="mt-6 space-y-5">
@@ -411,7 +411,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
             </div>
             {houseProfiles.length === 0 && (
               <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                Create House profiles in the House Page Images tab before adding House events.
+                Create House profiles in Profiles & Images before adding House events for this year.
               </p>
             )}
           </div>
@@ -499,7 +499,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
             </label>
             <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text2)' }}>
               <input type="checkbox" checked={draft.is_published} onChange={(event) => setDraft({ ...draft, is_published: event.target.checked })} />
-              Published
+              Show publicly
             </label>
           </div>
 
@@ -521,13 +521,15 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
           <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
             <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Manage House Events</h2>
             <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-              {events.length} event{events.length !== 1 ? 's' : ''} for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.
+              {events.length} event{events.length !== 1 ? 's' : ''} for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. Drafts stay in Admin; published events appear on matching public House pages.
             </p>
           </div>
           {eventsLoading ? (
             <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading House events...</p>
           ) : events.length === 0 ? (
-            <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>No House events yet.</p>
+            <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
+              No House events found for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. Create one after profiles exist, or leave this empty if the year has no House event programming yet.
+            </p>
           ) : (
             <div>
               {[

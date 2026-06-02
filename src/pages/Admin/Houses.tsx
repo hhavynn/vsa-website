@@ -742,14 +742,27 @@ export default function AdminHouses() {
       <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="mb-4 sm:mb-0">
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>House Assignments</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Import House Reveal assignments without changing attendance or points.</p>
+          <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            Manage the selected academic year's House assignments, public House profiles/images, House parents, and House events. Assignment imports do not change attendance records or point calculations.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <span className="rounded border px-2 py-1" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
+              Editing: {selectedYear ? formatAcademicYear(selectedYear) : 'choose a year'}
+            </span>
+            <Link to="/house" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+              View public Houses
+            </Link>
+            <Link to="/leaderboard?view=houses" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+              View standings
+            </Link>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
             {([
-              ['assignments', 'Assignment Import'],
+              ['assignments', 'House Assignments'],
               ['backfill', 'Legacy Backfill'],
-              ['images', 'House Page Images'],
+              ['images', 'Profiles & Images'],
               ['events', 'House Events'],
             ] as const).map(([tab, label], index) => (
               <button
@@ -781,7 +794,7 @@ export default function AdminHouses() {
             <div className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <h2 className="mb-2 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Legacy Backfill from members.house</h2>
               <p className="mb-6 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                Reads the legacy <code className="rounded bg-[var(--color-surface2)] px-1 font-mono text-xs">members.house</code> field and creates <code className="rounded bg-[var(--color-surface2)] px-1 font-mono text-xs">house_memberships</code> records for members who do not yet have a membership for the selected year. House points only count for events on or after the effective start date.
+                Advanced one-time cleanup: reads the old member House value and creates House memberships for people who do not yet have one for the selected year. House points only count for events on or after the effective start date.
               </p>
 
               <div className="mb-5 grid gap-4 sm:grid-cols-2">
@@ -817,7 +830,7 @@ export default function AdminHouses() {
                 {loadingProfiles
                   ? 'Loading house profiles...'
                   : houseProfiles.length === 0
-                    ? `No house profiles found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in the House Page Images tab before backfilling.`
+                    ? `No House profiles found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in Profiles & Images before backfilling.`
                     : `${houseProfiles.length} profile${houseProfiles.length !== 1 ? 's' : ''} for ${selectedYear ? formatAcademicYear(selectedYear) : 'this year'}: ${houseProfiles.map((p) => p.display_name || p.house_key || p.house).join(', ')}.`}
               </div>
 
@@ -906,6 +919,9 @@ export default function AdminHouses() {
             <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
               Memberships start on the effective date. Earlier event attendance keeps individual points but does not earn house points.
             </p>
+            <p className="mt-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+              Selected year: {selectedYear ? formatAcademicYear(selectedYear) : 'choose a year'}. Applied memberships affect House pages and standings for this year only.
+            </p>
           </div>
 
           <div className="mb-5 grid gap-4 sm:grid-cols-2">
@@ -935,7 +951,7 @@ export default function AdminHouses() {
           </div>
 
           <div className="mb-5 rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface2)' }}>
-            {loadingProfiles ? 'Loading house profiles...' : `${houseProfiles.length} house profile${houseProfiles.length !== 1 ? 's' : ''} found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in the House Page Images tab before importing memberships.`}
+            {loadingProfiles ? 'Loading house profiles...' : `${houseProfiles.length} house profile${houseProfiles.length !== 1 ? 's' : ''} found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in Profiles & Images before importing memberships.`}
           </div>
 
           <label className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Sheet Format</label>

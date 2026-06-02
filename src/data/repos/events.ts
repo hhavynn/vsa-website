@@ -32,6 +32,7 @@ export interface EventFilters {
   offset?: number;
   sort_by?: 'date' | 'name' | 'created_at';
   sort_ascending?: boolean;
+  include_unpublished?: boolean;
 }
 
 export interface EventStats {
@@ -51,6 +52,7 @@ export class EventsRepository {
       let eventsQuery = supabase.from('events').select('*');
 
       // Apply filters
+      if (!filters.include_unpublished) eventsQuery = eventsQuery.eq('is_published', true);
       if (filters.event_type) eventsQuery = eventsQuery.eq('event_type', filters.event_type);
       if (filters.academic_term_id !== undefined) {
         eventsQuery = filters.academic_term_id
@@ -273,6 +275,7 @@ export class EventsRepository {
       const { data, error } = await supabase
         .from('events')
         .select('id, name, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url')
+        .eq('is_published', true)
         .gte('date', dateFrom)
         .order('date', { ascending: true })
         .limit(limit);

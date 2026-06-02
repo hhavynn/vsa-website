@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
+import { Link } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
@@ -20,6 +21,7 @@ const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
   event_type: 'other', check_in_form_url: '', points: 0,
   academic_term_id: null, start_time: null, end_time: null, end_date: null,
+  is_published: true,
 };
 
 type UploadedEventImage = {
@@ -107,7 +109,7 @@ function AcademicTermSelect({
 }
 
 export default function AdminEvents() {
-  const { events, refreshEvents } = useEvents();
+  const { events, refreshEvents } = useEvents({ include_unpublished: true });
   const { terms, loading: termsLoading, error: termsError, refreshTerms } = useAcademicTerms();
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -294,6 +296,7 @@ export default function AdminEvents() {
         points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
         check_in_code: checkInCode, is_code_expired: false,
+        is_published: newEvent.is_published ?? true,
         academic_term_id: academicTermId,
         start_time: newEvent.start_time || null,
         end_time: newEvent.end_time || null,
@@ -360,6 +363,7 @@ export default function AdminEvents() {
         event_type: selectedEvent.event_type, points: selectedEvent.points,
         image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null, check_in_code: selectedEvent.check_in_code,
         is_code_expired: selectedEvent.is_code_expired,
+        is_published: selectedEvent.is_published ?? true,
         check_in_form_url: selectedEvent.check_in_form_url || '',
         academic_term_id: academicTermId,
         start_time: selectedEvent.start_time || null,
@@ -403,6 +407,13 @@ export default function AdminEvents() {
         <p className="truncate font-sans text-base font-bold sm:text-sm sm:font-semibold" style={{ color: 'var(--color-text)' }}>{event.name}</p>
         <p className="mt-1 line-clamp-2 text-xs sm:line-clamp-1" style={{ color: 'var(--color-text2)' }}>{event.description}</p>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span className={`rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] ${
+            event.is_published
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+          }`}>
+            {event.is_published ? 'Published' : 'Draft'}
+          </span>
           <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
             {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
@@ -456,7 +467,9 @@ export default function AdminEvents() {
       <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <div className="mb-4 sm:mb-0">
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Events</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{events.length} events total</p>
+          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+            {events.length} events total. Published events appear on <Link to="/events" className="font-semibold text-[var(--brand)] hover:underline">/events</Link>, homepage previews, and Ask VSA event answers.
+          </p>
         </div>
         {/* Tab toggle */}
         <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
@@ -475,6 +488,9 @@ export default function AdminEvents() {
           {activeTab === 'create' ? (
             <div className="p-6 sm:p-8">
               <h2 className="mb-6 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Create Event</h2>
+              <p className="-mt-3 mb-6 text-sm" style={{ color: 'var(--color-text2)' }}>
+                Create the public event listing first, then add recap links after the event has happened.
+              </p>
               <form onSubmit={handleCreateEvent} className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
@@ -517,6 +533,20 @@ export default function AdminEvents() {
                     onChange={(termId) => setNewEvent({ ...newEvent, academic_term_id: termId })}
                   />
                 </div>
+                <label className="flex cursor-pointer items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={newEvent.is_published ?? true}
+                    onChange={e => setNewEvent({ ...newEvent, is_published: e.target.checked })}
+                    className="mt-1 rounded border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--brand)] focus:ring-[var(--brand)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Publish this event publicly</span>
+                    <span className="mt-1 block text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                      Turn this off to save a draft. Drafts stay in Admin and do not appear on public event pages or Ask VSA.
+                    </span>
+                  </span>
+                </label>
                 <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={4} required placeholder="Describe the event." /></div>
                 <div>
                   <label className={labelCls}>Image</label>
@@ -542,9 +572,14 @@ export default function AdminEvents() {
             <div>
               <div className="border-b px-6 py-5 sm:px-8" style={{ borderColor: 'var(--color-border)' }}>
                 <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Manage Events</h2>
+                <p className="mt-2 text-sm" style={{ color: 'var(--color-text2)' }}>
+                  Edit dates, points, images, public visibility, and recap links. Draft events are kept here until they are ready.
+                </p>
               </div>
               {upcomingEvents.length === 0 && pastEvents.length === 0 && (
-                <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>No events yet.</p>
+                <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
+                  No events found. Create an event to add it to Admin; leave it as a draft until it is ready for the public Events page.
+                </p>
               )}
               {upcomingEvents.length > 0 && (
                 <div className="mb-2">
@@ -621,6 +656,20 @@ export default function AdminEvents() {
                     onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
                   />
                 </div>
+                <label className="flex cursor-pointer items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedEvent.is_published ?? true}
+                    onChange={e => setSelectedEvent({ ...selectedEvent, is_published: e.target.checked })}
+                    className="mt-1 rounded border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--brand)] focus:ring-[var(--brand)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Show this event publicly</span>
+                    <span className="mt-1 block text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                      Published events appear on /events, homepage previews, and Ask VSA. Drafts remain editable in Admin only.
+                    </span>
+                  </span>
+                </label>
                 <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={4} required /></div>
                 <div>
                   <label className={labelCls}>Check-in Code</label>

@@ -362,6 +362,7 @@ export interface Database {
           thumbnail_url: string | null;
           check_in_code: string | null;
           is_code_expired: boolean;
+          is_published: boolean;
           academic_term_id: string | null;
           created_at: string;
           updated_at: string;
@@ -379,6 +380,7 @@ export interface Database {
           thumbnail_url?: string | null;
           check_in_code?: string | null;
           is_code_expired?: boolean;
+          is_published?: boolean;
           academic_term_id?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -396,6 +398,7 @@ export interface Database {
           thumbnail_url?: string | null;
           check_in_code?: string | null;
           is_code_expired?: boolean;
+          is_published?: boolean;
           academic_term_id?: string | null;
           created_at?: string;
           updated_at?: string;

@@ -23,6 +23,7 @@ interface AdminToolCard {
   to: string;
   label: string;
   desc: string;
+  affects?: string;
   keywords: string[];
 }
 
@@ -57,30 +58,35 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         to: '/admin/events',
         label: 'Events & Recaps',
         desc: 'Edit upcoming events, dates, locations, point values, event images, and recap notes.',
+        affects: '/events, homepage event previews, Ask VSA event answers',
         keywords: ['events', 'event recaps', 'recaps', 'dates', 'locations', 'points', 'images', 'check in'],
       },
       {
         to: '/admin/houses',
         label: 'Houses',
-        desc: 'Manage house assignments, house images, and House Reveal backfill tools.',
+        desc: 'Manage House assignments, public House profiles, House images, House parents, and House events.',
+        affects: '/house, /house/year/:year, House detail pages, house standings',
         keywords: ['houses', 'house', 'assignments', 'reveal', 'membership'],
       },
       {
         to: '/admin/ace',
         label: 'ACE Families',
         desc: 'Manage ACE family groups and member relationships.',
+        affects: '/ace and ACE family displays',
         keywords: ['ace', 'families', 'family', 'members'],
       },
       {
         to: '/admin/uvsa-schools',
         label: 'UVSA School Cards',
         desc: 'Manage SoCal VSA school cards shown on the UVSA Network page.',
+        affects: '/uvsa-network',
         keywords: ['uvsa', 'schools', 'externals', 'network', 'socal'],
       },
       {
         to: '/admin/external-events',
         label: 'External Events',
         desc: 'Manage UVSA and partner events promoted outside regular VSA programming.',
+        affects: '/uvsa-network and external event cards',
         keywords: ['external', 'externals', 'uvsa', 'events', 'partner'],
       },
     ],
@@ -91,38 +97,44 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
     tools: [
       {
         to: '/admin/content',
-        label: 'Homepage Content',
-        desc: 'Update homepage copy, featured photos, and program content without changing code.',
+        label: 'Homepage & Program Content',
+        desc: 'Update homepage presidents message, featured photos, and program page content without changing code.',
+        affects: '/, /get-involved, /intern-program, /vcn, /wild-n-culture',
         keywords: ['homepage', 'home', 'content', 'copy', 'photos', 'programs'],
       },
       {
         to: '/admin/cabinet',
         label: 'Cabinet',
         desc: 'Update cabinet profiles, photos, roles, and cabinet years shown on the public Cabinet page.',
+        affects: '/cabinet and cabinet archive years',
         keywords: ['cabinet', 'profiles', 'board', 'officers', 'photos'],
       },
       {
         to: '/admin/gallery',
         label: 'Gallery',
         desc: 'Upload gallery drops and connect memories to events with albums and cover images.',
+        affects: '/gallery and event recap links',
         keywords: ['gallery', 'photos', 'albums', 'memories', 'media'],
       },
       {
         to: '/admin/vcn',
         label: 'VCN Archives',
-        desc: 'Manage VCN archive entries, media links, and source notes.',
+        desc: 'Manage VCN archive entries, current production selection, media links, and source notes.',
+        affects: '/vcn/current and /vcn/archive',
         keywords: ['vcn', 'archives', 'archive', 'media', 'culture night'],
       },
       {
         to: '/admin/resources',
         label: 'Resources Index',
         desc: 'Maintain admin-only Drive, form, and doc links for cabinet work.',
+        affects: 'Admin-only resources and Ask VSA knowledge operations',
         keywords: ['resources', 'source of truth', 'drive', 'forms', 'docs', 'index', 'ai', 'assistant'],
       },
       {
         to: '/admin/settings',
         label: 'Site Settings',
-        desc: 'Adjust existing site-wide admin settings and public content switches.',
+        desc: 'Update logo, theme assets, and existing site-wide public content switches.',
+        affects: 'Global header, footer, logo, and site settings',
         keywords: ['settings', 'site settings', 'config', 'site'],
       },
     ],
@@ -135,30 +147,35 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         to: '/admin/import',
         label: 'Attendance Imports & Audit Logs',
         desc: 'Import attendance sheets, review matches, and check completed or failed import records.',
+        affects: 'Member point records and attendance audit history',
         keywords: ['attendance', 'imports', 'import', 'audit', 'logs', 'sheets'],
       },
       {
         to: '/admin/members',
         label: 'Members',
         desc: 'Manage members, aliases, exports, and records used by attendance and points tools.',
+        affects: 'Find My Points, attendance matching, and admin member tools',
         keywords: ['members', 'member', 'aliases', 'records', 'attendance', 'points'],
       },
       {
         to: '/admin/points',
         label: 'Points Tools',
         desc: 'Review point records and jump to related member, import, event, and merge tools.',
+        affects: '/leaderboard and /points lookups',
         keywords: ['points', 'leaderboard', 'find my points', 'records', 'tools'],
       },
       {
         to: '/admin/merge-suggestions',
         label: 'Merge Review',
         desc: 'Review duplicate member suggestions so point records stay clean.',
+        affects: 'Member records used by attendance and points',
         keywords: ['merge', 'duplicates', 'members', 'cleanup', 'data health'],
       },
       {
         to: '/admin/years',
         label: 'Years & Terms',
         desc: 'Manage academic terms and cabinet years used by events, archives, and points.',
+        affects: 'Event grouping, cabinet years, archives, and academic-year filters',
         keywords: ['years', 'terms', 'quarters', 'academic', 'cabinet years'],
       },
     ],
@@ -171,18 +188,21 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         to: '/admin',
         label: 'Data Health Warnings',
         desc: 'Check missing event terms, incomplete upcoming event info, and gallery cover issues.',
+        affects: 'Admin dashboard diagnostics',
         keywords: ['data health', 'warnings', 'diagnostics', 'missing', 'issues'],
       },
       {
         to: '/admin/analytics',
         label: 'Analytics',
         desc: 'Review existing admin analytics and high-level site activity signals.',
+        affects: 'Admin-only analytics views',
         keywords: ['analytics', 'reports', 'activity', 'diagnostics'],
       },
       {
         to: '/admin/feedback',
         label: 'Feedback',
         desc: 'Triage bugs, feature requests, and user suggestions from the public feedback form.',
+        affects: '/feedback submissions and admin triage',
         keywords: ['feedback', 'bugs', 'requests', 'support', 'suggestions'],
       },
     ],
@@ -246,6 +266,11 @@ function ToolCard({ tool }: { tool: AdminToolCard }) {
       <p className="mt-3 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
         {tool.desc}
       </p>
+      {tool.affects && (
+        <p className="mt-4 rounded border px-3 py-2 font-sans text-[11px] leading-relaxed" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface2)' }}>
+          <span className="font-semibold" style={{ color: 'var(--color-text2)' }}>Public page affected:</span> {tool.affects}
+        </p>
+      )}
     </Link>
   );
 }

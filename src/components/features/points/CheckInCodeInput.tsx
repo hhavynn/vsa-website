@@ -28,6 +28,7 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
         .from('events')
         .select('*')
         .eq('check_in_code', code.toUpperCase())
+        .eq('is_published', true)
         .single();
 
       if (eventError) throw eventError;

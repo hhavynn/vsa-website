@@ -355,6 +355,7 @@ async function getLatestMemory(): Promise<LatestMemory | null> {
       .from('events')
       .select('id, name, date, image_url, thumbnail_url')
       .eq('id', recap.event_id)
+      .eq('is_published', true)
       .single();
 
     if (event) {

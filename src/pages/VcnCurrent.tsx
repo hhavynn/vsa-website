@@ -6,17 +6,12 @@ import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { ProgramContentStatus, VCNArchive } from '../types';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VCN CURRENT YEAR — Update all fields in this config each production cycle.
-// This file is the only thing that needs editing for a new VCN year.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const VCN_CURRENT = {
-  active: true,
-  year: '2026',
-  title: 'Tình Yêu Thầm Lặng',
-  synopsis: 'Tình Yêu Thầm Lặng explores unspoken love within a Vietnamese household, highlighting family sacrifice, generational misunderstanding, and the quiet ways care is expressed through action rather than words.',
-  date: 'Saturday, April 18, 2026',
+const VCN_PLACEHOLDER = {
+  active: false,
+  year: '',
+  title: '',
+  synopsis: '',
+  date: '',
   time: '',
   venue: '',
   ticketStatus: 'hidden' as ProgramContentStatus,
@@ -41,7 +36,7 @@ function formatArchiveDate(date: string | null) {
 }
 
 function currentFromArchive(archive: VCNArchive | null) {
-  if (!archive) return VCN_CURRENT;
+  if (!archive) return VCN_PLACEHOLDER;
 
   return {
     active: true,
@@ -56,9 +51,9 @@ function currentFromArchive(archive: VCNArchive | null) {
     ticketNote: archive.ticket_note ?? '',
     posterUrl: archive.poster_url || archive.cover_thumbnail_url || archive.cover_image_url || '',
     trailerUrl: archive.trailer_url || '',
-    dances: VCN_CURRENT.dances,
-    sponsors: VCN_CURRENT.sponsors,
-    messageFromTeam: VCN_CURRENT.messageFromTeam,
+    dances: VCN_PLACEHOLDER.dances,
+    sponsors: VCN_PLACEHOLDER.sponsors,
+    messageFromTeam: VCN_PLACEHOLDER.messageFromTeam,
   };
 }
 
