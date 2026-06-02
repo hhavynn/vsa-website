@@ -16,6 +16,7 @@ const NAV_GROUPS = [
     { to: '/admin/cabinet', label: 'Cabinet' },
     { to: '/admin/gallery', label: 'Gallery' },
     { to: '/admin/vcn', label: 'VCN Archives' },
+    { to: '/admin/ai-knowledge', label: 'Ask VSA Knowledge' },
     { to: '/admin/resources', label: 'Resources Index' },
     { to: '/admin/settings', label: 'Site Settings' },
   ]},

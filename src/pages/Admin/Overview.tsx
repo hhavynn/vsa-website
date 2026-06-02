@@ -173,10 +173,17 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         keywords: ['vcn', 'archives', 'archive', 'media', 'culture night'],
       },
       {
+        to: '/admin/ai-knowledge',
+        label: 'Ask VSA Knowledge',
+        desc: 'Manage public-safe facts Ask VSA can use when answering member questions.',
+        affects: 'Ask VSA assistant responses',
+        keywords: ['ai', 'assistant', 'ask vsa', 'knowledge', 'snippets', 'faq'],
+      },
+      {
         to: '/admin/resources',
         label: 'Resources Index',
         desc: 'Maintain admin-only Drive, form, and doc links for cabinet work.',
-        affects: 'Admin-only resources and Ask VSA knowledge operations',
+        affects: 'Admin-only resources and cabinet operations',
         keywords: ['resources', 'source of truth', 'drive', 'forms', 'docs', 'index', 'ai', 'assistant'],
       },
       {
@@ -295,7 +302,7 @@ function HealthWarning({ count, label, to, critical = false }: { count: number; 
   );
 }
 
-function ToolCard({ tool }: { tool: AdminToolCard }) {
+function ToolCard({ tool, activeAiSnippets }: { tool: AdminToolCard; activeAiSnippets?: number }) {
   return (
     <Link
       to={tool.to}
@@ -318,6 +325,11 @@ function ToolCard({ tool }: { tool: AdminToolCard }) {
       {tool.affects && (
         <p className="mt-4 rounded border px-3 py-2 font-sans text-[11px] leading-relaxed" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface2)' }}>
           <span className="font-semibold" style={{ color: 'var(--color-text2)' }}>Public page affected:</span> {tool.affects}
+        </p>
+      )}
+      {tool.to === '/admin/ai-knowledge' && typeof activeAiSnippets === 'number' && (
+        <p className="mt-3 rounded border px-3 py-2 font-sans text-[11px] leading-relaxed" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface2)' }}>
+          <span className="font-semibold" style={{ color: 'var(--color-text2)' }}>{activeAiSnippets}</span> active snippets available to Ask VSA.
         </p>
       )}
     </Link>
@@ -665,7 +677,11 @@ export default function AdminOverview() {
                       </div>
                       <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
                         {group.tools.map(tool => (
-                          <ToolCard key={tool.to} tool={tool} />
+                          <ToolCard
+                            key={tool.to}
+                            tool={tool}
+                            activeAiSnippets={stats.aiTableExists ? stats.aiSnippetsActive : undefined}
+                          />
                         ))}
                       </div>
                     </section>
