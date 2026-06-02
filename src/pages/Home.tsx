@@ -15,6 +15,8 @@ import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seaso
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion } from 'framer-motion';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { FALLBACK_LINKS } from '../config/publicFallbackContent';
 
 const pillars = [
   {
@@ -167,12 +169,13 @@ export function Home() {
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const today = getTodayDateOnly();
-  const { data: upcomingEvents = [] } = useQuery<PublicEventPreview[]>({
+  const { data: upcomingEvents = [], isError: eventsError } = useQuery<PublicEventPreview[]>({
     queryKey: ['home', 'upcoming-events-section', today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
   const logoSrc = siteSettings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo.jpg`;
   const presidentParagraphs = splitPresidentsMessage(presidentsContent.message);
@@ -195,6 +198,7 @@ export function Home() {
   return (
     <>
       <PageTitle title="Home" />
+      {eventsError && <DegradedModeBanner sourceName="events" />}
 
       <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16">
         {/* Tape accent for the whole board */}
@@ -346,7 +350,23 @@ export function Home() {
                 <div className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
                   Upcoming
                 </div>
-                {!featured ? (
+                {eventsError ? (
+                  <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right space-y-3" style={{ color: 'var(--text3)' }}>
+                    <p className="font-serif text-lg leading-tight" style={{ color: 'var(--text)' }}>
+                      Events are temporarily unavailable
+                    </p>
+                    <p className="font-sans text-sm leading-relaxed">
+                      Check{' '}
+                      <a href={FALLBACK_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>Instagram</a>
+                      {' '}or{' '}
+                      <a href={FALLBACK_LINKS.linktree} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>Linktree</a>
+                      {' '}for the latest updates.
+                    </p>
+                    <Link to="/events" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                      View events page
+                    </Link>
+                  </div>
+                ) : !featured ? (
                   <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
                     {useSummerEventsEmptyState ? (
                       <div className="space-y-3">

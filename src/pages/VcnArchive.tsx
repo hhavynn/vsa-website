@@ -7,6 +7,11 @@ import { VCNArchive as VCNArchiveEntry } from '../types';
 import { formatDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 
+import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
+import { FALLBACK_LINKS } from '../config/publicFallbackContent';
+
 function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
   const eventDate = formatDateOnly(entry.event_date, 'MMMM d, yyyy');
   const title = entry.title || `Vietnamese Culture Night ${entry.year}`;
@@ -128,12 +133,30 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
 
 export function VCNArchive() {
   const { archives, loading, error } = usePublishedVcnArchives();
+  const isDegraded = isSupabaseUnavailable(error);
 
   if (loading) {
     return (
       <>
         <PageTitle title="VCN Archive" />
         <PageLoader message="Loading VCN archive..." />
+      </>
+    );
+  }
+
+  if (isDegraded) {
+    return (
+      <>
+        <PageTitle title="VCN Archive" />
+        <DegradedModeBanner sourceName="vcn-archive" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="VCN Archive temporarily unavailable"
+            message="We're having trouble loading the VCN production archive. Check @vsaatucsd on Instagram for historical show highlights."
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
+        </div>
       </>
     );
   }
@@ -150,6 +173,7 @@ export function VCNArchive() {
   return (
     <>
       <PageTitle title="VCN Archive" />
+      {/* Degraded mode already handled above with full page fallback */}
 
       <div className="program-app">
         <section className="program-hero">
