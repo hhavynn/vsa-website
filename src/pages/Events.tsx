@@ -534,10 +534,13 @@ export function Events() {
     return (
       <>
         <PageTitle title="Events" />
-        <div className="mx-auto max-w-4xl px-8 py-20 text-center">
-          <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-            Error loading events: {(upcomingError as any)?.message || (pastError as any)?.message || 'Unknown error'}
-          </p>
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="Events are temporarily unavailable"
+            message="We're having trouble loading the event board right now. Please check back later or use VSA's official channels for the latest updates."
+            actionLabel="View on Instagram"
+            actionHref={FALLBACK_LINKS.instagram}
+          />
         </div>
       </>
     );

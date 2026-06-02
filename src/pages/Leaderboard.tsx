@@ -476,11 +476,16 @@ export function Leaderboard() {
   if ((waitingForInitialYear || loading) && selectedYear === null) return <PageLoader message="Loading leaderboard..." />;
   if (error && !isDegradedMode) {
     return (
-      <div className="mx-auto max-w-4xl px-8 py-20 text-center">
-        <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-          {(error as any)?.message || String(error)}
-        </p>
-      </div>
+      <>
+        <PageTitle title="Leaderboard" />
+        <div className="vsa-container py-20">
+          <ContentUnavailableState
+            title="Leaderboard temporarily unavailable"
+            message="We're having trouble loading the leaderboard right now. Please check back later."
+            showLinks={false}
+          />
+        </div>
+      </>
     );
   }
 
