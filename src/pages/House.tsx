@@ -444,11 +444,17 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
 
       {imageUrl && (
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded border scrapbook-photo-sm" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex h-full w-full items-center justify-center bg-[var(--color-surface2)]">
+            <span className="font-serif text-lg italic" style={{ color }}>VSA</span>
+          </div>
           <img
             src={getSupabaseImageUrl(imageUrl, { width: 128, height: 128, resize: 'cover', quality: 70 })}
             alt={event.title}
-            className="h-full w-full object-cover"
+            className="-mt-16 h-full w-full object-cover"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </div>
       )}
@@ -865,21 +871,23 @@ export function House() {
                       className="relative aspect-[4/3] overflow-hidden"
                       style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
                     >
+                      <div className="flex h-full items-center justify-center">
+                        <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
+                      </div>
                       {imageUrl ? (
                         <img
                           src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
                           srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
                           sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
                           alt={asset.image_alt || label}
-                          className="h-full w-full object-cover"
+                          className="absolute inset-0 h-full w-full object-cover"
                           loading="lazy"
                           decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
-                        </div>
-                      )}
+                      ) : null}
 
                       {/* Rank badge overlay */}
                       {rank !== null && !isArchive && (

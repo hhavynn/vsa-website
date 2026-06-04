@@ -69,6 +69,9 @@ export function HouseEventCard({
       <div className="grid gap-0 sm:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
         {/* Image Area */}
         <div className="relative min-h-[200px] bg-[var(--color-surface2)] sm:min-h-0">
+          <div className="flex h-full min-h-[200px] items-center justify-center">
+            <span className="font-serif text-3xl italic" style={{ color }}>VSA</span>
+          </div>
           {imageUrl ? (
             <img
               src={getSupabaseImageUrl(imageUrl, { width: 480, height: 360, resize: 'cover', quality: 72 })}
@@ -76,12 +79,11 @@ export function HouseEventCard({
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
               decoding="async"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
-          ) : (
-            <div className="flex h-full min-h-[200px] items-center justify-center">
-              <span className="font-serif text-3xl italic" style={{ color }}>VSA</span>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Content Area */}

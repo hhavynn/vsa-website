@@ -866,8 +866,9 @@ function SchoolVisualMark({
   const sizeClass = size === "lg" ? "h-32 w-32" : "h-14 w-14";
   const textClass = size === "lg" ? "text-2xl" : "text-sm";
   const logoUrl = getSafeLogoUrl(school?.logo_url);
+  const [logoFailed, setLogoFailed] = React.useState(false);
 
-  if (logoUrl) {
+  if (logoUrl && !logoFailed) {
     return (
       <div
         className={`${sizeClass} shrink-0 rounded-lg border bg-[var(--surface2)] p-2 shadow-sm`}
@@ -881,6 +882,7 @@ function SchoolVisualMark({
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
+          onError={() => setLogoFailed(true)}
         />
       </div>
     );

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { Event } from '../../../types';
 import { CountdownTimer } from '../../common/CountdownTimer';
@@ -12,6 +13,7 @@ export interface EventCardProps {
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
   const imageUrl = event.thumbnail_url || event.image_url;
+  const [imageFailed, setImageFailed] = useState(false);
 
   const handleSaveToCalendar = () => {
     if (!event.date) return;
@@ -47,7 +49,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
     <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden flex flex-col h-full hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
       {/* Image */}
       <div className="relative h-44 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-        {imageUrl ? (
+        {imageUrl && !imageFailed ? (
           <img
             src={getSupabaseImageUrl(imageUrl, {
               width: 520,
@@ -64,6 +66,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
             className="w-full h-full object-cover"
             loading="lazy"
             decoding="async"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -123,10 +126,10 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
           disabled={!event.date}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          Add to Google Calendar
+          <span className="leading-tight">Add to Google Calendar</span>
         </button>
       </div>
     </div>

@@ -43,14 +43,13 @@ export function AddToCalendarButton({ event, variant = 'default' }: Props) {
       href={googleUrl(event)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-lg border font-mono text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors duration-150"
+      className="inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg border text-center font-mono text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors duration-150"
       style={{
         padding: isGhost ? '7px 12px' : '9px 14px',
         borderColor: 'var(--color-border-strong)',
         background: isGhost ? 'transparent' : 'var(--color-surface)',
         color: 'var(--color-text2)',
         textDecoration: 'none',
-        whiteSpace: 'nowrap',
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border-strong)';
@@ -62,7 +61,7 @@ export function AddToCalendarButton({ event, variant = 'default' }: Props) {
       }}
     >
       <CalendarIcon />
-      <span>Add to Google Calendar</span>
+      <span className="leading-tight">Add to Google Calendar</span>
     </a>
   );
 }
