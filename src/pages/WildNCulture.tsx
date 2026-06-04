@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useProgramContent } from '../hooks/useProgramContent';
 import {
   getProgramMetaParts,
@@ -141,6 +142,20 @@ export function WildNCulture() {
             <p className="program-body">
               WNC is also a night for shared culture, school pride, and the kind of chaotic fun that only a packed auditorium can produce.
             </p>
+          </div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Join the WNC Team</div>
+            <ApplicationCTA
+              applicationKeys="wnc_team_form"
+              fallback={{
+                not_open:
+                  "Interest forms will reopen closer to the next Wild 'N Culture cycle.",
+                closed: 'WNC team forms have closed for this cycle.',
+              }}
+            />
           </div>
         </section>
 

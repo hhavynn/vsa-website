@@ -6,6 +6,7 @@ const NAV_GROUPS = [
   { group: null, items: [{ to: '/admin', label: 'Dashboard' }] },
   { group: 'Member Experience', items: [
     { to: '/admin/events', label: 'Events' },
+    { to: '/admin/applications', label: 'Applications' },
     { to: '/admin/houses', label: 'Houses' },
     { to: '/admin/ace', label: 'ACE Families' },
     { to: '/admin/uvsa-schools', label: 'UVSA Schools' },

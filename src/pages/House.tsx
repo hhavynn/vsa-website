@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { leaderboardRepository } from '../data/repos/leaderboard';
@@ -785,6 +786,22 @@ export function House() {
                   </a>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* ── House applications (fall / winter / spring) ── */}
+        {!isArchive && (
+          <section className="program-section">
+            <div className="program-section-inner">
+              <div className="program-eyebrow">House Applications</div>
+              <ApplicationCTA
+                applicationKeys={['house_fall', 'house_winter', 'house_spring']}
+                fallback={{
+                  not_open: 'House applications reopen next quarter.',
+                  closed: 'House applications reopen next quarter.',
+                }}
+              />
             </div>
           </section>
         )}

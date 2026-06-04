@@ -128,6 +128,58 @@ export interface ProgramContent {
   updated_at: string;
 }
 
+export type ApplicationKey =
+  | 'ace_application'
+  | 'house_fall'
+  | 'house_winter'
+  | 'house_spring'
+  | 'intern_application'
+  | 'cabinet_application'
+  | 'vcn_stage_ninja_interest'
+  | 'vcn_props_team_interest'
+  | 'wnc_team_form';
+
+export type ApplicationStatus = 'disabled' | 'not_open' | 'open' | 'closed';
+
+// Admin-only row (raw target_url visible to admins).
+export interface ApplicationLink {
+  id: string;
+  application_key: ApplicationKey;
+  title: string;
+  description: string | null;
+  button_label: string;
+  target_url: string;
+  open_at: string;
+  due_at: string;
+  is_enabled: boolean;
+  before_open_message: string | null;
+  after_close_message: string | null;
+  sort_order: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Public-safe row from the public_application_links view. target_url is null
+// unless the window is currently active; status is computed in the database.
+export interface PublicApplicationLink {
+  id: string;
+  application_key: ApplicationKey;
+  title: string;
+  description: string | null;
+  button_label: string;
+  target_url: string | null;
+  status: ApplicationStatus;
+  open_at: string;
+  due_at: string;
+  is_enabled: boolean;
+  before_open_message: string | null;
+  after_close_message: string | null;
+  sort_order: number;
+  updated_at: string;
+}
+
 export type ResourceLinkVisibility = 'admin_only';
 
 export interface ResourceLink {

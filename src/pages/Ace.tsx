@@ -18,6 +18,7 @@ import {
 } from '../lib/aceFamilyAdapter';
 import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import '../styles/ace.css';
 
 // Members whose role_label contains these strings are treated as fam heads.
@@ -251,6 +252,15 @@ export function Ace() {
             </div>
           </section>
         )}
+
+        {/* ACE Application */}
+        <section className="ace-section">
+          <div className="ace-eyebrow">Apply to ACE</div>
+          <ApplicationCTA
+            applicationKeys="ace_application"
+            fallback={{ closed: 'ACE applications have closed. Check back next year.' }}
+          />
+        </section>
 
         {/* Fam tabs */}
         <section className="ace-section">

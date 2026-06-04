@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 
 type CabinetMember = CabinetMemberRaw;
 
@@ -808,6 +809,17 @@ export function Cabinet() {
         </div>
       ) : (
         <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
+          {/* ── CABINET APPLICATION — separate from the member display ── */}
+          {!isViewingArchive && (
+            <section className="mb-16">
+              <span className="scrapbook-sticker scrapbook-sticker-coral mb-3">Join Cabinet</span>
+              <ApplicationCTA
+                applicationKeys="cabinet_application"
+                fallback={{ closed: 'Cabinet applications have closed. Check back next year.' }}
+              />
+            </section>
+          )}
+
           {/* ── EXECUTIVE BOARD — one cohesive staggered wall ── */}
           {execBoard.length > 0 && (
             <section className="mb-16">
