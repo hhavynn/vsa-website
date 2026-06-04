@@ -16,9 +16,9 @@ const programs = [
     id: 'house',
     tag: 'Competition',
     title: 'House Program',
-    description: 'Join one of four houses for friendly rivalries, close-knit events, and a year-long battle for the ultimate prize.',
+    description: 'Join a House for friendly rivalries, close-knit events, and a year-long battle for the ultimate prize.',
     link: '/house-system',
-    details: ['4 Houses', 'Points Competition', 'Exclusive Events'],
+    details: ['House Reveal', 'Points Competition', 'Exclusive Events'],
   },
   {
     id: 'intern',

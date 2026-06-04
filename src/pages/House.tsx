@@ -17,7 +17,7 @@ import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImag
 import { HouseEvent, HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
-import { getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
+import { getLegacyHouseArchiveByYear, getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -502,6 +502,7 @@ export function House() {
   const isPastYear = activeYear !== null && activeYear === currentYear - 1;
   const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
   const isFutureYear = activeYear !== null && activeYear > currentYear;
+  const legacyArchiveEntry = activeYearLabel ? getLegacyHouseArchiveByYear(activeYearLabel) : null;
 
   const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
     queryKey: ['house', 'upcoming-house-event-preview', today, activeYear],
@@ -537,7 +538,7 @@ export function House() {
     : houseAssets.length > 0
       ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
       : isArchive
-        ? []
+        ? (legacyArchiveEntry?.houses ?? []).map((house) => ({ house, asset: undefined }))
         : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
 
   useEffect(() => {
@@ -662,15 +663,15 @@ export function House() {
           <section className="program-hero">
             <div className="program-hero-grain" />
             <div className="program-hero-inner">
-              <span className="program-hero-kicker">Coming Fall {activeYear + 1}</span>
+              <span className="program-hero-kicker">Not announced yet</span>
               <h1 className="program-title">
                 House <span className="program-title-script">{activeYearLabel}</span>
               </h1>
               <p className="program-hero-meta">
-                House apps, House Reveal, and the new Houses for {activeYearLabel} will all be announced in fall. Check back once the new school year kicks off.
+                {activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.
               </p>
               <div className="program-hero-actions">
-                <span className="scrapbook-sticker scrapbook-sticker-gold">Coming Fall {activeYear + 1}</span>
+                <span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>
               </div>
             </div>
             <div className="program-watermark">houses</div>
@@ -689,10 +690,10 @@ export function House() {
               <div className="scrapbook-paper mx-auto max-w-xl p-8 text-center">
                 <span className="scrapbook-sticker mb-6 inline-block">🏠</span>
                 <h2 className="mt-4 font-serif text-[28px] leading-tight" style={{ color: 'var(--color-text)' }}>
-                  {activeYearLabel} Houses haven't been revealed yet
+                  {activeYearLabel} Houses have not been announced yet
                 </h2>
                 <p className="mt-4 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                  Follow <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a> on Instagram to find out when House apps open.
+                  Current House information will be updated once assignments are finalized. Follow <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a> on Instagram for official House Reveal announcements.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <Link to="/house" className="vsa-btn-primary font-sans text-sm">
@@ -791,7 +792,9 @@ export function House() {
               {isArchive ? `About ${activeYearLabel}` : 'About the Program'}
             </div>
             <p className="program-body">
-              {isArchive
+              {isArchive && legacyArchiveEntry?.status === 'unconfirmed'
+                ? `No confirmed public House archive has been found for ${activeYearLabel}. This year is kept as an archive gap until VSA can verify the House names from public records or alumni memory.`
+                : isArchive
                 ? `The House Program in ${activeYearLabel} was a year-long community experience. Members were placed into houses to participate in socials, bonding activities, and VSA events, building friendships and competing for the top spot on the leaderboard.`
                 : 'The House Program is a year-long community experience within VSA. Members are placed into one of four houses and participate in socials, bonding activities, and VSA events to earn points and build friendships. At the end of the year, the house with the most points wins.'}
             </p>
@@ -809,6 +812,16 @@ export function House() {
             <div className="program-eyebrow">
               {isArchive ? `${activeYearLabel} Houses` : 'The Four Houses'}
             </div>
+            {displayedHouses.length === 0 && isArchive && (
+              <div className="scrapbook-empty mb-5 p-6 text-center">
+                <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                  No confirmed Houses yet
+                </p>
+                <p className="mx-auto mt-2 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                  This archive year is intentionally left blank until the House names can be verified.
+                </p>
+              </div>
+            )}
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {displayedHouses.map(({ house, asset }, index) => {
                 const color = getHouseColor(house, asset);
@@ -822,24 +835,28 @@ export function House() {
                 // Deterministic rotation
                 const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
 
-                const detailHref = isArchive
-                  ? `/house/year/${activeYearLabel}/${houseSlugFromKey(asset?.house_key || asset?.house || label)}`
-                  : getHousePagePath({
-                    house_key: asset?.house_key ?? house,
-                    house: asset?.house ?? house,
-                    display_name: label,
-                  });
+                const hasPublishedDetail = !isArchive || !!asset;
+                const detailHref = hasPublishedDetail
+                  ? isArchive
+                    ? `/house/year/${activeYearLabel}/${houseSlugFromKey(asset?.house_key || asset?.house || label)}`
+                    : getHousePagePath({
+                      house_key: asset?.house_key ?? house,
+                      house: asset?.house ?? house,
+                      display_name: label,
+                    })
+                  : null;
+                const HouseCard = (detailHref ? Link : 'article') as any;
 
                 return (
-                  <Link
+                  <HouseCard
                     key={house}
-                    to={detailHref}
-                    className={`program-feature-card block overflow-hidden p-0 transition-all scrapbook-hover-tilt hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${rotationClass}`}
+                    {...(detailHref ? { to: detailHref } : {})}
+                    className={`program-feature-card block overflow-hidden p-0 transition-all ${detailHref ? 'scrapbook-hover-tilt hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2' : ''} ${rotationClass}`}
                     style={{ 
                       borderColor: `${color}55`,
                       '--tw-ring-color': color 
                     } as any}
-                    aria-label={`View ${label} house page`}
+                    aria-label={detailHref ? `View ${label} house page` : `${label} archive summary`}
                   >
 
                     <span className="scrapbook-pin" aria-hidden />
@@ -940,10 +957,10 @@ export function House() {
                         className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
                         style={{ color }}
                       >
-                        {isArchive ? 'View Archive →' : 'Explore →'}
+                        {detailHref ? (isArchive ? 'View Archive →' : 'Explore →') : 'Archive summary'}
                       </span>
                     </div>
-                  </Link>
+                  </HouseCard>
                 );
               })}
             </div>

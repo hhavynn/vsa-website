@@ -119,7 +119,7 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
   {
     name: 'House',
     description:
-      'A year-long community competition inside VSA. Get sorted into one of four Houses, meet your crew, and earn points together throughout the year.',
+      'A year-long community competition inside VSA. Get sorted into a House, meet your crew, and earn points together throughout the year.',
     slug: 'house',
   },
   {
