@@ -120,8 +120,9 @@ function EventImage({
   sizes?: string;
 }) {
   const imageUrl = event.thumbnail_url || event.image_url;
+  const [imageFailed, setImageFailed] = useState(false);
 
-  if (imageUrl) {
+  if (imageUrl && !imageFailed) {
     return (
       <img
         src={getSupabaseImageUrl(imageUrl, {
@@ -139,6 +140,7 @@ function EventImage({
         className={className}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        onError={() => setImageFailed(true)}
       />
     );
   }
