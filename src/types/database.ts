@@ -26,6 +26,17 @@ export type ProgramPageKey = 'ace' | 'intern' | 'house' | 'wnc';
 export type ProgramSectionKey = 'current_cycle' | 'application_cta' | 'event_cta' | 'notice';
 export type ProgramContentStatus = 'hidden' | 'coming_soon' | 'open' | 'closed' | 'active';
 export type ResourceLinkVisibility = 'admin_only';
+export type ApplicationKey =
+  | 'ace_application'
+  | 'house_fall'
+  | 'house_winter'
+  | 'house_spring'
+  | 'intern_application'
+  | 'cabinet_application'
+  | 'vcn_stage_ninja_interest'
+  | 'vcn_props_team_interest'
+  | 'wnc_team_form';
+export type ApplicationStatus = 'disabled' | 'not_open' | 'open' | 'closed';
 export type ImportJobStatus = 'completed' | 'failed';
 export type ImportSourceType = 'csv_url' | 'google_sheets_csv' | 'manual' | 'unknown';
 export type ImportRowDecision = 'matched' | 'created' | 'skipped_duplicate' | 'review' | 'error';
@@ -648,6 +659,62 @@ export interface Database {
           display_order?: number;
           source_doc_url?: string | null;
           internal_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      application_links: {
+        Row: {
+          id: string;
+          application_key: ApplicationKey;
+          title: string;
+          description: string | null;
+          button_label: string;
+          target_url: string;
+          open_at: string;
+          due_at: string;
+          is_enabled: boolean;
+          before_open_message: string | null;
+          after_close_message: string | null;
+          sort_order: number;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          application_key: ApplicationKey;
+          title: string;
+          description?: string | null;
+          button_label: string;
+          target_url: string;
+          open_at: string;
+          due_at: string;
+          is_enabled?: boolean;
+          before_open_message?: string | null;
+          after_close_message?: string | null;
+          sort_order?: number;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          application_key?: ApplicationKey;
+          title?: string;
+          description?: string | null;
+          button_label?: string;
+          target_url?: string;
+          open_at?: string;
+          due_at?: string;
+          is_enabled?: boolean;
+          before_open_message?: string | null;
+          after_close_message?: string | null;
+          sort_order?: number;
+          created_by?: string | null;
+          updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1327,6 +1394,24 @@ export interface Database {
       };
     };
     Views: {
+      public_application_links: {
+        Row: {
+          id: string;
+          application_key: ApplicationKey;
+          title: string;
+          description: string | null;
+          button_label: string;
+          target_url: string | null;
+          status: ApplicationStatus;
+          open_at: string;
+          due_at: string;
+          is_enabled: boolean;
+          before_open_message: string | null;
+          after_close_message: string | null;
+          sort_order: number;
+          updated_at: string;
+        };
+      };
       published_ace_families: {
         Row: {
           id: string;

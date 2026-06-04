@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
 import { formatDateOnly } from '../lib/dateOnly';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
@@ -266,6 +267,20 @@ export function VCNCurrent() {
             </div>
           </section>
         )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Join the Production</div>
+            <ApplicationCTA
+              applicationKeys={['vcn_stage_ninja_interest', 'vcn_props_team_interest']}
+              fallback={{
+                not_open:
+                  'Interest forms will reopen closer to the next production cycle.',
+                closed: 'Interest forms have closed for this cycle.',
+              }}
+            />
+          </div>
+        </section>
 
         <section className="program-section">
           <div className="program-section-inner">

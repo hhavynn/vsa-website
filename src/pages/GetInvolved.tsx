@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
+import { APPLICATION_KEYS } from '../lib/applicationLinks';
 
 const programs = [
   {
@@ -141,6 +143,15 @@ export function GetInvolved() {
               <NewMemberChecklist />
             </div>
           </div>
+        </div>
+
+        <div className="mb-12 border-t pt-8" style={{ borderColor: 'var(--border)' }}>
+          <Label className="mb-5 text-[var(--accent)]">Open Applications & Interest Forms</Label>
+          <ApplicationCTA
+            applicationKeys={APPLICATION_KEYS}
+            openOnly
+            emptyMessage="Applications and interest forms will appear here when they open."
+          />
         </div>
 
         <div id="programs" className="mb-10">

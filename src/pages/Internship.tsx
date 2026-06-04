@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
 import { useProgramContent } from '../hooks/useProgramContent';
@@ -181,6 +182,16 @@ export function Internship() {
             </div>
           </section>
         )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <div className="program-eyebrow">Intern Application</div>
+            <ApplicationCTA
+              applicationKeys="intern_application"
+              fallback={{ closed: 'Intern applications have closed. Check back next year.' }}
+            />
+          </div>
+        </section>
 
         <section className="program-section">
           <div className="program-section-inner program-section-narrow">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
+import { getApplicationStatus } from '../../lib/applicationLinks';
 
 interface OverviewStats {
   members: number;
@@ -42,6 +43,10 @@ interface OverviewStats {
   aiSnippetsInactive: number;
   aiLastVerifiedAt: string | null;
   storageUrlsCount: number;
+  applicationsTotal: number;
+  applicationsOpen: number;
+  applicationsUpcoming: number;
+  applicationsClosed: number;
 }
 
 interface AdminToolCard {
@@ -96,6 +101,10 @@ const DEFAULT_STATS: OverviewStats = {
   aiSnippetsInactive: 0,
   aiLastVerifiedAt: null,
   storageUrlsCount: 0,
+  applicationsTotal: 0,
+  applicationsOpen: 0,
+  applicationsUpcoming: 0,
+  applicationsClosed: 0,
 };
 
 const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
@@ -123,6 +132,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         desc: 'Manage ACE family groups and member relationships.',
         affects: '/ace and ACE family displays',
         keywords: ['ace', 'families', 'family', 'members'],
+      },
+      {
+        to: '/admin/applications',
+        label: 'Applications',
+        desc: 'Manage application and interest-form links with open/close windows. Buttons appear publicly only while a window is open.',
+        affects: '/ace, /house, /intern-program, /cabinet, /vcn/current, /wild-n-culture, /get-involved',
+        keywords: ['applications', 'apply', 'forms', 'interest form', 'windows', 'ace', 'house', 'intern', 'cabinet', 'vcn', 'wnc'],
       },
       {
         to: '/admin/uvsa-schools',
@@ -520,6 +536,26 @@ export default function AdminOverview() {
 
       const storageCount = storageRes.reduce((acc, curr) => acc + (curr.count || 0), 0);
 
+      // Application windows (admin RLS allows direct select). Resilient if the
+      // table does not exist yet (pre-migration).
+      let applicationsTotal = 0;
+      let applicationsOpen = 0;
+      let applicationsUpcoming = 0;
+      let applicationsClosed = 0;
+      const applicationsRes = await supabase
+        .from('application_links')
+        .select('open_at, due_at, is_enabled');
+      if (!applicationsRes.error && applicationsRes.data) {
+        const nowDate = new Date();
+        applicationsTotal = applicationsRes.data.length;
+        applicationsRes.data.forEach((row) => {
+          const status = getApplicationStatus(row.open_at, row.due_at, row.is_enabled, nowDate);
+          if (status === 'open') applicationsOpen += 1;
+          else if (status === 'not_open') applicationsUpcoming += 1;
+          else if (status === 'closed') applicationsClosed += 1;
+        });
+      }
+
       setStats({
         members: membersResult.count ?? 0,
         events: eventsResult.count ?? 0,
@@ -558,6 +594,10 @@ export default function AdminOverview() {
         aiSnippetsInactive,
         aiLastVerifiedAt,
         storageUrlsCount: storageCount,
+        applicationsTotal,
+        applicationsOpen,
+        applicationsUpcoming,
+        applicationsClosed,
       });
       setLoading(false);
     }
@@ -802,6 +842,13 @@ export default function AdminOverview() {
                   ) : (
                     <HealthItem label="AI Table exists" value="No" status="warning" />
                   )}
+                </HealthGroupCard>
+
+                <HealthGroupCard title="Applications" to="/admin/applications">
+                  <HealthItem label="Total windows" value={stats.applicationsTotal} status="neutral" />
+                  <HealthItem label="Currently open" value={stats.applicationsOpen} status={stats.applicationsOpen > 0 ? 'good' : 'neutral'} />
+                  <HealthItem label="Upcoming" value={stats.applicationsUpcoming} status="neutral" />
+                  <HealthItem label="Closed" value={stats.applicationsClosed} status="neutral" />
                 </HealthGroupCard>
 
                 <HealthGroupCard title="Storage / Egress">

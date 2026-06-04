@@ -154,6 +154,13 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
   },
 ];
 
+// ── Applications / Interest Forms ────────────────────────────────────────────
+
+export const FALLBACK_APPLICATIONS = {
+  message:
+    'Applications are temporarily unavailable. Please check Instagram or Linktree for current forms.',
+} as const;
+
 // ── UVSA Network ─────────────────────────────────────────────────────────────
 
 export const FALLBACK_UVSA_NETWORK = {
