@@ -104,7 +104,7 @@ export function VCNCurrent() {
                 VCN <span className="program-title-script">{currentVcn.year || 'Coming Soon'}</span>
               </h1>
               <p className="program-hero-meta">
-                Details for this year's Vietnamese Culture Night production are coming soon. Follow{' '}
+                Current VCN details will be updated when available. Follow{' '}
                 <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
                   @vsaatucsd
                 </a>{' '}

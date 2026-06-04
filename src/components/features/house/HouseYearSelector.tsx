@@ -10,7 +10,7 @@ interface YearOption {
 
 // Update this list each year when a new House cycle is added or completed.
 const PRIMARY_YEAR_OPTIONS: YearOption[] = [
-  { startYear: 2026, label: '2026-2027', badge: 'Coming Fall', route: '/house/year/2026-2027' },
+  { startYear: 2026, label: '2026-2027', badge: 'Not announced', route: '/house/year/2026-2027' },
   { startYear: 2025, label: '2025-2026', badge: 'Current',     route: '/house' },
   { startYear: 2024, label: '2024-2025', badge: 'Archive',     route: '/house/year/2024-2025' },
 ];
