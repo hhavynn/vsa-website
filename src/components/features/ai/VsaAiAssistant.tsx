@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
+import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 
 type Role = 'user' | 'assistant';
 type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
@@ -18,6 +19,7 @@ interface ChatMessage {
   content: string;
   sources?: SourceChip[];
   status?: AssistantStatus;
+  feedbackSubmitted?: boolean;
 }
 
 interface AssistantResponse {
@@ -159,6 +161,11 @@ export function VsaAiAssistant() {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  
+  const [activeFeedbackMsgId, setActiveFeedbackMsgId] = useState<string | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<'helpful' | 'not_helpful' | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -261,6 +268,46 @@ export function VsaAiAssistant() {
   function minimizeAssistant() {
     setIsOpen(false);
     setIsMinimized(true);
+  }
+
+  function startFeedback(messageId: string, rating: 'helpful' | 'not_helpful') {
+    setActiveFeedbackMsgId(messageId);
+    setFeedbackRating(rating);
+    setFeedbackText('');
+  }
+
+  async function submitFeedback(message: ChatMessage) {
+    if (!feedbackRating) return;
+    setFeedbackSubmitting(true);
+    
+    // Extract a category if available from sources
+    const category = message.sources && message.sources.length > 0 ? message.sources[0].category : null;
+
+    try {
+      await aiFeedbackRepository.submitFeedback({
+        rating: feedbackRating,
+        category: category,
+        page_path: location.pathname,
+        feedback_text: feedbackText,
+        answer_excerpt: message.content, // truncated in repo
+      });
+
+      setMessages(current => 
+        current.map(msg => 
+          msg.id === message.id ? { ...msg, feedbackSubmitted: true } : msg
+        )
+      );
+      setActiveFeedbackMsgId(null);
+      setFeedbackRating(null);
+    } catch (err) {
+      console.error("Failed to submit feedback", err);
+      // We log it but don't disrupt the chat flow aggressively.
+      // We could add a small toast here if we imported react-hot-toast.
+      // For now, we'll just close the inline form to avoid blocking the user.
+      setActiveFeedbackMsgId(null);
+    } finally {
+      setFeedbackSubmitting(false);
+    }
   }
 
   return (
@@ -430,6 +477,66 @@ export function VsaAiAssistant() {
                           })}
                         </div>
                       )}
+                      
+                      {/* Feedback UI */}
+                      {message.role === 'assistant' && message.status === 'answered' && !message.feedbackSubmitted && activeFeedbackMsgId !== message.id && (
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          <span className="font-sans text-[10px] text-[var(--color-text3)]">Was this helpful?</span>
+                          <button
+                            onClick={() => startFeedback(message.id, 'helpful')}
+                            className="rounded border px-2 py-0.5 font-sans text-[10px] font-semibold text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]"
+                            style={{ borderColor: 'var(--color-border)' }}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => startFeedback(message.id, 'not_helpful')}
+                            className="rounded border px-2 py-0.5 font-sans text-[10px] font-semibold text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]"
+                            style={{ borderColor: 'var(--color-border)' }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      )}
+
+                      {message.role === 'assistant' && activeFeedbackMsgId === message.id && (
+                        <div className="mt-2 rounded-lg border p-3 text-left shadow-sm" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                          <p className="font-sans text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
+                            {feedbackRating === 'helpful' ? 'Glad it helped! Any other feedback?' : 'Sorry about that. What was missing or wrong?'}
+                          </p>
+                          <textarea
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="Optional. Do not include private information."
+                            className="mt-2 w-full resize-none rounded border bg-[var(--color-surface2)] p-2 font-sans text-[11px] outline-none focus:border-[var(--accent)]"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                            rows={2}
+                          />
+                          <div className="mt-2 flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setActiveFeedbackMsgId(null)}
+                              disabled={feedbackSubmitting}
+                              className="font-sans text-[10px] text-[var(--color-text3)] hover:text-[var(--color-text)]"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => submitFeedback(message)}
+                              disabled={feedbackSubmitting}
+                              className="rounded bg-[var(--brand)] px-3 py-1 font-sans text-[10px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                            >
+                              {feedbackSubmitting ? 'Sending...' : 'Submit'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {message.role === 'assistant' && message.feedbackSubmitted && (
+                        <div className="mt-2 text-right font-sans text-[10px] italic text-[var(--color-text3)]">
+                          Thanks for the feedback!
+                        </div>
+                      )}
+
                     </div>
                   </motion.div>
                 ))}

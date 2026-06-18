@@ -271,6 +271,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         keywords: ['data health', 'warnings', 'diagnostics', 'missing', 'issues'],
       },
       {
+        to: '/admin/ai-feedback',
+        label: 'Ask VSA Feedback',
+        desc: 'Review ratings and feedback submitted by users on Ask VSA AI assistant responses.',
+        affects: 'Admin-only',
+        keywords: ['ai', 'ask vsa', 'feedback', 'assistant', 'knowledge'],
+      },
+      {
         to: '/admin/analytics',
         label: 'Analytics',
         desc: 'Review existing admin analytics and high-level site activity signals.',
