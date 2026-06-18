@@ -1,0 +1,34 @@
+# Graphify index exclusions for the VSA website repo
+# Keep secrets, heavy build artifacts, and local-only data out of the graph.
+
+# Dependencies and build output
+node_modules/
+build/
+dist/
+coverage/
+
+# Cloud platform / deployment
+.vercel/
+.supabase/
+supabase/.temp/
+
+# Environment and secrets — NEVER index these
+.env
+.env.*
+*.local
+*.log
+
+# macOS / editor noise
+.DS_Store
+.cache/
+.idea/
+.vscode/
+
+# Graphify local-only outputs
+graphify-out/cost.json
+graphify-out/cache/
+
+# Supabase schema files contain RLS policy bodies and seeding details;
+# exclude to avoid surfacing schema internals in graph queries
+supabase/migrations/
+schema.sql

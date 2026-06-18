@@ -56,3 +56,22 @@ ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider
 - `src/components/features/` — Feature-grouped components (admin, auth, events, points, etc.)
 - `src/components/common/` — Shared utilities (ErrorBoundary, LoadingSpinner, Modal, etc.)
 - `src/components/ui/` — Base UI primitives (Button, Input, Card, Badge, Alert)
+
+## Graphify: Query-First Workflow
+
+Graphify indexes the codebase into a navigable graph. Use it before doing broad file reads for architecture questions — it saves tokens and surfaces the right files faster.
+
+**Key commands:**
+
+```bash
+graphify query "<question>"              # Answer architecture questions from the graph
+graphify path "<source>" "<target>"      # Trace relationships between two files or symbols
+graphify explain "<file or symbol>"      # Explain what a file/symbol does and its connections
+graphify . --update                      # Refresh the graph if it feels stale
+```
+
+**Orientation:** Check `graphify-out/GRAPH_REPORT.md` first when dropped into an unfamiliar part of the codebase.
+
+**What stays local:** `graphify-out/cost.json` and the cache directory are gitignored and must not be committed.
+
+**Workflow rule:** Run `graphify query` or `graphify path` before opening files speculatively. Only read source files directly after the graph confirms they are relevant. If Graphify is not installed, fall back to targeted `grep`/`find` searches rather than reading entire directories.

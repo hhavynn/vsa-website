@@ -182,6 +182,23 @@ Current test files:
 
 ---
 
+## Graphify: Query-First Workflow
+
+Graphify indexes the codebase into a navigable graph. Run it before reading files speculatively — it keeps context focused and token usage low.
+
+```bash
+graphify query "<question>"           # Architecture and dependency questions
+graphify path "<source>" "<target>"   # Trace relationships between files or symbols
+graphify explain "<file or symbol>"   # Understand a file's role in the graph
+graphify . --update                   # Refresh the graph if stale
+```
+
+Check `graphify-out/GRAPH_REPORT.md` for initial orientation when entering an unfamiliar part of the codebase. `graphify-out/cost.json` is local only — never commit it.
+
+If Graphify is not installed, fall back to targeted `grep`/`find` rather than broad directory reads. Install with `uv tool install graphifyy` or `pipx install graphifyy`.
+
+---
+
 ## Codex VSA playbook workflow
 
 Codex should use the VSA playbook roster below when the user requests a domain-specific agent or playbook. The existing files in `.claude/agents/` are the source-of-truth domain playbooks even though Codex does not load them as native Claude Code subagents.
