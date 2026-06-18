@@ -8,17 +8,6 @@ import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERN PROGRAM CONFIG — Update these values each cycle.
-// ─────────────────────────────────────────────────────────────────────────────
-const INTERN_CONFIG = {
-  applicationsOpen: false,
-  applicationLink: '',
-  cycleLabel: '',
-  announcement: '',
-  contactRole: 'the VSA Internal Vice President',
-};
-
 const pillars = [
   { title: 'Social', desc: 'Build lasting friendships with fellow interns and cabinet. Bond through GBMs, aftersocials, externals, and VSA events throughout the year.' },
   { title: 'Cultural', desc: 'Stay connected to Vietnamese culture and AAPI identity. Participate in events like Vietnamese Culture Night, Tet Fest, and other cultural programming.' },
@@ -149,36 +138,19 @@ export function Internship() {
                   {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
                 </span>
               )}
-              {!cycleContent && INTERN_CONFIG.applicationsOpen && (
-                <span className="scrapbook-sticker scrapbook-sticker-teal">
-                  Applications Open{INTERN_CONFIG.cycleLabel ? ` · ${INTERN_CONFIG.cycleLabel}` : ''}
-                </span>
-              )}
             </div>
           </div>
           <div className="program-watermark">cohort</div>
         </section>
 
-        {(cycleContent || (INTERN_CONFIG.applicationsOpen && INTERN_CONFIG.applicationLink)) && (
+        {cycleContent && (
           <section className="program-section">
             <div className="program-section-inner">
-              {cycleContent ? (
-                <ProgramContentCallout
-                  content={cycleContent}
-                  defaultTitle="Intern Program applications"
-                  defaultLinkLabel="Apply Now"
-                />
-              ) : (
-                <div className="scrapbook-note flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div className="min-w-0">
-                    <div className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>Applications are now open</div>
-                    {INTERN_CONFIG.cycleLabel && <div className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>{INTERN_CONFIG.cycleLabel}</div>}
-                  </div>
-                  <a href={INTERN_CONFIG.applicationLink} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
-                    Apply Now →
-                  </a>
-                </div>
-              )}
+              <ProgramContentCallout
+                content={cycleContent}
+                defaultTitle="Intern Program applications"
+                defaultLinkLabel="Apply Now"
+              />
             </div>
           </section>
         )}
