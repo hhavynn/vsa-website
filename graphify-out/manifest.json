@@ -1,0 +1,3722 @@
+{
+  ".claude/settings.json": {
+    "mtime": 1781760443.9556394,
+    "ast_hash": "e1073342e958ac9f00716938c8f165e3",
+    "semantic_hash": ""
+  },
+  ".claude/settings.local.json": {
+    "mtime": 1780564068.710919,
+    "ast_hash": "3e3de61e07849ed74ad7cd2a0e01af98",
+    "semantic_hash": ""
+  },
+  ".codex/hooks.json": {
+    "mtime": 1781760443.9887526,
+    "ast_hash": "11b11fd5e706e9a287a62f8e56d23895",
+    "semantic_hash": ""
+  },
+  "backend/package.json": {
+    "mtime": 1780559651.207179,
+    "ast_hash": "e246867d3a26536528c0383e4933fddc",
+    "semantic_hash": ""
+  },
+  "backend/server.js": {
+    "mtime": 1780559651.207235,
+    "ast_hash": "525418b689b7b332b78f11c5850c721f",
+    "semantic_hash": ""
+  },
+  "docs/supabase-usage-audit.sql": {
+    "mtime": 1780559651.208009,
+    "ast_hash": "ee8e3f37f844578766f02e833baf3ba8",
+    "semantic_hash": ""
+  },
+  "infrastructure/terraform/main.tf": {
+    "mtime": 1780559651.2081876,
+    "ast_hash": "6e012e7d3adb24e7783e20afb569bce9",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1780559651.2096224,
+    "ast_hash": "f9e5267ef1c153ecf24cd1bc20352c1b",
+    "semantic_hash": ""
+  },
+  "postcss.config.js": {
+    "mtime": 1780559651.209683,
+    "ast_hash": "ffd32f2c150c0fb17bdf3b969fe62f85",
+    "semantic_hash": ""
+  },
+  "public/manifest.json": {
+    "mtime": 1780559651.2757418,
+    "ast_hash": "33dccdb31ffeca3b9c76d1d8df4a238c",
+    "semantic_hash": ""
+  },
+  "scripts/deploy.sh": {
+    "mtime": 1780559651.2760677,
+    "ast_hash": "c3095cc836e3d3b371125d94d785b3e4",
+    "semantic_hash": ""
+  },
+  "scripts/migrate-supabase-images-to-public.ts": {
+    "mtime": 1780559651.2761567,
+    "ast_hash": "5092402c557cfbdcbf53a7db48c00dc6",
+    "semantic_hash": ""
+  },
+  "scripts/restore-house-events.sql": {
+    "mtime": 1780559651.2763104,
+    "ast_hash": "9c273b4513fe273d2b9481ce386cbd40",
+    "semantic_hash": ""
+  },
+  "scripts/verify-ace-import.mjs": {
+    "mtime": 1780559651.276406,
+    "ast_hash": "0d2f9698d4f2bd2efa48d801a919f3e2",
+    "semantic_hash": ""
+  },
+  "setup-chat.js": {
+    "mtime": 1780559651.2764595,
+    "ast_hash": "ef2b31012953698cd3bd9bb5bcc28ccc",
+    "semantic_hash": ""
+  },
+  "src/App.test.tsx": {
+    "mtime": 1780559651.2765934,
+    "ast_hash": "c5f4a554d9d60b7925d9ac5aae0b9c80",
+    "semantic_hash": ""
+  },
+  "src/App.tsx": {
+    "mtime": 1780559651.276648,
+    "ast_hash": "e694f85e88694e92e6ba9b36cbc12105",
+    "semantic_hash": ""
+  },
+  "src/components/common/ApplicationCTA.tsx": {
+    "mtime": 1781759857.4720516,
+    "ast_hash": "c1d6f0554980f801c2048b2e1426f601",
+    "semantic_hash": ""
+  },
+  "src/components/common/ContentUnavailableState.tsx": {
+    "mtime": 1780559651.2767735,
+    "ast_hash": "cf5b1dc86e4c6ce907eed47ba943ad17",
+    "semantic_hash": ""
+  },
+  "src/components/common/CountdownTimer.tsx": {
+    "mtime": 1780559651.2768252,
+    "ast_hash": "290d4d68248898e420956d2205a8fa69",
+    "semantic_hash": ""
+  },
+  "src/components/common/DegradedModeBanner.tsx": {
+    "mtime": 1780559651.2768767,
+    "ast_hash": "0bee04c7ca6399f1c0bf3be77b90123c",
+    "semantic_hash": ""
+  },
+  "src/components/common/ErrorBoundary.tsx": {
+    "mtime": 1780559651.2769382,
+    "ast_hash": "2af6be8d48a57d69a1dded33d90c5d91",
+    "semantic_hash": ""
+  },
+  "src/components/common/Modal.tsx": {
+    "mtime": 1780559651.276994,
+    "ast_hash": "e3a7648b159932530b630f8fe9e0faee",
+    "semantic_hash": ""
+  },
+  "src/components/common/OptimizedImage.tsx": {
+    "mtime": 1780559651.2770476,
+    "ast_hash": "3a78281d6e5f2fc034c0a628875be5f6",
+    "semantic_hash": ""
+  },
+  "src/components/common/PageError.tsx": {
+    "mtime": 1780559651.2770991,
+    "ast_hash": "e47341dfce4a75d191e3cc4af5d9dd30",
+    "semantic_hash": ""
+  },
+  "src/components/common/PageLoader.tsx": {
+    "mtime": 1781759857.4723449,
+    "ast_hash": "dee16041328e0d97c71126470dd98440",
+    "semantic_hash": ""
+  },
+  "src/components/common/PageTitle.tsx": {
+    "mtime": 1780559651.277199,
+    "ast_hash": "48efd0112f9106283cb16f23ab517db5",
+    "semantic_hash": ""
+  },
+  "src/components/common/PaginationControls.tsx": {
+    "mtime": 1780559651.2772858,
+    "ast_hash": "b5567adee0ef8793b47b31f4ef6612c2",
+    "semantic_hash": ""
+  },
+  "src/components/common/RevealOnScrollWrapper.tsx": {
+    "mtime": 1780559651.2773411,
+    "ast_hash": "fd19456bd56701f2e01ff428a6ef4719",
+    "semantic_hash": ""
+  },
+  "src/components/common/RouteTracker.tsx": {
+    "mtime": 1780559651.2773945,
+    "ast_hash": "8bd113ec7647a08abe918531cc88b96a",
+    "semantic_hash": ""
+  },
+  "src/components/common/Skeleton.tsx": {
+    "mtime": 1780559651.2774456,
+    "ast_hash": "b252e5143c8de93b5587a93b7b108444",
+    "semantic_hash": ""
+  },
+  "src/components/features/ace/FamCover.tsx": {
+    "mtime": 1780559651.2776062,
+    "ast_hash": "4c79f1e264ea2d62e6b6abf162fb510d",
+    "semantic_hash": ""
+  },
+  "src/components/features/ace/FamSheet.tsx": {
+    "mtime": 1780559651.2776823,
+    "ast_hash": "bb32f17b459c410ccdd3127f89e611a4",
+    "semantic_hash": ""
+  },
+  "src/components/features/ace/FamilyTree.tsx": {
+    "mtime": 1780559651.2777815,
+    "ast_hash": "0d16cbcf6125252266d795b9487b1c67",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/AdminLayout.tsx": {
+    "mtime": 1780559651.2778668,
+    "ast_hash": "9a6ea568c2d8b21e64cc6c40e458980d",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/AdminNav.tsx": {
+    "mtime": 1781759857.4727528,
+    "ast_hash": "b24b753f3be7db80b94680825cc6d872",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/EventRecapEditor.tsx": {
+    "mtime": 1780559651.2780313,
+    "ast_hash": "2927cc24fc41400b4b02b9f293ced1f3",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/FeedbackTab.tsx": {
+    "mtime": 1780559651.2781086,
+    "ast_hash": "26866b8e28dfbd588ba9f5194e8e67fc",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/GenerateCheckInCode.tsx": {
+    "mtime": 1780559651.2781785,
+    "ast_hash": "08fbde4186e32fee3d25541ff59c7d84",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/HouseEventsManager.tsx": {
+    "mtime": 1780559651.2782624,
+    "ast_hash": "f7ef70e63046e5a5a04e4fd5ac4d4089",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/HouseImagesManager.tsx": {
+    "mtime": 1780559651.2783575,
+    "ast_hash": "656bed15c92f55a2764a29e5615245c3",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/ImportAuditPanel.tsx": {
+    "mtime": 1780559651.2784772,
+    "ast_hash": "41ae50d35056afcc19da6d753dceb288",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/ManualCheckIn.tsx": {
+    "mtime": 1780559651.2785652,
+    "ast_hash": "791522a0b790869014336414fdb233f0",
+    "semantic_hash": ""
+  },
+  "src/components/features/admin/ProgramContentManager.tsx": {
+    "mtime": 1780559651.2786715,
+    "ast_hash": "8b34ce3a8919febb60909471c1ac20dd",
+    "semantic_hash": ""
+  },
+  "src/components/features/ai/VsaAiAssistant.tsx": {
+    "mtime": 1781759857.4730713,
+    "ast_hash": "e8d930e29d1e49b516a75651517950bb",
+    "semantic_hash": ""
+  },
+  "src/components/features/auth/SignInForm.tsx": {
+    "mtime": 1780559651.2788773,
+    "ast_hash": "a03c16894c8287166645b58301dc381b",
+    "semantic_hash": ""
+  },
+  "src/components/features/auth/SignUpForm.tsx": {
+    "mtime": 1780559651.2789443,
+    "ast_hash": "1856d3f2200ba2918b7231c52528c696",
+    "semantic_hash": ""
+  },
+  "src/components/features/avatar/Avatar.tsx": {
+    "mtime": 1780559651.279068,
+    "ast_hash": "920647c061c7202cd633cba1a971e251",
+    "semantic_hash": ""
+  },
+  "src/components/features/dashboard/MemberDashboard.tsx": {
+    "mtime": 1780559651.2791882,
+    "ast_hash": "6815478697c5888e173726ff1ab000ff",
+    "semantic_hash": ""
+  },
+  "src/components/features/events/AddToCalendarButton.tsx": {
+    "mtime": 1781759857.4733799,
+    "ast_hash": "7f2ff1dc1961626e34811e61ed7bb41b",
+    "semantic_hash": ""
+  },
+  "src/components/features/events/EventCard.tsx": {
+    "mtime": 1781759857.473731,
+    "ast_hash": "cd7124fd3b951d493e392e6b20e0b44a",
+    "semantic_hash": ""
+  },
+  "src/components/features/events/Events.tsx": {
+    "mtime": 1780559651.2794032,
+    "ast_hash": "3731c0f2a95d5f16b6ecceb8d3e1ff1d",
+    "semantic_hash": ""
+  },
+  "src/components/features/feedback/FeedbackForm.tsx": {
+    "mtime": 1780559651.2795358,
+    "ast_hash": "5a21420658b23368756205ee788f1380",
+    "semantic_hash": ""
+  },
+  "src/components/features/home/ThisWeekInVSA.tsx": {
+    "mtime": 1780559651.279642,
+    "ast_hash": "cd110d8207dc790594002c3b73c54137",
+    "semantic_hash": ""
+  },
+  "src/components/features/house/HouseEventCard.tsx": {
+    "mtime": 1781759857.474041,
+    "ast_hash": "4520df915b6501b621d6df77799f3714",
+    "semantic_hash": ""
+  },
+  "src/components/features/house/HouseMemberLeaderboard.tsx": {
+    "mtime": 1780559651.280006,
+    "ast_hash": "5eab23b813dd0cb8e9e0809526ce375c",
+    "semantic_hash": ""
+  },
+  "src/components/features/house/HouseYearSelector.tsx": {
+    "mtime": 1781759857.4743855,
+    "ast_hash": "e1b2ff670d240de8c1a0cf8c990ad59a",
+    "semantic_hash": ""
+  },
+  "src/components/features/onboarding/NewMemberChecklist.tsx": {
+    "mtime": 1780559651.2802176,
+    "ast_hash": "3cf03df49339b46d3d93f4f54a23c44e",
+    "semantic_hash": ""
+  },
+  "src/components/features/points/CheckInCodeInput.tsx": {
+    "mtime": 1780559651.2803051,
+    "ast_hash": "380821ebfe1a45d3566ff20fe4729ceb",
+    "semantic_hash": ""
+  },
+  "src/components/features/points/FindMyPoints.tsx": {
+    "mtime": 1780559651.280384,
+    "ast_hash": "b15058127090b345c7a332b528560214",
+    "semantic_hash": ""
+  },
+  "src/components/features/points/MyVSACard.tsx": {
+    "mtime": 1780559651.2804677,
+    "ast_hash": "a75cd26fc383d05f2f3e7fb151379af0",
+    "semantic_hash": ""
+  },
+  "src/components/features/points/PointsExplainer.tsx": {
+    "mtime": 1781759857.4747493,
+    "ast_hash": "abd2d997264f53619358059412232673",
+    "semantic_hash": ""
+  },
+  "src/components/features/profile/Profile.tsx": {
+    "mtime": 1780559651.2806394,
+    "ast_hash": "2d56187dae9c0efbfaf187a3fc20650c",
+    "semantic_hash": ""
+  },
+  "src/components/features/program/ProgramContentCallout.tsx": {
+    "mtime": 1780559651.2807288,
+    "ast_hash": "175154ef7a1d4416df82cc13f026c37d",
+    "semantic_hash": ""
+  },
+  "src/components/layout/BackToTop.tsx": {
+    "mtime": 1780559651.2808228,
+    "ast_hash": "f32eeb4b2d556ee9b6c417c469c3081f",
+    "semantic_hash": ""
+  },
+  "src/components/layout/Footer.tsx": {
+    "mtime": 1780559651.2809079,
+    "ast_hash": "93e7317a653b3f8f3a2eafd3ab08335b",
+    "semantic_hash": ""
+  },
+  "src/components/layout/Header.tsx": {
+    "mtime": 1780559651.2809892,
+    "ast_hash": "011af03818c71663de69b04dcd22b2e8",
+    "semantic_hash": ""
+  },
+  "src/components/layout/Layout.tsx": {
+    "mtime": 1781759857.4750385,
+    "ast_hash": "8f00c146e35ca8a266005dcda9a0d27e",
+    "semantic_hash": ""
+  },
+  "src/components/layout/ThemeToggle.tsx": {
+    "mtime": 1780559651.2810962,
+    "ast_hash": "32566429507237ac920c79326ffa6175",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/GetInvolvedDropdown.tsx": {
+    "mtime": 1780559651.2812133,
+    "ast_hash": "53aedd379ad601764abb8f04e7c1c716",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/MobileDrawer.tsx": {
+    "mtime": 1781759857.475435,
+    "ast_hash": "2a918a0f6d7c88655d797bd8ec8aa6f1",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/NavLinks.tsx": {
+    "mtime": 1780559651.281369,
+    "ast_hash": "60f233e5581f2551275527f278d68da5",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/NavLogo.tsx": {
+    "mtime": 1780559651.2814214,
+    "ast_hash": "e994870e726744b6509ec567694abb90",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/NavigationShell.tsx": {
+    "mtime": 1780559651.2814798,
+    "ast_hash": "507ecb396a531a0d3ffec68ed12f6296",
+    "semantic_hash": ""
+  },
+  "src/components/layout/navigation/UserMenu.tsx": {
+    "mtime": 1780559651.2815354,
+    "ast_hash": "51e2fa035ec235248b71f6fcb58a5af7",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Badge.tsx": {
+    "mtime": 1780559651.2816205,
+    "ast_hash": "582afbb15b1017146782b5cd20d0dcce",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Button.tsx": {
+    "mtime": 1780559651.2816858,
+    "ast_hash": "a26b6cc41d84a9dc2e382dd5bc3c52c3",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Card.tsx": {
+    "mtime": 1780559651.2817345,
+    "ast_hash": "da9ffef54a479582ce681ffd476a471e",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Input.tsx": {
+    "mtime": 1780559651.2817836,
+    "ast_hash": "4b1d48a122024ea1f3b2aa45add16368",
+    "semantic_hash": ""
+  },
+  "src/components/ui/Label.tsx": {
+    "mtime": 1780559651.2818332,
+    "ast_hash": "6abe796bb5b928723fbe964047e0d890",
+    "semantic_hash": ""
+  },
+  "src/config/publicFallbackContent.ts": {
+    "mtime": 1781759857.4757469,
+    "ast_hash": "3b9997346b11782df1f081cd73861476",
+    "semantic_hash": ""
+  },
+  "src/constants/cabinetOptions.ts": {
+    "mtime": 1780559651.2820292,
+    "ast_hash": "404e6b13349646e1ff493c48047773ed",
+    "semantic_hash": ""
+  },
+  "src/constants/eventTypes.ts": {
+    "mtime": 1780559651.28208,
+    "ast_hash": "396941c501d06b54acd66cfd28d78f35",
+    "semantic_hash": ""
+  },
+  "src/constants/houses.ts": {
+    "mtime": 1780559651.2821336,
+    "ast_hash": "873e046d9ba05c6d5dbc6eeff28ebabe",
+    "semantic_hash": ""
+  },
+  "src/context/AuthContext.tsx": {
+    "mtime": 1780559651.2822225,
+    "ast_hash": "215931973c036a986c3abe0d69c45892",
+    "semantic_hash": ""
+  },
+  "src/context/PointsContext.tsx": {
+    "mtime": 1780559651.282273,
+    "ast_hash": "6d04f747fc1ddde54a03bd86ded62e30",
+    "semantic_hash": ""
+  },
+  "src/context/SiteSettingsContext.tsx": {
+    "mtime": 1780559651.282325,
+    "ast_hash": "9f2e040342f2688d454b3b451e4df7ae",
+    "semantic_hash": ""
+  },
+  "src/context/ThemeContext.tsx": {
+    "mtime": 1780559651.282374,
+    "ast_hash": "58d309ed5d8241d9e833efd5afa4f8e0",
+    "semantic_hash": ""
+  },
+  "src/data/errors.ts": {
+    "mtime": 1780559651.28246,
+    "ast_hash": "467b9269f52657f18d8d0309c9a1b95b",
+    "semantic_hash": ""
+  },
+  "src/data/legacyHouseArchive.test.ts": {
+    "mtime": 1780559651.2825131,
+    "ast_hash": "77bf9a07bf8bed8ff32fafc666e8952b",
+    "semantic_hash": ""
+  },
+  "src/data/legacyHouseArchive.ts": {
+    "mtime": 1780559651.2826,
+    "ast_hash": "c9c3d62b13ee89350aab23c45dd72065",
+    "semantic_hash": ""
+  },
+  "src/data/presidentsContent.ts": {
+    "mtime": 1780559651.282651,
+    "ast_hash": "09b8312f3a33d14bb90fe823935a1922",
+    "semantic_hash": ""
+  },
+  "src/data/repos/academicTerms.ts": {
+    "mtime": 1780559651.2827473,
+    "ast_hash": "b13b94b32af98236d5fd72725970fc75",
+    "semantic_hash": ""
+  },
+  "src/data/repos/aceFamilies.ts": {
+    "mtime": 1780559651.2828279,
+    "ast_hash": "604da4e73c46a1f2b36e88afa41f5855",
+    "semantic_hash": ""
+  },
+  "src/data/repos/aiKnowledge.ts": {
+    "mtime": 1780559651.2828815,
+    "ast_hash": "4c1cc402351be71dfff0c80a9b45cfeb",
+    "semantic_hash": ""
+  },
+  "src/data/repos/applicationLinks.ts": {
+    "mtime": 1781759857.4760442,
+    "ast_hash": "0784de91952e4a1cd1096c40131de693",
+    "semantic_hash": ""
+  },
+  "src/data/repos/auth.ts": {
+    "mtime": 1780559651.2829623,
+    "ast_hash": "011344c70593fe1e26564a89385fcddb",
+    "semantic_hash": ""
+  },
+  "src/data/repos/cabinetYears.ts": {
+    "mtime": 1780559651.2830129,
+    "ast_hash": "c25dd76d607bb9f506b1483909ad1655",
+    "semantic_hash": ""
+  },
+  "src/data/repos/eventRecaps.ts": {
+    "mtime": 1780559651.283065,
+    "ast_hash": "150bb9951db68069a7d03825db7a274d",
+    "semantic_hash": ""
+  },
+  "src/data/repos/events.ts": {
+    "mtime": 1781759857.476332,
+    "ast_hash": "a7447b25dd15df6dd1f5103886212d21",
+    "semantic_hash": ""
+  },
+  "src/data/repos/externalEvents.ts": {
+    "mtime": 1780559651.2831945,
+    "ast_hash": "3785abae370d970045681499296ac369",
+    "semantic_hash": ""
+  },
+  "src/data/repos/gallery.ts": {
+    "mtime": 1780559651.2832458,
+    "ast_hash": "8e5a3934d766f4e38bce41de57586c5e",
+    "semantic_hash": ""
+  },
+  "src/data/repos/houseAssets.ts": {
+    "mtime": 1780559651.2833,
+    "ast_hash": "edea1d8c16902cf51c517c86637256cf",
+    "semantic_hash": ""
+  },
+  "src/data/repos/houseEvents.ts": {
+    "mtime": 1780559651.2833698,
+    "ast_hash": "3127c0374fbf33171ad46c34206b5cd4",
+    "semantic_hash": ""
+  },
+  "src/data/repos/importJobs.ts": {
+    "mtime": 1780559651.283425,
+    "ast_hash": "9b6f2bbfeb51374344141dc02689d299",
+    "semantic_hash": ""
+  },
+  "src/data/repos/leaderboard.ts": {
+    "mtime": 1780559651.2835114,
+    "ast_hash": "7b2a8306f19900be1e8ee8e2a5713265",
+    "semantic_hash": ""
+  },
+  "src/data/repos/points.ts": {
+    "mtime": 1780559651.2835913,
+    "ast_hash": "a65d37f23b240ac20ff40730c4585a40",
+    "semantic_hash": ""
+  },
+  "src/data/repos/programContent.ts": {
+    "mtime": 1780559651.2836452,
+    "ast_hash": "33c9991c2beecadc193c275f5edcb0ef",
+    "semantic_hash": ""
+  },
+  "src/data/repos/resourceLinks.ts": {
+    "mtime": 1780559651.2837253,
+    "ast_hash": "9836665465a853f43d88b8ed29aeffd5",
+    "semantic_hash": ""
+  },
+  "src/data/repos/uvsaSchools.ts": {
+    "mtime": 1780559651.2837818,
+    "ast_hash": "cb5713c53ecb6ec9eab78a5d446c0e1c",
+    "semantic_hash": ""
+  },
+  "src/data/repos/vcnArchives.ts": {
+    "mtime": 1780559651.2838607,
+    "ast_hash": "cf7ad57756439096f724cc9d3e9e6248",
+    "semantic_hash": ""
+  },
+  "src/data/siteSettings.ts": {
+    "mtime": 1780559651.2839108,
+    "ast_hash": "29ce4b5cc91eb3d733733989f0da485d",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAcademicTerms.ts": {
+    "mtime": 1780559651.2839918,
+    "ast_hash": "f7ea5b8d846e4b7ea714710f5fb07298",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAceFamilies.ts": {
+    "mtime": 1780559651.2840455,
+    "ast_hash": "e7014f10390262b08de472d57ad9ce1f",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAdmin.ts": {
+    "mtime": 1780559651.2840965,
+    "ast_hash": "92f4e3ebbf51ceda5393e14ecee6dfd8",
+    "semantic_hash": ""
+  },
+  "src/hooks/useApplicationLinks.ts": {
+    "mtime": 1781759857.4765584,
+    "ast_hash": "980022c5c7ff8ba71ed19ab43afb3a04",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAuth.ts": {
+    "mtime": 1780559651.2841496,
+    "ast_hash": "08ce4229408509db42c5cbba088d3a8b",
+    "semantic_hash": ""
+  },
+  "src/hooks/useCabinet.ts": {
+    "mtime": 1780559651.2842126,
+    "ast_hash": "d2e99030f1c8abe3097e0fa6707b4de5",
+    "semantic_hash": ""
+  },
+  "src/hooks/useCabinetInterns.ts": {
+    "mtime": 1780559651.2842762,
+    "ast_hash": "2176980427e3f19d9d9cb391615950d5",
+    "semantic_hash": ""
+  },
+  "src/hooks/useCabinetYears.ts": {
+    "mtime": 1780559651.2843387,
+    "ast_hash": "7a4874a5cfc7aeec152f6ba602c1ddf2",
+    "semantic_hash": ""
+  },
+  "src/hooks/useEventAttendance.ts": {
+    "mtime": 1780559651.2844257,
+    "ast_hash": "257fe40020f2275fef85fca78d72f88b",
+    "semantic_hash": ""
+  },
+  "src/hooks/useEventRecap.ts": {
+    "mtime": 1780559651.2844791,
+    "ast_hash": "3de504fd008398d9cedcdc425605cd7b",
+    "semantic_hash": ""
+  },
+  "src/hooks/useEvents.ts": {
+    "mtime": 1781759857.4768603,
+    "ast_hash": "210c5ea319d39e307402e862ae353371",
+    "semantic_hash": ""
+  },
+  "src/hooks/useExternalEvents.ts": {
+    "mtime": 1780559651.2846115,
+    "ast_hash": "f27f0ab6facac7133356ad0902647605",
+    "semantic_hash": ""
+  },
+  "src/hooks/useFindMyPoints.ts": {
+    "mtime": 1780559651.2846625,
+    "ast_hash": "cc8f87b0b390919d0dad589b30d38c8e",
+    "semantic_hash": ""
+  },
+  "src/hooks/useGallery.ts": {
+    "mtime": 1780559651.2847323,
+    "ast_hash": "5f2132b3559a7c1084a5c22859517f90",
+    "semantic_hash": ""
+  },
+  "src/hooks/useHouseAssets.ts": {
+    "mtime": 1780559651.2847862,
+    "ast_hash": "c079f530b0d5e14fcc37a14cb6976602",
+    "semantic_hash": ""
+  },
+  "src/hooks/useImportJobs.ts": {
+    "mtime": 1780559651.2848365,
+    "ast_hash": "92e06c1c3026d5443fec7b3bcac64672",
+    "semantic_hash": ""
+  },
+  "src/hooks/useLeaderboardYears.ts": {
+    "mtime": 1780559651.2848923,
+    "ast_hash": "5935f4af26f5d68508dbfcbc0ca703cd",
+    "semantic_hash": ""
+  },
+  "src/hooks/usePagination.ts": {
+    "mtime": 1780559651.2849524,
+    "ast_hash": "ae96f39173f273b4422c30047eb1c1ba",
+    "semantic_hash": ""
+  },
+  "src/hooks/usePoints.ts": {
+    "mtime": 1780559651.285016,
+    "ast_hash": "9eb253896cf7a12369790fb8c2977254",
+    "semantic_hash": ""
+  },
+  "src/hooks/usePresidentsContent.ts": {
+    "mtime": 1780559651.2850723,
+    "ast_hash": "e6f6bd897953436349e2fa0a49862f05",
+    "semantic_hash": ""
+  },
+  "src/hooks/useProgramContent.ts": {
+    "mtime": 1780559651.2851334,
+    "ast_hash": "1b18bfc1f0d7861867fc10ca4099e407",
+    "semantic_hash": ""
+  },
+  "src/hooks/useResourceLinks.ts": {
+    "mtime": 1780559651.2851975,
+    "ast_hash": "0774ec0e7f55a5032f64fe07d8c22dc3",
+    "semantic_hash": ""
+  },
+  "src/hooks/useUVSASchools.ts": {
+    "mtime": 1780559651.2852583,
+    "ast_hash": "07f1bfd75825dec7d1d42bed0ad989a5",
+    "semantic_hash": ""
+  },
+  "src/hooks/useVcnArchives.ts": {
+    "mtime": 1780559651.285318,
+    "ast_hash": "03e91853a2048c921db10c15f6cbdb23",
+    "semantic_hash": ""
+  },
+  "src/index.tsx": {
+    "mtime": 1780559651.2854753,
+    "ast_hash": "b084b1d60e6fc23cd1a8375c4912979c",
+    "semantic_hash": ""
+  },
+  "src/lib/academicTerms.ts": {
+    "mtime": 1780559651.2855835,
+    "ast_hash": "4fc00b082aecf44184f49cdaddfbc915",
+    "semantic_hash": ""
+  },
+  "src/lib/aceFamilyAdapter.ts": {
+    "mtime": 1780559651.2856808,
+    "ast_hash": "f7550a92e26e26de36d1be4c833b50ad",
+    "semantic_hash": ""
+  },
+  "src/lib/aceFamilyImport.ts": {
+    "mtime": 1780559651.2857761,
+    "ast_hash": "553d866ffc0b4441bdcdca721714da00",
+    "semantic_hash": ""
+  },
+  "src/lib/analytics.ts": {
+    "mtime": 1780559651.2858377,
+    "ast_hash": "a2c9dd39237c3684807de66cb4165eed",
+    "semantic_hash": ""
+  },
+  "src/lib/applicationLinks.test.ts": {
+    "mtime": 1781759857.4771028,
+    "ast_hash": "5bb5d48c2596dbd050669413a9d40d18",
+    "semantic_hash": ""
+  },
+  "src/lib/applicationLinks.ts": {
+    "mtime": 1781759857.4774113,
+    "ast_hash": "bd4e0da54bda51d3493342ddbc3760af",
+    "semantic_hash": ""
+  },
+  "src/lib/cabinetYears.ts": {
+    "mtime": 1780559651.2858944,
+    "ast_hash": "8c20ce6b904d9c88dec69acb6e83745f",
+    "semantic_hash": ""
+  },
+  "src/lib/dateOnly.test.ts": {
+    "mtime": 1780559651.285956,
+    "ast_hash": "b45a25e3ea77234a08a7d105e47b75c2",
+    "semantic_hash": ""
+  },
+  "src/lib/dateOnly.ts": {
+    "mtime": 1780559651.2860167,
+    "ast_hash": "7294ffc31fc4a7f65bf61ce4c8a12dc1",
+    "semantic_hash": ""
+  },
+  "src/lib/eventTime.ts": {
+    "mtime": 1780559651.286111,
+    "ast_hash": "e1efcffc5b22fd9f3156ca9942056775",
+    "semantic_hash": ""
+  },
+  "src/lib/imageUpload.ts": {
+    "mtime": 1780559651.286202,
+    "ast_hash": "e952b05c51b66314346c90eaca93c65d",
+    "semantic_hash": ""
+  },
+  "src/lib/memberMatching.test.ts": {
+    "mtime": 1780559651.2862809,
+    "ast_hash": "578d04cb275de4eacdb5f95e14f14f94",
+    "semantic_hash": ""
+  },
+  "src/lib/memberMatching.ts": {
+    "mtime": 1780559651.2863536,
+    "ast_hash": "a2c91718aff4de044ed96a095d9902e4",
+    "semantic_hash": ""
+  },
+  "src/lib/programContent.ts": {
+    "mtime": 1780559651.2864175,
+    "ast_hash": "d3cf443cd2a8954c0513edc3d1b9dd5f",
+    "semantic_hash": ""
+  },
+  "src/lib/supabase.ts": {
+    "mtime": 1780559651.2864692,
+    "ast_hash": "e0bbe0ec61a476215cad19693e8815ae",
+    "semantic_hash": ""
+  },
+  "src/lib/supabaseImages.ts": {
+    "mtime": 1780559651.2865224,
+    "ast_hash": "aea4481b8e372357b393adcb5207214f",
+    "semantic_hash": ""
+  },
+  "src/lib/utils.ts": {
+    "mtime": 1780559651.2865741,
+    "ast_hash": "8595c2f874aa1ff8c7cc28df2999f354",
+    "semantic_hash": ""
+  },
+  "src/lib/yearNormalizer.ts": {
+    "mtime": 1780559651.2866242,
+    "ast_hash": "5ff7f38c52ffd575387a4963c7503f9a",
+    "semantic_hash": ""
+  },
+  "src/pages/Ace.tsx": {
+    "mtime": 1781759857.4776917,
+    "ast_hash": "e84bf884f095bfb0ee5e18a0a92e62b9",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/AceFamilies.tsx": {
+    "mtime": 1780559651.2869349,
+    "ast_hash": "68e51caf789cde911bf33d896a343389",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/AiKnowledge.tsx": {
+    "mtime": 1780559651.2870145,
+    "ast_hash": "94f7255e5ad241cac84cb781d6b8d342",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Analytics.tsx": {
+    "mtime": 1780559651.287094,
+    "ast_hash": "0fdf732a8e38a89a66b34e0d2b1e05a6",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Applications.tsx": {
+    "mtime": 1781759857.4779816,
+    "ast_hash": "4b64d93ffb4807a895d12ebc1e763f78",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Cabinet.tsx": {
+    "mtime": 1780559651.2871773,
+    "ast_hash": "2c9397feecba9d84a22ad148042a264d",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Content.tsx": {
+    "mtime": 1780559651.2872999,
+    "ast_hash": "a3b34d836dfcabeb3590ef2de591a46a",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Events.tsx": {
+    "mtime": 1780559651.2874055,
+    "ast_hash": "56e07b1faac0233c2361b35598661083",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/ExternalEvents.tsx": {
+    "mtime": 1780559651.2875419,
+    "ast_hash": "02a6f76fba12688472e6c580e3f49701",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Feedback.tsx": {
+    "mtime": 1780559651.2876015,
+    "ast_hash": "27ba00b5bcb162b334f8b6d6d53b47b2",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Gallery.tsx": {
+    "mtime": 1780559651.2876809,
+    "ast_hash": "8c83ae5e98c02f931813f48ad9e5a178",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Houses.tsx": {
+    "mtime": 1780559651.2877948,
+    "ast_hash": "207e2c7d5f62f9f5db001074b812dee9",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Import.tsx": {
+    "mtime": 1780559651.2879288,
+    "ast_hash": "2a6e2b625839acf72ffccc2122038416",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Members.tsx": {
+    "mtime": 1780559651.2880414,
+    "ast_hash": "df62c6ea3c073005d69f5a2e46964422",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/MergeSuggestions.tsx": {
+    "mtime": 1780559651.2881544,
+    "ast_hash": "1962181b802bcce70998001b220421d1",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Overview.tsx": {
+    "mtime": 1781759857.4784095,
+    "ast_hash": "95a804c73f5b054185777966ce045c51",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Points.tsx": {
+    "mtime": 1780559651.2883165,
+    "ast_hash": "4bc4cedd0bd3389303edf1e483a0fc6a",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Resources.tsx": {
+    "mtime": 1780559651.2884011,
+    "ast_hash": "a11d0ef07e69be00b078e08eca478902",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/Settings.tsx": {
+    "mtime": 1780559651.2885005,
+    "ast_hash": "d6e98d96379268a44fc668c8d3d97b2f",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/UVSASchools.tsx": {
+    "mtime": 1780559651.288577,
+    "ast_hash": "18835309b518449867c6c13f8fc2e6d6",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/VcnArchives.tsx": {
+    "mtime": 1780559651.2886462,
+    "ast_hash": "59a13c635f7bb7f764934a9f30e6f597",
+    "semantic_hash": ""
+  },
+  "src/pages/Admin/YearsTerms.tsx": {
+    "mtime": 1780559651.2887242,
+    "ast_hash": "766154134ba7f32970d2252da843c758",
+    "semantic_hash": ""
+  },
+  "src/pages/Cabinet.tsx": {
+    "mtime": 1781759857.4787679,
+    "ast_hash": "b523334f181a44682e662729c1632e81",
+    "semantic_hash": ""
+  },
+  "src/pages/Events.tsx": {
+    "mtime": 1781759857.4791503,
+    "ast_hash": "100316d3511a2348f9ead24fd40e6f5b",
+    "semantic_hash": ""
+  },
+  "src/pages/Feedback.tsx": {
+    "mtime": 1780559651.2889652,
+    "ast_hash": "05c7cf25763155928738c95500731c13",
+    "semantic_hash": ""
+  },
+  "src/pages/Gallery.tsx": {
+    "mtime": 1780559651.2890449,
+    "ast_hash": "597969d5c37f978360c6aceceae489c1",
+    "semantic_hash": ""
+  },
+  "src/pages/GetInvolved.tsx": {
+    "mtime": 1781759857.479575,
+    "ast_hash": "0adfa218bae12645bd99033fe38ddab7",
+    "semantic_hash": ""
+  },
+  "src/pages/Home.tsx": {
+    "mtime": 1781759857.4799023,
+    "ast_hash": "44f3b05838444cde769f26d80e694fc9",
+    "semantic_hash": ""
+  },
+  "src/pages/House.tsx": {
+    "mtime": 1781759857.4801817,
+    "ast_hash": "43cae025d26f60193517dfbcb2e93382",
+    "semantic_hash": ""
+  },
+  "src/pages/HouseArchive.tsx": {
+    "mtime": 1780559651.2893736,
+    "ast_hash": "b4f9a21efec6a136b188704303450a48",
+    "semantic_hash": ""
+  },
+  "src/pages/HouseDetail.tsx": {
+    "mtime": 1780559651.2894454,
+    "ast_hash": "0eb8816b22d6c7462a4dbee4afa2fc93",
+    "semantic_hash": ""
+  },
+  "src/pages/Internship.tsx": {
+    "mtime": 1781759857.4803689,
+    "ast_hash": "30497450fdbdabc30bf8a49c1a7be93b",
+    "semantic_hash": ""
+  },
+  "src/pages/Leaderboard.tsx": {
+    "mtime": 1781759857.4807231,
+    "ast_hash": "6b973aaa112b28b1c8d1910f93a0ec5c",
+    "semantic_hash": ""
+  },
+  "src/pages/MemberAccountsUnavailable.tsx": {
+    "mtime": 1780559651.2897265,
+    "ast_hash": "cdf76799a43868ff2a0ce4cbb7637a62",
+    "semantic_hash": ""
+  },
+  "src/pages/NotFound.tsx": {
+    "mtime": 1781759857.481021,
+    "ast_hash": "eb27e9f0dc9c02b58268e654991599df",
+    "semantic_hash": ""
+  },
+  "src/pages/Points.tsx": {
+    "mtime": 1781759857.4813104,
+    "ast_hash": "555496707524a67bf9e87ffa78844e89",
+    "semantic_hash": ""
+  },
+  "src/pages/Profile.tsx": {
+    "mtime": 1780559651.2900634,
+    "ast_hash": "64ab4171a951410f82f8828a73b25d3f",
+    "semantic_hash": ""
+  },
+  "src/pages/PublicPointsExplainer.tsx": {
+    "mtime": 1780559651.2901258,
+    "ast_hash": "51004f70845f4fe9e0c4e8febaa91ecf",
+    "semantic_hash": ""
+  },
+  "src/pages/SignIn.tsx": {
+    "mtime": 1780559651.2901826,
+    "ast_hash": "9c173254663d78201e220f430f0cd485",
+    "semantic_hash": ""
+  },
+  "src/pages/UVSANetwork.tsx": {
+    "mtime": 1781759857.481653,
+    "ast_hash": "7b44cfceca82c6ad667f54235ae20647",
+    "semantic_hash": ""
+  },
+  "src/pages/Vcn.tsx": {
+    "mtime": 1780559651.2903671,
+    "ast_hash": "491ada6439b1333cc998921ec89d1a2c",
+    "semantic_hash": ""
+  },
+  "src/pages/VcnArchive.tsx": {
+    "mtime": 1780559651.2904444,
+    "ast_hash": "7698c33ccf0ead677724208958f81676",
+    "semantic_hash": ""
+  },
+  "src/pages/VcnCurrent.tsx": {
+    "mtime": 1781759857.4820776,
+    "ast_hash": "c19938b3c220bc3d9330036e78dafa06",
+    "semantic_hash": ""
+  },
+  "src/pages/WildNCulture.tsx": {
+    "mtime": 1781759857.482428,
+    "ast_hash": "d129288e99051c6b975d4ce41c2a14d4",
+    "semantic_hash": ""
+  },
+  "src/react-app-env.d.ts": {
+    "mtime": 1780559651.2906716,
+    "ast_hash": "3b12a2a445e35988cd2eb9f73d12c500",
+    "semantic_hash": ""
+  },
+  "src/reportWebVitals.ts": {
+    "mtime": 1780559651.290725,
+    "ast_hash": "f62c07c24a14ca699e74938f358baf22",
+    "semantic_hash": ""
+  },
+  "src/routes/AdminRoute.tsx": {
+    "mtime": 1780559651.2908158,
+    "ast_hash": "66e6e5fbddb1e539452ee92f53d6eeb0",
+    "semantic_hash": ""
+  },
+  "src/routes/ProtectedRoute.tsx": {
+    "mtime": 1780559651.2908762,
+    "ast_hash": "fab8977f1f1cf8025f3af0a9478e57a0",
+    "semantic_hash": ""
+  },
+  "src/routes/index.tsx": {
+    "mtime": 1781759857.4828038,
+    "ast_hash": "bc06f585e6b721069c9d5e7e9793160a",
+    "semantic_hash": ""
+  },
+  "src/schemas/index.ts": {
+    "mtime": 1780559651.2910633,
+    "ast_hash": "e3ea36b17a9ada4d07c24cb85f8ba7f7",
+    "semantic_hash": ""
+  },
+  "src/scripts/createEventsTable.ts": {
+    "mtime": 1780559651.2911465,
+    "ast_hash": "f8c566a8ce28364023cb390a59916ddc",
+    "semantic_hash": ""
+  },
+  "src/scripts/migrateCabinet.ts": {
+    "mtime": 1780559651.2912679,
+    "ast_hash": "10bd221ce301cd49aa373d1448c939a7",
+    "semantic_hash": ""
+  },
+  "src/scripts/normalizeYears.ts": {
+    "mtime": 1780559651.29132,
+    "ast_hash": "2a020e24b5fd85c7d6e61042269c646d",
+    "semantic_hash": ""
+  },
+  "src/setupTests.ts": {
+    "mtime": 1780559651.2913702,
+    "ast_hash": "987ae0a59483ee509d221d6ada9878e5",
+    "semantic_hash": ""
+  },
+  "src/types/database.ts": {
+    "mtime": 1781759857.483152,
+    "ast_hash": "79ef44864b43170239ada6b306d0571a",
+    "semantic_hash": ""
+  },
+  "src/types/index.ts": {
+    "mtime": 1781759857.4835086,
+    "ast_hash": "68a737f76e791697ed9d9287f2bee0d7",
+    "semantic_hash": ""
+  },
+  "src/utils/housePublicPointOverrides.ts": {
+    "mtime": 1780559651.2918062,
+    "ast_hash": "776696087b71823af211ea6f93f8dc34",
+    "semantic_hash": ""
+  },
+  "src/utils/houseSlug.ts": {
+    "mtime": 1780559651.2918584,
+    "ast_hash": "2055f449b2494ac009ce200dbe425379",
+    "semantic_hash": ""
+  },
+  "src/utils/isSupabaseUnavailable.ts": {
+    "mtime": 1780559651.2919087,
+    "ast_hash": "14358d756601c5e106633a5a286810c4",
+    "semantic_hash": ""
+  },
+  "src/utils/losAngelesDate.ts": {
+    "mtime": 1780559651.291964,
+    "ast_hash": "e49ef9a9d967f7c4b1c7edab7a09670e",
+    "semantic_hash": ""
+  },
+  "src/utils/seasonalState.test.ts": {
+    "mtime": 1780559651.2920203,
+    "ast_hash": "694064aa8e9fe6f397dddc7dcc4cf721",
+    "semantic_hash": ""
+  },
+  "src/utils/seasonalState.ts": {
+    "mtime": 1780559651.2920823,
+    "ast_hash": "ac1fe2ad211f95b606e0b72d2bb59b39",
+    "semantic_hash": ""
+  },
+  "supabase/functions/analytics-proxy/index.ts": {
+    "mtime": 1780559651.2927709,
+    "ast_hash": "79375f0021c0ebeeab448739e3ec9fc4",
+    "semantic_hash": ""
+  },
+  "supabase/functions/secure-ai/index.ts": {
+    "mtime": 1780559651.2929027,
+    "ast_hash": "a2bb02ee797bb5303d292be8ce19ae5f",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trigger-event-image-migration/index.ts": {
+    "mtime": 1780559651.293052,
+    "ast_hash": "0213ef52a1ade6e4602e0c409c8f23f3",
+    "semantic_hash": ""
+  },
+  "supabase/functions/trigger-house-event-image-migration/index.ts": {
+    "mtime": 1780559651.2931952,
+    "ast_hash": "ae8fb4950a44f13406e845ecac6f7847",
+    "semantic_hash": ""
+  },
+  "supabase/functions/vsa-ai-assistant/index.ts": {
+    "mtime": 1780559651.2933288,
+    "ast_hash": "aff9c85c8911c9d79f88c7faaa0ae0d1",
+    "semantic_hash": ""
+  },
+  "tailwind.config.js": {
+    "mtime": 1780559651.298409,
+    "ast_hash": "63cb47560e5bf2ec2145220f1c7600ea",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1780559651.2985334,
+    "ast_hash": "75a54e1abd560b1af0f3f2205a7c90df",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1780559651.2985945,
+    "ast_hash": "ff0174d89f0796e116ee77db8ae4a2ba",
+    "semantic_hash": ""
+  },
+  ".claude/CLAUDE.md": {
+    "mtime": 1781760397.749,
+    "ast_hash": "db73b0edd7ffbc61ceac177130730865",
+    "semantic_hash": ""
+  },
+  ".claude/agents/README.md": {
+    "mtime": 1781759857.4672115,
+    "ast_hash": "be624807c5823fdd2a8db8e6c36ed261",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-admin-workflows.md": {
+    "mtime": 1781759857.4674923,
+    "ast_hash": "0c60f3f10a28b605b30b6e1a0cb1002a",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-ai-knowledge.md": {
+    "mtime": 1781759857.4677706,
+    "ast_hash": "a29a99cb23c4c606b996ead4ce50c0d5",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-applications-forms.md": {
+    "mtime": 1781759857.4680302,
+    "ast_hash": "15c1d07d525f619b09cee65f765bdabd",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-architecture-guardian.md": {
+    "mtime": 1781759857.4682732,
+    "ast_hash": "86dbd043c411a1af6ce6ea300b0328b4",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-cabinet-leadership.md": {
+    "mtime": 1781759857.4684715,
+    "ast_hash": "9c5fa9f389817dbb0554890ba9a9041b",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-docs-acceptance.md": {
+    "mtime": 1781759857.468683,
+    "ast_hash": "834123774dc08c141de57862f3af058e",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-events-gallery.md": {
+    "mtime": 1781759857.4688714,
+    "ast_hash": "4bfad43ab64310142996fee0095c9d98",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-house-system.md": {
+    "mtime": 1781759857.4691064,
+    "ast_hash": "ee5a0a9609c712569cebf968de5122b2",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-points-attendance-guardian.md": {
+    "mtime": 1781759857.4693131,
+    "ast_hash": "388ca790d38c13a657cec47e9ec37742",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-public-content.md": {
+    "mtime": 1781759857.4695091,
+    "ast_hash": "73e2cffcf74fd33315203508a3c982a9",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-storage-egress.md": {
+    "mtime": 1781759857.4696965,
+    "ast_hash": "c48012e802edf846203b0d29c41f112b",
+    "semantic_hash": ""
+  },
+  ".claude/agents/vsa-testing-qa.md": {
+    "mtime": 1781759857.4699283,
+    "ast_hash": "183d801cc6b9fadf74dd9c122e9c7884",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/SKILL.md": {
+    "mtime": 1781760443.954819,
+    "ast_hash": "9789fc1893135c6f4088d1012f2a1f62",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/add-watch.md": {
+    "mtime": 1781760360.5926638,
+    "ast_hash": "0df0589623217ca38a12bdcabfb42f4c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/exports.md": {
+    "mtime": 1781760360.5927873,
+    "ast_hash": "c04ddf8f1f5ef5e262ebec491a523c74",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1781760360.5929184,
+    "ast_hash": "24808b03abfeaf5f6435bb69c0125b2c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1781760360.5930018,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/hooks.md": {
+    "mtime": 1781760360.5930808,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/query.md": {
+    "mtime": 1781760360.5932596,
+    "ast_hash": "7d1ff295a0e0aa1cc9a14e52c3a19202",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/transcribe.md": {
+    "mtime": 1781760360.5933468,
+    "ast_hash": "70f6aa30d6211f3a2c7e9fc45479f50c",
+    "semantic_hash": ""
+  },
+  ".claude/skills/graphify/references/update.md": {
+    "mtime": 1781760360.5934649,
+    "ast_hash": "0662e1a77b21d670132cd5855954bfff",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/SKILL.md": {
+    "mtime": 1781760443.9879951,
+    "ast_hash": "2b3477036742471691b444be392c3f81",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/add-watch.md": {
+    "mtime": 1781760360.5961745,
+    "ast_hash": "0df0589623217ca38a12bdcabfb42f4c",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/exports.md": {
+    "mtime": 1781760360.5962818,
+    "ast_hash": "c04ddf8f1f5ef5e262ebec491a523c74",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1781760360.5964441,
+    "ast_hash": "a86a7321597b23cc2b22e011b3dc6e1d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1781760360.596539,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/hooks.md": {
+    "mtime": 1781760360.5966232,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/query.md": {
+    "mtime": 1781760360.5967839,
+    "ast_hash": "7d1ff295a0e0aa1cc9a14e52c3a19202",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/transcribe.md": {
+    "mtime": 1781760360.596879,
+    "ast_hash": "70f6aa30d6211f3a2c7e9fc45479f50c",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/update.md": {
+    "mtime": 1781760360.5970323,
+    "ast_hash": "0662e1a77b21d670132cd5855954bfff",
+    "semantic_hash": ""
+  },
+  ".github/workflows/deploy.yml": {
+    "mtime": 1780559651.20642,
+    "ast_hash": "ef2c9d0f2e2786646380d5213fd4baa3",
+    "semantic_hash": ""
+  },
+  ".github/workflows/migrate-event-images.yml": {
+    "mtime": 1780559651.2065148,
+    "ast_hash": "887b97aac2efea738326dacab456d84e",
+    "semantic_hash": ""
+  },
+  ".github/workflows/migrate-images.yml": {
+    "mtime": 1780559651.2065809,
+    "ast_hash": "760185a415325f7a2d30f3f56b5e60e6",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1781760397.7805727,
+    "ast_hash": "882617f9d60b254dec264f85366c0047",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1781760397.7493331,
+    "ast_hash": "f764256a11341d06a57663fd35b5ade5",
+    "semantic_hash": ""
+  },
+  "DEPLOYMENT_GUIDE.md": {
+    "mtime": 1780559651.2068908,
+    "ast_hash": "b49ac691d6a16870754e81d3bba51a87",
+    "semantic_hash": ""
+  },
+  "DESIGN.md": {
+    "mtime": 1780559651.206947,
+    "ast_hash": "e4bb2aa20a8b6eaeb3e16c8955839780",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1780559651.2070825,
+    "ast_hash": "c6716990fea9f3bb60a54c028a979758",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1780559651.207288,
+    "ast_hash": "484c401cf0065f8558c6c1fc88085cc4",
+    "semantic_hash": ""
+  },
+  "docs/admin-analytics-setup.md": {
+    "mtime": 1780559651.2073758,
+    "ast_hash": "ac8ec987c09b5c67c82366c5907389ad",
+    "semantic_hash": ""
+  },
+  "docs/admin-content-management.md": {
+    "mtime": 1780559651.2074378,
+    "ast_hash": "83ae471d59bf7e78ea762089e812a866",
+    "semantic_hash": ""
+  },
+  "docs/claude-subagent-task-template.md": {
+    "mtime": 1781759857.470591,
+    "ast_hash": "65c363adbbc3d06176593ac5ee13fa3e",
+    "semantic_hash": ""
+  },
+  "docs/claude-subagent-workflow.md": {
+    "mtime": 1781759857.4708655,
+    "ast_hash": "e42e50d29e2925e338194d77f20422b3",
+    "semantic_hash": ""
+  },
+  "docs/cloud-architecture.md": {
+    "mtime": 1780559651.2075264,
+    "ast_hash": "9c4f1bbb4411010a1ce0d5ea31b553de",
+    "semantic_hash": ""
+  },
+  "docs/codex-subagent-task-template.md": {
+    "mtime": 1781759857.471114,
+    "ast_hash": "838f71930ec53dbd0248ee3d31c6919b",
+    "semantic_hash": ""
+  },
+  "docs/codex-subagent-workflow.md": {
+    "mtime": 1781759857.4713824,
+    "ast_hash": "2b2844d07927992dfc84ab44aa10fc4d",
+    "semantic_hash": ""
+  },
+  "docs/dynamic-content-routing-audit.md": {
+    "mtime": 1780559651.2076173,
+    "ast_hash": "b8529d9fb67dacb64389d8aa55ac8dfb",
+    "semantic_hash": ""
+  },
+  "docs/event-image-migration.md": {
+    "mtime": 1780559651.2077358,
+    "ast_hash": "8d274c3dd6f5c2df2850b94d726aa8ba",
+    "semantic_hash": ""
+  },
+  "docs/graphify-workflow.md": {
+    "mtime": 1781759970.4979448,
+    "ast_hash": "fe2402819c6d0d43e5f76081b67af0de",
+    "semantic_hash": ""
+  },
+  "docs/house-image-migration.md": {
+    "mtime": 1780559651.2077909,
+    "ast_hash": "d098637ba16845aa7cc3d9faa730222f",
+    "semantic_hash": ""
+  },
+  "docs/leaderboard-system.md": {
+    "mtime": 1780559651.2078462,
+    "ast_hash": "8ce1c5b85f03cf2ec8b1f4b908c56165",
+    "semantic_hash": ""
+  },
+  "docs/leaderboard-test-checklist.md": {
+    "mtime": 1780559651.207902,
+    "ast_hash": "bfc214629fd38fc68a17056ccd301917",
+    "semantic_hash": ""
+  },
+  "k8s/deployment.yaml": {
+    "mtime": 1780559651.2082763,
+    "ast_hash": "3c93334b1c4b2b8ff58e8e7d69d4e3cb",
+    "semantic_hash": ""
+  },
+  "k8s/namespace.yaml": {
+    "mtime": 1780559651.2083282,
+    "ast_hash": "b6d0f29513fa2708ee64c3e030398871",
+    "semantic_hash": ""
+  },
+  "monitoring/prometheus.yml": {
+    "mtime": 1780559651.208462,
+    "ast_hash": "8294cedba76076bb487af7015a89599d",
+    "semantic_hash": ""
+  },
+  "public/index.html": {
+    "mtime": 1781759857.471707,
+    "ast_hash": "f595605a8d86197a68da84e68382071f",
+    "semantic_hash": ""
+  },
+  "public/robots.txt": {
+    "mtime": 1780559651.2757926,
+    "ast_hash": "ea2c2a833ce5d9661c07842f1f902e8d",
+    "semantic_hash": ""
+  },
+  "push_out.txt": {
+    "mtime": 1780559651.2758808,
+    "ast_hash": "9619101293fb8d62392ed81fb0483128",
+    "semantic_hash": ""
+  },
+  "stitch-prompts.md": {
+    "mtime": 1780559651.2921817,
+    "ast_hash": "4138fe27564417f1718e49782d70db7e",
+    "semantic_hash": ""
+  },
+  "ts_output.txt": {
+    "mtime": 1780559651.2984664,
+    "ast_hash": "a404ce729d586f26008128edec337fff",
+    "semantic_hash": ""
+  },
+  "public/images/2024events/LaJollaSmores.png": {
+    "mtime": 1780559651.2104514,
+    "ast_hash": "f0e666333f75e33294ce0e9ae78b7dea",
+    "semantic_hash": ""
+  },
+  "public/images/2024events/PicnicwCab.jpeg": {
+    "mtime": 1780559651.211085,
+    "ast_hash": "caaba110647cdc08822d7bfe48d92bfa",
+    "semantic_hash": ""
+  },
+  "public/images/2024events/phok.png": {
+    "mtime": 1780559651.211571,
+    "ast_hash": "828452aa1fec620f57b554d8663dd86a",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/abby-le_fb58f6de.webp": {
+    "mtime": 1780559651.2121787,
+    "ast_hash": "f42bb508bffc0f84ba83ff1f4d9f8474",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/abby_le.png": {
+    "mtime": 1780559651.2127116,
+    "ast_hash": "03a3cf56b1f2abc56ffc5350619d2a55",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/adriel-abaoag_354f169e.webp": {
+    "mtime": 1780559651.2128315,
+    "ast_hash": "8887580a3e82fba57b2895fefcf8fe67",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/allyson-hong_30f4d6a6.webp": {
+    "mtime": 1780559651.2129986,
+    "ast_hash": "8d22c8267626aa80dbbe93d4cb77ecc9",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/alyssa-nott_51b417d0.webp": {
+    "mtime": 1780559651.2131493,
+    "ast_hash": "e37de477f3f2bec97f4ab6872e67c176",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/amy-nguyen_7d132c43.webp": {
+    "mtime": 1780559651.2132623,
+    "ast_hash": "0b2efee6d4e194a0710dfd19ebd91463",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/amy_nguyen.png": {
+    "mtime": 1780559651.2202482,
+    "ast_hash": "552f3cb0eac10da52ed2df3bceeed807",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/andy-phan_7c26e83a.webp": {
+    "mtime": 1780559651.2203796,
+    "ast_hash": "fd40b41583ec6cd8b2dd6dee9f1ad993",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/andy-tran_6152894e.webp": {
+    "mtime": 1780559651.2204933,
+    "ast_hash": "3483089225e34ce1bc49abcf4312cc4c",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/andy_tran.png": {
+    "mtime": 1780559651.2206733,
+    "ast_hash": "a0aeeea4d82ecb85f75d30fc22b5f778",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/anne-fa_6c9275de.webp": {
+    "mtime": 1780559651.2207785,
+    "ast_hash": "a4a441d3b5378e44a581fe14d97aab99",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/april-pham_6f17904b.webp": {
+    "mtime": 1780559651.2208889,
+    "ast_hash": "b9d151c95c40cbb15d0769b70627fdd9",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/april-pham_cd67b1ce.webp": {
+    "mtime": 1780559651.2209966,
+    "ast_hash": "b9d151c95c40cbb15d0769b70627fdd9",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/april_pham.png": {
+    "mtime": 1780559651.2212071,
+    "ast_hash": "08ad4687e386e5e9b41b0fd568a7f9b0",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/asia-martin_7bf9ef7b.webp": {
+    "mtime": 1780559651.2212894,
+    "ast_hash": "736ad27d9ce20717ec2266e0a504fc07",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/brandon-do_ac675fb8.webp": {
+    "mtime": 1780559651.221359,
+    "ast_hash": "bf7d42cdfee4c30d899d68d295360454",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/brandon-thach_304f8306.webp": {
+    "mtime": 1780559651.2214549,
+    "ast_hash": "811ce817563092f5020a8c9bc73f253f",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/brandon_thach.png": {
+    "mtime": 1780559651.225736,
+    "ast_hash": "7a9d9d1f9c3b7d4295fe3f27ec6105db",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/candice-tran_8db96813.webp": {
+    "mtime": 1780559651.2258854,
+    "ast_hash": "baef7015c6db2b11fbfffaf147f72bff",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/darlene-le_5867b49d.webp": {
+    "mtime": 1780559651.2260277,
+    "ast_hash": "4b64731dce92fb8e469e10bce53c462e",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/darlene-le_76c7445f.webp": {
+    "mtime": 1780559651.2261322,
+    "ast_hash": "4b64731dce92fb8e469e10bce53c462e",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/emily-nguyen_f1e638e8.webp": {
+    "mtime": 1780559651.2263074,
+    "ast_hash": "73a01610c24ab15d2df3296442898dd2",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/ethan-dau_ae881b42.webp": {
+    "mtime": 1780559651.2263887,
+    "ast_hash": "3092fcc8d2c9357e2c6dbbd4a5ce59c9",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/ethan-lam_aa315e78.webp": {
+    "mtime": 1780559651.2264657,
+    "ast_hash": "8a8ce2cdb6f4b6e12cdc99a5331bbf5e",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/faith-nguyen_0a40dab6.webp": {
+    "mtime": 1780559651.2265842,
+    "ast_hash": "4b64731dce92fb8e469e10bce53c462e",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/gracie-nguyen_a3307be1.webp": {
+    "mtime": 1780559651.22669,
+    "ast_hash": "426ed57cbfab056f3ad1746d7f289102",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/gracie_nguyen.png": {
+    "mtime": 1780559651.230742,
+    "ast_hash": "09c244b2b170343f8b0ad233b6f51915",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/hailie-cheng_3d8be591.webp": {
+    "mtime": 1780559651.2308676,
+    "ast_hash": "8f3fc9e6ca3483f5d8fdaaef1d2650af",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/hailie-cheng_8a88ea17.webp": {
+    "mtime": 1780559651.2309678,
+    "ast_hash": "8f3fc9e6ca3483f5d8fdaaef1d2650af",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/hanni-lam_e22e3506.webp": {
+    "mtime": 1780559651.2310607,
+    "ast_hash": "16ec4fa2d7f66e9b073ffe76bf709b20",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/havyn-nguyen_24c99009.webp": {
+    "mtime": 1780559651.2311552,
+    "ast_hash": "0905bd422a66141739597e041e1bb56c",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/havyn-nguyen_979cdb15.webp": {
+    "mtime": 1780559651.2312427,
+    "ast_hash": "0905bd422a66141739597e041e1bb56c",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/havyn_nguyen.png": {
+    "mtime": 1780559651.2352283,
+    "ast_hash": "23c2120cc010119cfb454639413a5e3a",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/ingyin-moh_5c0c505d.webp": {
+    "mtime": 1780559651.2353864,
+    "ast_hash": "5a3b31c6de9e8692b476ee35b5cd7384",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/ingyin_moh.png": {
+    "mtime": 1780559651.2356696,
+    "ast_hash": "800bd9d43ac1307f540cd59715c19287",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/ivy-khuu_a6997fba.webp": {
+    "mtime": 1780559651.2357836,
+    "ast_hash": "3c78413eb7d9ff56ec08a85441536ea6",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/jonas-truong_36e91845.webp": {
+    "mtime": 1780559651.235891,
+    "ast_hash": "b140d40e995c2a385885098944c63dec",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/jonas_truong.png": {
+    "mtime": 1780559651.2384505,
+    "ast_hash": "c0993d2b8bcce547dce3851f56eea1f5",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/kayla-truong_2f5c218b.webp": {
+    "mtime": 1780559651.2385774,
+    "ast_hash": "91e76d9020efbfaca3a1b719402f44b5",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/kirsten-ngo_967daf57.webp": {
+    "mtime": 1780559651.2386832,
+    "ast_hash": "1a13a53af25d45d621d4bb22754c7d87",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/kirsten_ngo.png": {
+    "mtime": 1780559651.250742,
+    "ast_hash": "07c61db1a3d036115e67ce24bc0bb097",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/lesley-luong_a94d68b2.webp": {
+    "mtime": 1780559651.2508974,
+    "ast_hash": "19c77344cd46252cab9a06e3d3a9554a",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/martin-dang_be184667.webp": {
+    "mtime": 1780559651.2510066,
+    "ast_hash": "630d105d86f9d647d90b10f930c25d63",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/martin_dang.png": {
+    "mtime": 1780559651.2520883,
+    "ast_hash": "c29c8f47a870660038b25ee9bf5ac4ec",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/matthew-cao_16f5d3f0.webp": {
+    "mtime": 1780559651.252229,
+    "ast_hash": "e610af733a7211a512c32456eb49347f",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/matthew-ly_ef2c94e5.webp": {
+    "mtime": 1780559651.2523198,
+    "ast_hash": "4b1eceeec9c597aa4ba6bac09e91f6bd",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/mindy-tran_dd611aef.webp": {
+    "mtime": 1780559651.2524455,
+    "ast_hash": "64cfcbaed0c1bcd1c51e7c1ad3b374b9",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/mindy_tran.png": {
+    "mtime": 1780559651.254847,
+    "ast_hash": "9cd70dbe01e5c7985aafc625e1026230",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/phuong-le_062af82e.webp": {
+    "mtime": 1780559651.254971,
+    "ast_hash": "378f1173ece023a1b3c1fe1137af4e9c",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/phuong_le.png": {
+    "mtime": 1780559651.2555203,
+    "ast_hash": "b5587a5de6300415b946cbd4a5fe2a7a",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/robert-le_1ff24580.webp": {
+    "mtime": 1780559651.255638,
+    "ast_hash": "401dbda03ad07c85b616a749a1c1611d",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/robert-le_316b40b1.webp": {
+    "mtime": 1780559651.2557306,
+    "ast_hash": "401dbda03ad07c85b616a749a1c1611d",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/robert_le.png": {
+    "mtime": 1780559651.256053,
+    "ast_hash": "59ba68d0aa9b4d3773441c6cac690ad0",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/sofia-nguyen_53cf5c06.webp": {
+    "mtime": 1780559651.256158,
+    "ast_hash": "94e2c0c647d7a22c6b79886211b919be",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/stephanie-nguyen_dafb9903.webp": {
+    "mtime": 1780559651.2562554,
+    "ast_hash": "3966708c6f749c63730cf4754a0bc314",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/teresa-pham_6eb79850.webp": {
+    "mtime": 1780559651.256362,
+    "ast_hash": "3d1ea93247f7dedbbbf914ab36ba6c7f",
+    "semantic_hash": ""
+  },
+  "public/images/cabinet/teresa-pham_77a20410.webp": {
+    "mtime": 1780559651.2564454,
+    "ast_hash": "3d1ea93247f7dedbbbf914ab36ba6c7f",
+    "semantic_hash": ""
+  },
+  "public/images/events/LaJollaSmores.png": {
+    "mtime": 1780559651.2570572,
+    "ast_hash": "f0e666333f75e33294ce0e9ae78b7dea",
+    "semantic_hash": ""
+  },
+  "public/images/events/afterglow-a-night-of-memories_2026-06-01.webp": {
+    "mtime": 1780559651.257166,
+    "ast_hash": "ec5142b0025d3aac1c4de61b900073b0",
+    "semantic_hash": ""
+  },
+  "public/images/events/all-house-mixer_2026-04-27.webp": {
+    "mtime": 1780559651.2573576,
+    "ast_hash": "9fed0bb43ed6b792dd755e0afc5e7010",
+    "semantic_hash": ""
+  },
+  "public/images/events/asian-night-market-2026_2026-01-31.webp": {
+    "mtime": 1780559651.2574928,
+    "ast_hash": "9a30af9ddb0d3a1f2d1c4cccb8193c7c",
+    "semantic_hash": ""
+  },
+  "public/images/events/cab-meet-and-greet_2026-04-09.webp": {
+    "mtime": 1780559651.2576003,
+    "ast_hash": "b1a17da4bbf8a1df3c5cacad6497843a",
+    "semantic_hash": ""
+  },
+  "public/images/events/diy-time-w-vsa_2025-10-09.webp": {
+    "mtime": 1780559651.2577348,
+    "ast_hash": "6892fdac35e1bc3d3411b33c4fd00b04",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-anh-chi-em-reveal_2025-11-15.webp": {
+    "mtime": 1780559651.2578437,
+    "ast_hash": "2f0635f1fbfe53200fd9d6bf77600aa7",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-finals-study-jams_2025-12-02.webp": {
+    "mtime": 1780559651.2579405,
+    "ast_hash": "b68198075092b8ab56125f8b22c1e1d8",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-gbm-1-sail-into-the-sunset-with-vsa_2025-10-02.webp": {
+    "mtime": 1780559651.2581868,
+    "ast_hash": "7fa89bd2f8edd32850ffdf7fe504adaf",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-gbm-2-mic-d-up-w-vsa_2025-10-16.webp": {
+    "mtime": 1780559651.2583575,
+    "ast_hash": "90d14df0683cd15de4bc4a49e17cba73",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-gbm-3-harvesting-memories-w-vsa_2025-11-06.webp": {
+    "mtime": 1780559651.258475,
+    "ast_hash": "e461dcbf26200a90a4bb82860c46d21e",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-gbm-4-giving-thanks_2025-11-20.webp": {
+    "mtime": 1780559651.258644,
+    "ast_hash": "625abb242e94339eacde8cd133ebf6cb",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-house-reveal_2025-11-08.webp": {
+    "mtime": 1780559651.2587595,
+    "ast_hash": "3d3fad8a9c40e35c78f8cc90191f0775",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-midterm-study-jams-d1_2025-10-28.webp": {
+    "mtime": 1780559651.2588363,
+    "ast_hash": "f5399f0dbc976482562a89bd11d1819b",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-midterm-study-jams-d2_2025-10-29.webp": {
+    "mtime": 1780559651.2589066,
+    "ast_hash": "f5399f0dbc976482562a89bd11d1819b",
+    "semantic_hash": ""
+  },
+  "public/images/events/fall-25-vcn-dance-workshop_2025-11-04.webp": {
+    "mtime": 1780559651.2590559,
+    "ast_hash": "698c82639df94cc690b852efb0932be2",
+    "semantic_hash": ""
+  },
+  "public/images/events/family-bingo_2025-10-08.webp": {
+    "mtime": 1780559651.2591684,
+    "ast_hash": "6892fdac35e1bc3d3411b33c4fd00b04",
+    "semantic_hash": ""
+  },
+  "public/images/events/financial-and-mental-health-workshop_2026-02-11.webp": {
+    "mtime": 1780559651.2592986,
+    "ast_hash": "8c033becf3072d8b5f06967c30811c3f",
+    "semantic_hash": ""
+  },
+  "public/images/events/house-meet-and-greet_2025-10-10.webp": {
+    "mtime": 1780559651.2594044,
+    "ast_hash": "6892fdac35e1bc3d3411b33c4fd00b04",
+    "semantic_hash": ""
+  },
+  "public/images/events/phok.png": {
+    "mtime": 1780559651.2598345,
+    "ast_hash": "828452aa1fec620f57b554d8663dd86a",
+    "semantic_hash": ""
+  },
+  "public/images/events/pie-a-cab_2026-06-04.webp": {
+    "mtime": 1780559651.2599409,
+    "ast_hash": "20324c3f02a1551983cc333499ddb39b",
+    "semantic_hash": ""
+  },
+  "public/images/events/pie-a-cab_2026-06-04_thumb.webp": {
+    "mtime": 1780559651.2600284,
+    "ast_hash": "483b0460298eecfb1774f3f95f4f62f2",
+    "semantic_hash": ""
+  },
+  "public/images/events/spring-26-gbm-1_2026-04-01.webp": {
+    "mtime": 1780559651.2601504,
+    "ast_hash": "65e69a1ea47b2c0e8f47f67968b50b0b",
+    "semantic_hash": ""
+  },
+  "public/images/events/spring-26-gbm-2-remembering-the-fall-of-saigon_2026-04-23.webp": {
+    "mtime": 1780559651.2602768,
+    "ast_hash": "8e986a551d8a1d9e78767a8cebf85c0d",
+    "semantic_hash": ""
+  },
+  "public/images/events/spring-26-study-jams_2026-04-21.webp": {
+    "mtime": 1780559651.2603724,
+    "ast_hash": "38fb9499cbc7c96c0cc1e32624b3c319",
+    "semantic_hash": ""
+  },
+  "public/images/events/vcn-pie-a-cast_2026-04-06.webp": {
+    "mtime": 1780559651.260454,
+    "ast_hash": "639dac41e6e9fc16daf23768aaef3cc4",
+    "semantic_hash": ""
+  },
+  "public/images/events/vietnamese-culture-night-vcn_2026-04-19.webp": {
+    "mtime": 1780559651.2605808,
+    "ast_hash": "cd2bdb091a0fcd3c42cd8e8243a6a593",
+    "semantic_hash": ""
+  },
+  "public/images/events/vsa-x-casa-white-lies-mixer_2026-05-04.webp": {
+    "mtime": 1780559651.260758,
+    "ast_hash": "ed4ab972c56135a559040b638e182229",
+    "semantic_hash": ""
+  },
+  "public/images/events/welcome-week-mixer-risky-business_2025-10-11.webp": {
+    "mtime": 1780559651.2608695,
+    "ast_hash": "bc5da165885b6b6be18d7285b6334baf",
+    "semantic_hash": ""
+  },
+  "public/images/events/wild-n-culture-2026_2026-02-08.webp": {
+    "mtime": 1780559651.2609804,
+    "ast_hash": "0ecc5d79c5afd4a47a63bc503bf13fd4",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-finals-study-jams_2026-03-12.webp": {
+    "mtime": 1780559651.2611372,
+    "ast_hash": "688eee6ca2ebdfae634a5558097fa107",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-gbm-1-lowk-forever-loving-vsa_2026-01-08.webp": {
+    "mtime": 1780559651.2612782,
+    "ast_hash": "b8c452cfa502fec0fa5ab10172dc11c6",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-gbm-2-vsa-has-entered-the-villa_2026-01-29.webp": {
+    "mtime": 1780559651.2613823,
+    "ast_hash": "b8e9f15c5ce8ed4ce80874c699ebd759",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-gbm-3-horsing-around-into-t-t-w-vsa_2026-02-12.webp": {
+    "mtime": 1780559651.2615147,
+    "ast_hash": "38a8b6d973375081a55b9d3fc5932e64",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-gbm-4-service-auction_2026-03-05.webp": {
+    "mtime": 1780559651.2616727,
+    "ast_hash": "e6c87afe03ad0420dba99e3dad365f17",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-midterm-study-jams_2026-02-03.webp": {
+    "mtime": 1780559651.2617924,
+    "ast_hash": "ae8c1abc22ee20988d2158b10766177d",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-26-pho-n-karaoke_2026-01-17.webp": {
+    "mtime": 1780559651.2619135,
+    "ast_hash": "7fe78577b3ff66c527cdea6fdd5a1467",
+    "semantic_hash": ""
+  },
+  "public/images/events/winter-retreat-26_2026-01-10.webp": {
+    "mtime": 1780559651.262029,
+    "ast_hash": "f166c141e4f4c1a51adc052833e11bc9",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-ace-family-bingo_2025-10-07.webp": {
+    "mtime": 1780559651.262325,
+    "ast_hash": "be31aa5afc489048707d5a9a2bb90849",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-ace-reveal_2025-11-15.webp": {
+    "mtime": 1780559651.262445,
+    "ast_hash": "9d4f4bbab5c807ba1ed3a00cc445b31d",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-gbm-1_2025-10-01.webp": {
+    "mtime": 1780559651.2625382,
+    "ast_hash": "1c7dec12e8d29a4d5a983fe483ed133f",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-gbm-3_2025-11-05.webp": {
+    "mtime": 1780559651.2626548,
+    "ast_hash": "9c6de4db66b2a72d9f04d883c982962c",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-gbm-4-giving-thanks_2025-11-19.webp": {
+    "mtime": 1780559651.2628028,
+    "ast_hash": "63382d65e4b6c3d00d5e217f2523891c",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-house-parent-meet-n-greet_2025-10-09.webp": {
+    "mtime": 1780559651.2629123,
+    "ast_hash": "c37befd9633c5bb48dc4ca3efb5de584",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-house-reveal_2025-11-08.webp": {
+    "mtime": 1780559651.263048,
+    "ast_hash": "0845eb102c4dc0e72d4e634fa90b3330",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-la-jolla-s-mores_2025-10-03.webp": {
+    "mtime": 1780559651.2631598,
+    "ast_hash": "83f52fac55fc298953811d0f3319f5e3",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/fall-25-vcn-workshop_2025-11-11.webp": {
+    "mtime": 1780559651.2632546,
+    "ast_hash": "c2fcb150b73f5b18180298564542590c",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/spring-26-gbm-1-spring-ace-reveal_2026-04-01.webp": {
+    "mtime": 1780559651.2633646,
+    "ast_hash": "e3193cbedbd055b88fb4fa2951d621ea",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/vietnamese-culture-night-2026_2026-04-18.webp": {
+    "mtime": 1780559651.2634778,
+    "ast_hash": "bbb747b3ecb81188b4484525873f9396",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/winter-26-fam-olympics_2026-03-01.webp": {
+    "mtime": 1780559651.2636209,
+    "ast_hash": "e910cc50f0847cb4e304cfc50de59ea1",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/winter-26-pho-n-karaoke_2026-01-29.webp": {
+    "mtime": 1780559651.263714,
+    "ast_hash": "515f1b5ebdc5f563a9d36869cde3bc8c",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/winter-retreat-26_2026-01-11.webp": {
+    "mtime": 1780559651.2638133,
+    "ast_hash": "e20993dadebe3961dc51447803bc86c5",
+    "semantic_hash": ""
+  },
+  "public/images/gallery/wnc-26_2026-02-07.webp": {
+    "mtime": 1780559651.263912,
+    "ast_hash": "1cdfc0eb47669068508e2ac99a61b869",
+    "semantic_hash": ""
+  },
+  "public/images/home/presidents_presiden.webp": {
+    "mtime": 1780559651.264111,
+    "ast_hash": "21b9e8a95576b755cd035309cce9c9d8",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/00906a4c-bxb-field-day.webp": {
+    "mtime": 1780559651.2642791,
+    "ast_hash": "bb082d8244630bb719266be8dfd50fd5",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/00906a4c-bxb-field-day_thumb.webp": {
+    "mtime": 1780559651.264373,
+    "ast_hash": "d6e7288b078be5f5be2aaa8027f05999",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/02406030-party-like-it-s-2016.webp": {
+    "mtime": 1780559651.264516,
+    "ast_hash": "54bcf794ebbf1e9bc0d101cecf2fc726",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/02406030-party-like-it-s-2016_thumb.webp": {
+    "mtime": 1780559651.264613,
+    "ast_hash": "4009d3188acb97b4a8393a2b749d6ac9",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/140dbcd5-boo-ffet-housegiving-potluck.webp": {
+    "mtime": 1780559651.2647417,
+    "ast_hash": "a1b35b38d0affa6b4c0ef9cb51c657a2",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/140dbcd5-boo-ffet-housegiving-potluck_thumb.webp": {
+    "mtime": 1780559651.2648277,
+    "ast_hash": "39a9dae6c231bd7b4b1e47a1dd4b11f5",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/292fdf95-burgers-and-brushes.webp": {
+    "mtime": 1780559651.2649353,
+    "ast_hash": "8711de7b3ac0ccb4f455109e645ca573",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/292fdf95-burgers-and-brushes_thumb.webp": {
+    "mtime": 1780559651.2650044,
+    "ast_hash": "2efacc6414ba746a07b281f68dd8ccdf",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/34c22bff-hitting-the-boo-ks.webp": {
+    "mtime": 1780559651.265121,
+    "ast_hash": "8f38944de70a5c8b5086dcf24840d485",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/34c22bff-hitting-the-boo-ks_thumb.webp": {
+    "mtime": 1780559651.2651925,
+    "ast_hash": "b2d1fe4b7467167d4906e8b3c9ac7037",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/505b637c-karaoke-night.webp": {
+    "mtime": 1780559651.2652795,
+    "ast_hash": "b0201ed4bd73b453072785c7cb833341",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/505b637c-karaoke-night_thumb.webp": {
+    "mtime": 1780559651.2653587,
+    "ast_hash": "a2d7d150f5f51d4465b25b11b75e8a1e",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/525910b8-boo-house-takes-over-oc.webp": {
+    "mtime": 1780559651.2654352,
+    "ast_hash": "c2f44bba216a3cd646498158cd97c1c5",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/525910b8-boo-house-takes-over-oc_thumb.webp": {
+    "mtime": 1780559651.265509,
+    "ast_hash": "c0dae78f8322e730cc1ac770ad79edef",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/55296894-sunset-send-off-beach-bash.webp": {
+    "mtime": 1780559651.2656143,
+    "ast_hash": "5e8d70ddf6787c37edc9ecb02213fb1a",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/55296894-sunset-send-off-beach-bash_thumb.webp": {
+    "mtime": 1780559651.2656841,
+    "ast_hash": "a16c2bb8f40449de79e417493d6a705b",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/55807130-inferno-bash.webp": {
+    "mtime": 1780559651.2657902,
+    "ast_hash": "ef8e8776690b6d1c60286cf7fbf68187",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/55807130-inferno-bash_thumb.webp": {
+    "mtime": 1780559651.265868,
+    "ast_hash": "191c2135629f1ab3e574413b0f5a2050",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/72820b73-bowser-takes-on-studying.webp": {
+    "mtime": 1780559651.2659843,
+    "ast_hash": "91bd4ae6cc205b4d1ce420daff6ff12c",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/72820b73-bowser-takes-on-studying_thumb.webp": {
+    "mtime": 1780559651.2660587,
+    "ast_hash": "3a44398e6569be16ff2cd6992fe67b96",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/79b21e56-badtzmaru-dayger.webp": {
+    "mtime": 1780559651.2661579,
+    "ast_hash": "ab797218a3c32e38875d0a3b4c6db9e8",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/79b21e56-badtzmaru-dayger_thumb.webp": {
+    "mtime": 1780559651.26626,
+    "ast_hash": "3cf61f126ea155a6b4ee2846e856c5ef",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/7dabcfe4-valentine-s-mixer.webp": {
+    "mtime": 1780559651.2663894,
+    "ast_hash": "c0133143d8ac6409be0f4b7a1b766438",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/7dabcfe4-valentine-s-mixer_thumb.webp": {
+    "mtime": 1780559651.2664948,
+    "ast_hash": "97fb999f8328804336fea41b8a09cc26",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/8152040d-thanksgiving-dinner-party.webp": {
+    "mtime": 1780559651.2666104,
+    "ast_hash": "5c2ac1fe917416d1c5f0048ab47901df",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/8152040d-thanksgiving-dinner-party_thumb.webp": {
+    "mtime": 1780559651.266743,
+    "ast_hash": "322be72ffa65fc6b7db5578e1f53f97b",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/82cec7cb-mocktail-night.webp": {
+    "mtime": 1780559651.2668753,
+    "ast_hash": "c989c0b18e3a5ffed531e07f18a7a08e",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/82cec7cb-mocktail-night_thumb.webp": {
+    "mtime": 1780559651.2669773,
+    "ast_hash": "6e1e438565103dd9a2067dfee0d8f0c1",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/8bc93110-housegiving-potluck.webp": {
+    "mtime": 1780559651.2670608,
+    "ast_hash": "7e5ececa885d1755b0be3167c512f426",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/8bc93110-housegiving-potluck_thumb.webp": {
+    "mtime": 1780559651.2671468,
+    "ast_hash": "6c21bf1153574216f0f63a1b60e837cc",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9142ffdd-pool-party.webp": {
+    "mtime": 1780559651.2672858,
+    "ast_hash": "c654829bc79596ae57787f45c82201fa",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9142ffdd-pool-party_thumb.webp": {
+    "mtime": 1780559651.2674494,
+    "ast_hash": "663fa0fa8a2e05909073f8983dcb5374",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/93c3d066-dressed-for-the-wrong-party.webp": {
+    "mtime": 1780559651.2675297,
+    "ast_hash": "1854bd6adca8bf8698f0055434868e4a",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/93c3d066-dressed-for-the-wrong-party_thumb.webp": {
+    "mtime": 1780559651.2676156,
+    "ast_hash": "ff2f00a2d77760f77b7fce1dfdbdf233",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9498ed4e-president-s-day-bbq.webp": {
+    "mtime": 1780559651.2677445,
+    "ast_hash": "e5bc4a6d8bc50516d11fb8ea1366bec2",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9498ed4e-president-s-day-bbq_thumb.webp": {
+    "mtime": 1780559651.2678277,
+    "ast_hash": "acae300a0bc70e39ba08d40c517f525c",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9958a54d-beach-bash.webp": {
+    "mtime": 1780559651.2679038,
+    "ast_hash": "9451c8d4162513a8aad06b452d8e305c",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9958a54d-beach-bash_thumb.webp": {
+    "mtime": 1780559651.2680056,
+    "ast_hash": "3e598e08b804e0c9c8de44f762f9fc6f",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9f314ced-annie-s-canyon-hike.webp": {
+    "mtime": 1780559651.2681208,
+    "ast_hash": "bb7ce92c441ec1d3d02c89039f8e7d85",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/9f314ced-annie-s-canyon-hike_thumb.webp": {
+    "mtime": 1780559651.2682152,
+    "ast_hash": "e270f32d30c75a688ad27a03c700ebc8",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a1d40df3-valentine-s-party.webp": {
+    "mtime": 1780559651.268377,
+    "ast_hash": "f1e9c63ae240a97d7d80cf533b18c324",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a1d40df3-valentine-s-party_thumb.webp": {
+    "mtime": 1780559651.2684696,
+    "ast_hash": "0254ab70302438e03aef6a85e794c61f",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a380be8d-donkey-kong-raoke.webp": {
+    "mtime": 1780559651.2686276,
+    "ast_hash": "345ef15ab57aa223bbd490319e8c5c49",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a380be8d-donkey-kong-raoke_thumb.webp": {
+    "mtime": 1780559651.2687228,
+    "ast_hash": "7ad30f0ff498b899ac8e8a7ef2833e09",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a3dfd9ab-backyard-beach-bash.webp": {
+    "mtime": 1780559651.268828,
+    "ast_hash": "ecc8d53c19795edc8e4610e38a0433c5",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/a3dfd9ab-backyard-beach-bash_thumb.webp": {
+    "mtime": 1780559651.268912,
+    "ast_hash": "1a66960f76f5e209b5d00cd9ba7d47ab",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/bf7405de-potluck-and-friends.webp": {
+    "mtime": 1780559651.269035,
+    "ast_hash": "b4279f864421dd816a8738c0bfa34d64",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/bf7405de-potluck-and-friends_thumb.webp": {
+    "mtime": 1780559651.2691147,
+    "ast_hash": "ca017b0cc03bd99dda5abae7de4bf943",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/ce542eab-baddie-badtz-maru-karaoke.webp": {
+    "mtime": 1780559651.269241,
+    "ast_hash": "56ef86cc2658553e5b025734c7d92290",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/ce542eab-baddie-badtz-maru-karaoke_thumb.webp": {
+    "mtime": 1780559651.2693157,
+    "ast_hash": "529a5e992225dfee1e9b397beef43060",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/db2cf7db-gone-wild.webp": {
+    "mtime": 1780559651.269421,
+    "ast_hash": "84ac8be2cc44a3ad7a7b53589caba7a7",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/db2cf7db-gone-wild_thumb.webp": {
+    "mtime": 1780559651.269518,
+    "ast_hash": "f8cc11d45b0c26d2df7396bd6c042edd",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/e76d9f69-pho-night.webp": {
+    "mtime": 1780559651.2696395,
+    "ast_hash": "ac504c7654ffb2fd95e2c3e86957eb67",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/e76d9f69-pho-night_thumb.webp": {
+    "mtime": 1780559651.2697215,
+    "ast_hash": "d1c6cfbaf9d0587a6d33be36bdfa4a91",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/e8392f2d-grill-n-chill.webp": {
+    "mtime": 1780559651.2698631,
+    "ast_hash": "b57e9944fdaad8b5d29c51687b5697d3",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/e8392f2d-grill-n-chill_thumb.webp": {
+    "mtime": 1780559651.2699754,
+    "ast_hash": "823639a3f382f51e195bd5c1ca30d347",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/efcd8d34-pool-party.webp": {
+    "mtime": 1780559651.2700946,
+    "ast_hash": "0bc963657c82fc766f6c1cfff1d14be6",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/efcd8d34-pool-party_thumb.webp": {
+    "mtime": 1780559651.2701852,
+    "ast_hash": "cdc7edfbb6cd6cb34d1fbac7be8e2065",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/f25ce80b-pool-party.webp": {
+    "mtime": 1780559651.2702804,
+    "ast_hash": "d74ca94fea85a99af52a727e9981f725",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/f25ce80b-pool-party_thumb.webp": {
+    "mtime": 1780559651.2703493,
+    "ast_hash": "457d46a7862ccda8404db28746881b8a",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/fb733949-bowser-wigs-out.webp": {
+    "mtime": 1780559651.2704766,
+    "ast_hash": "6ea30ef2ea5e7e56b7c6de5d9f67796e",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/fb733949-bowser-wigs-out_thumb.webp": {
+    "mtime": 1780559651.2705772,
+    "ast_hash": "413043f3fa41f0548391c9fff0f06937",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/fcfd7e5f-house-giving-potluck.webp": {
+    "mtime": 1780559651.270719,
+    "ast_hash": "2bea03043ec6e855f2a57a30166ffbe2",
+    "semantic_hash": ""
+  },
+  "public/images/house-events/fcfd7e5f-house-giving-potluck_thumb.webp": {
+    "mtime": 1780559651.2708266,
+    "ast_hash": "81b945d2d41596b093a3aef578387e51",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_cdg.webp": {
+    "mtime": 1780559651.2710364,
+    "ast_hash": "b8f99db902715863c260c68dec8c7859",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_cdg_thumb.webp": {
+    "mtime": 1780559651.2711165,
+    "ast_hash": "b779e96bec5a84895a694d25d6b81a98",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_gucci.webp": {
+    "mtime": 1780559651.2712054,
+    "ast_hash": "ab8333d79c69375d8481e8a3a18d8bdd",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_gucci_thumb.webp": {
+    "mtime": 1780559651.2712817,
+    "ast_hash": "a1dd8dad12663145cc38ce21c197d0bb",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_supreme.webp": {
+    "mtime": 1780559651.2713413,
+    "ast_hash": "5c52b51f34fec5b8dab8d9623a1f2096",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_supreme_thumb.webp": {
+    "mtime": 1780559651.2714293,
+    "ast_hash": "cf06dc1e09d1fa921626bd7f4a0b04b6",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_ysl.webp": {
+    "mtime": 1780559651.2715595,
+    "ast_hash": "5bb9b2d8383ba5f9b7d73cf10c44d652",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2019_ysl_thumb.webp": {
+    "mtime": 1780559651.2716556,
+    "ast_hash": "6e6ac2b93e77562bb80ec6895d122ea7",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_dragon.webp": {
+    "mtime": 1780559651.2717438,
+    "ast_hash": "c1c40541a41d67b2dd51cd8ab246f7ed",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_dragon_thumb.webp": {
+    "mtime": 1780559651.2718298,
+    "ast_hash": "5c19b3c88b64d78ce5b5ca185373f17c",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_phoenix.webp": {
+    "mtime": 1780559651.2719333,
+    "ast_hash": "fc8220010a3c8c8a122f5e29637a4609",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_phoenix_thumb.webp": {
+    "mtime": 1780559651.2720146,
+    "ast_hash": "0af18e20a8a5a66178fc0f4f516f342b",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_tortoise.webp": {
+    "mtime": 1780559651.272122,
+    "ast_hash": "7b2928c219002b42023bbd320ad43ae3",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_tortoise_thumb.webp": {
+    "mtime": 1780559651.2721884,
+    "ast_hash": "eb66bc231b63c7738a4cb6406d9fde03",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_unicorn.webp": {
+    "mtime": 1780559651.2722657,
+    "ast_hash": "ed123d6b90183d9e220837f40a900ac0",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2021_unicorn_thumb.webp": {
+    "mtime": 1780559651.2723265,
+    "ast_hash": "419e1e869b2ece4953882d04c0af950f",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_bulbasaur.webp": {
+    "mtime": 1780559651.2724142,
+    "ast_hash": "00a2a9cbbaf31b3fb50c8d435423806e",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_bulbasaur_thumb.webp": {
+    "mtime": 1780559651.2724922,
+    "ast_hash": "85a2cb0b1a1cd2dac9edda29b0b5e192",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_charmander.webp": {
+    "mtime": 1780559651.2725453,
+    "ast_hash": "109e915df7f4fed2b8ad8a8b0a87d87c",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_charmander_thumb.webp": {
+    "mtime": 1780559651.2725956,
+    "ast_hash": "196334da243e1c7dbbfe5aac47b99307",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_pikachu.webp": {
+    "mtime": 1780559651.2726817,
+    "ast_hash": "cb68d7ca49caaf5dd4c1b370320c1bac",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_pikachu_thumb.webp": {
+    "mtime": 1780559651.2727778,
+    "ast_hash": "07f11b83f933a079656567b3e519de64",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_squirtle.webp": {
+    "mtime": 1780559651.2728276,
+    "ast_hash": "26c06e4fbd6febd7a8ebe726eea94957",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2022_squirtle_thumb.webp": {
+    "mtime": 1780559651.2728775,
+    "ast_hash": "98af33f0f355a5396f2a1800c11250b6",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_banana-milk.webp": {
+    "mtime": 1780559651.2729309,
+    "ast_hash": "fcf475d4fb58f5bb8e4ddc23f81047c6",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_banana-milk_thumb.webp": {
+    "mtime": 1780559651.2730196,
+    "ast_hash": "bb017991c16d701e9a21aa15a338a13f",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_ca-phe-sua-da.webp": {
+    "mtime": 1780559651.273082,
+    "ast_hash": "57a1ec95420f5dab59f80ce4573c37fa",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_ca-phe-sua-da_thumb.webp": {
+    "mtime": 1780559651.273141,
+    "ast_hash": "40ca7dd12fbf171a51c22ac95b3694b2",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_matcha.webp": {
+    "mtime": 1780559651.2732306,
+    "ast_hash": "e09021732212b6ab4c1bb00b4864488d",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_matcha_thumb.webp": {
+    "mtime": 1780559651.2733061,
+    "ast_hash": "a97d64c6f6483b0957c9bdce54225d50",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_yakult.webp": {
+    "mtime": 1780559651.2733872,
+    "ast_hash": "d26cc558849754201cc140e0107daf69",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2023_yakult_thumb.webp": {
+    "mtime": 1780559651.2734585,
+    "ast_hash": "f552f51a55fec41d88245e028c00fd12",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_badtz-maru.webp": {
+    "mtime": 1780559651.273523,
+    "ast_hash": "a11fb13a5854d026e5e089f00ef533d4",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_badtz-maru_thumb.webp": {
+    "mtime": 1780559651.273587,
+    "ast_hash": "b25fa383cfe64f76cf42a82683160266",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_keroppi.webp": {
+    "mtime": 1780559651.2736506,
+    "ast_hash": "5b3263b09d31e01020b3e86128c55cae",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_keroppi_thumb.webp": {
+    "mtime": 1780559651.2737155,
+    "ast_hash": "111b3e202f240e54fdc039587ebe8ad0",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_kuromi.webp": {
+    "mtime": 1780559651.273791,
+    "ast_hash": "58a867a797d57bbaf2c0855544dbea2c",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2024_kuromi_thumb.webp": {
+    "mtime": 1780559651.2738614,
+    "ast_hash": "931766d2a7d62294d6868ade34cde8f0",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2025_boo.webp": {
+    "mtime": 1780559651.2739117,
+    "ast_hash": "994caa00398cf621c11f353b5b3d2ff8",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2025_bowser.webp": {
+    "mtime": 1780559651.273986,
+    "ast_hash": "97c3639f2f7d2293dafe81a7e3cb574f",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2025_donkey-kong.webp": {
+    "mtime": 1780559651.2740622,
+    "ast_hash": "406a5dfd3af0f2de978a8b7fa6f23069",
+    "semantic_hash": ""
+  },
+  "public/images/houses/2025_toad.webp": {
+    "mtime": 1780559651.2741096,
+    "ast_hash": "9dbe5a400be37feb542820d714f53c23",
+    "semantic_hash": ""
+  },
+  "public/images/logo192.png": {
+    "mtime": 1780559651.2741942,
+    "ast_hash": "80b37db7ebf9ee0a18e633903e85ef6e",
+    "semantic_hash": ""
+  },
+  "public/images/vsa-logo.jpg": {
+    "mtime": 1780559651.2745426,
+    "ast_hash": "320537e8df9a2165c02ecbb6d4869f13",
+    "semantic_hash": ""
+  },
+  "public/images/vsa-logo.png": {
+    "mtime": 1780559651.2753701,
+    "ast_hash": "8590d748ce3ab3db3daa68d7ff5430df",
+    "semantic_hash": ""
+  },
+  "public/images/vsa-logo.svg": {
+    "mtime": 1780559651.2754421,
+    "ast_hash": "573e2a068f1bf7219dae4f08018c785b",
+    "semantic_hash": ""
+  },
+  "public/logo192.png": {
+    "mtime": 1780559651.2755995,
+    "ast_hash": "33dbdd0177549353eeeb785d02c294af",
+    "semantic_hash": ""
+  },
+  "public/logo512.png": {
+    "mtime": 1780559651.2756836,
+    "ast_hash": "917515db74ea8d1aee6a246cfbcc0b45",
+    "semantic_hash": ""
+  },
+  "src/logo.svg": {
+    "mtime": 1780559651.2866783,
+    "ast_hash": "06e733283fa43d1dd57738cfc409adbd",
+    "semantic_hash": ""
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/App.test.tsx": {
+    "mtime": 1780559651.2765934,
+    "ast_hash": "c5f4a554d9d60b7925d9ac5aae0b9c80",
+    "semantic_hash": "c5f4a554d9d60b7925d9ac5aae0b9c80"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/App.tsx": {
+    "mtime": 1780559651.276648,
+    "ast_hash": "e694f85e88694e92e6ba9b36cbc12105",
+    "semantic_hash": "e694f85e88694e92e6ba9b36cbc12105"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/ApplicationCTA.tsx": {
+    "mtime": 1781759857.4720516,
+    "ast_hash": "c1d6f0554980f801c2048b2e1426f601",
+    "semantic_hash": "c1d6f0554980f801c2048b2e1426f601"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/ContentUnavailableState.tsx": {
+    "mtime": 1780559651.2767735,
+    "ast_hash": "cf5b1dc86e4c6ce907eed47ba943ad17",
+    "semantic_hash": "cf5b1dc86e4c6ce907eed47ba943ad17"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/CountdownTimer.tsx": {
+    "mtime": 1780559651.2768252,
+    "ast_hash": "290d4d68248898e420956d2205a8fa69",
+    "semantic_hash": "290d4d68248898e420956d2205a8fa69"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/DegradedModeBanner.tsx": {
+    "mtime": 1780559651.2768767,
+    "ast_hash": "0bee04c7ca6399f1c0bf3be77b90123c",
+    "semantic_hash": "0bee04c7ca6399f1c0bf3be77b90123c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/ErrorBoundary.tsx": {
+    "mtime": 1780559651.2769382,
+    "ast_hash": "2af6be8d48a57d69a1dded33d90c5d91",
+    "semantic_hash": "2af6be8d48a57d69a1dded33d90c5d91"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/Modal.tsx": {
+    "mtime": 1780559651.276994,
+    "ast_hash": "e3a7648b159932530b630f8fe9e0faee",
+    "semantic_hash": "e3a7648b159932530b630f8fe9e0faee"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/OptimizedImage.tsx": {
+    "mtime": 1780559651.2770476,
+    "ast_hash": "3a78281d6e5f2fc034c0a628875be5f6",
+    "semantic_hash": "3a78281d6e5f2fc034c0a628875be5f6"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/PageError.tsx": {
+    "mtime": 1780559651.2770991,
+    "ast_hash": "e47341dfce4a75d191e3cc4af5d9dd30",
+    "semantic_hash": "e47341dfce4a75d191e3cc4af5d9dd30"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/PageLoader.tsx": {
+    "mtime": 1781759857.4723449,
+    "ast_hash": "dee16041328e0d97c71126470dd98440",
+    "semantic_hash": "dee16041328e0d97c71126470dd98440"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/PageTitle.tsx": {
+    "mtime": 1780559651.277199,
+    "ast_hash": "48efd0112f9106283cb16f23ab517db5",
+    "semantic_hash": "48efd0112f9106283cb16f23ab517db5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/PaginationControls.tsx": {
+    "mtime": 1780559651.2772858,
+    "ast_hash": "b5567adee0ef8793b47b31f4ef6612c2",
+    "semantic_hash": "b5567adee0ef8793b47b31f4ef6612c2"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/RevealOnScrollWrapper.tsx": {
+    "mtime": 1780559651.2773411,
+    "ast_hash": "fd19456bd56701f2e01ff428a6ef4719",
+    "semantic_hash": "fd19456bd56701f2e01ff428a6ef4719"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/RouteTracker.tsx": {
+    "mtime": 1780559651.2773945,
+    "ast_hash": "8bd113ec7647a08abe918531cc88b96a",
+    "semantic_hash": "8bd113ec7647a08abe918531cc88b96a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/common/Skeleton.tsx": {
+    "mtime": 1780559651.2774456,
+    "ast_hash": "b252e5143c8de93b5587a93b7b108444",
+    "semantic_hash": "b252e5143c8de93b5587a93b7b108444"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/ace/FamCover.tsx": {
+    "mtime": 1780559651.2776062,
+    "ast_hash": "4c79f1e264ea2d62e6b6abf162fb510d",
+    "semantic_hash": "4c79f1e264ea2d62e6b6abf162fb510d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/ace/FamSheet.tsx": {
+    "mtime": 1780559651.2776823,
+    "ast_hash": "bb32f17b459c410ccdd3127f89e611a4",
+    "semantic_hash": "bb32f17b459c410ccdd3127f89e611a4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/ace/FamilyTree.tsx": {
+    "mtime": 1780559651.2777815,
+    "ast_hash": "0d16cbcf6125252266d795b9487b1c67",
+    "semantic_hash": "0d16cbcf6125252266d795b9487b1c67"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/AdminLayout.tsx": {
+    "mtime": 1780559651.2778668,
+    "ast_hash": "9a6ea568c2d8b21e64cc6c40e458980d",
+    "semantic_hash": "9a6ea568c2d8b21e64cc6c40e458980d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/AdminNav.tsx": {
+    "mtime": 1781759857.4727528,
+    "ast_hash": "b24b753f3be7db80b94680825cc6d872",
+    "semantic_hash": "b24b753f3be7db80b94680825cc6d872"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/EventRecapEditor.tsx": {
+    "mtime": 1780559651.2780313,
+    "ast_hash": "2927cc24fc41400b4b02b9f293ced1f3",
+    "semantic_hash": "2927cc24fc41400b4b02b9f293ced1f3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/FeedbackTab.tsx": {
+    "mtime": 1780559651.2781086,
+    "ast_hash": "26866b8e28dfbd588ba9f5194e8e67fc",
+    "semantic_hash": "26866b8e28dfbd588ba9f5194e8e67fc"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/GenerateCheckInCode.tsx": {
+    "mtime": 1780559651.2781785,
+    "ast_hash": "08fbde4186e32fee3d25541ff59c7d84",
+    "semantic_hash": "08fbde4186e32fee3d25541ff59c7d84"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/HouseEventsManager.tsx": {
+    "mtime": 1780559651.2782624,
+    "ast_hash": "f7ef70e63046e5a5a04e4fd5ac4d4089",
+    "semantic_hash": "f7ef70e63046e5a5a04e4fd5ac4d4089"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/HouseImagesManager.tsx": {
+    "mtime": 1780559651.2783575,
+    "ast_hash": "656bed15c92f55a2764a29e5615245c3",
+    "semantic_hash": "656bed15c92f55a2764a29e5615245c3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/ImportAuditPanel.tsx": {
+    "mtime": 1780559651.2784772,
+    "ast_hash": "41ae50d35056afcc19da6d753dceb288",
+    "semantic_hash": "41ae50d35056afcc19da6d753dceb288"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/ManualCheckIn.tsx": {
+    "mtime": 1780559651.2785652,
+    "ast_hash": "791522a0b790869014336414fdb233f0",
+    "semantic_hash": "791522a0b790869014336414fdb233f0"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/admin/ProgramContentManager.tsx": {
+    "mtime": 1780559651.2786715,
+    "ast_hash": "8b34ce3a8919febb60909471c1ac20dd",
+    "semantic_hash": "8b34ce3a8919febb60909471c1ac20dd"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/ai/VsaAiAssistant.tsx": {
+    "mtime": 1781759857.4730713,
+    "ast_hash": "e8d930e29d1e49b516a75651517950bb",
+    "semantic_hash": "e8d930e29d1e49b516a75651517950bb"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/auth/SignInForm.tsx": {
+    "mtime": 1780559651.2788773,
+    "ast_hash": "a03c16894c8287166645b58301dc381b",
+    "semantic_hash": "a03c16894c8287166645b58301dc381b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/auth/SignUpForm.tsx": {
+    "mtime": 1780559651.2789443,
+    "ast_hash": "1856d3f2200ba2918b7231c52528c696",
+    "semantic_hash": "1856d3f2200ba2918b7231c52528c696"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/avatar/Avatar.tsx": {
+    "mtime": 1780559651.279068,
+    "ast_hash": "920647c061c7202cd633cba1a971e251",
+    "semantic_hash": "920647c061c7202cd633cba1a971e251"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/dashboard/MemberDashboard.tsx": {
+    "mtime": 1780559651.2791882,
+    "ast_hash": "6815478697c5888e173726ff1ab000ff",
+    "semantic_hash": "6815478697c5888e173726ff1ab000ff"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/events/AddToCalendarButton.tsx": {
+    "mtime": 1781759857.4733799,
+    "ast_hash": "7f2ff1dc1961626e34811e61ed7bb41b",
+    "semantic_hash": "7f2ff1dc1961626e34811e61ed7bb41b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/events/EventCard.tsx": {
+    "mtime": 1781759857.473731,
+    "ast_hash": "cd7124fd3b951d493e392e6b20e0b44a",
+    "semantic_hash": "cd7124fd3b951d493e392e6b20e0b44a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/events/Events.tsx": {
+    "mtime": 1780559651.2794032,
+    "ast_hash": "3731c0f2a95d5f16b6ecceb8d3e1ff1d",
+    "semantic_hash": "3731c0f2a95d5f16b6ecceb8d3e1ff1d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/feedback/FeedbackForm.tsx": {
+    "mtime": 1780559651.2795358,
+    "ast_hash": "5a21420658b23368756205ee788f1380",
+    "semantic_hash": "5a21420658b23368756205ee788f1380"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/home/ThisWeekInVSA.tsx": {
+    "mtime": 1780559651.279642,
+    "ast_hash": "cd110d8207dc790594002c3b73c54137",
+    "semantic_hash": "cd110d8207dc790594002c3b73c54137"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/house/HouseEventCard.tsx": {
+    "mtime": 1781759857.474041,
+    "ast_hash": "4520df915b6501b621d6df77799f3714",
+    "semantic_hash": "4520df915b6501b621d6df77799f3714"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/house/HouseMemberLeaderboard.tsx": {
+    "mtime": 1780559651.280006,
+    "ast_hash": "5eab23b813dd0cb8e9e0809526ce375c",
+    "semantic_hash": "5eab23b813dd0cb8e9e0809526ce375c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/house/HouseYearSelector.tsx": {
+    "mtime": 1781759857.4743855,
+    "ast_hash": "e1b2ff670d240de8c1a0cf8c990ad59a",
+    "semantic_hash": "e1b2ff670d240de8c1a0cf8c990ad59a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/onboarding/NewMemberChecklist.tsx": {
+    "mtime": 1780559651.2802176,
+    "ast_hash": "3cf03df49339b46d3d93f4f54a23c44e",
+    "semantic_hash": "3cf03df49339b46d3d93f4f54a23c44e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/points/CheckInCodeInput.tsx": {
+    "mtime": 1780559651.2803051,
+    "ast_hash": "380821ebfe1a45d3566ff20fe4729ceb",
+    "semantic_hash": "380821ebfe1a45d3566ff20fe4729ceb"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/points/FindMyPoints.tsx": {
+    "mtime": 1780559651.280384,
+    "ast_hash": "b15058127090b345c7a332b528560214",
+    "semantic_hash": "b15058127090b345c7a332b528560214"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/points/MyVSACard.tsx": {
+    "mtime": 1780559651.2804677,
+    "ast_hash": "a75cd26fc383d05f2f3e7fb151379af0",
+    "semantic_hash": "a75cd26fc383d05f2f3e7fb151379af0"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/points/PointsExplainer.tsx": {
+    "mtime": 1781759857.4747493,
+    "ast_hash": "abd2d997264f53619358059412232673",
+    "semantic_hash": "abd2d997264f53619358059412232673"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/profile/Profile.tsx": {
+    "mtime": 1780559651.2806394,
+    "ast_hash": "2d56187dae9c0efbfaf187a3fc20650c",
+    "semantic_hash": "2d56187dae9c0efbfaf187a3fc20650c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/features/program/ProgramContentCallout.tsx": {
+    "mtime": 1780559651.2807288,
+    "ast_hash": "175154ef7a1d4416df82cc13f026c37d",
+    "semantic_hash": "175154ef7a1d4416df82cc13f026c37d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/BackToTop.tsx": {
+    "mtime": 1780559651.2808228,
+    "ast_hash": "f32eeb4b2d556ee9b6c417c469c3081f",
+    "semantic_hash": "f32eeb4b2d556ee9b6c417c469c3081f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/Footer.tsx": {
+    "mtime": 1780559651.2809079,
+    "ast_hash": "93e7317a653b3f8f3a2eafd3ab08335b",
+    "semantic_hash": "93e7317a653b3f8f3a2eafd3ab08335b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/Header.tsx": {
+    "mtime": 1780559651.2809892,
+    "ast_hash": "011af03818c71663de69b04dcd22b2e8",
+    "semantic_hash": "011af03818c71663de69b04dcd22b2e8"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/Layout.tsx": {
+    "mtime": 1781759857.4750385,
+    "ast_hash": "8f00c146e35ca8a266005dcda9a0d27e",
+    "semantic_hash": "8f00c146e35ca8a266005dcda9a0d27e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/ThemeToggle.tsx": {
+    "mtime": 1780559651.2810962,
+    "ast_hash": "32566429507237ac920c79326ffa6175",
+    "semantic_hash": "32566429507237ac920c79326ffa6175"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/GetInvolvedDropdown.tsx": {
+    "mtime": 1780559651.2812133,
+    "ast_hash": "53aedd379ad601764abb8f04e7c1c716",
+    "semantic_hash": "53aedd379ad601764abb8f04e7c1c716"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/MobileDrawer.tsx": {
+    "mtime": 1781759857.475435,
+    "ast_hash": "2a918a0f6d7c88655d797bd8ec8aa6f1",
+    "semantic_hash": "2a918a0f6d7c88655d797bd8ec8aa6f1"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/NavLinks.tsx": {
+    "mtime": 1780559651.281369,
+    "ast_hash": "60f233e5581f2551275527f278d68da5",
+    "semantic_hash": "60f233e5581f2551275527f278d68da5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/NavLogo.tsx": {
+    "mtime": 1780559651.2814214,
+    "ast_hash": "e994870e726744b6509ec567694abb90",
+    "semantic_hash": "e994870e726744b6509ec567694abb90"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/NavigationShell.tsx": {
+    "mtime": 1780559651.2814798,
+    "ast_hash": "507ecb396a531a0d3ffec68ed12f6296",
+    "semantic_hash": "507ecb396a531a0d3ffec68ed12f6296"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/layout/navigation/UserMenu.tsx": {
+    "mtime": 1780559651.2815354,
+    "ast_hash": "51e2fa035ec235248b71f6fcb58a5af7",
+    "semantic_hash": "51e2fa035ec235248b71f6fcb58a5af7"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/ui/Badge.tsx": {
+    "mtime": 1780559651.2816205,
+    "ast_hash": "582afbb15b1017146782b5cd20d0dcce",
+    "semantic_hash": "582afbb15b1017146782b5cd20d0dcce"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/ui/Button.tsx": {
+    "mtime": 1780559651.2816858,
+    "ast_hash": "a26b6cc41d84a9dc2e382dd5bc3c52c3",
+    "semantic_hash": "a26b6cc41d84a9dc2e382dd5bc3c52c3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/ui/Card.tsx": {
+    "mtime": 1780559651.2817345,
+    "ast_hash": "da9ffef54a479582ce681ffd476a471e",
+    "semantic_hash": "da9ffef54a479582ce681ffd476a471e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/ui/Input.tsx": {
+    "mtime": 1780559651.2817836,
+    "ast_hash": "4b1d48a122024ea1f3b2aa45add16368",
+    "semantic_hash": "4b1d48a122024ea1f3b2aa45add16368"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/components/ui/Label.tsx": {
+    "mtime": 1780559651.2818332,
+    "ast_hash": "6abe796bb5b928723fbe964047e0d890",
+    "semantic_hash": "6abe796bb5b928723fbe964047e0d890"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/config/publicFallbackContent.ts": {
+    "mtime": 1781759857.4757469,
+    "ast_hash": "3b9997346b11782df1f081cd73861476",
+    "semantic_hash": "3b9997346b11782df1f081cd73861476"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/constants/cabinetOptions.ts": {
+    "mtime": 1780559651.2820292,
+    "ast_hash": "404e6b13349646e1ff493c48047773ed",
+    "semantic_hash": "404e6b13349646e1ff493c48047773ed"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/constants/eventTypes.ts": {
+    "mtime": 1780559651.28208,
+    "ast_hash": "396941c501d06b54acd66cfd28d78f35",
+    "semantic_hash": "396941c501d06b54acd66cfd28d78f35"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/constants/houses.ts": {
+    "mtime": 1780559651.2821336,
+    "ast_hash": "873e046d9ba05c6d5dbc6eeff28ebabe",
+    "semantic_hash": "873e046d9ba05c6d5dbc6eeff28ebabe"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/context/AuthContext.tsx": {
+    "mtime": 1780559651.2822225,
+    "ast_hash": "215931973c036a986c3abe0d69c45892",
+    "semantic_hash": "215931973c036a986c3abe0d69c45892"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/context/PointsContext.tsx": {
+    "mtime": 1780559651.282273,
+    "ast_hash": "6d04f747fc1ddde54a03bd86ded62e30",
+    "semantic_hash": "6d04f747fc1ddde54a03bd86ded62e30"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/context/SiteSettingsContext.tsx": {
+    "mtime": 1780559651.282325,
+    "ast_hash": "9f2e040342f2688d454b3b451e4df7ae",
+    "semantic_hash": "9f2e040342f2688d454b3b451e4df7ae"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/context/ThemeContext.tsx": {
+    "mtime": 1780559651.282374,
+    "ast_hash": "58d309ed5d8241d9e833efd5afa4f8e0",
+    "semantic_hash": "58d309ed5d8241d9e833efd5afa4f8e0"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/errors.ts": {
+    "mtime": 1780559651.28246,
+    "ast_hash": "467b9269f52657f18d8d0309c9a1b95b",
+    "semantic_hash": "467b9269f52657f18d8d0309c9a1b95b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/legacyHouseArchive.test.ts": {
+    "mtime": 1780559651.2825131,
+    "ast_hash": "77bf9a07bf8bed8ff32fafc666e8952b",
+    "semantic_hash": "77bf9a07bf8bed8ff32fafc666e8952b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/legacyHouseArchive.ts": {
+    "mtime": 1780559651.2826,
+    "ast_hash": "c9c3d62b13ee89350aab23c45dd72065",
+    "semantic_hash": "c9c3d62b13ee89350aab23c45dd72065"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/presidentsContent.ts": {
+    "mtime": 1780559651.282651,
+    "ast_hash": "09b8312f3a33d14bb90fe823935a1922",
+    "semantic_hash": "09b8312f3a33d14bb90fe823935a1922"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/academicTerms.ts": {
+    "mtime": 1780559651.2827473,
+    "ast_hash": "b13b94b32af98236d5fd72725970fc75",
+    "semantic_hash": "b13b94b32af98236d5fd72725970fc75"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/aceFamilies.ts": {
+    "mtime": 1780559651.2828279,
+    "ast_hash": "604da4e73c46a1f2b36e88afa41f5855",
+    "semantic_hash": "604da4e73c46a1f2b36e88afa41f5855"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/aiKnowledge.ts": {
+    "mtime": 1780559651.2828815,
+    "ast_hash": "4c1cc402351be71dfff0c80a9b45cfeb",
+    "semantic_hash": "4c1cc402351be71dfff0c80a9b45cfeb"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/applicationLinks.ts": {
+    "mtime": 1781759857.4760442,
+    "ast_hash": "0784de91952e4a1cd1096c40131de693",
+    "semantic_hash": "0784de91952e4a1cd1096c40131de693"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/auth.ts": {
+    "mtime": 1780559651.2829623,
+    "ast_hash": "011344c70593fe1e26564a89385fcddb",
+    "semantic_hash": "011344c70593fe1e26564a89385fcddb"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/cabinetYears.ts": {
+    "mtime": 1780559651.2830129,
+    "ast_hash": "c25dd76d607bb9f506b1483909ad1655",
+    "semantic_hash": "c25dd76d607bb9f506b1483909ad1655"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/eventRecaps.ts": {
+    "mtime": 1780559651.283065,
+    "ast_hash": "150bb9951db68069a7d03825db7a274d",
+    "semantic_hash": "150bb9951db68069a7d03825db7a274d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/events.ts": {
+    "mtime": 1781759857.476332,
+    "ast_hash": "a7447b25dd15df6dd1f5103886212d21",
+    "semantic_hash": "a7447b25dd15df6dd1f5103886212d21"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/externalEvents.ts": {
+    "mtime": 1780559651.2831945,
+    "ast_hash": "3785abae370d970045681499296ac369",
+    "semantic_hash": "3785abae370d970045681499296ac369"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/gallery.ts": {
+    "mtime": 1780559651.2832458,
+    "ast_hash": "8e5a3934d766f4e38bce41de57586c5e",
+    "semantic_hash": "8e5a3934d766f4e38bce41de57586c5e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/houseAssets.ts": {
+    "mtime": 1780559651.2833,
+    "ast_hash": "edea1d8c16902cf51c517c86637256cf",
+    "semantic_hash": "edea1d8c16902cf51c517c86637256cf"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/houseEvents.ts": {
+    "mtime": 1780559651.2833698,
+    "ast_hash": "3127c0374fbf33171ad46c34206b5cd4",
+    "semantic_hash": "3127c0374fbf33171ad46c34206b5cd4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/importJobs.ts": {
+    "mtime": 1780559651.283425,
+    "ast_hash": "9b6f2bbfeb51374344141dc02689d299",
+    "semantic_hash": "9b6f2bbfeb51374344141dc02689d299"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/leaderboard.ts": {
+    "mtime": 1780559651.2835114,
+    "ast_hash": "7b2a8306f19900be1e8ee8e2a5713265",
+    "semantic_hash": "7b2a8306f19900be1e8ee8e2a5713265"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/points.ts": {
+    "mtime": 1780559651.2835913,
+    "ast_hash": "a65d37f23b240ac20ff40730c4585a40",
+    "semantic_hash": "a65d37f23b240ac20ff40730c4585a40"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/programContent.ts": {
+    "mtime": 1780559651.2836452,
+    "ast_hash": "33c9991c2beecadc193c275f5edcb0ef",
+    "semantic_hash": "33c9991c2beecadc193c275f5edcb0ef"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/resourceLinks.ts": {
+    "mtime": 1780559651.2837253,
+    "ast_hash": "9836665465a853f43d88b8ed29aeffd5",
+    "semantic_hash": "9836665465a853f43d88b8ed29aeffd5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/uvsaSchools.ts": {
+    "mtime": 1780559651.2837818,
+    "ast_hash": "cb5713c53ecb6ec9eab78a5d446c0e1c",
+    "semantic_hash": "cb5713c53ecb6ec9eab78a5d446c0e1c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/repos/vcnArchives.ts": {
+    "mtime": 1780559651.2838607,
+    "ast_hash": "cf7ad57756439096f724cc9d3e9e6248",
+    "semantic_hash": "cf7ad57756439096f724cc9d3e9e6248"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/data/siteSettings.ts": {
+    "mtime": 1780559651.2839108,
+    "ast_hash": "29ce4b5cc91eb3d733733989f0da485d",
+    "semantic_hash": "29ce4b5cc91eb3d733733989f0da485d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useAcademicTerms.ts": {
+    "mtime": 1780559651.2839918,
+    "ast_hash": "f7ea5b8d846e4b7ea714710f5fb07298",
+    "semantic_hash": "f7ea5b8d846e4b7ea714710f5fb07298"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useAceFamilies.ts": {
+    "mtime": 1780559651.2840455,
+    "ast_hash": "e7014f10390262b08de472d57ad9ce1f",
+    "semantic_hash": "e7014f10390262b08de472d57ad9ce1f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useAdmin.ts": {
+    "mtime": 1780559651.2840965,
+    "ast_hash": "92f4e3ebbf51ceda5393e14ecee6dfd8",
+    "semantic_hash": "92f4e3ebbf51ceda5393e14ecee6dfd8"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useApplicationLinks.ts": {
+    "mtime": 1781759857.4765584,
+    "ast_hash": "980022c5c7ff8ba71ed19ab43afb3a04",
+    "semantic_hash": "980022c5c7ff8ba71ed19ab43afb3a04"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useAuth.ts": {
+    "mtime": 1780559651.2841496,
+    "ast_hash": "08ce4229408509db42c5cbba088d3a8b",
+    "semantic_hash": "08ce4229408509db42c5cbba088d3a8b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useCabinet.ts": {
+    "mtime": 1780559651.2842126,
+    "ast_hash": "d2e99030f1c8abe3097e0fa6707b4de5",
+    "semantic_hash": "d2e99030f1c8abe3097e0fa6707b4de5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useCabinetInterns.ts": {
+    "mtime": 1780559651.2842762,
+    "ast_hash": "2176980427e3f19d9d9cb391615950d5",
+    "semantic_hash": "2176980427e3f19d9d9cb391615950d5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useCabinetYears.ts": {
+    "mtime": 1780559651.2843387,
+    "ast_hash": "7a4874a5cfc7aeec152f6ba602c1ddf2",
+    "semantic_hash": "7a4874a5cfc7aeec152f6ba602c1ddf2"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useEventAttendance.ts": {
+    "mtime": 1780559651.2844257,
+    "ast_hash": "257fe40020f2275fef85fca78d72f88b",
+    "semantic_hash": "257fe40020f2275fef85fca78d72f88b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useEventRecap.ts": {
+    "mtime": 1780559651.2844791,
+    "ast_hash": "3de504fd008398d9cedcdc425605cd7b",
+    "semantic_hash": "3de504fd008398d9cedcdc425605cd7b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useEvents.ts": {
+    "mtime": 1781759857.4768603,
+    "ast_hash": "210c5ea319d39e307402e862ae353371",
+    "semantic_hash": "210c5ea319d39e307402e862ae353371"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useExternalEvents.ts": {
+    "mtime": 1780559651.2846115,
+    "ast_hash": "f27f0ab6facac7133356ad0902647605",
+    "semantic_hash": "f27f0ab6facac7133356ad0902647605"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useFindMyPoints.ts": {
+    "mtime": 1780559651.2846625,
+    "ast_hash": "cc8f87b0b390919d0dad589b30d38c8e",
+    "semantic_hash": "cc8f87b0b390919d0dad589b30d38c8e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useGallery.ts": {
+    "mtime": 1780559651.2847323,
+    "ast_hash": "5f2132b3559a7c1084a5c22859517f90",
+    "semantic_hash": "5f2132b3559a7c1084a5c22859517f90"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useHouseAssets.ts": {
+    "mtime": 1780559651.2847862,
+    "ast_hash": "c079f530b0d5e14fcc37a14cb6976602",
+    "semantic_hash": "c079f530b0d5e14fcc37a14cb6976602"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useImportJobs.ts": {
+    "mtime": 1780559651.2848365,
+    "ast_hash": "92e06c1c3026d5443fec7b3bcac64672",
+    "semantic_hash": "92e06c1c3026d5443fec7b3bcac64672"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useLeaderboardYears.ts": {
+    "mtime": 1780559651.2848923,
+    "ast_hash": "5935f4af26f5d68508dbfcbc0ca703cd",
+    "semantic_hash": "5935f4af26f5d68508dbfcbc0ca703cd"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/usePagination.ts": {
+    "mtime": 1780559651.2849524,
+    "ast_hash": "ae96f39173f273b4422c30047eb1c1ba",
+    "semantic_hash": "ae96f39173f273b4422c30047eb1c1ba"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/usePoints.ts": {
+    "mtime": 1780559651.285016,
+    "ast_hash": "9eb253896cf7a12369790fb8c2977254",
+    "semantic_hash": "9eb253896cf7a12369790fb8c2977254"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/usePresidentsContent.ts": {
+    "mtime": 1780559651.2850723,
+    "ast_hash": "e6f6bd897953436349e2fa0a49862f05",
+    "semantic_hash": "e6f6bd897953436349e2fa0a49862f05"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useProgramContent.ts": {
+    "mtime": 1780559651.2851334,
+    "ast_hash": "1b18bfc1f0d7861867fc10ca4099e407",
+    "semantic_hash": "1b18bfc1f0d7861867fc10ca4099e407"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useResourceLinks.ts": {
+    "mtime": 1780559651.2851975,
+    "ast_hash": "0774ec0e7f55a5032f64fe07d8c22dc3",
+    "semantic_hash": "0774ec0e7f55a5032f64fe07d8c22dc3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useUVSASchools.ts": {
+    "mtime": 1780559651.2852583,
+    "ast_hash": "07f1bfd75825dec7d1d42bed0ad989a5",
+    "semantic_hash": "07f1bfd75825dec7d1d42bed0ad989a5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/hooks/useVcnArchives.ts": {
+    "mtime": 1780559651.285318,
+    "ast_hash": "03e91853a2048c921db10c15f6cbdb23",
+    "semantic_hash": "03e91853a2048c921db10c15f6cbdb23"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/index.tsx": {
+    "mtime": 1780559651.2854753,
+    "ast_hash": "b084b1d60e6fc23cd1a8375c4912979c",
+    "semantic_hash": "b084b1d60e6fc23cd1a8375c4912979c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/academicTerms.ts": {
+    "mtime": 1780559651.2855835,
+    "ast_hash": "4fc00b082aecf44184f49cdaddfbc915",
+    "semantic_hash": "4fc00b082aecf44184f49cdaddfbc915"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/aceFamilyAdapter.ts": {
+    "mtime": 1780559651.2856808,
+    "ast_hash": "f7550a92e26e26de36d1be4c833b50ad",
+    "semantic_hash": "f7550a92e26e26de36d1be4c833b50ad"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/aceFamilyImport.ts": {
+    "mtime": 1780559651.2857761,
+    "ast_hash": "553d866ffc0b4441bdcdca721714da00",
+    "semantic_hash": "553d866ffc0b4441bdcdca721714da00"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/analytics.ts": {
+    "mtime": 1780559651.2858377,
+    "ast_hash": "a2c9dd39237c3684807de66cb4165eed",
+    "semantic_hash": "a2c9dd39237c3684807de66cb4165eed"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/applicationLinks.test.ts": {
+    "mtime": 1781759857.4771028,
+    "ast_hash": "5bb5d48c2596dbd050669413a9d40d18",
+    "semantic_hash": "5bb5d48c2596dbd050669413a9d40d18"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/applicationLinks.ts": {
+    "mtime": 1781759857.4774113,
+    "ast_hash": "bd4e0da54bda51d3493342ddbc3760af",
+    "semantic_hash": "bd4e0da54bda51d3493342ddbc3760af"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/cabinetYears.ts": {
+    "mtime": 1780559651.2858944,
+    "ast_hash": "8c20ce6b904d9c88dec69acb6e83745f",
+    "semantic_hash": "8c20ce6b904d9c88dec69acb6e83745f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/dateOnly.test.ts": {
+    "mtime": 1780559651.285956,
+    "ast_hash": "b45a25e3ea77234a08a7d105e47b75c2",
+    "semantic_hash": "b45a25e3ea77234a08a7d105e47b75c2"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/dateOnly.ts": {
+    "mtime": 1780559651.2860167,
+    "ast_hash": "7294ffc31fc4a7f65bf61ce4c8a12dc1",
+    "semantic_hash": "7294ffc31fc4a7f65bf61ce4c8a12dc1"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/eventTime.ts": {
+    "mtime": 1780559651.286111,
+    "ast_hash": "e1efcffc5b22fd9f3156ca9942056775",
+    "semantic_hash": "e1efcffc5b22fd9f3156ca9942056775"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/imageUpload.ts": {
+    "mtime": 1780559651.286202,
+    "ast_hash": "e952b05c51b66314346c90eaca93c65d",
+    "semantic_hash": "e952b05c51b66314346c90eaca93c65d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/memberMatching.test.ts": {
+    "mtime": 1780559651.2862809,
+    "ast_hash": "578d04cb275de4eacdb5f95e14f14f94",
+    "semantic_hash": "578d04cb275de4eacdb5f95e14f14f94"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/memberMatching.ts": {
+    "mtime": 1780559651.2863536,
+    "ast_hash": "a2c91718aff4de044ed96a095d9902e4",
+    "semantic_hash": "a2c91718aff4de044ed96a095d9902e4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/programContent.ts": {
+    "mtime": 1780559651.2864175,
+    "ast_hash": "d3cf443cd2a8954c0513edc3d1b9dd5f",
+    "semantic_hash": "d3cf443cd2a8954c0513edc3d1b9dd5f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/supabase.ts": {
+    "mtime": 1780559651.2864692,
+    "ast_hash": "e0bbe0ec61a476215cad19693e8815ae",
+    "semantic_hash": "e0bbe0ec61a476215cad19693e8815ae"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/supabaseImages.ts": {
+    "mtime": 1780559651.2865224,
+    "ast_hash": "aea4481b8e372357b393adcb5207214f",
+    "semantic_hash": "aea4481b8e372357b393adcb5207214f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/utils.ts": {
+    "mtime": 1780559651.2865741,
+    "ast_hash": "8595c2f874aa1ff8c7cc28df2999f354",
+    "semantic_hash": "8595c2f874aa1ff8c7cc28df2999f354"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/lib/yearNormalizer.ts": {
+    "mtime": 1780559651.2866242,
+    "ast_hash": "5ff7f38c52ffd575387a4963c7503f9a",
+    "semantic_hash": "5ff7f38c52ffd575387a4963c7503f9a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Ace.tsx": {
+    "mtime": 1781759857.4776917,
+    "ast_hash": "e84bf884f095bfb0ee5e18a0a92e62b9",
+    "semantic_hash": "e84bf884f095bfb0ee5e18a0a92e62b9"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/AceFamilies.tsx": {
+    "mtime": 1780559651.2869349,
+    "ast_hash": "68e51caf789cde911bf33d896a343389",
+    "semantic_hash": "68e51caf789cde911bf33d896a343389"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/AiKnowledge.tsx": {
+    "mtime": 1780559651.2870145,
+    "ast_hash": "94f7255e5ad241cac84cb781d6b8d342",
+    "semantic_hash": "94f7255e5ad241cac84cb781d6b8d342"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Analytics.tsx": {
+    "mtime": 1780559651.287094,
+    "ast_hash": "0fdf732a8e38a89a66b34e0d2b1e05a6",
+    "semantic_hash": "0fdf732a8e38a89a66b34e0d2b1e05a6"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Applications.tsx": {
+    "mtime": 1781759857.4779816,
+    "ast_hash": "4b64d93ffb4807a895d12ebc1e763f78",
+    "semantic_hash": "4b64d93ffb4807a895d12ebc1e763f78"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Cabinet.tsx": {
+    "mtime": 1780559651.2871773,
+    "ast_hash": "2c9397feecba9d84a22ad148042a264d",
+    "semantic_hash": "2c9397feecba9d84a22ad148042a264d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Content.tsx": {
+    "mtime": 1780559651.2872999,
+    "ast_hash": "a3b34d836dfcabeb3590ef2de591a46a",
+    "semantic_hash": "a3b34d836dfcabeb3590ef2de591a46a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Events.tsx": {
+    "mtime": 1780559651.2874055,
+    "ast_hash": "56e07b1faac0233c2361b35598661083",
+    "semantic_hash": "56e07b1faac0233c2361b35598661083"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/ExternalEvents.tsx": {
+    "mtime": 1780559651.2875419,
+    "ast_hash": "02a6f76fba12688472e6c580e3f49701",
+    "semantic_hash": "02a6f76fba12688472e6c580e3f49701"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Feedback.tsx": {
+    "mtime": 1780559651.2876015,
+    "ast_hash": "27ba00b5bcb162b334f8b6d6d53b47b2",
+    "semantic_hash": "27ba00b5bcb162b334f8b6d6d53b47b2"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Gallery.tsx": {
+    "mtime": 1780559651.2876809,
+    "ast_hash": "8c83ae5e98c02f931813f48ad9e5a178",
+    "semantic_hash": "8c83ae5e98c02f931813f48ad9e5a178"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Houses.tsx": {
+    "mtime": 1780559651.2877948,
+    "ast_hash": "207e2c7d5f62f9f5db001074b812dee9",
+    "semantic_hash": "207e2c7d5f62f9f5db001074b812dee9"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Import.tsx": {
+    "mtime": 1780559651.2879288,
+    "ast_hash": "2a6e2b625839acf72ffccc2122038416",
+    "semantic_hash": "2a6e2b625839acf72ffccc2122038416"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Members.tsx": {
+    "mtime": 1780559651.2880414,
+    "ast_hash": "df62c6ea3c073005d69f5a2e46964422",
+    "semantic_hash": "df62c6ea3c073005d69f5a2e46964422"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/MergeSuggestions.tsx": {
+    "mtime": 1780559651.2881544,
+    "ast_hash": "1962181b802bcce70998001b220421d1",
+    "semantic_hash": "1962181b802bcce70998001b220421d1"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Overview.tsx": {
+    "mtime": 1781759857.4784095,
+    "ast_hash": "95a804c73f5b054185777966ce045c51",
+    "semantic_hash": "95a804c73f5b054185777966ce045c51"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Points.tsx": {
+    "mtime": 1780559651.2883165,
+    "ast_hash": "4bc4cedd0bd3389303edf1e483a0fc6a",
+    "semantic_hash": "4bc4cedd0bd3389303edf1e483a0fc6a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Resources.tsx": {
+    "mtime": 1780559651.2884011,
+    "ast_hash": "a11d0ef07e69be00b078e08eca478902",
+    "semantic_hash": "a11d0ef07e69be00b078e08eca478902"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/Settings.tsx": {
+    "mtime": 1780559651.2885005,
+    "ast_hash": "d6e98d96379268a44fc668c8d3d97b2f",
+    "semantic_hash": "d6e98d96379268a44fc668c8d3d97b2f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/UVSASchools.tsx": {
+    "mtime": 1780559651.288577,
+    "ast_hash": "18835309b518449867c6c13f8fc2e6d6",
+    "semantic_hash": "18835309b518449867c6c13f8fc2e6d6"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/VcnArchives.tsx": {
+    "mtime": 1780559651.2886462,
+    "ast_hash": "59a13c635f7bb7f764934a9f30e6f597",
+    "semantic_hash": "59a13c635f7bb7f764934a9f30e6f597"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Admin/YearsTerms.tsx": {
+    "mtime": 1780559651.2887242,
+    "ast_hash": "766154134ba7f32970d2252da843c758",
+    "semantic_hash": "766154134ba7f32970d2252da843c758"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Cabinet.tsx": {
+    "mtime": 1781759857.4787679,
+    "ast_hash": "b523334f181a44682e662729c1632e81",
+    "semantic_hash": "b523334f181a44682e662729c1632e81"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Events.tsx": {
+    "mtime": 1781759857.4791503,
+    "ast_hash": "100316d3511a2348f9ead24fd40e6f5b",
+    "semantic_hash": "100316d3511a2348f9ead24fd40e6f5b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Feedback.tsx": {
+    "mtime": 1780559651.2889652,
+    "ast_hash": "05c7cf25763155928738c95500731c13",
+    "semantic_hash": "05c7cf25763155928738c95500731c13"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Gallery.tsx": {
+    "mtime": 1780559651.2890449,
+    "ast_hash": "597969d5c37f978360c6aceceae489c1",
+    "semantic_hash": "597969d5c37f978360c6aceceae489c1"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/GetInvolved.tsx": {
+    "mtime": 1781759857.479575,
+    "ast_hash": "0adfa218bae12645bd99033fe38ddab7",
+    "semantic_hash": "0adfa218bae12645bd99033fe38ddab7"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Home.tsx": {
+    "mtime": 1781759857.4799023,
+    "ast_hash": "44f3b05838444cde769f26d80e694fc9",
+    "semantic_hash": "44f3b05838444cde769f26d80e694fc9"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/House.tsx": {
+    "mtime": 1781759857.4801817,
+    "ast_hash": "43cae025d26f60193517dfbcb2e93382",
+    "semantic_hash": "43cae025d26f60193517dfbcb2e93382"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/HouseArchive.tsx": {
+    "mtime": 1780559651.2893736,
+    "ast_hash": "b4f9a21efec6a136b188704303450a48",
+    "semantic_hash": "b4f9a21efec6a136b188704303450a48"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/HouseDetail.tsx": {
+    "mtime": 1780559651.2894454,
+    "ast_hash": "0eb8816b22d6c7462a4dbee4afa2fc93",
+    "semantic_hash": "0eb8816b22d6c7462a4dbee4afa2fc93"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Internship.tsx": {
+    "mtime": 1781759857.4803689,
+    "ast_hash": "30497450fdbdabc30bf8a49c1a7be93b",
+    "semantic_hash": "30497450fdbdabc30bf8a49c1a7be93b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Leaderboard.tsx": {
+    "mtime": 1781759857.4807231,
+    "ast_hash": "6b973aaa112b28b1c8d1910f93a0ec5c",
+    "semantic_hash": "6b973aaa112b28b1c8d1910f93a0ec5c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/MemberAccountsUnavailable.tsx": {
+    "mtime": 1780559651.2897265,
+    "ast_hash": "cdf76799a43868ff2a0ce4cbb7637a62",
+    "semantic_hash": "cdf76799a43868ff2a0ce4cbb7637a62"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/NotFound.tsx": {
+    "mtime": 1781759857.481021,
+    "ast_hash": "eb27e9f0dc9c02b58268e654991599df",
+    "semantic_hash": "eb27e9f0dc9c02b58268e654991599df"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Points.tsx": {
+    "mtime": 1781759857.4813104,
+    "ast_hash": "555496707524a67bf9e87ffa78844e89",
+    "semantic_hash": "555496707524a67bf9e87ffa78844e89"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Profile.tsx": {
+    "mtime": 1780559651.2900634,
+    "ast_hash": "64ab4171a951410f82f8828a73b25d3f",
+    "semantic_hash": "64ab4171a951410f82f8828a73b25d3f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/PublicPointsExplainer.tsx": {
+    "mtime": 1780559651.2901258,
+    "ast_hash": "51004f70845f4fe9e0c4e8febaa91ecf",
+    "semantic_hash": "51004f70845f4fe9e0c4e8febaa91ecf"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/SignIn.tsx": {
+    "mtime": 1780559651.2901826,
+    "ast_hash": "9c173254663d78201e220f430f0cd485",
+    "semantic_hash": "9c173254663d78201e220f430f0cd485"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/UVSANetwork.tsx": {
+    "mtime": 1781759857.481653,
+    "ast_hash": "7b44cfceca82c6ad667f54235ae20647",
+    "semantic_hash": "7b44cfceca82c6ad667f54235ae20647"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/Vcn.tsx": {
+    "mtime": 1780559651.2903671,
+    "ast_hash": "491ada6439b1333cc998921ec89d1a2c",
+    "semantic_hash": "491ada6439b1333cc998921ec89d1a2c"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/VcnArchive.tsx": {
+    "mtime": 1780559651.2904444,
+    "ast_hash": "7698c33ccf0ead677724208958f81676",
+    "semantic_hash": "7698c33ccf0ead677724208958f81676"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/VcnCurrent.tsx": {
+    "mtime": 1781759857.4820776,
+    "ast_hash": "c19938b3c220bc3d9330036e78dafa06",
+    "semantic_hash": "c19938b3c220bc3d9330036e78dafa06"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/pages/WildNCulture.tsx": {
+    "mtime": 1781759857.482428,
+    "ast_hash": "d129288e99051c6b975d4ce41c2a14d4",
+    "semantic_hash": "d129288e99051c6b975d4ce41c2a14d4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/react-app-env.d.ts": {
+    "mtime": 1780559651.2906716,
+    "ast_hash": "3b12a2a445e35988cd2eb9f73d12c500",
+    "semantic_hash": "3b12a2a445e35988cd2eb9f73d12c500"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/reportWebVitals.ts": {
+    "mtime": 1780559651.290725,
+    "ast_hash": "f62c07c24a14ca699e74938f358baf22",
+    "semantic_hash": "f62c07c24a14ca699e74938f358baf22"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/routes/AdminRoute.tsx": {
+    "mtime": 1780559651.2908158,
+    "ast_hash": "66e6e5fbddb1e539452ee92f53d6eeb0",
+    "semantic_hash": "66e6e5fbddb1e539452ee92f53d6eeb0"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/routes/ProtectedRoute.tsx": {
+    "mtime": 1780559651.2908762,
+    "ast_hash": "fab8977f1f1cf8025f3af0a9478e57a0",
+    "semantic_hash": "fab8977f1f1cf8025f3af0a9478e57a0"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/routes/index.tsx": {
+    "mtime": 1781759857.4828038,
+    "ast_hash": "bc06f585e6b721069c9d5e7e9793160a",
+    "semantic_hash": "bc06f585e6b721069c9d5e7e9793160a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/schemas/index.ts": {
+    "mtime": 1780559651.2910633,
+    "ast_hash": "e3ea36b17a9ada4d07c24cb85f8ba7f7",
+    "semantic_hash": "e3ea36b17a9ada4d07c24cb85f8ba7f7"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/scripts/createEventsTable.ts": {
+    "mtime": 1780559651.2911465,
+    "ast_hash": "f8c566a8ce28364023cb390a59916ddc",
+    "semantic_hash": "f8c566a8ce28364023cb390a59916ddc"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/scripts/migrateCabinet.ts": {
+    "mtime": 1780559651.2912679,
+    "ast_hash": "10bd221ce301cd49aa373d1448c939a7",
+    "semantic_hash": "10bd221ce301cd49aa373d1448c939a7"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/scripts/normalizeYears.ts": {
+    "mtime": 1780559651.29132,
+    "ast_hash": "2a020e24b5fd85c7d6e61042269c646d",
+    "semantic_hash": "2a020e24b5fd85c7d6e61042269c646d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/setupTests.ts": {
+    "mtime": 1780559651.2913702,
+    "ast_hash": "987ae0a59483ee509d221d6ada9878e5",
+    "semantic_hash": "987ae0a59483ee509d221d6ada9878e5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/types/database.ts": {
+    "mtime": 1781759857.483152,
+    "ast_hash": "79ef44864b43170239ada6b306d0571a",
+    "semantic_hash": "79ef44864b43170239ada6b306d0571a"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/types/index.ts": {
+    "mtime": 1781759857.4835086,
+    "ast_hash": "68a737f76e791697ed9d9287f2bee0d7",
+    "semantic_hash": "68a737f76e791697ed9d9287f2bee0d7"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/housePublicPointOverrides.ts": {
+    "mtime": 1780559651.2918062,
+    "ast_hash": "776696087b71823af211ea6f93f8dc34",
+    "semantic_hash": "776696087b71823af211ea6f93f8dc34"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/houseSlug.ts": {
+    "mtime": 1780559651.2918584,
+    "ast_hash": "2055f449b2494ac009ce200dbe425379",
+    "semantic_hash": "2055f449b2494ac009ce200dbe425379"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/isSupabaseUnavailable.ts": {
+    "mtime": 1780559651.2919087,
+    "ast_hash": "14358d756601c5e106633a5a286810c4",
+    "semantic_hash": "14358d756601c5e106633a5a286810c4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/losAngelesDate.ts": {
+    "mtime": 1780559651.291964,
+    "ast_hash": "e49ef9a9d967f7c4b1c7edab7a09670e",
+    "semantic_hash": "e49ef9a9d967f7c4b1c7edab7a09670e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/seasonalState.test.ts": {
+    "mtime": 1780559651.2920203,
+    "ast_hash": "694064aa8e9fe6f397dddc7dcc4cf721",
+    "semantic_hash": "694064aa8e9fe6f397dddc7dcc4cf721"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/utils/seasonalState.ts": {
+    "mtime": 1780559651.2920823,
+    "ast_hash": "ac1fe2ad211f95b606e0b72d2bb59b39",
+    "semantic_hash": "ac1fe2ad211f95b606e0b72d2bb59b39"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/supabase-usage-audit.sql": {
+    "mtime": 1780559651.208009,
+    "ast_hash": "ee8e3f37f844578766f02e833baf3ba8",
+    "semantic_hash": "ee8e3f37f844578766f02e833baf3ba8"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/supabase/functions/analytics-proxy/index.ts": {
+    "mtime": 1780559651.2927709,
+    "ast_hash": "79375f0021c0ebeeab448739e3ec9fc4",
+    "semantic_hash": "79375f0021c0ebeeab448739e3ec9fc4"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/supabase/functions/secure-ai/index.ts": {
+    "mtime": 1780559651.2929027,
+    "ast_hash": "a2bb02ee797bb5303d292be8ce19ae5f",
+    "semantic_hash": "a2bb02ee797bb5303d292be8ce19ae5f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/supabase/functions/trigger-event-image-migration/index.ts": {
+    "mtime": 1780559651.293052,
+    "ast_hash": "0213ef52a1ade6e4602e0c409c8f23f3",
+    "semantic_hash": "0213ef52a1ade6e4602e0c409c8f23f3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/supabase/functions/trigger-house-event-image-migration/index.ts": {
+    "mtime": 1780559651.2931952,
+    "ast_hash": "ae8fb4950a44f13406e845ecac6f7847",
+    "semantic_hash": "ae8fb4950a44f13406e845ecac6f7847"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/supabase/functions/vsa-ai-assistant/index.ts": {
+    "mtime": 1780559651.2933288,
+    "ast_hash": "aff9c85c8911c9d79f88c7faaa0ae0d1",
+    "semantic_hash": "aff9c85c8911c9d79f88c7faaa0ae0d1"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/admin-analytics-setup.md": {
+    "mtime": 1780559651.2073758,
+    "ast_hash": "ac8ec987c09b5c67c82366c5907389ad",
+    "semantic_hash": "ac8ec987c09b5c67c82366c5907389ad"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/admin-content-management.md": {
+    "mtime": 1780559651.2074378,
+    "ast_hash": "83ae471d59bf7e78ea762089e812a866",
+    "semantic_hash": "83ae471d59bf7e78ea762089e812a866"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/claude-subagent-task-template.md": {
+    "mtime": 1781759857.470591,
+    "ast_hash": "65c363adbbc3d06176593ac5ee13fa3e",
+    "semantic_hash": "65c363adbbc3d06176593ac5ee13fa3e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/claude-subagent-workflow.md": {
+    "mtime": 1781759857.4708655,
+    "ast_hash": "e42e50d29e2925e338194d77f20422b3",
+    "semantic_hash": "e42e50d29e2925e338194d77f20422b3"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/cloud-architecture.md": {
+    "mtime": 1780559651.2075264,
+    "ast_hash": "9c4f1bbb4411010a1ce0d5ea31b553de",
+    "semantic_hash": "9c4f1bbb4411010a1ce0d5ea31b553de"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/codex-subagent-task-template.md": {
+    "mtime": 1781759857.471114,
+    "ast_hash": "838f71930ec53dbd0248ee3d31c6919b",
+    "semantic_hash": "838f71930ec53dbd0248ee3d31c6919b"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/codex-subagent-workflow.md": {
+    "mtime": 1781759857.4713824,
+    "ast_hash": "2b2844d07927992dfc84ab44aa10fc4d",
+    "semantic_hash": "2b2844d07927992dfc84ab44aa10fc4d"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/dynamic-content-routing-audit.md": {
+    "mtime": 1780559651.2076173,
+    "ast_hash": "b8529d9fb67dacb64389d8aa55ac8dfb",
+    "semantic_hash": "b8529d9fb67dacb64389d8aa55ac8dfb"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/event-image-migration.md": {
+    "mtime": 1780559651.2077358,
+    "ast_hash": "8d274c3dd6f5c2df2850b94d726aa8ba",
+    "semantic_hash": "8d274c3dd6f5c2df2850b94d726aa8ba"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/graphify-workflow.md": {
+    "mtime": 1781759970.4979448,
+    "ast_hash": "fe2402819c6d0d43e5f76081b67af0de",
+    "semantic_hash": "fe2402819c6d0d43e5f76081b67af0de"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/house-image-migration.md": {
+    "mtime": 1780559651.2077909,
+    "ast_hash": "d098637ba16845aa7cc3d9faa730222f",
+    "semantic_hash": "d098637ba16845aa7cc3d9faa730222f"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/leaderboard-system.md": {
+    "mtime": 1780559651.2078462,
+    "ast_hash": "8ce1c5b85f03cf2ec8b1f4b908c56165",
+    "semantic_hash": "8ce1c5b85f03cf2ec8b1f4b908c56165"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/docs/leaderboard-test-checklist.md": {
+    "mtime": 1780559651.207902,
+    "ast_hash": "bfc214629fd38fc68a17056ccd301917",
+    "semantic_hash": "bfc214629fd38fc68a17056ccd301917"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/ts_output.txt": {
+    "mtime": 1780559651.2984664,
+    "ast_hash": "a404ce729d586f26008128edec337fff",
+    "semantic_hash": "a404ce729d586f26008128edec337fff"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/push_out.txt": {
+    "mtime": 1780559651.2758808,
+    "ast_hash": "9619101293fb8d62392ed81fb0483128",
+    "semantic_hash": "9619101293fb8d62392ed81fb0483128"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/stitch-prompts.md": {
+    "mtime": 1780559651.2921817,
+    "ast_hash": "4138fe27564417f1718e49782d70db7e",
+    "semantic_hash": "4138fe27564417f1718e49782d70db7e"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/README.md": {
+    "mtime": 1780559651.2070825,
+    "ast_hash": "c6716990fea9f3bb60a54c028a979758",
+    "semantic_hash": "c6716990fea9f3bb60a54c028a979758"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/DEPLOYMENT_GUIDE.md": {
+    "mtime": 1780559651.2068908,
+    "ast_hash": "b49ac691d6a16870754e81d3bba51a87",
+    "semantic_hash": "b49ac691d6a16870754e81d3bba51a87"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/DESIGN.md": {
+    "mtime": 1780559651.206947,
+    "ast_hash": "e4bb2aa20a8b6eaeb3e16c8955839780",
+    "semantic_hash": "e4bb2aa20a8b6eaeb3e16c8955839780"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/AGENTS.md": {
+    "mtime": 1781760397.7805727,
+    "ast_hash": "882617f9d60b254dec264f85366c0047",
+    "semantic_hash": "882617f9d60b254dec264f85366c0047"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/CLAUDE.md": {
+    "mtime": 1781760397.7493331,
+    "ast_hash": "f764256a11341d06a57663fd35b5ade5",
+    "semantic_hash": "f764256a11341d06a57663fd35b5ade5"
+  },
+  "/Users/havyn/Documents/CS/vsa-website/src/logo.svg": {
+    "mtime": 1780559651.2866783,
+    "ast_hash": "06e733283fa43d1dd57738cfc409adbd",
+    "semantic_hash": "06e733283fa43d1dd57738cfc409adbd"
+  }
+}
