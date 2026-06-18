@@ -25,7 +25,7 @@ function corsHeaders(req: Request) {
 }
 
 const FALLBACK_MESSAGE =
-  "I'm not sure from the approved VSA info I have. Try the Events page, Feedback page, or official VSA channels.";
+  "I don't have a confirmed approved answer for that yet, but these pages may help: Events, Get Involved, Applications, and Ask VSA feedback. For deadlines or official updates, check VSA's official channels.";
 
 const RATE_LIMIT_MESSAGE = "You've reached today's Ask VSA limit. Try again later!";
 
@@ -35,12 +35,17 @@ const SYSTEM_PROMPT = `You are "Ask VSA," the friendly AI assistant for VSA at U
 
 Answer only using the approved context provided in this request.
 Do not use outside knowledge, guesses, assumptions, or training memory.
-If the context does not answer the question, say: "I'm not sure from the approved VSA info I have. Try checking our Events page, Instagram, or asking a cabinet member!"
+If the context does not answer the question, say: "I don't have a confirmed approved answer for that yet, but these pages may help: Events, Get Involved, Applications, and Ask VSA feedback. For deadlines or official updates, check VSA's official channels."
 
 Tone and Style:
+- Be direct and answer the question first.
 - Be concise, helpful, and welcoming, like a VSA board member.
-- Keep answers short (usually 1-3 sentences) unless the user asks for more detail.
+- Use short bullet points for multi-step answers or lists.
+- Link or mention relevant website routes (like /events, /get-involved) when known.
 - Use "VSA at UCSD" for casual references and "VSA at UC San Diego" for formal ones.
+- Keep answers short (usually 1-3 sentences) unless the user asks for more detail.
+- Avoid saying "I'm not sure" if the answer is clearly in the approved context.
+- Tell users to "check official channels" for current deadlines if they aren't explicitly provided.
 
 Guardrails and Privacy:
 - Never invent event dates, times, locations, point values, application deadlines, or 2026–2027 Houses.
@@ -60,11 +65,13 @@ Known Corrections to Enforce:
 Website Routes to Suggest:
 - /events (Upcoming/past events)
 - /leaderboard (Points/standings)
+- /points (Find My Points lookup)
 - /house (Houses/lore)
 - /gallery (Photos/recaps)
 - /cabinet (Leadership)
 - /uvsa-network (Externals)
-- /get-involved (Sign-ups)`;
+- /get-involved (Sign-ups)
+- /ace (Anh Chi Em mentorship)`;
 
 const RecentTurnSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -242,14 +249,31 @@ async function getRateLimitReason(
   return null;
 }
 
+function expandQuerySynonyms(query: string): string {
+  let expanded = query;
+  const q = query.toLowerCase();
+  
+  if (/\bjoin\b/.test(q) && !q.includes('get involved')) expanded += ' or "get involved"';
+  if (/\bget involved\b/.test(q) && !q.includes('join')) expanded += ' or join';
+  if (/\bfam(ily)?\b/.test(q) && !q.includes('ace')) expanded += ' or ACE or "Anh-Em"';
+  if (/\bpoints\b/.test(q) && !q.includes('leaderboard')) expanded += ' or leaderboard or "House points"';
+  if (/\bculture night\b/.test(q) && !q.includes('vcn')) expanded += ' or VCN';
+  if (/\bwild n culture\b/.test(q) && !q.includes('wnc')) expanded += ' or WNC';
+  if (/\bapply\b|\bapplications\b/.test(q) && !q.includes('forms')) expanded += ' or forms';
+  if (/\bcab\b/.test(q) && !q.includes('cabinet')) expanded += ' or cabinet';
+
+  return expanded;
+}
+
 async function retrieveKnowledge(
   supabaseClient: ReturnType<typeof createClient>,
   message: string,
   currentPage?: string,
 ) {
   const query = [message, currentPage ?? ""].filter(Boolean).join(" ");
+  const expandedQuery = expandQuerySynonyms(query);
   const { data, error } = await supabaseClient.rpc("match_ai_knowledge_base", {
-    query_text: query,
+    query_text: expandedQuery,
     match_limit: 6,
   });
 

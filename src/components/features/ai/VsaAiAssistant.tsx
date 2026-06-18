@@ -28,11 +28,13 @@ interface AssistantResponse {
 
 const STARTER_QUESTIONS = [
   'How do I get involved?',
-  'How do points work?',
-  'What are Houses?',
   'What is ACE?',
+  'How do House points work?',
   'Where can I find upcoming events?',
-  'What are externals?',
+  'How do I join the Intern Program?',
+  'What is VCN?',
+  'What is WNC?',
+  'How do I check my points?'
 ];
 
 const MAX_MESSAGES = 12;
@@ -132,6 +134,7 @@ function SourceIcon({ className = 'h-3 w-3' }: { className?: string }) {
 function isFallbackMessage(message: ChatMessage) {
   return (
     message.status === 'fallback' ||
+    message.content.toLowerCase().includes("i don't have a confirmed approved answer") ||
     message.content.toLowerCase().includes("i'm not sure from the approved vsa info i have")
   );
 }
@@ -391,7 +394,7 @@ export function VsaAiAssistant() {
                       </div>
                       {message.role === 'assistant' && isFallbackMessage(message) && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          {['Events', 'Feedback', 'Official channels'].map((label) => (
+                          {['Events', 'Get Involved', 'Applications'].map((label) => (
                             <span
                               key={`${message.id}-${label}`}
                               className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
