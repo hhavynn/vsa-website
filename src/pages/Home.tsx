@@ -12,6 +12,7 @@ import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImag
 import { parseDateOnly } from '../lib/dateOnly';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../lib/eventTime';
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
+import { OpenOpportunities } from '../components/features/home/OpenOpportunities';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion, useReducedMotion } from 'framer-motion';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -328,6 +329,10 @@ export function Home() {
             </div>
           </div>
         </section>
+      </RevealOnScrollWrapper>
+
+      <RevealOnScrollWrapper>
+        <OpenOpportunities compact />
       </RevealOnScrollWrapper>
 
       <RevealOnScrollWrapper>
