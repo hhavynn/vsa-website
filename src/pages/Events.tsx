@@ -19,7 +19,11 @@ import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
-import { useEvents, useInfiniteEvents } from '../hooks/useEvents';
+import {
+  useEvents,
+  useInfiniteEvents,
+  usePublishedPastEventArchiveAvailability,
+} from '../hooks/useEvents';
 import { AcademicTerm, Event, HouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
 import { motion } from 'framer-motion';
@@ -343,18 +347,31 @@ export function Events() {
     sort_ascending: true
   });
 
-  const { terms } = useAcademicTerms();
+  const { terms, loading: termsLoading, error: termsError } = useAcademicTerms();
+
+  const {
+    data: archiveAvailability,
+    isLoading: archiveAvailabilityLoading,
+    error: archiveAvailabilityError,
+  } = usePublishedPastEventArchiveAvailability(oneDayAgo);
 
   // 2. Fetch past events (paginated)
+  const publishedPastEventTermIds = useMemo(
+    () => new Set(archiveAvailability?.termIds ?? []),
+    [archiveAvailability?.termIds]
+  );
   const archiveTerms = useMemo(
-    () => terms.filter(t => !t.is_active).sort(sortTermsByDateDesc),
-    [terms]
+    () => terms.filter((term) => publishedPastEventTermIds.has(term.id)).sort(sortTermsByDateDesc),
+    [publishedPastEventTermIds, terms]
   );
   
-  const archiveOptions: ArchiveTermOption[] = useMemo(() => [
-    ...archiveTerms,
-    { id: 'unassigned', label: 'Unassigned Dates' }
-  ], [archiveTerms]);
+  const archiveOptions = useMemo<ArchiveTermOption[]>(() => {
+    const options: ArchiveTermOption[] = [...archiveTerms];
+    if (archiveAvailability?.hasUnassignedEvents) {
+      options.push({ id: 'unassigned', label: 'Unassigned Dates' });
+    }
+    return options;
+  }, [archiveAvailability?.hasUnassignedEvents, archiveTerms]);
 
   const effectiveArchiveTermId =
     selectedArchiveTermId && archiveOptions.some((term) => term.id === selectedArchiveTermId)
@@ -504,7 +521,12 @@ export function Events() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [archivedEventIdsKey]);
 
-  if (upcomingLoading || (pastLoading && archivedEvents.length === 0)) {
+  if (
+    upcomingLoading ||
+    termsLoading ||
+    archiveAvailabilityLoading ||
+    (pastLoading && archivedEvents.length === 0)
+  ) {
     return (
       <>
         <PageTitle title="Events" />
@@ -513,7 +535,11 @@ export function Events() {
     );
   }
 
-  const isDegraded = isSupabaseUnavailable(upcomingError) || isSupabaseUnavailable(pastError);
+  const isDegraded =
+    isSupabaseUnavailable(upcomingError) ||
+    isSupabaseUnavailable(termsError) ||
+    isSupabaseUnavailable(archiveAvailabilityError) ||
+    isSupabaseUnavailable(pastError);
 
   if (isDegraded) {
     return (
@@ -532,7 +558,7 @@ export function Events() {
     );
   }
 
-  if (upcomingError || pastError) {
+  if (upcomingError || termsError || archiveAvailabilityError || pastError) {
     return (
       <>
         <PageTitle title="Events" />
