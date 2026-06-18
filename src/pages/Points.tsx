@@ -4,6 +4,7 @@ import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { useFindMyPoints } from '../hooks/useFindMyPoints';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { Link } from 'react-router-dom';
 
 export default function Points() {
   const { error } = useFindMyPoints('all'); // Check all-time to see if service is up
@@ -44,7 +45,23 @@ export default function Points() {
 
       <div className="vsa-container space-y-10 py-10">
         <FindMyPoints variant="page" />
-        <PointsExplainer />
+        <div className="scrapbook-note flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
+              Need help with your points?
+            </h2>
+            <p className="mt-1 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
+              If an event or point total looks wrong, send cabinet a correction request with the details.
+            </p>
+          </div>
+          <Link
+            to="/feedback?type=event&title=Points%20correction"
+            className="vsa-btn-primary w-full shrink-0 text-center sm:w-auto"
+          >
+            Request a correction
+          </Link>
+        </div>
+        <PointsExplainer showCorrectionCta={false} />
       </div>
     </>
   );
