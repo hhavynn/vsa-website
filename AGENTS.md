@@ -187,15 +187,18 @@ Current test files:
 Graphify indexes the codebase into a navigable graph. Run it before reading files speculatively — it keeps context focused and token usage low.
 
 ```bash
-graphify query "<question>"           # Architecture and dependency questions
-graphify path "<source>" "<target>"   # Trace relationships between files or symbols
-graphify explain "<file or symbol>"   # Understand a file's role in the graph
-graphify . --update                   # Refresh the graph if stale
+./scripts/graphify-run query "<question>"           # Architecture and dependency questions
+./scripts/graphify-run path "<source>" "<target>"   # Trace relationships between files or symbols
+./scripts/graphify-run explain "<file or symbol>"   # Understand a file's role in the graph
+./scripts/graphify-run hook status                  # Check git hook is active
+graphify . --update                                 # Refresh the graph if stale (interactive only)
 ```
 
-Check `graphify-out/GRAPH_REPORT.md` for initial orientation when entering an unfamiliar part of the codebase. `graphify-out/cost.json` is local only — never commit it.
+**PATH note:** Use `./scripts/graphify-run` instead of bare `graphify` in subagents and hooks. Subagent PATH typically excludes `~/.local/bin` where Graphify installs; the wrapper resolves the binary across all common install locations.
 
-If Graphify is not installed, fall back to targeted `grep`/`find` rather than broad directory reads. Install with `uv tool install graphifyy` or `pipx install graphifyy`.
+Check `graphify-out/GRAPH_REPORT.md` for initial orientation when entering an unfamiliar part of the codebase. `graphify-out/cost.json` and `graphify-out/cache/` are local only — never commit them. Keep graph-output updates in a separate `chore: update graphify graph` commit rather than mixing into feature PRs.
+
+If Graphify is unavailable, continue with targeted `grep`/`find` and report the blocker. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks. Install with `uv tool install graphifyy` or `pipx install graphifyy`.
 
 ---
 

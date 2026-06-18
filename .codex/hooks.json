@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/havyn/.local/bin/graphify hook-check"
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); \"$ROOT/scripts/graphify-run\" hook-check"
           }
         ]
       }

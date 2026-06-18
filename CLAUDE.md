@@ -64,14 +64,17 @@ Graphify indexes the codebase into a navigable graph. Use it before doing broad 
 **Key commands:**
 
 ```bash
-graphify query "<question>"              # Answer architecture questions from the graph
-graphify path "<source>" "<target>"      # Trace relationships between two files or symbols
-graphify explain "<file or symbol>"      # Explain what a file/symbol does and its connections
-graphify . --update                      # Refresh the graph if it feels stale
+./scripts/graphify-run query "<question>"              # Answer architecture questions from the graph
+./scripts/graphify-run path "<source>" "<target>"      # Trace relationships between two files or symbols
+./scripts/graphify-run explain "<file or symbol>"      # Explain what a file/symbol does and its connections
+./scripts/graphify-run hook status                     # Check whether the git hook is active
+graphify . --update                                    # Refresh the graph if it feels stale (interactive only)
 ```
+
+**PATH note:** Use `./scripts/graphify-run` instead of bare `graphify` in subagents and hooks — subagent PATH typically excludes `~/.local/bin` where Graphify installs. The wrapper resolves the binary across all common install locations automatically.
 
 **Orientation:** Check `graphify-out/GRAPH_REPORT.md` first when dropped into an unfamiliar part of the codebase.
 
-**What stays local:** `graphify-out/cost.json` and the cache directory are gitignored and must not be committed.
+**What stays local:** `graphify-out/cost.json` and the cache directory are gitignored and must not be committed. Keep graph-output changes (`graphify-out/*.md`, `graph.json`, `graph.html`) in a separate commit (`chore: update graphify graph`) rather than mixing them into feature PRs.
 
-**Workflow rule:** Run `graphify query` or `graphify path` before opening files speculatively. Only read source files directly after the graph confirms they are relevant. If Graphify is not installed, fall back to targeted `grep`/`find` searches rather than reading entire directories.
+**Workflow rule:** Run `./scripts/graphify-run query` or `./scripts/graphify-run path` before opening files speculatively. Only read source files directly after the graph confirms they are relevant. If Graphify is not installed, fall back to targeted `grep`/`find` searches rather than reading entire directories. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks for it.
