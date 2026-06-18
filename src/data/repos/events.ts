@@ -42,7 +42,39 @@ export interface EventStats {
   total_attendance: number;
 }
 
+export interface PublishedPastEventArchiveAvailability {
+  termIds: string[];
+  hasUnassignedEvents: boolean;
+}
+
 export class EventsRepository {
+  async getPublishedPastEventArchiveAvailability(
+    dateTo: string
+  ): Promise<PublishedPastEventArchiveAvailability> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('academic_term_id')
+        .eq('is_published', true)
+        .lte('date', dateTo);
+
+      if (error) throw error;
+
+      const termIds = new Set<string>();
+      let hasUnassignedEvents = false;
+
+      for (const event of data ?? []) {
+        if (event.academic_term_id) {
+          termIds.add(event.academic_term_id);
+        } else {
+          hasUnassignedEvents = true;
+        }
+      }
+
+      return { termIds: Array.from(termIds), hasUnassignedEvents };
+    }, 'Failed to fetch past event archive availability');
+  }
+
   /**
    * Get all events with optional filtering
    */

@@ -16,6 +16,15 @@ export function useEvents(filters?: EventFilters) {
 
 export const EVENTS_PAGE_SIZE = 9;
 
+export function usePublishedPastEventArchiveAvailability(dateTo: string) {
+  return useQuery({
+    queryKey: ['events', 'archive-availability', dateTo],
+    queryFn: () => eventsRepository.getPublishedPastEventArchiveAvailability(dateTo),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+  });
+}
+
 export function useInfiniteEvents(filters: Omit<EventFilters, 'limit' | 'offset'> = {}) {
   return useInfiniteQuery<EventWithAttendance[]>({
     queryKey: ['events', 'infinite', filters],

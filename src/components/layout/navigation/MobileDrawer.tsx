@@ -16,8 +16,9 @@ interface NavLink {
 // ─── Link groups ──────────────────────────────────────────────────────────────
 
 const QUICK_LINKS: NavLink[] = [
-  { path: '/events',      label: 'Events',      emoji: '📅' },
-  { path: '/leaderboard', label: 'Points',       emoji: '⭐' },
+  { path: '/events',      label: 'Events',         emoji: '📅' },
+  { path: '/points',      label: 'Find My Points', emoji: '🎯' },
+  { path: '/leaderboard', label: 'Leaderboard',    emoji: '⭐' },
 ];
 
 const INVOLVEMENT_LINKS: NavLink[] = [
