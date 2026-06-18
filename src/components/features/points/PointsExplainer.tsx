@@ -45,7 +45,11 @@ function StickerBadge({ children, rotation = 0, color = 'primary' }: { children:
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PointsExplainer: React.FC = () => {
+interface PointsExplainerProps {
+  showCorrectionCta?: boolean;
+}
+
+export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrectionCta = true }) => {
   return (
     <div className="space-y-8">
       {/* Main Explainer Card */}
@@ -129,30 +133,31 @@ export const PointsExplainer: React.FC = () => {
         </div>
       </div>
 
-      {/* Correction CTA Note */}
-      <div className="scrapbook-note relative p-6 sm:p-8" style={{ background: 'var(--surface2)' }}>
-        <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-          <div className="flex gap-4">
-            <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--accent)] text-[var(--accent)] shadow-inner">
-              <QuestionIcon className="h-5 w-5" />
+      {showCorrectionCta && (
+        <div className="scrapbook-note relative p-6 sm:p-8" style={{ background: 'var(--surface2)' }}>
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex gap-4">
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--accent)] text-[var(--accent)] shadow-inner">
+                <QuestionIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-serif text-[17px] font-bold" style={{ color: 'var(--text)' }}>
+                  Points look wrong?
+                </h4>
+                <p className="mt-1 font-sans text-sm opacity-80" style={{ color: 'var(--text2)' }}>
+                  If you believe your points haven't been recorded correctly, please let us know so we can fix it!
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-serif text-[17px] font-bold" style={{ color: 'var(--text)' }}>
-                Points look wrong?
-              </h4>
-              <p className="mt-1 font-sans text-sm opacity-80" style={{ color: 'var(--text2)' }}>
-                If you believe your points haven't been recorded correctly, please let us know so we can fix it!
-              </p>
-            </div>
+            <Link
+              to="/feedback?type=event&title=Points%20correction"
+              className="vsa-btn-primary w-full whitespace-nowrap text-center md:w-auto"
+            >
+              Submit Correction
+            </Link>
           </div>
-          <Link 
-            to="/feedback?type=event&title=Points%20correction" 
-            className="vsa-btn-primary w-full whitespace-nowrap text-center md:w-auto"
-          >
-            Submit Correction
-          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 };

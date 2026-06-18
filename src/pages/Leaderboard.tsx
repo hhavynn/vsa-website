@@ -12,8 +12,8 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
-import { FindMyPoints } from '../components/features/points/FindMyPoints';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
+import { Link } from 'react-router-dom';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
@@ -576,7 +576,19 @@ export function Leaderboard() {
       </div>
 
       <div className="vsa-container pt-8">
-        <FindMyPoints variant="panel" />
+        <div className="scrapbook-paper flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
+              Looking for your own points?
+            </h2>
+            <p className="mt-1 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
+              Use the personal lookup to find your total, event count, and correction options.
+            </p>
+          </div>
+          <Link to="/points" className="vsa-btn-primary w-full shrink-0 text-center sm:w-auto">
+            Find My Points
+          </Link>
+        </div>
         {summerBreak && (
           <div className="mt-4 rounded border px-4 py-3 font-sans text-xs leading-relaxed" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text3)' }}>
             <span className="font-semibold" style={{ color: 'var(--text)' }}>{summerPointsMessage.title}.</span>{' '}
@@ -714,9 +726,30 @@ export function Leaderboard() {
           </>
         )}
 
-        <div className="mt-20">
-          <PointsExplainer />
-        </div>
+        <details className="group mt-16 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 transition-colors hover:bg-[var(--surface2)] sm:px-6">
+            <div>
+              <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
+                How points work
+              </h2>
+              <p className="mt-1 font-sans text-sm" style={{ color: 'var(--text2)' }}>
+                Learn how individual points, academic years, and House standings are counted.
+              </p>
+            </div>
+            <svg
+              className="h-5 w-5 shrink-0 text-[var(--text3)] transition-transform group-open:rotate-180"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div className="border-t border-[var(--border)] p-4 sm:p-6">
+            <PointsExplainer showCorrectionCta={false} />
+          </div>
+        </details>
       </div>
     </>
   );
