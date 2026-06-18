@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { NavigationShell } from './navigation/NavigationShell';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { BackToTop } from './BackToTop';
 import { Suspense, useEffect } from 'react';
 import Footer from './Footer';
@@ -20,6 +20,7 @@ function ScrollToTop() {
 
 export function Layout() {
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
@@ -31,10 +32,10 @@ export function Layout() {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15, ease: 'easeInOut' }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeInOut' }}
               className="w-full"
             >
               <Outlet />

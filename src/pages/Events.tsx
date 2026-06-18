@@ -26,7 +26,7 @@ import {
 } from '../hooks/useEvents';
 import { AcademicTerm, Event, HouseEvent, HousePageAsset } from '../types';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useQuery } from 'react-query';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -336,16 +336,23 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
 export function Events() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const now = useMemo(() => new Date(), []);
   const oneDayAgo = useMemo(() => new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), [now]);
 
   // 1. Fetch upcoming events
-  const { events: upcomingEventsAll, loading: upcomingLoading, error: upcomingError } = useEvents({
+  const { events: unfilteredUpcomingEvents, loading: upcomingLoading, error: upcomingError } = useEvents({
     date_from: oneDayAgo,
-    event_type: activeFilter === 'all' ? undefined : activeFilter,
     sort_ascending: true
   });
+
+  const upcomingEventsAll = useMemo(
+    () => activeFilter === 'all'
+      ? unfilteredUpcomingEvents
+      : unfilteredUpcomingEvents.filter((event) => event.event_type === activeFilter),
+    [activeFilter, unfilteredUpcomingEvents]
+  );
 
   const { terms, loading: termsLoading, error: termsError } = useAcademicTerms();
 
@@ -421,7 +428,7 @@ export function Events() {
   }, []);
 
   const [featured, ...rest] = upcomingEventsAll;
-  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(upcomingEventsAll.length > 0);
+  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(unfilteredUpcomingEvents.length > 0);
   const summerEventsMessage = getSummerBreakMessage('events');
   const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now.toISOString())?.code);
   const activeYear = activeTerm?.academic_year_start ?? null;
@@ -444,6 +451,15 @@ export function Events() {
   const houseAssetsById = useMemo(() => new Map(houseAssets.map((asset) => [asset.id, asset])), [houseAssets]);
 
   const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
+  const latestArchiveTerm = archiveOptions[0] ?? null;
+  const latestArchiveActionLabel = latestArchiveTerm
+    ? `View ${latestArchiveTerm.label} memories`
+    : 'View past events';
+
+  const showLatestArchive = () => {
+    setActiveFilter('all');
+    setSelectedArchiveTermId(latestArchiveTerm?.id ?? null);
+  };
 
   // Batch-fetch published recaps + attendance stats for currently visible archived events.
   const archivedEventIds = archivedEvents.map((e) => e.id);
@@ -592,17 +608,19 @@ export function Events() {
             </p>
           )}
 
-          <div className="vsa-filter-bar">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => setActiveFilter(filter.key)}
-                className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
+          {unfilteredUpcomingEvents.length > 0 && (
+            <div className="vsa-filter-bar">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  onClick={() => setActiveFilter(filter.key)}
+                  className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -611,7 +629,7 @@ export function Events() {
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
               style={{ borderColor: 'var(--color-border)' }}
@@ -684,7 +702,7 @@ export function Events() {
               {rest.map((event: Event) => (
                 <motion.div
                   key={event.id}
-                  whileHover={{ y: -2 }}
+                  whileHover={shouldReduceMotion ? undefined : { y: -2 }}
                   className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[104px_minmax(0,1fr)] lg:grid-cols-[88px_240px_minmax(0,1fr)_auto]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
@@ -756,6 +774,13 @@ export function Events() {
           >
             {useSummerUpcomingEmptyState ? (
               <div className="mx-auto max-w-xl space-y-3 text-center">
+                <a
+                  href="#memory-wall"
+                  onClick={showLatestArchive}
+                  className="inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
+                >
+                  {latestArchiveActionLabel}
+                </a>
                 <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
                   {summerEventsMessage.badge}
                 </span>
@@ -767,14 +792,20 @@ export function Events() {
                     {summerEventsMessage.body}
                   </p>
                 </div>
-                <a href="#memory-wall" className="inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                  View past events
-                </a>
               </div>
             ) : (
-              <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                No upcoming events posted yet. Check back soon.
-              </p>
+              <div className="space-y-3 text-center">
+                <a
+                  href="#memory-wall"
+                  onClick={showLatestArchive}
+                  className="inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
+                >
+                  {latestArchiveActionLabel}
+                </a>
+                <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
+                  No upcoming events posted yet. Check back soon.
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -840,6 +871,15 @@ export function Events() {
                   No {activeFilter === 'all' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
                   events found for {selectedArchiveTerm?.label ?? 'this term'}.
                 </p>
+                {latestArchiveTerm && (
+                  <a
+                    href="#memory-wall"
+                    onClick={showLatestArchive}
+                    className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
+                  >
+                    {latestArchiveActionLabel}
+                  </a>
+                )}
               </div>
             ) : (
               <RevealOnScrollWrapper>

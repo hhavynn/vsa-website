@@ -11,10 +11,9 @@ import { splitPresidentsMessage } from '../data/presidentsContent';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { parseDateOnly } from '../lib/dateOnly';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../lib/eventTime';
-import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { ThisWeekInVSA } from '../components/features/home/ThisWeekInVSA';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { FALLBACK_LINKS } from '../config/publicFallbackContent';
 
@@ -166,6 +165,7 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
 }
 
 export function Home() {
+  const shouldReduceMotion = useReducedMotion();
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const today = getTodayDateOnly();
@@ -192,9 +192,6 @@ export function Home() {
   const presidentsPhotoUrl = presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
 
   const [featured, ...rest] = upcomingEvents;
-  const useSummerEventsEmptyState = shouldUseSummerEmptyState(upcomingEvents.length > 0);
-  const summerEventsMessage = getSummerBreakMessage('events');
-
   return (
     <>
       <PageTitle title="Home" />
@@ -239,10 +236,10 @@ export function Home() {
                   {pillars.map((pillar, idx) => (
                     <motion.div
                       key={pillar.label}
-                      initial={{ opacity: 0, y: 12 }}
+                      initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.45 + idx * 0.08 }}
-                      whileHover={{ y: -4, scale: 1.02 }}
+                      transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.45 + idx * 0.08 }}
+                      whileHover={shouldReduceMotion ? undefined : { y: -4, scale: 1.02 }}
                       className={`scrapbook-note flex min-h-[76px] flex-col justify-center gap-1 px-4 py-3 ${idx % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}`}
                     >
                       <span className="font-mono text-[10px]" style={{ color: 'var(--accent)' }}>{pillar.n}</span>
@@ -267,7 +264,10 @@ export function Home() {
             </div>
 
             <div className="relative flex min-h-[340px] flex-col items-center justify-center py-8 lg:p-10">
-              <div className="scrapbook-photo relative aspect-square w-[min(360px,80%)] rotate-[2deg]" style={{ animation: 'vsa-float 7s ease-in-out infinite' }}>
+              <div
+                className="scrapbook-photo relative aspect-square w-[min(360px,80%)] rotate-[2deg]"
+                style={{ animation: shouldReduceMotion ? 'none' : 'vsa-float 7s ease-in-out infinite' }}
+              >
                 <img
                   src={getSupabaseImageUrl(logoSrc, { width: 420, height: 420, resize: 'contain', quality: 78 })}
                   srcSet={getSupabaseImageSrcSet(logoSrc, [240, 420, 720], {
@@ -368,31 +368,10 @@ export function Home() {
                   </div>
                 ) : !featured ? (
                   <div className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right" style={{ color: 'var(--text3)' }}>
-                    {useSummerEventsEmptyState ? (
-                      <div className="space-y-3">
-                        <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
-                          {summerEventsMessage.badge}
-                        </span>
-                        <div>
-                          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
-                            {summerEventsMessage.title}
-                          </p>
-                          <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-                            {summerEventsMessage.body}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                          <Link to="/events" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-                            View past events
-                          </Link>
-                          <Link to="/points" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-                            Find My Points
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      'No upcoming events posted yet.'
-                    )}
+                    <p>No upcoming events posted yet.</p>
+                    <Link to="/events#memory-wall" className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+                      View past events
+                    </Link>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
