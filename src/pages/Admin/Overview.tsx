@@ -257,6 +257,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
     intro: 'Check site health, feedback, diagnostics, and admin operations.',
     tools: [
       {
+        to: '/admin/launch-checklist',
+        label: 'Launch Checklist',
+        desc: 'Pre-launch readiness checks for each academic year. Covers terms, cabinet, events, gallery, applications, Houses, VCN, and Ask VSA.',
+        affects: 'All public-facing sections of the site',
+        keywords: ['launch', 'checklist', 'readiness', 'pre-launch', 'year', 'setup', 'qa'],
+      },
+      {
         to: '/admin',
         label: 'Data Health Warnings',
         desc: 'Check missing event terms, incomplete upcoming event info, and gallery cover issues.',
