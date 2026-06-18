@@ -16,6 +16,14 @@ export interface Event {
   is_code_expired: boolean;
   is_published: boolean;
   academic_term_id?: string | null;
+  interest_counts?: EventInterestCounts | null;
+}
+
+export interface EventInterestCounts {
+  event_id: string;
+  interested_count: number;
+  going_count: number;
+  updated_at: string;
 }
 
 export interface EventRecap {

@@ -429,6 +429,11 @@ export default function AdminEvents() {
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
           <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{event.points} pts</span>
+          {event.interest_counts && (
+            <span className="rounded border border-brand-500/30 bg-brand-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-brand-700 dark:text-brand-300" title="Public interest: Interested / Going">
+              ⭐ {event.interest_counts.interested_count} / ✅ {event.interest_counts.going_count}
+            </span>
+          )}
         </div>
       </div>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
@@ -655,6 +660,26 @@ export default function AdminEvents() {
                     termsError={termsError}
                     onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
                   />
+                  {selectedEvent.interest_counts && (
+                    <div className="col-span-full rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                      <label className={labelCls}>Public Interest</label>
+                      <div className="mt-2 flex gap-8">
+                        <div>
+                          <span className="font-sans text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Interested</span>
+                          <div className="mt-1 font-serif text-2xl" style={{ color: 'var(--color-text)' }}>{selectedEvent.interest_counts.interested_count}</div>
+                        </div>
+                        <div>
+                          <span className="font-sans text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Going</span>
+                          <div className="mt-1 font-serif text-2xl" style={{ color: 'var(--color-text)' }}>{selectedEvent.interest_counts.going_count}</div>
+                        </div>
+                        <div className="flex items-end pb-1">
+                          <p className="font-sans text-[10px] italic" style={{ color: 'var(--color-text3)' }}>
+                            Last signal received: {new Date(selectedEvent.interest_counts.updated_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <label className="flex cursor-pointer items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                   <input

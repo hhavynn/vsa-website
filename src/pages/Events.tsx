@@ -7,6 +7,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
 import { AddToCalendarButton } from '../components/features/events/AddToCalendarButton';
+import { EventInterestButtons } from '../components/features/events/EventInterestButtons';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../constants/houses';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
@@ -663,7 +664,10 @@ export function Events() {
                     {featured.location}
                   </div>
                 )}
-                <AddToCalendarButton event={featured} variant="ghost" align="left" />
+                <div className="flex flex-col gap-6">
+                  <AddToCalendarButton event={featured} variant="ghost" align="left" />
+                  <EventInterestButtons eventId={featured.id} initialCounts={featured.interest_counts || null} />
+                </div>
               </div>
 
               <div className="relative flex min-h-[320px] flex-col justify-center bg-[var(--color-surface2)] p-4 sm:min-h-[380px] sm:p-6 lg:min-h-[460px] lg:p-7">
@@ -759,8 +763,11 @@ export function Events() {
                     )}
                   </div>
 
-                  <div className="order-4 flex items-start pt-1 sm:col-span-2 sm:order-4 lg:col-auto lg:justify-end">
+                  <div className="order-4 flex flex-col items-start gap-4 pt-1 sm:col-span-2 sm:order-4 lg:col-auto lg:items-end lg:justify-start">
                     <AddToCalendarButton event={event} align="right" />
+                    <div className="w-full lg:w-auto">
+                      <EventInterestButtons eventId={event.id} initialCounts={event.interest_counts || null} compact />
+                    </div>
                   </div>
                 </motion.div>
               ))}

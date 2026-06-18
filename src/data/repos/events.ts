@@ -1,11 +1,12 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling, DatabaseError, NotFoundError, ValidationError } from '../errors';
-import { Event } from '../../types';
+import { Event, EventInterestCounts } from '../../types';
 import { CreateEventFormData, UpdateEventFormData } from '../../schemas';
 
 export interface EventWithAttendance extends Event {
   attendance_count: number;
   user_attended?: boolean;
+  interest_counts?: EventInterestCounts | null;
 }
 
 export type PublicEventPreview = Pick<
@@ -21,7 +22,9 @@ export type PublicEventPreview = Pick<
   | 'event_type'
   | 'image_url'
   | 'thumbnail_url'
->;
+> & {
+  interest_counts?: EventInterestCounts | null;
+};
 
 export interface EventFilters {
   event_type?: Event['event_type'];
@@ -107,11 +110,22 @@ export class EventsRepository {
       if (eventsError) throw eventsError;
       if (!events) throw new NotFoundError('No events found');
 
+      // Fetch interest counts
+      const eventIds = events.map(e => e.id);
+      const { data: interestData } = await supabase
+        .from('event_interest_counts')
+        .select('*')
+        .in('event_id', eventIds);
+
+      const interestMap = new Map<string, EventInterestCounts>();
+      interestData?.forEach(ic => interestMap.set(ic.event_id, ic));
+
       // Note: We no longer fetch attendance rows here to avoid large egress payloads.
       // attendance_count is not used on list views.
       return events.map((event: any) => ({
         ...event,
         attendance_count: 0,
+        interest_counts: interestMap.get(event.id) || null,
       }));
     }, 'Failed to fetch events');
   }
@@ -139,6 +153,13 @@ export class EventsRepository {
 
       if (attendanceError) throw attendanceError;
 
+      // Fetch interest counts
+      const { data: interestData } = await supabase
+        .from('event_interest_counts')
+        .select('*')
+        .eq('event_id', id)
+        .single();
+
       const attendanceRows = attendanceData || [];
       const attendanceCount = attendanceRows.length;
       const userAttended = userId ? attendanceRows.some((r: any) => r.user_id === userId) : false;
@@ -147,8 +168,23 @@ export class EventsRepository {
         ...event,
         attendance_count: attendanceCount,
         user_attended: !!userAttended,
+        interest_counts: interestData || null,
       };
     }, 'Failed to fetch event');
+  }
+
+  /**
+   * Record public interest in an event
+   */
+  async recordInterest(eventId: string, signal: 'interested' | 'going'): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase.rpc('record_event_interest', {
+        p_event_id: eventId,
+        p_signal: signal
+      });
+
+      if (error) throw error;
+    }, 'Failed to record event interest');
   }
 
   /**
@@ -304,7 +340,7 @@ export class EventsRepository {
 
   async getPublicUpcomingPreview(dateFrom: string, limit: number = 4): Promise<PublicEventPreview[]> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
+      const { data: events, error } = await supabase
         .from('events')
         .select('id, name, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url')
         .eq('is_published', true)
@@ -313,7 +349,22 @@ export class EventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []) as PublicEventPreview[];
+      if (!events) return [];
+
+      // Fetch interest counts
+      const eventIds = events.map(e => e.id);
+      const { data: interestData } = await supabase
+        .from('event_interest_counts')
+        .select('*')
+        .in('event_id', eventIds);
+
+      const interestMap = new Map<string, EventInterestCounts>();
+      interestData?.forEach(ic => interestMap.set(ic.event_id, ic));
+
+      return events.map((event: any) => ({
+        ...event,
+        interest_counts: interestMap.get(event.id) || null,
+      })) as PublicEventPreview[];
     }, 'Failed to fetch upcoming event previews');
   }
 
