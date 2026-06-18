@@ -152,6 +152,7 @@ function assistantToneClasses(status?: AssistantStatus) {
 export function VsaAiAssistant() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -255,6 +256,11 @@ export function VsaAiAssistant() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     sendMessage(input);
+  }
+
+  function minimizeAssistant() {
+    setIsOpen(false);
+    setIsMinimized(true);
   }
 
   return (
@@ -492,24 +498,49 @@ export function VsaAiAssistant() {
         )}
       </AnimatePresence>
 
-      <motion.button
-        whileHover={{ y: -2, scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
-        style={{ borderColor: 'var(--color-border)' }}
-        aria-expanded={isOpen}
-        aria-controls="vsa-ai-assistant-panel"
-        aria-label={isOpen ? 'Close VSA AI Assistant' : 'Open VSA AI Assistant'}
-      >
-        <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">
-          <ChatSparkIcon className="h-5 w-5" />
-        </span>
-        <span className="hidden sm:inline">Ask VSA</span>
-        <span className="sm:hidden">Ask</span>
-      </motion.button>
+      {isMinimized ? (
+        <motion.button
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          type="button"
+          onClick={() => setIsMinimized(false)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
+          style={{ borderColor: 'var(--color-border)' }}
+          aria-label="Restore Ask VSA"
+        >
+          <ChatSparkIcon className="h-4 w-4" />
+        </motion.button>
+      ) : (
+        <div className="relative">
+          <motion.button
+            whileHover={{ y: -2, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="button"
+            onClick={() => setIsOpen((open) => !open)}
+            className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
+            style={{ borderColor: 'var(--color-border)' }}
+            aria-expanded={isOpen}
+            aria-controls="vsa-ai-assistant-panel"
+            aria-label={isOpen ? 'Close VSA AI Assistant' : 'Open VSA AI Assistant'}
+          >
+            <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">
+              <ChatSparkIcon className="h-5 w-5" />
+            </span>
+            <span className="hidden sm:inline">Ask VSA</span>
+            <span className="sm:hidden">Ask</span>
+          </motion.button>
+          <button
+            type="button"
+            onClick={minimizeAssistant}
+            className="absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface)] text-[var(--color-text2)] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:hidden"
+            style={{ borderColor: 'var(--color-border)' }}
+            aria-label="Minimize Ask VSA"
+          >
+            <CloseIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
