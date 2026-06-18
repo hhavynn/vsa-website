@@ -3,7 +3,10 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useEffect } from 'react';
 
 const NAV_GROUPS = [
-  { group: null, items: [{ to: '/admin', label: 'Dashboard' }] },
+  { group: null, items: [
+    { to: '/admin', label: 'Dashboard' },
+    { to: '/admin/content-calendar', label: 'Content Calendar' }
+  ] },
   { group: 'Member Experience', items: [
     { to: '/admin/events', label: 'Events' },
     { to: '/admin/applications', label: 'Applications' },

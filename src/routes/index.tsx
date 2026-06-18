@@ -70,6 +70,7 @@ const UVSANetwork = lazy(() => import("../pages/UVSANetwork"));
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
 const AdminContent = lazy(() => import("../pages/Admin/Content"));
+const AdminContentCalendar = lazy(() => import("../pages/Admin/ContentCalendar"));
 const AdminResources = lazy(() => import("../pages/Admin/Resources"));
 const AdminGallery = lazy(() => import("../pages/Admin/Gallery"));
 const AdminVcnArchives = lazy(() => import("../pages/Admin/VcnArchives"));
@@ -173,6 +174,7 @@ export default function AppRoutes() {
               <Route element={<AdminRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route path="/admin" element={<AdminOverview />} />
+                  <Route path="/admin/content-calendar" element={<AdminContentCalendar />} />
                   <Route path="/admin/content" element={<AdminContent />} />
                   <Route path="/admin/resources" element={<AdminResources />} />
                   <Route path="/admin/events" element={<AdminEvents />} />
