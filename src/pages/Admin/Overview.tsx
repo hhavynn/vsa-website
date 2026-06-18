@@ -161,6 +161,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
     intro: 'Keep public site content, photos, archives, and resources current.',
     tools: [
       {
+        to: '/admin/content-calendar',
+        label: 'Content Calendar',
+        desc: 'Plan upcoming website updates and review content health derived from events, apps, and terms.',
+        affects: 'Admin workflow planning',
+        keywords: ['calendar', 'content', 'planning', 'schedule', 'reminders'],
+      },
+      {
         to: '/admin/content',
         label: 'Homepage & Program Content',
         desc: 'Update homepage presidents message, featured photos, and program page content without changing code.',
