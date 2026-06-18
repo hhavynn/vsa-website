@@ -25,14 +25,6 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HOUSE PROGRAM CONFIG — Update this section each year.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const APPLICATIONS_OPEN = false;
-const APPLICATION_LINK = '';
-const CYCLE_LABEL = '';
-
-// ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PERSONALITY — Flavor copy per house. Update each cycle as needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -767,25 +759,14 @@ export function House() {
         </div>
 
         {/* ── Program callout ── */}
-        {(cycleContent || (APPLICATIONS_OPEN && APPLICATION_LINK)) && (
+        {cycleContent && (
           <section className="program-section">
             <div className="program-section-inner">
-              {cycleContent ? (
-                <ProgramContentCallout
-                  content={cycleContent}
-                  defaultTitle="House Program updates"
-                  defaultLinkLabel="Apply Now"
-                />
-              ) : (
-                <div className="scrapbook-note flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div className="min-w-0 font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Applications are now open{CYCLE_LABEL ? ` · ${CYCLE_LABEL}` : ''}
-                  </div>
-                  <a href={APPLICATION_LINK} target="_blank" rel="noopener noreferrer" className="program-cta-link rounded border border-brand-600 px-4 py-2 font-sans text-sm font-medium text-brand-600 transition-colors duration-150 hover:bg-brand-600 hover:text-white dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-400 dark:hover:text-zinc-950">
-                    Apply Now →
-                  </a>
-                </div>
-              )}
+              <ProgramContentCallout
+                content={cycleContent}
+                defaultTitle="House Program updates"
+                defaultLinkLabel="Apply Now"
+              />
             </div>
           </section>
         )}
