@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 
@@ -362,7 +362,13 @@ export function VsaAiAssistant() {
               style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
             >
               <InfoDotIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
-              <p>Ask VSA uses approved public VSA website info. For official updates, check VSA channels.</p>
+              <p>
+                Ask VSA uses approved public VSA website info. Do not share private or personal information.{' '}
+                <Link to="/privacy" className="font-semibold underline underline-offset-2">
+                  Privacy details
+                </Link>
+                .
+              </p>
             </div>
           </div>
 

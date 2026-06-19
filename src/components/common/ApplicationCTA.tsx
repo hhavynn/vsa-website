@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ApplicationKey, ApplicationStatus, PublicApplicationLink } from '../../types';
 import { usePublicApplicationLinks } from '../../hooks/useApplicationLinks';
 import {
@@ -209,6 +210,13 @@ export function ApplicationCTA({
             <ApplicationButton key={key} link={link!} />
           ))}
         </div>
+        <p className="mt-3 font-sans text-xs leading-5 text-[var(--color-text3)]">
+          Application forms open on an external service. Review the form before sharing personal information.{' '}
+          <Link to="/privacy" className="font-semibold underline underline-offset-2">
+            Privacy details
+          </Link>
+          .
+        </p>
       </div>
     );
   }
@@ -228,6 +236,15 @@ export function ApplicationCTA({
           <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} />
         ))}
       </div>
+      {rows.some(({ link }) => link?.status === 'open' && link.target_url) && (
+        <p className="mt-3 font-sans text-xs leading-5 text-[var(--color-text3)]">
+          Application forms open on an external service. Review the form before sharing personal information.{' '}
+          <Link to="/privacy" className="font-semibold underline underline-offset-2">
+            Privacy details
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }

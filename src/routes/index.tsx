@@ -66,6 +66,7 @@ const FeedbackPage = lazy(() =>
 );
 const Points = lazy(() => import("../pages/Points"));
 const UVSANetwork = lazy(() => import("../pages/UVSANetwork"));
+const Privacy = lazy(() => import("../pages/Privacy"));
 
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
@@ -169,6 +170,7 @@ export default function AppRoutes() {
               {/* /points is a public no-account lookup (Find My Points + how-it-works). */}
               <Route path="/points" element={<Points />} />
               <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/privacy" element={<Privacy />} />
 
               {/* Admin Routes - all nested under AdminLayout (provides nav + shell) */}
               <Route element={<AdminRoute />}>
