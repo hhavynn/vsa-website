@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { trackPageView } from '../../lib/analytics';
+import { initGA, trackPageView } from '../../lib/analytics';
+import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 
 /**
  * Component that monitors route changes and reports them as GA4 page_view events.
@@ -8,11 +9,13 @@ import { trackPageView } from '../../lib/analytics';
  */
 const RouteTracker = () => {
   const location = useLocation();
+  const { consent } = useAnalyticsConsent();
 
   useEffect(() => {
-    // Track page view on route change
-    trackPageView(location.pathname + location.search);
-  }, [location]);
+    if (consent !== 'granted') return;
+    initGA();
+    trackPageView(location.pathname);
+  }, [consent, location.pathname]);
 
   return null;
 };

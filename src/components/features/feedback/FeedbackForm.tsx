@@ -68,7 +68,11 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full" aria-describedby="feedback-privacy-note">
+      <p id="feedback-privacy-note" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3 text-xs leading-5 text-[var(--color-text2)]">
+        Authorized VSA website administrators review submissions. Name and email are optional. Do not include passwords,
+        payment information, check-in codes, or other sensitive details.
+      </p>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="name" className={labelCls}>Name (Optional)</label>

@@ -4,6 +4,7 @@
  */
 
 const GA_ID = process.env.REACT_APP_GA4_MEASUREMENT_ID;
+const GA_SCRIPT_ID = 'vsa-ga4-script';
 
 declare global {
   interface Window {
@@ -19,25 +20,36 @@ declare global {
 export const initGA = () => {
   if (!GA_ID || typeof window === 'undefined') return;
 
-  // Inject GA4 script tag
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-  document.head.appendChild(script);
+  const disableKey = `ga-disable-${GA_ID}`;
+  (window as unknown as Record<string, boolean>)[disableKey] = false;
 
-  // Initialize dataLayer and gtag function
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function() {
-    window.dataLayer.push(arguments);
-  };
+  if (!window.gtag) {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function() {
+      window.dataLayer.push(arguments);
+    };
+    window.gtag('js', new Date());
+    window.gtag('config', GA_ID, {
+      send_page_view: false,
+      anonymize_ip: true,
+    });
+  }
 
-  window.gtag('js', new Date());
-  window.gtag('config', GA_ID, {
-    // Prevent duplicate pageviews on initial load since we track manually in RouteTracker
-    send_page_view: false,
-    // Ensure anonymized tracking or other defaults if needed
-    anonymize_ip: true,
-  });
+  if (!document.getElementById(GA_SCRIPT_ID)) {
+    const script = document.createElement('script');
+    script.id = GA_SCRIPT_ID;
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    document.head.appendChild(script);
+  }
+};
+
+export const isAnalyticsConfigured = () => Boolean(GA_ID);
+
+export const disableGA = () => {
+  if (!GA_ID || typeof window === 'undefined') return;
+  const disableKey = `ga-disable-${GA_ID}`;
+  (window as unknown as Record<string, boolean>)[disableKey] = true;
 };
 
 /**
@@ -48,7 +60,7 @@ export const trackPageView = (path: string) => {
   if (!GA_ID || !window.gtag) return;
   window.gtag('event', 'page_view', {
     page_path: path,
-    page_location: window.location.href,
+    page_location: `${window.location.origin}${path}`,
     send_to: GA_ID,
   });
 };

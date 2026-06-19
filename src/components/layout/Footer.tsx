@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 
 const socialLinks = [
   {
@@ -44,6 +45,8 @@ const footerGroups = [
 ];
 
 const Footer: React.FC = () => {
+  const { isConfigured, openPreferences } = useAnalyticsConsent();
+
   return (
     <footer className="scrapbook-board border-t" style={{ borderColor: 'var(--border)' }}>
       <div className="vsa-container py-12 sm:py-14">
@@ -104,6 +107,20 @@ const Footer: React.FC = () => {
           <span className="font-sans text-xs" style={{ color: 'var(--text3)' }}>
             Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
           </span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 font-sans text-xs">
+            <Link to="/privacy" className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
+              Privacy Notice
+            </Link>
+            {isConfigured && (
+              <button
+                type="button"
+                onClick={openPreferences}
+                className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+              >
+                Analytics preferences
+              </button>
+            )}
+          </div>
         </div>
         </div>
       </div>
