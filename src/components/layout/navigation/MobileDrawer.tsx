@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { UserMenu } from './UserMenu';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -118,6 +118,8 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
   const location = useLocation();
   const [involvementExpanded, setInvolvementExpanded] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   // Collapse involvement accordion when drawer closes
   useEffect(() => {
@@ -137,23 +139,58 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  // Escape key
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
 
-  // Focus trap: send focus into drawer when it opens
-  useEffect(() => {
-    if (isOpen) {
-      const firstFocusable = drawerRef.current?.querySelector<HTMLElement>(
-        'a[href], button:not([disabled])'
-      );
-      firstFocusable?.focus();
-    }
-  }, [isOpen]);
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    const panel = drawerRef.current;
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    panel?.querySelector<HTMLElement>(focusableSelector)?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !panel) return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedRef.current?.focus();
+      previouslyFocusedRef.current = null;
+    };
+  }, [isOpen, onClose]);
 
   const isInvolvementActive = INVOLVEMENT_PREFIXES.some((p) =>
     isRouteActive(location.pathname, p)
@@ -167,10 +204,10 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
           {/* Backdrop — renders at body level, always above nav */}
           <motion.div
             key="backdrop"
-            initial={{ opacity: 0 }}
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: 'easeInOut' }}
             className="fixed inset-0 z-[60] md:hidden"
             style={{ background: 'rgba(12, 20, 28, 0.55)', backdropFilter: 'blur(2px)' }}
             aria-hidden="true"
@@ -181,13 +218,15 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
           <motion.div
             key="drawer"
             ref={drawerRef}
+            id="mobile-navigation-drawer"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            initial={{ x: '100%' }}
+            tabIndex={-1}
+            initial={shouldReduceMotion ? false : { x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.32, 0.72, 0, 1] }}
             className="fixed right-0 top-0 z-[70] flex h-full w-full max-w-[320px] flex-col md:hidden"
             style={{
               background: 'var(--color-bg)',
@@ -209,9 +248,10 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
                 VSA <span className="font-light italic" style={{ color: 'var(--brand)' }}>at UCSD</span>
               </Link>
               <button
+                type="button"
                 onClick={onClose}
                 aria-label="Close navigation menu"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text2)] transition-colors duration-150 hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text2)] transition-colors duration-150 hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -245,8 +285,10 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
 
                 {/* Accordion toggle */}
                 <button
+                  type="button"
                   onClick={() => setInvolvementExpanded((v) => !v)}
                   aria-expanded={involvementExpanded}
+                  aria-controls="mobile-involvement-links"
                   className={`
                     flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-3 transition-colors duration-100
                     ${isInvolvementActive
@@ -285,10 +327,11 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
                 <AnimatePresence initial={false}>
                   {involvementExpanded && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
+                      id="mobile-involvement-links"
+                      initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.18, ease: 'easeInOut' }}
+                      transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: 'easeInOut' }}
                       className="overflow-hidden"
                     >
                       <div

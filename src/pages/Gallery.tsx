@@ -6,7 +6,7 @@ import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -61,6 +61,7 @@ function AlbumFallback() {
 }
 
 export default function Gallery() {
+  const shouldReduceMotion = useReducedMotion();
   const { 
     data, 
     isLoading: loading, 
@@ -118,7 +119,7 @@ export default function Gallery() {
 
       <div className="vsa-container py-10">
         {albums.length === 0 ? (
-          <div className="scrapbook-empty">
+          <div className="scrapbook-empty" role="status">
             {useSummerGalleryEmptyState ? (
               <div className="mx-auto max-w-xl space-y-3 text-center">
                 <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
@@ -138,9 +139,9 @@ export default function Gallery() {
         ) : (
           <>
             <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="show"
+              variants={shouldReduceMotion ? undefined : containerVariants}
+              initial={shouldReduceMotion ? false : 'hidden'}
+              whileInView={shouldReduceMotion ? undefined : 'show'}
               viewport={{ once: true, margin: '-20px' }}
               className="gallery-memory-wall"
             >
@@ -150,13 +151,14 @@ export default function Gallery() {
                 return (
                   <motion.a
                     key={album.id}
-                    variants={itemVariants}
+                    variants={shouldReduceMotion ? undefined : itemVariants}
                     href={album.google_photos_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="gallery-memory-card group block transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl"
+                    aria-label={`${album.title} photo album (opens in a new tab)`}
+                    className="gallery-memory-card group block transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none"
                     style={getAlbumStyle(index)}
-                    whileHover={{ y: -4 }}
+                    whileHover={shouldReduceMotion ? undefined : { y: -4 }}
                   >
                     <div className="gallery-memory-image relative">
                       {coverUrl ? (
@@ -175,7 +177,7 @@ export default function Gallery() {
                             })}
                             sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
                             alt={album.title}
-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
                             loading="lazy"
                             decoding="async"
                             onError={(event) => {

@@ -76,11 +76,13 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             type="text"
             id="name"
             {...register('name')}
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'feedback-name-error' : undefined}
             placeholder="Your name"
             className={inputCls}
           />
           {errors.name && (
-            <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+            <p id="feedback-name-error" role="alert" className="mt-1 text-xs text-red-400">{errors.name.message}</p>
           )}
         </div>
         <div>
@@ -89,11 +91,13 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             type="email"
             id="email"
             {...register('email')}
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'feedback-email-error' : undefined}
             placeholder="Your email"
             className={inputCls}
           />
           {errors.email && (
-            <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+            <p id="feedback-email-error" role="alert" className="mt-1 text-xs text-red-400">{errors.email.message}</p>
           )}
         </div>
       </div>
@@ -104,6 +108,8 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
           <select
             id="type"
             {...register('type')}
+            aria-invalid={Boolean(errors.type)}
+            aria-describedby={errors.type ? 'feedback-type-error' : undefined}
             className={inputCls}
           >
             <option value="bug">Bug Report</option>
@@ -113,7 +119,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             <option value="other">Other</option>
           </select>
           {errors.type && (
-            <p className="mt-1 text-xs text-red-400">{errors.type.message}</p>
+            <p id="feedback-type-error" role="alert" className="mt-1 text-xs text-red-400">{errors.type.message}</p>
           )}
         </div>
         <div>
@@ -122,11 +128,13 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             type="text"
             id="title"
             {...register('title')}
+            aria-invalid={Boolean(errors.title)}
+            aria-describedby={errors.title ? 'feedback-title-error' : undefined}
             placeholder="What's on your mind?"
             className={inputCls}
           />
           {errors.title && (
-            <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>
+            <p id="feedback-title-error" role="alert" className="mt-1 text-xs text-red-400">{errors.title.message}</p>
           )}
         </div>
       </div>
@@ -136,17 +144,19 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
         <textarea
           id="description"
           {...register('description')}
+          aria-invalid={Boolean(errors.description)}
+          aria-describedby={errors.description ? 'feedback-description-error' : undefined}
           placeholder="Detailed description..."
           rows={4}
           className={`${inputCls} resize-none`}
         />
         {errors.description && (
-          <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+          <p id="feedback-description-error" role="alert" className="mt-1 text-xs text-red-400">{errors.description.message}</p>
         )}
       </div>
 
       {errors.root && (
-        <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-xs">
+        <div role="alert" className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-xs">
           {errors.root.message}
         </div>
       )}
@@ -164,6 +174,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
         <button
           type="submit"
           disabled={isSubmitting}
+          aria-busy={isSubmitting}
           className="rounded-lg bg-[var(--brand)] px-6 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Sending...' : 'Submit Feedback'}
