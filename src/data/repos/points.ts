@@ -79,35 +79,15 @@ export class PointsRepository {
   }
 
   /**
-   * Add points to user (typically called after event check-in)
+   * @deprecated Direct client-side point mutation is no longer permitted.
+   * Points are now attributed server-side through the check_in_to_event RPC.
+   * This method is kept as a no-op to avoid breaking call sites until they
+   * are updated; it throws so callers discover the removal explicitly.
    */
-  async addPoints(userId: string, points: number, eventId: string): Promise<void> {
-    return withErrorHandling(async () => {
-      if (points <= 0) {
-        throw new ValidationError('Points must be positive');
-      }
-
-      // Use a transaction-like approach by updating the points
-      const { data: currentPoints, error: fetchError } = await supabase
-        .from('user_points')
-        .select('total_points')
-        .eq('user_id', userId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const newTotal = (currentPoints?.total_points || 0) + points;
-
-      const { error: updateError } = await supabase
-        .from('user_points')
-        .update({
-          total_points: newTotal,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId);
-
-      if (updateError) throw updateError;
-    }, 'Failed to add points');
+  async addPoints(_userId: string, _points: number, _eventId: string): Promise<void> {
+    throw new ValidationError(
+      'addPoints() is disabled: use the check_in_to_event RPC for server-authoritative point attribution'
+    );
   }
 
   /**
