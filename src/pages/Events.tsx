@@ -610,11 +610,13 @@ export function Events() {
           )}
 
           {unfilteredUpcomingEvents.length > 0 && (
-            <div className="vsa-filter-bar">
+            <div className="vsa-filter-bar" role="group" aria-label="Filter events by type">
               {FILTERS.map((filter) => (
                 <button
+                  type="button"
                   key={filter.key}
                   onClick={() => setActiveFilter(filter.key)}
+                  aria-pressed={activeFilter === filter.key}
                   className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
                 >
                   {filter.label}
@@ -851,10 +853,11 @@ export function Events() {
               </div>
               {archiveOptions.length > 0 && (
                 <div className="min-w-[220px]">
-                  <label className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                  <label htmlFor="events-archive-term" className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
                     Term
                   </label>
                   <select
+                    id="events-archive-term"
                     value={effectiveArchiveTermId ?? ''}
                     onChange={(event) => setSelectedArchiveTermId(event.target.value || null)}
                     className="scrapbook-select"
@@ -871,6 +874,7 @@ export function Events() {
 
             {archivedEvents.length === 0 && !pastLoading ? (
               <div
+                role="status"
                 className="rounded border p-10 text-center"
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
               >

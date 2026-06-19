@@ -69,11 +69,13 @@ export function SignInForm() {
           id="email"
           type="email"
           {...register('email')}
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? 'sign-in-email-error' : undefined}
           className={inputCls}
           placeholder="Enter your email"
         />
         {errors.email && (
-          <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+          <p id="sign-in-email-error" role="alert" className="mt-1 text-xs text-red-400">{errors.email.message}</p>
         )}
       </div>
 
@@ -83,16 +85,18 @@ export function SignInForm() {
           id="password"
           type="password"
           {...register('password')}
+          aria-invalid={Boolean(errors.password)}
+          aria-describedby={errors.password ? 'sign-in-password-error' : undefined}
           className={inputCls}
           placeholder="Enter your password"
         />
         {errors.password && (
-          <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
+          <p id="sign-in-password-error" role="alert" className="mt-1 text-xs text-red-400">{errors.password.message}</p>
         )}
       </div>
 
       {errors.root && (
-        <div className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">
+        <div role="alert" className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">
           {errors.root.message}
         </div>
       )}
@@ -100,6 +104,7 @@ export function SignInForm() {
       <button
         type="submit"
         disabled={isSubmitting}
+        aria-busy={isSubmitting}
         className="w-full flex justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
       >
         {isSubmitting ? 'Verifying access...' : 'Sign In'}

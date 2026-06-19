@@ -310,11 +310,11 @@ export default function AdminApplications() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]" style={{ padding: '20px 28px' }}>
         <main className="min-w-0 space-y-4">
-          <section className="rounded-md border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <section aria-label="Filter application windows" className="rounded-md border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Application type</label>
-                <select value={keyFilter} onChange={(e) => setKeyFilter(e.target.value as 'all' | ApplicationKey)} className={inputCls} style={fieldStyle()}>
+                <label htmlFor="application-type-filter" className={labelCls} style={{ color: 'var(--color-text3)' }}>Application type</label>
+                <select id="application-type-filter" value={keyFilter} onChange={(e) => setKeyFilter(e.target.value as 'all' | ApplicationKey)} className={inputCls} style={fieldStyle()}>
                   <option value="all">All types</option>
                   {APPLICATION_KEY_OPTIONS.map((o) => (
                     <option key={o.key} value={o.key}>{o.label}</option>
@@ -322,8 +322,8 @@ export default function AdminApplications() {
                 </select>
               </div>
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Status</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className={inputCls} style={fieldStyle()}>
+                <label htmlFor="application-status-filter" className={labelCls} style={{ color: 'var(--color-text3)' }}>Status</label>
+                <select id="application-status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className={inputCls} style={fieldStyle()}>
                   <option value="all">All statuses</option>
                   <option value="open">Open</option>
                   <option value="not_open">Not open yet</option>
@@ -334,9 +334,9 @@ export default function AdminApplications() {
             </div>
           </section>
 
-          <section className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <section aria-labelledby="application-window-list-title" className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="flex items-center justify-between gap-3 border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
-              <h2 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              <h2 id="application-window-list-title" aria-live="polite" className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
                 {visibleLinks.length} application window{visibleLinks.length === 1 ? '' : 's'}
               </h2>
             </div>
@@ -405,7 +405,7 @@ export default function AdminApplications() {
         <aside className="h-fit rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-sans text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+              <h2 id="application-window-editor-title" className="font-sans text-base font-semibold" style={{ color: 'var(--color-text)' }}>
                 {selected ? 'Edit Application Link' : 'Add Application Link'}
               </h2>
               <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
@@ -419,67 +419,67 @@ export default function AdminApplications() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-labelledby="application-window-editor-title">
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Application type *</label>
-              <select value={form.application_key} onChange={(e) => onKeyChange(e.target.value as ApplicationKey)} className={inputCls} style={fieldStyle()}>
+              <label htmlFor="application-key" className={labelCls} style={{ color: 'var(--color-text3)' }}>Application type *</label>
+              <select id="application-key" aria-required="true" value={form.application_key} onChange={(e) => onKeyChange(e.target.value as ApplicationKey)} className={inputCls} style={fieldStyle()}>
                 {APPLICATION_KEY_OPTIONS.map((o) => (
                   <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Title *</label>
-              <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} style={fieldStyle()} required />
+              <label htmlFor="application-title" className={labelCls} style={{ color: 'var(--color-text3)' }}>Title *</label>
+              <input id="application-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} style={fieldStyle()} required />
             </div>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Button label *</label>
-              <input value={form.button_label} onChange={(e) => setForm({ ...form, button_label: e.target.value })} className={inputCls} style={fieldStyle()} required />
+              <label htmlFor="application-button-label" className={labelCls} style={{ color: 'var(--color-text3)' }}>Button label *</label>
+              <input id="application-button-label" value={form.button_label} onChange={(e) => setForm({ ...form, button_label: e.target.value })} className={inputCls} style={fieldStyle()} required />
             </div>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Target URL *</label>
-              <input type="url" value={form.target_url} onChange={(e) => setForm({ ...form, target_url: e.target.value })} className={inputCls} style={fieldStyle()} placeholder="https://forms.gle/..." />
-              <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+              <label htmlFor="application-target-url" className={labelCls} style={{ color: 'var(--color-text3)' }}>Target URL *</label>
+              <input id="application-target-url" type="url" aria-required="true" aria-describedby="application-target-url-help" value={form.target_url} onChange={(e) => setForm({ ...form, target_url: e.target.value })} className={inputCls} style={fieldStyle()} placeholder="https://forms.gle/..." />
+              <p id="application-target-url-help" className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
                 Must start with https://. Only exposed publicly while the window is open.
               </p>
             </div>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputCls} min-h-[60px]`} style={fieldStyle()} />
+              <label htmlFor="application-description" className={labelCls} style={{ color: 'var(--color-text3)' }}>Description</label>
+              <textarea id="application-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputCls} min-h-[60px]`} style={fieldStyle()} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Open date *</label>
-                <input type="date" value={form.open_date} onChange={(e) => setForm({ ...form, open_date: e.target.value })} className={inputCls} style={fieldStyle()} />
+                <label htmlFor="application-open-date" className={labelCls} style={{ color: 'var(--color-text3)' }}>Open date *</label>
+                <input id="application-open-date" type="date" aria-required="true" aria-describedby="application-schedule-help" value={form.open_date} onChange={(e) => setForm({ ...form, open_date: e.target.value })} className={inputCls} style={fieldStyle()} />
               </div>
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Open time</label>
-                <input type="time" value={form.open_time} onChange={(e) => setForm({ ...form, open_time: e.target.value })} className={inputCls} style={fieldStyle()} />
+                <label htmlFor="application-open-time" className={labelCls} style={{ color: 'var(--color-text3)' }}>Open time</label>
+                <input id="application-open-time" type="time" aria-describedby="application-schedule-help" value={form.open_time} onChange={(e) => setForm({ ...form, open_time: e.target.value })} className={inputCls} style={fieldStyle()} />
               </div>
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Due date *</label>
-                <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className={inputCls} style={fieldStyle()} />
+                <label htmlFor="application-due-date" className={labelCls} style={{ color: 'var(--color-text3)' }}>Due date *</label>
+                <input id="application-due-date" type="date" aria-required="true" aria-describedby="application-schedule-help" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className={inputCls} style={fieldStyle()} />
               </div>
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Due time</label>
-                <input type="time" value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })} className={inputCls} style={fieldStyle()} />
+                <label htmlFor="application-due-time" className={labelCls} style={{ color: 'var(--color-text3)' }}>Due time</label>
+                <input id="application-due-time" type="time" aria-describedby="application-schedule-help" value={form.due_time} onChange={(e) => setForm({ ...form, due_time: e.target.value })} className={inputCls} style={fieldStyle()} />
               </div>
             </div>
-            <p className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+            <p id="application-schedule-help" className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
               Open date can be in the past. Due time defaults to 11:59 PM unless you change it.
             </p>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Before-open message</label>
-              <textarea value={form.before_open_message} onChange={(e) => setForm({ ...form, before_open_message: e.target.value })} className={`${inputCls} min-h-[52px]`} style={fieldStyle()} />
+              <label htmlFor="application-before-open-message" className={labelCls} style={{ color: 'var(--color-text3)' }}>Before-open message</label>
+              <textarea id="application-before-open-message" value={form.before_open_message} onChange={(e) => setForm({ ...form, before_open_message: e.target.value })} className={`${inputCls} min-h-[52px]`} style={fieldStyle()} />
             </div>
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>After-close message</label>
-              <textarea value={form.after_close_message} onChange={(e) => setForm({ ...form, after_close_message: e.target.value })} className={`${inputCls} min-h-[52px]`} style={fieldStyle()} />
+              <label htmlFor="application-after-close-message" className={labelCls} style={{ color: 'var(--color-text3)' }}>After-close message</label>
+              <textarea id="application-after-close-message" value={form.after_close_message} onChange={(e) => setForm({ ...form, after_close_message: e.target.value })} className={`${inputCls} min-h-[52px]`} style={fieldStyle()} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Sort order</label>
-                <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} className={inputCls} style={fieldStyle()} />
+                <label htmlFor="application-sort-order" className={labelCls} style={{ color: 'var(--color-text3)' }}>Sort order</label>
+                <input id="application-sort-order" type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} className={inputCls} style={fieldStyle()} />
               </div>
               <label className="flex items-end gap-2 pb-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
                 <input type="checkbox" checked={form.is_enabled} onChange={(e) => setForm({ ...form, is_enabled: e.target.checked })} />
@@ -488,7 +488,7 @@ export default function AdminApplications() {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded px-4 py-2 font-sans text-sm font-medium transition-colors disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
+              <button type="submit" disabled={saving} aria-busy={saving} className="inline-flex items-center gap-2 rounded px-4 py-2 font-sans text-sm font-medium transition-colors disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}>
                 {saving ? 'Saving...' : selected ? 'Save Changes' : 'Create Link'}
               </button>
               {selected && (

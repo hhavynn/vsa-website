@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 
 type Role = 'user' | 'assistant';
@@ -162,6 +162,10 @@ export function VsaAiAssistant() {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
+  const minimizedButtonRef = useRef<HTMLButtonElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -171,8 +175,30 @@ export function VsaAiAssistant() {
 
   useEffect(() => {
     if (!isOpen) return;
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, loading, isOpen]);
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: shouldReduceMotion ? 'auto' : 'smooth',
+    });
+  }, [messages, loading, isOpen, shouldReduceMotion]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const focusFrame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsOpen(false);
+        window.requestAnimationFrame(() => launcherRef.current?.focus());
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const recentTurns = useMemo(
     () =>
@@ -181,6 +207,12 @@ export function VsaAiAssistant() {
         .map((message) => ({ role: message.role, content: message.content })),
     [messages],
   );
+
+  const assistantAnnouncement = useMemo(() => {
+    if (loading) return 'Ask VSA is checking approved VSA information.';
+    const latestMessage = messages[messages.length - 1];
+    return latestMessage?.role === 'assistant' ? `Ask VSA says: ${latestMessage.content}` : '';
+  }, [loading, messages]);
 
   if (isAdminRoute) return null;
 
@@ -264,6 +296,17 @@ export function VsaAiAssistant() {
   function minimizeAssistant() {
     setIsOpen(false);
     setIsMinimized(true);
+    window.requestAnimationFrame(() => minimizedButtonRef.current?.focus());
+  }
+
+  function closeAssistant() {
+    setIsOpen(false);
+    window.requestAnimationFrame(() => launcherRef.current?.focus());
+  }
+
+  function restoreAssistant() {
+    setIsMinimized(false);
+    window.requestAnimationFrame(() => launcherRef.current?.focus());
   }
 
   return (
@@ -272,13 +315,14 @@ export function VsaAiAssistant() {
         {isOpen && (
           <motion.section
             id="vsa-ai-assistant-panel"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            role="dialog"
+            aria-labelledby="vsa-ai-assistant-title"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
             className="fixed inset-x-3 bottom-[86px] flex max-h-[75dvh] flex-col overflow-hidden rounded-[1.35rem] border bg-[var(--color-surface)] shadow-[0_22px_70px_rgba(15,23,42,0.28)] sm:inset-x-auto sm:left-5 sm:w-[380px] sm:max-h-[560px]"
             style={{ borderColor: 'var(--color-border)' }}
-            aria-label="VSA AI Assistant chat panel"
           >
           <div
             className="relative overflow-hidden border-b px-4 py-3.5"
@@ -294,7 +338,7 @@ export function VsaAiAssistant() {
                     <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-surface2)] bg-amber-300" />
                   </span>
                   <div>
-                    <h2 className="font-sans text-base font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+                    <h2 id="vsa-ai-assistant-title" className="font-sans text-base font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                       Ask VSA
                     </h2>
                     <p className="font-sans text-[11px] font-medium leading-tight" style={{ color: 'var(--color-text3)' }}>
@@ -305,7 +349,7 @@ export function VsaAiAssistant() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={closeAssistant}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-[var(--color-surface)] text-[var(--color-text2)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                 style={{ borderColor: 'var(--color-border)' }}
                 aria-label="Close VSA AI Assistant"
@@ -322,13 +366,13 @@ export function VsaAiAssistant() {
             </div>
           </div>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4" aria-live="polite">
+          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4" aria-label="Ask VSA conversation">
             {messages.length === 0 ? (
               <div className="space-y-4 py-1">
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
+                <motion.div
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
+                  transition={{ delay: shouldReduceMotion ? 0 : 0.1, duration: shouldReduceMotion ? 0 : 0.2 }}
                   className="rounded-2xl border border-dashed p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]" 
                   style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
                 >
@@ -347,11 +391,11 @@ export function VsaAiAssistant() {
                   {STARTER_QUESTIONS.map((question, idx) => (
                     <motion.button
                       key={question}
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.15 + idx * 0.03 }}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
+                      transition={{ delay: shouldReduceMotion ? 0 : 0.15 + idx * 0.03, duration: shouldReduceMotion ? 0 : 0.2 }}
+                      whileHover={shouldReduceMotion ? undefined : { scale: 1.03 }}
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                       type="button"
                       onClick={() => sendMessage(question)}
                       disabled={loading}
@@ -366,11 +410,11 @@ export function VsaAiAssistant() {
             ) : (
               <div className="space-y-3">
                 {messages.map((message) => (
-                  <motion.div 
-                    key={message.id} 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  <motion.div
+                    key={message.id}
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[88%] ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
@@ -442,10 +486,10 @@ export function VsaAiAssistant() {
                       className="rounded-2xl rounded-bl-md border px-3.5 py-2.5 font-sans text-xs shadow-[0_6px_20px_rgba(15,23,42,0.05)]"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-bg)' }}
                     >
-                      <span className="mr-2 inline-flex align-middle">
-                        <span className="mx-0.5 h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500 [animation-delay:-0.2s]" />
-                        <span className="mx-0.5 h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500 [animation-delay:-0.1s]" />
-                        <span className="mx-0.5 h-1.5 w-1.5 animate-bounce rounded-full bg-brand-500" />
+                      <span className="mr-2 inline-flex align-middle" aria-hidden="true">
+                        <span className="mx-0.5 h-1.5 w-1.5 rounded-full bg-brand-500 motion-safe:animate-bounce [animation-delay:-0.2s]" />
+                        <span className="mx-0.5 h-1.5 w-1.5 rounded-full bg-brand-500 motion-safe:animate-bounce [animation-delay:-0.1s]" />
+                        <span className="mx-0.5 h-1.5 w-1.5 rounded-full bg-brand-500 motion-safe:animate-bounce" />
                       </span>
                       Checking VSA info...
                     </div>
@@ -455,8 +499,12 @@ export function VsaAiAssistant() {
             )}
           </div>
 
+          <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {assistantAnnouncement}
+          </div>
+
           {errorText && (
-            <div className="border-t px-4 py-2 font-sans text-xs text-rose-700 dark:text-rose-300" style={{ borderColor: 'var(--color-border)' }}>
+            <div role="alert" className="border-t px-4 py-2 font-sans text-xs text-rose-700 dark:text-rose-300" style={{ borderColor: 'var(--color-border)' }}>
               {errorText}
             </div>
           )}
@@ -467,6 +515,7 @@ export function VsaAiAssistant() {
                 Ask VSA a question
               </label>
               <textarea
+                ref={inputRef}
                 id="vsa-ai-message"
                 value={input}
                 onChange={(event) => setInput(event.target.value.slice(0, MAX_INPUT_LENGTH))}
@@ -479,12 +528,13 @@ export function VsaAiAssistant() {
                 placeholder="Ask about VSA..."
                 rows={2}
                 maxLength={MAX_INPUT_LENGTH}
+                aria-describedby="vsa-ai-character-count"
                 className="min-h-[44px] flex-1 resize-none rounded-xl border bg-[var(--color-input)] px-3 py-2 font-sans text-sm leading-5 text-[var(--color-text)] placeholder:text-[var(--color-text3)] outline-none transition-colors focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 dark:focus:border-brand-400"
                 style={{ borderColor: 'var(--color-border)' }}
               />
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
                 type="submit"
                 disabled={loading || input.trim().length === 0}
                 className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
@@ -493,7 +543,7 @@ export function VsaAiAssistant() {
                 <SendIcon />
               </motion.button>
             </div>
-            <div className="mt-1 text-right font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
+            <div id="vsa-ai-character-count" className="mt-1 text-right font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
               {input.length}/{MAX_INPUT_LENGTH}
             </div>
           </form>
@@ -503,10 +553,11 @@ export function VsaAiAssistant() {
 
       {isMinimized ? (
         <motion.button
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.96 }}
+          ref={minimizedButtonRef}
+          whileHover={shouldReduceMotion ? undefined : { y: -2 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           type="button"
-          onClick={() => setIsMinimized(false)}
+          onClick={restoreAssistant}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
           style={{ borderColor: 'var(--color-border)' }}
           aria-label="Restore Ask VSA"
@@ -516,8 +567,9 @@ export function VsaAiAssistant() {
       ) : (
         <div className="relative">
           <motion.button
-            whileHover={{ y: -2, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            ref={launcherRef}
+            whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
             type="button"
             onClick={() => setIsOpen((open) => !open)}
             className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
