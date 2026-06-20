@@ -32,6 +32,7 @@ const NAV_GROUPS = [
     { to: '/admin/years', label: 'Years & Terms' },
   ]},
   { group: 'System', items: [
+    { to: '/admin/data-rights', label: 'Data Rights' },
     { to: '/admin/launch-checklist', label: 'Launch Checklist' },
     { to: '/admin/analytics', label: 'Analytics' },
     { to: '/admin/feedback', label: 'Feedback' },

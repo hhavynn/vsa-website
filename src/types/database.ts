@@ -41,6 +41,38 @@ export type ImportJobStatus = 'completed' | 'failed';
 export type ImportSourceType = 'csv_url' | 'google_sheets_csv' | 'manual' | 'unknown';
 export type ImportRowDecision = 'matched' | 'created' | 'skipped_duplicate' | 'review' | 'error';
 export type ImportRowStatus = 'recorded' | 'error';
+export type DataRightsRequestType =
+  | 'review'
+  | 'correction'
+  | 'export'
+  | 'deletion'
+  | 'anonymization'
+  | 'media_removal'
+  | 'analytics_browser_help'
+  | 'external_form'
+  | 'other';
+export type DataRightsRequestStatus =
+  | 'intake'
+  | 'identity_verification'
+  | 'preview_needed'
+  | 'pending_review'
+  | 'approved_for_future_action'
+  | 'completed'
+  | 'rejected'
+  | 'cancelled';
+export type DataRightsVerificationStatus =
+  | 'not_started'
+  | 'pending'
+  | 'verified'
+  | 'failed'
+  | 'not_required';
+export type DataRightsRequestPriority = 'low' | 'normal' | 'high';
+export type DataRightsRequestEventType =
+  | 'created'
+  | 'status_changed'
+  | 'verification_changed'
+  | 'workflow_updated'
+  | 'details_updated';
 
 export interface Database {
   public: {
@@ -661,6 +693,103 @@ export interface Database {
           internal_notes?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      data_rights_requests: {
+        Row: {
+          id: string;
+          request_type: DataRightsRequestType;
+          status: DataRightsRequestStatus;
+          subject_auth_user_id: string | null;
+          subject_member_id: string | null;
+          subject_display_name: string | null;
+          contact_channel: string | null;
+          contact_reference: string | null;
+          verification_status: DataRightsVerificationStatus;
+          verification_method: string | null;
+          assigned_to: string | null;
+          reviewer_id: string | null;
+          priority: DataRightsRequestPriority;
+          summary: string | null;
+          internal_notes: string | null;
+          decision: string | null;
+          completed_at: string | null;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_type: DataRightsRequestType;
+          status?: DataRightsRequestStatus;
+          subject_auth_user_id?: string | null;
+          subject_member_id?: string | null;
+          subject_display_name?: string | null;
+          contact_channel?: string | null;
+          contact_reference?: string | null;
+          verification_status?: DataRightsVerificationStatus;
+          verification_method?: string | null;
+          assigned_to?: string | null;
+          reviewer_id?: string | null;
+          priority?: DataRightsRequestPriority;
+          summary?: string | null;
+          internal_notes?: string | null;
+          decision?: string | null;
+          completed_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_type?: DataRightsRequestType;
+          status?: DataRightsRequestStatus;
+          subject_auth_user_id?: string | null;
+          subject_member_id?: string | null;
+          subject_display_name?: string | null;
+          contact_channel?: string | null;
+          contact_reference?: string | null;
+          verification_status?: DataRightsVerificationStatus;
+          verification_method?: string | null;
+          assigned_to?: string | null;
+          reviewer_id?: string | null;
+          priority?: DataRightsRequestPriority;
+          summary?: string | null;
+          internal_notes?: string | null;
+          decision?: string | null;
+          completed_at?: string | null;
+          created_by?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      data_rights_request_events: {
+        Row: {
+          id: string;
+          request_id: string;
+          event_type: DataRightsRequestEventType;
+          event_summary: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          event_type: DataRightsRequestEventType;
+          event_summary: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_id?: string;
+          event_type?: DataRightsRequestEventType;
+          event_summary?: string;
+          created_by?: string | null;
+          created_at?: string;
         };
       };
       application_links: {
