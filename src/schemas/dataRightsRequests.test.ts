@@ -1,4 +1,8 @@
-import { DataRightsDependencyPreviewSchema, DataRightsRequestFormSchema } from '.';
+import {
+  DataRightsDependencyPreviewSchema,
+  DataRightsExportBundleSchema,
+  DataRightsRequestFormSchema,
+} from '.';
 
 const validForm = {
   request_type: 'review',
@@ -110,6 +114,77 @@ describe('DataRightsDependencyPreviewSchema', () => {
       ...validPreview,
       read_only: false,
       counts: { ...validPreview.counts, feedback_rows: -1 },
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+const validExportBundle = {
+  version: 1,
+  request_id: '11111111-1111-4111-8111-111111111111',
+  generated_at: '2026-06-19T12:00:00.000Z',
+  subject: { has_auth_user_id: true, has_member_id: false },
+  auth_account: {
+    id: '22222222-2222-4222-8222-222222222222',
+    email: 'synthetic@example.invalid',
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-02T00:00:00.000Z',
+    last_sign_in_at: null,
+  },
+  profile: null,
+  member_records: [],
+  attendance: {
+    auth_attendance: [{
+      id: '33333333-3333-4333-8333-333333333333',
+      event_id: '44444444-4444-4444-8444-444444444444',
+      event_name: 'Synthetic Event',
+      event_date: '2026-06-01T00:00:00.000Z',
+      event_location: null,
+      event_type: 'other',
+      points_earned: 1,
+      check_in_type: 'manual',
+      checked_in_at: '2026-06-01T01:00:00.000Z',
+      created_at: '2026-06-01T01:00:00.000Z',
+    }],
+    member_attendance: [],
+  },
+  points: { auth_points: [], member_totals: [] },
+  house_memberships: [],
+  feedback: [],
+  media_references: [],
+  browser_and_analytics_notes: ['Synthetic browser note.'],
+  external_systems: ['Synthetic external-system note.'],
+  exclusions: ['Synthetic exclusion.'],
+  warnings: [],
+};
+
+describe('DataRightsExportBundleSchema', () => {
+  it('accepts a versioned allowlisted export bundle', () => {
+    expect(DataRightsExportBundleSchema.safeParse(validExportBundle).success).toBe(true);
+  });
+
+  it('rejects forbidden attendance fields', () => {
+    const result = DataRightsExportBundleSchema.safeParse({
+      ...validExportBundle,
+      attendance: {
+        ...validExportBundle.attendance,
+        auth_attendance: [{
+          ...validExportBundle.attendance.auth_attendance[0],
+          check_in_code: 'must-not-export',
+          checked_in_by: '55555555-5555-4555-8555-555555555555',
+        }],
+      },
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects raw import and request-note payloads', () => {
+    const result = DataRightsExportBundleSchema.safeParse({
+      ...validExportBundle,
+      raw_import_rows: [{ value: 'must-not-export' }],
+      internal_notes: 'must-not-export',
     });
 
     expect(result.success).toBe(false);

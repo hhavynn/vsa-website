@@ -132,18 +132,22 @@ Future PR A should add an admin-only tracker before mutation. Suggested logical 
 
 RLS must be admin-only with server authorization and append-oriented audit events. Processor roles and retention **needs admin/VSA policy decision**.
 
-## Export architecture
+## Export architecture — implemented for admin-generated local bundles
 
-Future PR B should implement a narrow admin-only RPC plus server function or Supabase Edge Function that:
+The admin tracker can call `generate_data_rights_export` only for a verified request with type `export`, status `approved_for_future_action`, and an explicit Auth user or member ID. The RPC checks admin status server-side, rejects conflicting or duplicate linked identities, and returns a versioned JSON bundle built from fixed allowlists.
+
+The browser downloads the validated response directly. The payload is not written to the database, Storage, localStorage, analytics, or logs. An append-only request event records category counts only. Approved delivery channels, expiration, and retention remain **needs admin/VSA policy decision**.
+
+The implementation:
 
 1. requires authentication and verifies approved admin status server-side;
 2. requires an approved request and explicit Auth/member IDs;
-3. rejects unresolved duplicates/name-only matches;
+3. rejects conflicting linked duplicates and excludes/flags name-only candidates;
 4. uses fixed column allowlists;
 5. returns versioned JSON;
-6. audits counts and bundle hash only;
+6. audits category counts only; bundle hashing is deferred;
 7. never logs payloads; and
-8. uses approved private, short-lived delivery.
+8. requires an approved private, short-lived delivery process after local generation; **needs admin/VSA policy decision**.
 
 Never expose a service-role key to frontend code. Do not add public self-service until subject-scoped access/member linking are verified.
 
@@ -237,9 +241,9 @@ The admin-only `/admin/data-rights` tracker stores minimal request/audit metadat
 
 The admin-only RPC and tracker UI return counts, ambiguity warnings, attribution limits, and review steps from explicit request identifiers. The preview is count/warning-only, creates no audit event, and performs no export, deletion, anonymization, media removal, Storage operation, or subject-data mutation. AI usage attribution and stable media/provider ownership remain **needs schema verification** and manual review.
 
-### PR B: Admin-only export function
+### PR B: Admin-only export function — implemented
 
-Add fixed allowlists/versioned JSON, server admin check, approved request/explicit IDs, synthetic leakage tests, and private delivery. Acceptance: no public endpoint or other-user data.
+The admin-only RPC and tracker action enforce verified/approved export requests and explicit subject identifiers, reject conflicting or duplicate linked identities, validate a strict versioned bundle, and download it locally without persisting the payload. Export audit events contain category counts only. Private delivery and expiration policy remain **needs admin/VSA policy decision**.
 
 ### PR C: Profile/member anonymization workflow
 
