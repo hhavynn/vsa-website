@@ -108,7 +108,7 @@ interface Member {
   year: string | null;
   points: number;
   events_attended: number;
-  user_id: string | null;
+  user_id?: string | null;
 }
 
 interface LeaderboardEntry extends Member {

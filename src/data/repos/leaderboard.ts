@@ -20,7 +20,7 @@ export class LeaderboardRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('members')
-        .select('id, first_name, last_name, college, year, points, events_attended, user_id')
+        .select('id, first_name, last_name, college, year, points, events_attended')
         .order('points', { ascending: false });
 
       if (error) throw error;

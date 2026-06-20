@@ -332,7 +332,7 @@ export interface MemberYearlyPoints {
   last_name: string;
   college: string | null;
   graduation_year: string | null;
-  user_id: string | null;
+  user_id?: string | null;
   academic_year_start: number;
   academic_year_end: number;
   total_points: number;
