@@ -16,7 +16,6 @@ export interface FindMyPointsEntry {
   events_attended: number;
   all_time_points: number;
   rank: number;
-  user_id: string | null;
 }
 
 export function useFindMyPoints(selectedYear: SelectedYear | null) {
@@ -30,7 +29,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
       if (selectedYear === 'all') {
         const { data, error } = await supabase
           .from('members')
-          .select('id, first_name, last_name, college, year, house, points, events_attended, user_id')
+          .select('id, first_name, last_name, college, year, house, points, events_attended')
           .order('points', { ascending: false });
         if (error) throw error;
 
@@ -46,7 +45,6 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           events_attended: m.events_attended ?? 0,
           all_time_points: m.points ?? 0,
           rank: idx + 1,
-          user_id: m.user_id ?? null,
         }));
       }
 
@@ -84,7 +82,6 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           events_attended: m.events_attended,
           all_time_points: extra?.allTime ?? m.total_points,
           rank: idx + 1,
-          user_id: m.user_id ?? null,
         };
       });
     },
