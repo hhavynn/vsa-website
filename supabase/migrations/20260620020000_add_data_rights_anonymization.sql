@@ -145,9 +145,14 @@ begin
     from public.feedback as feedback
     where feedback.user_id = p_subject_auth_user_id;
 
-    select count(*)::integer into v_legacy_chat_log_rows
-    from public.chat_logs as chat_log
-    where chat_log.user_id = p_subject_auth_user_id;
+    if exists (
+      select 1 from information_schema.tables
+      where table_schema = 'public' and table_name = 'chat_logs'
+    ) then
+      execute 'select count(*)::integer from public.chat_logs where user_id = $1'
+      into v_legacy_chat_log_rows
+      using p_subject_auth_user_id;
+    end if;
   end if;
 
   if p_subject_member_id is not null then
