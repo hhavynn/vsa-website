@@ -150,10 +150,25 @@ group by
 
 grant select on public.house_member_all_time_points to anon, authenticated;
 
--- ─── members table: column-level REVOKE ──────────────────────────────────────
--- PostgREST respects column-level privileges. With user_id revoked, any
--- select('... user_id ...') or select('*') from the members table returns
--- a permission error for that column.
+-- ─── members table: block anon from sensitive columns ────────────────────────
+-- Column-level REVOKE cannot override a table-level SELECT grant in PostgreSQL.
+-- Supabase grants anon table-level SELECT via ALTER DEFAULT PRIVILEGES at
+-- project init, so the only effective pattern is:
+--   (1) REVOKE the table-level grant
+--   (2) GRANT only the safe columns back
+--
+-- This blocks anon from reading user_id (auth UUID), email, needs_review,
+-- import metadata, and any columns added after the original table creation.
 
-revoke select (user_id) on public.members from anon;
-revoke select (user_id) on public.members from authenticated;
+revoke select on public.members from anon;
+
+-- Re-grant only the columns required by public-facing UI
+-- (leaderboard, house standings, find-my-points, events recap).
+grant select (id, first_name, last_name, college, year, house, points, events_attended)
+  on public.members to anon;
+
+-- authenticated keeps its table-level SELECT: admin pages need email, user_id,
+-- needs_review, created_at, etc. from the base table. Non-admin authenticated
+-- users can still read user_id via direct members queries, but no current
+-- client code path does this — all public data flows through the safe views
+-- and the explicit column lists fixed elsewhere in this PR.
