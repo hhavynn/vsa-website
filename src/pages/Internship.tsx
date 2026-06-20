@@ -143,6 +143,15 @@ export function Internship() {
           <div className="program-watermark">cohort</div>
         </section>
 
+        <section className="program-section">
+          <div className="program-section-inner program-section-narrow">
+            <div className="program-eyebrow">About the Program</div>
+            <p className="program-body">
+              The VSA at UCSD Intern Program is for students who want to get more involved, learn how cabinet works, and help with events throughout the year.
+            </p>
+          </div>
+        </section>
+
         {cycleContent && (
           <section className="program-section">
             <div className="program-section-inner">
@@ -162,15 +171,6 @@ export function Internship() {
               applicationKeys="intern_application"
               fallback={{ closed: 'Intern applications have closed. Check back next year.' }}
             />
-          </div>
-        </section>
-
-        <section className="program-section">
-          <div className="program-section-inner program-section-narrow">
-            <div className="program-eyebrow">About the Program</div>
-            <p className="program-body">
-              The VSA at UCSD Intern Program is for students who want to get more involved, learn how cabinet works, and help with events throughout the year.
-            </p>
           </div>
         </section>
 

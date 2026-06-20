@@ -714,8 +714,16 @@ export function Cabinet() {
                   ? `Requested year: ${requestedYear}`
                   : isResolvingYearQuery
                     ? `Requested year: ${requestedYear}`
-                  : `${isViewingArchive ? 'Cabinet Archive' : 'Current Cabinet'} / ${selectedYearRange}${selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''} / ${members.length} members`}
+                    : `${isViewingArchive ? 'Cabinet Archive' : 'Current Cabinet'} / ${selectedYearRange}${selectedCabinetYear?.theme_name ? ` / ${selectedCabinetYear.theme_name}` : ''} / ${members.length} members`}
               </p>
+              {!isViewingArchive && members.length > 0 && (
+                <a
+                  href="#cabinet-role-explorer"
+                  className="mt-4 inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
+                >
+                  Explore cabinet roles ↓
+                </a>
+              )}
               {isInvalidYearQuery && (
                 <Link
                   to="/cabinet"
@@ -810,21 +818,6 @@ export function Cabinet() {
         </div>
       ) : (
         <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
-          {!isViewingArchive && (
-            <CabinetRoleExplorer />
-          )}
-
-          {/* ── CABINET APPLICATION — separate from the member display ── */}
-          {!isViewingArchive && (
-            <section className="mb-16 mt-16 border-t pt-16" style={{ borderColor: 'var(--color-border)' }}>
-              <span className="scrapbook-sticker scrapbook-sticker-coral mb-3">Join Cabinet</span>
-              <ApplicationCTA
-                applicationKeys="cabinet_application"
-                fallback={{ closed: 'Cabinet applications have closed. Check back next year.' }}
-              />
-            </section>
-          )}
-
           {/* ── EXECUTIVE BOARD — one cohesive staggered wall ── */}
           {execBoard.length > 0 && (
             <section className="mb-16">
@@ -986,7 +979,7 @@ export function Cabinet() {
                   Additional contributors and specialty roles supporting the organization across the year.
                 </p>
               </div>
-              <motion.div 
+              <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 whileInView="show"
@@ -998,6 +991,25 @@ export function Cabinet() {
                 ))}
               </motion.div>
             </section>
+          )}
+
+          {!isViewingArchive && (
+            <div
+              id="cabinet-role-explorer"
+              className="mt-16 scroll-mt-24 border-t pt-10"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <CabinetRoleExplorer />
+              <section className="mt-12 text-center">
+                <span className="scrapbook-sticker scrapbook-sticker-coral mb-3 inline-block">Join Cabinet</span>
+                <div className="flex justify-center">
+                  <ApplicationCTA
+                    applicationKeys="cabinet_application"
+                    fallback={{ closed: 'Cabinet applications have closed. Check back next year.' }}
+                  />
+                </div>
+              </section>
+            </div>
           )}
         </div>
       )}
