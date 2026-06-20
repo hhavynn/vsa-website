@@ -14,7 +14,7 @@
 
 -- ─── 1. event_check_in_secrets ───────────────────────────────────────────────
 
-CREATE TABLE public.event_check_in_secrets (
+CREATE TABLE IF NOT EXISTS public.event_check_in_secrets (
   event_id      uuid        PRIMARY KEY REFERENCES public.events(id) ON DELETE CASCADE,
   check_in_code text        NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now(),
@@ -27,6 +27,7 @@ ALTER TABLE public.event_check_in_secrets ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.event_check_in_secrets FROM anon;
 
 -- Admin-only SELECT
+DROP POLICY IF EXISTS "Admins can read check-in secrets" ON public.event_check_in_secrets;
 CREATE POLICY "Admins can read check-in secrets"
   ON public.event_check_in_secrets FOR SELECT TO authenticated
   USING (
@@ -37,6 +38,7 @@ CREATE POLICY "Admins can read check-in secrets"
   );
 
 -- Admin-only INSERT
+DROP POLICY IF EXISTS "Admins can insert check-in secrets" ON public.event_check_in_secrets;
 CREATE POLICY "Admins can insert check-in secrets"
   ON public.event_check_in_secrets FOR INSERT TO authenticated
   WITH CHECK (
@@ -47,6 +49,7 @@ CREATE POLICY "Admins can insert check-in secrets"
   );
 
 -- Admin-only UPDATE (e.g. rotate code or fix typo)
+DROP POLICY IF EXISTS "Admins can update check-in secrets" ON public.event_check_in_secrets;
 CREATE POLICY "Admins can update check-in secrets"
   ON public.event_check_in_secrets FOR UPDATE TO authenticated
   USING (
@@ -159,10 +162,18 @@ REVOKE EXECUTE ON FUNCTION public.check_in_to_event(text) FROM anon;
 -- All live codes are now in event_check_in_secrets.  Clearing the column
 -- means no historical data leaks if events.check_in_code is ever queried.
 
-UPDATE public.events SET check_in_code = NULL;
-
--- Belt-and-suspenders: revoke column-level SELECT from authenticated too.
--- (anon was revoked in the emergency_security_hardening migration.)
--- The column is now null for all rows, but the revoke prevents it from
--- being used even if new code accidentally writes to it again.
-REVOKE SELECT (check_in_code) ON public.events FROM authenticated;
+-- Null out check_in_code only if the column still exists.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'events'
+      AND column_name  = 'check_in_code'
+  ) THEN
+    UPDATE public.events SET check_in_code = NULL;
+    -- Belt-and-suspenders: revoke column-level SELECT from authenticated too.
+    -- (anon was revoked in the emergency_security_hardening migration.)
+    REVOKE SELECT (check_in_code) ON public.events FROM authenticated;
+  END IF;
+END $$;
