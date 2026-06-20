@@ -192,19 +192,14 @@ export class EventsRepository {
    */
   async createEvent(eventData: CreateEventFormData): Promise<Event> {
     return withErrorHandling(async () => {
-      const { check_in_code, ...eventFields } = eventData;
       const { data, error } = await supabase
         .from('events')
-        .insert([eventFields])
+        .insert([eventData])
         .select()
         .single();
 
       if (error) throw error;
       if (!data) throw new DatabaseError('Failed to create event');
-
-      if (check_in_code) {
-        await this.setCheckInCode(data.id, check_in_code);
-      }
 
       return data;
     }, 'Failed to create event');
@@ -215,11 +210,10 @@ export class EventsRepository {
    */
   async updateEvent(id: string, eventData: UpdateEventFormData): Promise<Event> {
     return withErrorHandling(async () => {
-      const { check_in_code, ...eventFields } = eventData;
       const { data, error } = await supabase
         .from('events')
         .update({
-          ...eventFields,
+          ...eventData,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -228,10 +222,6 @@ export class EventsRepository {
 
       if (error) throw error;
       if (!data) throw new NotFoundError('Event not found', 'event', id);
-
-      if (check_in_code) {
-        await this.setCheckInCode(id, check_in_code);
-      }
 
       return data;
     }, 'Failed to update event');
