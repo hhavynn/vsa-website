@@ -2,6 +2,8 @@ import { supabase } from '../../lib/supabase';
 import {
   DataRightsDependencyPreview,
   DataRightsDependencyPreviewSchema,
+  DataRightsExportBundle,
+  DataRightsExportBundleSchema,
 } from '../../schemas';
 import { Database } from '../../types/database';
 import { withErrorHandling } from '../errors';
@@ -125,6 +127,17 @@ export class DataRightsRequestsRepository {
       if (error) throw error;
       return DataRightsDependencyPreviewSchema.parse(data);
     }, 'Failed to generate data-rights dependency preview');
+  }
+
+  async generateDataRightsExport(requestId: string): Promise<DataRightsExportBundle> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase.rpc('generate_data_rights_export', {
+        p_request_id: requestId,
+      });
+
+      if (error) throw error;
+      return DataRightsExportBundleSchema.parse(data);
+    }, 'Failed to generate data-rights export');
   }
 
   async listAdminAssignees(): Promise<DataRightsAdminOption[]> {

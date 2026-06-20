@@ -157,6 +157,112 @@ export const DataRightsDependencyPreviewSchema = z.object({
   next_steps: z.array(z.string().min(1)),
 }).strict();
 
+const DataRightsExportEventSchema = z.object({
+  id: z.string().uuid(),
+  event_id: z.string().uuid(),
+  event_name: z.string(),
+  event_date: z.string(),
+  event_location: z.string().nullable(),
+  event_type: z.string(),
+  points_earned: z.number().int(),
+}).strict();
+
+export const DataRightsExportBundleSchema = z.object({
+  version: z.literal(1),
+  request_id: z.string().uuid(),
+  generated_at: z.string(),
+  subject: z.object({
+    has_auth_user_id: z.boolean(),
+    has_member_id: z.boolean(),
+  }).strict(),
+  auth_account: z.object({
+    id: z.string().uuid(),
+    email: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string().nullable(),
+    last_sign_in_at: z.string().nullable(),
+  }).strict().nullable(),
+  profile: z.object({
+    id: z.string().uuid(),
+    email: z.string(),
+    first_name: z.string(),
+    last_name: z.string(),
+    college: z.string().nullable(),
+    year: z.string().nullable(),
+    is_admin: z.boolean(),
+    discord_user_id: z.string().nullable(),
+    discord_username: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string(),
+  }).strict().nullable(),
+  member_records: z.array(z.object({
+    id: z.string().uuid(),
+    first_name: z.string(),
+    last_name: z.string(),
+    college: z.string().nullable(),
+    year: z.string().nullable(),
+    house: z.string().nullable(),
+    points: z.number().int(),
+    events_attended: z.number().int(),
+    created_at: z.string(),
+    updated_at: z.string(),
+  }).strict()),
+  attendance: z.object({
+    auth_attendance: z.array(DataRightsExportEventSchema.extend({
+      check_in_type: z.enum(['code', 'manual']),
+      checked_in_at: z.string(),
+      created_at: z.string(),
+    }).strict()),
+    member_attendance: z.array(DataRightsExportEventSchema.extend({
+      member_id: z.string().uuid(),
+      imported_at: z.string(),
+    }).strict()),
+  }).strict(),
+  points: z.object({
+    auth_points: z.array(z.object({
+      id: z.string().uuid(),
+      total_points: z.number().int(),
+      points: z.number().int().nullable(),
+      created_at: z.string(),
+      updated_at: z.string(),
+    }).strict()),
+    member_totals: z.array(z.object({
+      member_id: z.string().uuid(),
+      total_points: z.number().int(),
+      events_attended: z.number().int(),
+    }).strict()),
+  }).strict(),
+  house_memberships: z.array(z.object({
+    id: z.string().uuid(),
+    member_id: z.string().uuid(),
+    house_key: z.string(),
+    house_name: z.string(),
+    academic_year_start: z.number().int(),
+    academic_year_end: z.number().int(),
+    effective_start_date: z.string(),
+    effective_end_date: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string(),
+  }).strict()),
+  feedback: z.array(z.object({
+    id: z.string().uuid(),
+    type: z.enum(['bug', 'feature', 'improvement', 'event', 'other']),
+    title: z.string(),
+    description: z.string(),
+    status: z.enum(['open', 'pending', 'in_progress', 'resolved', 'closed']),
+    created_at: z.string(),
+    updated_at: z.string(),
+  }).strict()),
+  media_references: z.array(z.object({
+    kind: z.enum(['avatar', 'discord_avatar']),
+    url: z.string(),
+  }).strict()),
+  browser_and_analytics_notes: z.array(z.string().min(1)),
+  external_systems: z.array(z.string().min(1)),
+  exclusions: z.array(z.string().min(1)),
+  warnings: z.array(z.string().min(1)),
+}).strict();
+
 // Type exports for TypeScript
 export type Event = z.infer<typeof EventSchema>;
 export type EventFormData = z.infer<typeof EventSchema>;
@@ -170,3 +276,4 @@ export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;
 export type DataRightsRequestFormData = z.infer<typeof DataRightsRequestFormSchema>;
 export type DataRightsDependencyPreview = z.infer<typeof DataRightsDependencyPreviewSchema>;
+export type DataRightsExportBundle = z.infer<typeof DataRightsExportBundleSchema>;

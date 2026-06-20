@@ -20,6 +20,7 @@ import {
 } from '../../../data/repos/dataRightsRequests';
 import {
   DataRightsDependencyPreview,
+  DataRightsExportBundle,
   DataRightsRequestFormData,
   DataRightsRequestFormSchema,
 } from '../../../schemas';
@@ -118,12 +119,41 @@ function requestLabel(request: DataRightsRequest): string {
   return request.subject_display_name?.trim() || `Request ${request.id.slice(0, 8)}`;
 }
 
+function isExportEligible(request: DataRightsRequest): boolean {
+  return request.request_type === 'export'
+    && request.verification_status === 'verified'
+    && request.status === 'approved_for_future_action'
+    && Boolean(request.subject_auth_user_id || request.subject_member_id);
+}
+
+function getExportEligibilityIssues(request: DataRightsRequest): string[] {
+  const issues: string[] = [];
+  if (request.request_type !== 'export') issues.push('Request type must be Export.');
+  if (request.verification_status !== 'verified') issues.push('Identity verification must be Verified.');
+  if (request.status !== 'approved_for_future_action') issues.push('Status must be Approved for future action.');
+  if (!request.subject_auth_user_id && !request.subject_member_id) issues.push('A confirmed Auth user ID or member ID is required.');
+  return issues;
+}
+
+function downloadExportBundle(bundle: DataRightsExportBundle): void {
+  const blob = new Blob([`${JSON.stringify(bundle, null, 2)}\n`], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `vsa-data-rights-export-${bundle.request_id}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
 export function DataRightsRequestTracker() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | DataRightsRequestStatus>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | DataRightsRequestType>('all');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   const requestsQuery = useQuery(
     ['admin', 'data-rights-requests'],
@@ -175,6 +205,7 @@ export function DataRightsRequestTracker() {
         : dataRightsRequestsRepository.createDataRightsRequest(input),
     {
       onSuccess: async (request) => {
+        setExportSuccess(null);
         setEditingId(request.id);
         setSaveError(null);
         await Promise.all([
@@ -201,8 +232,34 @@ export function DataRightsRequestTracker() {
     },
   );
 
+  const exportMutation = useMutation(
+    async (requestId: string) => {
+      const bundle = await dataRightsRequestsRepository.generateDataRightsExport(requestId);
+      downloadExportBundle(bundle);
+      return {
+        requestId: bundle.request_id,
+        warningCount: bundle.warnings.length,
+      };
+    },
+    {
+      onSuccess: async ({ requestId, warningCount }) => {
+        setExportSuccess(
+          `Export downloaded locally. The bundle includes ${warningCount} review warning${warningCount === 1 ? '' : 's'}.`,
+        );
+        await queryClient.invalidateQueries(['admin', 'data-rights-request-events', requestId]);
+        toast.success('Data-rights export downloaded');
+      },
+      onError: () => {
+        setExportSuccess(null);
+        toast.error('Unable to generate data-rights export');
+      },
+    },
+  );
+
   function startNewRequest() {
     previewMutation.reset();
+    exportMutation.reset();
+    setExportSuccess(null);
     setEditingId(null);
     reset(emptyForm);
     setSaveError(null);
@@ -210,10 +267,14 @@ export function DataRightsRequestTracker() {
 
   function reviewRequest(requestId: string) {
     previewMutation.reset();
+    exportMutation.reset();
+    setExportSuccess(null);
     setEditingId(requestId);
   }
 
   const onSubmit = handleSubmit((values) => {
+    exportMutation.reset();
+    setExportSuccess(null);
     setSaveError(null);
     saveMutation.mutate({ id: editingId, input: formToInput(values) });
   });
@@ -240,10 +301,10 @@ export function DataRightsRequestTracker() {
         className="mb-6 rounded border border-border-strong bg-surface2 px-4 py-4"
       >
         <h2 id="tracker-safety-heading" className="text-sm font-semibold text-text-primary">
-          Intake and review only
+          Sensitive admin workflow
         </h2>
         <p className="mt-1 text-[13px] leading-5 text-text-secondary">
-          This tracker does not export, delete, anonymize, or remove data. Use it to document verification status, review decisions, and future approved actions. Follow <code>docs/privacy-data-rights-architecture.md</code>.
+          This tracker can generate a local allowlisted export only for verified, approved export requests. It does not store export payloads or delete, anonymize, or remove subject data. Follow <code>docs/privacy-data-rights-architecture.md</code>.
         </p>
       </section>
 
@@ -460,6 +521,56 @@ export function DataRightsRequestTracker() {
               )}
               {previewMutation.data && (
                 <DependencyPreviewPanel preview={previewMutation.data} />
+              )}
+            </Card>
+          )}
+
+          {selectedRequest && (
+            <Card className="mt-4">
+              <h2 className="text-sm font-semibold text-text-primary">Generate subject export</h2>
+              <p className="mt-1 text-xs leading-5 text-text-muted">
+                Admin-only sensitive action. The server rechecks approval, verification, explicit identifiers, and identity ambiguity before returning an allowlisted bundle.
+              </p>
+
+              {isExportEligible(selectedRequest) ? (
+                <div className="mt-4 space-y-4">
+                  <div id="export-safety-warning" className="rounded border border-amber-300 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                    The downloaded JSON contains private subject data. Save it only to an approved secure location, share it only through an approved channel, and follow the future retention/expiration policy. The payload is not stored by this site.
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={exportMutation.isLoading}
+                    onClick={() => exportMutation.mutate(selectedRequest.id)}
+                    aria-describedby="export-safety-warning"
+                  >
+                    Generate export
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-4 rounded border border-border-strong bg-surface2 px-3 py-3">
+                  <p className="text-xs font-semibold text-text-primary">Export is not available for this request.</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-text-secondary">
+                    {getExportEligibilityIssues(selectedRequest).map((issue) => <li key={issue}>{issue}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {exportMutation.isLoading && (
+                <p role="status" aria-live="polite" className="mt-4 text-sm text-text-muted">
+                  Generating the allowlisted export…
+                </p>
+              )}
+              {exportMutation.isError && (
+                <p role="alert" className="mt-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+                  Export generation was refused or failed. Recheck verification, approval, explicit identifiers, and dependency-preview warnings.
+                </p>
+              )}
+              {exportSuccess && (
+                <p role="status" aria-live="polite" className="mt-4 rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-700 dark:bg-green-950/30 dark:text-green-100">
+                  {exportSuccess}
+                </p>
               )}
             </Card>
           )}

@@ -72,7 +72,8 @@ export type DataRightsRequestEventType =
   | 'status_changed'
   | 'verification_changed'
   | 'workflow_updated'
-  | 'details_updated';
+  | 'details_updated'
+  | 'export_generated';
 
 export interface Database {
   public: {
@@ -1701,6 +1702,12 @@ export interface Database {
         Returns: number;
       };
       get_data_rights_dependency_preview: {
+        Args: {
+          p_request_id: string;
+        };
+        Returns: Json;
+      };
+      generate_data_rights_export: {
         Args: {
           p_request_id: string;
         };
