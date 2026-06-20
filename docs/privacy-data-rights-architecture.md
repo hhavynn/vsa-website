@@ -227,9 +227,9 @@ Storage ownership, caching, migrated copies, and external permissions **needs sc
 
 ## Future implementation plan
 
-### PR A: Admin request tracker and runbook UI, non-destructive
+### PR A: Admin request tracker and runbook UI, non-destructive — implemented
 
-Add strict admin-only request/audit records, intake/verification/approval states, read-only subject preview, and second review. Store no documents, payloads, or unnecessary messages. Acceptance: ordinary users have no access and no mutation exists.
+The admin-only `/admin/data-rights` tracker stores minimal request/audit metadata in `data_rights_requests` and append-only `data_rights_request_events`. It supports intake, verification, assignment, review, and decisions without acting on subject data. It stores no documents or payloads and provides no export, deletion, anonymization, or media-removal action. Subject dependency preview remains future work.
 
 ### PR B: Admin-only export function
 

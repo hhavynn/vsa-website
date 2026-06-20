@@ -264,6 +264,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
     intro: 'Check site health, feedback, diagnostics, and admin operations.',
     tools: [
       {
+        to: '/admin/data-rights',
+        label: 'Data Rights',
+        desc: 'Track minimal intake, identity-verification, review, and decision metadata for privacy and data requests.',
+        affects: 'Admin-only request tracking; no member data actions',
+        keywords: ['privacy', 'data rights', 'requests', 'verification', 'review', 'decisions'],
+      },
+      {
         to: '/admin/launch-checklist',
         label: 'Launch Checklist',
         desc: 'Pre-launch readiness checks for each academic year. Covers terms, cabinet, events, gallery, applications, Houses, VCN, and Ask VSA.',

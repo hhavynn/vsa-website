@@ -79,6 +79,48 @@ export const AdminEventUpdateSchema = z.object({
   academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
 
+const optionalUuid = z.union([z.string().uuid('Use a valid UUID'), z.literal('')]);
+
+export const DataRightsRequestFormSchema = z.object({
+  request_type: z.enum([
+    'review',
+    'correction',
+    'export',
+    'deletion',
+    'anonymization',
+    'media_removal',
+    'analytics_browser_help',
+    'external_form',
+    'other',
+  ]),
+  status: z.enum([
+    'intake',
+    'identity_verification',
+    'preview_needed',
+    'pending_review',
+    'approved_for_future_action',
+    'completed',
+    'rejected',
+    'cancelled',
+  ]),
+  subject_auth_user_id: optionalUuid,
+  subject_member_id: optionalUuid,
+  subject_display_name: z.string().max(200, 'Display name must be 200 characters or fewer'),
+  contact_channel: z.string().max(80, 'Contact channel must be 80 characters or fewer'),
+  contact_reference: z.string().max(200, 'Contact reference must be 200 characters or fewer'),
+  verification_status: z.enum(['not_started', 'pending', 'verified', 'failed', 'not_required']),
+  verification_method: z.string().max(200, 'Verification method must be 200 characters or fewer'),
+  assigned_to: optionalUuid,
+  reviewer_id: optionalUuid,
+  priority: z.enum(['low', 'normal', 'high']),
+  summary: z.string().max(1000, 'Summary must be 1,000 characters or fewer'),
+  internal_notes: z.string().max(2000, 'Internal notes must be 2,000 characters or fewer'),
+  decision: z.string().max(1000, 'Decision must be 1,000 characters or fewer'),
+}).strict().refine(
+  (data) => !data.assigned_to || !data.reviewer_id || data.assigned_to !== data.reviewer_id,
+  { message: 'Reviewer must be different from the assigned processor', path: ['reviewer_id'] },
+);
+
 // Type exports for TypeScript
 export type Event = z.infer<typeof EventSchema>;
 export type EventFormData = z.infer<typeof EventSchema>;
@@ -90,3 +132,4 @@ export type SignUpFormData = z.infer<typeof SignUpSchema>;
 export type FeedbackFormData = z.infer<typeof FeedbackSchema>;
 export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;
+export type DataRightsRequestFormData = z.infer<typeof DataRightsRequestFormSchema>;
