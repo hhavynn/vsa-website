@@ -12,7 +12,6 @@ export interface Event {
   check_in_form_url: string;
   image_url?: string | null;
   thumbnail_url?: string | null;
-  check_in_code?: string;
   is_code_expired: boolean;
   is_published: boolean;
   academic_term_id?: string | null;

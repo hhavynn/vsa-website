@@ -244,24 +244,16 @@ export class EventsRepository {
   /**
    * Check in a user to an event
    */
-  async checkInUser(eventId: string, userId: string, checkInType: 'code' | 'manual', code?: string): Promise<void> {
+  async checkInUser(eventId: string, userId: string, checkInType: 'code' | 'manual', _code?: string): Promise<void> {
     return withErrorHandling(async () => {
-      // First, get the event to validate the check-in
-      const event = await this.getEventById(eventId);
-      
       if (checkInType === 'code') {
-        if (!code) {
-          throw new ValidationError('Check-in code is required');
-        }
-        
-        if (!event.check_in_code || event.check_in_code !== code) {
-          throw new ValidationError('Invalid check-in code');
-        }
-        
-        if (event.is_code_expired) {
-          throw new ValidationError('Check-in code has expired');
-        }
+        // Code check-in is handled server-side by the check_in_to_event RPC
+        // (SECURITY DEFINER). Codes no longer live on the events row.
+        throw new ValidationError('Code check-in must use the check_in_to_event RPC');
       }
+
+      // First, get the event to validate the manual check-in
+      const event = await this.getEventById(eventId);
 
       // Check if user is already checked in
       const { data: existingAttendance } = await supabase

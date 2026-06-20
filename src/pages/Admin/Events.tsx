@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
@@ -126,6 +126,22 @@ export default function AdminEvents() {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
+  // Secret loaded separately from event_check_in_secrets (admin-only table).
+  // Kept out of selectedEvent so codes never travel in the public event state.
+  const [selectedEventSecret, setSelectedEventSecret] = useState<{ check_in_code: string } | null>(null);
+
+  useEffect(() => {
+    if (!selectedEvent?.id) {
+      setSelectedEventSecret(null);
+      return;
+    }
+    supabase
+      .from('event_check_in_secrets')
+      .select('check_in_code')
+      .eq('event_id', selectedEvent.id)
+      .single()
+      .then(({ data }) => setSelectedEventSecret(data ?? null));
+  }, [selectedEvent?.id]);
 
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return '';
@@ -289,20 +305,25 @@ export default function AdminEvents() {
       const startTime = newEvent.start_time || '00:00';
       const isoDate = new Date(`${newEvent.date}T${startTime}`).toISOString();
       const academicTermId = await resolveAcademicTermId(isoDate, newEvent.academic_term_id);
-      const { error } = await supabase.from('events').insert([{
+      const { data: inserted, error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
         date: isoDate, location: newEvent.location,
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
         points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
-        check_in_code: checkInCode, is_code_expired: false,
+        is_code_expired: false,
         is_published: newEvent.is_published ?? true,
         academic_term_id: academicTermId,
         start_time: newEvent.start_time || null,
         end_time: newEvent.end_time || null,
         end_date: newEvent.end_date || null,
-      }]);
+      }]).select('id').single();
       if (error) throw error;
+      // Persist the generated code into the admin-only secrets table.
+      const { error: secretError } = await supabase
+        .from('event_check_in_secrets')
+        .insert({ event_id: inserted.id, check_in_code: checkInCode });
+      if (secretError) throw secretError;
       toast.success('Event created');
       setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null);
       refreshTerms();
@@ -361,7 +382,7 @@ export default function AdminEvents() {
         name: selectedEvent.name, description: selectedEvent.description,
         date: isoDate, location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
-        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null, check_in_code: selectedEvent.check_in_code,
+        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null,
         is_code_expired: selectedEvent.is_code_expired,
         is_published: selectedEvent.is_published ?? true,
         check_in_form_url: selectedEvent.check_in_form_url || '',
@@ -371,6 +392,16 @@ export default function AdminEvents() {
         end_date: selectedEvent.end_date || null,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
+      // Persist any code edits into the admin-only secrets table.
+      if (selectedEventSecret?.check_in_code) {
+        const { error: secretError } = await supabase
+          .from('event_check_in_secrets')
+          .upsert(
+            { event_id: selectedEvent.id, check_in_code: selectedEventSecret.check_in_code },
+            { onConflict: 'event_id' }
+          );
+        if (secretError) throw secretError;
+      }
       await removeEventImage(imageUrlToRemove);
       await removeEventImage(thumbnailUrlToRemove);
       if (pointsChanged) {
@@ -391,8 +422,8 @@ export default function AdminEvents() {
   };
 
   const handleCopyCode = async () => {
-    if (!selectedEvent?.check_in_code) return;
-    await navigator.clipboard.writeText(selectedEvent.check_in_code);
+    if (!selectedEventSecret?.check_in_code) return;
+    await navigator.clipboard.writeText(selectedEventSecret.check_in_code);
     setCopiedCode(true);
     toast.success('Copied');
     setTimeout(() => setCopiedCode(false), 2000);
@@ -699,7 +730,7 @@ export default function AdminEvents() {
                 <div>
                   <label className={labelCls}>Check-in Code</label>
                   <div className="mt-1 flex gap-2">
-                    <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_code: e.target.value})} className={`${inputCls} mt-0 font-mono tracking-widest`} />
+                    <input type="text" value={selectedEventSecret?.check_in_code || ''} onChange={e => setSelectedEventSecret(prev => prev ? { ...prev, check_in_code: e.target.value.toUpperCase() } : { check_in_code: e.target.value.toUpperCase() })} className={`${inputCls} mt-0 font-mono tracking-widest`} />
                     <button type="button" onClick={handleCopyCode} className={`shrink-0 rounded border px-4 py-2 text-sm font-semibold transition-colors ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400' : 'bg-[var(--color-surface2)] hover:bg-[var(--color-surface)]'}`} style={{ borderColor: copiedCode ? '' : 'var(--color-border)', color: copiedCode ? '' : 'var(--color-text)' }}>
                       {copiedCode ? 'Copied' : 'Copy'}
                     </button>
