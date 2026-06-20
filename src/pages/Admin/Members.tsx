@@ -97,19 +97,10 @@ export default function AdminMembers() {
     else { setSortKey(key); setSortAsc(key === 'name'); }
   }
 
-  // Multi-select
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [confirmBulk, setConfirmBulk] = useState(false);
-
   // Edit modal
   const [editing, setEditing] = useState<Member | null>(null);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '', house: '' });
   const [saving, setSaving] = useState(false);
-
-  // Single delete modal
-  const [deleting, setDeleting] = useState<Member | null>(null);
-  const [confirming, setConfirming] = useState(false);
 
   // History modal
   const [historyMember, setHistoryMember] = useState<Member | null>(null);
@@ -133,7 +124,6 @@ export default function AdminMembers() {
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
     setMembers((data ?? []) as Member[]);
-    setSelected(new Set());
     setLoading(false);
   }
 
@@ -179,31 +169,6 @@ export default function AdminMembers() {
     paginatedData: paginatedFiltered,
   } = usePagination(filtered, { defaultRowsPerPage: 25, resetKey });
 
-  // ── Selection ────────────────────────────────────────────────────────────────
-  const allFilteredIds = filtered.map(m => m.id);
-  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
-  const someSelected = allFilteredIds.some(id => selected.has(id));
-
-  function toggleOne(id: string) {
-    setSelected(prev => {
-      const next = new Set(Array.from(prev));
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  function toggleAll() {
-    if (allSelected) {
-      setSelected(prev => {
-        const next = new Set(Array.from(prev));
-        allFilteredIds.forEach(id => next.delete(id));
-        return next;
-      });
-    } else {
-      setSelected(prev => new Set([...Array.from(prev), ...allFilteredIds]));
-    }
-  }
-
   // ── Edit ─────────────────────────────────────────────────────────────────────
   function openEdit(m: Member) {
     setEditing(m);
@@ -239,35 +204,11 @@ export default function AdminMembers() {
     load();
   }
 
-  // ── Single delete ─────────────────────────────────────────────────────────────
-  async function handleDelete() {
-    if (!deleting) return;
-    setConfirming(true);
-    const { error } = await supabase.from('members').delete().eq('id', deleting.id);
-    setConfirming(false);
-    if (error) { toast.error('Failed to delete member.'); return; }
-    toast.success(`${deleting.first_name} ${deleting.last_name} removed.`);
-    setDeleting(null);
-    load();
-  }
-
   // ── Unflag (Clear Review) ───────────────────────────────────────────────────
   async function handleUnflag(m: Member) {
     const { error } = await supabase.from('members').update({ needs_review: false }).eq('id', m.id);
     if (error) { toast.error('Failed to clear review flag.'); return; }
     toast.success(`Cleared review flag for ${m.first_name} ${m.last_name}.`);
-    load();
-  }
-
-  // ── Bulk delete ───────────────────────────────────────────────────────────────
-  async function handleBulkDelete() {
-    setBulkDeleting(true);
-    const ids = Array.from(selected);
-    const { error } = await supabase.from('members').delete().in('id', ids);
-    setBulkDeleting(false);
-    if (error) { toast.error('Bulk delete failed.'); return; }
-    toast.success(`Removed ${ids.length} member${ids.length !== 1 ? 's' : ''}.`);
-    setConfirmBulk(false);
     load();
   }
 
@@ -349,7 +290,6 @@ export default function AdminMembers() {
     load();
   }
 
-  const selectedCount = selected.size;
   const needsReviewCount = members.filter(m => m.needs_review).length;
   const unassignedHouseCount = members.filter(m => !m.house).length;
 
@@ -390,6 +330,18 @@ export default function AdminMembers() {
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8">
+
+        <section
+          aria-labelledby="member-deletion-guard-heading"
+          className="mb-6 rounded-md border border-border-strong bg-surface2 px-4 py-3 text-text-primary"
+        >
+          <h2 id="member-deletion-guard-heading" className="text-sm font-semibold">
+            Member deletion is temporarily disabled
+          </h2>
+          <p className="mt-1 text-[13px] text-text-secondary">
+            Deleting a member can remove attendance, House membership, and leaderboard history. Use the data-rights runbook and future anonymization workflow for privacy or correction requests. See <code>docs/privacy-data-rights-architecture.md</code>.
+          </p>
+        </section>
 
         {/* STAT CARDS */}
         {!loading && (
@@ -463,14 +415,6 @@ export default function AdminMembers() {
               ))}
             </select>
           </div>
-          {selectedCount > 0 && (
-            <button
-              onClick={() => setConfirmBulk(true)}
-              className="w-full rounded bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-red-700 sm:w-auto"
-            >
-              Delete {selectedCount} selected
-            </button>
-          )}
         </div>
 
         {/* TABLE */}
@@ -486,15 +430,6 @@ export default function AdminMembers() {
               <table className="w-full min-w-[800px] text-sm">
                 <thead>
                   <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
-                    <th className="w-10 px-4 py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                        onChange={toggleAll}
-                        className="cursor-pointer rounded border-[var(--color-border)] bg-[var(--color-surface2)] text-[var(--brand)] focus:ring-[var(--brand)]"
-                      />
-                    </th>
                     <th className="w-10 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">#</th>
                     <SortTh label="Name" sk="name" active={sortKey} asc={sortAsc} onSort={handleSort} />
                     <th className="w-28 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">Year</th>
@@ -507,24 +442,8 @@ export default function AdminMembers() {
                 </thead>
                 <tbody className="divide-y bg-[var(--color-surface)]" style={{ borderColor: 'var(--color-border)' }}>
                   {paginatedFiltered.map((m, i) => {
-                    const isChecked = selected.has(m.id);
                     return (
-                      <tr
-                        key={m.id}
-                        onClick={() => toggleOne(m.id)}
-                        className={`cursor-pointer transition-colors ${isChecked
-                            ? 'bg-[var(--color-surface2)] border-l-2 border-l-[var(--brand)]'
-                            : 'hover:bg-[var(--color-surface2)]'
-                          }`}
-                      >
-                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleOne(m.id)}
-                            className="cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]"
-                          />
-                        </td>
+                      <tr key={m.id} className="transition-colors hover:bg-[var(--color-surface2)]">
                         <td className="font-mono text-xs px-4 py-3 text-[var(--color-text3)]">{pageStart + i + 1}</td>
                         {/* NAME */}
                         <td className="px-4 py-3">
@@ -567,7 +486,6 @@ export default function AdminMembers() {
                             {m.needs_review && <GhostBtn color="green" onClick={() => handleUnflag(m)}>Review OK</GhostBtn>}
                             <GhostBtn color="zinc" onClick={() => openHistory(m)}>History</GhostBtn>
                             <GhostBtn color="amber" onClick={() => openMerge(m)}>Merge</GhostBtn>
-                            <GhostBtn color="red" onClick={() => setDeleting(m)}>Delete</GhostBtn>
                           </div>
                         </td>
                       </tr>
@@ -586,25 +504,6 @@ export default function AdminMembers() {
             )}
           </div>
         )}
-
-      {/* ── Bulk Delete Modal ── */}
-      {confirmBulk && (
-        <Modal onClose={() => setConfirmBulk(false)}>
-          <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            Delete {selectedCount} member{selectedCount !== 1 ? 's' : ''}?
-          </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mb-5">
-            This permanently removes {selectedCount} member{selectedCount !== 1 ? 's' : ''} and all their attendance records. Cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <button onClick={handleBulkDelete} disabled={bulkDeleting}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
-              {bulkDeleting ? 'Deleting…' : `Yes, delete ${selectedCount}`}
-            </button>
-            <BtnCancel onClick={() => setConfirmBulk(false)} />
-          </div>
-        </Modal>
-      )}
 
       {/* ── Edit Modal ── */}
       {editing && (
@@ -669,23 +568,6 @@ export default function AdminMembers() {
               {saving ? 'Saving…' : 'Save changes'}
             </button>
             <BtnCancel onClick={() => setEditing(null)} />
-          </div>
-        </Modal>
-      )}
-
-      {/* ── Single Delete Modal ── */}
-      {deleting && (
-        <Modal onClose={() => setDeleting(null)}>
-          <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50 mb-2">Delete member?</h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mb-5">
-            Remove <strong className="text-zinc-700 dark:text-zinc-200">{deleting.first_name} {deleting.last_name}</strong> and all their attendance records? Cannot be undone.
-          </p>
-          <div className="flex gap-3">
-            <button onClick={handleDelete} disabled={confirming}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
-              {confirming ? 'Deleting…' : 'Yes, delete'}
-            </button>
-            <BtnCancel onClick={() => setDeleting(null)} />
           </div>
         </Modal>
       )}
