@@ -25,7 +25,7 @@ create or replace function public.preview_data_rights_anonymization(
 returns jsonb
 language plpgsql
 security definer
-stable
+volatile
 set search_path = ''
 as $$
 declare
@@ -113,6 +113,11 @@ begin
     from public.user_profiles as profile
     where profile.id = p_subject_auth_user_id;
 
+    if v_auth_user_exists and v_profile_rows = 0 then
+      v_deferred := array_append(v_deferred,
+        'Auth user exists but no user_profiles row was found; profile scrub will be a no-op. Investigate whether the profile trigger failed at signup.');
+    end if;
+
     if v_subject_is_admin then
       v_blockers := array_append(v_blockers, 'Admin subjects require a separate role-transfer and revocation workflow.');
     end if;
@@ -140,9 +145,14 @@ begin
     from public.feedback as feedback
     where feedback.user_id = p_subject_auth_user_id;
 
-    select count(*)::integer into v_legacy_chat_log_rows
-    from public.chat_logs as chat_log
-    where chat_log.user_id = p_subject_auth_user_id;
+    if exists (
+      select 1 from information_schema.tables
+      where table_schema = 'public' and table_name = 'chat_logs'
+    ) then
+      execute 'select count(*)::integer from public.chat_logs where user_id = $1'
+      into v_legacy_chat_log_rows
+      using p_subject_auth_user_id;
+    end if;
   end if;
 
   if p_subject_member_id is not null then
@@ -240,7 +250,7 @@ declare
   v_profile_rows integer := 0;
   v_member_rows integer := 0;
   v_feedback_rows integer := 0;
-  v_avatar_reference_cleared boolean := false;
+  v_avatar_db_reference_cleared boolean := false;
 begin
   if auth.uid() is null or not exists (
     select 1
@@ -262,6 +272,8 @@ begin
   end if;
 
   if p_subject_auth_user_id is not null then
+    -- FOR KEY SHARE on auth.users prevents concurrent auth account deletion during
+    -- the transaction. Requires SECURITY DEFINER running as postgres (superuser).
     perform 1
     from auth.users as auth_user
     where auth_user.id = p_subject_auth_user_id
@@ -291,7 +303,7 @@ begin
   end if;
 
   if p_subject_auth_user_id is not null then
-    v_avatar_reference_cleared := coalesce(
+    v_avatar_db_reference_cleared := coalesce(
       (v_preview->'deferred_counts'->>'avatar_reference_present')::boolean,
       false
     );
@@ -374,6 +386,10 @@ begin
     end if;
   end if;
 
+  update public.data_rights_requests
+  set status = 'completed'
+  where id = v_request.id;
+
   insert into public.data_rights_request_events (
     request_id,
     event_type,
@@ -399,7 +415,7 @@ begin
       'profile_rows_scrubbed', v_profile_rows,
       'member_rows_scrubbed', v_member_rows,
       'feedback_rows_detached', v_feedback_rows,
-      'avatar_reference_cleared', v_avatar_reference_cleared
+      'avatar_db_reference_cleared', v_avatar_db_reference_cleared
     ),
     'preserved_counts', v_preview->'preserve_counts',
     'deferred_counts', v_preview->'deferred_counts'
