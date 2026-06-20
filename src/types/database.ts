@@ -404,7 +404,6 @@ export interface Database {
           check_in_form_url: string;
           image_url: string | null;
           thumbnail_url: string | null;
-          check_in_code: string | null;
           is_code_expired: boolean;
           is_published: boolean;
           academic_term_id: string | null;
@@ -422,7 +421,6 @@ export interface Database {
           check_in_form_url?: string;
           image_url?: string | null;
           thumbnail_url?: string | null;
-          check_in_code?: string | null;
           is_code_expired?: boolean;
           is_published?: boolean;
           academic_term_id?: string | null;
@@ -440,12 +438,28 @@ export interface Database {
           check_in_form_url?: string;
           image_url?: string | null;
           thumbnail_url?: string | null;
-          check_in_code?: string | null;
           is_code_expired?: boolean;
           is_published?: boolean;
           academic_term_id?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      event_check_in_secrets: {
+        Row: {
+          event_id: string;
+          check_in_code: string;
+          created_at: string;
+        };
+        Insert: {
+          event_id: string;
+          check_in_code: string;
+          created_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          check_in_code?: string;
+          created_at?: string;
         };
       };
       feedback: {

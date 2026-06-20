@@ -192,14 +192,19 @@ export class EventsRepository {
    */
   async createEvent(eventData: CreateEventFormData): Promise<Event> {
     return withErrorHandling(async () => {
+      const { check_in_code, ...eventFields } = eventData;
       const { data, error } = await supabase
         .from('events')
-        .insert([eventData])
+        .insert([eventFields])
         .select()
         .single();
 
       if (error) throw error;
       if (!data) throw new DatabaseError('Failed to create event');
+
+      if (check_in_code) {
+        await this.setCheckInCode(data.id, check_in_code);
+      }
 
       return data;
     }, 'Failed to create event');
@@ -210,10 +215,11 @@ export class EventsRepository {
    */
   async updateEvent(id: string, eventData: UpdateEventFormData): Promise<Event> {
     return withErrorHandling(async () => {
+      const { check_in_code, ...eventFields } = eventData;
       const { data, error } = await supabase
         .from('events')
         .update({
-          ...eventData,
+          ...eventFields,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -223,8 +229,41 @@ export class EventsRepository {
       if (error) throw error;
       if (!data) throw new NotFoundError('Event not found', 'event', id);
 
+      if (check_in_code) {
+        await this.setCheckInCode(id, check_in_code);
+      }
+
       return data;
     }, 'Failed to update event');
+  }
+
+  /**
+   * Get the admin-only check-in code for an event
+   */
+  async getCheckInCode(eventId: string): Promise<string | null> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('event_check_in_secrets')
+        .select('check_in_code')
+        .eq('event_id', eventId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.check_in_code ?? null;
+    }, 'Failed to fetch check-in code');
+  }
+
+  /**
+   * Set (or replace) the admin-only check-in code for an event
+   */
+  async setCheckInCode(eventId: string, code: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase
+        .from('event_check_in_secrets')
+        .upsert({ event_id: eventId, check_in_code: code });
+
+      if (error) throw error;
+    }, 'Failed to set check-in code');
   }
 
   /**
@@ -248,16 +287,17 @@ export class EventsRepository {
     return withErrorHandling(async () => {
       // First, get the event to validate the check-in
       const event = await this.getEventById(eventId);
-      
+
       if (checkInType === 'code') {
         if (!code) {
           throw new ValidationError('Check-in code is required');
         }
-        
-        if (!event.check_in_code || event.check_in_code !== code) {
+
+        const storedCode = await this.getCheckInCode(eventId);
+        if (!storedCode || storedCode !== code) {
           throw new ValidationError('Invalid check-in code');
         }
-        
+
         if (event.is_code_expired) {
           throw new ValidationError('Check-in code has expired');
         }
