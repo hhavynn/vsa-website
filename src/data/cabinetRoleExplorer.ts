@@ -67,7 +67,7 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     roleSlug: "evp",
     roleName: "External Vice President",
     aliases: ["EVP", "ICC", "Intercollegiate Council Chair"],
-    boardGroup: "Culture & External",
+    boardGroup: "Executive Board",
     status: "current",
     shortDescription: "The bridge between UCSD VSA and the broader UVSA Southern California network.",
     responsibilities: [
@@ -87,7 +87,7 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     roleSlug: "treasurer",
     roleName: "Treasurer",
     aliases: [],
-    boardGroup: "Finance & Operations",
+    boardGroup: "Executive Board",
     status: "current",
     shortDescription: "The financial controller responsible for budgeting, reimbursements, and funding.",
     responsibilities: [
@@ -107,7 +107,7 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     roleSlug: "secretary",
     roleName: "Secretary",
     aliases: [],
-    boardGroup: "Finance & Operations",
+    boardGroup: "Executive Board",
     status: "current",
     shortDescription: "The organizational anchor, managing points, attendance, newsletters, and records.",
     responsibilities: [
