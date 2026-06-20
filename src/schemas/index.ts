@@ -121,6 +121,42 @@ export const DataRightsRequestFormSchema = z.object({
   { message: 'Reviewer must be different from the assigned processor', path: ['reviewer_id'] },
 );
 
+export const DataRightsDependencyPreviewSchema = z.object({
+  version: z.literal(1),
+  request_id: z.string().uuid(),
+  read_only: z.literal(true),
+  subject_signals: z.object({
+    has_auth_user_id: z.boolean(),
+    auth_user_exists: z.boolean(),
+    has_member_id: z.boolean(),
+    member_exists: z.boolean(),
+    has_display_name: z.boolean(),
+    subject_is_admin: z.boolean(),
+    identity_confidence: z.enum(['confirmed_link', 'explicit_identifier', 'needs_review']),
+  }).strict(),
+  counts: z.object({
+    profile_rows: z.number().int().nonnegative(),
+    linked_member_rows: z.number().int().nonnegative(),
+    candidate_member_rows: z.number().int().nonnegative(),
+    confirmed_member_rows: z.number().int().nonnegative(),
+    auth_attendance_rows: z.number().int().nonnegative(),
+    member_attendance_rows: z.number().int().nonnegative(),
+    user_points_rows: z.number().int().nonnegative(),
+    house_membership_rows: z.number().int().nonnegative(),
+    feedback_rows: z.number().int().nonnegative(),
+    legacy_chat_log_rows: z.number().int().nonnegative(),
+    import_raw_rows: z.number().int().nonnegative(),
+  }).strict(),
+  references: z.object({
+    avatar_reference_present: z.boolean(),
+    ai_usage_attributable: z.literal(false),
+    media_attribution: z.literal('needs_schema_verification'),
+    external_provider_review_required: z.boolean(),
+  }).strict(),
+  warnings: z.array(z.string().min(1)),
+  next_steps: z.array(z.string().min(1)),
+}).strict();
+
 // Type exports for TypeScript
 export type Event = z.infer<typeof EventSchema>;
 export type EventFormData = z.infer<typeof EventSchema>;
@@ -133,3 +169,4 @@ export type FeedbackFormData = z.infer<typeof FeedbackSchema>;
 export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;
 export type DataRightsRequestFormData = z.infer<typeof DataRightsRequestFormSchema>;
+export type DataRightsDependencyPreview = z.infer<typeof DataRightsDependencyPreviewSchema>;
