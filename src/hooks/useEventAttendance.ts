@@ -5,17 +5,18 @@ export function useEventAttendance() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const checkInWithCode = useCallback(async (eventId: string, code: string) => {
+  const checkInWithCode = useCallback(async (code: string) => {
     try {
       setLoading(true);
       setError(null);
 
       // Delegate all validation and point attribution to the server-side RPC.
-      // The server identifies the caller via auth.uid(), reads check_in_code
-      // privately, validates event state, inserts attendance, and updates
-      // user_points — the client never receives or submits the stored code.
+      // The server identifies the caller via auth.uid(), resolves the event
+      // from the privately-stored code, validates event state, inserts
+      // attendance, and updates user_points — the client never knows which
+      // event a code belongs to or reads the stored code itself.
       const { data, error: rpcError } = await supabase
-        .rpc('check_in_to_event', { p_event_id: eventId, p_code: code });
+        .rpc('check_in_to_event', { p_code: code });
 
       if (rpcError) {
         console.error('Error calling check_in_to_event:', rpcError);
@@ -23,14 +24,14 @@ export function useEventAttendance() {
       }
 
       if (!data?.success) {
-        throw new Error(data?.error ?? 'Failed to check in');
+        return { success: false as const, error: data?.error ?? 'Failed to check in' };
       }
 
-      return true;
+      return { success: true as const, eventName: data.event_name as string | undefined };
     } catch (err) {
       console.error('Error in checkInWithCode:', err);
       setError(err instanceof Error ? err : new Error('Failed to check in'));
-      return false;
+      return { success: false as const, error: 'Failed to check in' };
     } finally {
       setLoading(false);
     }

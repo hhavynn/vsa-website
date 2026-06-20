@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '../../../lib/supabase';
 import { usePointsContext } from '../../../context/PointsContext';
 import { useEventAttendance } from '../../../hooks/useEventAttendance';
 
@@ -24,38 +23,14 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
       setError(null);
       setSuccess(null);
 
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('check_in_code', code.toUpperCase())
-        .eq('is_published', true)
-        .single();
-
-      if (eventError) throw eventError;
-      if (!event) {
-        setError('Invalid code. Please try again.');
-        return;
-      }
-
-      if (event.is_code_expired) {
-        setError('This code has expired.');
-        return;
-      }
-
-      const eventDate = new Date(event.date);
-      const now = new Date();
-      const hoursSinceEvent = (now.getTime() - eventDate.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceEvent > 24) {
-        setError('This event check-in period has ended.');
-        return;
-      }
-
-      const checkedIn = await checkInWithCode(event.id, code.toUpperCase());
-      if (checkedIn) {
-        setSuccess(`Successfully checked in to ${event.name}!`);
+      const result = await checkInWithCode(code.toUpperCase());
+      if (result.success) {
+        setSuccess(`Successfully checked in to ${result.eventName ?? 'the event'}!`);
         setCode('');
         await refreshPoints();
         onPointsAdded?.();
+      } else {
+        setError(result.error ?? 'Invalid code. Please try again.');
       }
     } catch (err) {
       console.error('Error submitting code:', err);

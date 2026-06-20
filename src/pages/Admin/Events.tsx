@@ -6,6 +6,7 @@ import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
+import { eventsRepository } from '../../data/repos/events';
 import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
@@ -126,6 +127,7 @@ export default function AdminEvents() {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
+  const [editCheckInCode, setEditCheckInCode] = useState('');
 
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return '';
@@ -289,20 +291,21 @@ export default function AdminEvents() {
       const startTime = newEvent.start_time || '00:00';
       const isoDate = new Date(`${newEvent.date}T${startTime}`).toISOString();
       const academicTermId = await resolveAcademicTermId(isoDate, newEvent.academic_term_id);
-      const { error } = await supabase.from('events').insert([{
+      const { data: createdEvent, error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
         date: isoDate, location: newEvent.location,
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
         points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
-        check_in_code: checkInCode, is_code_expired: false,
+        is_code_expired: false,
         is_published: newEvent.is_published ?? true,
         academic_term_id: academicTermId,
         start_time: newEvent.start_time || null,
         end_time: newEvent.end_time || null,
         end_date: newEvent.end_date || null,
-      }]);
+      }]).select('id').single();
       if (error) throw error;
+      await eventsRepository.setCheckInCode(createdEvent.id, checkInCode);
       toast.success('Event created');
       setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null);
       refreshTerms();
@@ -361,7 +364,7 @@ export default function AdminEvents() {
         name: selectedEvent.name, description: selectedEvent.description,
         date: isoDate, location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
-        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null, check_in_code: selectedEvent.check_in_code,
+        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null,
         is_code_expired: selectedEvent.is_code_expired,
         is_published: selectedEvent.is_published ?? true,
         check_in_form_url: selectedEvent.check_in_form_url || '',
@@ -371,6 +374,9 @@ export default function AdminEvents() {
         end_date: selectedEvent.end_date || null,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
+      if (editCheckInCode) {
+        await eventsRepository.setCheckInCode(selectedEvent.id, editCheckInCode);
+      }
       await removeEventImage(imageUrlToRemove);
       await removeEventImage(thumbnailUrlToRemove);
       if (pointsChanged) {
@@ -383,6 +389,7 @@ export default function AdminEvents() {
       }
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
       setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
+      setEditCheckInCode('');
       refreshTerms();
       refreshEvents();
     } catch (err) {
@@ -391,8 +398,8 @@ export default function AdminEvents() {
   };
 
   const handleCopyCode = async () => {
-    if (!selectedEvent?.check_in_code) return;
-    await navigator.clipboard.writeText(selectedEvent.check_in_code);
+    if (!editCheckInCode) return;
+    await navigator.clipboard.writeText(editCheckInCode);
     setCopiedCode(true);
     toast.success('Copied');
     setTimeout(() => setCopiedCode(false), 2000);
@@ -449,6 +456,10 @@ export default function AdminEvents() {
             setSelectedEventOriginalPoints(event.points ?? 0);
             setEditImageFile(null);
             setEditImagePreview(null);
+            setEditCheckInCode('');
+            eventsRepository.getCheckInCode(event.id)
+              .then((code) => setEditCheckInCode(code ?? ''))
+              .catch(() => setEditCheckInCode(''));
           }}
           className="flex-1 rounded border px-4 py-2 text-xs font-medium transition-colors hover:bg-[var(--color-surface2)] sm:flex-none sm:px-3 sm:py-1.5"
           style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
@@ -616,7 +627,7 @@ export default function AdminEvents() {
             <div className="scrapbook-paper my-8 w-full max-w-5xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
                 <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit Event</h2>
-                <button onClick={() => setSelectedEvent(null)} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
+                <button onClick={() => { setSelectedEvent(null); setEditCheckInCode(''); }} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-5 p-6 sm:p-8">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
@@ -699,7 +710,7 @@ export default function AdminEvents() {
                 <div>
                   <label className={labelCls}>Check-in Code</label>
                   <div className="mt-1 flex gap-2">
-                    <input type="text" value={selectedEvent.check_in_code || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_code: e.target.value})} className={`${inputCls} mt-0 font-mono tracking-widest`} />
+                    <input type="text" value={editCheckInCode} onChange={e => setEditCheckInCode(e.target.value)} className={`${inputCls} mt-0 font-mono tracking-widest`} />
                     <button type="button" onClick={handleCopyCode} className={`shrink-0 rounded border px-4 py-2 text-sm font-semibold transition-colors ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400' : 'bg-[var(--color-surface2)] hover:bg-[var(--color-surface)]'}`} style={{ borderColor: copiedCode ? '' : 'var(--color-border)', color: copiedCode ? '' : 'var(--color-text)' }}>
                       {copiedCode ? 'Copied' : 'Copy'}
                     </button>
@@ -732,7 +743,7 @@ export default function AdminEvents() {
                   <button type="submit" disabled={editUploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
                     {editUploading ? 'Saving...' : 'Save Changes'}
                   </button>
-                  <button type="button" onClick={() => setSelectedEvent(null)} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                  <button type="button" onClick={() => { setSelectedEvent(null); setEditCheckInCode(''); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                     Cancel
                   </button>
                 </div>
