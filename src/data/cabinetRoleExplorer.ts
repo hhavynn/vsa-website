@@ -171,15 +171,15 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     status: "current",
     shortDescription: "The primary planners of VSA's social calendar, creating spaces for members to bond.",
     responsibilities: [
-      "Plan and execute General Body Meetings (GBMs) and aftersocials.",
-      "Organize large-scale social events like fall/winter retreats.",
-      "Manage event logistics, food, and activities.",
-      "Work with other orgs for collaborative mixers."
+      "Plan and lead logistics for larger social events and retreats.",
+      "Coordinate with cabinet for event execution, including GBMs and socials.",
+      "Plan and organize the annual Winter Retreat.",
+      "Work with Media Chairs to promote VSA social events when relevant."
     ],
     skillsBuilt: ["Event Planning", "Time Management", "Public Speaking", "Creativity"],
-    worksWith: ["Secretary", "Treasurer", "PR Chair"],
+    worksWith: ["Secretary", "Treasurer", "PR Chair", "Media Chairs"],
     bestFitFor: ["Outgoing planners", "Creative hosts", "Energetic speakers"],
-    busySeasons: ["Fall (Welcome Week)", "Retreats"],
+    busySeasons: ["Fall (Welcome Week)", "Winter Retreat"],
     sourceConfidence: "High",
     displayOrder: 8
   },
@@ -189,17 +189,17 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     aliases: ["Anh Chi Em Chair"],
     boardGroup: "Programming & Member Experience",
     status: "current",
-    shortDescription: "The leaders of the ACE (Anh Chi Em) mentorship program and House system.",
+    shortDescription: "The leaders of the ACE (Anh Chị Em) family and mentorship program, fostering a supportive community for general members.",
     responsibilities: [
       "Coordinate Big/Little pairings and family assignments.",
       "Organize ACE-specific events, reveals, and family competitions.",
-      "Manage the House System and track house points/standings.",
+      "Support family heads and organize family bonding events.",
       "Foster a welcoming environment for new members."
     ],
     skillsBuilt: ["Community Building", "Empathy", "Event Planning"],
     worksWith: ["IVP", "General Members", "Family Heads"],
     bestFitFor: ["Mentors", "Community builders", "Approachable individuals"],
-    busySeasons: ["Fall (Pairings/Reveals)", "Winter (Retreat)"],
+    busySeasons: ["Fall (Pairings/Reveals)", "Winter Retreat"],
     sourceConfidence: "High",
     displayOrder: 9
   },
@@ -290,12 +290,12 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     aliases: ["CPC", "Philanthropy"],
     boardGroup: "Culture & External",
     status: "current",
-    shortDescription: "The advocate for community service and the annual Collective Philanthropy Project (CPP).",
+    shortDescription: "The advocate for community service, cultural awareness, and philanthropic outreach within VSA.",
     responsibilities: [
-      "Educate members on the annual UVSA CPP beneficiary.",
-      "Plan volunteering events and community service opportunities.",
-      "Organize specific fundraising events dedicated to the CPP.",
-      "Promote cultural awareness within the general body."
+      "Plan volunteering events and community service opportunities for members.",
+      "Promote cultural awareness and historical education within the general body.",
+      "Connect with local San Diego Vietnamese cultural organizations, community groups, and charters to build exposure, outreach, and partnership opportunities for VSA.",
+      "Organize fundraising campaigns and events for philanthropic causes."
     ],
     skillsBuilt: ["Advocacy", "Event Planning", "Public Speaking"],
     worksWith: ["CRC", "Fundraising Chair", "EVP"],
@@ -310,17 +310,17 @@ export const cabinetRoles: CabinetRoleExplorerItem[] = [
     aliases: ["CRC", "Outreach"],
     boardGroup: "Culture & External",
     status: "current",
-    shortDescription: "The connector between UCSD VSA and the local San Diego Vietnamese community, including high schools.",
+    shortDescription: "The primary coordinator for the House System and cabinet liaison for San Diego community involvement.",
     responsibilities: [
-      "Maintain relationships with local high school VSAs.",
-      "Coordinate the High School Conference (HSC) program.",
-      "Connect VSA with local San Diego community events (e.g., Tet Festivals).",
-      "Act as a liaison to alumni."
+      "Serves as the main cabinet point person for the House System, coordinating house engagement, communication, and house-related planning across VSA.",
+      "Support House Heads and Parents in planning house events, tracking standings, and fostering house spirit.",
+      "Connect VSA members with external San Diego community events and local cultural activities.",
+      "Coordinate inter-house competitions and joint activities to maintain general member engagement."
     ],
     skillsBuilt: ["Mentorship", "Networking", "Event Planning"],
-    worksWith: ["CPC", "EVP", "President"],
-    bestFitFor: ["Mentors", "Locals", "Networkers"],
-    busySeasons: ["Winter/Spring (High School Conference)"],
+    worksWith: ["CPC", "EVP", "President", "House Heads", "ACE Chair"],
+    bestFitFor: ["Organizers", "Community builders", "House system enthusiasts"],
+    busySeasons: ["All year (weekly house tracking)"],
     sourceConfidence: "High",
     displayOrder: 15
   }
