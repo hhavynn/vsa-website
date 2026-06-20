@@ -73,7 +73,8 @@ export type DataRightsRequestEventType =
   | 'verification_changed'
   | 'workflow_updated'
   | 'details_updated'
-  | 'export_generated';
+  | 'export_generated'
+  | 'anonymization_completed';
 
 export interface Database {
   public: {
@@ -1724,6 +1725,22 @@ export interface Database {
       generate_data_rights_export: {
         Args: {
           p_request_id: string;
+        };
+        Returns: Json;
+      };
+      preview_data_rights_anonymization: {
+        Args: {
+          p_request_id: string;
+          p_subject_auth_user_id: string | null;
+          p_subject_member_id: string | null;
+        };
+        Returns: Json;
+      };
+      anonymize_data_rights_subject: {
+        Args: {
+          p_request_id: string;
+          p_subject_auth_user_id: string | null;
+          p_subject_member_id: string | null;
         };
         Returns: Json;
       };

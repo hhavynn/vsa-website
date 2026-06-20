@@ -58,7 +58,7 @@ This is a material minimization/exposure risk. Before implementation, a separate
 - `import_job_rows` stores raw source rows, CSV contact fields, match details, and errors.
 - Legacy `chat_logs` stores raw prompts/responses. Current Ask VSA stores hashed session/IP and usage metadata in `ai_chat_usage_logs`, while Gemini processes prompts/recent context.
 - Public buckets and external forms/albums can hold data outside the referencing DB row.
-- The admin request tracker and count/warning-only dependency preview are implemented. There is still no retention schedule, export service, destructive-action preview, or completion audit trail.
+- The admin request tracker, dependency preview, export RPC, and profile/member anonymization RPCs are implemented. There is still no approved retention schedule, Auth-account deletion workflow, automated raw chat/import cleanup, or media/provider removal workflow.
 
 ## Current data inventory
 
@@ -245,9 +245,9 @@ The admin-only RPC and tracker UI return counts, ambiguity warnings, attribution
 
 The admin-only RPC and tracker action enforce verified/approved export requests and explicit subject identifiers, reject conflicting or duplicate linked identities, validate a strict versioned bundle, and download it locally without persisting the payload. Export audit events contain category counts only. Private delivery and expiration policy remain **needs admin/VSA policy decision**.
 
-### PR C: Profile/member anonymization workflow
+### PR C: Profile/member anonymization workflow — backend implemented
 
-Separate dry-run/execution, define anonymized public behavior, resolve FKs forward-only, remove private fields/Auth IDs from public paths, and prevent bypass through current deletion. Acceptance: approved leaderboard/attendance/House invariants hold.
+Separate admin-only preview/execution RPCs require a verified approved request, exact saved identifiers, an assigned processor, and a different reviewer. The execution scrubs non-admin profile/member display fields, detaches direct feedback identity, preserves attendance/points/House history, and writes a counts-only audit event. Auth email/account changes, raw chat/import cleanup, Storage/media removal, deployed SQL verification, and any destructive admin UI remain deferred; see `docs/data-rights-anonymization-runbook.md`.
 
 ### PR D: Media/avatar removal workflow
 
