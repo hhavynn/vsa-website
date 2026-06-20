@@ -13,7 +13,7 @@ Use this workflow only for a verified VSA website anonymization request that has
 7. Stop if `ready_for_anonymization` is false. Do not work around blockers with ad hoc SQL.
 8. Compare the dry-run counts with the dependency preview and approval record.
 9. Call `anonymize_data_rights_subject` with the same three arguments.
-10. Verify the scrubbed fields and preserved history, complete manual follow-ups, then mark the request completed in the tracker.
+10. Confirm the request status is now `completed` in the tracker (the RPC sets this automatically). Complete any remaining manual follow-ups: Storage object removal, legacy chat and import content review, and external provider/media checks.
 
 The execution function reruns its own preview while holding the request row lock. Both RPCs recheck the caller's admin profile server-side. The explicit Auth and member arguments must exactly match the saved request, and linked identities must agree. Admin subjects are refused because role transfer and revocation need a separate approval workflow.
 
@@ -71,7 +71,7 @@ Run these checks in a non-production Supabase environment with synthetic users a
 5. Confirm profile display/avatar/optional Discord fields are scrubbed without changing `id`, `email`, or `is_admin`.
 6. Confirm the explicit member remains at the same UUID with `Deleted Member`, null contact/demographic/Auth fields, and unchanged House, points, and event count.
 7. Confirm direct feedback identity fields are null and feedback text was not returned by either RPC.
-8. Confirm one counts-only `anonymization_completed` event was appended. Confirm the request was not automatically marked completed.
+8. Confirm one counts-only `anonymization_completed` event was appended. Confirm the request status was automatically set to `completed`.
 9. Run the execution RPC again before completing the request. Confirm the member remains anonymized, no history changes, and the second audit event contains counts only.
 10. Mark the request completed through the tracker only after manual media/provider and retention follow-ups are recorded.
 
