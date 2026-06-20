@@ -19,6 +19,7 @@ import {
   dataRightsRequestsRepository,
 } from '../../../data/repos/dataRightsRequests';
 import {
+  DataRightsDependencyPreview,
   DataRightsRequestFormData,
   DataRightsRequestFormSchema,
 } from '../../../schemas';
@@ -47,6 +48,23 @@ const emptyForm: DataRightsRequestFormData = {
   internal_notes: '',
   decision: '',
 };
+
+const previewCountLabels: ReadonlyArray<{
+  key: keyof DataRightsDependencyPreview['counts'];
+  label: string;
+}> = [
+  { key: 'profile_rows', label: 'Profile rows' },
+  { key: 'linked_member_rows', label: 'Auth-linked members' },
+  { key: 'candidate_member_rows', label: 'Member candidates' },
+  { key: 'confirmed_member_rows', label: 'Confirmed members counted' },
+  { key: 'auth_attendance_rows', label: 'Auth attendance rows' },
+  { key: 'member_attendance_rows', label: 'Member attendance rows' },
+  { key: 'user_points_rows', label: 'User points rows' },
+  { key: 'house_membership_rows', label: 'House membership rows' },
+  { key: 'feedback_rows', label: 'Feedback rows' },
+  { key: 'legacy_chat_log_rows', label: 'Legacy chat rows' },
+  { key: 'import_raw_rows', label: 'Raw import audit rows' },
+];
 
 function requestToForm(request: DataRightsRequest): DataRightsRequestFormData {
   return {
@@ -173,10 +191,26 @@ export function DataRightsRequestTracker() {
     },
   );
 
+  const previewMutation = useMutation(
+    (requestId: string) =>
+      dataRightsRequestsRepository.getDataRightsDependencyPreview(requestId),
+    {
+      onError: () => {
+        toast.error('Unable to generate dependency preview');
+      },
+    },
+  );
+
   function startNewRequest() {
+    previewMutation.reset();
     setEditingId(null);
     reset(emptyForm);
     setSaveError(null);
+  }
+
+  function reviewRequest(requestId: string) {
+    previewMutation.reset();
+    setEditingId(requestId);
   }
 
   const onSubmit = handleSubmit((values) => {
@@ -286,7 +320,7 @@ export function DataRightsRequestTracker() {
                         <td className="px-4 py-3 text-text-secondary">{DATA_RIGHTS_VERIFICATION_LABELS[request.verification_status]}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-text-muted">{formatTimestamp(request.updated_at)}</td>
                         <td className="px-4 py-3 text-right">
-                          <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(request.id)}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => reviewRequest(request.id)}>
                             Review
                           </Button>
                         </td>
@@ -392,6 +426,46 @@ export function DataRightsRequestTracker() {
 
           {selectedRequest && (
             <Card className="mt-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-text-primary">Dependency preview</h2>
+                  <p className="mt-1 max-w-xl text-xs leading-5 text-text-muted">
+                    Read-only counts and warnings. This does not export, delete, anonymize, remove media, or show raw private content.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={previewMutation.isLoading}
+                  onClick={() => previewMutation.mutate(selectedRequest.id)}
+                  aria-describedby="dependency-preview-safety"
+                >
+                  Preview dependencies
+                </Button>
+              </div>
+              <p id="dependency-preview-safety" className="sr-only">
+                Generates read-only counts and warnings without changing subject data.
+              </p>
+
+              {previewMutation.isLoading && (
+                <p role="status" aria-live="polite" className="mt-4 text-sm text-text-muted">
+                  Generating dependency preview…
+                </p>
+              )}
+              {previewMutation.isError && (
+                <p role="alert" className="mt-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+                  The preview could not be generated. Confirm the migration is applied and your account still has admin access.
+                </p>
+              )}
+              {previewMutation.data && (
+                <DependencyPreviewPanel preview={previewMutation.data} />
+              )}
+            </Card>
+          )}
+
+          {selectedRequest && (
+            <Card className="mt-4">
               <h2 className="text-sm font-semibold text-text-primary">Audit history</h2>
               <p className="mt-1 text-xs text-text-muted">Append-only metadata events; note contents are never copied here.</p>
               {eventsQuery.isLoading ? (
@@ -413,6 +487,64 @@ export function DataRightsRequestTracker() {
             </Card>
           )}
         </section>
+      </div>
+    </div>
+  );
+}
+
+function DependencyPreviewPanel({ preview }: { preview: DataRightsDependencyPreview }) {
+  return (
+    <div className="mt-5 space-y-5" aria-live="polite">
+      <div className="rounded border border-border-strong bg-surface2 px-3 py-3 text-xs text-text-secondary">
+        <span className="font-semibold text-text-primary">Identity confidence:</span>{' '}
+        {preview.subject_signals.identity_confidence.replace(/_/g, ' ')}
+        <span className="mx-2" aria-hidden="true">·</span>
+        <span className="font-semibold text-text-primary">Admin profile:</span>{' '}
+        {preview.subject_signals.subject_is_admin ? 'Present' : 'Not found'}
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Record counts</h3>
+        <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+          {previewCountLabels.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between gap-4 rounded border border-border-strong bg-surface px-3 py-2">
+              <dt className="text-xs text-text-secondary">{label}</dt>
+              <dd className="font-mono text-sm font-semibold text-text-primary">{preview.counts[key]}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Reference checks</h3>
+        <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+          <div className="rounded border border-border-strong bg-surface px-3 py-2">
+            <dt className="text-xs text-text-muted">Avatar reference</dt>
+            <dd className="mt-1 text-sm text-text-primary">{preview.references.avatar_reference_present ? 'Present' : 'Not found'}</dd>
+          </div>
+          <div className="rounded border border-border-strong bg-surface px-3 py-2">
+            <dt className="text-xs text-text-muted">AI usage attribution</dt>
+            <dd className="mt-1 text-sm text-text-primary">Not safely attributable</dd>
+          </div>
+          <div className="rounded border border-border-strong bg-surface px-3 py-2 sm:col-span-2">
+            <dt className="text-xs text-text-muted">Media and external providers</dt>
+            <dd className="mt-1 text-sm text-text-primary">Manual review required · needs schema verification</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="rounded border border-amber-300 bg-amber-50 px-3 py-3 dark:border-amber-700 dark:bg-amber-950/30">
+        <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Warnings</h3>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-amber-900 dark:text-amber-100">
+          {preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-text-primary">Next review steps</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5 text-text-secondary">
+          {preview.next_steps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
       </div>
     </div>
   );

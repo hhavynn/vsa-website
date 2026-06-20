@@ -58,7 +58,7 @@ This is a material minimization/exposure risk. Before implementation, a separate
 - `import_job_rows` stores raw source rows, CSV contact fields, match details, and errors.
 - Legacy `chat_logs` stores raw prompts/responses. Current Ask VSA stores hashed session/IP and usage metadata in `ai_chat_usage_logs`, while Gemini processes prompts/recent context.
 - Public buckets and external forms/albums can hold data outside the referencing DB row.
-- There is no request tracker, retention schedule, export service, deletion preview, or dedicated audit trail.
+- The admin request tracker and count/warning-only dependency preview are implemented. There is still no retention schedule, export service, destructive-action preview, or completion audit trail.
 
 ## Current data inventory
 
@@ -86,9 +86,11 @@ Repository evidence only; deployed behavior **needs schema verification**.
 | Analytics/consent | Consent banner/GA; `localStorage` and GA4 | Local choice/authorized analytics | Explain local choice; provider export only if attributable | Change/clear choice; provider process if applicable | Retention/attribution policy needed |
 | Browser state | Theme, Auth, Ask VSA ID, interest, error recovery | `localStorage`/`sessionStorage` | Explain categories, never token contents | Clear locally/sign out | Never ask users to send session tokens |
 
-## Identity resolution and dependency preview
+## Identity resolution and dependency preview — implemented for read-only counts
 
-A future read-only preview must require an approved request ID and verified identifiers, then return:
+The admin-only tracker can call `get_data_rights_dependency_preview` for a saved request. It returns versioned counts, identity signals, attribution limits, warnings, and next steps only. It does not return raw rows or private content and does not export, delete, anonymize, or remove media. Name matches are candidate signals only and are not used to attribute downstream attendance, points, House, import, or other records.
+
+The preview covers:
 
 1. Auth ID and admin-role status.
 2. `user_profiles` and Auth-linked row counts.
@@ -229,7 +231,11 @@ Storage ownership, caching, migrated copies, and external permissions **needs sc
 
 ### PR A: Admin request tracker and runbook UI, non-destructive — implemented
 
-The admin-only `/admin/data-rights` tracker stores minimal request/audit metadata in `data_rights_requests` and append-only `data_rights_request_events`. It supports intake, verification, assignment, review, and decisions without acting on subject data. It stores no documents or payloads and provides no export, deletion, anonymization, or media-removal action. Subject dependency preview remains future work.
+The admin-only `/admin/data-rights` tracker stores minimal request/audit metadata in `data_rights_requests` and append-only `data_rights_request_events`. It supports intake, verification, assignment, review, and decisions without acting on subject data. It stores no documents or payloads and provides no export, deletion, anonymization, or media-removal action.
+
+### PR A.5: Read-only subject dependency preview — implemented
+
+The admin-only RPC and tracker UI return counts, ambiguity warnings, attribution limits, and review steps from explicit request identifiers. The preview is count/warning-only, creates no audit event, and performs no export, deletion, anonymization, media removal, Storage operation, or subject-data mutation. AI usage attribution and stable media/provider ownership remain **needs schema verification** and manual review.
 
 ### PR B: Admin-only export function
 

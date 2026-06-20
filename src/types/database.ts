@@ -1700,6 +1700,12 @@ export interface Database {
         };
         Returns: number;
       };
+      get_data_rights_dependency_preview: {
+        Args: {
+          p_request_id: string;
+        };
+        Returns: Json;
+      };
       smart_merge_members: {
         Args: {
           p_source_id: string;
