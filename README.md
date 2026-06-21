@@ -1,164 +1,148 @@
 # VSA Website
 
-A modern, responsive website for the Vietnamese Student Association (VSA) built with React, TypeScript, and Supabase.
+The website for the Vietnamese Student Association at UCSD — built with Create React App (TypeScript) and Supabase (PostgreSQL, Auth, Storage, Edge Functions).
 
-## 🚀 Features
+## Features
 
-- **Modern UI/UX**: Built with React 18, TypeScript, and Tailwind CSS
-- **Authentication**: Secure user authentication with Supabase Auth
-- **Event Management**: Create, manage, and display events with attendance tracking
-- **Points System**: Gamified points system for member engagement
-- **Admin Dashboard**: Comprehensive admin panel for content management
-- **Chat Assistant**: AI-powered chat assistant for member support
-- **Feedback System**: Collect and manage member feedback
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Real-time Updates**: Live data synchronization with Supabase
+- **Public pages** — home, events, gallery, cabinet, house system, ACE, VCN, Wild N Culture, internship program, UVSA network, leaderboard, and a no-account "Find My Points" lookup
+- **Ask VSA** — an AI chat assistant (`src/components/features/ai/VsaAiAssistant.tsx`) backed by the `vsa-ai-assistant` Supabase Edge Function (Gemini), answering only from admin-curated knowledge with a feedback loop for unanswered questions
+- **Admin dashboard** (`/admin/*`) — content calendar, events, gallery, cabinet, houses, ACE families, VCN archives, applications, AI knowledge base, AI feedback review, member/merge tools, analytics, data-rights requests, and a launch checklist
+- **Points & leaderboard** — attendance import, points calculation, and a public leaderboard
+- **House system** — current and archived house years, standings, and per-house detail pages
+- **Privacy / data rights** — public feedback form, privacy page, and an admin data-rights anonymization workflow
+- **Analytics** — Plausible and/or GA4 via an `analytics-proxy` Edge Function
 
-## 🛠️ Tech Stack
+Member account self-service (`/profile`) is intentionally parked for this release; `/points` remains a public, no-login lookup.
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Deployment**: Vercel, Docker, Kubernetes
-- **Monitoring**: Prometheus, Grafana
-- **Infrastructure**: Terraform, AWS
+## Tech Stack
 
-## 📋 Prerequisites
+- **Frontend**: React 18, TypeScript, Create React App (react-scripts), Tailwind CSS v3, Framer Motion
+- **Routing**: React Router v6, lazy-loaded pages
+- **Data fetching**: react-query, a repository layer in `src/data/repos/` wrapping Supabase queries
+- **Forms**: react-hook-form + zod (`src/schemas/`)
+- **Backend**: Supabase — Postgres, Auth, Storage, and Deno Edge Functions (`supabase/functions/`)
+- **Deployment**: Vercel (see `vercel.json`)
 
-Before you begin, ensure you have the following installed:
-- Node.js (v18 or higher)
-- npm or yarn
-- Git
-- Supabase CLI (optional, for local development)
+## Prerequisites
 
-## 🚀 Getting Started
+- Node.js 18+
+- npm
+- A Supabase project (for local development against real data)
 
-### 1. Clone the Repository
+## Getting Started
 
-```bash
-git clone https://github.com/your-username/vsa-website.git
-cd vsa-website
-```
-
-### 2. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Environment Setup
+### 2. Configure environment variables
 
-Create a `.env.local` file in the root directory and add the following variables:
+Copy `.env.example` to `.env.local` and fill in:
 
 ```env
-# Supabase Configuration
-REACT_APP_SUPABASE_URL=your_supabase_project_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+REACT_APP_SUPABASE_URL=
+REACT_APP_SUPABASE_ANON_KEY=
+REACT_APP_OPENAI_API_KEY=   # optional, legacy — current Ask VSA assistant runs server-side via Supabase Edge Functions
 
-# Optional: OpenAI API Key for chat assistant
-REACT_APP_OPENAI_API_KEY=your_openai_api_key
+# Optional analytics
+REACT_APP_PLAUSIBLE_DOMAIN=
+REACT_APP_GA4_MEASUREMENT_ID=
 ```
 
-**⚠️ Security Note**: Never commit `.env` files to version control. The `.env.example` file is provided as a template.
+Never commit `.env` or `.env.local` — they're gitignored.
 
-### 4. Database Setup
+### 3. Database & Edge Functions
 
-1. Set up a Supabase project at [supabase.com](https://supabase.com)
-2. Run the migration files in the `supabase/migrations/` directory
-3. Configure your Supabase URL and API keys in the `.env.local` file
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Apply migrations in `supabase/migrations/`
+3. Deploy the Edge Functions you need from `supabase/functions/` (notably `vsa-ai-assistant` and `analytics-proxy`) with the Supabase CLI, setting any required secrets (e.g. `GEMINI_API_KEY`)
 
-### 5. Start Development Server
+### 4. Run the dev server
 
 ```bash
 npm start
 ```
 
-The application will open at [http://localhost:3000](http://localhost:3000).
+Opens at [http://localhost:3000](http://localhost:3000).
 
-## 📁 Project Structure
+## Available Scripts
+
+- `npm start` — start the dev server
+- `npm test` — run tests (Jest + React Testing Library); use `-- --testPathPattern=<file>` for a single file
+- `npm run build` — production build
+- `npm run lint` — lint `src/**/*.{ts,tsx}`
+- `npm run format` — format with Prettier
+- `npm run analyze` — build then inspect the JS bundle with source-map-explorer (`analyze:css` / `analyze:all` variants also exist)
+- `npm run migrate:images:dry` / `migrate:images:apply` — Supabase-Storage-to-public-asset image migration (`scripts/migrate-supabase-images-to-public.ts`); `migrate:house-assets:*` scopes it to house assets
+
+## Project Structure
 
 ```
 vsa-website/
 ├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── Admin/          # Admin-specific components
-│   │   ├── Auth/           # Authentication components
-│   │   ├── Chat/           # Chat assistant components
-│   │   └── ui/             # Base UI components
-│   ├── pages/              # Page components
-│   ├── hooks/              # Custom React hooks
-│   ├── context/            # React context providers
-│   ├── lib/                # Utility libraries
-│   ├── types/              # TypeScript type definitions
-│   └── data/               # Data access layer
-├── supabase/               # Supabase configuration and migrations
-├── infrastructure/         # Terraform infrastructure code
-├── k8s/                   # Kubernetes deployment files
-├── monitoring/            # Monitoring configuration
-└── docs/                  # Documentation
+│   ├── components/
+│   │   ├── layout/        # Layout, Header/nav, Footer
+│   │   ├── features/      # Feature-grouped components (admin, ai, auth, cabinet, events, house, points, ...)
+│   │   ├── common/        # Shared utilities (ErrorBoundary, Modal, PageLoader, ...)
+│   │   └── ui/             # Base UI primitives (Button, Input, Card, Badge, Alert)
+│   ├── pages/              # Route-level pages, incl. pages/Admin/*
+│   ├── routes/             # Route table, ProtectedRoute, AdminRoute
+│   ├── data/
+│   │   ├── repos/          # Repository classes wrapping Supabase queries
+│   │   └── errors.ts       # Custom error classes + withErrorHandling()
+│   ├── context/             # AuthContext, ThemeContext, PointsContext
+│   ├── hooks/               # Custom React hooks
+│   ├── schemas/             # zod schemas for react-hook-form
+│   └── lib/                 # supabase client singleton, utils
+├── supabase/
+│   ├── functions/           # Edge Functions (vsa-ai-assistant, analytics-proxy, image migration triggers, ...)
+│   └── migrations/          # SQL migrations
+├── scripts/                 # graphify-run, image migration, RLS/import verification scripts
+└── docs/                    # Runbooks, architecture notes, checklists
 ```
 
-## 🚀 Deployment
+## Architecture Notes
 
-### Vercel (Recommended)
+See [CLAUDE.md](CLAUDE.md) for the authoritative architecture reference (provider hierarchy, route tiers, key tables, styling conventions).
 
-1. Connect your GitHub repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Docker
+This repo also includes [Graphify](docs/graphify-workflow.md), a generated knowledge graph of the codebase. For architecture questions, prefer:
 
 ```bash
-# Build the Docker image
-docker build -t vsa-website .
-
-# Run the container
-docker run -p 3000:3000 vsa-website
+./scripts/graphify-run query "<question>"
+./scripts/graphify-run path "<source>" "<target>"
+./scripts/graphify-run explain "<file or symbol>"
 ```
 
-### Kubernetes
+## Deployment
+
+Production deploys go through Vercel (`vercel.json` configures build output, security headers, and SPA fallback routing). `.github/workflows/deploy.yml` runs lint/test/build on push and pull request, then builds/pushes a Docker image to GitHub Container Registry and deploys to Vercel on `main` (the Vercel step is skipped if `VERCEL_TOKEN` isn't configured).
+
+### Optional: run in Docker
+
+A `Dockerfile` (multi-stage Node build → nginx) and `docker-compose.yml` are provided for running the production build in a container locally:
 
 ```bash
-# Apply Kubernetes configurations
-kubectl apply -f k8s/
+REACT_APP_SUPABASE_URL=... REACT_APP_SUPABASE_ANON_KEY=... docker compose up --build
 ```
 
-## 🔧 Available Scripts
+Serves the app at [http://localhost:3000](http://localhost:3000). This isn't required for day-to-day development — `npm start` is faster — but it's useful for verifying the production container build.
 
-- `npm start` - Start development server
-- `npm test` - Run tests
-- `npm run build` - Build for production
-- `npm run eject` - Eject from Create React App (not recommended)
+## Security
 
-## 🔒 Security
+- API keys and secrets live in environment variables / Supabase secrets, never in source
+- `.env*` files are gitignored
+- Supabase Auth handles authentication; admin access is gated by `is_admin` on `user_profiles` plus Row Level Security policies
+- See `docs/security-headers-and-csp.md` and `docs/rls-verification-checklist.md`
 
-- All API keys and sensitive data are stored in environment variables
-- `.env` files are gitignored and never committed
-- Supabase handles authentication and authorization
-- All user inputs are validated and sanitized
+## Contributing
 
-## 🤝 Contributing
+1. Create a feature branch (`git checkout -b feature/your-change`)
+2. Make your changes, with tests where it makes sense
+3. Run `npm run lint` and `npm test` before opening a PR
+4. Open a Pull Request against `main`
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## License
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support, email havynnnguyen9@gmail.com or create an issue in the GitHub repository.
-
-## 🙏 Acknowledgments
-
-- [Create React App](https://github.com/facebook/create-react-app)
-- [Supabase](https://supabase.com)
-- [Tailwind CSS](https://tailwindcss.com)
-- [React](https://reactjs.org)
-
----
-
-**Note**: This README is automatically updated. For the most current information, always refer to the latest version in the repository.
+No LICENSE file is currently checked into this repository.
