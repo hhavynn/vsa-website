@@ -89,6 +89,7 @@ const AdminAceFamilies = lazy(() => import("../pages/Admin/AceFamilies"));
 const AdminUVSASchools = lazy(() => import("../pages/Admin/UVSASchools"));
 const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
 const AdminAiKnowledge = lazy(() => import("../pages/Admin/AiKnowledge"));
+const AdminAiFeedback = lazy(() => import("../pages/Admin/AiFeedback"));
 const AdminApplications = lazy(() => import("../pages/Admin/Applications"));
 const AdminLaunchChecklist = lazy(() => import("../pages/Admin/LaunchChecklist"));
 const AdminDataRightsRequests = lazy(() => import("../pages/Admin/DataRightsRequests"));
@@ -197,6 +198,7 @@ export default function AppRoutes() {
                   <Route path="/admin/uvsa-schools" element={<AdminUVSASchools />} />
                   <Route path="/admin/external-events" element={<AdminExternalEvents />} />
                   <Route path="/admin/ai-knowledge" element={<AdminAiKnowledge />} />
+                  <Route path="/admin/ai-feedback" element={<AdminAiFeedback />} />
                   <Route path="/admin/applications" element={<AdminApplications />} />
                   <Route path="/admin/launch-checklist" element={<AdminLaunchChecklist />} />
                   <Route path="/admin/data-rights" element={<AdminDataRightsRequests />} />

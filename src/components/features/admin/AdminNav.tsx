@@ -36,6 +36,7 @@ const NAV_GROUPS = [
     { to: '/admin/launch-checklist', label: 'Launch Checklist' },
     { to: '/admin/analytics', label: 'Analytics' },
     { to: '/admin/feedback', label: 'Feedback' },
+    { to: '/admin/ai-feedback', label: 'Ask VSA Feedback' },
   ]},
 ];
 
