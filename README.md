@@ -150,7 +150,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-For support, email support@vsa-website.com or create an issue in the GitHub repository.
+For support, email havynnnguyen9@gmail.com or create an issue in the GitHub repository.
 
 ## 🙏 Acknowledgments
 
