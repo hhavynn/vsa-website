@@ -41,3 +41,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.ai_knowledge_base WHERE title = 'How do I
 INSERT INTO public.ai_knowledge_base (title, content, category, source_type, source_url, priority, tags)
 SELECT 'How do I contact VSA or report website feedback?', 'For general questions, you can reach out via our official Instagram or talk to a cabinet member. If you want to report a bug or provide feedback about the website, use the /feedback page!', 'contact', 'faq', '/feedback', 80, array['contact', 'feedback', 'bug', 'report']
 WHERE NOT EXISTS (SELECT 1 FROM public.ai_knowledge_base WHERE title = 'How do I contact VSA or report website feedback?');
+
+INSERT INTO public.ai_knowledge_base (title, content, category, source_type, source_url, priority, tags)
+SELECT 'How do I join a House?', 'To join the House System, watch for sign-up or application announcements at the start of the academic year (usually during Fall quarter). You can sign up through the /house page, check open forms on the homepage, or follow official VSA channels like @vsaatucsd on Instagram for updates.', 'house', 'faq', '/house', 95, array['house', 'join house', 'house sign-up', 'sorting', 'applications']
+WHERE NOT EXISTS (SELECT 1 FROM public.ai_knowledge_base WHERE title = 'How do I join a House?');
