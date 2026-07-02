@@ -29,14 +29,13 @@ interface AssistantResponse {
 }
 
 const STARTER_QUESTIONS = [
-  'How do I get involved?',
+  'What events are coming up?',
+  'How do I join a House?',
   'What is ACE?',
-  'How do House points work?',
-  'Where can I find upcoming events?',
-  'How do I join the Intern Program?',
-  'What is VCN?',
-  'What is WNC?',
-  'How do I check my points?'
+  'How do points work?',
+  'How do I get involved?',
+  'Who is on cabinet?',
+  'What is VCN?'
 ];
 
 const MAX_MESSAGES = 12;
@@ -152,6 +151,62 @@ function assistantToneClasses(status?: AssistantStatus) {
     return 'border-sky-200 bg-sky-50 text-sky-950 shadow-[0_6px_20px_rgba(14,165,233,0.08)] dark:border-sky-500/40 dark:bg-sky-950/30 dark:text-sky-100';
   }
   return 'border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text2)] shadow-[0_6px_20px_rgba(15,23,42,0.06)]';
+}
+
+function parseMessageContent(content: string) {
+  const parts = [];
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    const matchIndex = match.index;
+    const [fullMatch, label, url] = match;
+
+    if (matchIndex > lastIndex) {
+      parts.push(content.substring(lastIndex, matchIndex));
+    }
+
+    const isInternal = url.startsWith('/') && !url.startsWith('//');
+    const isSafeUrl = /^(https?:)?\/\//i.test(url) || isInternal;
+
+    // eslint-disable-next-line no-script-url
+    if (isSafeUrl && !url.toLowerCase().startsWith('javascript:')) {
+      if (isInternal) {
+        parts.push(
+          <Link
+            key={`${matchIndex}-${url}`}
+            to={url}
+            className="font-semibold text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+          >
+            {label}
+          </Link>
+        );
+      } else {
+        parts.push(
+          <a
+            key={`${matchIndex}-${url}`}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+          >
+            {label}
+          </a>
+        );
+      }
+    } else {
+      parts.push(fullMatch);
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(content.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : content;
 }
 
 export function VsaAiAssistant() {
@@ -294,6 +349,15 @@ export function VsaAiAssistant() {
     }
   }
 
+  async function handleRetry(messageIndex: number) {
+    const userMsg = messages.slice(0, messageIndex).reverse().find((m) => m.role === 'user');
+    if (!userMsg) return;
+
+    setErrorText(null);
+    setMessages((current) => current.slice(0, messageIndex));
+    await sendMessage(userMsg.content);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     sendMessage(input);
@@ -433,7 +497,7 @@ export function VsaAiAssistant() {
                     Public VSA helper
                   </div>
                   <p className="font-sans text-[15px] font-bold leading-6" style={{ color: 'var(--color-text)' }}>
-                    Ask about VSA at UCSD programs, events, points, House, ACE, VCN, WNC, or externals.
+                    Ask me about VSA events, houses, points, ACE, intern program, VCN, WNC, cabinet, or getting involved.
                   </p>
                   <p className="mt-1 font-sans text-xs leading-5" style={{ color: 'var(--color-text3)' }}>
                     If I do not have approved info, I will say so.
@@ -461,7 +525,7 @@ export function VsaAiAssistant() {
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((message) => (
+                {messages.map((message, idx) => (
                   <motion.div
                     key={message.id}
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 10, scale: 0.95 }}
@@ -486,8 +550,20 @@ export function VsaAiAssistant() {
                         {message.role === 'assistant' && isFallbackMessage(message) && (
                           <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Not sure yet</p>
                         )}
-                        {message.content}
+                        {parseMessageContent(message.content)}
                       </div>
+                      {message.role === 'assistant' && message.status === 'error' && (
+                        <div className="mt-2 flex items-center justify-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRetry(idx)}
+                            disabled={loading}
+                            className="rounded border border-rose-300 bg-rose-50 px-2.5 py-1 font-sans text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-950/20 dark:text-rose-300 disabled:opacity-50"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      )}
                       {message.role === 'assistant' && isFallbackMessage(message) && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {['Events', 'Get Involved', 'Applications'].map((label) => (
@@ -655,8 +731,9 @@ export function VsaAiAssistant() {
                 <SendIcon />
               </motion.button>
             </div>
-            <div id="vsa-ai-character-count" className="mt-1 text-right font-mono text-[10px]" style={{ color: 'var(--color-text3)' }}>
-              {input.length}/{MAX_INPUT_LENGTH}
+            <div id="vsa-ai-character-count" className="mt-1 flex items-center justify-between font-sans text-[10px]" style={{ color: 'var(--color-text3)' }}>
+              <span className="italic leading-normal text-left max-w-[75%]">I may be wrong; check official VSA channels for critical deadlines.</span>
+              <span className="font-mono">{input.length}/{MAX_INPUT_LENGTH}</span>
             </div>
           </form>
           </motion.section>

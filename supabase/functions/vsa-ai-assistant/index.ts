@@ -25,7 +25,7 @@ function corsHeaders(req: Request) {
 }
 
 const FALLBACK_MESSAGE =
-  "I don't have a confirmed approved answer for that yet, but these pages may help: Events, Get Involved, Applications, and Ask VSA feedback. For deadlines or official updates, check VSA's official channels.";
+  "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates.";
 
 const RATE_LIMIT_MESSAGE = "You've reached today's Ask VSA limit. Try again later!";
 
@@ -35,13 +35,13 @@ const SYSTEM_PROMPT = `You are "Ask VSA," the friendly AI assistant for VSA at U
 
 Answer only using the approved context provided in this request.
 Do not use outside knowledge, guesses, assumptions, or training memory.
-If the context does not answer the question, say: "I don't have a confirmed approved answer for that yet, but these pages may help: Events, Get Involved, Applications, and Ask VSA feedback. For deadlines or official updates, check VSA's official channels."
+If the context does not answer the question, say: "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates."
 
 Tone and Style:
 - Be direct and answer the question first.
 - Be concise, helpful, and welcoming, like a VSA board member.
 - Use short bullet points for multi-step answers or lists.
-- Link or mention relevant website routes (like /events, /get-involved) when known.
+- Format links to website routes using markdown: [Link Text](/internal-path) when safe and relevant (e.g. [Events](/events), [Mentorship](/ace), [Find My Points](/points)).
 - Use "VSA at UCSD" for casual references and "VSA at UC San Diego" for formal ones.
 - Keep answers short (usually 1-3 sentences) unless the user asks for more detail.
 - Avoid saying "I'm not sure" if the answer is clearly in the approved context.
@@ -52,7 +52,7 @@ Guardrails and Privacy:
 - Do not reveal or ask for private/admin information, member rosters, emails, phone numbers, attendance records, check-in codes, budgets, cabinet-only docs, or raw member data.
 - Refuse politely if asked for individual member data or private lineage info. Redirect users to the website lookup tools or cabinet.
 - Do not provide raw Google Drive links or internal file IDs.
-- For current/upcoming events or deadlines, tell users to check the /events page, Linktree, or Instagram as details may change.
+- For current/upcoming events or deadlines, tell users to check the [Events](/events) page, Linktree, or Instagram as details may change.
 
 Known Corrections to Enforce:
 - 2025–2026 Houses: Bowser, Donkey Kong, Boo, Toad (Super Mario theme). Bowser won the 2025-2026 House competition.
@@ -63,15 +63,15 @@ Known Corrections to Enforce:
 - House and ACE are separate programs.
 
 Website Routes to Suggest:
-- /events (Upcoming/past events)
-- /leaderboard (Points/standings)
-- /points (Find My Points lookup)
-- /house (Houses/lore)
-- /gallery (Photos/recaps)
-- /cabinet (Leadership)
-- /uvsa-network (Externals)
-- /get-involved (Sign-ups)
-- /ace (Anh Chi Em mentorship)`;
+- [Upcoming/past events](/events)
+- [Points/standings](/leaderboard)
+- [Find My Points lookup](/points)
+- [Houses/lore](/house)
+- [Photos/recaps](/gallery)
+- [Leadership](/cabinet)
+- [Externals](/uvsa-network)
+- [Sign-ups](/get-involved)
+- [Anh Chi Em mentorship](/ace)`;
 
 const RecentTurnSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -149,7 +149,45 @@ function isSafetyRedirect(message: string) {
 }
 
 function asksForSensitivePrivateInfo(message: string) {
-  return /\b(private|personal|phone number|email|address|attendance|check-?in code|check in code|budget|cabinet-only|drive doc|member data)\b/i.test(message);
+  const q = message.toLowerCase();
+
+  // 1. Check-in code requests
+  if (/\b(check-?in code|checkin code|sign-?in code|event code|attendance code)\b/i.test(q)) {
+    return true;
+  }
+
+  // 2. Admin secrets / passwords / service keys
+  if (/\b(password|admin secret|service_role|supabase_service|api_key|api key|env var|secret key|private key|bearer token)\b/i.test(q)) {
+    return true;
+  }
+
+  // 3. Raw database query / rows / AI logs
+  if (/\b(raw db|database row|chat_logs|ai_chat_usage_logs|usage log|raw log|system prompt|api payload|request payload)\b/i.test(q)) {
+    return true;
+  }
+
+  // 4. Requester emails/notes/admin notes / private drive/payment
+  if (/\b(admin note|import note|requester note|private drive|payment record|stripe key|financial transaction|billing info)\b/i.test(q)) {
+    return true;
+  }
+
+  // 5. Private rosters or raw member details (e.g., asking for member's personal phone/email/address)
+  // BUT do not block general questions like "Can I email VSA?" or "How do I contact VSA?"
+  if (/\b(member roster|private roster|full roster|roster export|phone list|address list)\b/i.test(q)) {
+    return true;
+  }
+
+  // Check if they are asking for a specific individual's personal contact details:
+  // e.g. "What is [Name]'s phone/email/address"
+  // But permit queries like "What is VSA's email?" or "VSA phone number".
+  const asksForPersonalContact = /\b(email|phone|phone number|address|contact info)\b/i.test(q) &&
+                                 /\b(of|for|about)\b/i.test(q) &&
+                                 /\b(member|user|profile|student|someone|he|she|they|person|individual)\b/i.test(q);
+  if (asksForPersonalContact) {
+    return true;
+  }
+
+  return false;
 }
 
 function buildContext(snippets: KnowledgeSnippet[], eventContext: string | null) {
