@@ -31,6 +31,7 @@ const INVOLVEMENT_LINKS: NavLink[] = [
 ];
 
 const EXPLORE_LINKS: NavLink[] = [
+  { path: '/wrapped',       label: "Wrapped '25–'26", emoji: '🎁' },
   { path: '/gallery',       label: 'Gallery',        emoji: '📷' },
   { path: '/cabinet',       label: 'Cabinet',        emoji: '🗂️' },
   { path: '/uvsa-network',  label: 'UVSA Network',   emoji: '🌐' },
