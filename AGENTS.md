@@ -65,9 +65,9 @@ supabase/
   config.toml
   migrations/                    SQL migration files (source of truth for schema)
   functions/                     Supabase Edge Functions
-schema.sql                       Full DB schema snapshot (reference only)
 tailwind.config.js               Brand tokens, type scale, spacing grid
 vercel.json                      Static-build config + SPA fallback routes
+Dockerfile / docker-compose.yml  Optional local containerized run (nginx-served build)
 ```
 
 ---
@@ -79,7 +79,7 @@ vercel.json                      Static-build config + SPA fallback routes
 npm install
 
 # 2. Create local env file
-cp env.example .env.local
+cp .env.example .env.local
 # Fill in:
 #   REACT_APP_SUPABASE_URL=
 #   REACT_APP_SUPABASE_ANON_KEY=
@@ -272,7 +272,6 @@ git push -u origin feat/my-feature
 - **Don't add inline `style` props** for anything Tailwind can handle.
 - **Don't write comments that explain what the code does.** Only add a comment when the *why* is non-obvious (hidden constraint, workaround, subtle invariant).
 - **Don't run `npm run eject`.** Ejecting CRA is permanent.
-- **Don't edit `schema.sql` directly.** It's a reference snapshot; schema changes belong in `supabase/migrations/`.
 - **Don't add OpenAI API calls** outside of `src/components/features/ai/`.
 - **Don't touch `src/react-app-env.d.ts`** — CRA auto-generates it.
 - **Don't add error handling for code paths that can't fail.** Only validate at system boundaries (user input, external API responses).
