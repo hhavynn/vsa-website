@@ -170,6 +170,7 @@ function parseMessageContent(content: string) {
     const isInternal = url.startsWith('/') && !url.startsWith('//');
     const isSafeUrl = /^(https?:)?\/\//i.test(url) || isInternal;
 
+    // eslint-disable-next-line no-script-url
     if (isSafeUrl && !url.toLowerCase().startsWith('javascript:')) {
       if (isInternal) {
         parts.push(
