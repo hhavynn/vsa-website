@@ -60,7 +60,16 @@ The only public read surface: `member_id` + `avatar_url` for **approved** reques
 ### Storage Abuse & Cleanup Considerations
 Since any public visitor can upload files to the `pending/` directory of the `member-photo-requests` bucket to submit a photo request:
 1. **Private Bucket**: The `member-photo-requests` bucket is completely private. Anonymous users have no read, update, or delete access to it. They can only perform `INSERT`.
-2. **Stale Uploads Cleanup**: Stale/unapproved files in `pending/` that do not transition to `approved` should be cleaned up periodically (e.g. removing objects in `pending/` older than 7 days via database trigger or a CRON job).
+2. **Database Rate Limits**: Enforced via a `BEFORE INSERT` trigger on the database (`guard_member_photo_request_rate_limit`):
+   - **Max 3 pending requests per matched member**: Prevents spamming requests for a single individual.
+   - **Max 5 pending requests per normalized requester email**: Prevents a single email address from flooding the admin inbox with requests.
+   - Triggers throw a generic database error message on violation to avoid leaking email/member details.
+3. **Honeypot Field**: The public form contains a visually hidden honeypot text field (`middle_name`) styled off-screen. Real users cannot see or focus/tab into it, but spam bots will fill it. If filled, the client UI silently drops the submission (exhibiting success behavior on-screen but performing no uploads or database writes).
+4. **Stale Uploads Cleanup**: A utility script is available at `scripts/cleanup-stale-photo-requests.mjs` to automatically clean up orphaned pending uploads (stale objects older than 7 days that do not have an active pending database row).
+   - Run in Dry-Run mode: `node scripts/cleanup-stale-photo-requests.mjs`
+   - Run actual cleanup: `CONFIRM_DELETE=true node scripts/cleanup-stale-photo-requests.mjs`
+   - *Future option:* Set up a scheduled cron pipeline to run this script periodically.
+5. **Egress & Cloudflare Note**: If spam persists, a future mitigation is adding a Cloudflare page rule to rate limit `/storage/v1/object/member-photo-requests/` API path. Since Supabase storage is routed directly to the database API endpoint, Cloudflare is deferred until actual abuse is observed.
 
 ## Admin workflow (`/admin/photo-requests`)
 
