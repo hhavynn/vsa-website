@@ -45,7 +45,7 @@ The application has successfully transitioned from an unhardened client-authorit
 - **Google Analytics Consent Gate:** Implemented [AnalyticsConsentContext](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/src/context/AnalyticsConsentContext.tsx) and [RouteTracker](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/src/components/common/RouteTracker.tsx). Script injection and tracking are completely blocked until the user selects "Allow analytics."
 - **Privacy Notice:** Added a plain-language [Privacy Notice page](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/src/pages/Privacy.tsx) documenting exact data uses, Ask VSA AI privacy constraints, tracking preferences, and data-rights procedures.
 - **Data-Rights Request Tracker:** Created [data_rights_requests](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/supabase/migrations/20260619010000_add_data_rights_request_tracker.sql) database tables and history trackers so admins can intake, assign, verify, and document data privacy requests safely.
-- **Admin Export Function:** Built the [generate_data_rights_export](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/supabase/migrations/20260619030000_add_data_rights_export_function.sql) DB function to compile a user's full profile, memberships, feedback, and attendance history into a standard JSON bundle.
+- **Admin Export Function:** Built the [generate_data_rights_export](file:///Users/havyn/Documents/CS/vsa-website-final-compliance-worktree/supabase/migrations/20260619030000_add_data_rights_export_function.sql) DB function with allowlists, server-side checks, and validation schemas to compile a user's profile, memberships, feedback, and attendance history into a JSON bundle. Note that this logic still needs live Supabase/RLS verification to ensure data boundaries are enforced.
 - **Public Roster Exposure Minimization:** Removed authentication UUIDs, sensitive contact columns, and unverified data from public leaderboard and member view scripts, replacing them with safe public profiles.
 
 ### Remaining Policy Decisions
@@ -55,7 +55,7 @@ The application has successfully transitioned from an unhardened client-authorit
 
 ### Remaining Live Verification Checks
 - **Analytics Script Blocking:** Open browser developer tools before granting consent, reload pages, and verify that `googletagmanager.com/gtag/js` is not loaded and no `_ga` cookies are set.
-- **LocalStorage Choice Persistence:** Confirm consent choices ('granted' or 'declined') persist correctly across page loads in local storage.
+- **LocalStorage Choice Persistence:** Confirm consent choices ('granted' or 'declined') persist across page loads in local storage. Note: while localStorage is acceptable for storing non-sensitive user preferences like consent state, it must not be used for storing secrets, tokens, or private user data, and production-level behavior still needs browser verification.
 
 ---
 
