@@ -149,6 +149,23 @@ export class HouseEventsRepository {
     }, 'Failed to fetch upcoming house event previews');
   }
 
+  async getPublicEventsInRange(from: string, to: string, limit = 200): Promise<HouseEvent[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('house_events')
+        .select(PUBLIC_FIELDS)
+        .eq('is_published', true)
+        .gte('event_date', from)
+        .lte('event_date', to)
+        .order('event_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      return this.mapRelations(data);
+    }, 'Failed to fetch house events for calendar');
+  }
+
   async getAdminEvents(academicYearStart: number | null): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       let query = supabase

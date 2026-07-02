@@ -16,6 +16,9 @@ const Home = lazy(() =>
 const Events = lazy(() =>
   import("../pages/Events").then((module) => ({ default: module.Events }))
 );
+const Calendar = lazy(() =>
+  import("../pages/Calendar").then((module) => ({ default: module.Calendar }))
+);
 const Leaderboard = lazy(() =>
   import("../pages/Leaderboard").then((module) => ({
     default: module.Leaderboard,
@@ -146,6 +149,7 @@ export default function AppRoutes() {
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/calendar" element={<Calendar />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cabinet" element={<Cabinet />} />
               <Route path="/get-involved" element={<GetInvolved />} />

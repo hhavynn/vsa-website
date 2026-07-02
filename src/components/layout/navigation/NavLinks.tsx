@@ -11,6 +11,7 @@ interface NavItem {
 // handles home navigation. "Get Involved" is handled by GetInvolvedDropdown.
 const FLAT_NAV_ITEMS: NavItem[] = [
   { path: '/events',       label: 'Events' },
+  { path: '/calendar',     label: 'Calendar' },
   { path: '/leaderboard',  label: 'Leaderboard' },
   { path: '/gallery',      label: 'Gallery' },
   { path: '/cabinet',      label: 'Cabinet' },
