@@ -7,6 +7,7 @@ import { type FindMyPointsEntry } from '../../../hooks/useFindMyPoints';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
 import { supabase } from '../../../lib/supabase';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { Avatar } from '../avatar/Avatar';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -327,6 +328,7 @@ export interface MyVSACardProps {
   isAllTime: boolean;
   ambiguous: boolean;
   onReset: () => void;
+  avatarUrl?: string | null;
 }
 
 const CORRECTION_HREF = '/feedback?type=event&title=Points%20correction';
@@ -338,6 +340,7 @@ export function MyVSACard({
   isAllTime,
   ambiguous,
   onReset,
+  avatarUrl,
 }: MyVSACardProps) {
   const { data: attended = [] } = useRecentAttendance(entry.member_id);
   
@@ -366,7 +369,11 @@ export function MyVSACard({
         <div className="px-6 pt-6 pb-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              <InitialsAvatar name={entry.full_name || 'VSA Member'} size={64} />
+              {avatarUrl ? (
+                <Avatar size="lg" avatarUrl={avatarUrl} />
+              ) : (
+                <InitialsAvatar name={entry.full_name || 'VSA Member'} size={64} />
+              )}
               <div className="min-w-0">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-wider opacity-60" style={{ color: 'var(--color-text3)' }}>
                   Your VSA Snapshot
