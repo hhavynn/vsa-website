@@ -60,6 +60,8 @@ The RPC deliberately does not:
 
 These categories need separate retention/legal-hold decisions, exact object or provider identifiers, and review that protects records involving other people. Clearing an avatar URL hides the profile reference but does not prove the object or cached copies were removed.
 
+For photos submitted through the member photo request workflow, admins can complete the avatar-object deletion step from `/admin/photo-requests` ("Remove from public display"), which deletes that request's published thumbnail and pending original and records an audit event; see `docs/member-photo-requests.md`. Legacy self-uploaded objects under `avatars/<user_id>/…` still require manual cleanup.
+
 ## Post-migration SQL checks
 
 Run these checks in a non-production Supabase environment with synthetic users and members. Never paste real identifiers, emails, request text, or returned private data into tickets or logs.

@@ -1,5 +1,6 @@
 export type ImageUploadPreset =
   | 'avatar'
+  | 'avatarThumbnail'
   | 'cabinet'
   | 'cabinetThumbnail'
   | 'event'
@@ -26,6 +27,7 @@ const MB = 1024 * 1024;
 
 const PRESETS: Record<ImageUploadPreset, CompressionOptions> = {
   avatar: { maxWidth: 512, maxHeight: 512, quality: 0.78, maxInputBytes: 5 * MB, outputType: 'image/webp' },
+  avatarThumbnail: { maxWidth: 256, maxHeight: 256, quality: 0.78, maxInputBytes: 5 * MB, outputType: 'image/webp' },
   cabinet: { maxWidth: 900, maxHeight: 900, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   cabinetThumbnail: { maxWidth: 420, maxHeight: 420, quality: 0.76, maxInputBytes: 8 * MB, outputType: 'image/webp' },
   event: { maxWidth: 1200, maxHeight: 1200, quality: 0.78, maxInputBytes: 10 * MB, outputType: 'image/webp' },

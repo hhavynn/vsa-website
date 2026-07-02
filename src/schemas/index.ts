@@ -119,6 +119,23 @@ export const DataRightsRequestFormSchema = z.object({
   { message: 'Reviewer must be different from the assigned processor', path: ['reviewer_id'] },
 );
 
+export const MemberPhotoRequestFormSchema = z.object({
+  submitted_name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(200, 'Name must be 200 characters or fewer'),
+  submitted_email: z
+    .string()
+    .trim()
+    .email('Enter a valid email address')
+    .max(200, 'Email must be 200 characters or fewer'),
+  note_to_admins: z.string().max(1000, 'Note must be 1,000 characters or fewer'),
+  consent_confirmed: z.literal(true, {
+    errorMap: () => ({ message: 'You must confirm consent to submit a photo' }),
+  }),
+}).strict();
+
 export const DataRightsDependencyPreviewSchema = z.object({
   version: z.literal(1),
   request_id: z.string().uuid(),
@@ -273,5 +290,6 @@ export type FeedbackFormData = z.infer<typeof FeedbackSchema>;
 export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;
 export type DataRightsRequestFormData = z.infer<typeof DataRightsRequestFormSchema>;
+export type MemberPhotoRequestFormData = z.infer<typeof MemberPhotoRequestFormSchema>;
 export type DataRightsDependencyPreview = z.infer<typeof DataRightsDependencyPreviewSchema>;
 export type DataRightsExportBundle = z.infer<typeof DataRightsExportBundleSchema>;

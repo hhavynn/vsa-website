@@ -75,6 +75,8 @@ export type DataRightsRequestEventType =
   | 'details_updated'
   | 'export_generated'
   | 'anonymization_completed';
+export type MemberPhotoRequestStatus = 'pending' | 'approved' | 'rejected' | 'removed';
+export type MemberPhotoRequestEventAction = 'submitted' | 'approved' | 'rejected' | 'removed';
 
 export interface Database {
   public: {
@@ -805,6 +807,88 @@ export interface Database {
           event_type?: DataRightsRequestEventType;
           event_summary?: string;
           created_by?: string | null;
+          created_at?: string;
+        };
+      };
+      member_photo_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          matched_member_id: string | null;
+          submitted_name: string;
+          submitted_email: string;
+          note_to_admins: string | null;
+          consent_confirmed: boolean;
+          storage_path_pending: string;
+          storage_path_approved: string | null;
+          approved_avatar_url: string | null;
+          status: MemberPhotoRequestStatus;
+          admin_notes: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          matched_member_id?: string | null;
+          submitted_name: string;
+          submitted_email: string;
+          note_to_admins?: string | null;
+          consent_confirmed: boolean;
+          storage_path_pending: string;
+          storage_path_approved?: string | null;
+          approved_avatar_url?: string | null;
+          status?: MemberPhotoRequestStatus;
+          admin_notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          matched_member_id?: string | null;
+          submitted_name?: string;
+          submitted_email?: string;
+          note_to_admins?: string | null;
+          consent_confirmed?: boolean;
+          storage_path_pending?: string;
+          storage_path_approved?: string | null;
+          approved_avatar_url?: string | null;
+          status?: MemberPhotoRequestStatus;
+          admin_notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      member_photo_request_events: {
+        Row: {
+          id: string;
+          request_id: string;
+          action: MemberPhotoRequestEventAction;
+          actor: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          action: MemberPhotoRequestEventAction;
+          actor?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_id?: string;
+          action?: MemberPhotoRequestEventAction;
+          actor?: string | null;
+          note?: string | null;
           created_at?: string;
         };
       };
@@ -1704,6 +1788,22 @@ export interface Database {
           latest_activity_at: string | null;
         };
       };
+      my_member_photo_requests: {
+        Row: {
+          id: string;
+          status: MemberPhotoRequestStatus;
+          submitted_name: string;
+          storage_path_pending: string;
+          created_at: string;
+          reviewed_at: string | null;
+        };
+      };
+      public_member_avatars: {
+        Row: {
+          member_id: string;
+          avatar_url: string;
+        };
+      };
     };
     Functions: {
       create_events_table: {
@@ -1748,6 +1848,29 @@ export interface Database {
         Args: {
           p_source_id: string;
           p_target_id: string;
+        };
+        Returns: void;
+      };
+      approve_member_photo_request: {
+        Args: {
+          p_request_id: string;
+          p_approved_path: string;
+          p_public_url: string;
+          p_matched_member_id?: string | null;
+        };
+        Returns: void;
+      };
+      reject_member_photo_request: {
+        Args: {
+          p_request_id: string;
+          p_admin_note?: string | null;
+        };
+        Returns: void;
+      };
+      remove_member_photo_request: {
+        Args: {
+          p_request_id: string;
+          p_admin_note?: string | null;
         };
         Returns: void;
       };

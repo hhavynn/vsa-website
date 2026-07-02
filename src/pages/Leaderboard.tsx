@@ -9,6 +9,7 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { photoRequestsRepository } from '../data/repos/photoRequests';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
@@ -245,6 +246,16 @@ export function Leaderboard() {
     }
     setSelectedYear(initialSelectedYear);
   }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
+
+  // Approved member avatars, fetched once as a single public-safe view query
+  // (member_id → thumbnail URL). Fail-soft: initials remain the fallback.
+  const [memberAvatars, setMemberAvatars] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    photoRequestsRepository
+      .getPublicMemberAvatars()
+      .then(setMemberAvatars)
+      .catch(() => setMemberAvatars(new Map()));
+  }, []);
 
   const fetchLeaderboard = useCallback(async (year: SelectedYear) => {
     try {
@@ -600,7 +611,7 @@ export function Leaderboard() {
       <div className="vsa-container py-8">
         {activeView === 'individual' ? (
           <>
-            {top3.length >= 3 && <PodiumIndividual top3={top3} activeTab={activeTab} />}
+            {top3.length >= 3 && <PodiumIndividual top3={top3} activeTab={activeTab} memberAvatars={memberAvatars} />}
 
             <div className="mt-12">
               <div className="mb-6 flex items-center gap-3 px-2">
@@ -651,8 +662,8 @@ export function Leaderboard() {
                       {/* Member Info */}
                       <div className="flex flex-1 items-center gap-3 min-w-0">
                         <div className="shrink-0">
-                          {entry.user_id ? (
-                            <Avatar size="sm" userId={entry.user_id} />
+                          {memberAvatars.get(entry.id) ? (
+                            <Avatar size="sm" avatarUrl={memberAvatars.get(entry.id)} />
                           ) : (
                             <InitialsAvatar name={`${entry.first_name} ${entry.last_name}`} size={32} />
                           )}
@@ -759,7 +770,7 @@ export function Leaderboard() {
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activeTab: 'points' | 'events' }) {
+function PodiumIndividual({ top3, activeTab, memberAvatars }: { top3: LeaderboardEntry[]; activeTab: 'points' | 'events'; memberAvatars: Map<string, string> }) {
   const first = top3[0];
   const second = top3[1];
   const third = top3[2];
@@ -820,8 +831,13 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
 
                 {/* Avatar */}
                 <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-zinc-800">
-                  {card.entry.user_id ? (
-                    <Avatar size="md" userId={card.entry.user_id} />
+                  {memberAvatars.get(card.entry.id) ? (
+                    <img
+                      src={memberAvatars.get(card.entry.id)}
+                      alt={`${card.entry.first_name} ${card.entry.last_name}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />
                   )}

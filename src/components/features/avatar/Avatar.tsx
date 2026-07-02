@@ -1,13 +1,17 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
-import { motion, useReducedMotion } from 'framer-motion';
-import { getUploadExtension, prepareImageForUpload } from '../../../lib/imageUpload';
 
 interface AvatarProps {
   size?: 'sm' | 'md' | 'lg';
-  showUploadButton?: boolean;
   className?: string;
+  /** Render this image directly without querying user_profiles. Preferred for
+   * list surfaces (leaderboard, member cards) so each row does not issue its
+   * own profile query. */
+  avatarUrl?: string | null;
+  /** Fetch the avatar for this auth user id. RLS only permits reading your
+   * own profile (or any profile as admin); other rows fall back to the
+   * placeholder silently. */
   userId?: string;
 }
 
@@ -17,150 +21,59 @@ const sizeClasses = {
   lg: 'w-24 h-24'
 };
 
-export function Avatar({ size = 'md', showUploadButton = false, className = '', userId }: AvatarProps) {
+export function Avatar({ size = 'md', className = '', avatarUrl: avatarUrlProp, userId }: AvatarProps) {
   const { user } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const shouldReduceMotion = useReducedMotion();
+  const [fetchedUrl, setFetchedUrl] = useState<string | null>(null);
+  const skipFetch = avatarUrlProp !== undefined;
 
   const fetchAvatar = useCallback(async () => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
-    try {
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('avatar_url')
-        .eq('id', targetUserId)
-        .single();
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('avatar_url')
+      .eq('id', targetUserId)
+      .single();
 
-      if (error) throw error;
-      if (profile?.avatar_url) {
-        setAvatarUrl(profile.avatar_url);
-      }
-    } catch (error) {
-      console.error('Error fetching avatar:', error);
+    // RLS blocks reading other users' profiles; treat as "no avatar".
+    if (!error && profile?.avatar_url) {
+      setFetchedUrl(profile.avatar_url);
     }
   }, [userId, user?.id]);
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user) return;
-    
-    try {
-      setUploading(true);
-
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
-      }
-
-      const { file } = await prepareImageForUpload(event.target.files[0], 'avatar');
-      const fileExt = getUploadExtension(file);
-      const filePath = `${user.id}/${Math.random()}.${fileExt}`;
-
-      // Upload image to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '31536000',
-          contentType: file.type,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Update user profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      setAvatarUrl(publicUrl);
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      alert('Error uploading avatar!');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Fetch avatar on component mount and when user changes
   useEffect(() => {
+    if (skipFetch) return;
     fetchAvatar();
-  }, [user, userId, fetchAvatar]);
+  }, [skipFetch, fetchAvatar]);
 
-  const handleClick = () => {
-    if (showUploadButton && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const avatarVisual = avatarUrl ? (
-    <img
-      src={avatarUrl}
-      alt={showUploadButton ? '' : 'Profile photo'}
-      className="h-full w-full object-cover"
-    />
-  ) : (
-    <svg
-      className="h-1/2 w-1/2 text-[var(--color-text3)]"
-      fill="currentColor"
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
+  const avatarUrl = skipFetch ? avatarUrlProp : fetchedUrl;
 
   return (
     <div className={`relative ${className}`}>
-      {showUploadButton ? (
-        <motion.button
-          type="button"
-          whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
-          whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
-          onClick={handleClick}
-          disabled={uploading}
-          aria-label={avatarUrl ? 'Change profile photo' : 'Upload profile photo'}
-          className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] disabled:cursor-wait`}
-        >
-          {avatarVisual}
-        </motion.button>
-      ) : (
-        <div className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface2)]`}>
-          {avatarVisual}
-        </div>
-      )}
-
-      {showUploadButton && (
-        <>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleUpload}
-            accept="image/*"
-            className="hidden"
+      <div className={`${sizeClasses[size]} flex items-center justify-center overflow-hidden rounded-full bg-[var(--color-surface2)]`}>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
           />
-          {uploading && (
-            <>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50" aria-hidden="true">
-                <div className="h-6 w-6 rounded-full border-b-2 border-white motion-safe:animate-spin" />
-              </div>
-              <span className="sr-only" role="status" aria-live="polite">Uploading profile photo</span>
-            </>
-          )}
-        </>
-      )}
+        ) : (
+          <svg
+            className="h-1/2 w-1/2 text-[var(--color-text3)]"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
+      </div>
     </div>
   );
-} 
+}
