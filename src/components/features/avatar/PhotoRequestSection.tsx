@@ -32,6 +32,7 @@ export function PhotoRequestSection({
   const [consent, setConsent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [middleName, setMiddleName] = useState('');
 
   useEffect(() => {
     setForm(f => ({ ...f, name: f.name || defaultName, email: f.email || defaultEmail }));
@@ -41,6 +42,16 @@ export function PhotoRequestSection({
 
   async function handleSubmit() {
     setFormError(null);
+    if (middleName) {
+      toast.success('Photo request submitted for review!');
+      setModalOpen(false);
+      setSubmitted(true);
+      setFile(null);
+      setConsent(false);
+      setForm(f => ({ ...f, note: '' }));
+      setMiddleName('');
+      return;
+    }
     if (!matchedMemberId) {
       setFormError('Choose a member from the leaderboard before requesting a photo.');
       return;
@@ -132,6 +143,17 @@ export function PhotoRequestSection({
               <div>
                 <Label className="mb-1.5">Your name</Label>
                 <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} />
+              </div>
+              <div className="absolute opacity-0 -z-10 w-0 h-0 pointer-events-none" aria-hidden="true">
+                <label htmlFor="middle_name">Middle Name</label>
+                <input
+                  id="middle_name"
+                  type="text"
+                  value={middleName}
+                  onChange={e => setMiddleName(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
               </div>
               <div>
                 <Label className="mb-1.5">UCSD Email</Label>

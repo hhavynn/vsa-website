@@ -90,6 +90,45 @@ create trigger set_member_photo_request_updated_at
   for each row
   execute function public.set_member_photo_request_updated_at();
 
+create or replace function public.guard_member_photo_request_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_pending_count_for_member integer;
+  v_pending_count_for_email integer;
+begin
+  -- 1. Check matched_member_id pending limit
+  select count(*) into v_pending_count_for_member
+  from public.member_photo_requests
+  where matched_member_id = new.matched_member_id
+    and status = 'pending';
+
+  if v_pending_count_for_member >= 3 then
+    raise exception 'Too many pending photo requests. Please try again later or contact VSA.';
+  end if;
+
+  -- 2. Check submitted_email pending limit
+  select count(*) into v_pending_count_for_email
+  from public.member_photo_requests
+  where lower(trim(submitted_email)) = lower(trim(new.submitted_email))
+    and status = 'pending';
+
+  if v_pending_count_for_email >= 5 then
+    raise exception 'Too many pending photo requests. Please try again later or contact VSA.';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger guard_member_photo_request_rate_limit
+  before insert on public.member_photo_requests
+  for each row
+  execute function public.guard_member_photo_request_rate_limit();
+
 alter table public.member_photo_requests enable row level security;
 
 -- Anyone (authenticated or anonymous) can submit photo requests.
