@@ -25,13 +25,12 @@ export function PhotoWall({ albums }: Props) {
   if (withCovers.length === 0) {
     return (
       <div className="scrapbook-empty py-8 text-center">
-        <p className="font-sans text-[14px]" style={{ color: 'var(--text2)' }}>
+        <p className="font-sans text-[14px] text-text-secondary">
           The photo wall lives in the gallery — album drops from every quarter.
         </p>
         <Link
           to="/gallery"
-          className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider"
-          style={{ color: 'var(--brand)' }}
+          className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
         >
           Open the gallery →
         </Link>
@@ -57,10 +56,8 @@ export function PhotoWall({ albums }: Props) {
                 loading="lazy"
               />
               <div className="mt-2 px-1">
-                <div className="truncate font-sans text-[12.5px] font-bold" style={{ color: 'var(--text)' }}>
-                  {album.title}
-                </div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+                <div className="truncate font-sans text-[12.5px] font-bold text-text-primary">{album.title}</div>
+                <div className="font-mono text-[9px] uppercase tracking-[0.1em] text-text-muted">
                   {formatDateOnly(album.date, 'MMM yyyy')}
                 </div>
               </div>
@@ -70,8 +67,7 @@ export function PhotoWall({ albums }: Props) {
       </div>
       <Link
         to="/gallery"
-        className="mt-2 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider"
-        style={{ color: 'var(--brand)' }}
+        className="mt-2 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400"
       >
         See every album in the gallery →
       </Link>

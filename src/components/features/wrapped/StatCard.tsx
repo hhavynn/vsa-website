@@ -27,23 +27,15 @@ export function StatCard({ emoji, label, value, fallback, caption, rotate = 'non
       <div className="text-2xl" aria-hidden>
         {emoji}
       </div>
-      <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
-        {label}
-      </div>
+      <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">{label}</div>
       {value ? (
-        <div className="mt-1 font-serif text-[44px] font-black leading-none tracking-[-0.02em] sm:text-[56px]" style={{ color: 'var(--brand)' }}>
+        <div className="mt-1 font-serif text-[44px] font-black leading-none tracking-[-0.02em] text-brand-600 dark:text-brand-400 sm:text-[56px]">
           {value}
         </div>
       ) : (
-        <div className="mt-2 font-sans text-[15px] font-bold leading-snug" style={{ color: 'var(--text)' }}>
-          {fallback}
-        </div>
+        <div className="mt-2 font-sans text-[15px] font-bold leading-snug text-text-primary">{fallback}</div>
       )}
-      {caption && (
-        <p className="mt-2 font-sans text-[12.5px] leading-relaxed" style={{ color: 'var(--text2)' }}>
-          {caption}
-        </p>
-      )}
+      {caption && <p className="mt-2 font-sans text-[12.5px] leading-relaxed text-text-secondary">{caption}</p>}
     </div>
   );
 }

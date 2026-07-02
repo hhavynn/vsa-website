@@ -43,21 +43,18 @@ export function WrappedSection({
       aria-label={heading}
     >
       <span
-        className="pointer-events-none absolute -top-2 right-0 select-none font-serif text-[96px] font-black leading-none opacity-[0.07] sm:text-[160px]"
-        style={{ color: 'var(--text)' }}
+        className="pointer-events-none absolute -top-2 right-0 select-none font-serif text-[96px] font-black leading-none text-text-primary opacity-[0.07] sm:text-[160px]"
         aria-hidden
       >
         {number}
       </span>
 
       <span className={`scrapbook-sticker ${STICKER_CLASS[stickerTone]} mb-4`}>{sticker}</span>
-      <h2 className="max-w-3xl font-serif text-[30px] leading-[1.1] tracking-[-0.02em] sm:text-[42px]" style={{ color: 'var(--text)' }}>
+      <h2 className="max-w-3xl font-serif text-[30px] leading-[1.1] tracking-[-0.02em] text-text-primary sm:text-[42px]">
         {heading}
       </h2>
       {subheading && (
-        <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-          {subheading}
-        </p>
+        <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] text-text-secondary">{subheading}</p>
       )}
 
       <div className="mt-8">{children}</div>

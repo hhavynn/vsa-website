@@ -20,7 +20,7 @@ import {
   roundToFriendlyFloor,
   sumCommunityPoints,
 } from '../utils/wrapped';
-import { toDateOnlyString } from '../lib/dateOnly';
+import { addDaysToDateOnly } from '../utils/calendar';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 
 // Aggregate-only data. This page intentionally never queries member-level
@@ -30,19 +30,22 @@ const QUERY_OPTIONS = { staleTime: 10 * 60 * 1000, retry: 1 } as const;
 
 const W = WRAPPED_2026;
 
+// Internal nav link color — matches the text-brand-600/dark:text-brand-400
+// idiom used for this exact purpose across every other public page.
+const LINK_CLASS = 'text-brand-600 dark:text-brand-400';
+
 function CtaLink({ to, label, external = false }: { to: string; label: string; external?: boolean }) {
   const className =
-    'inline-flex items-center justify-center rounded-lg border px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.05em] transition-colors duration-150 hover:bg-[var(--surface2)]';
-  const style = { borderColor: 'var(--color-border-strong)', color: 'var(--text)' };
+    'inline-flex items-center justify-center rounded-lg border border-border-strong px-5 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.05em] text-text-primary transition-colors duration-150 hover:bg-surface2';
   if (external) {
     return (
-      <a href={to} target="_blank" rel="noopener noreferrer" className={className} style={style}>
+      <a href={to} target="_blank" rel="noopener noreferrer" className={className}>
         {label}
       </a>
     );
   }
   return (
-    <Link to={to} className={className} style={style}>
+    <Link to={to} className={className}>
       {label}
     </Link>
   );
@@ -53,12 +56,22 @@ export function Wrapped() {
 
   const eventsQuery = useQuery(
     ['wrapped-events', W.windowStart, W.windowEnd],
-    () => eventsRepository.getEvents({ date_from: W.windowStart, date_to: W.windowEnd, limit: 400 }),
+    () =>
+      eventsRepository.getEvents({
+        date_from: W.windowStart,
+        // +1 day: events.date is a timestamptz, so an inclusive .lte() bound of
+        // windowEnd would drop any event later than midnight on that day.
+        date_to: addDaysToDateOnly(W.windowEnd, 1),
+        limit: 400,
+      }),
     QUERY_OPTIONS
   );
   const albumsQuery = useQuery(
-    ['wrapped-albums'],
-    () => galleryRepository.getAlbums({ limit: 60 }),
+    ['wrapped-albums', W.windowStart, W.windowEnd],
+    // gallery_events.date is a plain DATE column, so an inclusive bound here
+    // is correct (no off-by-one). Fetch the full year rather than a capped
+    // "newest N" slice so older albums aren't pushed out as new ones are added.
+    () => galleryRepository.getAlbums({ date_from: W.windowStart, date_to: W.windowEnd, limit: 400 }),
     QUERY_OPTIONS
   );
   const housesQuery = useQuery(
@@ -75,23 +88,10 @@ export function Wrapped() {
     return count > 0 ? count : null;
   }, [eventsQuery.data]);
 
-  const yearAlbums = useMemo(() => {
-    const albums = albumsQuery.data ?? [];
-    const inYear = albums.filter((album) => {
-      const day = toDateOnlyString(album.date);
-      return day >= W.windowStart && day <= W.windowEnd;
-    });
-    return inYear.length > 0 ? inYear : albums;
-  }, [albumsQuery.data]);
-
-  const albumCount = useMemo(() => {
-    const albums = albumsQuery.data ?? [];
-    const count = albums.filter((album) => {
-      const day = toDateOnlyString(album.date);
-      return day >= W.windowStart && day <= W.windowEnd;
-    }).length;
-    return count > 0 ? count : null;
-  }, [albumsQuery.data]);
+  // Already year-scoped by the query itself (date_from/date_to), so no
+  // client-side re-filtering or "newest N" capping is needed here.
+  const yearAlbums = albumsQuery.data ?? [];
+  const albumCount = yearAlbums.length > 0 ? yearAlbums.length : null;
 
   // Same placeholder-injection + official public point overrides as /leaderboard.
   const houses = useMemo(
@@ -142,22 +142,18 @@ export function Wrapped() {
             <span className="scrapbook-sticker scrapbook-sticker-coral rotate-[-2deg]">
               That's a wrap on {W.yearLabel}
             </span>
-            <h1
-              className="mx-auto mt-6 max-w-3xl font-serif text-[52px] font-black leading-[0.95] tracking-[-0.03em] sm:text-[84px]"
-              style={{ color: 'var(--text)' }}
-            >
-              VSA <span className="italic" style={{ color: 'var(--brand)' }}>Wrapped</span>
+            <h1 className="mx-auto mt-6 max-w-3xl font-serif text-[52px] font-black leading-[0.95] tracking-[-0.03em] text-text-primary sm:text-[84px]">
+              VSA <span className={`italic ${LINK_CLASS}`}>Wrapped</span>
             </h1>
             <p className="mt-3 font-mono text-[13px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--accent)' }}>
               {W.yearLabel}
             </p>
-            <p className="mx-auto mt-5 max-w-xl font-sans text-[16px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+            <p className="mx-auto mt-5 max-w-xl font-sans text-[16px] leading-[1.8] text-text-secondary">
               {W.hero.tagline}
             </p>
             <a
               href="#numbers"
-              className="mt-8 inline-flex items-center gap-2 rounded-full border px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.08em] transition-colors hover:bg-[var(--surface2)]"
-              style={{ borderColor: 'var(--color-border-strong)', color: 'var(--text)' }}
+              className="mt-8 inline-flex items-center gap-2 rounded-full border border-border-strong px-6 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.08em] text-text-primary transition-colors hover:bg-surface2"
             >
               {W.hero.scrollCta} ↓
             </a>
@@ -221,20 +217,12 @@ export function Wrapped() {
                 <div className="text-3xl" aria-hidden>
                   {event.emoji}
                 </div>
-                <h3 className="mt-2 font-sans text-[18px] font-bold" style={{ color: 'var(--text)' }}>
-                  {event.name}
-                </h3>
-                <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
-                  {event.blurb}
-                </p>
+                <h3 className="mt-2 font-sans text-[18px] font-bold text-text-primary">{event.name}</h3>
+                <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7] text-text-secondary">{event.blurb}</p>
               </div>
             ))}
           </div>
-          <Link
-            to="/events"
-            className="mt-6 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--brand)' }}
-          >
+          <Link to="/events" className={`mt-6 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider ${LINK_CLASS}`}>
             Relive the full event archive →
           </Link>
         </WrappedSection>
@@ -268,11 +256,7 @@ export function Wrapped() {
         <div className="scrapbook-rule" aria-hidden />
 
         {/* ── 06 · Culture highlights ───────────────────────────────────────── */}
-        <WrappedSection
-          number="06"
-          sticker="Culture Nights"
-          heading="The stages we filled."
-        >
+        <WrappedSection number="06" sticker="Culture Nights" heading="The stages we filled.">
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="scrapbook-photo relative overflow-hidden scrapbook-rotate-sm-left">
               {vcnCover && (
@@ -285,17 +269,13 @@ export function Wrapped() {
               )}
               <div className="p-5">
                 <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">VCN</span>
-                <h3 className="mt-2 font-sans text-[18px] font-bold" style={{ color: 'var(--text)' }}>
+                <h3 className="mt-2 font-sans text-[18px] font-bold text-text-primary">
                   {vcnArchive?.theme_name || vcnArchive?.title || W.vcn.fallbackTitle}
                 </h3>
-                <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
+                <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7] text-text-secondary">
                   {vcnArchive?.description || W.vcn.fallbackBlurb}
                 </p>
-                <Link
-                  to="/vcn"
-                  className="mt-3 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--brand)' }}
-                >
+                <Link to="/vcn" className={`mt-3 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider ${LINK_CLASS}`}>
                   Visit the VCN archive →
                 </Link>
               </div>
@@ -304,17 +284,9 @@ export function Wrapped() {
             <div className="scrapbook-paper relative p-5 scrapbook-rotate-sm-right">
               <span className="scrapbook-pin" aria-hidden />
               <span className="scrapbook-sticker scrapbook-sticker-coral px-2 py-0.5 text-[9px]">WNC</span>
-              <h3 className="mt-2 font-sans text-[18px] font-bold" style={{ color: 'var(--text)' }}>
-                {W.wnc.title}
-              </h3>
-              <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
-                {W.wnc.blurb}
-              </p>
-              <Link
-                to="/wild-n-culture"
-                className="mt-3 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--brand)' }}
-              >
+              <h3 className="mt-2 font-sans text-[18px] font-bold text-text-primary">{W.wnc.title}</h3>
+              <p className="mt-1.5 font-sans text-[13.5px] leading-[1.7] text-text-secondary">{W.wnc.blurb}</p>
+              <Link to="/wild-n-culture" className={`mt-3 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider ${LINK_CLASS}`}>
                 Wild n' Culture →
               </Link>
             </div>
@@ -341,29 +313,21 @@ export function Wrapped() {
                 <div className="text-3xl" aria-hidden>
                   {award.emoji}
                 </div>
-                <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
+                <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
                   {award.title}
                 </div>
                 <div className="mt-1 font-serif text-[24px] font-black leading-tight" style={{ color: 'var(--accent)' }}>
                   {award.winner}
                 </div>
-                <p className="mt-1.5 font-sans text-[13px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
-                  {award.blurb}
-                </p>
+                <p className="mt-1.5 font-sans text-[13px] leading-[1.7] text-text-secondary">{award.blurb}</p>
               </div>
             ))}
           </div>
 
           <div className="scrapbook-paper mt-6 p-5 text-center">
-            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
-              {W.vibe.title}
-            </div>
-            <div className="mt-1 font-serif text-[32px] font-black" style={{ color: 'var(--brand)' }}>
-              {W.vibe.value}
-            </div>
-            <p className="mx-auto mt-1.5 max-w-xl font-sans text-[13.5px] leading-[1.7]" style={{ color: 'var(--text2)' }}>
-              {W.vibe.blurb}
-            </p>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">{W.vibe.title}</div>
+            <div className={`mt-1 font-serif text-[32px] font-black ${LINK_CLASS}`}>{W.vibe.value}</div>
+            <p className="mx-auto mt-1.5 max-w-xl font-sans text-[13.5px] leading-[1.7] text-text-secondary">{W.vibe.blurb}</p>
           </div>
         </WrappedSection>
 
@@ -381,14 +345,8 @@ export function Wrapped() {
               : undefined
           }
         >
-          <p className="max-w-2xl font-sans text-[15px] leading-[1.9]" style={{ color: 'var(--text2)' }}>
-            {W.cabinet.thankYou}
-          </p>
-          <Link
-            to="/cabinet"
-            className="mt-4 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--brand)' }}
-          >
+          <p className="max-w-2xl font-sans text-[15px] leading-[1.9] text-text-secondary">{W.cabinet.thankYou}</p>
+          <Link to="/cabinet" className={`mt-4 inline-flex font-mono text-[11px] font-semibold uppercase tracking-wider ${LINK_CLASS}`}>
             Meet the cabinet →
           </Link>
         </WrappedSection>
@@ -397,12 +355,10 @@ export function Wrapped() {
       {/* ── 09 · Closing CTA ─────────────────────────────────────────────────── */}
       <div className="scrapbook-board border-t" style={{ borderColor: 'var(--border)' }}>
         <div className="vsa-container py-16 text-center sm:py-20">
-          <h2 className="font-serif text-[36px] font-black tracking-[-0.02em] sm:text-[48px]" style={{ color: 'var(--text)' }}>
+          <h2 className="font-serif text-[36px] font-black tracking-[-0.02em] text-text-primary sm:text-[48px]">
             {W.closing.heading}
           </h2>
-          <p className="mx-auto mt-3 max-w-xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            {W.closing.blurb}
-          </p>
+          <p className="mx-auto mt-3 max-w-xl font-sans text-[15px] leading-[1.8] text-text-secondary">{W.closing.blurb}</p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <CtaLink to="/events" label="Upcoming events" />
             <CtaLink to="/house" label="The House system" />

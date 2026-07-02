@@ -33,13 +33,12 @@ export function HouseCup({ houses }: Props) {
   if (standings.length === 0) {
     return (
       <div className="scrapbook-empty py-8 text-center">
-        <p className="font-sans text-[14px]" style={{ color: 'var(--text2)' }}>
+        <p className="font-sans text-[14px] text-text-secondary">
           Four houses. One year of friendly chaos. See the full story on the leaderboard.
         </p>
         <Link
           to="/leaderboard"
-          className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider"
-          style={{ color: 'var(--brand)' }}
+          className="mt-3 inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
         >
           View the leaderboard →
         </Link>
@@ -71,7 +70,7 @@ export function HouseCup({ houses }: Props) {
           <h3 className="mt-2 font-serif text-[34px] font-black leading-none" style={{ color: houseColor(winner) }}>
             {winner.display_name}
           </h3>
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.1em] text-text-muted">
             {formatStatNumber(winner.total_points)} points
             {winner.unique_events > 0 && ` · ${formatStatNumber(winner.unique_events)} events`}
           </p>
@@ -85,10 +84,8 @@ export function HouseCup({ houses }: Props) {
           return (
             <div key={house.house_profile_id} className="scrapbook-paper p-3.5">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-sans text-[14px] font-bold" style={{ color: 'var(--text)' }}>
-                  <span className="mr-2 font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                    #{index + 1}
-                  </span>
+                <span className="font-sans text-[14px] font-bold text-text-primary">
+                  <span className="mr-2 font-mono text-[11px] text-text-muted">#{index + 1}</span>
                   {HOUSE_EMOJI[normalizeHouse(house.house || house.display_name) ?? ''] ?? ''}{' '}
                   {house.display_name}
                 </span>
@@ -96,7 +93,7 @@ export function HouseCup({ houses }: Props) {
                   {formatStatNumber(house.total_points)} pts
                 </span>
               </div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full" style={{ background: 'var(--surface2)' }}>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface2">
                 <div
                   className="h-full rounded-full transition-[width] duration-700"
                   style={{ width: `${width}%`, background: color }}
@@ -105,13 +102,13 @@ export function HouseCup({ houses }: Props) {
             </div>
           );
         })}
-        <p className="pt-1 font-sans text-[12px]" style={{ color: 'var(--text3)' }}>
+        <p className="pt-1 font-sans text-[12px] text-text-muted">
           House totals are community aggregates — dive deeper on the{' '}
-          <Link to="/leaderboard" className="underline underline-offset-2" style={{ color: 'var(--brand)' }}>
+          <Link to="/leaderboard" className="underline underline-offset-2 text-brand-600 dark:text-brand-400">
             leaderboard
           </Link>{' '}
           or the{' '}
-          <Link to="/house" className="underline underline-offset-2" style={{ color: 'var(--brand)' }}>
+          <Link to="/house" className="underline underline-offset-2 text-brand-600 dark:text-brand-400">
             House page
           </Link>
           .
