@@ -11,6 +11,8 @@ import {
 import { MyVSACard } from "./MyVSACard";
 import { isSupabaseUnavailable } from "../../../utils/isSupabaseUnavailable";
 import { FALLBACK_POINTS } from "../../../config/publicFallbackContent";
+import { Avatar } from "../avatar/Avatar";
+import { photoRequestsRepository } from "../../../data/repos/photoRequests";
 
 const SearchIcon = ({ className }: { className?: string }) => (
   <svg
@@ -152,6 +154,14 @@ export function FindMyPoints({
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
   const [pickedMemberId, setPickedMemberId] = useState<string | null>(null);
+  const [memberAvatars, setMemberAvatars] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    photoRequestsRepository
+      .getPublicMemberAvatars()
+      .then(setMemberAvatars)
+      .catch(() => setMemberAvatars(new Map()));
+  }, []);
 
   const academicYears = useMemo<AcademicYearOption[]>(() => {
     const years = new Map<number, AcademicYearOption>();
@@ -413,6 +423,7 @@ export function FindMyPoints({
             isAllTime={selectedYear === "all"}
             ambiguous={matches.length > 1}
             onReset={() => setPickedMemberId(null)}
+            avatarUrl={memberAvatars.get(resolvedEntry.member_id) ?? null}
           />
         ) : showAmbiguous ? (
           <MultipleMatches
@@ -420,6 +431,7 @@ export function FindMyPoints({
             totalCount={matches.length}
             yearLabel={selectedYearLabel}
             onPick={(id) => setPickedMemberId(id)}
+            memberAvatars={memberAvatars}
           />
         ) : null}
       </div>
@@ -482,11 +494,13 @@ function MultipleMatches({
   totalCount,
   yearLabel,
   onPick,
+  memberAvatars,
 }: {
   matches: FindMyPointsEntry[];
   totalCount: number;
   yearLabel: string;
   onPick: (memberId: string) => void;
+  memberAvatars: Map<string, string>;
 }) {
   return (
     <div>
@@ -516,7 +530,11 @@ function MultipleMatches({
               onClick={() => onPick(entry.member_id)}
               className="group flex w-full items-center gap-3 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--brand)] hover:shadow-sm"
             >
-              <InitialsAvatar name={entry.full_name || "Member"} size={36} />
+              {memberAvatars.get(entry.member_id) ? (
+                <Avatar size="sm" avatarUrl={memberAvatars.get(entry.member_id)} />
+              ) : (
+                <InitialsAvatar name={entry.full_name || "Member"} size={36} />
+              )}
               <div className="min-w-0 flex-1">
                 <div
                   className="truncate font-serif text-[15px] font-bold"

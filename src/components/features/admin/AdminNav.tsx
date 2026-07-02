@@ -27,6 +27,7 @@ const NAV_GROUPS = [
   { group: 'Points & Attendance', items: [
     { to: '/admin/import', label: 'Attendance Imports' },
     { to: '/admin/members', label: 'Members' },
+    { to: '/admin/photo-requests', label: 'Photo Requests' },
     { to: '/admin/points', label: 'Points Tools' },
     { to: '/admin/merge-suggestions', label: 'Merge Review' },
     { to: '/admin/years', label: 'Years & Terms' },

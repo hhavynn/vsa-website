@@ -93,6 +93,7 @@ const AdminAiFeedback = lazy(() => import("../pages/Admin/AiFeedback"));
 const AdminApplications = lazy(() => import("../pages/Admin/Applications"));
 const AdminLaunchChecklist = lazy(() => import("../pages/Admin/LaunchChecklist"));
 const AdminDataRightsRequests = lazy(() => import("../pages/Admin/DataRightsRequests"));
+const AdminPhotoRequests = lazy(() => import("../pages/Admin/PhotoRequests"));
 const SignIn = lazy(() =>
   import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
 );
@@ -187,6 +188,7 @@ export default function AppRoutes() {
                   <Route path="/admin/feedback" element={<AdminFeedback />} />
                   <Route path="/admin/import" element={<AdminImport />} />
                   <Route path="/admin/members" element={<AdminMembers />} />
+                  <Route path="/admin/photo-requests" element={<AdminPhotoRequests />} />
                   <Route path="/admin/houses" element={<AdminHouses />} />
                   <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
                   <Route path="/admin/cabinet" element={<AdminCabinet />} />

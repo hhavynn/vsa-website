@@ -3,12 +3,14 @@ import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
 import { Avatar } from '../components/features/avatar/Avatar';
+import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
 import { PageLoader } from '../components/common/PageLoader';
 import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { photoRequestsRepository } from '../data/repos/photoRequests';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { HouseRecentActivity } from '../types';
@@ -166,6 +168,96 @@ function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
   );
 }
 
+function getMemberDisplayName(member: Pick<Member, 'first_name' | 'last_name'>) {
+  return `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim() || 'VSA Member';
+}
+
+function PublicMemberProfileModal({
+  member,
+  avatarUrl,
+  activeTab,
+  onClose,
+}: {
+  member: LeaderboardEntry;
+  avatarUrl: string | null;
+  activeTab: 'points' | 'events';
+  onClose: () => void;
+}) {
+  const displayName = getMemberDisplayName(member);
+  const meta = [member.year, member.college].filter(Boolean).join(' • ') || 'VSA Member';
+  const primaryMetric = activeTab === 'points' ? member.points.toLocaleString() : member.events_attended.toLocaleString();
+  const secondaryMetric = activeTab === 'points' ? member.events_attended.toLocaleString() : member.points.toLocaleString();
+  const primaryLabel = activeTab === 'points' ? 'Points' : 'Events';
+  const secondaryLabel = activeTab === 'points' ? 'Events attended' : 'Points';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${displayName} member profile`}
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
+                />
+              ) : (
+                <InitialsAvatar name={displayName} size={96} />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate font-serif text-2xl font-bold text-[var(--text)]">{displayName}</h2>
+              <p className="mt-1 font-sans text-xs text-[var(--text2)]">{meta}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {member.rank <= 3 && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
+                <StickerBadge color="primary" size="sm">{primaryLabel.toUpperCase()}</StickerBadge>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[var(--border)] px-2 py-1 font-sans text-xs text-[var(--text2)] transition-colors hover:bg-[var(--surface2)]"
+            aria-label="Close member profile"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text3)]">{primaryLabel}</p>
+            <p className="mt-1 font-mono text-2xl font-black text-[var(--text)]">{primaryMetric}</p>
+          </div>
+          <div className="rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text3)]">{secondaryLabel}</p>
+            <p className="mt-1 font-mono text-2xl font-black text-[var(--text)]">{secondaryMetric}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-[var(--border)] pt-4">
+          <PhotoRequestSection
+            matchedMemberId={member.id}
+            selectedMemberName={displayName}
+            buttonLabel={avatarUrl ? 'Update photo' : 'Request photo'}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,6 +278,7 @@ export function Leaderboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<LeaderboardEntry | null>(null);
 
   const academicYears = useMemo<AcademicYearOption[]>(() => {
     const years = new Map<number, AcademicYearOption>();
@@ -245,6 +338,16 @@ export function Leaderboard() {
     }
     setSelectedYear(initialSelectedYear);
   }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
+
+  // Approved member avatars, fetched once as a single public-safe view query
+  // (member_id → thumbnail URL). Fail-soft: initials remain the fallback.
+  const [memberAvatars, setMemberAvatars] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    photoRequestsRepository
+      .getPublicMemberAvatars()
+      .then(setMemberAvatars)
+      .catch(() => setMemberAvatars(new Map()));
+  }, []);
 
   const fetchLeaderboard = useCallback(async (year: SelectedYear) => {
     try {
@@ -600,7 +703,14 @@ export function Leaderboard() {
       <div className="vsa-container py-8">
         {activeView === 'individual' ? (
           <>
-            {top3.length >= 3 && <PodiumIndividual top3={top3} activeTab={activeTab} />}
+          {top3.length >= 3 && (
+            <PodiumIndividual
+              top3={top3}
+              activeTab={activeTab}
+              memberAvatars={memberAvatars}
+              onSelectMember={setSelectedMember}
+            />
+          )}
 
             <div className="mt-12">
               <div className="mb-6 flex items-center gap-3 px-2">
@@ -633,12 +743,22 @@ export function Leaderboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {paginatedData.map((entry) => (
-                    <div 
-                      key={entry.id} 
-                      className="group scrapbook-paper flex items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg"
-                      style={{ borderColor: 'var(--color-border)' }}
-                    >
+              {paginatedData.map((entry) => (
+                <div
+                  key={entry.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open profile for ${getMemberDisplayName(entry)}`}
+                  onClick={() => setSelectedMember(entry)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedMember(entry);
+                    }
+                  }}
+                  className="group scrapbook-paper flex cursor-pointer items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                       {/* Rank */}
                       <div className="flex w-12 shrink-0 items-center justify-center sm:w-16">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 font-mono font-black transition-colors ${
@@ -651,8 +771,8 @@ export function Leaderboard() {
                       {/* Member Info */}
                       <div className="flex flex-1 items-center gap-3 min-w-0">
                         <div className="shrink-0">
-                          {entry.user_id ? (
-                            <Avatar size="sm" userId={entry.user_id} />
+                          {memberAvatars.get(entry.id) ? (
+                            <Avatar size="sm" avatarUrl={memberAvatars.get(entry.id)} />
                           ) : (
                             <InitialsAvatar name={`${entry.first_name} ${entry.last_name}`} size={32} />
                           )}
@@ -751,6 +871,14 @@ export function Leaderboard() {
           </div>
         </details>
       </div>
+      {selectedMember && (
+        <PublicMemberProfileModal
+          member={selectedMember}
+          avatarUrl={memberAvatars.get(selectedMember.id) ?? null}
+          activeTab={activeTab}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
     </>
   );
 }
@@ -759,7 +887,17 @@ export function Leaderboard() {
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activeTab: 'points' | 'events' }) {
+function PodiumIndividual({
+  top3,
+  activeTab,
+  memberAvatars,
+  onSelectMember,
+}: {
+  top3: LeaderboardEntry[];
+  activeTab: 'points' | 'events';
+  memberAvatars: Map<string, string>;
+  onSelectMember: (member: LeaderboardEntry) => void;
+}) {
   const first = top3[0];
   const second = top3[1];
   const third = top3[2];
@@ -794,11 +932,23 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
             >
               <PushPin color={card.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
               
-              <div className={`scrapbook-paper overflow-hidden p-6 text-center shadow-xl ${
-                isFirst 
-                  ? 'border-4 border-[var(--accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface2)]' 
-                  : 'border-2 border-[var(--border)]'
-              }`}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label={`Open profile for ${getMemberDisplayName(card.entry)}`}
+                onClick={() => onSelectMember(card.entry)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelectMember(card.entry);
+                  }
+                }}
+                className={`scrapbook-paper overflow-hidden p-6 text-center shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] ${
+                  isFirst
+                    ? 'border-4 border-[var(--accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface2)]'
+                    : 'border-2 border-[var(--border)]'
+                }`}
+              >
                 {isFirst && <div className="absolute top-2 right-2 opacity-20"><BoltIcon className="h-6 w-6" /></div>}
                 
                 {/* Rank Badge */}
@@ -820,8 +970,13 @@ function PodiumIndividual({ top3, activeTab }: { top3: LeaderboardEntry[]; activ
 
                 {/* Avatar */}
                 <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md dark:border-zinc-800">
-                  {card.entry.user_id ? (
-                    <Avatar size="md" userId={card.entry.user_id} />
+                  {memberAvatars.get(card.entry.id) ? (
+                    <img
+                      src={memberAvatars.get(card.entry.id)}
+                      alt={`${card.entry.first_name} ${card.entry.last_name}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <InitialsAvatar name={`${card.entry.first_name} ${card.entry.last_name}`} size={96} />
                   )}

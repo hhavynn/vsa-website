@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Event, EventAttendance } from '../types';
 import { MemberDashboard } from '../components/features/dashboard/MemberDashboard';
-import { Avatar } from '../components/features/avatar/Avatar';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
@@ -119,9 +118,6 @@ export function Profile() {
       {/* Page header */}
       <div className="border-b px-5 py-8 sm:px-8 lg:px-[52px]" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-          <div onClick={e => e.stopPropagation()}>
-            <Avatar size="lg" showUploadButton />
-          </div>
           <div>
             <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 36, color: 'var(--color-text)' }}>
               {displayName}
