@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Avatar } from './Avatar';
 import { Label } from '../../ui/Label';
 import { MemberPhotoRequestFormSchema } from '../../../schemas';
-import {
-  photoRequestsRepository,
-  MyMemberPhotoRequest,
-} from '../../../data/repos/photoRequests';
+import { photoRequestsRepository } from '../../../data/repos/photoRequests';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -14,47 +10,41 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--color-border)', borderRadius: 4, outline: 'none',
 };
 
-const STATUS_COPY: Record<MyMemberPhotoRequest['status'], string> = {
-  pending: 'Pending review — an admin will look at your photo soon.',
-  approved: 'Approved — your photo is live on your profile.',
-  rejected: 'Not approved this time. You can submit a different photo.',
-  removed: 'Removed — this photo is no longer displayed.',
-};
-
 interface PhotoRequestSectionProps {
-  userId: string;
+  matchedMemberId?: string | null;
+  selectedMemberName?: string;
   defaultName?: string;
   defaultEmail?: string;
+  buttonLabel?: string;
 }
 
-export function PhotoRequestSection({ userId, defaultName = '', defaultEmail = '' }: PhotoRequestSectionProps) {
-  const [latestRequest, setLatestRequest] = useState<MyMemberPhotoRequest | null>(null);
+export function PhotoRequestSection({
+  matchedMemberId,
+  selectedMemberName = '',
+  defaultName = '',
+  defaultEmail = '',
+  buttonLabel = 'Request photo',
+}: PhotoRequestSectionProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: defaultName, email: defaultEmail, note: '' });
   const [file, setFile] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  const loadRequests = useCallback(async () => {
-    try {
-      const requests = await photoRequestsRepository.getMyPhotoRequests();
-      setLatestRequest(requests[0] ?? null);
-    } catch {
-      // Status is informational; the avatar itself still renders.
-    }
-  }, []);
-
-  useEffect(() => { loadRequests(); }, [loadRequests]);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     setForm(f => ({ ...f, name: f.name || defaultName, email: f.email || defaultEmail }));
   }, [defaultName, defaultEmail]);
 
-  const hasPending = latestRequest?.status === 'pending';
+  const canSubmit = Boolean(matchedMemberId);
 
   async function handleSubmit() {
     setFormError(null);
+    if (!matchedMemberId) {
+      setFormError('Choose a member from the leaderboard before requesting a photo.');
+      return;
+    }
     const parsed = MemberPhotoRequestFormSchema.safeParse({
       submitted_name: form.name,
       submitted_email: form.email,
@@ -72,7 +62,8 @@ export function PhotoRequestSection({ userId, defaultName = '', defaultEmail = '
 
     setSubmitting(true);
     try {
-      await photoRequestsRepository.submitPhotoRequest(userId, {
+      await photoRequestsRepository.submitPhotoRequest({
+        matchedMemberId,
         file,
         submittedName: parsed.data.submitted_name,
         submittedEmail: parsed.data.submitted_email,
@@ -81,10 +72,10 @@ export function PhotoRequestSection({ userId, defaultName = '', defaultEmail = '
       });
       toast.success('Photo request submitted for review!');
       setModalOpen(false);
+      setSubmitted(true);
       setFile(null);
       setConsent(false);
       setForm(f => ({ ...f, note: '' }));
-      loadRequests();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to submit photo request.';
       setFormError(message);
@@ -96,18 +87,17 @@ export function PhotoRequestSection({ userId, defaultName = '', defaultEmail = '
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Avatar size="lg" />
         <button
           onClick={() => setModalOpen(true)}
-          disabled={hasPending}
+          disabled={!canSubmit || submitted}
           className="font-sans text-xs border rounded px-2.5 py-1.5 transition-colors duration-150 disabled:opacity-50"
-          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: hasPending ? 'default' : 'pointer' }}
+          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: !canSubmit || submitted ? 'default' : 'pointer' }}
         >
-          {hasPending ? 'Photo pending review' : 'Request profile photo'}
+          {submitted ? 'Request submitted' : buttonLabel}
         </button>
-        {latestRequest && (
+        {submitted && (
           <p className="font-sans text-[11px] leading-snug" style={{ color: 'var(--color-text3)', maxWidth: 200 }}>
-            {STATUS_COPY[latestRequest.status]}
+            Thanks — a VSA admin will review it before it appears publicly.
           </p>
         )}
       </div>
@@ -129,8 +119,18 @@ export function PhotoRequestSection({ userId, defaultName = '', defaultEmail = '
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {selectedMemberName && (
+                <div className="rounded border p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                  <p className="font-sans text-[11px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                    Selected member
+                  </p>
+                  <p className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                    {selectedMemberName}
+                  </p>
+                </div>
+              )}
               <div>
-                <Label className="mb-1.5">Name</Label>
+                <Label className="mb-1.5">Your name</Label>
                 <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} />
               </div>
               <div>

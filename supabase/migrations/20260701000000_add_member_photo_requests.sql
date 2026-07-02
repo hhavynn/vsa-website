@@ -17,7 +17,7 @@
 
 create table public.member_photo_requests (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
   matched_member_id uuid references public.members(id) on delete set null,
   submitted_name text not null,
   submitted_email text not null,
@@ -49,7 +49,7 @@ create table public.member_photo_requests (
     admin_notes is null or char_length(admin_notes) <= 2000
   ),
   constraint member_photo_requests_pending_path_check check (
-    storage_path_pending like (user_id::text || '/%')
+    storage_path_pending like 'pending/%'
     and char_length(storage_path_pending) <= 500
   ),
   constraint member_photo_requests_approved_path_length check (
@@ -92,24 +92,25 @@ create trigger set_member_photo_request_updated_at
 
 alter table public.member_photo_requests enable row level security;
 
--- Members can only create their own pending request and cannot pre-fill
--- review fields. There is intentionally no owner SELECT policy: members read
--- status through the my_member_photo_requests view, which excludes
--- admin-only columns.
-create policy "Members can submit their own photo requests"
+-- Anyone (authenticated or anonymous) can submit photo requests.
+-- If authenticated, user_id must match auth.uid(); if anonymous, user_id must be null.
+create policy "Anyone can submit photo requests"
   on public.member_photo_requests
   for insert
-  to authenticated
+  to anon, authenticated
   with check (
-    user_id = auth.uid()
-    and status = 'pending'
+    status = 'pending'
     and consent_confirmed = true
-    and matched_member_id is null
+    and matched_member_id is not null
     and storage_path_approved is null
     and approved_avatar_url is null
     and admin_notes is null
     and reviewed_by is null
     and reviewed_at is null
+    and (
+      (auth.uid() is not null and user_id = auth.uid())
+      or (auth.uid() is null and user_id is null)
+    )
   );
 
 create policy "Admins can view photo requests"
@@ -234,13 +235,13 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
-create policy "Members can upload pending photo requests"
+create policy "Anyone can upload pending photo requests"
   on storage.objects
   for insert
-  to authenticated
+  to anon, authenticated
   with check (
     bucket_id = 'member-photo-requests'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[1] = 'pending'
   );
 
 create policy "Admins can read pending photo requests"

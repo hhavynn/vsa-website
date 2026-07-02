@@ -118,12 +118,14 @@ function RequestCard({
 
   useEffect(() => {
     if (!isPending || autoMatchChecked) return;
-    photoRequestsRepository
-      .findMemberForUser(request.user_id)
+    const matchPromise = request.matched_member_id
+      ? photoRequestsRepository.findMemberById(request.matched_member_id)
+      : photoRequestsRepository.findMemberForUser(request.user_id);
+    matchPromise
       .then(setAutoMatch)
       .catch(() => setAutoMatch(null))
       .finally(() => setAutoMatchChecked(true));
-  }, [isPending, autoMatchChecked, request.user_id]);
+  }, [isPending, autoMatchChecked, request.matched_member_id, request.user_id]);
 
   async function loadPreview() {
     try {

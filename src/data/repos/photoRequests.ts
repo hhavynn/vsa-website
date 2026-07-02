@@ -16,6 +16,7 @@ const REQUEST_SELECT =
   'id, user_id, matched_member_id, submitted_name, submitted_email, note_to_admins, consent_confirmed, storage_path_pending, storage_path_approved, approved_avatar_url, status, admin_notes, reviewed_by, reviewed_at, created_at, updated_at' as const;
 
 export interface SubmitPhotoRequestInput {
+  matchedMemberId: string;
   file: File;
   submittedName: string;
   submittedEmail: string;
@@ -30,19 +31,24 @@ export interface MemberMatchOption {
 
 export class PhotoRequestsRepository {
   /**
-   * Member flow: compress the photo client-side, upload it to the PRIVATE
-   * pending bucket under the caller's own folder, then create the request
-   * row. RLS enforces ownership, consent, and one pending request at a time.
+   * Public flow: compress the photo client-side, upload it to the PRIVATE
+   * pending bucket under a non-readable public-submission folder, then create
+   * the request row. RLS only allows pending, consented, matched-member rows.
    */
-  async submitPhotoRequest(userId: string, input: SubmitPhotoRequestInput): Promise<void> {
+  async submitPhotoRequest(input: SubmitPhotoRequestInput): Promise<void> {
     return withErrorHandling(async () => {
       if (!input.consentConfirmed) {
         throw new ValidationError('Consent is required to submit a photo request.');
       }
 
+      const matchedMemberId = input.matchedMemberId.trim();
+      if (!matchedMemberId) {
+        throw new ValidationError('Choose a member before submitting a photo request.');
+      }
+
       const { file } = await prepareImageForUpload(input.file, 'avatar');
       const ext = getUploadExtension(file);
-      const pendingPath = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const pendingPath = `pending/${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from(PENDING_PHOTO_BUCKET)
@@ -50,14 +56,18 @@ export class PhotoRequestsRepository {
       if (uploadError) throw uploadError;
 
       const { error: insertError } = await supabase.from('member_photo_requests').insert({
-        user_id: userId,
+        user_id: null,
+        matched_member_id: matchedMemberId,
         submitted_name: input.submittedName.trim(),
         submitted_email: input.submittedEmail.trim(),
         note_to_admins: input.noteToAdmins?.trim() || null,
         consent_confirmed: true,
         storage_path_pending: pendingPath,
       });
-      if (insertError) throw insertError;
+      if (insertError) {
+        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
+        throw insertError;
+      }
     }, 'Failed to submit photo request');
   }
 
@@ -234,7 +244,27 @@ export class PhotoRequestsRepository {
   }
 
   /** Admin helper: auto-match a request's auth user to a member row. */
-  async findMemberForUser(userId: string): Promise<MemberMatchOption | null> {
+  async findMemberById(memberId: string | null | undefined): Promise<MemberMatchOption | null> {
+    if (!memberId) return null;
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('members')
+        .select('id, first_name, last_name, college, year')
+        .eq('id', memberId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        displayName: [`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim(), data.college, data.year]
+          .filter(Boolean)
+          .join(' · '),
+      };
+    }, 'Failed to look up matching member');
+  }
+
+  async findMemberForUser(userId: string | null | undefined): Promise<MemberMatchOption | null> {
+    if (!userId) return null;
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('members')
