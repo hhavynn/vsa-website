@@ -17,6 +17,7 @@ interface NavLink {
 
 const QUICK_LINKS: NavLink[] = [
   { path: '/events',      label: 'Events',         emoji: '📅' },
+  { path: '/calendar',    label: 'Calendar',       emoji: '🗓️' },
   { path: '/points',      label: 'Find My Points', emoji: '🎯' },
   { path: '/leaderboard', label: 'Leaderboard',    emoji: '⭐' },
 ];
