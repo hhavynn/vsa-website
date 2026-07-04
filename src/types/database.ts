@@ -7,76 +7,102 @@ export type Json =
   | Json[];
 
 export type SiteEventType =
-  | 'gbm'
-  | 'mixer'
-  | 'winter_retreat'
-  | 'vcn'
-  | 'wildn_culture'
-  | 'external_event'
-  | 'other';
+  | "gbm"
+  | "mixer"
+  | "winter_retreat"
+  | "vcn"
+  | "wildn_culture"
+  | "external_event"
+  | "other";
 
 export type CheckInCodeEventType =
-  | 'general_event'
-  | 'wildn_culture'
-  | 'vcn_dance_practice'
-  | 'vcn_attendance';
+  | "general_event"
+  | "wildn_culture"
+  | "vcn_dance_practice"
+  | "vcn_attendance";
 
-export type AcademicQuarter = 'fall' | 'winter' | 'spring' | 'summer';
-export type ProgramPageKey = 'ace' | 'intern' | 'house' | 'wnc';
-export type ProgramSectionKey = 'current_cycle' | 'application_cta' | 'event_cta' | 'notice';
-export type ProgramContentStatus = 'hidden' | 'coming_soon' | 'open' | 'closed' | 'active';
-export type ResourceLinkVisibility = 'admin_only';
+export type AcademicQuarter = "fall" | "winter" | "spring" | "summer";
+export type ProgramPageKey = "ace" | "intern" | "house" | "wnc";
+export type ProgramSectionKey =
+  | "current_cycle"
+  | "application_cta"
+  | "event_cta"
+  | "notice";
+export type ProgramContentStatus =
+  | "hidden"
+  | "coming_soon"
+  | "open"
+  | "closed"
+  | "active";
+export type ResourceLinkVisibility = "admin_only";
 export type ApplicationKey =
-  | 'ace_application'
-  | 'house_fall'
-  | 'house_winter'
-  | 'house_spring'
-  | 'intern_application'
-  | 'cabinet_application'
-  | 'vcn_stage_ninja_interest'
-  | 'vcn_props_team_interest'
-  | 'wnc_team_form';
-export type ApplicationStatus = 'disabled' | 'not_open' | 'open' | 'closed';
-export type ImportJobStatus = 'completed' | 'failed';
-export type ImportSourceType = 'csv_url' | 'google_sheets_csv' | 'manual' | 'unknown';
-export type ImportRowDecision = 'matched' | 'created' | 'skipped_duplicate' | 'review' | 'error';
-export type ImportRowStatus = 'recorded' | 'error';
+  | "ace_application"
+  | "house_fall"
+  | "house_winter"
+  | "house_spring"
+  | "intern_application"
+  | "cabinet_application"
+  | "vcn_stage_ninja_interest"
+  | "vcn_props_team_interest"
+  | "wnc_team_form";
+export type ApplicationStatus = "disabled" | "not_open" | "open" | "closed";
+export type ImportJobStatus = "completed" | "failed";
+export type ImportSourceType =
+  | "csv_url"
+  | "google_sheets_csv"
+  | "manual"
+  | "unknown";
+export type ImportRowDecision =
+  | "matched"
+  | "created"
+  | "skipped_duplicate"
+  | "review"
+  | "error";
+export type ImportRowStatus = "recorded" | "error";
 export type DataRightsRequestType =
-  | 'review'
-  | 'correction'
-  | 'export'
-  | 'deletion'
-  | 'anonymization'
-  | 'media_removal'
-  | 'analytics_browser_help'
-  | 'external_form'
-  | 'other';
+  | "review"
+  | "correction"
+  | "export"
+  | "deletion"
+  | "anonymization"
+  | "media_removal"
+  | "analytics_browser_help"
+  | "external_form"
+  | "other";
 export type DataRightsRequestStatus =
-  | 'intake'
-  | 'identity_verification'
-  | 'preview_needed'
-  | 'pending_review'
-  | 'approved_for_future_action'
-  | 'completed'
-  | 'rejected'
-  | 'cancelled';
+  | "intake"
+  | "identity_verification"
+  | "preview_needed"
+  | "pending_review"
+  | "approved_for_future_action"
+  | "completed"
+  | "rejected"
+  | "cancelled";
 export type DataRightsVerificationStatus =
-  | 'not_started'
-  | 'pending'
-  | 'verified'
-  | 'failed'
-  | 'not_required';
-export type DataRightsRequestPriority = 'low' | 'normal' | 'high';
+  | "not_started"
+  | "pending"
+  | "verified"
+  | "failed"
+  | "not_required";
+export type DataRightsRequestPriority = "low" | "normal" | "high";
 export type DataRightsRequestEventType =
-  | 'created'
-  | 'status_changed'
-  | 'verification_changed'
-  | 'workflow_updated'
-  | 'details_updated'
-  | 'export_generated'
-  | 'anonymization_completed';
-export type MemberPhotoRequestStatus = 'pending' | 'approved' | 'rejected' | 'removed';
-export type MemberPhotoRequestEventAction = 'submitted' | 'approved' | 'rejected' | 'removed';
+  | "created"
+  | "status_changed"
+  | "verification_changed"
+  | "workflow_updated"
+  | "details_updated"
+  | "export_generated"
+  | "anonymization_completed";
+export type MemberPhotoRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "removed";
+export type MemberPhotoRequestEventAction =
+  | "submitted"
+  | "approved"
+  | "rejected"
+  | "removed";
 
 export interface Database {
   public: {
@@ -298,7 +324,7 @@ export interface Database {
           event_id: string;
           user_id: string;
           points_earned: number;
-          check_in_type: 'code' | 'manual';
+          check_in_type: "code" | "manual";
           checked_in_by: string | null;
           checked_in_at: string;
           created_at: string;
@@ -309,7 +335,7 @@ export interface Database {
           event_id: string;
           user_id: string;
           points_earned?: number;
-          check_in_type?: 'code' | 'manual';
+          check_in_type?: "code" | "manual";
           checked_in_by?: string | null;
           checked_in_at?: string;
           created_at?: string;
@@ -320,7 +346,7 @@ export interface Database {
           event_id?: string;
           user_id?: string;
           points_earned?: number;
-          check_in_type?: 'code' | 'manual';
+          check_in_type?: "code" | "manual";
           checked_in_by?: string | null;
           checked_in_at?: string;
           created_at?: string;
@@ -471,11 +497,11 @@ export interface Database {
           user_id: string | null;
           name: string | null;
           email: string | null;
-          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          type: "bug" | "feature" | "improvement" | "event" | "other";
           title: string;
           description: string;
-          priority: 'low' | 'medium' | 'high';
-          status: 'open' | 'pending' | 'in_progress' | 'closed';
+          priority: "low" | "medium" | "high";
+          status: "open" | "pending" | "in_progress" | "closed";
           created_at: string;
           updated_at: string;
         };
@@ -484,11 +510,11 @@ export interface Database {
           user_id?: string | null;
           name?: string | null;
           email?: string | null;
-          type: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          type: "bug" | "feature" | "improvement" | "event" | "other";
           title: string;
           description: string;
-          priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'pending' | 'in_progress' | 'closed';
+          priority?: "low" | "medium" | "high";
+          status?: "open" | "pending" | "in_progress" | "closed";
           created_at?: string;
           updated_at?: string;
         };
@@ -497,11 +523,11 @@ export interface Database {
           user_id?: string | null;
           name?: string | null;
           email?: string | null;
-          type?: 'bug' | 'feature' | 'improvement' | 'event' | 'other';
+          type?: "bug" | "feature" | "improvement" | "event" | "other";
           title?: string;
           description?: string;
-          priority?: 'low' | 'medium' | 'high';
-          status?: 'open' | 'pending' | 'in_progress' | 'closed';
+          priority?: "low" | "medium" | "high";
+          status?: "open" | "pending" | "in_progress" | "closed";
           created_at?: string;
           updated_at?: string;
         };
@@ -1545,6 +1571,68 @@ export interface Database {
           id?: string;
           logo_url?: string | null;
           logo_alt?: string;
+          updated_at?: string;
+        };
+      };
+      uvsa_network_page_settings: {
+        Row: {
+          id: string;
+          hero_kicker: string;
+          hero_title: string;
+          hero_emphasis: string;
+          hero_description: string;
+          intro_heading: string;
+          intro_body: string;
+          intro_note: string;
+          stat_school_count_label: string;
+          stat_competitions_label: string;
+          stat_community_label: string;
+          upcoming_heading: string;
+          showcase_heading: string;
+          showcase_description: string;
+          schools_heading: string;
+          empty_state_title: string;
+          empty_state_message: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          hero_kicker?: string;
+          hero_title?: string;
+          hero_emphasis?: string;
+          hero_description?: string;
+          intro_heading?: string;
+          intro_body?: string;
+          intro_note?: string;
+          stat_school_count_label?: string;
+          stat_competitions_label?: string;
+          stat_community_label?: string;
+          upcoming_heading?: string;
+          showcase_heading?: string;
+          showcase_description?: string;
+          schools_heading?: string;
+          empty_state_title?: string;
+          empty_state_message?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          hero_kicker?: string;
+          hero_title?: string;
+          hero_emphasis?: string;
+          hero_description?: string;
+          intro_heading?: string;
+          intro_body?: string;
+          intro_note?: string;
+          stat_school_count_label?: string;
+          stat_competitions_label?: string;
+          stat_community_label?: string;
+          upcoming_heading?: string;
+          showcase_heading?: string;
+          showcase_description?: string;
+          schools_heading?: string;
+          empty_state_title?: string;
+          empty_state_message?: string;
           updated_at?: string;
         };
       };
