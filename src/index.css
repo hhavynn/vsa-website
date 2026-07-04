@@ -545,6 +545,18 @@
     transition: transform var(--trans);
   }
 
+  /* Cabinet positions grid — clean 2-col layout for exec role cards */
+  .cabinet-positions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 28px 24px;
+  }
+
+  .cabinet-position-card {
+    transition: transform var(--trans);
+  }
+
   /* Department spread card — tape at both corners, no centered tape */
   .scrapbook-dept {
     position: relative;
@@ -1355,6 +1367,15 @@
   .cabinet-card {
     transform: none;
     margin-top: 0;
+  }
+
+  .cabinet-positions-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .cabinet-position-card {
+    transform: none !important;
   }
 
   .gallery-memory-image {
