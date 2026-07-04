@@ -110,6 +110,21 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function getNextSchoolFormWithShortName(
+  form: SchoolForm,
+  shortName: string,
+): SchoolForm {
+  const currentGeneratedSlug = slugify(form.short_name);
+  const shouldSyncSlug =
+    form.slug.trim().length === 0 || form.slug === currentGeneratedSlug;
+
+  return {
+    ...form,
+    short_name: shortName,
+    slug: shouldSyncSlug ? slugify(shortName) : form.slug,
+  };
+}
+
 function schoolToForm(school: UVSASchool): SchoolForm {
   return {
     id: school.id,
@@ -499,11 +514,9 @@ export default function AdminUVSASchools() {
                 label="Short name"
                 value={schoolForm.short_name}
                 onChange={(short_name) =>
-                  setSchoolForm({
-                    ...schoolForm,
-                    short_name,
-                    slug: schoolForm.slug || slugify(short_name),
-                  })
+                  setSchoolForm(
+                    getNextSchoolFormWithShortName(schoolForm, short_name),
+                  )
                 }
               />
               <TextField
@@ -638,7 +651,8 @@ export default function AdminUVSASchools() {
                   setSchoolForm({ ...schoolForm, confidence_level })
                 }
               />
-              <label className="flex items-center gap-3 rounded-md border border-border bg-surface2 px-3 py-2 text-sm text-text-primary">
+              <label className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface2 px-3 py-2 text-sm text-text-primary">
+                <span>Show on public page</span>
                 <input
                   type="checkbox"
                   checked={schoolForm.is_active}
@@ -648,9 +662,12 @@ export default function AdminUVSASchools() {
                       is_active: event.target.checked,
                     })
                   }
-                  className="h-4 w-4 rounded border-border text-brand-600 focus:ring-brand-600"
+                  className="peer sr-only"
                 />
-                Show on public page
+                <span
+                  aria-hidden
+                  className="relative h-6 w-11 rounded-full bg-border transition-colors after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-surface after:shadow-sm after:transition-transform peer-checked:bg-brand-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-600/40"
+                />
               </label>
             </div>
           </form>
