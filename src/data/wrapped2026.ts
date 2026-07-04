@@ -2,7 +2,7 @@
 //
 // Everything in this file is community-recap copy written/approved by cabinet,
 // NOT derived from private data. Dynamic aggregate stats (event counts, House
-// standings, gallery counts) are fetched separately in src/pages/Wrapped.tsx;
+// standings, gallery counts) are fetched separately in src/components/features/home/WrappedRecapCard.tsx;
 // when those queries are unavailable the page falls back to the copy here so
 // we never show fake precision.
 //

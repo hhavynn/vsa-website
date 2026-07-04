@@ -1,5 +1,10 @@
 import { lazy, Suspense } from "react";
-import { Routes as RouterRoutes, Route, Navigate, Link } from "react-router-dom";
+import {
+  Routes as RouterRoutes,
+  Route,
+  Navigate,
+  Link,
+} from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
@@ -11,64 +16,71 @@ import RouteTracker from "../components/common/RouteTracker";
 
 // Lazy load pages
 const Home = lazy(() =>
-  import("../pages/Home").then((module) => ({ default: module.Home }))
+  import("../pages/Home").then((module) => ({ default: module.Home })),
 );
 const Events = lazy(() =>
-  import("../pages/Events").then((module) => ({ default: module.Events }))
+  import("../pages/Events").then((module) => ({ default: module.Events })),
 );
 const Calendar = lazy(() =>
-  import("../pages/Calendar").then((module) => ({ default: module.Calendar }))
-);
-const Wrapped = lazy(() =>
-  import("../pages/Wrapped").then((module) => ({ default: module.Wrapped }))
+  import("../pages/Calendar").then((module) => ({ default: module.Calendar })),
 );
 const Leaderboard = lazy(() =>
   import("../pages/Leaderboard").then((module) => ({
     default: module.Leaderboard,
-  }))
+  })),
 );
 const Cabinet = lazy(() =>
-  import("../pages/Cabinet").then((module) => ({ default: module.Cabinet }))
+  import("../pages/Cabinet").then((module) => ({ default: module.Cabinet })),
 );
 const GetInvolved = lazy(() =>
   import("../pages/GetInvolved").then((module) => ({
     default: module.GetInvolved,
-  }))
+  })),
 );
 const Gallery = lazy(() => import("../pages/Gallery"));
 const Ace = lazy(() =>
-  import("../pages/Ace").then((module) => ({ default: module.Ace }))
+  import("../pages/Ace").then((module) => ({ default: module.Ace })),
 );
 const House = lazy(() =>
-  import("../pages/House").then((module) => ({ default: module.House }))
+  import("../pages/House").then((module) => ({ default: module.House })),
 );
 const HouseArchive = lazy(() =>
-  import("../pages/HouseArchive").then((module) => ({ default: module.HouseArchive }))
+  import("../pages/HouseArchive").then((module) => ({
+    default: module.HouseArchive,
+  })),
 );
 const HouseDetail = lazy(() =>
-  import("../pages/HouseDetail").then((module) => ({ default: module.HouseDetail }))
+  import("../pages/HouseDetail").then((module) => ({
+    default: module.HouseDetail,
+  })),
 );
 const Internship = lazy(() =>
   import("../pages/Internship").then((module) => ({
     default: module.Internship,
-  }))
+  })),
 );
 const Vcn = lazy(() =>
-  import("../pages/Vcn").then((module) => ({ default: module.VCN }))
+  import("../pages/Vcn").then((module) => ({ default: module.VCN })),
 );
 const VcnCurrent = lazy(() =>
-  import("../pages/VcnCurrent").then((module) => ({ default: module.VCNCurrent }))
+  import("../pages/VcnCurrent").then((module) => ({
+    default: module.VCNCurrent,
+  })),
 );
 const VcnArchive = lazy(() =>
-  import("../pages/VcnArchive").then((module) => ({ default: module.VCNArchive }))
+  import("../pages/VcnArchive").then((module) => ({
+    default: module.VCNArchive,
+  })),
 );
 const WildNCulture = lazy(() =>
   import("../pages/WildNCulture").then((module) => ({
     default: module.WildNCulture,
-  }))
+  })),
 );
 const FeedbackPage = lazy(() =>
-  import("../pages/Feedback").then((module) => ({ default: module.FeedbackPage }))
+  import("../pages/Feedback").then((module) => ({
+    default: module.FeedbackPage,
+  })),
 );
 const Points = lazy(() => import("../pages/Points"));
 const UVSANetwork = lazy(() => import("../pages/UVSANetwork"));
@@ -77,7 +89,9 @@ const Privacy = lazy(() => import("../pages/Privacy"));
 const AdminEvents = lazy(() => import("../pages/Admin/Events"));
 const AdminOverview = lazy(() => import("../pages/Admin/Overview"));
 const AdminContent = lazy(() => import("../pages/Admin/Content"));
-const AdminContentCalendar = lazy(() => import("../pages/Admin/ContentCalendar"));
+const AdminContentCalendar = lazy(
+  () => import("../pages/Admin/ContentCalendar"),
+);
 const AdminResources = lazy(() => import("../pages/Admin/Resources"));
 const AdminGallery = lazy(() => import("../pages/Admin/Gallery"));
 const AdminVcnArchives = lazy(() => import("../pages/Admin/VcnArchives"));
@@ -85,7 +99,9 @@ const AdminFeedback = lazy(() => import("../pages/Admin/Feedback"));
 const AdminImport = lazy(() => import("../pages/Admin/Import"));
 const AdminMembers = lazy(() => import("../pages/Admin/Members"));
 const AdminHouses = lazy(() => import("../pages/Admin/Houses"));
-const AdminMergeSuggestions = lazy(() => import("../pages/Admin/MergeSuggestions"));
+const AdminMergeSuggestions = lazy(
+  () => import("../pages/Admin/MergeSuggestions"),
+);
 const AdminCabinet = lazy(() => import("../pages/Admin/Cabinet"));
 const AdminYearsTerms = lazy(() => import("../pages/Admin/YearsTerms"));
 const AdminPoints = lazy(() => import("../pages/Admin/Points"));
@@ -97,30 +113,47 @@ const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
 const AdminAiKnowledge = lazy(() => import("../pages/Admin/AiKnowledge"));
 const AdminAiFeedback = lazy(() => import("../pages/Admin/AiFeedback"));
 const AdminApplications = lazy(() => import("../pages/Admin/Applications"));
-const AdminLaunchChecklist = lazy(() => import("../pages/Admin/LaunchChecklist"));
-const AdminDataRightsRequests = lazy(() => import("../pages/Admin/DataRightsRequests"));
+const AdminLaunchChecklist = lazy(
+  () => import("../pages/Admin/LaunchChecklist"),
+);
+const AdminDataRightsRequests = lazy(
+  () => import("../pages/Admin/DataRightsRequests"),
+);
 const AdminPhotoRequests = lazy(() => import("../pages/Admin/PhotoRequests"));
 const SignIn = lazy(() =>
-  import("../pages/SignIn").then((module) => ({ default: module.SignIn }))
+  import("../pages/SignIn").then((module) => ({ default: module.SignIn })),
 );
 const NotFound = lazy(() =>
-  import("../pages/NotFound").then((module) => ({ default: module.NotFound }))
+  import("../pages/NotFound").then((module) => ({ default: module.NotFound })),
 );
 
 function MemberAccountsUnavailable() {
   return (
     <>
       <PageTitle title="Member Accounts Unavailable" />
-      <div className="min-h-[60vh] px-4 py-20" style={{ background: "var(--color-bg)" }}>
+      <div
+        className="min-h-[60vh] px-4 py-20"
+        style={{ background: "var(--color-bg)" }}
+      >
         <div className="mx-auto max-w-md text-center">
-          <p className="font-sans text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--color-text3)" }}>
+          <p
+            className="font-sans text-[11px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: "var(--color-text3)" }}
+          >
             Member accounts
           </p>
-          <h1 className="mt-3 font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 36, color: "var(--color-text)" }}>
+          <h1
+            className="mt-3 font-serif leading-none tracking-[-0.03em]"
+            style={{ fontSize: 36, color: "var(--color-text)" }}
+          >
             Not currently enabled
           </h1>
-          <p className="mt-4 font-sans text-sm leading-6" style={{ color: "var(--color-text2)" }}>
-            VSA member account features are paused for this version of the site. Public pages are still available without signing in.
+          <p
+            className="mt-4 font-sans text-sm leading-6"
+            style={{ color: "var(--color-text2)" }}
+          >
+            VSA member account features are paused for this version of the site.
+            Public pages are still available without signing in.
           </p>
           <Link
             to="/"
@@ -153,7 +186,6 @@ export default function AppRoutes() {
               <Route path="/" element={<Home />} />
               <Route path="/events" element={<Events />} />
               <Route path="/calendar" element={<Calendar />} />
-              <Route path="/wrapped" element={<Wrapped />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cabinet" element={<Cabinet />} />
               <Route path="/get-involved" element={<GetInvolved />} />
@@ -162,9 +194,15 @@ export default function AppRoutes() {
               <Route path="/house" element={<House />} />
               <Route path="/house/archive" element={<HouseArchive />} />
               <Route path="/house/archive/:yearSlug" element={<House />} />
-              <Route path="/house/archive/:yearSlug/:houseSlug" element={<HouseDetail />} />
+              <Route
+                path="/house/archive/:yearSlug/:houseSlug"
+                element={<HouseDetail />}
+              />
               <Route path="/house/year/:yearSlug" element={<House />} />
-              <Route path="/house/year/:yearSlug/:houseSlug" element={<HouseDetail />} />
+              <Route
+                path="/house/year/:yearSlug/:houseSlug"
+                element={<HouseDetail />}
+              />
               <Route path="/house/:houseSlug" element={<HouseDetail />} />
               <Route path="/house-system" element={<House />} />
               <Route path="/intern-program" element={<Internship />} />
@@ -173,7 +211,10 @@ export default function AppRoutes() {
               <Route path="/vcn/archive" element={<VcnArchive />} />
               <Route path="/wild-n-culture" element={<WildNCulture />} />
               <Route path="/uvsa-network" element={<UVSANetwork />} />
-              <Route path="/signin" element={<Navigate to="/admin/login" replace />} />
+              <Route
+                path="/signin"
+                element={<Navigate to="/admin/login" replace />}
+              />
               <Route path="/admin/login" element={<SignIn />} />
 
               {/* Member account routes are intentionally parked for this release. */}
@@ -187,7 +228,10 @@ export default function AppRoutes() {
               <Route element={<AdminRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route path="/admin" element={<AdminOverview />} />
-                  <Route path="/admin/content-calendar" element={<AdminContentCalendar />} />
+                  <Route
+                    path="/admin/content-calendar"
+                    element={<AdminContentCalendar />}
+                  />
                   <Route path="/admin/content" element={<AdminContent />} />
                   <Route path="/admin/resources" element={<AdminResources />} />
                   <Route path="/admin/events" element={<AdminEvents />} />
@@ -196,22 +240,49 @@ export default function AppRoutes() {
                   <Route path="/admin/feedback" element={<AdminFeedback />} />
                   <Route path="/admin/import" element={<AdminImport />} />
                   <Route path="/admin/members" element={<AdminMembers />} />
-                  <Route path="/admin/photo-requests" element={<AdminPhotoRequests />} />
+                  <Route
+                    path="/admin/photo-requests"
+                    element={<AdminPhotoRequests />}
+                  />
                   <Route path="/admin/houses" element={<AdminHouses />} />
-                  <Route path="/admin/merge-suggestions" element={<AdminMergeSuggestions />} />
+                  <Route
+                    path="/admin/merge-suggestions"
+                    element={<AdminMergeSuggestions />}
+                  />
                   <Route path="/admin/cabinet" element={<AdminCabinet />} />
                   <Route path="/admin/years" element={<AdminYearsTerms />} />
                   <Route path="/admin/points" element={<AdminPoints />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   <Route path="/admin/settings" element={<AdminSettings />} />
                   <Route path="/admin/ace" element={<AdminAceFamilies />} />
-                  <Route path="/admin/uvsa-schools" element={<AdminUVSASchools />} />
-                  <Route path="/admin/external-events" element={<AdminExternalEvents />} />
-                  <Route path="/admin/ai-knowledge" element={<AdminAiKnowledge />} />
-                  <Route path="/admin/ai-feedback" element={<AdminAiFeedback />} />
-                  <Route path="/admin/applications" element={<AdminApplications />} />
-                  <Route path="/admin/launch-checklist" element={<AdminLaunchChecklist />} />
-                  <Route path="/admin/data-rights" element={<AdminDataRightsRequests />} />
+                  <Route
+                    path="/admin/uvsa-schools"
+                    element={<AdminUVSASchools />}
+                  />
+                  <Route
+                    path="/admin/external-events"
+                    element={<AdminExternalEvents />}
+                  />
+                  <Route
+                    path="/admin/ai-knowledge"
+                    element={<AdminAiKnowledge />}
+                  />
+                  <Route
+                    path="/admin/ai-feedback"
+                    element={<AdminAiFeedback />}
+                  />
+                  <Route
+                    path="/admin/applications"
+                    element={<AdminApplications />}
+                  />
+                  <Route
+                    path="/admin/launch-checklist"
+                    element={<AdminLaunchChecklist />}
+                  />
+                  <Route
+                    path="/admin/data-rights"
+                    element={<AdminDataRightsRequests />}
+                  />
                 </Route>
               </Route>
 
