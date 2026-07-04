@@ -46,6 +46,41 @@ function WrappedCardLink({
   );
 }
 
+function WrappedMiniFeature({
+  eyebrow,
+  title,
+  body,
+  emoji,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  emoji?: string;
+}) {
+  return (
+    <div className="border-t border-[var(--border)] pt-5">
+      <div className="flex items-start gap-3">
+        {emoji && (
+          <span className="mt-0.5 text-[22px]" aria-hidden>
+            {emoji}
+          </span>
+        )}
+        <div>
+          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
+            {eyebrow}
+          </div>
+          <h3 className="mt-1 font-serif text-[24px] font-black leading-tight text-text-primary">
+            {title}
+          </h3>
+        </div>
+      </div>
+      <p className="mt-3 font-sans text-[13.5px] leading-[1.75] text-text-secondary">
+        {body}
+      </p>
+    </div>
+  );
+}
+
 export function WrappedRecapCard() {
   const eventsQuery = useQuery(
     ["home-wrapped-events", W.windowStart, W.windowEnd],
@@ -87,6 +122,8 @@ export function WrappedRecapCard() {
   const topHousePoints = topHouse
     ? roundToFriendlyFloor(topHouse.total_points)
     : null;
+  const spotlightEvents = W.signatureEvents.slice(0, 3);
+  const featuredAwards = W.awards.slice(0, 3);
 
   return (
     <section className="scrapbook-board border-t border-[var(--border)]">
@@ -141,6 +178,90 @@ export function WrappedRecapCard() {
                 }
               />
             </div>
+          </div>
+
+          <div className="relative mt-10 grid gap-8 border-t border-[var(--border)] pt-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div>
+              <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+                Highlight reel
+              </div>
+              <div className="mt-5 grid gap-4">
+                {spotlightEvents.map((event) => (
+                  <div
+                    key={event.name}
+                    className="scrapbook-note border border-[var(--border)] p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-[24px]" aria-hidden>
+                        {event.emoji}
+                      </span>
+                      <div>
+                        <h3 className="font-serif text-[22px] font-black leading-tight text-text-primary">
+                          {event.name}
+                        </h3>
+                        <p className="mt-2 font-sans text-[13.5px] leading-[1.7] text-text-secondary">
+                          {event.blurb}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-5">
+              <WrappedMiniFeature
+                eyebrow="VCN"
+                title={W.vcn.fallbackTitle}
+                body={W.vcn.fallbackBlurb}
+              />
+              <WrappedMiniFeature
+                eyebrow="WNC"
+                title={W.wnc.title}
+                body={W.wnc.blurb}
+              />
+              <WrappedMiniFeature
+                eyebrow="Cabinet"
+                title={W.cabinet.fallbackTheme}
+                body={W.cabinet.thankYou}
+              />
+            </div>
+          </div>
+
+          <div className="relative mt-8 border-t border-[var(--border)] pt-8">
+            <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+              Wrapped awards
+            </div>
+            <h3 className="mt-2 max-w-2xl font-serif text-[30px] font-black leading-tight text-text-primary">
+              The moments that became the group chat lore
+            </h3>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              {featuredAwards.map((award) => (
+                <div
+                  key={award.title}
+                  className="scrapbook-note border border-[var(--border)] p-4"
+                >
+                  <div className="text-[26px]" aria-hidden>
+                    {award.emoji}
+                  </div>
+                  <div className="mt-3 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
+                    {award.title}
+                  </div>
+                  <div className="mt-1 font-serif text-[22px] font-black leading-tight text-[var(--accent)]">
+                    {award.winner}
+                  </div>
+                  <p className="mt-2 font-sans text-[13px] leading-[1.65] text-text-secondary">
+                    {award.blurb}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative mt-8 border-t border-[var(--border)] pt-8">
+            <p className="max-w-3xl font-sans text-[15px] leading-[1.85] text-text-secondary">
+              {W.closing.blurb}
+            </p>
           </div>
         </div>
       </div>
