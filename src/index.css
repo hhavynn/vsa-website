@@ -1332,6 +1332,7 @@
   .gallery-memory-wall {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 18px;
   }
 
@@ -1347,6 +1348,7 @@
   .cabinet-wall {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 20px;
   }
 

@@ -457,9 +457,11 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
           <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
             House Event
           </span>
-          <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
-            {housesLabel}
-          </span>
+          {event.houses && event.houses.length > 0 && (
+            <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
+              {housesLabel}
+            </span>
+          )}
         </div>
         <div className="mt-1.5 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
           {event.title}

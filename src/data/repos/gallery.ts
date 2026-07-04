@@ -22,6 +22,9 @@ export interface GalleryAlbum {
 export interface GalleryFilters {
   limit?: number;
   offset?: number;
+  /** Inclusive "YYYY-MM-DD" bounds — gallery_events.date is a DATE column. */
+  date_from?: string;
+  date_to?: string;
 }
 
 export class GalleryRepository {
@@ -36,10 +39,13 @@ export class GalleryRepository {
         .not('google_photos_url', 'is', null)
         .order('date', { ascending: false });
 
+      if (filters.date_from) query = query.gte('date', filters.date_from);
+      if (filters.date_to) query = query.lte('date', filters.date_to);
+
       if (filters.limit) {
         query = query.limit(filters.limit);
       }
-      
+
       if (filters.offset !== undefined) {
         const limit = filters.limit || 12;
         query = query.range(filters.offset, filters.offset + limit - 1);
