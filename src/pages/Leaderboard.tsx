@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
@@ -925,10 +925,10 @@ function PodiumIndividual({
           const Icon = card.icon;
 
           return (
-            <div 
-              key={card.entry.id} 
-              className={`${card.order} relative ${isFirst ? 'md:scale-110 md:z-10' : 'md:opacity-90'}`}
-              style={{ transform: `rotate(${card.rotation}deg)` }}
+            <div
+              key={card.entry.id}
+              className={`${card.order} relative ${isFirst ? 'md:scale-110 md:z-10' : 'md:opacity-90'} md:rotate-[var(--podium-rotate)]`}
+              style={{ '--podium-rotate': `${card.rotation}deg` } as CSSProperties}
             >
               <PushPin color={card.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
               
