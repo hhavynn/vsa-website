@@ -111,7 +111,7 @@ export function WrappedRecapCard() {
                   VSA Wrapped 2025–2026
                 </h2>
                 <p className="mt-5 max-w-2xl font-sans text-[18px] font-bold leading-[1.7] text-text-primary">
-                  One year. Four Houses. Too many side quests to count.
+                  A quick look back at 2025–2026.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <WrappedNavLink to="/events">Events</WrappedNavLink>
@@ -138,20 +138,17 @@ export function WrappedRecapCard() {
             <div className="mt-6 grid gap-5 lg:grid-cols-2">
               <WrappedBlock emoji="🎭" title="VCN" heading="Tình Yêu Thầm Lặng">
                 <p>
-                  Months of rehearsals, late nights, dances, acting, tech, and a
-                  whole lot of people making one huge show happen.
+                  Months of rehearsals and late nights for one night on stage.
                 </p>
-                <p>One stage. One story. A lot of VSA.</p>
               </WrappedBlock>
 
               <WrappedBlock
                 emoji="🏕️"
                 title="Winter Retreat"
-                heading="The trip where everyone somehow came back closer"
+                heading="The trip where everyone came back closer"
               >
                 <p>
-                  Games, late-night conversations, questionable sleep schedules,
-                  and the kind of bonding you cannot really recreate at a GBM.
+                  Games, late-night talks, and very questionable sleep schedules.
                 </p>
               </WrappedBlock>
 
@@ -161,19 +158,16 @@ export function WrappedRecapCard() {
                 heading="Library Walk got personal"
               >
                 <p>Pay a few dollars. Pick a cabinet member. Throw a pie.</p>
-                <p>Simple concept. Extremely effective.</p>
               </WrappedBlock>
 
               <WrappedBlock
                 emoji="🌎"
                 title="Wild N’ Culture"
-                heading="Culture, competition, and complete nonsense"
+                heading="Culture and competition got loud"
               >
                 <p>
-                  Games got loud. Schools got competitive. Somehow the chaos was
-                  still on theme.
+                  Schools got competitive, and the chaos stayed mostly on theme.
                 </p>
-                <p>Classic WNC.</p>
               </WrappedBlock>
             </div>
           </div>
@@ -191,8 +185,7 @@ export function WrappedRecapCard() {
                   The Super Mario Era
                 </h3>
                 <div className="mt-4 space-y-3 font-sans text-[14px] leading-[1.8] text-text-secondary">
-                  <p>Bowser. Donkey Kong. Toad. Boo.</p>
-                  <p>Four Houses entered the year. One finished on top.</p>
+              <p>The House race stayed worth checking all year.</p>
                 </div>
               </div>
 
@@ -211,7 +204,7 @@ export function WrappedRecapCard() {
                   ))}
                 </div>
                 <p className="mt-6 font-sans text-[15px] font-bold leading-[1.7] text-text-primary">
-                  Bowser House takes the 2025–2026 crown.
+              Bowser House finished first in 2025–2026.
                 </p>
               </div>
             </div>
@@ -228,9 +221,7 @@ export function WrappedRecapCard() {
                 winner="VCN"
               >
                 <p>
-                  The biggest production of the year, powered by members who
-                  spent months turning rehearsals, meetings, costumes, dances,
-                  and a script into one night on stage.
+                  Months of work turned into one night on stage.
                 </p>
               </AwardBlock>
 
@@ -239,8 +230,7 @@ export function WrappedRecapCard() {
                 title="Most Chaotic Energy"
                 winner="Wild N’ Culture"
               >
-                <p>There are events you explain to your friends.</p>
-                <p>Then there is WNC.</p>
+                <p>Loud and mostly on purpose.</p>
               </AwardBlock>
 
               <AwardBlock
@@ -248,7 +238,7 @@ export function WrappedRecapCard() {
                 title="Most Dangerous Place to Be Cabinet"
                 winner="Pie-A-Cab"
               >
-                <p>No position title could save you.</p>
+                <p>No title helped.</p>
               </AwardBlock>
 
               <AwardBlock
@@ -257,8 +247,7 @@ export function WrappedRecapCard() {
                 winner="The House race"
               >
                 <p>
-                  Bowser, Donkey Kong, Toad, and Boo spent the year collecting
-                  points, showing up, and keeping the leaderboard interesting.
+                  The leaderboard stayed worth checking all year.
                 </p>
               </AwardBlock>
 
@@ -268,8 +257,7 @@ export function WrappedRecapCard() {
                 winner="Welcome Week Mixer"
               >
                 <p>
-                  Fall started differently this year with a bigger social
-                  kickoff and a new spin on Welcome Week.
+                  Welcome Week started with a bigger social kickoff.
                 </p>
               </AwardBlock>
 
@@ -278,13 +266,7 @@ export function WrappedRecapCard() {
                 title="Most “This Is Why We Do VSA” Moment"
                 winner="The people who kept showing up"
               >
-                <p>The members who came back after their first GBM.</p>
-                <p>The interns who stepped up.</p>
-                <p>The House Parents who built community.</p>
-                <p>The performers who stayed late.</p>
-                <p>The cabinet members carrying boxes.</p>
-                <p>The friends who brought their friends.</p>
-                <p>That was the year.</p>
+                <p>People kept coming back and bringing friends with them.</p>
               </AwardBlock>
             </div>
           </div>
@@ -301,14 +283,12 @@ export function WrappedRecapCard() {
               </div>
               <div className="space-y-4 font-sans text-[15px] leading-[1.85] text-text-secondary">
                 <p>
-                  We closed out 2025–2026 with{" "}
-                  <strong className="text-text-primary">Afterglow</strong>,
-                  celebrating the people, Houses, seniors, memories, and little
-                  moments that made the year what it was.
+                We closed out 2025–2026 with{" "}
+                <strong className="text-text-primary">Afterglow</strong> and a
+                lot of people to celebrate.
                 </p>
                 <p>
-                  To every member, intern, House Parent, performer, volunteer,
-                  photographer, cabinet member, and friend who showed up:
+                To everyone who showed up:
                 </p>
                 <p className="font-bold text-text-primary">
                   thank you for being part of it.
@@ -323,13 +303,13 @@ export function WrappedRecapCard() {
             </h2>
             <div className="mt-5 space-y-2 font-sans text-[15px] leading-[1.8] text-text-secondary">
               <p>2025–2026 gave us:</p>
-              <p>🍄 a Super Mario House era</p>
-              <p>🎭 another VCN story brought to life</p>
-              <p>🌎 WNC chaos</p>
-              <p>🏕️ retreat memories</p>
-              <p>🥧 pies to the face</p>
-              <p>📸 way too many photos</p>
-              <p>❤️ and a lot of reasons to come back</p>
+              <p>🍄 Mario Houses</p>
+              <p>🎭 VCN</p>
+              <p>🌎 WNC</p>
+              <p>🏕️ retreat</p>
+              <p>🥧 pies</p>
+              <p>📸 photos</p>
+              <p>❤️ reasons to come back</p>
             </div>
             <p className="mt-7 font-sans text-[17px] font-bold leading-[1.7] text-text-primary">
               Same VSA. New year loading.
