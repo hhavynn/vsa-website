@@ -1,9 +1,11 @@
-import React from "react";
+import React, { ComponentType } from "react";
 import { PageTitle } from "../components/common/PageTitle";
 import { useUVSASchools } from "../hooks/useUVSASchools";
+import { useUVSANetworkPageSettings } from "../hooks/useUVSANetworkPageSettings";
 import { useExternalEvents } from "../hooks/useExternalEvents";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { IconBaseProps } from "react-icons";
 import {
   FaGlobe,
   FaMapMarkerAlt,
@@ -20,24 +22,29 @@ import { formatDateOnly } from "../lib/dateOnly";
 import { ExternalEvent, UVSASchool } from "../types";
 import { motion } from "framer-motion";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
-import { getSummerBreakMessage, shouldUseSummerEmptyState } from "../utils/seasonalState";
+import {
+  getSummerBreakMessage,
+  shouldUseSummerEmptyState,
+} from "../utils/seasonalState";
 
 import { isSupabaseUnavailable } from "../utils/isSupabaseUnavailable";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { ContentUnavailableState } from "../components/common/ContentUnavailableState";
-import { FALLBACK_UVSA_NETWORK, FALLBACK_LINKS } from "../config/publicFallbackContent";
+import {
+  FALLBACK_UVSA_NETWORK,
+  FALLBACK_LINKS,
+} from "../config/publicFallbackContent";
 
-// Icon components cast to any to avoid TS JSX errors in some environments
-const GlobeIcon = FaGlobe as any;
-const MapPinIcon = FaMapMarkerAlt as any;
-const InstagramIcon = FaInstagram as any;
-const ExternalLinkIcon = FaExternalLinkAlt as any;
-const StarIcon = FaStar as any;
-const InfoIcon = FaInfoCircle as any;
-const CalendarIcon = FaCalendarAlt as any;
-const CheckCircleIcon = FaCheckCircle as any;
-const UsersIcon = FaUsers as any;
-const TrophyIcon = FaTrophy as any;
+const GlobeIcon = FaGlobe as ComponentType<IconBaseProps>;
+const MapPinIcon = FaMapMarkerAlt as ComponentType<IconBaseProps>;
+const InstagramIcon = FaInstagram as ComponentType<IconBaseProps>;
+const ExternalLinkIcon = FaExternalLinkAlt as ComponentType<IconBaseProps>;
+const StarIcon = FaStar as ComponentType<IconBaseProps>;
+const InfoIcon = FaInfoCircle as ComponentType<IconBaseProps>;
+const CalendarIcon = FaCalendarAlt as ComponentType<IconBaseProps>;
+const CheckCircleIcon = FaCheckCircle as ComponentType<IconBaseProps>;
+const UsersIcon = FaUsers as ComponentType<IconBaseProps>;
+const TrophyIcon = FaTrophy as ComponentType<IconBaseProps>;
 
 const EXTERNAL_SHOWCASE_ORDER = [
   "ucsd",
@@ -71,19 +78,36 @@ const itemVariants = {
 };
 
 export default function UVSANetwork() {
-  const { schools, loading: schoolsLoading, error: schoolsError } = useUVSASchools();
-  const { events: upcomingEvents, loading: upcomingLoading, error: upcomingError } =
-    useExternalEvents({ status: "upcoming" });
-  const { events: pastEvents, loading: pastLoading, error: pastError } = useExternalEvents({
+  const {
+    schools,
+    loading: schoolsLoading,
+    error: schoolsError,
+  } = useUVSASchools();
+  const { settings, error: settingsError } = useUVSANetworkPageSettings();
+  const {
+    events: upcomingEvents,
+    loading: upcomingLoading,
+    error: upcomingError,
+  } = useExternalEvents({ status: "upcoming" });
+  const {
+    events: pastEvents,
+    loading: pastLoading,
+    error: pastError,
+  } = useExternalEvents({
     status: "past",
   });
-  const { events: historicalEvents, loading: historicalLoading, error: historicalError } =
-    useExternalEvents({ status: "historical" });
+  const {
+    events: historicalEvents,
+    loading: historicalLoading,
+    error: historicalError,
+  } = useExternalEvents({ status: "historical" });
 
-  const isDegraded = isSupabaseUnavailable(schoolsError) || 
-                     isSupabaseUnavailable(upcomingError) || 
-                     isSupabaseUnavailable(pastError) || 
-                     isSupabaseUnavailable(historicalError);
+  const isDegraded =
+    isSupabaseUnavailable(schoolsError) ||
+    isSupabaseUnavailable(settingsError) ||
+    isSupabaseUnavailable(upcomingError) ||
+    isSupabaseUnavailable(pastError) ||
+    isSupabaseUnavailable(historicalError);
 
   const archiveEvents = [...pastEvents, ...historicalEvents];
   const allPublicEvents = [...upcomingEvents, ...archiveEvents];
@@ -92,7 +116,9 @@ export default function UVSANetwork() {
     .sort(compareEventsByRecency)[0];
   const spotlightEvent = featuredEvent || archiveEvents[0];
   const spotlightLoading = upcomingLoading || pastLoading || historicalLoading;
-  const useSummerExternalsEmptyState = shouldUseSummerEmptyState(upcomingEvents.length > 0);
+  const useSummerExternalsEmptyState = shouldUseSummerEmptyState(
+    upcomingEvents.length > 0,
+  );
   const summerExternalsMessage = getSummerBreakMessage("externals");
 
   if (isDegraded) {
@@ -120,17 +146,16 @@ export default function UVSANetwork() {
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-teal mb-4">
-            UVSA 101
+            {settings.hero_kicker}
           </span>
           <h1 className="vsa-page-title">
-            SoCal VSA <em>Network</em>
+            {settings.hero_title} <em>{settings.hero_emphasis}</em>
           </h1>
           <p
             className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]"
             style={{ color: "var(--text2)" }}
           >
-            13 schools. One community. VSA at UCSD is part of the larger UVSA
-            SoCal network of students across Southern California.
+            {settings.hero_description}
           </p>
         </div>
       </div>
@@ -142,20 +167,16 @@ export default function UVSANetwork() {
               className="font-sans text-lg leading-relaxed"
               style={{ color: "var(--text2)" }}
             >
-              <span className="font-bold text-[var(--text)]">Externals</span> are
-              events hosted by other VSAs where UCSD members can attend, support,
-              compete, and meet people from other schools. Externals can look like
-              pageants, game shows, talent competitions, showcases, or performance
-              nights, but they are also a way for schools to support each other's
-              philanthropy projects and cultural programming.
+              <span className="font-bold text-[var(--text)]">
+                {settings.intro_heading}
+              </span>{" "}
+              {settings.intro_body}
             </p>
             <p
               className="font-sans text-sm leading-relaxed"
               style={{ color: "var(--text3)" }}
             >
-              Many externals are also tied to philanthropy, culture, or community
-              causes. Some feel like big competitions or showcases, but they still
-              help connect schools and support the values behind UVSA.
+              {settings.intro_note}
             </p>
             <div className="pt-4 flex flex-wrap gap-4">
               <div
@@ -163,7 +184,9 @@ export default function UVSANetwork() {
                 style={{ borderColor: "var(--border)" }}
               >
                 <UsersIcon size={18} className="text-[var(--brand)]" />
-                <span className="font-sans text-sm font-medium">13 Schools</span>
+                <span className="font-sans text-sm font-medium">
+                  {settings.stat_school_count_label}
+                </span>
               </div>
               <div
                 className="flex items-center gap-2 px-4 py-2 rounded-full border bg-[var(--surface)]"
@@ -171,7 +194,7 @@ export default function UVSANetwork() {
               >
                 <TrophyIcon size={18} className="text-[var(--brand)]" />
                 <span className="font-sans text-sm font-medium">
-                  Competitions
+                  {settings.stat_competitions_label}
                 </span>
               </div>
               <div
@@ -180,7 +203,7 @@ export default function UVSANetwork() {
               >
                 <StarIcon size={18} className="text-[var(--brand)]" />
                 <span className="font-sans text-sm font-medium">
-                  VSA Community
+                  {settings.stat_community_label}
                 </span>
               </div>
             </div>
@@ -200,7 +223,7 @@ export default function UVSANetwork() {
         <section className="space-y-8">
           <div className="flex items-center gap-4">
             <CalendarIcon className="text-[var(--brand)]" size={28} />
-            <h2 className="font-serif text-3xl">Upcoming Externals</h2>
+            <h2 className="font-serif text-3xl">{settings.upcoming_heading}</h2>
           </div>
 
           {upcomingLoading ? (
@@ -214,7 +237,7 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : upcomingEvents.length > 0 ? (
-            <motion.div 
+            <motion.div
               variants={containerVariants}
               initial="hidden"
               whileInView="show"
@@ -261,14 +284,13 @@ export default function UVSANetwork() {
                     className="font-serif text-xl italic"
                     style={{ color: "var(--text3)" }}
                   >
-                    "Upcoming externals will be added once they are confirmed by
-                    VSA at UCSD and the host schools."
+                    {settings.empty_state_title}
                   </p>
                   <p
                     className="mt-2 font-sans text-sm"
                     style={{ color: "var(--text3)" }}
                   >
-                    Check back soon for the upcoming season.
+                    {settings.empty_state_message}
                   </p>
                 </>
               )}
@@ -280,14 +302,11 @@ export default function UVSANetwork() {
         <section className="space-y-8">
           <div className="flex items-center gap-4">
             <StarIcon className="text-[var(--brand)]" size={28} />
-            <h2 className="font-serif text-3xl">2025–2026 External Showcase</h2>
+            <h2 className="font-serif text-3xl">{settings.showcase_heading}</h2>
           </div>
 
           <p className="font-sans text-[var(--text2)] max-w-2xl">
-            A look at the externals from the previous year. UCSD's Wild N'
-            Culture is listed first as our home-hosted event. Many externals
-            also connect to philanthropy and cultural programming at the hosting
-            school.
+            {settings.showcase_description}
           </p>
 
           {pastLoading || historicalLoading ? (
@@ -301,7 +320,7 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : (
-            <motion.div 
+            <motion.div
               variants={containerVariants}
               initial="hidden"
               whileInView="show"
@@ -309,7 +328,12 @@ export default function UVSANetwork() {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
               {sortArchiveEventsUCSDFirst(archiveEvents).map((event, index) => (
-                <ExternalEventCard key={event.id} event={event} isArchive index={index} />
+                <ExternalEventCard
+                  key={event.id}
+                  event={event}
+                  isArchive
+                  index={index}
+                />
               ))}
             </motion.div>
           )}
@@ -319,7 +343,7 @@ export default function UVSANetwork() {
         <section className="space-y-8">
           <div className="flex items-center gap-4">
             <GlobeIcon className="text-[var(--brand)]" size={28} />
-            <h2 className="font-serif text-3xl">Explore the 13 Schools</h2>
+            <h2 className="font-serif text-3xl">{settings.schools_heading}</h2>
           </div>
 
           {schoolsLoading ? (
@@ -333,7 +357,7 @@ export default function UVSANetwork() {
               ))}
             </div>
           ) : (
-            <motion.div 
+            <motion.div
               variants={containerVariants}
               initial="hidden"
               whileInView="show"
@@ -389,7 +413,9 @@ export default function UVSANetwork() {
             <section className="scrapbook-paper p-8 space-y-6">
               <div className="flex items-center gap-3">
                 <StarIcon className="text-[var(--brand)]" size={24} />
-                <h2 className="font-serif text-2xl">External Points Explainer</h2>
+                <h2 className="font-serif text-2xl">
+                  External Points Explainer
+                </h2>
               </div>
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-[var(--surface2)] border border-[var(--brand)] border-opacity-20">
@@ -629,10 +655,11 @@ function ExternalEventCard({
   const isSpecialPointEvent = isUCSD && event.points > 4;
 
   // Deterministic rotation
-  const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right';
+  const rotationClass =
+    index % 2 === 0 ? "scrapbook-rotate-sm-left" : "scrapbook-rotate-sm-right";
 
   return (
-    <motion.div 
+    <motion.div
       variants={itemVariants}
       whileHover={{ y: -4 }}
       className={`scrapbook-paper h-full overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
@@ -765,9 +792,26 @@ function ExternalEventCard({
   );
 }
 
-function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number }) {
+function SchoolCard({
+  school,
+  index = 0,
+}: {
+  school: UVSASchool;
+  index?: number;
+}) {
   const isHomeSchool = school.slug === "ucsd";
-  const rotationClass = index % 2 === 0 ? 'scrapbook-rotate-sm-right' : 'scrapbook-rotate-sm-left';
+  const rotationClass =
+    index % 2 === 0 ? "scrapbook-rotate-sm-right" : "scrapbook-rotate-sm-left";
+  const knownFor = school.known_for || [];
+  const recurringEvents = school.recurring_events || [];
+  const externalLinks = [
+    { label: "Website", url: school.website_url },
+    { label: "Linktree", url: school.linktree_url },
+    { label: "Instagram", url: school.instagram_url },
+    { label: "Facebook", url: school.facebook_url },
+    { label: "YouTube", url: school.youtube_url },
+    { label: "TikTok", url: school.tiktok_url },
+  ].filter((link): link is { label: string; url: string } => Boolean(link.url));
 
   return (
     <motion.div
@@ -808,10 +852,34 @@ function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number 
       <div className="flex-grow">
         {school.description && (
           <p
-            className="font-sans text-xs line-clamp-2"
+            className="font-sans text-xs line-clamp-3"
             style={{ color: "var(--text2)" }}
           >
             {school.description}
+          </p>
+        )}
+        {knownFor.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {knownFor.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border px-2 py-0.5 font-sans text-[10px]"
+                style={{
+                  borderColor: "var(--border)",
+                  color: "var(--text3)",
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        {recurringEvents.length > 0 && (
+          <p
+            className="mt-2 font-sans text-[11px]"
+            style={{ color: "var(--text3)" }}
+          >
+            {recurringEvents.slice(0, 2).join(" / ")}
           </p>
         )}
       </div>
@@ -820,33 +888,19 @@ function SchoolCard({ school, index = 0 }: { school: UVSASchool, index?: number 
         className="flex flex-wrap gap-2 pt-2 border-t"
         style={{ borderColor: "var(--border)" }}
       >
-        {school.linktree_url && (
+        {externalLinks.map((link) => (
           <Button
+            key={link.label}
             variant="outline"
             size="sm"
             className="text-[10px] h-7 px-2 gap-1"
             onClick={() =>
-              window.open(school.linktree_url!, "_blank", "noopener,noreferrer")
+              window.open(link.url, "_blank", "noopener,noreferrer")
             }
           >
-            Linktree <ExternalLinkIcon size={10} />
+            {link.label} <ExternalLinkIcon size={10} />
           </Button>
-        )}
-        {school.instagram_url && (
-          <button
-            className="p-1.5 rounded-md hover:bg-[var(--surface2)] text-[var(--text3)] hover:text-[var(--text)] transition-colors"
-            onClick={() =>
-              window.open(
-                school.instagram_url!,
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-            title="Instagram"
-          >
-            <InstagramIcon size={14} />
-          </button>
-        )}
+        ))}
       </div>
     </motion.div>
   );
