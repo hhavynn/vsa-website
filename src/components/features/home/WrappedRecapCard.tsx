@@ -1,41 +1,7 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "react-query";
-import { eventsRepository } from "../../../data/repos/events";
-import { galleryRepository } from "../../../data/repos/gallery";
-import { leaderboardRepository } from "../../../data/repos/leaderboard";
-import { WRAPPED_2026 } from "../../../data/wrapped2026";
-import { addDaysToDateOnly } from "../../../utils/calendar";
-import {
-  buildPublicHouseStandings,
-  countEventsInWindow,
-  formatStatNumber,
-  roundToFriendlyFloor,
-} from "../../../utils/wrapped";
 
-const QUERY_OPTIONS = { staleTime: 10 * 60 * 1000, retry: 1 } as const;
-
-const W = WRAPPED_2026;
-
-function WrappedMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border-t border-[var(--border)] pt-4">
-      <div className="font-serif text-[32px] font-black leading-none text-text-primary sm:text-[40px]">
-        {value}
-      </div>
-      <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function WrappedCardLink({
-  to,
-  children,
-}: {
-  to: string;
-  children: React.ReactNode;
-}) {
+function WrappedNavLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link
       to={to}
@@ -46,84 +12,84 @@ function WrappedCardLink({
   );
 }
 
-function WrappedMiniFeature({
-  eyebrow,
-  title,
-  body,
-  emoji,
-}: {
-  eyebrow: string;
-  title: string;
-  body: string;
-  emoji?: string;
-}) {
+function WrappedStat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="border-t border-[var(--border)] pt-5">
-      <div className="flex items-start gap-3">
-        {emoji && (
-          <span className="mt-0.5 text-[22px]" aria-hidden>
-            {emoji}
-          </span>
-        )}
-        <div>
-          <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
-            {eyebrow}
-          </div>
-          <h3 className="mt-1 font-serif text-[24px] font-black leading-tight text-text-primary">
-            {title}
-          </h3>
-        </div>
+    <div className="border-t border-[var(--border)] pt-4">
+      <div className="font-serif text-[34px] font-black leading-none text-text-primary sm:text-[42px]">
+        {value}
       </div>
-      <p className="mt-3 font-sans text-[13.5px] leading-[1.75] text-text-secondary">
-        {body}
-      </p>
+      <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
+        {label}
+      </div>
     </div>
   );
 }
 
+function WrappedBlock({
+  emoji,
+  title,
+  heading,
+  children,
+}: {
+  emoji: string;
+  title: string;
+  heading: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className="scrapbook-note border border-[var(--border)] p-5">
+      <div className="text-[28px]" aria-hidden>
+        {emoji}
+      </div>
+      <h3 className="mt-3 font-serif text-[28px] font-black leading-tight text-text-primary">
+        {title}
+      </h3>
+      <p className="mt-2 font-sans text-[16px] font-bold leading-[1.6] text-text-primary">
+        {heading}
+      </p>
+      <div className="mt-4 space-y-3 font-sans text-[14px] leading-[1.8] text-text-secondary">
+        {children}
+      </div>
+    </article>
+  );
+}
+
+function AwardBlock({
+  emoji,
+  title,
+  winner,
+  children,
+}: {
+  emoji: string;
+  title: string;
+  winner: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className="border-t border-[var(--border)] pt-5">
+      <div className="text-[26px]" aria-hidden>
+        {emoji}
+      </div>
+      <h3 className="mt-2 font-serif text-[24px] font-black leading-tight text-text-primary">
+        {title}
+      </h3>
+      <p className="mt-2 font-sans text-[15px] font-bold text-[var(--accent)]">
+        {winner}
+      </p>
+      <div className="mt-3 space-y-3 font-sans text-[13.5px] leading-[1.75] text-text-secondary">
+        {children}
+      </div>
+    </article>
+  );
+}
+
 export function WrappedRecapCard() {
-  const eventsQuery = useQuery(
-    ["home-wrapped-events", W.windowStart, W.windowEnd],
-    () =>
-      eventsRepository.getEvents({
-        date_from: W.windowStart,
-        date_to: addDaysToDateOnly(W.windowEnd, 1),
-        limit: 400,
-      }),
-    QUERY_OPTIONS,
-  );
-
-  const albumsQuery = useQuery(
-    ["home-wrapped-albums", W.windowStart, W.windowEnd],
-    () =>
-      galleryRepository.getAlbums({
-        date_from: W.windowStart,
-        date_to: W.windowEnd,
-        limit: 400,
-      }),
-    QUERY_OPTIONS,
-  );
-
-  const housesQuery = useQuery(
-    ["home-wrapped-houses", W.academicYearStart],
-    () => leaderboardRepository.getYearlyHouseLeaderboard(W.academicYearStart),
-    QUERY_OPTIONS,
-  );
-
-  const eventCount = eventsQuery.data
-    ? countEventsInWindow(eventsQuery.data, W.windowStart, W.windowEnd)
-    : null;
-  const albumCount = albumsQuery.data?.length ?? null;
-  const houseStandings = buildPublicHouseStandings(
-    housesQuery.data ?? [],
-    W.academicYearStart,
-  );
-  const topHouse = houseStandings[0] ?? null;
-  const topHousePoints = topHouse
-    ? roundToFriendlyFloor(topHouse.total_points)
-    : null;
-  const spotlightEvents = W.signatureEvents.slice(0, 3);
-  const featuredAwards = W.awards.slice(0, 3);
+  const finalStandings = [
+    "🥇 Bowser — 247",
+    "🥈 Donkey Kong — 215",
+    "🥉 Toad — 158",
+    "👻 Boo — 125",
+  ];
 
   return (
     <section className="scrapbook-board border-t border-[var(--border)]">
@@ -135,132 +101,241 @@ export function WrappedRecapCard() {
             aria-hidden
           />
 
-          <div className="relative grid gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-end">
-            <div>
-              <div className="vsa-section-label">Year in review</div>
-              <h2 className="mt-3 max-w-2xl font-serif text-[38px] font-black leading-[0.98] text-text-primary sm:text-[52px]">
-                VSA Wrapped {W.yearLabel}
-              </h2>
-              <p className="mt-5 max-w-2xl font-sans text-[15px] leading-[1.8] text-text-secondary">
-                {W.hero.tagline}
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <WrappedCardLink to="/events">Events</WrappedCardLink>
-                <WrappedCardLink to="/gallery">Gallery</WrappedCardLink>
-                <WrappedCardLink to="/house">House</WrappedCardLink>
-                <WrappedCardLink to="/get-involved">
-                  Get involved
-                </WrappedCardLink>
-              </div>
+          <div className="relative">
+            <div className="font-mono text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+              Year in Review
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-              <WrappedMetric
-                label="events counted"
-                value={
-                  eventCount === null ? "--" : formatStatNumber(eventCount)
-                }
-              />
-              <WrappedMetric
-                label="gallery albums"
-                value={
-                  albumCount === null ? "--" : formatStatNumber(albumCount)
-                }
-              />
-              <WrappedMetric
-                label={
-                  topHouse ? `${topHouse.display_name} points` : "house points"
-                }
-                value={
-                  topHousePoints === null
-                    ? "--"
-                    : formatStatNumber(topHousePoints)
-                }
-              />
-            </div>
-          </div>
-
-          <div className="relative mt-10 grid gap-8 border-t border-[var(--border)] pt-8 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
-                Highlight reel
-              </div>
-              <div className="mt-5 grid gap-4">
-                {spotlightEvents.map((event) => (
-                  <div
-                    key={event.name}
-                    className="scrapbook-note border border-[var(--border)] p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-[24px]" aria-hidden>
-                        {event.emoji}
-                      </span>
-                      <div>
-                        <h3 className="font-serif text-[22px] font-black leading-tight text-text-primary">
-                          {event.name}
-                        </h3>
-                        <p className="mt-2 font-sans text-[13.5px] leading-[1.7] text-text-secondary">
-                          {event.blurb}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-5">
-              <WrappedMiniFeature
-                eyebrow="VCN"
-                title={W.vcn.fallbackTitle}
-                body={W.vcn.fallbackBlurb}
-              />
-              <WrappedMiniFeature
-                eyebrow="WNC"
-                title={W.wnc.title}
-                body={W.wnc.blurb}
-              />
-              <WrappedMiniFeature
-                eyebrow="Cabinet"
-                title={W.cabinet.fallbackTheme}
-                body={W.cabinet.thankYou}
-              />
-            </div>
-          </div>
-
-          <div className="relative mt-8 border-t border-[var(--border)] pt-8">
-            <div className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
-              Wrapped awards
-            </div>
-            <h3 className="mt-2 max-w-2xl font-serif text-[30px] font-black leading-tight text-text-primary">
-              The moments that became the group chat lore
-            </h3>
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {featuredAwards.map((award) => (
-                <div
-                  key={award.title}
-                  className="scrapbook-note border border-[var(--border)] p-4"
-                >
-                  <div className="text-[26px]" aria-hidden>
-                    {award.emoji}
-                  </div>
-                  <div className="mt-3 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
-                    {award.title}
-                  </div>
-                  <div className="mt-1 font-serif text-[22px] font-black leading-tight text-[var(--accent)]">
-                    {award.winner}
-                  </div>
-                  <p className="mt-2 font-sans text-[13px] leading-[1.65] text-text-secondary">
-                    {award.blurb}
-                  </p>
+            <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_0.85fr] lg:items-end">
+              <div>
+                <h2 className="font-serif text-[40px] font-black leading-[0.98] text-text-primary sm:text-[58px]">
+                  VSA Wrapped 2025–2026
+                </h2>
+                <p className="mt-5 max-w-2xl font-sans text-[18px] font-bold leading-[1.7] text-text-primary">
+                  One year. Four Houses. Too many side quests to count.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <WrappedNavLink to="/events">Events</WrappedNavLink>
+                  <WrappedNavLink to="/gallery">Gallery</WrappedNavLink>
+                  <WrappedNavLink to="/house">Houses</WrappedNavLink>
+                  <WrappedNavLink to="/get-involved">
+                    Get involved
+                  </WrappedNavLink>
                 </div>
-              ))}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                <WrappedStat value="35" label="events counted" />
+                <WrappedStat value="15" label="gallery albums" />
+                <WrappedStat value="247" label="Bowser points" />
+              </div>
             </div>
           </div>
 
-          <div className="relative mt-8 border-t border-[var(--border)] pt-8">
-            <p className="max-w-3xl font-sans text-[15px] leading-[1.85] text-text-secondary">
-              {W.closing.blurb}
+          <div className="relative mt-12 border-t border-[var(--border)] pt-10">
+            <h2 className="font-serif text-[34px] font-black leading-tight text-text-primary">
+              The year, basically
+            </h2>
+            <div className="mt-6 grid gap-5 lg:grid-cols-2">
+              <WrappedBlock emoji="🎭" title="VCN" heading="Tình Yêu Thầm Lặng">
+                <p>
+                  Months of rehearsals, late nights, dances, acting, tech, and a
+                  whole lot of people making one huge show happen.
+                </p>
+                <p>One stage. One story. A lot of VSA.</p>
+              </WrappedBlock>
+
+              <WrappedBlock
+                emoji="🏕️"
+                title="Winter Retreat"
+                heading="The trip where everyone somehow came back closer"
+              >
+                <p>
+                  Games, late-night conversations, questionable sleep schedules,
+                  and the kind of bonding you cannot really recreate at a GBM.
+                </p>
+              </WrappedBlock>
+
+              <WrappedBlock
+                emoji="🥧"
+                title="Pie-A-Cab"
+                heading="Library Walk got personal"
+              >
+                <p>Pay a few dollars. Pick a cabinet member. Throw a pie.</p>
+                <p>Simple concept. Extremely effective.</p>
+              </WrappedBlock>
+
+              <WrappedBlock
+                emoji="🌎"
+                title="Wild N’ Culture"
+                heading="Culture, competition, and complete nonsense"
+              >
+                <p>
+                  Games got loud. Schools got competitive. Somehow the chaos was
+                  still on theme.
+                </p>
+                <p>Classic WNC.</p>
+              </WrappedBlock>
+            </div>
+          </div>
+
+          <div className="relative mt-12 border-t border-[var(--border)] pt-10">
+            <div className="grid gap-8 lg:grid-cols-[0.85fr_1fr] lg:items-start">
+              <div>
+                <h2 className="font-serif text-[34px] font-black leading-tight text-text-primary">
+                  House race
+                </h2>
+                <div className="mt-5 text-[30px]" aria-hidden>
+                  🍄
+                </div>
+                <h3 className="mt-2 font-serif text-[28px] font-black leading-tight text-text-primary">
+                  The Super Mario Era
+                </h3>
+                <div className="mt-4 space-y-3 font-sans text-[14px] leading-[1.8] text-text-secondary">
+                  <p>Bowser. Donkey Kong. Toad. Boo.</p>
+                  <p>Four Houses entered the year. One finished on top.</p>
+                </div>
+              </div>
+
+              <div className="scrapbook-note border border-[var(--border)] p-5">
+                <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">
+                  Final standings
+                </h3>
+                <div className="mt-5 grid gap-3">
+                  {finalStandings.map((standing) => (
+                    <div
+                      key={standing}
+                      className="font-serif text-[24px] font-black leading-tight text-text-primary"
+                    >
+                      {standing}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-6 font-sans text-[15px] font-bold leading-[1.7] text-text-primary">
+                  Bowser House takes the 2025–2026 crown.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative mt-12 border-t border-[var(--border)] pt-10">
+            <h2 className="font-serif text-[34px] font-black leading-tight text-text-primary">
+              A few things that defined the year
+            </h2>
+            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <AwardBlock
+                emoji="🎤"
+                title="Biggest Main Character Moment"
+                winner="VCN"
+              >
+                <p>
+                  The biggest production of the year, powered by members who
+                  spent months turning rehearsals, meetings, costumes, dances,
+                  and a script into one night on stage.
+                </p>
+              </AwardBlock>
+
+              <AwardBlock
+                emoji="🌪️"
+                title="Most Chaotic Energy"
+                winner="Wild N’ Culture"
+              >
+                <p>There are events you explain to your friends.</p>
+                <p>Then there is WNC.</p>
+              </AwardBlock>
+
+              <AwardBlock
+                emoji="🥧"
+                title="Most Dangerous Place to Be Cabinet"
+                winner="Pie-A-Cab"
+              >
+                <p>No position title could save you.</p>
+              </AwardBlock>
+
+              <AwardBlock
+                emoji="🎮"
+                title="Best Ongoing Rivalry"
+                winner="The House race"
+              >
+                <p>
+                  Bowser, Donkey Kong, Toad, and Boo spent the year collecting
+                  points, showing up, and keeping the leaderboard interesting.
+                </p>
+              </AwardBlock>
+
+              <AwardBlock
+                emoji="🎉"
+                title="Biggest Plot Twist"
+                winner="Welcome Week Mixer"
+              >
+                <p>
+                  Fall started differently this year with a bigger social
+                  kickoff and a new spin on Welcome Week.
+                </p>
+              </AwardBlock>
+
+              <AwardBlock
+                emoji="🤝"
+                title="Most “This Is Why We Do VSA” Moment"
+                winner="The people who kept showing up"
+              >
+                <p>The members who came back after their first GBM.</p>
+                <p>The interns who stepped up.</p>
+                <p>The House Parents who built community.</p>
+                <p>The performers who stayed late.</p>
+                <p>The cabinet members carrying boxes.</p>
+                <p>The friends who brought their friends.</p>
+                <p>That was the year.</p>
+              </AwardBlock>
+            </div>
+          </div>
+
+          <div className="relative mt-12 border-t border-[var(--border)] pt-10">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1fr]">
+              <div>
+                <h2 className="font-serif text-[34px] font-black leading-tight text-text-primary">
+                  Afterglow
+                </h2>
+                <h3 className="mt-3 font-serif text-[28px] font-black leading-tight text-text-primary">
+                  A Night of Memories
+                </h3>
+              </div>
+              <div className="space-y-4 font-sans text-[15px] leading-[1.85] text-text-secondary">
+                <p>
+                  We closed out 2025–2026 with{" "}
+                  <strong className="text-text-primary">Afterglow</strong>,
+                  celebrating the people, Houses, seniors, memories, and little
+                  moments that made the year what it was.
+                </p>
+                <p>
+                  To every member, intern, House Parent, performer, volunteer,
+                  photographer, cabinet member, and friend who showed up:
+                </p>
+                <p className="font-bold text-text-primary">
+                  thank you for being part of it.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative mt-12 border-t border-[var(--border)] pt-10">
+            <h2 className="font-serif text-[34px] font-black leading-tight text-text-primary">
+              One last thing
+            </h2>
+            <div className="mt-5 space-y-2 font-sans text-[15px] leading-[1.8] text-text-secondary">
+              <p>2025–2026 gave us:</p>
+              <p>🍄 a Super Mario House era</p>
+              <p>🎭 another VCN story brought to life</p>
+              <p>🌎 WNC chaos</p>
+              <p>🏕️ retreat memories</p>
+              <p>🥧 pies to the face</p>
+              <p>📸 way too many photos</p>
+              <p>❤️ and a lot of reasons to come back</p>
+            </div>
+            <p className="mt-7 font-sans text-[17px] font-bold leading-[1.7] text-text-primary">
+              Same VSA. New year loading.
+            </p>
+            <p className="mt-2 font-sans text-[15px] leading-[1.8] text-text-secondary">
+              See you in Fall.
             </p>
           </div>
         </div>
