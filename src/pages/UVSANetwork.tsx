@@ -802,6 +802,8 @@ function SchoolCard({
   const isHomeSchool = school.slug === "ucsd";
   const rotationClass =
     index % 2 === 0 ? "scrapbook-rotate-sm-right" : "scrapbook-rotate-sm-left";
+  const knownFor = school.known_for || [];
+  const recurringEvents = school.recurring_events || [];
   const externalLinks = [
     { label: "Website", url: school.website_url },
     { label: "Linktree", url: school.linktree_url },
@@ -856,9 +858,9 @@ function SchoolCard({
             {school.description}
           </p>
         )}
-        {school.known_for.length > 0 && (
+        {knownFor.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {school.known_for.slice(0, 4).map((tag) => (
+            {knownFor.slice(0, 4).map((tag) => (
               <span
                 key={tag}
                 className="rounded-full border px-2 py-0.5 font-sans text-[10px]"
@@ -872,12 +874,12 @@ function SchoolCard({
             ))}
           </div>
         )}
-        {school.recurring_events.length > 0 && (
+        {recurringEvents.length > 0 && (
           <p
             className="mt-2 font-sans text-[11px]"
             style={{ color: "var(--text3)" }}
           >
-            {school.recurring_events.slice(0, 2).join(" / ")}
+            {recurringEvents.slice(0, 2).join(" / ")}
           </p>
         )}
       </div>

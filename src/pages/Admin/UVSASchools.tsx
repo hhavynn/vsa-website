@@ -24,6 +24,7 @@ const SYSTEM_TYPES: UVSASystemType[] = ["UC", "CSU", "Private"];
 const CONFIDENCE_LEVELS: UVSAConfidenceLevel[] = ["high", "medium", "low"];
 const settingsQueryKey = ["uvsa-network-page-settings"];
 const schoolsQueryKey = ["admin-uvsa-schools"];
+const publicSchoolsQueryKey = ["uvsa-schools"];
 const ExternalLinkAltIcon = FaExternalLinkAlt as ComponentType<IconBaseProps>;
 const PenIcon = FaPen as ComponentType<IconBaseProps>;
 const PlusIcon = FaPlus as ComponentType<IconBaseProps>;
@@ -209,6 +210,7 @@ export default function AdminUVSASchools() {
       onSuccess: () => {
         toast.success("UVSA school saved");
         queryClient.invalidateQueries(schoolsQueryKey);
+        queryClient.invalidateQueries(publicSchoolsQueryKey);
         setSchoolForm(emptySchoolForm);
         setIsEditingSchool(false);
       },
@@ -224,6 +226,7 @@ export default function AdminUVSASchools() {
       onSuccess: () => {
         toast.success("UVSA school deleted");
         queryClient.invalidateQueries(schoolsQueryKey);
+        queryClient.invalidateQueries(publicSchoolsQueryKey);
       },
       onError: () => {
         toast.error("Unable to delete UVSA school");
