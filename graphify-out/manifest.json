@@ -305,9 +305,9 @@
     "semantic_hash": "f32eeb4b2d556ee9b6c417c469c3081f"
   },
   "src/components/layout/Footer.tsx": {
-    "mtime": 1781999851.4637728,
-    "ast_hash": "05081a444590063477516db0dba68881",
-    "semantic_hash": "05081a444590063477516db0dba68881"
+    "mtime": 1783134718.7642505,
+    "ast_hash": "86aaa82b8a17a9aa060bb0d0821a9708",
+    "semantic_hash": ""
   },
   "src/components/layout/Header.tsx": {
     "mtime": 1780559651.2809892,
@@ -330,14 +330,14 @@
     "semantic_hash": "53aedd379ad601764abb8f04e7c1c716"
   },
   "src/components/layout/navigation/MobileDrawer.tsx": {
-    "mtime": 1781999851.4641852,
-    "ast_hash": "3db5c2afeb5799e680cd8a0aec84e4c1",
-    "semantic_hash": "3db5c2afeb5799e680cd8a0aec84e4c1"
+    "mtime": 1783134704.1279821,
+    "ast_hash": "fce8926735801d9d26eed2230fe46713",
+    "semantic_hash": ""
   },
   "src/components/layout/navigation/NavLinks.tsx": {
-    "mtime": 1780559651.281369,
-    "ast_hash": "60f233e5581f2551275527f278d68da5",
-    "semantic_hash": "60f233e5581f2551275527f278d68da5"
+    "mtime": 1783018456.5707765,
+    "ast_hash": "3b821e508f029cd6acf92b4b3ce6dfaa",
+    "semantic_hash": ""
   },
   "src/components/layout/navigation/NavLogo.tsx": {
     "mtime": 1780559651.2814214,
@@ -485,9 +485,9 @@
     "semantic_hash": "3785abae370d970045681499296ac369"
   },
   "src/data/repos/gallery.ts": {
-    "mtime": 1780559651.2832458,
-    "ast_hash": "8e5a3934d766f4e38bce41de57586c5e",
-    "semantic_hash": "8e5a3934d766f4e38bce41de57586c5e"
+    "mtime": 1783018898.9148452,
+    "ast_hash": "8bbc280a65d6d1ded9eaae3097206ff0",
+    "semantic_hash": ""
   },
   "src/data/repos/houseAssets.ts": {
     "mtime": 1780559651.2833,
@@ -495,9 +495,9 @@
     "semantic_hash": "edea1d8c16902cf51c517c86637256cf"
   },
   "src/data/repos/houseEvents.ts": {
-    "mtime": 1780559651.2833698,
-    "ast_hash": "3127c0374fbf33171ad46c34206b5cd4",
-    "semantic_hash": "3127c0374fbf33171ad46c34206b5cd4"
+    "mtime": 1783018456.5711677,
+    "ast_hash": "f2a60b9d47aa86d5ea8eddcec63ec9f2",
+    "semantic_hash": ""
   },
   "src/data/repos/importJobs.ts": {
     "mtime": 1780559651.283425,
@@ -890,14 +890,14 @@
     "semantic_hash": "b51ad3b996f245ebf0965b97aa19fa54"
   },
   "src/pages/Home.tsx": {
-    "mtime": 1781765466.1381006,
-    "ast_hash": "34107790d5bfa9c765220e8ca0d22bb7",
-    "semantic_hash": "34107790d5bfa9c765220e8ca0d22bb7"
+    "mtime": 1783126330.9382958,
+    "ast_hash": "f923eb4cea0e3f25b3909af3e0b4cdf6",
+    "semantic_hash": ""
   },
   "src/pages/House.tsx": {
-    "mtime": 1781763781.8471599,
-    "ast_hash": "16705a4d78cbbf96a73973e06cf9180a",
-    "semantic_hash": "16705a4d78cbbf96a73973e06cf9180a"
+    "mtime": 1783134313.0615122,
+    "ast_hash": "95b03f53feb97baf10800174e83fce6d",
+    "semantic_hash": ""
   },
   "src/pages/HouseArchive.tsx": {
     "mtime": 1780559651.2893736,
@@ -915,9 +915,9 @@
     "semantic_hash": "129fa3b0e091c534fb1d3d50c7a867dd"
   },
   "src/pages/Leaderboard.tsx": {
-    "mtime": 1782981786.5468702,
-    "ast_hash": "b005a1bc8187f7f6ea99fdfa8f4e98b8",
-    "semantic_hash": "b005a1bc8187f7f6ea99fdfa8f4e98b8"
+    "mtime": 1783133946.5735438,
+    "ast_hash": "e34cd5835ebdd0099fa63c181f8d958e",
+    "semantic_hash": ""
   },
   "src/pages/MemberAccountsUnavailable.tsx": {
     "mtime": 1780559651.2897265,
@@ -995,9 +995,9 @@
     "semantic_hash": "fab8977f1f1cf8025f3af0a9478e57a0"
   },
   "src/routes/index.tsx": {
-    "mtime": 1782981786.5475597,
-    "ast_hash": "a3ceefcbe8714099079a3f072f28d4d4",
-    "semantic_hash": "a3ceefcbe8714099079a3f072f28d4d4"
+    "mtime": 1783126331.0244908,
+    "ast_hash": "90ddbb8ebd32708efdc11449b7de8388",
+    "semantic_hash": ""
   },
   "src/schemas/index.ts": {
     "mtime": 1782981786.5478346,
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/deploy.yml": {
-    "mtime": 1782982173.2717006,
-    "ast_hash": "8c9b3b380d2d0c455751f83aaacf8c77",
+    "mtime": 1782985363.7792597,
+    "ast_hash": "a06aac4e3d343a609c92e2fb51e6e0ea",
     "semantic_hash": ""
   },
   ".github/workflows/migrate-event-images.yml": {
@@ -2720,8 +2720,8 @@
     "semantic_hash": ""
   },
   ".serena/project.yml": {
-    "mtime": 1782965791.2234526,
-    "ast_hash": "7556645f20e0d782020ba4089d10bfde",
+    "mtime": 1783111841.9262798,
+    "ast_hash": "2015ed7c94bba144e2b068fddd52a8fe",
     "semantic_hash": ""
   },
   "docs/member-photo-requests.md": {
@@ -2747,6 +2747,126 @@
   "docs/ask-vsa-assistant.md": {
     "mtime": 1782982378.7810848,
     "ast_hash": "9075202094a9f07b6398181c630aef29",
+    "semantic_hash": ""
+  },
+  ".claude/launch.json": {
+    "mtime": 1783132867.25761,
+    "ast_hash": "61cc938f79582aa8c3ea4eddb2dd83a4",
+    "semantic_hash": ""
+  },
+  ".github/CONTRIBUTING.md": {
+    "mtime": 1782985363.7785268,
+    "ast_hash": "8b82a74add52d0189d86906e3ebd4dfd",
+    "semantic_hash": ""
+  },
+  ".github/pull_request_template.md": {
+    "mtime": 1782985363.7788448,
+    "ast_hash": "e9cf865f3d17b2ba768d837aaf0e6dbd",
+    "semantic_hash": ""
+  },
+  ".github/workflows/pr-title.yml": {
+    "mtime": 1782985363.7795165,
+    "ast_hash": "c8d58fd322093c5ecd08404ed8218435",
+    "semantic_hash": ""
+  },
+  "src/components/features/wrapped/HouseCup.tsx": {
+    "mtime": 1783019110.6848774,
+    "ast_hash": "5cbf09ab27d2b14dd55b45afb96c4a54",
+    "semantic_hash": ""
+  },
+  "src/components/features/wrapped/PhotoWall.tsx": {
+    "mtime": 1783019129.8083498,
+    "ast_hash": "a2311423ce81f5d7438e363d1e30ff85",
+    "semantic_hash": ""
+  },
+  "src/components/features/wrapped/StatCard.tsx": {
+    "mtime": 1783019072.1638145,
+    "ast_hash": "f3d27a331358c9da6c5434c1ead6ca10",
+    "semantic_hash": ""
+  },
+  "src/components/features/wrapped/WrappedSection.tsx": {
+    "mtime": 1783019061.5110757,
+    "ast_hash": "28a5978ff3bd20150334e1545dcc7c24",
+    "semantic_hash": ""
+  },
+  "src/data/wrapped2026.ts": {
+    "mtime": 1783126528.8633428,
+    "ast_hash": "0d324893aa914ac3543e22b679d821a3",
+    "semantic_hash": ""
+  },
+  "src/utils/wrapped.test.ts": {
+    "mtime": 1783018456.6033359,
+    "ast_hash": "55540967dc986d27aa5ab1a5560afdc2",
+    "semantic_hash": ""
+  },
+  "src/utils/wrapped.ts": {
+    "mtime": 1783018456.6035361,
+    "ast_hash": "a8e675e3645f25297bc76441ba95929f",
+    "semantic_hash": ""
+  },
+  "docs/vsa-wrapped.md": {
+    "mtime": 1783018456.6010602,
+    "ast_hash": "d49fe3e8eba67f28b02513a96b71ca4f",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/AddToGoogleCalendarLink.tsx": {
+    "mtime": 1783018456.5683353,
+    "ast_hash": "99632a236a28a54bad0c2937324e3ea1",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/CalendarDetailModal.tsx": {
+    "mtime": 1783018456.5686018,
+    "ast_hash": "1892b484d29e66f2716c89c12ac02097",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/CalendarFilters.tsx": {
+    "mtime": 1783018456.5688496,
+    "ast_hash": "ed770a4a2102d66781691a053a7983fd",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/CalendarItemCard.tsx": {
+    "mtime": 1783018456.5691328,
+    "ast_hash": "384e129f8e2e1ce184a4b4d1d4b0866d",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/MonthGrid.tsx": {
+    "mtime": 1783018456.5693986,
+    "ast_hash": "2673072eff813a58e3a7b8119a360808",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/ThisWeekStrip.tsx": {
+    "mtime": 1783018456.5696282,
+    "ast_hash": "cc82defe20380ab08059507af947ad3d",
+    "semantic_hash": ""
+  },
+  "src/components/features/calendar/calendarTheme.ts": {
+    "mtime": 1783018456.5698943,
+    "ast_hash": "14bd3a45f3c1f582c857b9db60aaff83",
+    "semantic_hash": ""
+  },
+  "src/pages/Calendar.tsx": {
+    "mtime": 1783018456.571415,
+    "ast_hash": "c264abe45def984f3af0768acd2e79d4",
+    "semantic_hash": ""
+  },
+  "src/utils/calendar.test.ts": {
+    "mtime": 1783018456.5721552,
+    "ast_hash": "796afac250de11ae1174541e37f96f15",
+    "semantic_hash": ""
+  },
+  "src/utils/calendar.ts": {
+    "mtime": 1783018456.5724306,
+    "ast_hash": "f0a19d8f615205044a1b4d4b16c9c1ee",
+    "semantic_hash": ""
+  },
+  "docs/public-calendar.md": {
+    "mtime": 1783018456.568064,
+    "ast_hash": "ca67d89c2a7f8c7aa426a9117fadd476",
+    "semantic_hash": ""
+  },
+  "src/components/features/home/WrappedRecapCard.tsx": {
+    "mtime": 1783132806.8814511,
+    "ast_hash": "9425c125aa74709ff2103aeb691d63ed",
     "semantic_hash": ""
   }
 }
