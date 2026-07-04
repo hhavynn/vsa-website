@@ -438,8 +438,6 @@ export function VsaAiAssistant() {
             className="relative overflow-hidden border-b px-4 py-3.5"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
           >
-            <div className="pointer-events-none absolute right-5 top-4 h-9 w-9 rounded-full border border-brand-200/70 bg-brand-50/70 dark:border-brand-400/20 dark:bg-brand-400/10" />
-            <div className="pointer-events-none absolute right-12 top-10 h-3 w-3 rounded-full bg-amber-300/70 dark:bg-amber-300/40" />
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
