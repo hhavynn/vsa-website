@@ -5,12 +5,12 @@
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2593 nodes · 4662 edges · 192 communities (154 shown, 38 thin omitted)
+- 2669 nodes · 4940 edges · 188 communities (153 shown, 35 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `127f7114`
+- Built from commit: `a3d7ea60`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -159,11 +159,8 @@
 - [[_COMMUNITY_Community 146|Community 146]]
 - [[_COMMUNITY_Community 147|Community 147]]
 - [[_COMMUNITY_Community 148|Community 148]]
-- [[_COMMUNITY_Community 149|Community 149]]
 - [[_COMMUNITY_Community 150|Community 150]]
 - [[_COMMUNITY_Community 151|Community 151]]
-- [[_COMMUNITY_Community 152|Community 152]]
-- [[_COMMUNITY_Community 153|Community 153]]
 - [[_COMMUNITY_Community 154|Community 154]]
 - [[_COMMUNITY_Community 155|Community 155]]
 - [[_COMMUNITY_Community 156|Community 156]]
@@ -174,7 +171,6 @@
 - [[_COMMUNITY_Community 161|Community 161]]
 - [[_COMMUNITY_Community 162|Community 162]]
 - [[_COMMUNITY_Community 163|Community 163]]
-- [[_COMMUNITY_Community 164|Community 164]]
 - [[_COMMUNITY_Community 166|Community 166]]
 - [[_COMMUNITY_Community 167|Community 167]]
 - [[_COMMUNITY_Community 168|Community 168]]
@@ -204,49 +200,49 @@
 - [[_COMMUNITY_Community 197|Community 197]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `withErrorHandling()` - 155 edges
+1. `withErrorHandling()` - 156 edges
 2. `supabase` - 62 edges
-3. `PageTitle()` - 50 edges
-4. `useAuth()` - 34 edges
-5. `getSupabaseImageUrl()` - 33 edges
+3. `PageTitle()` - 51 edges
+4. `getSupabaseImageUrl()` - 38 edges
+5. `useAuth()` - 34 edges
 6. `getAcademicTermMeta()` - 27 edges
-7. `useAcademicTerms()` - 25 edges
-8. `formatDateOnly()` - 24 edges
-9. `EventsRepository` - 23 edges
-10. `isSupabaseUnavailable()` - 23 edges
+7. `formatDateOnly()` - 27 edges
+8. `useAcademicTerms()` - 25 edges
+9. `EventsRepository` - 24 edges
+10. `isSupabaseUnavailable()` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `EventRow()` --calls--> `parseDateOnly()`  [EXTRACTED]
   src/pages/Home.tsx → src/lib/dateOnly.ts
-- `Footer()` --calls--> `useAnalyticsConsent()`  [EXTRACTED]
-  src/components/layout/Footer.tsx → src/context/AnalyticsConsentContext.tsx
-- `HouseData` --references--> `HouseName`  [EXTRACTED]
-  src/pages/House.tsx → src/constants/houses.ts
-- `getCurrentAcademicYearStart()` --calls--> `getAcademicTermMeta()`  [EXTRACTED]
-  src/pages/House.tsx → src/lib/academicTerms.ts
-- `resolveHouseYear()` --calls--> `parseYearSlug()`  [EXTRACTED]
-  src/pages/House.tsx → src/lib/academicTerms.ts
+- `LatestShowingPulse()` --calls--> `formatDateOnly()`  [EXTRACTED]
+  src/pages/House.tsx → src/lib/dateOnly.ts
+- `ExternalEventCard()` --calls--> `formatDateOnly()`  [EXTRACTED]
+  src/pages/UVSANetwork.tsx → src/lib/dateOnly.ts
+- `buildLongName()` --calls--> `cleanNameForImport()`  [EXTRACTED]
+  src/pages/Admin/Houses.tsx → src/lib/memberMatching.ts
+- `ParsedHouseRow` --references--> `HousePageAsset`  [EXTRACTED]
+  src/pages/Admin/Houses.tsx → src/types/index.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (192 total, 38 thin omitted)
+## Communities (188 total, 35 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.07
-Nodes (28): Wrapped2026Config, WRAPPED_2026, WrappedAward, WrappedSignatureEvent, Award, AWARDS, LAST_THINGS, Standing (+20 more)
+Cohesion: 0.09
+Nodes (15): Wrapped2026Config, WRAPPED_2026, WrappedAward, WrappedSignatureEvent, Award, AWARDS, LAST_THINGS, Standing (+7 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.17
-Nodes (13): AdminExternalEvents(), CalendarIcon, EditIcon, EMPTY_EVENT, MapPinIcon, PlusIcon, SaveIcon, STATUS_COLOR (+5 more)
+Cohesion: 0.09
+Nodes (42): CalendarDetailModal(), CalendarOverlayState, DaySheet(), CalendarFilterOption, CalendarFilters(), Props, MonthGrid(), WEEKDAYS (+34 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.07
 Nodes (28): AdminIconProps, AdminResources(), ArchiveIcon, CheckCircleIcon, CopyIcon, dateInputValue(), EditIcon, EMPTY_FORM (+20 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.07
-Nodes (19): FindMyPointsEntry, SelectedYear, AcademicYearOption, entryMatches(), FindMyPointsProps, isExactNameMatch(), normalizeForMatch(), tokenize() (+11 more)
+Cohesion: 0.13
+Nodes (7): SelectedYear, AcademicYearOption, entryMatches(), FindMyPointsProps, isExactNameMatch(), normalizeForMatch(), tokenize()
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
@@ -257,76 +253,76 @@ Cohesion: 0.07
 Nodes (23): AcademicTerm, AdminImport(), buildMemberEnrichment(), capitalizeName(), cleanName(), Event, getAcademicYearLabel(), getActionLabel() (+15 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.12
-Nodes (17): AdminEvents(), RevealOnScrollWrapper(), RevealOnScrollWrapperProps, useEvents(), useInfiniteEvents(), usePublishedPastEventArchiveAvailability(), ArchiveTermOption, EventMemoryStats (+9 more)
+Cohesion: 0.11
+Nodes (22): useInfiniteEvents(), usePublishedPastEventArchiveAvailability(), ArchiveTermOption, EventMemoryStats, Events(), FilterKey, FILTERS, getEventTerm() (+14 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.09
 Nodes (21): DataRightsRequestTracker(), emptyForm, formatTimestamp(), FormInputProps, FormSelectProps, FormTextareaProps, getExportEligibilityIssues(), isExportEligible() (+13 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.10
-Nodes (30): ApplicationCTA(), CountdownTimer(), CountdownTimerProps, DegradedModeBanner(), DegradedModeBannerProps, FALLBACK_GALLERY, EventCard(), useFindMyPoints() (+22 more)
+Cohesion: 0.07
+Nodes (37): ContentUnavailableState(), ContentUnavailableStateProps, DegradedModeBanner(), DegradedModeBannerProps, FALLBACK_CABINET, FALLBACK_EVENTS, FALLBACK_FEEDBACK, FALLBACK_GALLERY (+29 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.12
-Nodes (19): useAllPublishedAceFamilyMembers(), usePublishedAceFamilies(), accentFromThemeColor(), generationDepth(), hashString(), hexToRgb(), patternForFamily(), Ace() (+11 more)
+Cohesion: 0.16
+Nodes (12): useAllPublishedAceFamilyMembers(), usePublishedAceFamilies(), formatProgramDateTime(), Ace(), ACTIVE_FAM_SLOTS, FAM_HEAD_KEYWORDS, FamCardProps, FamHeadCardProps (+4 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.06
-Nodes (39): ContentUnavailableState(), ContentUnavailableStateProps, FALLBACK_CABINET, FALLBACK_EVENTS, FALLBACK_FEEDBACK, FALLBACK_GET_INVOLVED_PROGRAMS, FALLBACK_HOUSE_STANDINGS_2025_2026, FALLBACK_LEADERBOARD (+31 more)
+Cohesion: 0.09
+Nodes (25): RevealOnScrollWrapper(), RevealOnScrollWrapperProps, useExternalEvents(), useUVSASchools(), CalendarIcon, CheckCircleIcon, containerVariants, EXTERNAL_SHOWCASE_ORDER (+17 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.11
-Nodes (22): EVENT_TYPE_LABELS, getEventTimeLabel(), getTodayDateOnly(), LatestMemory, NextEventCard(), ThisWeekInVSA(), usePresidentsContent(), formatEventDateRange() (+14 more)
+Cohesion: 0.10
+Nodes (37): AddToGoogleCalendarLink(), Props, ItemDetail(), Props, CalendarItemCard(), Props, ROTATIONS, CATEGORY_COLORS (+29 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.10
-Nodes (18): usePublishedHouseAssets(), assetMapByHouse(), computeBadges(), faqs, getCurrentAcademicYearStart(), getHouseEventHousesLabel(), getHouseLabel(), getTodayDateOnly() (+10 more)
+Cohesion: 0.07
+Nodes (31): getLegacyHouseArchiveByYear(), getLegacyHouseArchiveYears(), getVerifiedLegacyHouseYears(), LEGACY_HOUSE_ARCHIVE, LegacyHouseArchiveStatus, LegacyHouseArchiveYear, usePublishedHouseAssets(), HouseYearSelector() (+23 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.13
-Nodes (28): AttendanceImportMember, AttendanceImportRowInput, AttendanceImportStatus, AttendanceMatchResult, AttendanceMemberLookupMaps, buildMemberLookupMaps(), candidateScore(), contextMatches() (+20 more)
+Cohesion: 0.17
+Nodes (24): AttendanceImportStatus, AttendanceMemberLookupMaps, buildMemberLookupMaps(), candidateScore(), capitalizeName(), cleanNameForImport(), contextMatches(), contextScore() (+16 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.17
-Nodes (12): AdminMembers(), AdminMergeSuggestions(), Member, MergePair, PaginationControls(), PaginationControlsProps, THEMES, ROWS_PER_PAGE_OPTIONS (+4 more)
+Cohesion: 0.09
+Nodes (16): AdminMembers(), AttendanceRecord, COLLEGE_OPTIONS, Member, YearlyTotal, AdminMergeSuggestions(), Member, MergePair (+8 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.10
-Nodes (30): buildAcademicYearOptions(), getCurrentAcademicYearStart(), buildAcademicYearOptions(), getCurrentAcademicYearStart(), AdminHouses(), academicYearStartFor(), AdminYearsTerms(), buildCabinetYearForm() (+22 more)
+Cohesion: 0.13
+Nodes (21): academicYearStartFor(), buildCabinetYearForm(), buildTermForm(), CabinetYearForm, cabinetYearToForm(), emptyCabinetYearForm(), emptyTermForm(), fieldStyle (+13 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.09
 Nodes (27): CabinetMemberRaw, useCabinetMembers(), useCabinetMemberYearIds(), formatCabinetYearRange(), Avatar(), Cabinet(), cabinetImage(), CabinetMember (+19 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.06
-Nodes (38): AdminApplications(), emptyForm(), fieldStyle(), formFromLink(), FormState, StatusFilter, CalendarItem, ApplicationCTAProps (+30 more)
+Cohesion: 0.22
+Nodes (11): AdminApplications(), emptyForm(), fieldStyle(), formFromLink(), FormState, StatusFilter, ADMIN_APPLICATION_LINKS_QUERY_KEY, PUBLIC_APPLICATION_LINKS_QUERY_KEY (+3 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.28
-Nodes (12): formatProgramDateTime(), getProgramMetaParts(), hasPrimaryProgramLink(), isProgramContentHidden(), PROGRAM_STATUS_LABELS, faqs, whatToExpect, WildNCulture() (+4 more)
+Cohesion: 0.09
+Nodes (20): DatabaseError, EventInterestButtons(), EventInterestButtonsProps, FindMyPointsEntry, AttendedEvent, BadgeData, getTop10Gap(), HOUSE_EMOJI (+12 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.12
-Nodes (18): emptyRecap, EventRecapEditor(), learningFields, operationsFields, RecapTextFieldKey, TextAreaField, AcademicTermSelect(), EMPTY_EVENT (+10 more)
+Cohesion: 0.15
+Nodes (12): emptyRecap, EventRecapEditor(), learningFields, operationsFields, RecapTextFieldKey, TextAreaField, useEventRecap(), EventRecapFormData (+4 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.16
-Nodes (14): getLegacyHouseArchiveByYear(), getLegacyHouseArchiveYears(), getVerifiedLegacyHouseYears(), LEGACY_HOUSE_ARCHIVE, LegacyHouseArchiveStatus, LegacyHouseArchiveYear, HouseYearSelector(), HouseYearSelectorProps (+6 more)
+Cohesion: 0.14
+Nodes (21): AcademicTermSelect(), AdminEvents(), EMPTY_EVENT, findTermForDate(), getSuggestedTermLabel(), UploadedEventImage, AdminPoints(), CheckIn (+13 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.11
 Nodes (19): APPLY, ARG_CATEGORY, ARG_EVENT_ID, ARG_HOUSE_EVENT_ID, CATEGORIES, CategoryConfig, compressToWebP(), downloadBuffer() (+11 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.08
-Nodes (27): FeedbackFormProps, validExportBundle, validForm, validPreview, AdminEventUpdateFormData, AdminEventUpdateSchema, CheckInCodeFormData, CheckInCodeSchema (+19 more)
+Cohesion: 0.09
+Nodes (23): validExportBundle, validForm, validPreview, AdminEventUpdateFormData, AdminEventUpdateSchema, CheckInCodeFormData, CheckInCodeSchema, CreateEventSchema (+15 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.07
-Nodes (22): HouseStandingsCard(), LatestMemoryCard(), useLeaderboardYears(), AcademicYearOption, getMemberDisplayName(), HouseStanding, Leaderboard(), LeaderboardEntry (+14 more)
+Cohesion: 0.08
+Nodes (12): useLeaderboardYears(), AcademicYearOption, getMemberDisplayName(), HouseStanding, Leaderboard(), LeaderboardEntry, Member, PublicMemberProfileModal() (+4 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.12
@@ -334,11 +330,11 @@ Nodes (12): DEFAULT_FORM, SnippetFormState, SortMode, StatusFilter, toDateInput(
 
 ### Community 26 - "Community 26"
 Cohesion: 0.14
-Nodes (5): normalizeSupabaseError(), withErrorHandling(), AiFeedbackRepository, AiKnowledgeRepository, PhotoRequestsRepository
+Nodes (5): normalizeSupabaseError(), withErrorHandling(), DataRightsRequestsRepository, GalleryRepository, PhotoRequestsRepository
 
 ### Community 27 - "Community 27"
-Cohesion: 0.12
-Nodes (15): AccentPalette, ACCENTS, FamilyTree(), LayoutResult, TreeNode, FamSheet(), firstInitial(), PanOffset (+7 more)
+Cohesion: 0.16
+Nodes (11): AccentPalette, ACCENTS, FamilyTree(), LayoutResult, TreeNode, FamSheet(), firstInitial(), PanOffset (+3 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.33
@@ -349,56 +345,56 @@ Cohesion: 0.50
 Nodes (3): Contributing, PR title format, Pull request expectations
 
 ### Community 30 - "Community 30"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (21): AdminHouseTab, BackfillPreview, buildAcademicYearOptions(), buildLongName(), collegeKey(), defaultAcademicYearStart(), EMPTY_SUMMARY, getCurrentAcademicYearStart() (+13 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.15
-Nodes (15): Avatar(), AvatarProps, sizeClasses, useAuth(), useAddPoints(), usePoints(), usePointsHistory(), usePointsStats() (+7 more)
+Cohesion: 0.13
+Nodes (17): AdminNav(), NAV_GROUPS, Avatar(), AvatarProps, sizeClasses, useAuth(), useAddPoints(), usePoints() (+9 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.16
 Nodes (11): DataRightsAdminOption, DataRightsRequest, DataRightsRequestEvent, DataRightsRequestInput, DataRightsRequestPatch, normalizeInput(), normalizePatch(), nullableText() (+3 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.10
-Nodes (19): AdminAceFamilies(), EMPTY_FAMILY_DRAFT, FamilyDraft, fieldStyle(), isValidHex(), MemberRow(), slugify(), useAdminAceFamilies() (+11 more)
+Cohesion: 0.15
+Nodes (12): AdminAceFamilies(), EMPTY_FAMILY_DRAFT, FamilyDraft, fieldStyle(), isValidHex(), MemberRow(), slugify(), useAdminAceFamilies() (+4 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.11
-Nodes (26): AdminContent(), AdminSettings(), SiteSettingsContext, SiteSettingsContextValue, SiteSettingsProvider(), useSiteSettings(), DEFAULT_PRESIDENTS_CONTENT, PresidentsContent (+18 more)
+Cohesion: 0.23
+Nodes (11): canvasToBlob(), CompressionOptions, createImageBitmapFallback(), fileExtensionForMime(), getUploadExtension(), ImageUploadPreset, isRasterImage(), loadImage() (+3 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.13
 Nodes (4): AuthRepository, SignInFormData, SignUpFormData, UserProfileFormData
 
 ### Community 36 - "Community 36"
-Cohesion: 0.40
-Nodes (8): compareDateOnlyAsc(), compareDateOnlyDesc(), formatDateOnly(), isDateOnlyString(), parseDateOnly(), toDateOnlyString(), LatestShowingPulse(), ExternalEventCard()
+Cohesion: 0.13
+Nodes (17): EMPTY_FORM, EventOption, GalleryAlbum, UploadedGalleryCover, buildHouseEventCalendarUrl(), datePart(), HouseEventCard(), nextDateOnly() (+9 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.12
 Nodes (9): AssistantResponse, AssistantStatus, ChatMessage, createMessageId(), getSessionId(), Role, SourceChip, STARTER_QUESTIONS (+1 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.14
-Nodes (5): AttendanceRecord, COLLEGE_OPTIONS, Member, YearlyTotal, HOUSE_OPTIONS
+Cohesion: 0.17
+Nodes (17): HOUSE_OPTIONS, isHouseName(), normalizeHouse(), AutoBadges, HouseYearlyPoints, isHousePointOverrideActive(), buildPublicHouseStandings(), countEventsInWindow() (+9 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.19
-Nodes (11): AdminUVSASchools(), EditIcon, EMPTY_SCHOOL, ExternalLinkIcon, PlusIcon, SaveIcon, TimesIcon, TrashIcon (+3 more)
+Cohesion: 0.14
+Nodes (17): getEventTimeLabel(), getTodayDateOnly(), HouseStandingsCard(), LatestMemory, LatestMemoryCard(), NextEventCard(), compareMonthDay(), getCurrentVsaSeason() (+9 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.11
-Nodes (23): emptyForm(), fieldStyle, formFromContent(), FormState, ProgramContentManager(), Target, TARGETS, toInputDateTime() (+15 more)
+Cohesion: 0.08
+Nodes (37): emptyForm(), fieldStyle, formFromContent(), FormState, ProgramContentManager(), Target, TARGETS, toInputDateTime() (+29 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.12
-Nodes (16): AcademicQuarter, ApplicationKey, ApplicationStatus, CheckInCodeEventType, DataRightsRequestEventType, DataRightsRequestStatus, ImportJobStatus, ImportRowStatus (+8 more)
+Nodes (16): AcademicQuarter, ApplicationKey, ApplicationStatus, CheckInCodeEventType, DataRightsRequestEventType, DataRightsRequestPriority, ImportJobStatus, ImportRowStatus (+8 more)
 
 ### Community 42 - "Community 42"
 Cohesion: 0.08
-Nodes (17): EVENT_TYPES, EventType, ManualCheckInProps, Achievement, ApiError, AuthenticationError, AuthorizationError, NetworkError (+9 more)
+Nodes (16): EVENT_TYPES, EventType, ApiError, AuthenticationError, AuthorizationError, NetworkError, NotFoundError, ValidationError (+8 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.18
@@ -406,91 +402,91 @@ Nodes (10): inputStyle, STATUS_BADGE, StatusFilter, MemberMatchOption, MemberPho
 
 ### Community 44 - "Community 44"
 Cohesion: 0.24
-Nodes (3): HouseEventsRepository, PUBLIC_FIELDS, HouseEvent
+Nodes (3): HouseEventCardProps, HouseEventsRepository, HouseEvent
 
 ### Community 45 - "Community 45"
 Cohesion: 0.18
 Nodes (7): FamAccent, FamilyTreeProps, FamSheetProps, FamDerived, AceFamiliesRepository, AceFamily, AceFamilyMember
 
 ### Community 46 - "Community 46"
-Cohesion: 0.18
-Nodes (3): PageTitle(), PageTitleProps, helpfulLinks
+Cohesion: 0.11
+Nodes (8): AnalyticsData, AnalyticsErrorBody, PageTitle(), PageTitleProps, helpfulLinks, committees, faqs, highlights
 
 ### Community 47 - "Community 47"
 Cohesion: 0.07
 Nodes (27): Current data inventory, Delete and anonymization architecture, Dual identity systems, Existing member deletion is destructive, Export architecture — implemented for admin-generated local bundles, Future implementation plan, High-risk systems requiring special review, Identity resolution and dependency preview — implemented for read-only counts (+19 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.09
-Nodes (22): HouseAssetDraft, HouseImagesManagerProps, UploadedHouseImage, UploadedHouseParentImage, ParsedHouseRow, HOUSE_COLORS, HOUSE_LABELS, HouseName (+14 more)
+Cohesion: 0.13
+Nodes (16): HouseEventsManager(), buildAcademicYearOptions(), getCurrentAcademicYearStart(), HouseAssetDraft, HouseImagesManager(), HouseImagesManagerProps, UploadedHouseImage, UploadedHouseParentImage (+8 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.14
-Nodes (12): asJson(), CreateImportJobInput, decisionFromRowStatus(), ImportJob, ImportJobEventSummary, ImportJobInsert, ImportJobRecord, ImportJobRow (+4 more)
+Cohesion: 0.10
+Nodes (19): formatDateTime(), formatEventDate(), ImportAuditPanel(), jobLabel(), statusClass(), useImportJobRows(), useRecentImportJobs(), asJson() (+11 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.14
 Nodes (11): amys, bigs, buildImportPlan(), byId, json, littles, maxDepth, plan (+3 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.23
-Nodes (7): formatDateTime(), formatEventDate(), ImportAuditPanel(), jobLabel(), statusClass(), useImportJobRows(), useRecentImportJobs()
+Cohesion: 0.12
+Nodes (12): AdminVcnArchives(), archivePayloadFromForm(), EMPTY_FORM, toNullable(), VCNArchiveFormState, ErrorBoundary, Props, State (+4 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.06
-Nodes (33): AdminVcnArchives(), archivePayloadFromForm(), EMPTY_FORM, toNullable(), VCNArchiveFormState, AnalyticsConsentBanner(), ErrorBoundary, Props (+25 more)
+Cohesion: 0.16
+Nodes (15): AnalyticsConsentBanner(), RouteTracker(), AnalyticsConsent, AnalyticsConsentContext, AnalyticsConsentContextValue, AnalyticsConsentProvider(), useAnalyticsConsent(), Footer() (+7 more)
 
 ### Community 55 - "Community 55"
-Cohesion: 0.42
-Nodes (7): AddToCalendarButton(), googleUrl(), buildGcalAllDayDates(), buildGcalTimedDates(), dateToPart(), extractDateOnly(), timeToGcalPart()
+Cohesion: 0.19
+Nodes (14): CountdownTimer(), CountdownTimerProps, EVENT_TYPE_LABELS, Achievement, AddToCalendarButton(), googleUrl(), Props, EventCardProps (+6 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.32
-Nodes (4): DatabaseError, AiFeedback, AiFeedbackFilters, SubmitAiFeedbackInput
+Cohesion: 0.24
+Nodes (4): AiFeedback, AiFeedbackFilters, AiFeedbackRepository, SubmitAiFeedbackInput
 
 ### Community 58 - "Community 58"
-Cohesion: 0.11
-Nodes (23): draftFromEvent(), HouseEventDraft, HouseEventsManager(), HouseEventsManagerProps, UploadedHouseEventImage, validateDraft(), HouseImagesManager(), useAcademicTerms() (+15 more)
+Cohesion: 0.15
+Nodes (11): buildAcademicYearOptions(), draftFromEvent(), getCurrentAcademicYearStart(), HouseEventDraft, HouseEventsManagerProps, UploadedHouseEventImage, validateDraft(), isEndAfterStart() (+3 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.17
 Nodes (5): ADMIN_TOOL_GROUPS, AdminToolCard, AdminToolGroup, DEFAULT_STATS, OverviewStats
 
 ### Community 60 - "Community 60"
-Cohesion: 0.29
-Nodes (7): MemberDashboard(), AttendanceRecord, inputStyle, UCSD_COLLEGES, UserProfile, YEARS, EventAttendance
+Cohesion: 0.15
+Nodes (13): FamPattern, accentFromThemeColor(), ACCENTS, generationDepth(), hashString(), hexToRgb(), membersToTreeNodes(), patternForFamily() (+5 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.17
-Nodes (5): FamCover(), FamCoverProps, FamPattern, PALETTE, PaletteEntry
+Cohesion: 0.18
+Nodes (4): FamCover(), FamCoverProps, PALETTE, PaletteEntry
 
 ### Community 62 - "Community 62"
 Cohesion: 0.08
 Nodes (26): dependencies, clsx, date-fns, framer-motion, @hookform/resolvers, react, react-dom, react-dropzone (+18 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.22
-Nodes (8): CabinetMember, CATEGORIES, EMPTY_MEMBER, MIGRATION_DATA, ROLE_SUGGESTIONS, UploadedCabinetImage, COLLEGE_OPTIONS, YEAR_OPTIONS
+Cohesion: 0.16
+Nodes (14): AdminCabinet(), CabinetMember, CATEGORIES, EMPTY_MEMBER, MIGRATION_DATA, ROLE_SUGGESTIONS, UploadedCabinetImage, AdminYearsTerms() (+6 more)
 
 ### Community 64 - "Community 64"
-Cohesion: 0.27
-Nodes (8): ManualCheckIn(), PointsContext, PointsContextType, PointsProvider(), usePointsContext(), useEventAttendance(), CheckInCodeInput(), CheckInCodeInputProps
+Cohesion: 0.13
+Nodes (16): ManualCheckIn(), ManualCheckInProps, PointsContext, PointsContextType, PointsProvider(), usePointsContext(), MemberDashboard(), useEventAttendance() (+8 more)
 
 ### Community 65 - "Community 65"
 Cohesion: 0.08
 Nodes (24): Common Questions, `docker-compose.yml` - Like a Kitchen Setup, `Dockerfile` - Like a Recipe, `.github/workflows/deploy.yml` - Automatic Updates, How to Update Your Website, Method 1: Automatic (Recommended), Method 2: Manual, Need Help? (+16 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.20
-Nodes (5): CheckData, ChecklistState, CheckStatus, DEFAULT_STATE, LOADING
+Cohesion: 0.11
+Nodes (14): CheckData, ChecklistState, CheckStatus, DEFAULT_STATE, LOADING, OpenOpportunities(), OpenOpportunitiesProps, APPLICATION_KEY_OPTIONS (+6 more)
 
 ### Community 68 - "Community 68"
-Cohesion: 0.14
-Nodes (9): AdminPoints(), CheckIn, initials(), LeaderboardRow, LeaderboardRepository, HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity (+1 more)
+Cohesion: 0.10
+Nodes (15): HOUSE_LABELS, HOUSE_EMOJI, HouseMemberLeaderboard(), Props, LeaderboardRepository, ExternalEventStatus, HouseAllTimePoints, HouseMemberRankEntry (+7 more)
 
 ### Community 69 - "Community 69"
 Cohesion: 0.24
-Nodes (7): Theme, ThemeContext, ThemeContextType, ThemeProvider(), useTheme(), ThemeToggle(), ThemeToggleInline()
+Nodes (5): ApplicationCTAProps, ApplicationLinksRepository, ApplicationKey, ApplicationLink, PublicApplicationLink
 
 ### Community 70 - "Community 70"
 Cohesion: 0.40
@@ -505,24 +501,24 @@ Cohesion: 0.08
 Nodes (22): Codex VSA playbook workflow, Coding conventions, Components, Current project phase, Data layer, Degraded mode, Dev setup, Domain-critical facts (+14 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.25
-Nodes (7): GetInvolvedDropdown(), INVOLVEMENT_PREFIXES, InvolvementLink, LINKS, FLAT_NAV_ITEMS, NavItem, NavLinks
+Cohesion: 0.18
+Nodes (7): AuthContext, AuthContextType, AuthProvider(), SiteSettingsProvider(), queryClient, root, reportWebVitals()
 
 ### Community 74 - "Community 74"
 Cohesion: 0.08
 Nodes (23): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+15 more)
 
 ### Community 75 - "Community 75"
-Cohesion: 0.33
-Nodes (4): VsaAiAssistant(), BackToTop(), Layout(), NavigationShell
+Cohesion: 0.20
+Nodes (8): ApplicationCTA(), CTABlock(), FallbackOverrides, STATUS_RANK, FALLBACK_APPLICATIONS, usePublicApplicationLinks(), DEFAULT_APPLICATION_MESSAGES, formatApplicationDateTime()
 
 ### Community 76 - "Community 76"
-Cohesion: 0.14
-Nodes (11): DrawerLinkProps, EXPLORE_LINKS, INVOLVEMENT_LINKS, INVOLVEMENT_PREFIXES, MobileDrawer, MobileDrawerProps, NavLink, QUICK_LINKS (+3 more)
+Cohesion: 0.07
+Nodes (25): Theme, ThemeContext, ThemeContextType, ThemeProvider(), useTheme(), ThemeToggle(), GetInvolvedDropdown(), INVOLVEMENT_PREFIXES (+17 more)
 
 ### Community 77 - "Community 77"
-Cohesion: 0.15
-Nodes (13): inputStyle, PhotoRequestSection(), PhotoRequestSectionProps, cn(), ChecklistItem(), ChecklistItemProps, NewMemberChecklist(), extraLinks (+5 more)
+Cohesion: 0.05
+Nodes (44): AdminExternalEvents(), CalendarIcon, EditIcon, EMPTY_EVENT, MapPinIcon, PlusIcon, SaveIcon, STATUS_COLOR (+36 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.39
@@ -548,25 +544,29 @@ Nodes (12): allowedOrigins, AssistantStatus, corsHeaders(), countUsage(), expand
 Cohesion: 0.46
 Nodes (7): build_and_push(), check_prerequisites(), cleanup(), deploy_k8s(), health_check(), main(), deploy.sh script
 
+### Community 84 - "Community 84"
+Cohesion: 0.20
+Nodes (5): CalendarItem, maskTargetUrl(), ApplicationLinkFormData, maskPublicRow(), PUBLIC_SELECT
+
 ### Community 85 - "Community 85"
-Cohesion: 0.28
-Nodes (6): GalleryAlbum, GalleryFilters, RelatedEvent, Props, ROTATIONS, TAPES
+Cohesion: 0.40
+Nodes (7): AdminContent(), DEFAULT_PRESIDENTS_CONTENT, PresidentsContent, splitPresidentsMessage(), fetchPresidentsContent(), normalizePresidentsContent(), PRESIDENTS_CONTENT_QUERY_KEY
 
 ### Community 86 - "Community 86"
-Cohesion: 0.29
-Nodes (7): SignInForm(), PageLoader(), PageLoaderProps, useAdmin(), SignIn(), AdminRoute(), AdminRouteProps
+Cohesion: 0.15
+Nodes (12): VsaAiAssistant(), SignInForm(), PageLoader(), PageLoaderProps, useAdmin(), BackToTop(), Layout(), NavigationShell (+4 more)
 
 ### Community 87 - "Community 87"
-Cohesion: 0.19
-Nodes (14): AdminCabinet(), CabinetIntern, useCurrentCabinetInterns(), useCabinetYears(), useProgramContent(), getCurrentCabinetYear(), faqs, InternCard() (+6 more)
+Cohesion: 0.36
+Nodes (7): AdminSettings(), SiteSettingsContext, SiteSettingsContextValue, useSiteSettings(), DEFAULT_SITE_SETTINGS, SiteSettings, extractSupabasePublicObjectName()
 
 ### Community 88 - "Community 88"
 Cohesion: 0.10
 Nodes (20): 1. Executive Summary, 2. Pillar 1: ADA / WCAG 2.1 AA, 3. Pillar 2: Privacy / GDPR / CCPA Readiness, 4. Pillar 3: Security / OWASP-Style Risk, 5. Remaining Gaps by Priority, 6. Suggested Next PRs, 7. Manual Verification Checklist, Biggest Remaining Risks (+12 more)
 
 ### Community 90 - "Community 90"
-Cohesion: 0.40
-Nodes (5): FeedbackForm(), FeedbackPage(), FeedbackType, feedbackTypes, getFeedbackType()
+Cohesion: 0.27
+Nodes (8): FeedbackForm(), FeedbackFormProps, FeedbackPage(), FeedbackType, feedbackTypes, getFeedbackType(), FeedbackFormData, FeedbackSchema
 
 ### Community 91 - "Community 91"
 Cohesion: 0.47
@@ -577,8 +577,8 @@ Cohesion: 0.11
 Nodes (17): 1. Install dependencies, 2. Configure environment variables, 3. Database & Edge Functions, 4. Run the dev server, Architecture Notes, Available Scripts, Contributing, Deployment (+9 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.36
-Nodes (3): ExternalEventFilters, ExternalEventsRepository, ExternalEvent
+Cohesion: 0.22
+Nodes (7): buildImportPlan(), PersonRow, RoleLabel, slugify(), SweatpantsJson, SweatpantsMember, validateJson()
 
 ### Community 95 - "Community 95"
 Cohesion: 0.11
@@ -593,12 +593,12 @@ Cohesion: 0.67
 Nodes (3): cabinet_images Storage Bucket, Cabinet Management Feature Architecture Design, cabinet_members Table Schema
 
 ### Community 111 - "Community 111"
-Cohesion: 0.12
-Nodes (12): Props, EventCardProps, EventInterestButtons(), EventInterestButtonsProps, EventFilters, EventStats, EventWithAttendance, PublishedPastEventArchiveAvailability (+4 more)
+Cohesion: 0.14
+Nodes (3): EventFilters, CreateEventFormData, UpdateEventFormData
 
 ### Community 112 - "Community 112"
-Cohesion: 0.40
-Nodes (4): Button, ButtonProps, buttonSizes, buttonVariants
+Cohesion: 0.29
+Nodes (5): AttendanceImportMember, AttendanceImportRowInput, AttendanceMatchResult, matchAttendanceImportRows(), matchOne()
 
 ### Community 113 - "Community 113"
 Cohesion: 0.32
@@ -633,8 +633,8 @@ Cohesion: 0.15
 Nodes (12): 1. Purpose, 2. Environment Variables & Test Accounts, 3. How to Run Against Staging, 4. How to Run Against Production Safely, 5. Non-Mutating (Read-Only) Verification Checks, 6. Gated Mutation (Write) Verification Checks, 7. What Pass / Fail Means, 8. Manual Supabase Dashboard Verification (+4 more)
 
 ### Community 122 - "Community 122"
-Cohesion: 0.33
-Nodes (4): EMPTY_FORM, EventOption, GalleryAlbum, UploadedGalleryCover
+Cohesion: 0.29
+Nodes (6): Data sources (all public-safe, no schema changes), Files, Filters, Follow-ups (not in v1), Google Calendar button, Public Calendar (`/calendar`)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.17
@@ -740,14 +740,6 @@ Nodes (6): Common Pitfalls, Dynamic Content Routing Audit, Dynamic Content Sourc
 Cohesion: 0.29
 Nodes (6): Browser security headers and CSP, CSP rollout decision, External services to account for, Headers applied, Manual QA, Rollback
 
-### Community 152 - "Community 152"
-Cohesion: 0.40
-Nodes (3): committees, faqs, highlights
-
-### Community 153 - "Community 153"
-Cohesion: 0.67
-Nodes (4): getEventTerm(), getEventTermCode(), getEventTermLabel(), PastEventMemoryCard()
-
 ### Community 154 - "Community 154"
 Cohesion: 0.33
 Nodes (4): Architecture, Commands, Environment Setup, Graphify: Query-First Workflow
@@ -829,24 +821,24 @@ Cohesion: 0.50
 Nodes (3): builds, routes, version
 
 ## Knowledge Gaps
-- **1076 isolated node(s):** `socialLinks`, `footerGroups`, `NavLink`, `QUICK_LINKS`, `INVOLVEMENT_LINKS` (+1071 more)
+- **1090 isolated node(s):** `supabase`, `name`, `version`, `private`, `@hookform/resolvers` (+1085 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **35 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `withErrorHandling()` connect `Community 26` to `Community 0`, `Community 130`, `Community 2`, `Community 17`, `Community 18`, `Community 20`, `Community 25`, `Community 32`, `Community 33`, `Community 162`, `Community 35`, `Community 164`, `Community 40`, `Community 42`, `Community 43`, `Community 44`, `Community 45`, `Community 48`, `Community 49`, `Community 50`, `Community 56`, `Community 57`, `Community 66`, `Community 68`, `Community 85`, `Community 93`, `Community 103`, `Community 111`, `Community 117`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
-- **Why does `PageTitle()` connect `Community 46` to `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 14`, `Community 15`, `Community 16`, `Community 18`, `Community 19`, `Community 20`, `Community 21`, `Community 24`, `Community 25`, `Community 152`, `Community 30`, `Community 33`, `Community 34`, `Community 39`, `Community 51`, `Community 54`, `Community 57`, `Community 58`, `Community 59`, `Community 60`, `Community 63`, `Community 67`, `Community 68`, `Community 77`, `Community 84`, `Community 86`, `Community 87`, `Community 90`, `Community 122`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Why does `supabase` connect `Community 42` to `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 11`, `Community 14`, `Community 16`, `Community 18`, `Community 20`, `Community 23`, `Community 24`, `Community 25`, `Community 30`, `Community 31`, `Community 32`, `Community 33`, `Community 34`, `Community 38`, `Community 40`, `Community 43`, `Community 44`, `Community 48`, `Community 49`, `Community 54`, `Community 57`, `Community 58`, `Community 59`, `Community 60`, `Community 63`, `Community 67`, `Community 68`, `Community 80`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 111`, `Community 117`, `Community 122`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **What connects `socialLinks`, `footerGroups`, `NavLink` to the rest of the system?**
-  _1076 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `withErrorHandling()` connect `Community 26` to `Community 130`, `Community 2`, `Community 17`, `Community 19`, `Community 20`, `Community 21`, `Community 25`, `Community 32`, `Community 33`, `Community 162`, `Community 35`, `Community 38`, `Community 40`, `Community 42`, `Community 43`, `Community 44`, `Community 45`, `Community 48`, `Community 49`, `Community 50`, `Community 56`, `Community 57`, `Community 58`, `Community 66`, `Community 68`, `Community 69`, `Community 77`, `Community 84`, `Community 103`, `Community 111`, `Community 117`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `PageTitle()` connect `Community 46` to `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 14`, `Community 15`, `Community 16`, `Community 18`, `Community 21`, `Community 24`, `Community 25`, `Community 30`, `Community 33`, `Community 36`, `Community 40`, `Community 51`, `Community 53`, `Community 57`, `Community 59`, `Community 63`, `Community 64`, `Community 67`, `Community 77`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 90`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **Why does `supabase` connect `Community 42` to `Community 2`, `Community 5`, `Community 6`, `Community 14`, `Community 16`, `Community 19`, `Community 20`, `Community 21`, `Community 24`, `Community 25`, `Community 30`, `Community 31`, `Community 32`, `Community 33`, `Community 36`, `Community 39`, `Community 40`, `Community 43`, `Community 46`, `Community 48`, `Community 49`, `Community 55`, `Community 57`, `Community 58`, `Community 59`, `Community 63`, `Community 64`, `Community 67`, `Community 73`, `Community 80`, `Community 84`, `Community 85`, `Community 86`, `Community 87`, `Community 90`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **What connects `supabase`, `name`, `version` to the rest of the system?**
+  _1090 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.07200929152148665 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
+- **Should `Community 1` be split into smaller, more focused modules?**
+  _Cohesion score 0.08627450980392157 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.06866002214839424 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.07226890756302522 - nodes in this community are weakly interconnected._
