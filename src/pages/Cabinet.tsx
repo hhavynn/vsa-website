@@ -127,10 +127,10 @@ const EXEC_PATTERNS = [
 ];
 
 const SUPPORTING_EXEC_PATTERNS = [
-  { span: 7, offset: '0px',  rotate: '-0.6deg', tapeX: '45%', tapeR: '-1.5deg' },
-  { span: 5, offset: '14px', rotate: '0.8deg',  tapeX: '55%', tapeR: '1deg'    },
-  { span: 5, offset: '4px',  rotate: '-0.7deg', tapeX: '40%', tapeR: '-1deg'   },
-  { span: 7, offset: '20px', rotate: '1.1deg',  tapeX: '60%', tapeR: '1.5deg'  },
+  { rotate: '-0.6deg', tapeX: '40%', tapeR: '-2deg',  tapeKind: 'teal' as const },
+  { rotate: '0.5deg',  tapeX: '58%', tapeR: '2deg',   tapeKind: 'teal' as const },
+  { rotate: '0.6deg',  tapeX: '44%', tapeR: '-1.5deg', tapeKind: 'teal' as const },
+  { rotate: '-0.5deg', tapeX: '60%', tapeR: '1.5deg',  tapeKind: 'teal' as const },
 ];
 
 const DEPT_PATTERNS = [
@@ -257,69 +257,117 @@ function ExecutiveRolePanel({
   role,
   members,
   className = '',
+  patternIndex = 0,
 }: {
   role: string;
   members: CabinetMember[];
   className?: string;
+  patternIndex?: number;
 }) {
-  const isSingle = members.length === 1;
+  const pattern = SUPPORTING_EXEC_PATTERNS[patternIndex % SUPPORTING_EXEC_PATTERNS.length];
+
+  const tapeStyle: CSSProperties = {
+    position: 'absolute',
+    top: -12,
+    width: 82,
+    height: 20,
+    borderRadius: 3,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)',
+    zIndex: 2,
+    pointerEvents: 'none',
+    left: pattern.tapeX,
+    transform: `translateX(-50%) rotate(${pattern.tapeR})`,
+    background: 'repeating-linear-gradient(45deg, var(--tape-teal) 0 9px, rgba(255,255,255,0.20) 9px 13px)',
+  };
 
   return (
-    <section
-      className={`scrapbook-paper p-5 h-full ${className}`.trim()}
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-    >
-      <div className="mb-4 flex items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
-        <div>
-          <p className="font-sans text-[15px] font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
-            {role}
-          </p>
-          <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
-            {members.length} {members.length === 1 ? 'position' : 'positions'}
-          </p>
-        </div>
-      </div>
+    <div style={{ transform: `rotate(${pattern.rotate})` }} className="cabinet-position-card">
+      <section
+        className={`relative overflow-visible rounded-lg ${className}`.trim()}
+        style={{
+          border: '1px solid var(--paper-edge)',
+          background: 'var(--color-surface)',
+          boxShadow: 'var(--paper-shadow)',
+        }}
+      >
+        {/* Tape strip */}
+        <span style={tapeStyle} aria-hidden />
 
-      <div className={`flex flex-col gap-1 ${isSingle ? '' : 'sm:grid sm:grid-cols-2 sm:gap-4'}`}>
-        {members.map((member, idx) => (
-          <article
-            key={member.id}
-            className={`flex flex-col gap-3 py-3 ${!isSingle && idx < members.length ? 'sm:py-0' : ''} ${isSingle ? '' : (idx % 2 === 0 && idx < members.length - 1 ? 'border-b sm:border-b-0 sm:border-r sm:pr-4' : '')} ${isSingle && idx < members.length - 1 ? 'border-b' : ''}`}
-            style={{ borderColor: 'var(--color-border2)' }}
+        {/* Pin */}
+        <span
+          className="absolute z-[3]"
+          style={{
+            left: 28,
+            top: -8,
+            width: 15,
+            height: 15,
+            border: '2px solid rgba(255,255,255,0.45)',
+            borderRadius: 999,
+            background: 'var(--accent)',
+            boxShadow: '0 3px 8px var(--pin-shadow)',
+            pointerEvents: 'none',
+          }}
+          aria-hidden
+        />
+
+        {/* Role header */}
+        <div
+          className="rounded-t-lg px-5 pt-[18px] pb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,189,181,0.10) 0%, transparent 62%)',
+          }}
+        >
+          <div
+            className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: 'var(--brand)' }}
           >
-            <div className={`flex gap-4 ${isSingle ? 'items-center' : 'flex-col sm:flex-row sm:items-start'}`}>
-              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={isSingle ? 64 : 56} />
+            Executive Core
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="scrapbook-sticker scrapbook-sticker-teal text-[11px] tracking-[0.06em] px-3.5 py-[7px]">
+              {role}
+            </span>
+            <span
+              className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]"
+              style={{ color: 'var(--color-text3)' }}
+            >
+              {members.length} {members.length === 1 ? 'position' : 'positions'}
+            </span>
+          </div>
+        </div>
+
+        {/* Members */}
+        <div className="px-5 pb-5 pt-0.5">
+          {members.map((member, idx) => (
+            <div
+              key={member.id}
+              className="flex items-center gap-4 py-[17px]"
+              style={{
+                borderTop: '1px dashed var(--color-border)',
+              }}
+            >
+              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={62} />
               <div className="min-w-0 flex-1">
-                <p className="font-sans text-[14.5px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+                <p
+                  className="font-serif text-[21px] font-normal leading-tight tracking-tight"
+                  style={{ color: 'var(--color-text)', letterSpacing: '-0.01em' }}
+                >
                   {member.name}
                 </p>
                 {formatMeta(member) && (
-                  <p className="mt-1 font-sans text-[10.5px] font-medium leading-tight" style={{ color: 'var(--color-text2)' }}>
+                  <p
+                    className="mt-1.5 font-sans text-[13px] font-medium leading-relaxed"
+                    style={{ color: 'var(--color-text2)' }}
+                  >
                     {formatMeta(member)}
-                  </p>
-                )}
-                {(member.pronouns || member.favorite_snack) && (
-                  <p className="mt-1.5 font-sans text-[10px] opacity-80" style={{ color: 'var(--color-text3)' }}>
-                    {[member.pronouns, member.favorite_snack && `Snack: ${member.favorite_snack}`]
-                      .filter(Boolean)
-                      .join(' · ')}
                   </p>
                 )}
               </div>
             </div>
-
-            {member.fun_fact && (
-              <div
-                className="rounded-lg bg-[var(--color-surface2)] p-2.5 font-sans text-[11px] italic leading-relaxed"
-                style={{ color: 'var(--color-text2)' }}
-              >
-                "{member.fun_fact}"
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -866,7 +914,7 @@ export function Cabinet() {
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true }}
-                className="cabinet-wall"
+                className="cabinet-positions-grid"
               >
                 {allExecRoles
                   .filter(([role]) => rolePriority(role) > 0)
@@ -874,14 +922,8 @@ export function Cabinet() {
                     <motion.div
                       key={role}
                       variants={itemVariants}
-                      className="cabinet-card"
-                      style={cabCardStyle(idx, SUPPORTING_EXEC_PATTERNS, allExecRoles.length - 1)}
                     >
-                      {rolePriority(role) <= 3 ? (
-                        <ExecutiveFeaturePanel role={role} members={roleMembers} />
-                      ) : (
-                        <ExecutiveRolePanel role={role} members={roleMembers} />
-                      )}
+                      <ExecutiveRolePanel role={role} members={roleMembers} patternIndex={idx} />
                     </motion.div>
                   ))}
               </motion.div>
