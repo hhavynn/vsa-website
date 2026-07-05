@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { NavigationShell } from './navigation/NavigationShell';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { BackToTop } from './BackToTop';
+import { MobileQuickDock } from './navigation/MobileQuickDock';
 import { Suspense, useEffect } from 'react';
 import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
@@ -46,6 +47,7 @@ export function Layout() {
 
       <Footer />
       <BackToTop />
+      <MobileQuickDock />
       <VsaAiAssistant />
     </div>
   );
