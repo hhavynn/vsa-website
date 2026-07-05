@@ -541,6 +541,60 @@
     z-index: 10;
   }
 
+  /* Leadership profile spotlight — cursor-tracked brand glow + gentle lift.
+     Applied selectively to executive leadership cards (see ProfileSpotlightCard). */
+  .profile-spotlight {
+    position: relative;
+    transition: transform var(--trans), box-shadow var(--trans), border-color var(--trans);
+  }
+
+  .profile-spotlight__glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--trans);
+    background: radial-gradient(
+      220px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+      rgba(59, 189, 181, 0.18),
+      transparent 68%
+    );
+  }
+
+  @media (hover: hover) {
+    .profile-spotlight:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--paper-shadow-hover);
+    }
+    .profile-spotlight:hover .profile-spotlight__glow {
+      opacity: 1;
+    }
+  }
+
+  /* Touch devices: a soft static hint instead of cursor tracking */
+  @media (hover: none) {
+    .profile-spotlight__glow {
+      opacity: 0.55;
+      background: radial-gradient(
+        160px circle at 50% 0%,
+        rgba(59, 189, 181, 0.1),
+        transparent 70%
+      );
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .profile-spotlight,
+    .profile-spotlight__glow {
+      transition: none;
+    }
+    .profile-spotlight:hover {
+      transform: none;
+    }
+  }
+
   /* Tape variants */
   .scrapbook-tape-teal::before {
     background: repeating-linear-gradient(45deg, var(--tape-teal) 0 9px, rgba(255, 255, 255, 0.2) 9px 13px);

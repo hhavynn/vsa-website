@@ -7,6 +7,7 @@ import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYea
 import { CabinetYear } from '../types';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { motion } from 'framer-motion';
+import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -282,8 +283,8 @@ function ExecutiveRolePanel({
 
   return (
     <div style={{ transform: `rotate(${pattern.rotate})` }} className="cabinet-position-card">
-      <section
-        className={`relative overflow-visible rounded-lg ${className}`.trim()}
+      <ProfileSpotlightCard
+        className={`overflow-visible rounded-lg ${className}`.trim()}
         style={{
           border: '1px solid var(--paper-edge)',
           background: 'var(--color-surface)',
@@ -366,7 +367,7 @@ function ExecutiveRolePanel({
             </div>
           ))}
         </div>
-      </section>
+      </ProfileSpotlightCard>
     </div>
   );
 }
@@ -375,7 +376,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
   const isPresident = rolePriority(role) === 0;
 
   return (
-    <section
+    <ProfileSpotlightCard
       className="scrapbook-paper overflow-hidden"
       style={{
         borderColor: isPresident ? 'var(--tape-teal)' : 'var(--color-border)',
@@ -470,7 +471,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
           </article>
         ))}
       </div>
-    </section>
+    </ProfileSpotlightCard>
   );
 }
 
