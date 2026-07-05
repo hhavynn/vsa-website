@@ -1,9 +1,22 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling } from '../errors';
 
-export const AI_KNOWLEDGE_SOURCE_TYPES = ['manual', 'public_page', 'public_event', 'faq'] as const;
+export const AI_KNOWLEDGE_SOURCE_TYPES = [
+  'manual',
+  'public_page',
+  'public_event',
+  'faq',
+  'approved_drive',
+  'historical_archive',
+] as const;
+
+export const AI_KNOWLEDGE_CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const;
+
+export const AI_KNOWLEDGE_FRESHNESS_LEVELS = ['stable', 'yearly', 'quarterly', 'event_live'] as const;
 
 export type AiKnowledgeSourceType = (typeof AI_KNOWLEDGE_SOURCE_TYPES)[number];
+export type AiKnowledgeConfidence = (typeof AI_KNOWLEDGE_CONFIDENCE_LEVELS)[number];
+export type AiKnowledgeFreshness = (typeof AI_KNOWLEDGE_FRESHNESS_LEVELS)[number];
 
 export interface AiKnowledgeSnippet {
   id: string;
@@ -16,6 +29,11 @@ export interface AiKnowledgeSnippet {
   is_active: boolean;
   priority: number;
   tags: string[];
+  aliases: string[];
+  confidence: AiKnowledgeConfidence;
+  freshness: AiKnowledgeFreshness;
+  academic_year: string | null;
+  valid_until: string | null;
   last_verified_at: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +48,11 @@ export interface AiKnowledgeSnippetInput {
   is_active?: boolean;
   priority: number;
   tags?: string[];
+  aliases?: string[];
+  confidence?: AiKnowledgeConfidence;
+  freshness?: AiKnowledgeFreshness;
+  academic_year?: string | null;
+  valid_until?: string | null;
   last_verified_at?: string | null;
 }
 
@@ -57,6 +80,11 @@ function normalizePayload(input: AiKnowledgeSnippetInput) {
     is_active: input.is_active ?? true,
     priority: Number.isFinite(input.priority) ? Math.trunc(input.priority) : 0,
     tags: normalizeTags(input.tags),
+    aliases: normalizeTags(input.aliases),
+    confidence: input.confidence ?? 'high',
+    freshness: input.freshness ?? 'stable',
+    academic_year: input.academic_year?.trim() || null,
+    valid_until: input.valid_until || null,
     last_verified_at: input.last_verified_at || null,
   };
 }
