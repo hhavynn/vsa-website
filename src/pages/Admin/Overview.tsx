@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { FadeContent } from '../../components/ui/FadeContent';
 import { supabase } from '../../lib/supabase';
 import { getApplicationStatus } from '../../lib/applicationLinks';
 
@@ -311,7 +312,7 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
 
 function StatCard({ label, value, detail }: { label: string; value: number; detail: string }) {
   return (
-    <div className="scrapbook-note flex flex-col justify-center px-5 py-5 sm:px-6">
+    <div className="scrapbook-note flex h-full flex-col justify-center px-5 py-5 sm:px-6">
       <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
         {label}
       </p>
@@ -383,21 +384,23 @@ function ToolCard({ tool, activeAiSnippets }: { tool: AdminToolCard; activeAiSni
 
 function HealthGroupCard({ title, to, children }: { title: string; to?: string; children: React.ReactNode }) {
   return (
-    <div className="scrapbook-paper overflow-hidden bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
-      <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>{title}</h3>
-        {to && (
-          <Link to={to} className="font-sans text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-400">
-            View details →
-          </Link>
-        )}
-      </div>
-      <div className="p-5">
-        <div className="space-y-3">
-          {children}
+    <FadeContent className="h-full">
+      <div className="scrapbook-paper h-full overflow-hidden bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-center justify-between border-b px-5 py-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>{title}</h3>
+          {to && (
+            <Link to={to} className="font-sans text-[11px] font-semibold text-brand-600 hover:underline dark:text-brand-400">
+              View details →
+            </Link>
+          )}
+        </div>
+        <div className="p-5">
+          <div className="space-y-3">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </FadeContent>
   );
 }
 
@@ -683,12 +686,18 @@ export default function AdminOverview() {
         ) : (
           <div className="space-y-8 lg:space-y-10">
             <div className="grid gap-4 sm:grid-cols-2 lg:gap-6 xl:grid-cols-3">
-              <StatCard label="Members" value={stats.members} detail="Total member records currently in the system." />
-              <StatCard label="Events" value={stats.events} detail={`${stats.upcomingEvents} upcoming events are still active.`} />
-              <StatCard label="Cabinet" value={stats.cabinetMembers} detail={`${stats.cabinetYears} cabinet years are available for archives.`} />
-              <StatCard label="Gallery" value={stats.galleryAlbums} detail="Public albums linked from Google Photos." />
-              <StatCard label="Terms" value={stats.academicTerms} detail="Academic terms used to group event archives." />
-              <StatCard label="Feedback" value={stats.feedback} detail={`${stats.pendingFeedback} items still need follow-up.`} />
+              {[
+                <StatCard key="members" label="Members" value={stats.members} detail="Total member records currently in the system." />,
+                <StatCard key="events" label="Events" value={stats.events} detail={`${stats.upcomingEvents} upcoming events are still active.`} />,
+                <StatCard key="cabinet" label="Cabinet" value={stats.cabinetMembers} detail={`${stats.cabinetYears} cabinet years are available for archives.`} />,
+                <StatCard key="gallery" label="Gallery" value={stats.galleryAlbums} detail="Public albums linked from Google Photos." />,
+                <StatCard key="terms" label="Terms" value={stats.academicTerms} detail="Academic terms used to group event archives." />,
+                <StatCard key="feedback" label="Feedback" value={stats.feedback} detail={`${stats.pendingFeedback} items still need follow-up.`} />,
+              ].map((card, index) => (
+                <FadeContent key={card.key} delay={index * 0.05} className="h-full">
+                  {card}
+                </FadeContent>
+              ))}
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -733,26 +742,28 @@ export default function AdminOverview() {
                     </p>
                   </div>
                 ) : (
-                  filteredGroups.map(group => (
-                    <section key={group.title} className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                      <div className="border-b px-5 py-4 sm:px-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                        <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-                          {group.title}
-                        </h2>
-                        <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                          {group.intro}
-                        </p>
-                      </div>
-                      <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
-                        {group.tools.map(tool => (
-                          <ToolCard
-                            key={tool.to}
-                            tool={tool}
-                            activeAiSnippets={stats.aiTableExists ? stats.aiSnippetsActive : undefined}
-                          />
-                        ))}
-                      </div>
-                    </section>
+                  filteredGroups.map((group, groupIndex) => (
+                    <FadeContent key={group.title} delay={groupIndex * 0.06}>
+                      <section className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+                        <div className="border-b px-5 py-4 sm:px-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+                          <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+                            {group.title}
+                          </h2>
+                          <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                            {group.intro}
+                          </p>
+                        </div>
+                        <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+                          {group.tools.map(tool => (
+                            <ToolCard
+                              key={tool.to}
+                              tool={tool}
+                              activeAiSnippets={stats.aiTableExists ? stats.aiSnippetsActive : undefined}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    </FadeContent>
                   ))
                 )}
               </div>
