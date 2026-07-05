@@ -25,6 +25,8 @@ import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrappe
 import { motion, useReducedMotion } from "framer-motion";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { FALLBACK_LINKS } from "../config/publicFallbackContent";
+import { SplitText } from "../components/ui/SplitText";
+import { ThreadsBackground } from "../components/ui/ThreadsBackground";
 
 const pillars = [
   {
@@ -273,6 +275,7 @@ export function Home() {
       {eventsError && <DegradedModeBanner sourceName="events" />}
 
       <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16">
+        <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
         {/* Tape accent for the whole board */}
         <div
           className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20"
@@ -299,10 +302,19 @@ export function Home() {
                 className="vsa-animate-slide-up vsa-delay-1 font-serif text-[clamp(52px,8vw,82px)] leading-[0.9] tracking-[-0.03em]"
                 style={{ color: "var(--text)" }}
               >
-                Culture,
+                <SplitText
+                  text="Culture,"
+                  disabled={Boolean(shouldReduceMotion)}
+                  stagger={0.032}
+                />
                 <br />
                 <span className="italic" style={{ color: "var(--brand)" }}>
-                  Community.
+                  <SplitText
+                    text="Community."
+                    disabled={Boolean(shouldReduceMotion)}
+                    delay={0.18}
+                    stagger={0.028}
+                  />
                 </span>
               </h1>
               <p

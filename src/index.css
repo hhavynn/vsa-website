@@ -4,6 +4,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes vsa-threads-drift {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(-1deg);
+  }
+
+  50% {
+    transform: translate(-49%, -51%) rotate(1deg);
+  }
+}
+
+@keyframes vsa-threads-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
 /* ── Design system color tokens ────────────────────────────────────────────
    CSS custom properties for light/dark. Consumed by both Tailwind
    (via tailwind.config.js color aliases) and inline styles where needed.
