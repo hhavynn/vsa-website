@@ -1363,20 +1363,29 @@
     text-align: center;
   }
 
+  /* Mobile: 2-column masonry "memory wall" — image-forward, less scroll,
+     natural height variation via --album-image-height for a premium feel. */
   .gallery-memory-wall {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 18px;
+    display: block;
+    columns: 2;
+    column-gap: 14px;
   }
 
   .gallery-memory-card {
     margin-top: 0;
+    margin-bottom: 16px;
     transform: none;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
   }
 
-  .gallery-memory-card:hover {
+  .gallery-memory-card:hover,
+  .gallery-memory-card:active {
     transform: translateY(-2px);
+  }
+
+  .gallery-memory-image {
+    height: calc(var(--album-image-height, 220px) * 0.62);
   }
 
   .cabinet-wall {
@@ -1398,10 +1407,6 @@
 
   .cabinet-position-card {
     transform: none !important;
-  }
-
-  .gallery-memory-image {
-    height: 220px;
   }
 }
 
