@@ -1534,3 +1534,20 @@ html.dark {
     line-height: 1.1;
   }
 }
+@media (max-width: 639px) {
+  .gallery-memory-wall {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 18px;
+  }
+
+  .gallery-memory-card {
+    width: 82vw;
+    min-width: 82vw;
+    scroll-snap-align: start;
+  }
+}
