@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'r
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
+import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
 import { PageLoader } from '../components/common/PageLoader';
@@ -793,7 +794,7 @@ export function Leaderboard() {
                           {activeTab === 'points' ? 'PTS' : 'EVENTS'}
                         </div>
                         <div className="font-mono text-2xl font-black leading-none" style={{ color: 'var(--text)' }}>
-                          {activeTab === 'points' ? entry.points.toLocaleString() : entry.events_attended}
+                          <AnimatedCounter value={activeTab === 'points' ? entry.points : entry.events_attended} />
                         </div>
                       </div>
 
@@ -921,7 +922,7 @@ function PodiumIndividual({
         {cards.map((card) => {
           if (!card.entry) return null;
           const isFirst = card.rank === 1;
-          const value = activeTab === 'points' ? card.entry.points.toLocaleString() : String(card.entry.events_attended);
+          const value = activeTab === 'points' ? card.entry.points : card.entry.events_attended;
           const Icon = card.icon;
 
           return (
@@ -996,7 +997,7 @@ function PodiumIndividual({
                     {activeTab === 'points' ? 'POINTS' : 'EVENTS'}
                   </div>
                   <div className={`font-mono font-black ${isFirst ? 'text-4xl text-[var(--accent)]' : 'text-3xl text-[var(--text)]'}`}>
-                    {value}
+                    <AnimatedCounter value={value} />
                   </div>
                 </div>
               </div>
@@ -1120,7 +1121,7 @@ function HouseStandingsWall({
                         HOUSE POINTS
                       </div>
                       <div className="font-mono text-4xl font-black sm:text-5xl" style={{ color }}>
-                        {standing.total_points.toLocaleString()}
+                        <AnimatedCounter value={standing.total_points} />
                       </div>
                     </div>
                   </div>
