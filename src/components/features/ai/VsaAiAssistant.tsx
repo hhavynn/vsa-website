@@ -420,7 +420,7 @@ export function VsaAiAssistant() {
   }
 
   return (
-    <div className="fixed bottom-5 left-4 z-50 sm:left-5">
+      <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-50 sm:bottom-5 sm:left-5">
       <AnimatePresence>
         {isOpen && (
           <motion.section
@@ -759,7 +759,7 @@ export function VsaAiAssistant() {
             whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
             type="button"
             onClick={() => setIsOpen((open) => !open)}
-            className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
+            className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors active:scale-[0.97] hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
             style={{ borderColor: 'var(--color-border)' }}
             aria-expanded={isOpen}
             aria-controls="vsa-ai-assistant-panel"

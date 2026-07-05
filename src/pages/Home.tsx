@@ -292,6 +292,18 @@ export function Home() {
 
         <div className="vsa-container relative z-10 w-full">
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+            <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
+              <div className="scrapbook-photo overflow-hidden rounded-lg shadow-[0_18px_42px_rgba(15,23,42,0.24)]">
+                <img
+                  src={logoSrc}
+                  alt="VSA at UC San Diego lantern artwork"
+                  className="aspect-square w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+              <div className="scrapbook-tape absolute -top-3 left-1/2 h-7 w-28 -translate-x-1/2 rotate-[-2deg] opacity-70" />
+            </div>
             <div className="scrapbook-paper flex flex-col justify-center p-6 sm:p-8 lg:p-10 scrapbook-rotate-sm-left">
               <span className="scrapbook-pin" aria-hidden />
               <div
@@ -405,7 +417,7 @@ export function Home() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[340px] flex-col items-center justify-center py-8 lg:p-10">
+            <div className="relative hidden min-h-[340px] flex-col items-center justify-center py-8 lg:flex lg:p-10">
               <div
                 className="scrapbook-photo relative aspect-square w-[min(360px,80%)] rotate-[2deg]"
                 style={{
