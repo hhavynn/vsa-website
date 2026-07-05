@@ -194,7 +194,7 @@ function PastEventMemoryCard({
     <motion.div 
       whileHover={{ y: -4, rotate: 0 }}
       transition={{ duration: 0.2 }}
-      className={`scrapbook-photo overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
+      className={`scrapbook-photo group/spotlight relative overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.22),transparent_46%)] before:opacity-0 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
     >
       {/* Image with optional gallery overlay */}
       <div className="relative">
@@ -295,7 +295,7 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
   const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
 
   return (
-    <Link to={href} className="scrapbook-paper group grid gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[120px_minmax(0,1fr)]" style={{ borderColor: `${color}55` }}>
+    <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-0 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] sm:grid-cols-[120px_minmax(0,1fr)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
         {imageUrl ? (
           <img

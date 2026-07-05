@@ -27,6 +27,7 @@ import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { FALLBACK_LINKS } from "../config/publicFallbackContent";
 import { SplitText } from "../components/ui/SplitText";
 import { ThreadsBackground } from "../components/ui/ThreadsBackground";
+import { SpotlightCard } from "../components/ui/SpotlightCard";
 
 const pillars = [
   {
@@ -131,12 +132,13 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
   const timeLabel = getEventTimeLabel(event);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
-    >
+    <SpotlightCard className="mb-6 rounded-none border-0 bg-transparent">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="scrapbook-paper flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
+      >
       <div
         className="flex flex-col justify-center p-6 sm:p-8 lg:border-r"
         style={{ borderColor: "var(--border)" }}
@@ -227,7 +229,8 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
           </div>
         </div>
       </div>
-    </motion.div>
+      </motion.div>
+    </SpotlightCard>
   );
 }
 
