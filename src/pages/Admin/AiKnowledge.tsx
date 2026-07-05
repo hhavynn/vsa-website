@@ -2,7 +2,11 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import {
+  AI_KNOWLEDGE_CONFIDENCE_LEVELS,
+  AI_KNOWLEDGE_FRESHNESS_LEVELS,
   AI_KNOWLEDGE_SOURCE_TYPES,
+  AiKnowledgeConfidence,
+  AiKnowledgeFreshness,
   AiKnowledgeSnippet,
   AiKnowledgeSourceType,
   aiKnowledgeRepository,
@@ -16,9 +20,14 @@ interface SnippetFormState {
   category: string;
   content: string;
   tags: string;
+  aliases: string;
   priority: string;
   source_type: AiKnowledgeSourceType;
   source_url: string;
+  confidence: AiKnowledgeConfidence;
+  freshness: AiKnowledgeFreshness;
+  academic_year: string;
+  valid_until_date: string;
   last_verified_date: string;
   is_active: boolean;
 }
@@ -28,9 +37,14 @@ const DEFAULT_FORM: SnippetFormState = {
   category: 'general',
   content: '',
   tags: '',
+  aliases: '',
   priority: '0',
   source_type: 'manual',
   source_url: '',
+  confidence: 'high',
+  freshness: 'stable',
+  academic_year: '',
+  valid_until_date: '',
   last_verified_date: '',
   is_active: true,
 };
@@ -53,9 +67,14 @@ function toFormState(snippet: AiKnowledgeSnippet): SnippetFormState {
     category: snippet.category ?? 'general',
     content: snippet.content ?? '',
     tags: (snippet.tags ?? []).join(', '),
+    aliases: (snippet.aliases ?? []).join(', '),
     priority: String(snippet.priority ?? 0),
     source_type: snippet.source_type ?? 'manual',
     source_url: snippet.source_url ?? '',
+    confidence: snippet.confidence ?? 'high',
+    freshness: snippet.freshness ?? 'stable',
+    academic_year: snippet.academic_year ?? '',
+    valid_until_date: toDateInput(snippet.valid_until),
     last_verified_date: toDateInput(snippet.last_verified_at),
     is_active: snippet.is_active,
   };
@@ -71,6 +90,16 @@ function parseTags(value: string) {
 function toTimestamp(value: string) {
   if (!value) return null;
   return new Date(`${value}T12:00:00`).toISOString();
+}
+
+// valid_until is an expiry boundary (retrieval excludes rows where valid_until <= now()),
+// so the snippet should stay valid through the entire selected date rather than expiring
+// at noon. Use the start of the next day as the cutoff.
+function toEndOfDayTimestamp(value: string) {
+  if (!value) return null;
+  const nextDay = new Date(`${value}T00:00:00`);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.toISOString();
 }
 
 function getSafetyWarnings(form: SnippetFormState) {
@@ -201,6 +230,7 @@ export default function AdminAiKnowledge() {
           snippet.source_type,
           snippet.source_url ?? '',
           ...(snippet.tags ?? []),
+          ...(snippet.aliases ?? []),
         ]
           .join(' ')
           .toLowerCase();
@@ -256,6 +286,11 @@ export default function AdminAiKnowledge() {
       is_active: form.is_active,
       priority: Number(form.priority),
       tags: parseTags(form.tags),
+      aliases: parseTags(form.aliases),
+      confidence: form.confidence,
+      freshness: form.freshness,
+      academic_year: form.academic_year,
+      valid_until: toEndOfDayTimestamp(form.valid_until_date),
       last_verified_at: toTimestamp(form.last_verified_date),
     };
 
@@ -660,6 +695,96 @@ export default function AdminAiKnowledge() {
                   />
                   <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
                     Separate tags with commas.
+                  </p>
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Aliases
+                  </span>
+                  <input
+                    value={form.aliases}
+                    onChange={event => updateForm('aliases', event.target.value)}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                    placeholder="eoyb, banquet, end of year banquet"
+                  />
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    Comma-separated nicknames, acronyms, and question phrasings that should retrieve this snippet. Aliases are the strongest retrieval signal after the title.
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Confidence
+                  </span>
+                  <select
+                    value={form.confidence}
+                    onChange={event => updateForm('confidence', event.target.value as AiKnowledgeConfidence)}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    {AI_KNOWLEDGE_CONFIDENCE_LEVELS.map(level => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    Medium/low makes Ask VSA use uncertainty language.
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Freshness
+                  </span>
+                  <select
+                    value={form.freshness}
+                    onChange={event => updateForm('freshness', event.target.value as AiKnowledgeFreshness)}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    {AI_KNOWLEDGE_FRESHNESS_LEVELS.map(level => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    How often this fact needs review (stable, yearly, quarterly, event_live).
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Academic year
+                  </span>
+                  <input
+                    value={form.academic_year}
+                    onChange={event => updateForm('academic_year', event.target.value)}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                    placeholder="2025-2026"
+                  />
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    Set for year-specific facts so Ask VSA labels them by year. Leave blank for evergreen facts.
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Valid until
+                  </span>
+                  <input
+                    type="date"
+                    value={form.valid_until_date}
+                    onChange={event => updateForm('valid_until_date', event.target.value)}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  />
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    Optional expiry. After this date the snippet stays saved but retrieval skips it automatically.
                   </p>
                 </label>
 
