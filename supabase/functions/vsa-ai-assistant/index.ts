@@ -236,9 +236,14 @@ function buildContext(snippets: KnowledgeSnippet[], eventContext: string | null)
     .join("\n\n");
 }
 
+const MAX_SOURCE_CHIPS = 7;
+
 function sourceChips(snippets: KnowledgeSnippet[], hasEventContext: boolean): SourceChip[] {
   const map = new Map<string, SourceChip>();
-  for (const snippet of snippets) {
+  // Reserve a slot for the live-events chip so it can't get sliced off below.
+  const snippetLimit = hasEventContext ? MAX_SOURCE_CHIPS - 1 : MAX_SOURCE_CHIPS;
+
+  for (const snippet of snippets.slice(0, snippetLimit)) {
     map.set(snippet.id, {
       title: snippet.title,
       source_url: snippet.source_url,
@@ -252,7 +257,7 @@ function sourceChips(snippets: KnowledgeSnippet[], hasEventContext: boolean): So
       category: "events",
     });
   }
-  return Array.from(map.values()).slice(0, 7);
+  return Array.from(map.values()).slice(0, MAX_SOURCE_CHIPS);
 }
 
 async function logUsage(

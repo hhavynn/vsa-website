@@ -92,6 +92,16 @@ function toTimestamp(value: string) {
   return new Date(`${value}T12:00:00`).toISOString();
 }
 
+// valid_until is an expiry boundary (retrieval excludes rows where valid_until <= now()),
+// so the snippet should stay valid through the entire selected date rather than expiring
+// at noon. Use the start of the next day as the cutoff.
+function toEndOfDayTimestamp(value: string) {
+  if (!value) return null;
+  const nextDay = new Date(`${value}T00:00:00`);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.toISOString();
+}
+
 function getSafetyWarnings(form: SnippetFormState) {
   const haystack = `${form.content}\n${form.source_url}`;
   const warnings: string[] = [];
@@ -280,7 +290,7 @@ export default function AdminAiKnowledge() {
       confidence: form.confidence,
       freshness: form.freshness,
       academic_year: form.academic_year,
-      valid_until: toTimestamp(form.valid_until_date),
+      valid_until: toEndOfDayTimestamp(form.valid_until_date),
       last_verified_at: toTimestamp(form.last_verified_date),
     };
 
