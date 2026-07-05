@@ -8,6 +8,7 @@ import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/h
 import { supabase } from '../../../lib/supabase';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
+import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -454,6 +455,11 @@ export function MyVSACard({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface2)]/50 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <ShareButton entry={entry} yearLabel={yearLabel} />
+          <PhotoRequestSection
+            matchedMemberId={entry.member_id}
+            selectedMemberName={entry.full_name}
+            buttonLabel={avatarUrl ? 'Update photo' : 'Request photo'}
+          />
           {ambiguous && (
             <button
               type="button"
