@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarItem, compareCalendarItems, formatDayGroupLabel } from '../../../utils/calendar';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { BottomSheet } from '../../ui/BottomSheet';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { getDetailLinkLabel, getItemColor } from './calendarTheme';
 
@@ -158,61 +158,36 @@ function DaySheet({
  * day sheet listing everything on a tapped day. Closes on Escape/backdrop.
  */
 export function CalendarDetailModal({ overlay, todayStr, onClose, onSelectItem }: Props) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!overlay) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    document.body.style.overflow = 'hidden';
-    closeButtonRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [overlay, onClose]);
-
   if (!overlay) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-6"
-      onClick={onClose}
-      role="presentation"
+    <BottomSheet
+      onClose={onClose}
+      ariaLabelledBy="calendar-detail-title"
+      className="scrapbook-paper p-5 sm:p-6"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="calendar-detail-title"
-        onClick={(e) => e.stopPropagation()}
-        className="scrapbook-paper max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-b-none p-5 sm:rounded-b-xl sm:p-6"
-      >
-        <div className="flex justify-end">
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-full font-sans text-lg leading-none transition-colors hover:bg-[var(--surface2)]"
-            style={{ color: 'var(--color-text2)' }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {overlay.mode === 'item' ? (
-          <ItemDetail item={overlay.item} onClose={onClose} />
-        ) : (
-          <DaySheet
-            dateStr={overlay.dateStr}
-            items={overlay.items}
-            todayStr={todayStr}
-            onSelectItem={onSelectItem}
-          />
-        )}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-full font-sans text-lg leading-none transition-colors hover:bg-[var(--surface2)]"
+          style={{ color: 'var(--color-text2)' }}
+        >
+          ✕
+        </button>
       </div>
-    </div>
+
+      {overlay.mode === 'item' ? (
+        <ItemDetail item={overlay.item} onClose={onClose} />
+      ) : (
+        <DaySheet
+          dateStr={overlay.dateStr}
+          items={overlay.items}
+          todayStr={todayStr}
+          onSelectItem={onSelectItem}
+        />
+      )}
+    </BottomSheet>
   );
 }

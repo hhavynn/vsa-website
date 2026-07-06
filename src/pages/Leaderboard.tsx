@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
+import { BottomSheet } from '../components/ui/BottomSheet';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
 import { LeaderboardSkeleton } from '../components/common/PageSkeletons';
@@ -192,19 +193,12 @@ function PublicMemberProfileModal({
   const secondaryLabel = activeTab === 'points' ? 'Events attended' : 'Points';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="presentation"
-      onClick={onClose}
+    <BottomSheet
+      onClose={onClose}
+      ariaLabel={`${displayName} member profile`}
+      className="border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
     >
-      <div
-        className="w-full max-w-lg rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${displayName} member profile`}
-        onClick={event => event.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative shrink-0">
               {avatarUrl ? (
@@ -254,8 +248,7 @@ function PublicMemberProfileModal({
             buttonLabel={avatarUrl ? 'Update photo' : 'Request photo'}
           />
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
 
