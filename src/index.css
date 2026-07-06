@@ -1487,6 +1487,50 @@
   .cabinet-position-card {
     transform: none !important;
   }
+
+  /* ─── Snap Rail ─────────────────────────────────────────────────────────────
+     Horizontal scroll-snap rail for card grids on mobile.
+     Applied to .snap-rail containers — cards become horizontally swipeable
+     with momentum scrolling and snap alignment. ────────────────────────────── */
+
+  .snap-rail {
+    display: flex !important;
+    grid-template-columns: unset !important;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-inline-start: 16px;
+    padding-bottom: 12px;
+  }
+
+  .snap-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .snap-rail > * {
+    flex: 0 0 80vw;
+    min-width: 280px;
+    max-width: 340px;
+    scroll-snap-align: start;
+  }
+
+  /* Fade hint on the trailing edge so users know there's more to swipe */
+  .snap-rail-container {
+    position: relative;
+  }
+
+  .snap-rail-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 12px;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--color-bg));
+    pointer-events: none;
+    z-index: 2;
+  }
 }
 
 html.dark {
