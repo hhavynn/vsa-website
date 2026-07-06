@@ -11,6 +11,7 @@ import { Label } from '../components/ui/Label';
 import { supabase } from '../lib/supabase';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import toast, { Toaster } from 'react-hot-toast';
+import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 
 interface AttendanceRecord extends EventAttendance { event: Event; }
 
@@ -134,17 +135,23 @@ export function Profile() {
         {/* Stats bar */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(3,max-content)_1fr] xl:items-center xl:gap-6">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{points}</span>
+            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>
+              <AnimatedCounter value={points} />
+            </span>
             <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>points</span>
           </div>
           <div className="hidden xl:block" style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
           <div className="flex items-baseline gap-1.5">
-            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{stats.totalEvents}</span>
+            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>
+              <AnimatedCounter value={stats.totalEvents} />
+            </span>
             <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>events attended</span>
           </div>
           <div className="hidden xl:block" style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
           <div className="flex items-baseline gap-1.5">
-            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>{stats.eventsThisMonth}</span>
+            <span className="font-serif" style={{ fontSize: 28, color: 'var(--color-text)' }}>
+              <AnimatedCounter value={stats.eventsThisMonth} />
+            </span>
             <span className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>this month</span>
           </div>
           <div className="sm:col-span-2 xl:col-span-1 xl:ml-auto">

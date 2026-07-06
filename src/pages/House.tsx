@@ -23,6 +23,7 @@ import { HouseYearSelector } from '../components/features/house/HouseYearSelecto
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PERSONALITY — Flavor copy per house. Update each cycle as needed.
@@ -851,6 +852,7 @@ export function House() {
                       display_name: label,
                     })
                   : null;
+
                 const HouseCard = (detailHref ? Link : 'article') as any;
 
                 return (
@@ -864,110 +866,111 @@ export function House() {
                     } as any}
                     aria-label={detailHref ? `View ${label} house page` : `${label} archive summary`}
                   >
-
-                    <span className="scrapbook-pin" aria-hidden />
-                    {/* Image area */}
-                    <div
-                      className="relative aspect-[4/3] overflow-hidden"
-                      style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
-                    >
-                      <div className="flex h-full items-center justify-center">
-                        <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
-                      </div>
-                      {imageUrl ? (
-                        <img
-                          src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
-                          srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
-                          sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-                          alt={asset.image_alt || label}
-                          className="absolute inset-0 h-full w-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : null}
-
-                      {/* Rank badge overlay */}
-                      {rank !== null && !isArchive && (
-                        <div
-                          className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black text-white shadow-md"
-                          style={{ background: color }}
-                        >
-                          #{rank}
+                    <ProfileSpotlightCard className="h-full w-full bg-transparent overflow-visible">
+                      <span className="scrapbook-pin" aria-hidden />
+                      {/* Image area */}
+                      <div
+                        className="relative aspect-[4/3] overflow-hidden"
+                        style={{ background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
+                      >
+                        <div className="flex h-full items-center justify-center">
+                          <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
                         </div>
-                      )}
+                        {imageUrl ? (
+                          <img
+                            src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
+                            srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
+                            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
+                            alt={asset.image_alt || label}
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
 
-                      {/* Points overlay */}
-                      {standing && standing.total_points > 0 && !isArchive && (
-                        <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
-                          <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">house pts</div>
-                          <div className="font-mono text-lg font-black leading-none text-white">
-                            {standing.total_points.toLocaleString()}
+                        {/* Rank badge overlay */}
+                        {rank !== null && !isArchive && (
+                          <div
+                            className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black text-white shadow-md"
+                            style={{ background: color }}
+                          >
+                            #{rank}
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
 
-                    {/* Card body */}
-                    <div className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{emoji}</span>
-                        <div className="program-card-title leading-tight">{label}</div>
+                        {/* Points overlay */}
+                        {standing && standing.total_points > 0 && !isArchive && (
+                          <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
+                            <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">house pts</div>
+                            <div className="font-mono text-lg font-black leading-none text-white">
+                              {standing.total_points.toLocaleString()}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <p className="mt-1.5 font-sans text-[12px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                        {tagline}
-                      </p>
+                      {/* Card body */}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{emoji}</span>
+                          <div className="program-card-title leading-tight">{label}</div>
+                        </div>
 
-                      {/* Live mini stats */}
-                      {!isArchive && (
-                        <>
-                          {standing && standing.total_points > 0 ? (
-                            <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                              <div className="text-center">
-                                <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
-                                <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
-                              </div>
-                              {standing.average_points_per_member !== null && (
+                        <p className="mt-1.5 font-sans text-[12px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                          {tagline}
+                        </p>
+
+                        {/* Live mini stats */}
+                        {!isArchive && (
+                          <>
+                            {standing && standing.total_points > 0 ? (
+                              <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
                                 <div className="text-center">
-                                  <div className="font-mono text-[14px] font-black" style={{ color }}>
-                                    {standing.average_points_per_member.toFixed(1)}
-                                  </div>
-                                  <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
+                                  <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
+                                  <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
                                 </div>
+                                {standing.average_points_per_member !== null && (
+                                  <div className="text-center">
+                                    <div className="font-mono text-[14px] font-black" style={{ color }}>
+                                      {standing.average_points_per_member.toFixed(1)}
+                                    </div>
+                                    <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
+                                <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
+                                  Season not yet started
+                                </p>
+                              </div>
+                            )}
+
+                            {/* House color bar */}
+                            <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
+                              {hasLiveStandings && standing && (
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{
+                                    width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
+                                    background: color,
+                                  }}
+                                />
                               )}
                             </div>
-                          ) : (
-                            <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                              <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                                Season not yet started
-                              </p>
-                            </div>
-                          )}
-
-                          {/* House color bar */}
-                          <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
-                            {hasLiveStandings && standing && (
-                              <div
-                                className="h-full rounded-full transition-all duration-700"
-                                style={{
-                                  width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
-                                  background: color,
-                                }}
-                              />
-                            )}
-                          </div>
-                        </>
-                      )}
-                      <span
-                        className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
-                        style={{ color }}
-                      >
-                        {detailHref ? (isArchive ? 'View Archive →' : 'Explore →') : 'Archive summary'}
-                      </span>
-                    </div>
+                          </>
+                        )}
+                        <span
+                          className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
+                          style={{ color }}
+                        >
+                          {detailHref ? (isArchive ? 'View Archive →' : 'Explore →') : 'Archive summary'}
+                        </span>
+                      </div>
+                    </ProfileSpotlightCard>
                   </HouseCard>
                 );
               })}
