@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { CabinetSkeleton } from '../components/common/PageSkeletons';
 import { useCabinetYears } from '../hooks/useCabinetYears';
 import { useCabinetMemberYearIds, useCabinetMembers, type CabinetMemberRaw } from '../hooks/useCabinet';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
@@ -829,9 +830,7 @@ export function Cabinet() {
       </div>
 
       {loadingCabinetYears || loadingYearIds || loadingMembers ? (
-        <div className="flex justify-center px-5 py-24 sm:px-8 lg:px-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-brand-600" />
-        </div>
+        <CabinetSkeleton />
       ) : isInvalidYearQuery ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
           <div

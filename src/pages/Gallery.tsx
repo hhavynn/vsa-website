@@ -2,7 +2,7 @@ import { type CSSProperties, useMemo } from 'react';
 import { formatDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { PageTitle } from '../components/common/PageTitle';
-import { PageLoader } from '../components/common/PageLoader';
+import { GallerySkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
@@ -81,7 +81,7 @@ export default function Gallery() {
 
   const isDegraded = isSupabaseUnavailable(error);
 
-  if (loading) return <PageLoader message="Loading gallery..." />;
+  if (loading) return <GallerySkeleton />;
   
   if (isDegraded) {
     return (

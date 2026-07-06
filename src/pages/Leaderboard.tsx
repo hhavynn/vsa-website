@@ -5,7 +5,7 @@ import { Input } from '../components/ui/Input';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
-import { PageLoader } from '../components/common/PageLoader';
+import { LeaderboardSkeleton } from '../components/common/PageSkeletons';
 import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
@@ -577,7 +577,7 @@ export function Leaderboard() {
   const top3 = filteredEntries.slice(0, 3);
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
-  if ((waitingForInitialYear || loading) && selectedYear === null) return <PageLoader message="Loading leaderboard..." />;
+  if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
   if (error && !isDegradedMode) {
     return (
       <>

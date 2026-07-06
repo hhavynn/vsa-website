@@ -2,7 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { formatEventDateRange, formatEventTimeRange } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
-import { PageLoader } from '../components/common/PageLoader';
+import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
@@ -547,7 +547,7 @@ export function Events() {
     return (
       <>
         <PageTitle title="Events" />
-        <PageLoader message="Loading events..." />
+        <EventsSkeleton />
       </>
     );
   }
