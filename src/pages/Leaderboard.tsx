@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'r
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
+import { AnimatedCounter } from '../components/ui/AnimatedCounter';
+import { BottomSheet } from '../components/ui/BottomSheet';
 import { Avatar } from '../components/features/avatar/Avatar';
 import { PhotoRequestSection } from '../components/features/avatar/PhotoRequestSection';
-import { PageLoader } from '../components/common/PageLoader';
+import { LeaderboardSkeleton } from '../components/common/PageSkeletons';
 import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
@@ -191,19 +193,12 @@ function PublicMemberProfileModal({
   const secondaryLabel = activeTab === 'points' ? 'Events attended' : 'Points';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="presentation"
-      onClick={onClose}
+    <BottomSheet
+      onClose={onClose}
+      ariaLabel={`${displayName} member profile`}
+      className="border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
     >
-      <div
-        className="w-full max-w-lg rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${displayName} member profile`}
-        onClick={event => event.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative shrink-0">
               {avatarUrl ? (
@@ -253,8 +248,7 @@ function PublicMemberProfileModal({
             buttonLabel={avatarUrl ? 'Update photo' : 'Request photo'}
           />
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
 
@@ -576,7 +570,7 @@ export function Leaderboard() {
   const top3 = filteredEntries.slice(0, 3);
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
-  if ((waitingForInitialYear || loading) && selectedYear === null) return <PageLoader message="Loading leaderboard..." />;
+  if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
   if (error && !isDegradedMode) {
     return (
       <>
@@ -793,7 +787,7 @@ export function Leaderboard() {
                           {activeTab === 'points' ? 'PTS' : 'EVENTS'}
                         </div>
                         <div className="font-mono text-2xl font-black leading-none" style={{ color: 'var(--text)' }}>
-                          {activeTab === 'points' ? entry.points.toLocaleString() : entry.events_attended}
+                          <AnimatedCounter value={activeTab === 'points' ? entry.points : entry.events_attended} />
                         </div>
                       </div>
 
@@ -921,7 +915,7 @@ function PodiumIndividual({
         {cards.map((card) => {
           if (!card.entry) return null;
           const isFirst = card.rank === 1;
-          const value = activeTab === 'points' ? card.entry.points.toLocaleString() : String(card.entry.events_attended);
+          const value = activeTab === 'points' ? card.entry.points : card.entry.events_attended;
           const Icon = card.icon;
 
           return (
@@ -996,7 +990,7 @@ function PodiumIndividual({
                     {activeTab === 'points' ? 'POINTS' : 'EVENTS'}
                   </div>
                   <div className={`font-mono font-black ${isFirst ? 'text-4xl text-[var(--accent)]' : 'text-3xl text-[var(--text)]'}`}>
-                    {value}
+                    <AnimatedCounter value={value} />
                   </div>
                 </div>
               </div>
@@ -1120,7 +1114,7 @@ function HouseStandingsWall({
                         HOUSE POINTS
                       </div>
                       <div className="font-mono text-4xl font-black sm:text-5xl" style={{ color }}>
-                        {standing.total_points.toLocaleString()}
+                        <AnimatedCounter value={standing.total_points} />
                       </div>
                     </div>
                   </div>

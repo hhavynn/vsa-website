@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
+import { AnimatedCounter } from '../../ui/AnimatedCounter';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ function StatBox({
   accentColor,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   accentColor?: string;
 }) {
   return (
@@ -416,10 +417,10 @@ export function MyVSACard({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 px-6 sm:grid-cols-4">
-          <StatBox label="Total Points" value={entry.total_points.toLocaleString()} accentColor={cardAccentColor} />
-          <StatBox label="Yearly Rank" value={`#${entry.rank}`} />
-          <StatBox label="Check-ins" value={String(entry.events_attended)} />
-          <StatBox label="All-Time" value={entry.all_time_points.toLocaleString()} />
+          <StatBox label="Total Points" value={<AnimatedCounter value={entry.total_points} />} accentColor={cardAccentColor} />
+          <StatBox label="Yearly Rank" value={<>#<AnimatedCounter value={entry.rank} /></>} />
+          <StatBox label="Check-ins" value={<AnimatedCounter value={entry.events_attended} />} />
+          <StatBox label="All-Time" value={<AnimatedCounter value={entry.all_time_points} />} />
         </div>
 
         {/* Actionable insight */}

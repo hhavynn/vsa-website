@@ -20,6 +20,7 @@ import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/house
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
+import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 
 function getCurrentAcademicYearStart() {
   return getAcademicTermMeta(new Date())?.academicYearStart ?? null;
@@ -61,7 +62,10 @@ function HouseParentsSection({ house, label, color }: { house: HousePageAsset; l
           </p>
         </div>
 
-        <div className="scrapbook-paper mx-auto max-w-3xl overflow-hidden p-4 sm:p-5" style={{ borderColor: `${color}55` }}>
+        <ProfileSpotlightCard
+          className="scrapbook-paper mx-auto max-w-3xl overflow-hidden p-4 sm:p-5"
+          style={{ borderColor: `${color}55`, background: 'var(--color-surface)' }}
+        >
           {parentImage ? (
             <div className="rounded border p-3" style={{ borderColor: `${color}33`, background: 'var(--color-surface2)' }}>
               <img
@@ -79,7 +83,7 @@ function HouseParentsSection({ house, label, color }: { house: HousePageAsset; l
               </p>
             </div>
           )}
-        </div>
+        </ProfileSpotlightCard>
       </section>
     </RevealOnScrollWrapper>
   );

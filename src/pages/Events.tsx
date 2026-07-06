@@ -2,7 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { formatEventDateRange, formatEventTimeRange } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
-import { PageLoader } from '../components/common/PageLoader';
+import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
 import { Badge, BadgeColor } from '../components/ui/Badge';
 import { Label } from '../components/ui/Label';
@@ -194,7 +194,7 @@ function PastEventMemoryCard({
     <motion.div 
       whileHover={{ y: -4, rotate: 0 }}
       transition={{ duration: 0.2 }}
-      className={`scrapbook-photo overflow-hidden transition-all scrapbook-hover-tilt ${rotationClass}`}
+      className={`scrapbook-photo group/spotlight relative min-w-[82vw] snap-start overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.22),transparent_46%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 sm:before:opacity-0 md:min-w-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
     >
       {/* Image with optional gallery overlay */}
       <div className="relative">
@@ -295,7 +295,7 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
   const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
 
   return (
-    <Link to={href} className="scrapbook-paper group grid gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[120px_minmax(0,1fr)]" style={{ borderColor: `${color}55` }}>
+    <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
         {imageUrl ? (
           <img
@@ -547,7 +547,7 @@ export function Events() {
     return (
       <>
         <PageTitle title="Events" />
-        <PageLoader message="Loading events..." />
+        <EventsSkeleton />
       </>
     );
   }
@@ -894,7 +894,7 @@ export function Events() {
               </div>
             ) : (
               <RevealOnScrollWrapper>
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="flex snap-x snap-mandatory items-start gap-4 overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:overflow-visible md:pb-0 xl:grid-cols-3">
                   {archivedEvents.map((event: Event, index: number) => (
                     <PastEventMemoryCard
                       key={event.id}

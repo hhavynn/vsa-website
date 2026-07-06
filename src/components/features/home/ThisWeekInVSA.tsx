@@ -513,11 +513,13 @@ export function ThisWeekInVSA() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          <NextEventCard />
-          <HouseStandingsCard academicYearStart={academicYearStart} />
-          <LatestMemoryCard />
-          <FindMyPointsCard />
+        <div className="snap-rail-container">
+          <div className="snap-rail grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <NextEventCard />
+            <HouseStandingsCard academicYearStart={academicYearStart} />
+            <LatestMemoryCard />
+            <FindMyPointsCard />
+          </div>
         </div>
       </div>
     </section>

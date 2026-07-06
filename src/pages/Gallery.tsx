@@ -2,7 +2,7 @@ import { type CSSProperties, useMemo } from 'react';
 import { formatDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { PageTitle } from '../components/common/PageTitle';
-import { PageLoader } from '../components/common/PageLoader';
+import { GallerySkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
@@ -81,7 +81,7 @@ export default function Gallery() {
 
   const isDegraded = isSupabaseUnavailable(error);
 
-  if (loading) return <PageLoader message="Loading gallery..." />;
+  if (loading) return <GallerySkeleton />;
   
   if (isDegraded) {
     return (
@@ -156,7 +156,7 @@ export default function Gallery() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${album.title} photo album (opens in a new tab)`}
-                    className="gallery-memory-card group block transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none"
+                    className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
                   >

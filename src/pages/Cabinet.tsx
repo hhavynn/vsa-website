@@ -1,12 +1,14 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { CabinetSkeleton } from '../components/common/PageSkeletons';
 import { useCabinetYears } from '../hooks/useCabinetYears';
 import { useCabinetMemberYearIds, useCabinetMembers, type CabinetMemberRaw } from '../hooks/useCabinet';
 import { formatCabinetYearRange, getCurrentCabinetYear } from '../lib/cabinetYears';
 import { CabinetYear } from '../types';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { motion } from 'framer-motion';
+import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -282,8 +284,8 @@ function ExecutiveRolePanel({
 
   return (
     <div style={{ transform: `rotate(${pattern.rotate})` }} className="cabinet-position-card">
-      <section
-        className={`relative overflow-visible rounded-lg ${className}`.trim()}
+      <ProfileSpotlightCard
+        className={`overflow-visible rounded-lg ${className}`.trim()}
         style={{
           border: '1px solid var(--paper-edge)',
           background: 'var(--color-surface)',
@@ -366,7 +368,7 @@ function ExecutiveRolePanel({
             </div>
           ))}
         </div>
-      </section>
+      </ProfileSpotlightCard>
     </div>
   );
 }
@@ -375,7 +377,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
   const isPresident = rolePriority(role) === 0;
 
   return (
-    <section
+    <ProfileSpotlightCard
       className="scrapbook-paper overflow-hidden"
       style={{
         borderColor: isPresident ? 'var(--tape-teal)' : 'var(--color-border)',
@@ -470,7 +472,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
           </article>
         ))}
       </div>
-    </section>
+    </ProfileSpotlightCard>
   );
 }
 
@@ -828,9 +830,7 @@ export function Cabinet() {
       </div>
 
       {loadingCabinetYears || loadingYearIds || loadingMembers ? (
-        <div className="flex justify-center px-5 py-24 sm:px-8 lg:px-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-brand-600" />
-        </div>
+        <CabinetSkeleton />
       ) : isInvalidYearQuery ? (
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 lg:px-12">
           <div

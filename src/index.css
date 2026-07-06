@@ -4,6 +4,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes vsa-threads-drift {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(-1deg);
+  }
+
+  50% {
+    transform: translate(-49%, -51%) rotate(1deg);
+  }
+}
+
+@keyframes vsa-threads-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
 /* ── Design system color tokens ────────────────────────────────────────────
    CSS custom properties for light/dark. Consumed by both Tailwind
    (via tailwind.config.js color aliases) and inline styles where needed.
@@ -97,7 +119,32 @@
   100% { transform: translateY(-120px) translateX(var(--dx, 30px)) scale(0.3); opacity: 0; }
 }
 
+@keyframes vsa-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @layer components {
+  /* Loading placeholder — shimmer sweep across a surface-toned bar.
+     Shape (width/height/rounding) is supplied by the caller. */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface2) 25%,
+      var(--color-border) 50%,
+      var(--color-surface2) 75%
+    );
+    background-size: 300% 100%;
+    animation: vsa-skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+      animation: none;
+      background: var(--color-surface2);
+    }
+  }
+
   .vsa-container {
     max-width: 1280px;
     margin: 0 auto;
@@ -517,6 +564,60 @@
     transform: translateY(-4px) rotate(0deg) !important;
     box-shadow: var(--paper-shadow-hover);
     z-index: 10;
+  }
+
+  /* Leadership profile spotlight — cursor-tracked brand glow + gentle lift.
+     Applied selectively to executive leadership cards (see ProfileSpotlightCard). */
+  .profile-spotlight {
+    position: relative;
+    transition: transform var(--trans), box-shadow var(--trans), border-color var(--trans);
+  }
+
+  .profile-spotlight__glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--trans);
+    background: radial-gradient(
+      220px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+      rgba(59, 189, 181, 0.18),
+      transparent 68%
+    );
+  }
+
+  @media (hover: hover) {
+    .profile-spotlight:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--paper-shadow-hover);
+    }
+    .profile-spotlight:hover .profile-spotlight__glow {
+      opacity: 1;
+    }
+  }
+
+  /* Touch devices: a soft static hint instead of cursor tracking */
+  @media (hover: none) {
+    .profile-spotlight__glow {
+      opacity: 0.55;
+      background: radial-gradient(
+        160px circle at 50% 0%,
+        rgba(59, 189, 181, 0.1),
+        transparent 70%
+      );
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .profile-spotlight,
+    .profile-spotlight__glow {
+      transition: none;
+    }
+    .profile-spotlight:hover {
+      transform: none;
+    }
   }
 
   /* Tape variants */
@@ -1341,20 +1442,29 @@
     text-align: center;
   }
 
+  /* Mobile: 2-column masonry "memory wall" — image-forward, less scroll,
+     natural height variation via --album-image-height for a premium feel. */
   .gallery-memory-wall {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 18px;
+    display: block;
+    columns: 2;
+    column-gap: 14px;
   }
 
   .gallery-memory-card {
     margin-top: 0;
+    margin-bottom: 16px;
     transform: none;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
   }
 
-  .gallery-memory-card:hover {
+  .gallery-memory-card:hover,
+  .gallery-memory-card:active {
     transform: translateY(-2px);
+  }
+
+  .gallery-memory-image {
+    height: calc(var(--album-image-height, 220px) * 0.62);
   }
 
   .cabinet-wall {
@@ -1378,8 +1488,48 @@
     transform: none !important;
   }
 
-  .gallery-memory-image {
-    height: 220px;
+  /* ─── Snap Rail ─────────────────────────────────────────────────────────────
+     Horizontal scroll-snap rail for card grids on mobile.
+     Applied to .snap-rail containers — cards become horizontally swipeable
+     with momentum scrolling and snap alignment. ────────────────────────────── */
+
+  .snap-rail {
+    display: flex !important;
+    grid-template-columns: unset !important;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-inline-start: 16px;
+    padding-bottom: 12px;
+  }
+
+  .snap-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .snap-rail > * {
+    flex: 0 0 80vw;
+    min-width: 280px;
+    max-width: 340px;
+    scroll-snap-align: start;
+  }
+
+  /* Fade hint on the trailing edge so users know there's more to swipe */
+  .snap-rail-container {
+    position: relative;
+  }
+
+  .snap-rail-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 12px;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--color-bg));
+    pointer-events: none;
+    z-index: 2;
   }
 }
 
@@ -1451,5 +1601,22 @@ html.dark {
   h1, h2, h3, h4, h5, h6 {
     letter-spacing: -0.02em;
     line-height: 1.1;
+  }
+}
+@media (max-width: 639px) {
+  .gallery-memory-wall {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 18px;
+  }
+
+  .gallery-memory-card {
+    width: 82vw;
+    min-width: 82vw;
+    scroll-snap-align: start;
   }
 }

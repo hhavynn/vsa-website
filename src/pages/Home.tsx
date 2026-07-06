@@ -25,6 +25,9 @@ import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrappe
 import { motion, useReducedMotion } from "framer-motion";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { FALLBACK_LINKS } from "../config/publicFallbackContent";
+import { SplitText } from "../components/ui/SplitText";
+import { ThreadsBackground } from "../components/ui/ThreadsBackground";
+import { SpotlightCard } from "../components/ui/SpotlightCard";
 
 const pillars = [
   {
@@ -129,12 +132,13 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
   const timeLabel = getEventTimeLabel(event);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="scrapbook-paper mb-6 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
-    >
+    <SpotlightCard className="mb-6 rounded-none border-0 bg-transparent">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="scrapbook-paper flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
+      >
       <div
         className="flex flex-col justify-center p-6 sm:p-8 lg:border-r"
         style={{ borderColor: "var(--border)" }}
@@ -225,7 +229,8 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
           </div>
         </div>
       </div>
-    </motion.div>
+      </motion.div>
+    </SpotlightCard>
   );
 }
 
@@ -273,6 +278,7 @@ export function Home() {
       {eventsError && <DegradedModeBanner sourceName="events" />}
 
       <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16">
+        <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
         {/* Tape accent for the whole board */}
         <div
           className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20"
@@ -286,6 +292,18 @@ export function Home() {
 
         <div className="vsa-container relative z-10 w-full">
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+            <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
+              <div className="scrapbook-photo overflow-hidden rounded-lg shadow-[0_18px_42px_rgba(15,23,42,0.24)]">
+                <img
+                  src={logoSrc}
+                  alt="VSA at UC San Diego lantern artwork"
+                  className="aspect-square w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+              <div className="scrapbook-tape absolute -top-3 left-1/2 h-7 w-28 -translate-x-1/2 rotate-[-2deg] opacity-70" />
+            </div>
             <div className="scrapbook-paper flex flex-col justify-center p-6 sm:p-8 lg:p-10 scrapbook-rotate-sm-left">
               <span className="scrapbook-pin" aria-hidden />
               <div
@@ -299,10 +317,19 @@ export function Home() {
                 className="vsa-animate-slide-up vsa-delay-1 font-serif text-[clamp(52px,8vw,82px)] leading-[0.9] tracking-[-0.03em]"
                 style={{ color: "var(--text)" }}
               >
-                Culture,
+                <SplitText
+                  text="Culture,"
+                  disabled={Boolean(shouldReduceMotion)}
+                  stagger={0.032}
+                />
                 <br />
                 <span className="italic" style={{ color: "var(--brand)" }}>
-                  Community.
+                  <SplitText
+                    text="Community."
+                    disabled={Boolean(shouldReduceMotion)}
+                    delay={0.18}
+                    stagger={0.028}
+                  />
                 </span>
               </h1>
               <p
@@ -390,7 +417,7 @@ export function Home() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[340px] flex-col items-center justify-center py-8 lg:p-10">
+            <div className="relative hidden min-h-[340px] flex-col items-center justify-center py-8 lg:flex lg:p-10">
               <div
                 className="scrapbook-photo relative aspect-square w-[min(360px,80%)] rotate-[2deg]"
                 style={{
