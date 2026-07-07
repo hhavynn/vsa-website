@@ -1,17 +1,6 @@
 ---
 name: vsa-research-frontier
-description: >
-  Load when brainstorming what to build next on the VSA website, when someone
-  asks "how do we make X best-in-class / beat state of the art for an org
-  website", when evaluating whether an ambitious idea is ready to start, or for
-  roadmap and strategy questions. Catalogs the OPEN and CANDIDATE frontier
-  problems where this project can advance the state of the art for its class
-  (best-in-class student-org website), ranked by impact x readiness, each with
-  repo evidence, this project's specific asset, the first three concrete steps
-  in this repo, and a falsifiable "you have a result when…" milestone. Also
-  lists what NOT to research. Trigger keywords: what should we build next,
-  roadmap, strategy, best-in-class, state of the art, SOTA, ambitious idea,
-  frontier, research direction, is this worth doing.
+description: Load when brainstorming what to build next on the VSA website, when someone asks "how do we make X best-in-class / beat state of the art for an org website", when evaluating whether an ambitious idea is ready to start, or for roadmap and strategy questions. Catalogs the OPEN and CANDIDATE frontier problems where this project can advance the state of the art for its class (best-in-class student-org website), ranked by impact x readiness, each with repo evidence, this project's specific asset, the first three concrete steps in this repo, and a falsifiable "you have a result when…" milestone. Also lists what NOT to research. Trigger keywords: what should we build next, roadmap, strategy, best-in-class, state of the art, SOTA, ambitious idea, frontier, research direction, is this worth doing.
 ---
 
 ## What this skill is for

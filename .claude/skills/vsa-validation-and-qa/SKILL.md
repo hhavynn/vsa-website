@@ -32,7 +32,7 @@ npm run build                         # Gate 2 — production build (CRA + stric
 CI=true npm test -- --watchAll=false  # Gate 3 — full Jest suite, one-shot (no watch mode)
 ```
 
-Gate 4 is **manual exercise of every affected surface** — actually load the routes you touched (see section 7 for per-change-type runbooks). No command substitutes for this; the test suite is three files (section 2) and cannot catch a broken page.
+Gate 4 is **manual exercise of every affected surface** — actually load the routes you touched (see section 7 for per-change-type runbooks). No command substitutes for this; the automated suite is small and logic-only (section 2) and cannot catch a broken page.
 
 **Acceptable warnings.** AGENTS.md (§ Testing) states the rule exactly:
 
@@ -56,26 +56,33 @@ gh api repos/{owner}/{repo}/branches/main/protection   # 404 = still unprotected
 
 - "It compiles" / "TypeScript is happy" — type-checks only.
 - "The dev server starts" — CRA dev builds are more permissive than `npm run build`.
-- "Tests pass" alone — the suite covers three files; your feature is almost certainly not in it.
+- "Tests pass" alone — the suite covers a handful of pure-logic modules (section 2); your feature is almost certainly not in it.
 - A screenshot of one viewport in one theme — see section 7 for the actual matrix.
 
 ---
 
-## 2. Test inventory — the golden set (as of 2026-07-06)
+## 2. Test inventory — the golden set (as of 2026-07-07)
 
-The entire suite is three files. Know what each one certifies and, more importantly, what nothing certifies.
+The suite is **ten files** (re-verify with `find src -name "*.test.ts*" | sort`). It is entirely pure-logic and smoke tests — no repository, RLS, or full-page behavior is covered. Know what each certifies and, more importantly, what nothing certifies.
 
 | File | What it certifies | Why it exists |
 |---|---|---|
 | `src/App.test.tsx` | The full app (provider hierarchy + router) renders without throwing, against the mocked Supabase client from `setupTests.ts`. | Smoke test — catches provider-order breakage and import-time crashes in `App.tsx`. |
 | `src/data/legacyHouseArchive.test.ts` | The House archive's exact year list (2018-2019 → 2025-2026); 2020-2021 is an `unconfirmed` gap with no Houses; 2019-2020 = designer Houses (Gucci, Comme des Garçons, Supreme, Yves Saint Laurent); 2023-2024 = beverage Houses (Ca Phe Sua Da, Banana Milk, Matcha, Yakult); 2024-2025 = three Sanrio Houses; the gap year is excluded from verified years. | **Protects domain facts.** House-year mapping has been repeatedly corrupted by agents inventing or shuffling Houses (AGENTS.md "Domain-critical facts" pins these years). This test makes the history executable — an agent that "fixes" the archive breaks the build. |
 | `src/utils/seasonalState.test.ts` | Seasonal boundaries in America/Los_Angeles: summer break starts June 15 and ends September 15 (exclusive); `shouldUseSummerEmptyState` only fires when no active items exist. | **Protects domain facts.** The academic-year clock drives visible site behavior (empty states, seasonal content); off-by-one date bugs here silently change the public site twice a year. See `vsa-seasonal-operations` for the full clock. |
+| `src/lib/applicationLinks.test.ts` | `getApplicationStatus` window logic: `disabled` when not enabled regardless of dates; `not_open` before open; `open` inside the window with both boundaries inclusive; `closed` after due. | **Risk-adjacent.** Governs whether an application window (and its URL) is exposed — enforces the "closed/future application URLs are never public" safety rule (AGENTS.md). |
+| `src/lib/memberMatching.test.ts` | House-assignment cell parsing (strips preference rank/timestamps, handles quoted CSV commas, doesn't mistake preference for class year) and attendance-import matching (unique email → auto-match; duplicate email → review). | **Risk-adjacent to a protected domain.** This is the matching layer of attendance import; the import/points domain is audit-first (section 4; playbook agent `vsa-points-attendance-guardian`). |
+| `src/utils/wrapped.test.ts` | `countEventsInWindow` (inclusive date-only window) and House-standings helpers: sort by total points descending without mutating input, winner selection, community-point sums. | **Leaderboard-adjacent.** Exercises standings ordering/winner logic used by VSA Wrapped. Does **not** test the canonical leaderboard calculation — that remains untested (see below). |
+| `src/utils/calendar.test.ts` | Calendar date math across month boundaries without timezone shift; `vsaEventToCalendarItem` maps **only public-safe fields**; house/application → calendar-item mapping and tag normalization. | **Privacy-adjacent.** The "public-safe fields only" assertion guards against leaking non-public event data into the public calendar. |
+| `src/lib/dateOnly.test.ts` | `toDateOnlyString` / `parseDateOnly`: parse `YYYY-MM-DD` as **local** calendar dates (no timezone shift), reject impossible dates (e.g. Feb 31), fall back to `parseISO` for other strings. | Date-only rendering has caused off-by-one display bugs; this pins the safe parsing behavior. |
+| `src/schemas/dataRightsRequests.test.ts` | `DataRightsRequestFormSchema` / `DataRightsDependencyPreviewSchema`: accept only non-destructive, read-only metadata; reject destructive action fields, raw content, invalid identifiers, and oversized notes; require an independent reviewer. | **Privacy/safety.** Keeps the data-rights workflow read-only-by-construction (see `docs/data-rights-anonymization-runbook.md`). |
+| `src/schemas/memberPhotoRequests.test.ts` | `MemberPhotoRequestFormSchema`: requires explicit `consent === true`; rejects missing name, invalid email, oversized notes, and unknown fields. | Enforces consent + input bounds on the public member-photo-request form. |
 
-**Unprotected areas — where you have NO automated safety net:**
+**Still unprotected — where you have NO automated safety net:**
 
-- **Points, attendance, and leaderboard calculation** — zero tests. This is also the most protected domain in the repo (section 4). Manual QA + the leaderboard checklist (section 5) are the only nets.
+- **Points / attendance / leaderboard _calculation_** — no direct tests. `memberMatching.test.ts` covers import _matching_ and `wrapped.test.ts` covers standings _sorting_, but the canonical points math and leaderboard aggregation are exercised only by manual QA + the leaderboard checklist (section 5). This is the most protected domain in the repo (section 4).
 - **All repositories in `src/data/repos/`** — no tests; every Supabase query path is exercised only by humans.
-- **Routing, auth gating, admin gating, forms, all feature components** — only the top-level smoke test.
+- **Routing, auth gating, admin gating, and all feature components** — only the top-level smoke test.
 - **RLS policies** — deliberately not covered by Jest (client tests can't prove server policy). Covered instead by `scripts/verify-rls-security.mjs` → interpretation guide in `vsa-diagnostics-and-measurement`, runbook pointer in section 5.
 
 Consequence: for any change in an unprotected area, Gate 4 (manual exercise) carries the entire burden. Do not skip it.
@@ -268,7 +275,7 @@ Sources (repo, branch `codex/reactbits-ui`, as of 2026-07-06):
 Re-verify volatile facts:
 
 ```bash
-ls src/**/*.test.* 2>/dev/null; find src -name "*.test.*"        # test inventory still three files?
+find src -name "*.test.ts*" | sort                               # test inventory — 10 files as of 2026-07-07?
 grep -n "acceptable" AGENTS.md                                    # acceptable-warnings rule unchanged?
 grep -n "transformIgnorePatterns" -A 3 package.json               # jest quirk unchanged?
 grep -n "pull_request\|npm run lint\|npm test\|npm run build" .github/workflows/deploy.yml

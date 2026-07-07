@@ -280,6 +280,8 @@ node .claude/skills/vsa-diagnostics-and-measurement/scripts/route-inventory.mjs 
 
 Uses: generating the per-route loop for axe/Lighthouse sweeps (§6), spotting an unregistered page, verifying a new route landed in the right tier. The tier classification is heuristic (text-position based) — if `src/routes/index.tsx` is restructured away from wrapper elements, re-verify the script against a manual read of the file.
 
+Note (as of 2026-07-07): the `protected` tier currently yields **zero** routes — `src/routes/index.tsx` uses no `ProtectedRoute` wrapper because member self-service is parked (see `vsa-architecture-contract` route-tier table). Expect only `public` and `admin` in the output today; `protected` is retained as a classification for when member accounts return.
+
 ---
 
 ## Provenance and maintenance

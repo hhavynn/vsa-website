@@ -46,6 +46,7 @@ These are real inconsistencies found by diffing the three root files against the
 | D5 | "After modifying code, run `graphify update .`" | `GEMINI.md` auto-generated tail section | **Conflicts** with `AGENTS.md`, which says `graphify . --update` is interactive-only and graph updates go in a separate `chore: update graphify graph` commit. |
 | D6 | Admin routes listed as `/admin`, `/admin/events`, `/admin/gallery`, `/admin/feedback` | `CLAUDE.md` (root) | **Incomplete.** More admin routes exist (e.g. `/admin/analytics` per `docs/admin-analytics-setup.md`, `/admin/cabinet` per `docs/DESIGN.md`, `/admin/points` per `docs/leaderboard-test-checklist.md`). Verify current set: `grep -n "admin/" src/routes/index.tsx`. |
 | D7 | "Do not use `gh pr create`" | `GEMINI.md` | Stricter than `AGENTS.md` ("provide a manual PR title and body unless PR creation was explicitly requested"). Not a contradiction — Gemini sessions follow the stricter rule; note when harmonizing. |
+| D8 | "Current test files:" enumerates 3 (`App.test.tsx`, `legacyHouseArchive.test.ts`, `seasonalState.test.ts`) | `AGENTS.md` §Testing | **Stale.** Actual = 10 test files as of 2026-07-07 (`find src -name "*.test.ts*" \| sort`). The authoritative inventory of what each certifies lives in `vsa-validation-and-qa` §2; correct the `AGENTS.md` list to all 10 in the next `docs:` PR. |
 
 ---
 
@@ -99,7 +100,7 @@ When you make the change on the left, the docs on the right are part of the SAME
 | New/renamed `.claude/agents/` playbook | `.claude/agents/README.md` roster + `AGENTS.md` "VSA playbook roster" + `GEMINI.md` routing list + both subagent-workflow docs (all five lists must stay in sync) |
 | Graphify graph refresh (`graphify-out/*`) | Separate `chore: update graphify graph` commit — never mixed into a feature PR (§4.4) |
 | House/president/application-key domain facts | `AGENTS.md` "Domain-critical facts" — the ONLY home; skills cite it |
-| Test added/removed | `AGENTS.md` "Current test files" list (it enumerates them explicitly) |
+| Test added/removed | `AGENTS.md` "Current test files" list (it enumerates them explicitly) — **this list is currently stale (D8): it names 3, actual = 10.** The authoritative inventory is `vsa-validation-and-qa` §2; correct `AGENTS.md` to match. |
 | Assistant behavior/knowledge change | `docs/ask-vsa-assistant.md`; deploy-order rules live in the assistant docs and `vsa-architecture-contract` |
 | Security headers / `vercel.json` | `docs/security-headers-and-csp.md` |
 
@@ -291,4 +292,4 @@ ls .claude/skills/                                  # §6.4 which skills actuall
 ls .claude/agents/ | wc -l                          # §7 playbook count (expect 13 incl. README)
 ```
 
-UNVERIFIED items: none load-bearing. The `vsa-failure-archaeology`, `vsa-validation-and-qa`, `vsa-run-and-operate`, `vsa-config-and-flags`, `vsa-design-system-reference`, `vsa-diagnostics-and-measurement`, `vsa-seasonal-operations`, `vsa-ui-excellence-campaign`, `vsa-research-frontier`, and `vsa-research-methodology` skills were planned but not yet on disk at writing time — §6.4 says to check with `ls .claude/skills/`.
+UNVERIFIED items: none load-bearing. All 16 `vsa-*` skills now exist on disk (verified 2026-07-07); the roster in §6.4 is complete. Re-verify with `ls .claude/skills/` before quoting the set — it is the self-checking source of truth.

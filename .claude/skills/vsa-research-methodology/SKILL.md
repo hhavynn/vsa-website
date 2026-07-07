@@ -1,16 +1,6 @@
 ---
 name: vsa-research-methodology
-description: >-
-  Load when turning a hunch into a proven, adopted change on the VSA website — about to run an
-  experiment, proposing a fix to a HARD problem (RLS recursion, egress spike, perf regression),
-  reviewing whether a change is actually proven vs merely plausible, or deciding whether an idea is
-  ready to adopt or should be retired. Provides this project's evidence bar (one mechanism must
-  explain ALL observations and survive adversarial review), the hypothesis-predicts-numbers-before-
-  running template per domain, the multi-agent branch lifecycle (claude/ codex/ gemini/ antigravity/
-  feat/), a copy-paste adversarial cross-model review prompt, dead-branch retirement etiquette, and
-  where good ideas historically came from here (audits). Trigger keywords: experiment, hypothesis,
-  proof, evidence bar, adversarial review, is this proven, ready to adopt, retire this idea, dead
-  branch, cross-model review.
+description: Load when turning a hunch into a proven, adopted change on the VSA website — about to run an experiment, proposing a fix to a HARD problem (RLS recursion, egress spike, perf regression), reviewing whether a change is actually proven vs merely plausible, or deciding whether an idea is ready to adopt or should be retired. Provides this project's evidence bar (one mechanism must explain ALL observations and survive adversarial review), the hypothesis-predicts-numbers-before-running template per domain, the multi-agent branch lifecycle (claude/ codex/ gemini/ antigravity/ feat/), a copy-paste adversarial cross-model review prompt, dead-branch retirement etiquette, and where good ideas historically came from here (audits). Trigger keywords: experiment, hypothesis, proof, evidence bar, adversarial review, is this proven, ready to adopt, retire this idea, dead branch, cross-model review.
 ---
 
 # VSA Research Methodology — how a hunch becomes an accepted change here
