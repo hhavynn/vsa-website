@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## How to work here (adapter)
+
+Root **`AGENTS.md`** is the authoritative governance contract. For any non-trivial task, follow the canonical **`docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`** — it turns a messy natural-language request into: brief → risk classification → owning skill(s) + playbook(s) → Graphify → Repomix → source → implement → validate → adversarial review → exact-evidence report. The user should never have to name a tool, skill, playbook, or process; you infer them. Scale rigor to risk — tiny tasks stay tiny.
+
+Claude-specific mechanics:
+- **Skills** (`.claude/skills/vsa-*`) are trigger-rich and load on demand via the Skill tool. Load the **owning** skill for the fact you need (skill router in the workflow doc §4) — never all 16. For risky work, load the owner explicitly rather than waiting for a trigger.
+- **Subagents** (`.claude/agents/vsa-*`) are domain personas — invoke the matching one natively when its scope fits (e.g. "use the vsa-house-system subagent"). Skills ≠ subagents; don't merge them, and only claim a subagent ran if you actually invoked one. Don't invoke every subagent ceremonially.
+- **Graphify** before broad grep for structural questions; **Repomix** (`npx repomix`) for a narrow slice after scope is known; **Impeccable** (skill) for meaningful UI work, combined with `vsa-design-system-reference`, never replacing it.
+- **Superpowers** is installed — use its native flow for meaningful work; the workflow doc §6 summarizes the methodology.
+- Preserve protected user files (`.claude/settings.local.json`, `.gitignore` local edits); never route around `vsa-change-control`.
+
 ## Commands
 
 ```bash

@@ -20,6 +20,28 @@ This is a mature production site. Prioritize stabilization, safety, admin workfl
 
 ---
 
+## Agent operating model
+
+This repo runs a self-orchestrating workflow so the user can speak in plain, messy, product language (*"the events page lowkey looks ass on mobile fix it"*) without naming tools or process. **The repository supplies the process — the user should never have to name Graphify, Repomix, Superpowers, Impeccable, a specific skill, a domain playbook, tests, or a risk tier.** You infer all of that.
+
+**For every non-trivial task, follow `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`** — the one canonical, detailed orchestration workflow. This `AGENTS.md` is the authoritative governance contract (protected domains, never-do list, branch/PR rules, domain facts); the workflow doc is the authoritative *how*. Do not duplicate the workflow here.
+
+The mandatory shape, scaled to risk:
+
+1. Read the governing instructions and inspect the worktree.
+2. Translate the request into an engineering brief (outcome, actors, surface, data, backend/migration, privacy, mobile/a11y, seasonal, tests).
+3. **Classify risk.** Low (copy/styling/docs) → lightweight, no ceremony. Medium (new route/component/repo method/form) → normal discovery, tests, review. High (auth, RLS, grants, migrations, points, attendance, House membership, leaderboard, applications, check-in, storage policies, private data, production) → owning skill + `vsa-change-control`, architecture review, privacy review, stronger validation, adversarial review, production safeguards.
+4. Load only the **owning** project skill(s) and relevant **playbook(s)** — never all 16 skills, never every playbook. Skills (`.claude/skills/`) are knowledge; playbooks (`.claude/agents/`) are domain personas — distinct mechanisms.
+5. **Graphify** for structural questions before broad grep → **Repomix** (`npx repomix`) for a narrow slice once scope is known → **direct source reads** to verify.
+6. Use **Superpowers** methodology (plugin installed; workflow doc §6 summarizes it) for meaningful work; **Impeccable** for meaningful UI (never replacing the design system).
+7. Implement in reviewable slices → validate proportionally (workflow §13) → adversarial review (§14) → report **exact** evidence (never conflate "read a playbook" with "invoked a subagent," or "wrote a migration" with "applied one").
+
+**Autonomy:** once asked for a feature/fix, proceed through the whole task; don't stop after audit/plan or repeatedly ask "should I implement this?" Pause only for destructive/irreversible/production actions, missing secrets, gated domains (`vsa-change-control`), or genuinely ambiguous intent. For ordinary ambiguity, assume, record it, and continue.
+
+Harness adapters: Claude → `CLAUDE.md`; Gemini → `GEMINI.md`; Antigravity → `ANTIGRAVITY.md`; Codex inherits this `AGENTS.md`. All point back to the canonical workflow.
+
+---
+
 ## Startup and workspace behavior
 
 - Run `git status --short --branch` before editing. Stop when unexpected dirty files are present.
@@ -204,7 +226,7 @@ If Graphify is unavailable, continue with targeted `grep`/`find` and report the 
 
 ## Codex VSA playbook workflow
 
-Codex should use the VSA playbook roster below when the user requests a domain-specific agent or playbook. The existing files in `.claude/agents/` are the source-of-truth domain playbooks even though Codex does not load them as native Claude Code subagents.
+Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md` for the full orchestration (risk classification, skill/playbook routing, Graphify → Repomix → source, validation, adversarial review). Codex should use the VSA playbook roster below when the user requests a domain-specific agent or playbook. The existing files in `.claude/agents/` are the source-of-truth domain playbooks even though Codex does not load them as native Claude Code subagents — read the file and apply it; never claim a Claude-native subagent was invoked.
 
 - When the user says “use `vsa-house-system`” (or another roster name), read `.claude/agents/<name>.md` first and follow its scope and constraints.
 - Spawn or run multiple subagents only when the user explicitly asks for them, then consolidate their findings into one coherent result.

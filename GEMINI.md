@@ -12,9 +12,9 @@ This file provides instructions to Gemini CLI when working in the VSA at UCSD we
 ## Mandatory Startup Workflow
 
 1. **Check Environment:** Run `git status --short --branch` and `git branch --show-current`.
-2. **Read Instructions:** Read `GEMINI.md` (this file) and `AGENTS.md` for shared repo workflows.
-3. **Graphify Orientation:** If `graphify-out/graph.json` exists, use the **Graphify Query-First** workflow before broad file reads.
-4. **Playbook Routing:** Identify the relevant domain and read the corresponding playbook from `.claude/agents/*.md` before starting work.
+2. **Read Instructions:** Read `GEMINI.md` (this file) and `AGENTS.md` for shared repo workflows. For any non-trivial task, follow the canonical **`docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`** (risk classification → owning skill(s) + playbook(s) → Graphify → Repomix → source → validate → adversarial review → exact-evidence report). Scale rigor to risk; the user should not have to name any tool or process.
+3. **Graphify Orientation:** If `graphify-out/graph.json` exists, use the **Graphify Query-First** workflow before broad file reads. Narrow scope with `npx repomix` before packing context; read the *owning* `.claude/skills/*/SKILL.md` as a runbook (never all 16).
+4. **Playbook Routing:** Identify the relevant domain and read the corresponding playbook from `.claude/agents/*.md` before starting work. These are source-of-truth domain playbooks — apply them with Gemini's own mechanics; never claim a Claude-native subagent ran.
 
 ## Gemini Playbook Routing
 
