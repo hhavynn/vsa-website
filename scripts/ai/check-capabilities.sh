@@ -11,7 +11,7 @@ warn() { printf '  \033[33mN/A\033[0m   %s\n' "$1"; }
 echo "Agentic-engineering capabilities:"
 
 # Graphify — structural navigation
-if command -v graphify >/dev/null 2>&1 || [ -x "$ROOT/scripts/graphify-run" ]; then
+if command -v graphify >/dev/null 2>&1 || ( [ -x "$ROOT/scripts/graphify-run" ] && "$ROOT/scripts/graphify-run" --version >/dev/null 2>&1 ); then
   if [ -f "$ROOT/graphify-out/graph.json" ]; then
     ok "Graphify — installed; graph present at graphify-out/graph.json"
   else
