@@ -894,7 +894,7 @@ export function Events() {
               </div>
             ) : (
               <RevealOnScrollWrapper>
-                <div className="flex snap-x snap-mandatory items-start gap-4 overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:overflow-visible md:pb-0 xl:grid-cols-3">
+                <div className="flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:overflow-visible md:pb-0 xl:grid-cols-3">
                   {archivedEvents.map((event: Event, index: number) => (
                     <PastEventMemoryCard
                       key={event.id}
