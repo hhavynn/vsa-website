@@ -15,13 +15,13 @@ type DockItem = {
 const HomeIcon = FiHome as unknown as DockItem["icon"];
 const EventsIcon = FiCalendar as unknown as DockItem["icon"];
 const GalleryIcon = FiImage as unknown as DockItem["icon"];
-const RanksIcon = FiAward as unknown as DockItem["icon"];
+const PointsIcon = FiAward as unknown as DockItem["icon"];
 
 const dockItems: DockItem[] = [
   { label: "Home", to: "/", icon: HomeIcon },
   { label: "Events", to: "/events", icon: EventsIcon },
   { label: "Gallery", to: "/gallery", icon: GalleryIcon },
-  { label: "Ranks", to: "/leaderboard", icon: RanksIcon },
+  { label: "Points", to: "/leaderboard", icon: PointsIcon },
 ];
 
 const hiddenPathPrefixes = ["/admin", "/signin"];
