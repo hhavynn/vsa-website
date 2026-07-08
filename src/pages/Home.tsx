@@ -293,7 +293,14 @@ export function Home() {
         <div className="vsa-container relative z-10 w-full">
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
             <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
-              <div className="scrapbook-photo overflow-hidden rounded-lg shadow-[0_18px_42px_rgba(15,23,42,0.24)]">
+              <div
+                className="scrapbook-photo overflow-hidden rounded-lg shadow-[0_18px_42px_rgba(15,23,42,0.24)]"
+                style={{
+                  animation: shouldReduceMotion
+                    ? "none"
+                    : "vsa-float 7s ease-in-out infinite",
+                }}
+              >
                 <img
                   src={logoSrc}
                   alt="VSA at UC San Diego lantern artwork"
