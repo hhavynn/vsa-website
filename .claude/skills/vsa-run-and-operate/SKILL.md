@@ -35,12 +35,11 @@ npx serve -s build               # quick local check of the prod bundle (optiona
 
 **Production is a static Vercel deployment of `build/`. Nothing else serves production.** Evidence trail:
 
-`vercel.json` uses `@vercel/static-build` with an SPA fallback (verbatim, abridged):
+`vercel.json` configures an SPA fallback while relying on Vercel zero-config for the CRA build (verbatim, abridged):
 
 ```json
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "build" } }],
   "routes": [
     { "src": "/static/(.*)", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "dest": "/static/$1" },
     { "handle": "filesystem" },
@@ -49,7 +48,7 @@ npx serve -s build               # quick local check of the prod bundle (optiona
 }
 ```
 
-The `handle: filesystem` + final catch-all to `/index.html` is the SPA (single-page app) fallback: any URL that isn't a real file serves `index.html` so React Router can route it. Security headers (HSTS, X-Frame-Options DENY, nosniff) are applied to every route in the same file. `AGENTS.md` (line 13) confirms: "Deployed to: Vercel (static build via `@vercel/static-build`, SPA fallback in `vercel.json`)".
+The `handle: filesystem` + final catch-all to `/index.html` is the SPA (single-page app) fallback: any URL that isn't a real file serves `index.html` so React Router can route it. Security headers (HSTS, X-Frame-Options DENY, nosniff) are applied to every route in the same file. `AGENTS.md` (line 13) confirms: "Deployed to: Vercel (zero-config CRA build, SPA fallback in `vercel.json`)".
 
 ### What `.github/workflows/deploy.yml` actually does
 

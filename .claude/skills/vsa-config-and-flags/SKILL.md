@@ -116,7 +116,7 @@ Re-verify: `cat vercel.json`
 | Field | Value | Why |
 |---|---|---|
 | `version: 2` | — | Vercel platform v2 config schema |
-| `builds` | `src: package.json`, `use: @vercel/static-build`, `config.distDir: build` | Runs `npm run build` (CRA) and serves the static `build/` directory — this is a static SPA, no server functions on Vercel |
+| `zero-config` | Vercel automatically detects CRA | Runs `npm run build` (CRA) and serves the static `build/` directory — this is a static SPA, no server functions on Vercel |
 | `routes[0]` (`/(.*)`, `continue: true`) | Security headers on every response | `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (denies camera/mic/geolocation/etc.), `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Do not weaken these |
 | `routes` `/static/(.*)` | `cache-control: public, max-age=31536000, immutable` | CRA emits content-hashed filenames, so static assets cache forever |
 | `routes` `/index.html` and final catch-all → `/index.html` | `cache-control: no-cache, no-store, must-revalidate` | HTML must never be cached (it references the hashed bundles); catch-all is the SPA fallback so React Router handles deep links |
