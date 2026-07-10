@@ -10,7 +10,7 @@ Vietnamese Student Association (VSA) at UCSD member website. This is a productio
 
 **Tech stack:** Create React App · TypeScript · React 18 · React Router v6 · React Query v3 · Supabase (Auth + PostgreSQL + Storage) · Tailwind CSS v3 · Framer Motion · react-hook-form + Zod · react-hot-toast
 
-**Deployed to:** Vercel (static build via `@vercel/static-build`, SPA fallback in `vercel.json`)
+**Deployed to:** Vercel (zero-config CRA build, SPA fallback in `vercel.json`)
 
 ---
 

@@ -29,7 +29,7 @@ Browser
        ├─ reads/writes → Supabase (Postgres + Auth + Storage + Deno Edge Functions)
        │     Edge Functions: analytics-proxy, secure-ai, trigger-event-image-migration,
        │                     trigger-house-event-image-migration, vsa-ai-assistant
-       └─ served by → Vercel static hosting (@vercel/static-build, distDir=build)
+       └─ served by → Vercel static hosting (zero-config CRA build)
              vercel.json: security headers on all routes, immutable cache for /static,
              no-cache for index.html, SPA fallback (everything else → /index.html)
 ```
