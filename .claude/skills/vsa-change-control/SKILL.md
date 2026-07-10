@@ -37,22 +37,11 @@ Source for the forbidden tier: `AGENTS.md` § "Things to never do" — "Don't mo
 
 ### Audit-first domains and their playbooks
 
-`AGENTS.md` designates protected/risky domains **audit-first**: inspect and report root cause and risk *before* editing. The 12 domain playbooks live in `.claude/agents/*.md` (roster also in `AGENTS.md` and `.claude/agents/README.md`):
+`AGENTS.md` designates protected/risky domains **audit-first**: inspect and report root cause and risk *before* editing. The canonical roster of the 12 domain playbooks — each with its edit vs. audit/dry-run mode and one-line use case — is **`.claude/agents/README.md`**; read it (and the matching `.claude/agents/<name>.md`) to pick the owning playbook. The modes that matter most for change control:
 
-| Domain | Playbook | Mode |
-|---|---|---|
-| Cross-cutting architecture, PR risk | `vsa-architecture-guardian` | **Audit/review-only** |
-| Attendance, points, leaderboard, merge/lookup | `vsa-points-attendance-guardian` | **Audit-first / read-only** |
-| Storage URL / egress work | `vsa-storage-egress` | Edit-capable, **dry-run first**, review-only SQL |
-| Public pages, launch copy, degraded mode | `vsa-public-content` | Edit-capable |
-| Admin dashboard/CRUD/UX | `vsa-admin-workflows` | Edit-capable |
-| Events, recaps, gallery, publishing | `vsa-events-gallery` | Edit-capable (no draft leaks, no check-in codes) |
-| House pages/archives/standings display | `vsa-house-system` | Edit-capable (never membership/leaderboard logic) |
-| Cabinet pages and leadership content | `vsa-cabinet-leadership` | Edit-capable |
-| Ask VSA / AI knowledge / Edge Function privacy | `vsa-ai-knowledge` | Edit-capable |
-| Application windows and form links | `vsa-applications-forms` | Edit-capable (closed/future URLs never public) |
-| Build/lint/test failures, route QA | `vsa-testing-qa` | Edit-capable |
-| Docs, runbooks, acceptance criteria | `vsa-docs-acceptance` | Edit-capable (docs only) |
+- **Audit-first / read-only** (report findings, never broad edits): `vsa-architecture-guardian` (cross-cutting architecture, PR risk) and `vsa-points-attendance-guardian` (attendance, points, leaderboard, merge/lookup).
+- **Edit-capable but dry-run first / review-only SQL**: `vsa-storage-egress`.
+- All other domain playbooks are edit-capable within their scope, still bound by the never-do list and the gating tiers above.
 
 ---
 
@@ -98,27 +87,18 @@ All verified against `AGENTS.md`, `.github/CONTRIBUTING.md`, `.github/pull_reque
 
    Valid: `feat: add Ask VSA suggestions`, `feat(ai): improve Ask VSA chat`, `fix!: remove deprecated backend`. Scope must be lowercase alphanumeric/hyphen.
 6. **PR body** follows `.github/pull_request_template.md`: Summary, Type checkbox, Safety/Scope checkboxes (no unrelated files, no secrets, no private/admin data exposed, **no production Supabase mutation**, RLS/storage/auth changes documented), Verification checkboxes, Screenshots/Notes. `AGENTS.md` additionally expects the final report to include: summary, files changed, safety confirmations, verification results, manual QA, pushed branch, and a manual PR title/body (provide these in the response; only create the PR if explicitly requested).
-7. **Pre-push verification** (full evidence standards in `vsa-validation-and-qa`):
-
-   ```bash
-   npm run lint && npm run build
-   CI=true npm test -- --watchAll=false
-   git diff --check
-   ```
-
-   Existing jsdom / ThemeProvider / Framer Motion console warnings are acceptable when the test command exits 0.
+7. **Pre-push verification:** follow the canonical matrix in `.claude/skills/vsa-validation-and-qa/SKILL.md`; root `AGENTS.md` § Testing carries only the quick pre-push subset. Report exact results, including any task-authorized reason a broad check was not relevant.
 
 ---
 
-## 4. CI reality check: "no automated CI test gate" vs deploy.yml
+## 4. CI reality: checks run, but do not enforce merges
 
-`AGENTS.md` says *"There is no automated CI test gate; run lint and build locally before pushing."* Meanwhile `.github/workflows/deploy.yml` visibly runs lint + tests + build on every PR. Both are real; here is the reconciliation, with evidence gathered 2026-07-06:
+`AGENTS.md` and `.github/workflows/deploy.yml` now state the same distinction, verified 2026-07-06:
 
 - `deploy.yml` has triggered on `pull_request` → `main` since commit `03ddf10d` (2025-09-21), running `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build`. It was last touched by `ba6907ee` (PR #176, 2026-07-02), which also added `pr-title.yml`.
-- The `AGENTS.md` sentence was written in commit `c2d1e08c` (2026-06-17), *after* the workflow existed.
 - **The `main` branch is not protected**: `gh api repos/hhavynn/vsa-website/branches/main/protection` returns HTTP 404 "Branch not protected" (checked 2026-07-06). No status check is *required* to merge.
 
-**Current truth:** CI *does* run lint/test/build (plus CodeQL and Trivy scans) on every PR to `main`, and deploys `main` to Vercel — but nothing mechanically blocks merging a red PR. "No automated CI test gate" means *no enforced gate*, not *no CI*. Consequences for you:
+**Current truth:** CI runs lint/test/build (plus CodeQL and Trivy scans) on every PR to `main`, and deploys `main` to Vercel — but nothing mechanically blocks merging a red PR. Consequences for you:
 
 1. Local verification (Section 3 step 7) is **mandatory**, not a courtesy — it is the actual gate.
 2. A red CI run must still be treated as blocking by convention, even though GitHub would let you merge.
@@ -158,10 +138,9 @@ Calendar-driven freeze windows exist (owner-confirmed 2026-07-05; previously unw
 5. BUILD      — Make the change. Gated tier: migrations forward-only,
                 RLS changes get the verification pass (Section 5),
                 no production Supabase mutation from the working tree.
-6. VERIFY     — npm run lint && npm run build
-                CI=true npm test -- --watchAll=false
-                git diff --check
-                Plus manual QA of the affected route(s).
+6. VERIFY     — Follow the canonical matrix in vsa-validation-and-qa,
+                scaled to the change, and report exact results.
+                Include manual QA of every affected route/surface.
 7. PR         — Push branch. Title matches the regex (Section 3.5).
                 Body per .github/pull_request_template.md with safety
                 confirmations and verification results. One concern per PR.

@@ -187,20 +187,17 @@ npm run analyze                                 # Bundle analysis (source-map-ex
 
 ## Testing
 
+The canonical validation runbook — the full evidence bar, the acceptable-warnings rule, the per-change-type manual-QA matrix, and the golden-test inventory — is **`.claude/skills/vsa-validation-and-qa/SKILL.md`**. It owns the definitive matrix; the block below is only the quick pre-push subset.
+
 ```bash
-npm run build
 npm run lint
+npm run build
 CI=true npm test -- --watchAll=false
 ```
 
 Existing jsdom, ThemeProvider, and Framer Motion console warnings are acceptable when the test command exits successfully.
 
-Tests live alongside the source files they test (`*.test.ts` / `*.test.tsx`). `src/setupTests.ts` configures jest-dom matchers.
-
-Current test files:
-- `src/App.test.tsx`
-- `src/data/legacyHouseArchive.test.ts`
-- `src/utils/seasonalState.test.ts`
+Tests live alongside the source files they test (`*.test.ts` / `*.test.tsx`); `src/setupTests.ts` configures jest-dom matchers. The suite grows over time, so this file does not enumerate it — list the current tests with `find src -name "*.test.ts*" | sort`. The authoritative inventory of what each test certifies is `vsa-validation-and-qa` §2.
 
 ---
 
@@ -235,18 +232,7 @@ Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENG
 
 ### VSA playbook roster
 
-- `vsa-architecture-guardian` — cross-cutting architecture, route/data-flow safety, and PR risk; audit/review-only.
-- `vsa-public-content` — public pages, launch copy, programs, and degraded-mode content.
-- `vsa-admin-workflows` — admin navigation, dashboards, CRUD flows, and admin UX.
-- `vsa-events-gallery` — events, recaps, gallery, calendar controls, and publishing behavior.
-- `vsa-points-attendance-guardian` — attendance, points, leaderboard, merge, and lookup behavior; audit-first/read-only.
-- `vsa-house-system` — House pages, archives, profiles, routing, and standings display.
-- `vsa-cabinet-leadership` — cabinet pages, archives, admin, and current leadership content.
-- `vsa-ai-knowledge` — Ask VSA, AI knowledge content, admin UI, and Edge Function privacy.
-- `vsa-applications-forms` — application windows, statuses, and public form-link safety.
-- `vsa-storage-egress` — Storage URL and egress audits; dry-run/review-only migration work.
-- `vsa-testing-qa` — build, lint, tests, route QA, and regression checks.
-- `vsa-docs-acceptance` — runbooks, acceptance criteria, PR checklists, and contributor docs.
+The canonical roster — every playbook with its edit/audit mode and one-line use case — is **`.claude/agents/README.md`**. Do not maintain a second copy here: read that registry, then the matching `.claude/agents/<name>.md` file, to route. The two read-only guardians are `vsa-architecture-guardian` and `vsa-points-attendance-guardian` (audit-first; they identify risk and recommend scoped follow-ups, never broad edits).
 
 ### Domain-critical facts
 
@@ -265,7 +251,7 @@ Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENG
 - **Stop if there are unexpected uncommitted changes in the working tree.** Don't overwrite in-progress work.
 - Branch names: `<scope>/<short-description>` (e.g. `feat/event-end-date`, `fix/house-leaderboard`, `chore/audit-content`). AI-generated branches are often prefixed `claude/` or `codex/`.
 - PRs are small and focused — one feature or fix per PR. No bundled unrelated changes.
-- There is no automated CI test gate; run lint and build locally before pushing.
+- CI runs lint, tests, build, CodeQL, and Trivy on every PR to `main` (`.github/workflows/deploy.yml`), but it is **not a protected merge gate** while `main` has no branch protection — nothing mechanically blocks merging a red PR. Local verification before pushing is therefore the real gate; treat a red CI run as blocking by convention. (Re-check with `gh api repos/hhavynn/vsa-website/branches/main/protection` — a 404 means still unprotected.)
 
 ```bash
 git checkout -b feat/my-feature
