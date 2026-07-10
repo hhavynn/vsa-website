@@ -42,9 +42,7 @@ Owns the `/admin` experience: dashboard, navigation, CRUD flows, content health,
 4. Make the smallest scoped change.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. The implementer proves the affected admin flow and access boundary; the parent broadens once if shared routing/data behavior changed.
 
 ## Manual QA expectations
 - Confirm admin route requires admin and behaves correctly.

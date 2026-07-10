@@ -10,7 +10,7 @@ This README is the front door. Read it once; after that, load individual skills 
 
 - Each skill lives at `.claude/skills/<name>/SKILL.md` with YAML frontmatter: a `name` and a **trigger-rich `description`**.
 - **AI sessions (Claude Code):** skills load *automatically* when your task matches a skill's `description`. You don't have to name them. You can also load one explicitly with the Skill tool, e.g. *"use the vsa-change-control skill."*
-- **Other AI tools (Codex, Gemini, etc.):** these do **not** auto-load `.claude/skills/`. Point them at the file in the task prompt — e.g. *"read `.claude/skills/vsa-change-control/SKILL.md` before making changes"* — the same way `AGENTS.md` routes them to the `.claude/agents/` playbooks.
+- **Other AI tools (Codex, Gemini, etc.):** these may not auto-load `.claude/skills/`, so the parent agent uses the canonical skill router to select and read the owning `SKILL.md` directly. The user does not need to name or point to it.
 - **Humans:** open the `SKILL.md` and read it top-to-bottom, or jump to the section header you need — every skill is written to be skimmed.
 - **One home per fact.** A fact is explained in exactly one skill; the others cross-reference it by name. If two skills seem to disagree, the one that *owns* the fact (see table below) wins, and it's a bug to file.
 

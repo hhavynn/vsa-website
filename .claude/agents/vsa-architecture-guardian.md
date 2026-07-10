@@ -42,7 +42,7 @@ Cross-cutting reviewer for the production VSA at UCSD website (React + TypeScrip
 
 ## Expected verification
 - This agent is read-only; verification is the quality of the risk report.
-- If others edit based on findings: `npm run build`, `npm run lint`, `CI=true npm test -- --watchAll=false`.
+- Inspect the supplied diff, acceptance criteria, invariants, and existing evidence. Rerun a check only for a concrete unanswered doubt; final-gate ownership remains with the parent per `vsa-validation-and-qa`.
 
 ## Manual QA expectations
 - Confirm no public route consumes admin-only or draft data.

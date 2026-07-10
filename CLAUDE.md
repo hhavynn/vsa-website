@@ -8,10 +8,11 @@ Root **`AGENTS.md`** is the authoritative governance contract. For any non-trivi
 
 Claude-specific mechanics:
 - **Skills** (`.claude/skills/vsa-*`) are trigger-rich and load on demand via the Skill tool. Load the **owning** skill for the fact you need (skill router in the workflow doc §4) — never all 16. For risky work, load the owner explicitly rather than waiting for a trigger.
-- **Subagents** (`.claude/agents/vsa-*`) are domain personas — invoke the matching one natively when its scope fits (e.g. "use the vsa-house-system subagent"). Skills ≠ subagents; don't merge them, and only claim a subagent ran if you actually invoked one. Don't invoke every subagent ceremonially.
+- **Subagents** (`.claude/agents/vsa-*`) are domain personas — infer and invoke the matching one natively when bounded specialization or independent review materially helps. The user need not name it. Skills ≠ subagents; only claim a subagent ran if you actually invoked one. Follow the cross-harness delegation and context contract in workflow §§5 and 9.
 - **Graphify** before broad grep for structural questions; **Repomix** (`npx repomix`) for a narrow slice after scope is known; **Impeccable** (skill) for meaningful UI work, combined with `vsa-design-system-reference`, never replacing it.
-- **Superpowers** is installed — use its native flow for meaningful work; the workflow doc §6 summarizes the methodology.
+- **Superpowers** is installed — route its methods proportionally by task shape and risk per workflow §6; repository governance overrides generic ceremony.
 - Preserve protected user files (`.claude/settings.local.json`, `.gitignore` local edits); never route around `vsa-change-control`.
+- The nested **`.claude/CLAUDE.md`** is **not** a competing authority — it exists only for scoped Claude Code wiring (the `/graphify` slash-command trigger). This root `CLAUDE.md` and `AGENTS.md` govern; the nested file just wires a tool.
 
 ## Commands
 
@@ -38,15 +39,9 @@ REACT_APP_OPENAI_API_KEY=   # optional, for chat assistant
 
 This is a Create React App (TypeScript) project for the Vietnamese Student Association website. The backend is entirely Supabase (PostgreSQL + Auth + Storage).
 
-**Provider hierarchy** (`App.tsx`):
-```
-ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider > AppRoutes > PointsProvider
-```
+**Provider hierarchy:** defined in `src/App.tsx` — read it there rather than trusting a copy (it has drifted before). Re-derive the current nesting with `grep -n "Provider" src/App.tsx`.
 
-**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages. Three route tiers:
-- Public: `/`, `/events`, `/leaderboard`, `/cabinet`, `/gallery`, etc.
-- Protected (auth required): `/profile`, `/points`, `/feedback`
-- Admin (admin flag required): `/admin`, `/admin/events`, `/admin/gallery`, `/admin/feedback`
+**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages, organized into three tiers — **Public** (e.g. `/`, `/events`, `/leaderboard`), **Protected** (auth required, e.g. `/profile`), and **Admin** (admin flag required, under `/admin/*`). The exact route set changes over time; read `src/routes/index.tsx` for the current list (admin routes: `grep -n "admin/" src/routes/index.tsx`).
 
 **Data layer** (`src/data/`):
 - `src/data/repos/` — Repository classes (`EventsRepository`, etc.) that wrap all Supabase queries. Use the exported singleton instances (e.g., `eventsRepository`).
@@ -56,7 +51,7 @@ ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider
 
 **Supabase client** (`src/lib/supabase.ts`): Singleton pattern. Import `supabase` directly for one-off queries, or use the repository layer for structured access.
 
-**Key Supabase tables**: `events`, `event_attendance`, `user_profiles`
+**Key Supabase tables**: schema source of truth is `supabase/migrations/` (types mirrored in `src/types/database.ts`). The public leaderboard and the authenticated check-in flow use **different** tables (two coexisting points systems) — see `docs/leaderboard-system.md`. Don't rely on a short table list here; it has been incomplete/misleading before.
 
 **Forms**: react-hook-form + zod schemas (defined in `src/schemas/index.ts`).
 
@@ -88,4 +83,4 @@ graphify . --update                                    # Refresh the graph if it
 
 **What stays local:** `graphify-out/cost.json` and the cache directory are gitignored and must not be committed. Keep graph-output changes (`graphify-out/*.md`, `graph.json`, `graph.html`) in a separate commit (`chore: update graphify graph`) rather than mixing them into feature PRs.
 
-**Workflow rule:** Run `./scripts/graphify-run query` or `./scripts/graphify-run path` before opening files speculatively. Only read source files directly after the graph confirms they are relevant. If Graphify is not installed, fall back to targeted `grep`/`find` searches rather than reading entire directories. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks for it.
+**Workflow rule:** Use `./scripts/graphify-run query` or `path` before broad or architectural search when ownership, relationships, or impact radius are unclear. Directly read known source, instruction, and configuration files; Graphify is not a prerequisite for already-scoped work. Verify graph findings against source. If Graphify is unavailable, fall back to targeted `rg`/direct reads. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks for it.

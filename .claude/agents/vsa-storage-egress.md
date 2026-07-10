@@ -44,10 +44,7 @@ Audits Supabase Storage URLs, plans egress reduction, and prepares image URL mig
 4. Confirm no deletion of originals is proposed.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
-- (SQL is reviewed by a human; not executed by this agent.)
+- Follow `vsa-validation-and-qa` ownership. Verify the scoped audit/dry-run artifact and have SQL reviewed by a human; this agent does not execute it. Application checks run only when application behavior changed.
 
 ## Manual QA expectations
 - Human reviews the dry-run plan and SQL before any execution.

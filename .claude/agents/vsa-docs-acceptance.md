@@ -35,8 +35,7 @@ Owns documentation: admin runbooks, QA checklists, PR review checklists, scoped 
 4. Ensure no private data or secrets are included.
 
 ## Expected verification
-- Docs-only changes; still safe to run:
-  `npm run build`, `npm run lint`, `CI=true npm test -- --watchAll=false`.
+- Follow `vsa-validation-and-qa` ownership. For docs-only work, use Markdown/reference/registry checks and diff review; do not run application build or full Jest unless executable behavior changed or the check answers a separate concrete question.
 
 ## Manual QA expectations
 - Re-read docs for accuracy against the current codebase.

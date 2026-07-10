@@ -1,6 +1,6 @@
-# Codex VSA Playbook Task Template
+# Codex Internal Specialist Task Template
 
-Copy, fill in, and send this prompt to Codex.
+The parent agent fills this template only when delegation or a sequential specialist pass is justified. Users provide the product request and do not need to name playbooks, files, tools, or subagents.
 
 ```text
 Codex playbook/subagent to use:
@@ -12,14 +12,23 @@ Goal:
 Current problem:
   <observed behavior, route, error, or content issue>
 
-Scope:
-  <what Codex may inspect or change>
+Owned files or subsystem:
+  <exact ownership boundary>
 
-Out of scope:
-  <protected behavior and unrelated domains that must not change>
+Forbidden files or systems:
+  <shared files, protected behavior, and unrelated domains that must not change>
 
 Likely files:
   <paths or areas, if known>
+
+Relevant invariants and constraints:
+  <only the architecture, privacy, security, and domain rules this concern needs>
+
+Targeted context:
+  <specific Graphify findings and source/Repomix excerpts; never the full transcript or repository>
+
+Permission:
+  <read-only or edit>
 
 Safety rules:
   - Do not expose secrets or private/admin data.
@@ -34,10 +43,12 @@ Acceptance criteria:
   - <observable result 1>
   - <observable result 2>
 
-Verification commands:
-  - npm run build
-  - npm run lint
-  - CI=true npm test -- --watchAll=false
+Focused verification:
+  - <smallest test/reproduction proving the owned behavior>
+  - <broader check only when this concern owns the question>
+
+Expected deliverable:
+  <diff/report, evidence, concerns, and exact files touched>
 
 Manual QA checklist:
   - <route/state/device to inspect>

@@ -265,17 +265,9 @@ falsified for now.
 ## F5 — Characterization-test coverage for protected domains (OPEN)
 
 **Why current state falls short.** The most dangerous logic in the repo (points,
-dates, seasonal state) is the least defended by tests. As of 2026-07-06 there
-are **10 test files** (verified via `find src -name "*.test.ts*"`):
-`src/App.test.tsx`, `src/utils/wrapped.test.ts`, `src/utils/calendar.test.ts`,
-`src/utils/seasonalState.test.ts`, `src/schemas/memberPhotoRequests.test.ts`,
-`src/schemas/dataRightsRequests.test.ts`, `src/lib/applicationLinks.test.ts`,
-`src/lib/dateOnly.test.ts`, `src/lib/memberMatching.test.ts`,
-`src/data/legacyHouseArchive.test.ts`.
-
-> Correction to a common stale claim: earlier notes said "only 3 test files."
-> That is out of date — there are 10. Re-verify with the command in Provenance
-> before repeating any count.
+dates, seasonal state) is the least defended by tests. Derive the current test
+set with `find src -name "*.test.ts*" | sort`; the authoritative inventory and
+coverage gaps live in **vsa-validation-and-qa** §2. Never repeat a copied count.
 
 Even at 10, coverage is thin relative to risk: the protected domains named in
 `AGENTS.md` ("Things to never do": points calculation, House membership,
@@ -429,7 +421,7 @@ the owner before treating any milestone number (F1 rubric, F3 "X%") as fixed.
 | Ask VSA v2 retrieval (aliases/valid_until/freshness) | `supabase/migrations/20260704000000_ai_knowledge_v2_schema.sql` | `grep -nE "aliases\|valid_until\|freshness" supabase/migrations/20260704000000_ai_knowledge_v2_schema.sql` |
 | `ai_feedback` table (rating/answer_excerpt/page_path) | `supabase/migrations/20260617000001_add_ai_feedback.sql` | `sed -n '1,25p' supabase/migrations/20260617000001_add_ai_feedback.sql` |
 | Ask VSA behavior in Edge Function SYSTEM_PROMPT | `supabase/functions/vsa-ai-assistant/index.ts` L34 | `grep -n "SYSTEM_PROMPT" supabase/functions/vsa-ai-assistant/index.ts` |
-| 10 test files (not 3) | `find src` | `find src -name "*.test.ts*" \| sort` |
+| Current test inventory and coverage gaps | `vsa-validation-and-qa` §2 | `find src -name "*.test.ts*" \| sort` |
 | Public surfaces already Storage-free | grep, 0 non-admin matches | `grep -rln "storage/v1/object\|\.storage\.from\|supabase.co/storage" src/pages src/components/features \| grep -viE "admin\|Admin"` |
 | Egress pipeline + audit tooling | `docs/event-image-migration.md`, `docs/supabase-usage-audit.sql`, `.claude/agents/vsa-storage-egress.md` | `ls docs/ \| grep -iE "image\|usage"` |
 | 12 agent playbooks (multi-agent dev) | `.claude/agents/*.md` | `ls .claude/agents/*.md \| wc -l` |
@@ -438,7 +430,7 @@ the owner before treating any milestone number (F1 rubric, F3 "X%") as fixed.
 
 **Maintenance triggers.** Re-verify this skill when: the UI campaign closes a
 gate (update F1 numbers), a consolidation or eval-set PR lands (move F2/F3 from
-OPEN/CANDIDATE toward done), the test count changes (update F5), or a new public
+OPEN/CANDIDATE toward done), the test coverage shape changes (update F5), or a new public
 surface reintroduces a Storage URL (F6 regression). Volatile numbers here (test
-count = 10, migration count, "0 matches" greps) are snapshots dated 2026-07-06 —
-always re-run the command, never quote the number blind.
+inventory, migration count, "0 matches" greps) are snapshots — always re-run
+the command, never quote a copied number blind.

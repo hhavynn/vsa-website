@@ -4,35 +4,22 @@ This repo ships project-level **Claude Code subagents** under `.claude/agents/`.
 
 ## What Claude subagents are here
 
-A subagent is a Markdown file with YAML frontmatter (`name`, `description`, `tools`) plus focused instructions. When you ask Claude to use a subagent, Claude works within that domain's rules, file list, and safety constraints — and only with the tools that subagent is granted.
+A subagent is a Markdown file with YAML frontmatter (`name`, `description`, `tools`) plus focused instructions. Claude infers the relevant domain from the user's request and invokes a bounded specialist when it materially improves safety, specialization, independent review, or parallel progress.
 
 ## When to use a subagent vs. the main conversation
 
-- **Use a subagent** when the task clearly belongs to one domain (Houses, events, points, applications, etc.) and you want Claude to respect that domain's guardrails.
-- **Use the main conversation** for quick questions, multi-domain orchestration, or deciding which subagent should own a task. `vsa-architecture-guardian` is a good first stop when a change spans domains.
+- **Use a subagent** for bounded domain implementation, audit-first protected work, independent architecture/privacy/security review, or independent non-overlapping investigations.
+- **Use the parent directly** for micro work and one coherent, already-scoped concern. The parent always owns multi-domain orchestration, integration, final verification, and delivery.
 
-## How to ask Claude to use a specific subagent
+## Automatic selection
 
-State the subagent name and a scoped goal:
+The user describes the product outcome; the parent selects the playbook from `.claude/agents/README.md`. Internal delegation uses `docs/claude-subagent-task-template.md` and canonical workflow §9. Users never need to provide a playbook name, file list, tool choice, or subagent strategy.
 
-> "Use the `vsa-house-system` subagent to audit why `/house/year/2026-2027` is showing current House data. Report root cause before editing."
+Do not invoke every playbook ceremonially. Do not parallelize overlapping writes. When a harness lacks native subagents, apply the same playbook as a sequential specialist pass per canonical workflow §5.
 
 ## The VSA subagents
 
-See `.claude/agents/README.md` for the full table. Summary:
-
-- `vsa-architecture-guardian` — cross-cutting architecture, route/data-flow safety, PR risk. **Audit/review-only.**
-- `vsa-public-content` — homepage, program pages, public copy, fallback content.
-- `vsa-admin-workflows` — admin dashboard, navigation, CRUD, admin UX.
-- `vsa-events-gallery` — events, recaps, gallery, calendar buttons, publishing.
-- `vsa-points-attendance-guardian` — attendance import, points, leaderboard, lookup. **Audit-first / read-only.**
-- `vsa-house-system` — House pages, year/archive routing, profiles, standings display.
-- `vsa-cabinet-leadership` — cabinet page/archive/admin, president & current-year content.
-- `vsa-ai-knowledge` — Ask VSA assistant, AI knowledge base, Edge Function safety.
-- `vsa-applications-forms` — admin-managed application windows and form links.
-- `vsa-storage-egress` — storage URL audits, egress reduction, migration planning (dry-run/docs).
-- `vsa-testing-qa` — build/lint/test failures, route QA, regression tests.
-- `vsa-docs-acceptance` — runbooks, QA/PR checklists, scoped task prompts (docs only).
+See `.claude/agents/README.md` for the one canonical roster. Do not copy the roster into helper docs.
 
 ## Audit/review-only vs. edit-capable
 
@@ -41,33 +28,23 @@ See `.claude/agents/README.md` for the full table. Summary:
 
 Protected systems (attendance import, points calculation, House membership, leaderboard calculation, RLS, storage originals, admin/private data) should always be approached **audit-first** — report root cause before any edit.
 
-## How to write a good scoped task
+## How the parent writes a scoped task
 
-A good task names the subagent, the goal, the scope, what's out of scope, and the verification expected.
+A good internal task names the playbook, objective, owned and forbidden files/systems, relevant invariants, acceptance criteria, focused verification, write permission, and deliverable. It contains targeted Graphify/source/Repomix context—not the parent transcript or entire repository.
 
 **Good**
 
 > "Use the `vsa-events-gallery` subagent to inspect the Google Calendar button overflow on event cards. Make the smallest safe UI fix and verify mobile layout."
 
-**Bad**
-
-> "Make events better."
-
 **Good**
 
 > "Use the `vsa-storage-egress` subagent to audit `supabase.co/storage` image URLs and generate review-only SQL. Do not mutate production."
-
-**Bad**
-
-> "Move images."
 
 **Good**
 
 > "Use the `vsa-house-system` subagent to audit why `/house/year/2026-2027` is showing current House data. Report root cause before editing."
 
-**Bad**
-
-> "Fix Houses."
+These are parent-to-specialist prompts, not user requirements. A user may say "make events better" or "fix Houses"; the parent investigates and constructs the scoped internal task.
 
 ## How to review the subagent's output
 
@@ -75,7 +52,7 @@ A good task names the subagent, the goal, the scope, what's out of scope, and th
 2. Read the diff — no app source, schema, RLS, or protected-logic changes unless explicitly requested.
 3. Confirm no private data (emails, rosters, check-in codes, payment logs, import/admin notes) reached a public surface.
 4. Confirm no secrets, env values, or real application links were hardcoded.
-5. Run the verification commands.
+5. Inspect focused verification evidence; rerun only for a concrete unanswered doubt.
 
 ## Safety checklist before accepting code changes
 
@@ -85,6 +62,5 @@ A good task names the subagent, the goal, the scope, what's out of scope, and th
 - [ ] No private/admin data exposed on public routes.
 - [ ] No secrets, env values, or private URLs added.
 - [ ] No fake events, members, points, standings, House assignments, or application links.
-- [ ] `npm run build` passes.
-- [ ] `npm run lint` passes.
-- [ ] `CI=true npm test -- --watchAll=false` passes.
+- [ ] Focused implementer evidence answers the owned behavior.
+- [ ] Parent integration and final-gate checks follow canonical workflow §13 without duplicate confidence work.

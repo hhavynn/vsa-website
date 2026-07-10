@@ -37,17 +37,22 @@ If two skills disagree, find which one *owns* the fact (its description says wha
 
 Users write brain dumps: *"the events page lowkey looks ass on mobile fix it"*, *"make admin able to schedule house applications every quarter"*. Before touching anything, silently convert the request into an internal brief by answering as many of these as the request and a quick investigation allow:
 
+- **Current vs. desired behavior** — what happens now, and what should happen instead?
 - **Desired user-visible outcome** — what does the user actually want to see or be able to do?
 - **Actors** — public visitor, authenticated member, or admin?
-- **Surface** — which route(s)/page(s)/component(s)? (Confirm with Graphify, don't guess.)
+- **Surface and domain** — which route/page/product area owns the behavior? Investigate the component name; do not ask the user to supply it.
+- **Likely data path** — which repository, query, cache, schema, or static source feeds the surface?
 - **State & data** — new tables/columns? new repo methods? new schemas? existing analogue?
 - **Backend / migration impact** — schema, RLS, grants, Edge Functions?
 - **Privacy & security** — does this expose or make discoverable any member data? (§11)
 - **Mobile / accessibility / dark mode** — always in scope for UI work.
 - **Seasonal / historical behavior** — application windows, House-year mapping, freeze windows? (skill `vsa-seasonal-operations`)
-- **Analytics / tests** — what proves it works and stays working?
+- **Acceptance criteria / tests** — what observable behavior proves it works and stays working?
+- **Ambiguity** — can repository evidence resolve it, or would different answers materially change the product, authorization, privacy, or production outcome?
 
-Do not interrogate the user for every unknown. **Investigate first.** For ordinary ambiguity, make a grounded assumption, record it in your response, and proceed (§16).
+**Natural-language routing contract:** the user is not required to name a skill, playbook, tool, file, test, repository class, table, or subagent. The parent agent infers and selects the internal workflow from the request and repository evidence. Never ask the user whether Graphify, Repomix, a Superpowers skill, or a particular specialist should be used.
+
+**Investigate first.** Ask the user only when two materially different product outcomes remain possible; authorization or privacy cannot be inferred safely; a destructive interpretation is unclear; a required business rule has no repository evidence; or proceeding would cause irreversible or production impact. For ordinary ambiguity, make a grounded assumption, record it in your response, and proceed (§16).
 
 ---
 
@@ -57,11 +62,11 @@ Classify every task before working. When in doubt, round **up** one tier.
 
 ### Low risk — lightweight
 Copy/text changes, isolated styling, docs, a single obviously-scoped non-behavioral edit.
-→ Inspect the file, make the change, do a quick targeted check (build or the one relevant test). No Graphify rebuild, no Repomix pack, no subagents, no multi-step plan.
+→ Inspect the file, make the change, and run the smallest relevant static, reference, manual, or focused test check. Do not run an application build merely for docs/config. No Graphify rebuild, Repomix pack, subagents, or multi-step plan.
 
 ### Medium risk — normal process
 New route, new component, new repo method, a significant form, application/UI logic that doesn't touch protected domains.
-→ Load the owning skill + relevant playbook, Graphify the area, Repomix a narrow slice if useful, plan briefly, implement in slices, run targeted + component/integration tests, self-review.
+→ Load the owning skill + relevant playbook, use Graphify when structural ownership or relationships are unclear, Repomix a narrow slice if useful, plan briefly, implement in slices, run targeted + component/integration tests, self-review.
 
 ### High risk — full process (protected domains)
 Anything touching: **auth, RLS, grants, migrations, points calculation, attendance import, House membership, leaderboard calculation, applications/forms windows, check-in codes, storage policies, private member data, or any production mutation.**
@@ -122,22 +127,33 @@ Playbooks live in `.claude/agents/<name>.md`. **Skills are knowledge; playbooks 
 
 The two read-only guardians (`vsa-architecture-guardian`, `vsa-points-attendance-guardian`) identify risk and recommend scoped follow-ups; they do not make broad edits.
 
+### Cross-harness delegation equivalence
+
+The parent chooses playbooks automatically; the user never needs to know the roster.
+
+- **Native subagents available:** dispatch bounded specialists with narrow context. Parallelize only independent concerns with non-overlapping writes; use read-only reviewers for architecture, security, privacy, or protected-domain questions.
+- **No native subagents:** execute the same playbooks sequentially as isolated specialist passes. Preserve concern boundaries and separate implementation from review; narrow or reset context where the harness allows it. Never claim that reading a playbook was a concurrently running agent.
+- **Capability does not weaken the gate:** lack of native delegation never permits skipping required architecture, privacy, security, or domain review.
+
 ---
 
-## 6. Superpowers methodology
+## 6. Superpowers compatibility and proportional routing
 
-The Superpowers plugin is **installed** — prefer its native flow (brainstorming, planning, subagent-driven development, and its skills) for meaningful work. The lifecycle below is the same intent, summarized here so the methodology survives even if the plugin is ever absent. Scale every step to task risk (§3) — a typo needs none of this.
+Superpowers supplies methodology; repository governance determines risk, safety, delivery, and how deeply that methodology applies. Start with `using-superpowers` or the available equivalent to identify relevant methods. That orientation does not require every Superpowers skill.
 
 ```
 Understand → Investigate → Brainstorm (only when design ambiguity is real)
 → Compare tradeoffs → Choose → Plan → Decompose → Implement → Validate → Review → Finish
 ```
 
-- **Understand / Investigate** before editing — always (§7).
-- **Brainstorm** only when there are genuinely different viable designs; skip it for obvious work.
-- **Plan / Decompose** for medium+ work; a new public feature may warrant a real plan, a one-liner does not.
-- **Implement in reviewable slices**, validating after each meaningful slice.
-- **Do not stop** after investigation/plan when safe implementation is possible (§16). Do not manufacture ceremony where it adds no value.
+| Task shape | Apply | Normally skip |
+|---|---|---|
+| Micro/obvious: typo, copy correction, known one-file edit, obvious config fix | Classify, targeted read, direct edit, focused verification | Brainstorming, design approval, committed spec, implementation plan, worktree, subagents, Repomix |
+| Bug/regression | `systematic-debugging`; reproduce and gather evidence; `test-driven-development` when a useful behavioral regression test can be added; targeted verification | Product brainstorming unless the fix requires a real product/design choice |
+| Medium feature | Brainstorm only for genuine design ambiguity; lightweight plan for multiple dependent steps; one coherent domain implementation; focused review and validation | Formal design approval when repository evidence yields one clear reversible implementation |
+| High-risk/cross-cutting | As appropriate: brainstorming, writing plans, worktree isolation, TDD, subagent-driven development, specialist security/architecture review, verification before completion | Shortcuts around change control, privacy review, production safeguards, or independent review |
+
+Generic methodology must not silently override repository-specific safety or Git/delivery rules. Explicit user approval remains necessary for destructive, irreversible, gated, genuinely ambiguous, or production decisions. Routine reversible work must not stall for ceremonial approval. Do not stop after investigation or planning when safe implementation is authorized (§16).
 
 ---
 
@@ -146,12 +162,12 @@ Understand → Investigate → Brainstorm (only when design ambiguity is real)
 Default order, but **skip straight to a direct read when you already know the exact file** — the goal is token efficiency, not ritual:
 
 1. Governing instructions (already in context) + owning skill (§4) + relevant playbook (§5).
-2. **Graphify** for structural questions — before any broad grep. Ask specific questions, e.g.:
+2. **Graphify** for structural questions — uncertain ownership, broad architecture, callers/callees, impact radius, data flow, authorization paths, or unfamiliar module relationships — before any broad grep. Ask specific questions, e.g.:
    - `./scripts/graphify-run query "what renders the public leaderboard?"`
    - `./scripts/graphify-run query "what code path calculates House standings?"`
    - `./scripts/graphify-run path "src/context/AuthContext.tsx" "src/pages/Leaderboard.tsx"`
    - `./scripts/graphify-run explain "eventsRepository"`
-   Graphify is for **navigation**, not final truth — verify implementation-critical claims against source before editing. Check freshness with `.claude/skills/vsa-diagnostics-and-measurement/scripts/check-graph-freshness.sh`; only refresh if the relevant area actually changed. Never rebuild the graph inside a feature PR.
+   Direct reads are preferred when the exact file is known, the user names an obviously owned page/component, you are reading instructions/config, you are verifying an identified source location, or the task is low-risk and narrow. Graphify is for **navigation**, not final truth — verify implementation-critical claims against source before editing. Do not require a graph query before every read. Check freshness with `.claude/skills/vsa-diagnostics-and-measurement/scripts/check-graph-freshness.sh`; only refresh if the relevant area actually changed. Never rebuild the graph inside a feature PR.
 3. **Repomix** — only *after* scope is narrowed, to pack one coherent slice (route + hook + repo + types + closest analogue + tests). Run via `npx repomix` (it is not a repo dependency). Ask yourself: *what exact uncertainty will this pack resolve?* Never dump the whole repo; never include secrets, `node_modules`, `build/`, `graphify-out/`, or unrelated migrations.
 4. **Direct source reads** to verify exact code before editing.
 5. Targeted `grep`/`glob` for a specific string.
@@ -167,11 +183,22 @@ Before writing a new route, card, form, repo method, modal, loading state, admin
 
 ## 9. Subagent / playbook delegation
 
-Delegate bounded, well-specified investigations — architecture impact, RLS/privacy review, test-gap analysis, mobile/accessibility review, failure archaeology, performance review. Each delegated task should state: objective, boundaries, which playbook, which skill, expected output, and write permission (read-only vs edit).
+The parent automatically delegates bounded work when specialization, safety, independent review, or genuinely parallel progress materially improves the result. Typical uses: architecture or RLS/privacy review; protected points/attendance/House/member work; cross-cutting features with independent concerns; and parallel read-only investigations. Do not delegate a typo, one-line config correction, known single-component bug, or one coherent subsystem change merely because subagents exist.
 
-- Parallelize **independent read-only** investigations.
-- Do **not** parallelize overlapping writes without isolation (worktrees only when complexity truly justifies them — root `AGENTS.md` says no speculative worktrees/sibling folders).
-- **Spawn subagents only when the task benefits or the user asks** — not ceremonially.
+**Decompose at independent concern and ownership boundaries, not by file count or implementation-step count.** A link, assertion, or integration edge that naturally belongs to a coherent concern is not a separate task.
+
+Every delegated task receives only:
+
+- objective and owning domain/playbook;
+- owned files or subsystem, plus files/systems it must not touch;
+- relevant architecture invariants and privacy/security constraints;
+- targeted Graphify findings and targeted direct-read or Repomix excerpts;
+- acceptance criteria and expected focused verification;
+- expected deliverable format and write permission (`read-only` or `edit`).
+
+Do not automatically provide the entire parent transcript, repository, skill library, playbook roster, unrelated history, or another implementer's reasoning. A reviewer receives the diff, acceptance criteria, relevant invariants, and verification evidence—not the implementer's full reasoning unless one unresolved issue requires it.
+
+The parent must prevent overlapping file ownership, wait for relevant specialists, reconcile disagreements against source evidence, integrate the final result, ensure abstractions were not bypassed, and retain accountability for final verification and delivery. Parallelize independent read-only work or non-overlapping isolated writes only; never allow concurrent agents to mutate shared files.
 
 ---
 
@@ -208,26 +235,37 @@ For schema, migrations, RLS, grants, auth, or Edge Functions: load `vsa-supabase
 
 ---
 
-## 13. Validation ladder (scale to risk)
+## 13. Verification ownership and validation ladder
+
+Before running a check, state the question it answers. Do not rerun unchanged scope when successful evidence already answers the same question and no relevant semantic change occurred. Formatting-only or whitespace-only changes do not invalidate broader evidence.
+
+- **Implementer:** prove owned behavior with the smallest meaningful scope: a changed unit/test file, focused component test, or focused manual reproduction. Broaden only for shared infrastructure, an unprovable focused scope, a concrete regression risk, or an explicit assignment.
+- **Reviewer:** read-only by default. Inspect diff, acceptance criteria, invariants, and implementer evidence. Rerun only when a concrete doubt remains; crossing an agent boundary is not a reason to repeat checks.
+- **Parent/controller:** accept valid focused evidence. Run integration checks only when completed concerns interact, and integrate the result itself.
+- **Final gate:** after semantic edits and formatting are complete, run in this order: format → lint/static analysis → focused integration tests → broader relevant tests once → build if runtime behavior changed → RLS/security checks if relevant → manual/browser checks if relevant → final review.
+
+The complete Jest suite is normally a final-gate check for cross-cutting/high-risk application changes, a CI clean-environment check, or a justified shared-infrastructure test. It is not a default for docs-only work, agent configuration, isolated copy, a narrow test change, or each subagent task.
 
 Run the cheapest relevant rung first, then broaden with risk. Exact commands and the acceptable-warning rule are in `vsa-validation-and-qa`.
 
 | Rung | What | When |
 |---|---|---|
-| Static | `git diff --check`, `npm run lint`, typecheck, format | every change |
+| Static | `git diff --check`, format, documentation/config validation, lint/typecheck where affected | every change, scoped to changed artifact types |
 | Unit | helpers, business logic, transformations | logic changes |
 | Component | render, events, states, a11y (`CI=true npm test -- --watchAll=false`, or scoped `--testPathPattern`) | UI/component changes |
 | Integration | data access, routes, auth | repo/route changes |
-| Build | `npm run build` | anything non-trivial |
+| Build | `npm run build` | application/runtime/config/dependency changes |
 | Browser | real flow + mobile + empty/error/loading + visual check | meaningful UI |
 | Database | policy + grant matrix for anon/auth/admin (`scripts/verify-rls-security.mjs`) | any RLS/grant/migration |
 | Regression | protected existing behavior (golden tests) | high-risk / protected domains |
 
-Run targeted tests first; broaden based on risk. Tests are **mandatory** for changes to protected logic and for anything `vsa-validation-and-qa` flags; optional for isolated copy/style.
+Run targeted tests first; broaden based on risk and ownership. Tests are **mandatory** for changes to protected logic and for anything `vsa-validation-and-qa` flags; optional for isolated copy/style/docs when they would not answer a new question.
 
 ---
 
 ## 14. Adversarial review (before claiming done)
+
+Default review depth is main-agent self-review plus one independent final review when risk warrants it. A third review is justified only for a distinct high-risk question involving authentication/authorization, RLS/security, destructive migration, production integration, private data, or physical/external operations; each review must answer a different question.
 
 For medium/high-risk work, review the change against these — and for high-risk work use an **independent reviewer** (a fresh subagent or the `vsa-architecture-guardian` playbook), not just self-review:
 
@@ -289,6 +327,15 @@ Authoritative rules are in root `AGENTS.md` ("PR / branch conventions", "Things 
 | Superpowers | Installed (`superpowers@superpowers-marketplace`) | Lifecycle discipline for meaningful work — prefer its native flow; §6 summarizes it |
 
 **Graphify locates the system. Repomix packages the relevant slice. Direct source reads verify exact code.** For UI, design authority is: repo design system → product identity → established component patterns → `vsa-design-system-reference` → Impeccable → generic taste. Impeccable improves UI; it never overrides the repo's tokens or identity. Avoid generic AI visual slop (gratuitous gradients, glow, excessive glass, cards-in-cards, giant heroes on utility pages).
+
+### Tool portability and honest fallback
+
+- Use official user-level/global installation for development helpers; do not add Superpowers, Graphify, Repomix, `rtk`, or GitHub CLI to application runtime dependencies merely to satisfy an agent session.
+- `rtk` is an optional token-reduction wrapper. Use it when available; if `command -v rtk` fails, run the ordinary underlying command and report the fallback rather than blocking work.
+- If Graphify is unavailable, use targeted `rg`/direct reads and report that it was skipped. Do not claim a query ran.
+- Repomix is optional and invoked through `npx repomix` only when a bounded pack resolves a named uncertainty; otherwise use targeted source reads.
+- If native subagents or Superpowers are unavailable, use the sequential/equivalent methods in §§5–6 without pretending the missing capability ran.
+- If GitHub CLI is unavailable, push with Git and provide the manual PR URL/title/body; never claim a PR was created.
 
 ---
 

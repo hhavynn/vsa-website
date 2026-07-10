@@ -1,45 +1,32 @@
 # Codex VSA Playbook Workflow
 
-Codex does not natively load `.claude/agents/` as Claude Code subagents. This repository provides the equivalent routing through `AGENTS.md`: each `.claude/agents/<name>.md` file is a source-of-truth VSA domain playbook that Codex reads before handling a matching task.
+Codex inherits root `AGENTS.md` and the canonical `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`. A user describes the product outcome in ordinary language; Codex—not the user—selects the owning VSA skills, domain playbooks, tools, verification, and delegation strategy.
 
-## Asking Codex to use a playbook
+## Automatic routing
 
-Name the playbook, state whether Codex should audit or edit, and define the smallest acceptable scope.
+1. Translate the request into the canonical engineering brief and classify risk.
+2. Select the owning `.claude/skills/<name>/SKILL.md` runbook and matching `.claude/agents/<name>.md` playbook from repository evidence.
+3. Delegate only when bounded specialization, safety, independent review, or genuinely parallel non-overlapping work materially helps.
+4. Keep one parent responsible for ownership boundaries, integration, final verification, and delivery.
 
-Examples:
+The canonical roster is `.claude/agents/README.md`. Users do not need to know or name roster entries.
 
-- “Use the `vsa-house-system` playbook. Audit first, no edits yet.”
-- “Use the `vsa-events-gallery` playbook to fix Google Calendar button overflow. Smallest safe fix only.”
-- “Use `vsa-storage-egress` to audit Supabase Storage URLs. Generate review-only SQL. Do not mutate production.”
+## Native delegation and fallback
 
-For multiple domains, explicitly name each playbook and ask Codex to consolidate the findings. Use `vsa-architecture-guardian` first when ownership or cross-domain risk is unclear.
+When Codex has native subagents, dispatch bounded specialists using the context contract in canonical workflow §9. Parallelize independent read-only work or non-overlapping isolated writes only. Never allow two agents to edit the same files concurrently.
 
-## Quick reference
+When native subagents are unavailable, execute the same playbooks sequentially as isolated specialist passes. Preserve concern boundaries and separate implementation from review; do not claim that reading a playbook was a concurrently running agent. Lack of native delegation never waives architecture, privacy, security, or protected-domain review.
 
-| Task type | Playbook |
-|---|---|
-| Architecture, route tiers, data-flow risk | `vsa-architecture-guardian` |
-| Homepage, public copy, programs, fallback content | `vsa-public-content` |
-| Admin dashboard, navigation, CRUD, admin UX | `vsa-admin-workflows` |
-| Events, recaps, gallery, calendar controls | `vsa-events-gallery` |
-| Attendance, points, leaderboard, member lookup | `vsa-points-attendance-guardian` |
-| House pages, archives, profiles, standings display | `vsa-house-system` |
-| Cabinet, leadership, current-year content | `vsa-cabinet-leadership` |
-| Ask VSA and AI knowledge safety | `vsa-ai-knowledge` |
-| Application windows and form links | `vsa-applications-forms` |
-| Storage URLs, egress, migration planning | `vsa-storage-egress` |
-| Build, lint, tests, route and regression QA | `vsa-testing-qa` |
-| Runbooks, acceptance criteria, contributor docs | `vsa-docs-acceptance` |
+## Proportionality
+
+Delegation is normally useful for cross-cutting architecture, protected points/attendance/House/member work, RLS or privacy review, and independent final review. It is normally unnecessary for a typo, one-line configuration correction, known single-component bug, or one coherent subsystem change.
+
+Decompose by independently reviewable concern and ownership boundary—not by file count, UI step, or test step. The parent waits for relevant specialists, reconciles disagreements against source evidence, and integrates the result.
 
 ## Audit-first domains
 
-- `vsa-architecture-guardian` is review-only.
-- `vsa-points-attendance-guardian` is audit-first/read-only.
-- `vsa-storage-egress` starts with a dry run and may produce only reviewable plans or SQL unless the user separately authorizes execution.
-- Any task touching points, attendance, House membership, leaderboard calculation, RLS, storage migration, or private data starts in audit-only mode and reports before editing.
+- `vsa-architecture-guardian` and `vsa-points-attendance-guardian` are read-only.
+- `vsa-storage-egress` starts with a dry run and review-only SQL/planning.
+- Points, attendance, House membership, leaderboard calculation, RLS, storage migration, and private data remain governed by `vsa-change-control`; delegation does not authorize mutation.
 
-## Reviewing Codex output
-
-Check that Codex read the named playbook, stayed inside the requested files, preserved protected systems, and reported verification and manual QA. Review the final diff for accidental app, schema, RLS, dependency, secret, or private-data changes.
-
-Avoid vague prompts such as “fix Houses.” State the observed problem, year or route, allowed files, protected behavior, acceptance criteria, and whether edits are authorized.
+Use `docs/codex-subagent-task-template.md` internally when a specialist pass is justified. Verification ownership comes from canonical workflow §13 and `vsa-validation-and-qa`, not from repeating the full suite at every boundary.

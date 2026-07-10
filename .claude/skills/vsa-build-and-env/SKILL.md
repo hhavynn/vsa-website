@@ -193,9 +193,10 @@ npm run build
 # build/ directory created with static/js and static/css bundles.
 
 CI=true npm test -- --watchAll=false
-# Acceptable: exits 0, all suites pass. As of 2026-07-07 there are 10 test files
-# (verify: find src -name "*.test.ts*" | sort). Full inventory of what each
-# certifies lives in vsa-validation-and-qa section 2.
+# Acceptable when the full suite is the assigned check: exits 0, all suites pass.
+# Derive the current files with: find src -name "*.test.ts*" | sort.
+# The canonical inventory and verification-ownership rules live in
+# vsa-validation-and-qa sections 1-2.
 # jsdom, ThemeProvider, and Framer Motion console warnings are ACCEPTABLE when
 # the exit code is 0 (AGENTS.md "Testing").
 ```

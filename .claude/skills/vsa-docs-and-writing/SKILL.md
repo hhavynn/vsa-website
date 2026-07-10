@@ -33,20 +33,22 @@ When two documents disagree, the higher one wins. Fix the lower one; never route
 
 `CLAUDE.md` (root) and `GEMINI.md` (root) are **tool-specific entry points**, not independent authorities: they orient Claude Code and Gemini CLI respectively and must agree with `AGENTS.md`. `GEMINI.md` explicitly defers ("Read … `AGENTS.md` for shared repo workflows"); `CLAUDE.md` restates a subset and can drift (see §1.1).
 
-### 1.1 Known drift (verified 2026-07-06) — maintenance items
+### 1.1 Known drift — maintenance items
 
-These are real inconsistencies found by diffing the three root files against the repo. Fix them in a `docs:` PR; until then, trust the "truth" column.
+**Resolved 2026-07-10** (the agent-workflow-consistency PR, branch `chore/agent-workflow-consistency`): the volatile-fact and adapter-drift items are fixed at the source —
+- **D1** — the stale "no CI test gate" claim in `AGENTS.md` §PR/branch was corrected to "CI runs but does not gate a merge while `main` is unprotected."
+- **D2** — the stale provider hierarchy in `CLAUDE.md` was replaced with a pointer to `src/App.tsx` + a `grep` re-verify command.
+- **D3** — the incomplete Supabase table list in `CLAUDE.md` was replaced with a pointer to `supabase/migrations/` + `docs/leaderboard-system.md`.
+- **D5** — the `GEMINI.md` `graphify update .` tail that conflicted with `AGENTS.md` was removed; `GEMINI.md` is now a thin adapter.
+- **D6** — the stale admin-route list in `CLAUDE.md` was replaced with a pointer + `grep -n "admin/" src/routes/index.tsx`.
+- **D7** — `GEMINI.md`'s `gh pr create` rule was harmonized with `AGENTS.md` ("not unless the user or governing task explicitly asks").
+- **D8** — the stale "3 test files" list in `AGENTS.md` §Testing was removed and replaced with `find src -name "*.test.ts*"` + a pointer to `vsa-validation-and-qa` §2.
+
+Remaining (fix in a `docs:` PR when convenient; until then trust the "truth" column):
 
 | # | Claim | Where | Truth (evidence) |
 |---|---|---|---|
-| D1 | "There is no automated CI test gate; run lint and build locally" | `AGENTS.md` §PR/branch conventions | **Stale.** `.github/workflows/deploy.yml` runs `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build` on every PR to `main`, plus `pr-title.yml` gates PR titles. Local runs are still expected, but a CI gate exists. |
-| D2 | Provider hierarchy "ErrorBoundary > QueryClientProvider > ThemeProvider > AuthProvider > AppRoutes > PointsProvider" | `CLAUDE.md` (root) | **Incomplete.** Actual nesting in `src/App.tsx` L23–37: ErrorBoundary > QueryClientProvider > ThemeProvider > **AnalyticsConsentProvider** > AuthProvider > **SiteSettingsProvider** > AppRoutes. |
-| D3 | "Key Supabase tables: `events`, `event_attendance`, `user_profiles`" | `CLAUDE.md` (root) | **Incomplete/misleading.** Public leaderboard truth is `member_event_attendance` + `events` + `academic_terms` (`docs/leaderboard-system.md`); `event_attendance` is the second (authenticated check-in) system. |
 | D4 | `REACT_APP_OPENAI_API_KEY` described as the AI-assistant key | `CLAUDE.md` env setup and `AGENTS.md` dev setup | **Legacy.** Ask VSA is Gemini-backed via the `vsa-ai-assistant` Edge Function (`docs/ask-vsa-assistant.md`); the OpenAI key is a leftover optional var. |
-| D5 | "After modifying code, run `graphify update .`" | `GEMINI.md` auto-generated tail section | **Conflicts** with `AGENTS.md`, which says `graphify . --update` is interactive-only and graph updates go in a separate `chore: update graphify graph` commit. |
-| D6 | Admin routes listed as `/admin`, `/admin/events`, `/admin/gallery`, `/admin/feedback` | `CLAUDE.md` (root) | **Incomplete.** More admin routes exist (e.g. `/admin/analytics` per `docs/admin-analytics-setup.md`, `/admin/cabinet` per `docs/DESIGN.md`, `/admin/points` per `docs/leaderboard-test-checklist.md`). Verify current set: `grep -n "admin/" src/routes/index.tsx`. |
-| D7 | "Do not use `gh pr create`" | `GEMINI.md` | Stricter than `AGENTS.md` ("provide a manual PR title and body unless PR creation was explicitly requested"). Not a contradiction — Gemini sessions follow the stricter rule; note when harmonizing. |
-| D8 | "Current test files:" enumerates 3 (`App.test.tsx`, `legacyHouseArchive.test.ts`, `seasonalState.test.ts`) | `AGENTS.md` §Testing | **Stale.** Actual = 10 test files as of 2026-07-07 (`find src -name "*.test.ts*" \| sort`). The authoritative inventory of what each certifies lives in `vsa-validation-and-qa` §2; correct the `AGENTS.md` list to all 10 in the next `docs:` PR. |
 
 ---
 
@@ -59,9 +61,9 @@ Legend for Status: **living** = keep current; **snapshot** = dated point-in-time
 | `admin-analytics-setup.md` | GA4 `analytics-proxy` Edge Function secrets + setup | Analytics secrets/scopes change | living |
 | `admin-content-management.md` | `academic_terms` model, year/quarter content management | Term model or admin content flow changes | living |
 | `ask-vsa-assistant.md` | Ask VSA architecture, Gemini model, safety filters, privacy | Assistant prompt/model/knowledge-base changes | living |
-| `claude-subagent-task-template.md` | Copy-paste task prompt for Claude subagents | Subagent roster/fields change | living |
+| `claude-subagent-task-template.md` | Parent-agent internal task contract for Claude specialists | Subagent context/ownership fields change | living |
 | `claude-subagent-workflow.md` | How Claude Code loads `.claude/agents/` subagents | Roster or workflow changes | living |
-| `codex-subagent-task-template.md` | Copy-paste task prompt for Codex playbooks | Roster/fields change | living |
+| `codex-subagent-task-template.md` | Parent-agent internal task contract for Codex specialists/passes | Playbook context/ownership fields change | living |
 | `codex-subagent-workflow.md` | How Codex routes to playbooks via AGENTS.md | Roster or routing changes | living |
 | `data-rights-anonymization-runbook.md` | Manual anonymization procedure (order, RPCs, safeguards) | Data-rights RPCs or policy change | living |
 | `DEPLOYMENT_GUIDE.md` | Beginner tutorial for manual `vercel` CLI deploy | — | **stale-candidate.** Tutorial voice ("puts it on the internet so anyone can access it!"); real deploy path is CI (`deploy.yml` → `npx vercel --prod` on push to `main`). See `vsa-run-and-operate` for the real path. |
@@ -97,11 +99,11 @@ When you make the change on the left, the docs on the right are part of the SAME
 | New route or content source | `docs/dynamic-content-routing-audit.md` route map (re-date "Last updated") |
 | Incident resolved / dead-end confirmed | Incident entry in `vsa-failure-archaeology` skill (template §5.2); one-paragraph trap pointer in `vsa-debugging-playbook` if it cost debugging time |
 | New npm script / operational script | `AGENTS.md` "Other useful commands" if general-purpose; runbook home is `vsa-run-and-operate` |
-| New/renamed `.claude/agents/` playbook | `.claude/agents/README.md` roster + `AGENTS.md` "VSA playbook roster" + `GEMINI.md` routing list + both subagent-workflow docs (all five lists must stay in sync) |
+| New/renamed/removed `.claude/agents/` playbook | `.claude/agents/README.md` — the **canonical roster**; update the row there. `AGENTS.md`, `GEMINI.md`, and `vsa-change-control` point at the README instead of repeating it; `src/__meta__/playbookRoster.test.ts` fails if the registry and actual `.claude/agents/*.md` files diverge. The per-tool workflow docs (`docs/*-subagent-workflow.md`) retain task-type routing references, so refresh those for additions, renames, or removals. |
 | New/renamed `.claude/skills/` skill | "Pick a skill" routing table + fact-ownership table in `.claude/skills/README.md`, plus the roster in §6.4 of this skill |
 | Graphify graph refresh (`graphify-out/*`) | Separate `chore: update graphify graph` commit — never mixed into a feature PR (§4.4) |
 | House/president/application-key domain facts | `AGENTS.md` "Domain-critical facts" — the ONLY home; skills cite it |
-| Test added/removed | `AGENTS.md` "Current test files" list (it enumerates them explicitly) — **this list is currently stale (D8): it names 3, actual = 10.** The authoritative inventory is `vsa-validation-and-qa` §2; correct `AGENTS.md` to match. |
+| Test added/removed | Update `vsa-validation-and-qa` §2 when the test's purpose changes the golden inventory. `AGENTS.md` intentionally does not enumerate tests; derive the current file set with `find src -name "*.test.ts*" | sort`. |
 | Assistant behavior/knowledge change | `docs/ask-vsa-assistant.md`; deploy-order rules live in the assistant docs and `vsa-architecture-contract` |
 | Security headers / `vercel.json` | `docs/security-headers-and-csp.md` |
 
@@ -267,10 +269,10 @@ Development here is multi-tool (branches prefixed `claude/`, `codex/`, `gemini/`
 | Doc | Serves |
 |---|---|
 | `docs/claude-subagent-workflow.md` | Claude Code — loads `.claude/agents/*.md` as native subagents with tool grants |
-| `docs/codex-subagent-workflow.md` | Codex — reads the same files as playbooks routed through `AGENTS.md` (no native subagent loading) |
+| `docs/codex-subagent-workflow.md` | Codex — reads the same playbooks, delegates with its own native mechanics when available, or performs sequential specialist passes |
 | `docs/gemini-cli-workflow.md` | Gemini CLI — Research → Strategy → Execution lifecycle, playbook routing via `GEMINI.md` |
 
-The 12-playbook roster with edit/audit modes lives in `.claude/agents/README.md`; keep it, `AGENTS.md`, and `GEMINI.md` in sync (see §3 sync rule).
+The 12-playbook roster with edit/audit modes lives canonically in `.claude/agents/README.md`. `AGENTS.md`, `GEMINI.md`, and `vsa-change-control` point at it instead of duplicating it, and `src/__meta__/playbookRoster.test.ts` fails if the README registry drifts from the actual `.claude/agents/*.md` files. The per-tool workflow docs (`docs/*-subagent-workflow.md`) keep task-type→playbook quick references for routing; refresh those when a playbook is added, renamed, or removed.
 
 ---
 

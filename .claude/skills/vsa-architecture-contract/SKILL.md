@@ -48,7 +48,7 @@ ErrorBoundary
                └─ AppRoutes  +  AnalyticsConsentBanner  +  Toaster (react-hot-toast)
 ```
 
-`PointsProvider` is NOT in `App.tsx` — it wraps the route tree inside `src/routes/index.tsx` (line ~181). Order matters: anything needing auth must sit inside `AuthProvider`; anything using react-query must sit inside `QueryClientProvider`. Note: the hierarchy summary in `CLAUDE.md` predates `AnalyticsConsentProvider`/`SiteSettingsProvider` — `src/App.tsx` is the ground truth.
+`PointsProvider` is NOT in `App.tsx` — it wraps the route tree inside `src/routes/index.tsx` (line ~181). Order matters: anything needing auth must sit inside `AuthProvider`; anything using react-query must sit inside `QueryClientProvider`. Root `CLAUDE.md` now points to `src/App.tsx` instead of copying this hierarchy; source remains the ground truth.
 
 ### Route tiers (verified in `src/routes/index.tsx`, 2026-07-06)
 
@@ -87,18 +87,18 @@ The pieces, and when to use each (all verified 2026-07-06):
 
 Decision rule: **public marquee surface → fallback content; secondary/data-dense surface → `ContentUnavailableState`; authenticated/admin surface → plain error UI** (admins can tolerate an honest failure message).
 
-## 4. Known-weak points — all OPEN
+## 4. Known-weak points
 
 State these plainly in reviews; none of them is intentional design.
 
 | # | Weakness | Evidence | Status |
 |---|---|---|---|
 | 1 | **Dual points systems.** Public/admin leaderboard truth is `member_event_attendance` + `events` + `academic_terms`, read through the `member_yearly_points` / `house_member_yearly_points` views (`src/data/repos/leaderboard.ts` L9/L93/L134). A second system (`event_attendance` + `user_points`, fed by `check_in_to_event`) exists for authenticated check-ins. They are NOT reconciled. | `docs/leaderboard-system.md` L11, L44 ("Future work should consolidate…") | OPEN — consolidation is future work. Never present the systems as unified; never "fix" a leaderboard number by writing to the check-in tables. |
-| 2 | **Thin automated tests.** 10 test files as of 2026-07-06, all utils/schemas/data helpers plus one `App.test.tsx` smoke test. Zero component, repo, or route-guard tests — invariants 1–8 above are enforced by review, not CI tests. | `find src -name "*.test.*"` | OPEN — see `vsa-validation-and-qa` for how to add tests. |
+| 2 | **Thin automated tests.** The suite remains primarily metadata, utils/schemas/data helpers, and one `App.test.tsx` smoke test. Derive the current inventory with `find src -name "*.test.ts*" \| sort`; do not copy a count. Zero repository, RLS, or full-page behavior tests exist — invariants 1–8 above are enforced mainly by review. | `vsa-validation-and-qa` §2 + discovery command | OPEN — see `vsa-validation-and-qa` for how to add tests. |
 | 3 | **Aging platform.** CRA (`react-scripts` ^5.0.1 — CRA is deprecated upstream), TypeScript ^4.9.5, `react-query` ^3.39.3 (superseded by TanStack Query v4/v5 with a different import path and API). `npm run eject` is explicitly forbidden (`AGENTS.md` L274). Any migration off CRA is a major change-control item. | `package.json` L19/25/28/75 | OPEN |
 | 4 | **Client-side admin check is fetch-per-mount.** `useAdmin()` does a raw `useEffect` + `select is_admin` (not react-query, not cached) — a legacy exception to invariant 3 and a per-navigation query. Safe only because RLS is the real boundary. | `src/hooks/useAdmin.ts` | OPEN |
 | 5 | **Check-in bypasses the repo layer.** The `check_in_to_event` RPC is called from `src/hooks/useEventAttendance.ts`, not from a repository — the one sanctioned deviation from invariant 1. Don't copy the pattern. | `src/hooks/useEventAttendance.ts` L19 | OPEN (candidate cleanup: move into `pointsRepository`) |
-| 6 | **Doc drift.** `CLAUDE.md`'s provider hierarchy omits `AnalyticsConsentProvider`/`SiteSettingsProvider` and places `PointsProvider` after AppRoutes ambiguously; `AGENTS.md` locates `useAdmin()` in `AuthContext.tsx`. Trust `src/App.tsx`, `src/routes/index.tsx`, `src/hooks/useAdmin.ts`. | compare docs vs. files above | OPEN — fixing docs is `vsa-docs-and-writing` territory. |
+| 6 | **Documentation location drift.** Root `CLAUDE.md` now points to `src/App.tsx` for provider hierarchy, and `AGENTS.md` points to `src/hooks/useAdmin.ts` for admin lookup instead of copying stale structure. | compare docs vs. files above | **RESOLVED 2026-07-10** — keep source pointers instead of restoring copied inventories. |
 | 7 | **Member accounts parked, code retained.** `/profile` renders `MemberAccountsUnavailable`; auth plumbing (`AuthProvider`, `PointsProvider`, `event_attendance` flow) remains live for admin sign-in and future re-enable. Dead-looking code here may not be dead. | `src/routes/index.tsx` L130–168, L220–224 | OPEN |
 
 ## 5. If you are about to violate an invariant

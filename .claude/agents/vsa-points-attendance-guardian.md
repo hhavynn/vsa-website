@@ -44,8 +44,7 @@ Guards the most sensitive logic on the site: attendance import, points calculati
 4. State required acceptance criteria and tests before any edit is approved.
 
 ## Expected verification
-- Read-only by default. If a change is later approved and made elsewhere:
-  `npm run build`, `npm run lint`, `CI=true npm test -- --watchAll=false`.
+- Read-only by default: verify the trace, invariants, acceptance criteria, and supplied evidence. If an approved change is made elsewhere, its implementer owns focused regression proof and the parent owns the broader protected-domain final gate per `vsa-validation-and-qa`.
 
 ## Manual QA expectations
 - Verify standings/points remain consistent with known-good data.

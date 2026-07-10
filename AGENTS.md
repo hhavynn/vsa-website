@@ -176,7 +176,8 @@ npm run analyze                                 # Bundle analysis (source-map-ex
 | `src/types/database.ts` | Source of truth for DB types and domain enums |
 | `src/data/errors.ts` | Error classes and `withErrorHandling` — used everywhere |
 | `src/lib/supabase.ts` | Supabase singleton — don't create new clients |
-| `src/context/AuthContext.tsx` | Auth state + `useAdmin()` hook |
+| `src/context/AuthContext.tsx` | Auth session state |
+| `src/hooks/useAdmin.ts` | Admin-status lookup used by admin route gating |
 | `src/schemas/index.ts` | All Zod schemas |
 | `src/config/publicFallbackContent.ts` | Static fallback data for degraded mode |
 | `tailwind.config.js` | Brand tokens — change colors here, nowhere else |
@@ -187,20 +188,19 @@ npm run analyze                                 # Bundle analysis (source-map-ex
 
 ## Testing
 
+The canonical validation runbook — evidence ownership, proportional final gates, the acceptable-warnings rule, per-change-type manual QA, and the golden-test inventory — is **`.claude/skills/vsa-validation-and-qa/SKILL.md`**. It owns the definitive matrix. For application/runtime changes, the common final-gate command set is:
+
 ```bash
-npm run build
 npm run lint
+npm run build
 CI=true npm test -- --watchAll=false
 ```
 
+Do not run that trio automatically for documentation-only, agent-configuration, or isolated non-runtime changes. Use the targeted documentation/reference/registry checks assigned by the canonical ownership model. Every new verification run must answer a new question.
+
 Existing jsdom, ThemeProvider, and Framer Motion console warnings are acceptable when the test command exits successfully.
 
-Tests live alongside the source files they test (`*.test.ts` / `*.test.tsx`). `src/setupTests.ts` configures jest-dom matchers.
-
-Current test files:
-- `src/App.test.tsx`
-- `src/data/legacyHouseArchive.test.ts`
-- `src/utils/seasonalState.test.ts`
+Tests live alongside the source files they test (`*.test.ts` / `*.test.tsx`); `src/setupTests.ts` configures jest-dom matchers. The suite grows over time, so this file does not enumerate it — list the current tests with `find src -name "*.test.ts*" | sort`. The authoritative inventory of what each test certifies is `vsa-validation-and-qa` §2.
 
 ---
 
@@ -226,27 +226,17 @@ If Graphify is unavailable, continue with targeted `grep`/`find` and report the 
 
 ## Codex VSA playbook workflow
 
-Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md` for the full orchestration (risk classification, skill/playbook routing, Graphify → Repomix → source, validation, adversarial review). Codex should use the VSA playbook roster below when the user requests a domain-specific agent or playbook. The existing files in `.claude/agents/` are the source-of-truth domain playbooks even though Codex does not load them as native Claude Code subagents — read the file and apply it; never claim a Claude-native subagent was invoked.
+Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md` for the full orchestration (risk classification, skill/playbook routing, Graphify → Repomix → source, validation, adversarial review). Codex automatically infers the owning skills and domain playbooks from the natural-language request; the user never needs to name them. The files in `.claude/agents/` are the source-of-truth domain playbooks even though Codex does not load them as Claude Code subagents — read and apply them using Codex's own delegation mechanics, and never claim a Claude-native subagent was invoked.
 
-- When the user says “use `vsa-house-system`” (or another roster name), read `.claude/agents/<name>.md` first and follow its scope and constraints.
-- Spawn or run multiple subagents only when the user explicitly asks for them, then consolidate their findings into one coherent result.
+- Delegate bounded work automatically when specialization, safety, independent review, or genuinely parallel non-overlapping concerns materially improve the result. Do not delegate tiny or single-concern work ceremonially.
+- Define concern and file-ownership boundaries, prevent overlapping writes, wait for relevant specialists, reconcile findings against repository evidence, and retain responsibility for integration and final verification.
+- If native delegation is unavailable, execute the same playbooks sequentially as isolated specialist passes; never skip required architecture, privacy, security, or domain review because the harness lacks subagents.
 - Protected or risky domains are audit-first: inspect and report root cause and risk before editing.
-- See `docs/codex-subagent-workflow.md` for invocation examples and `docs/codex-subagent-task-template.md` for a copy-paste task prompt.
+- See `docs/codex-subagent-workflow.md` for Codex mechanics and `docs/codex-subagent-task-template.md` for the parent agent's internal delegation contract.
 
 ### VSA playbook roster
 
-- `vsa-architecture-guardian` — cross-cutting architecture, route/data-flow safety, and PR risk; audit/review-only.
-- `vsa-public-content` — public pages, launch copy, programs, and degraded-mode content.
-- `vsa-admin-workflows` — admin navigation, dashboards, CRUD flows, and admin UX.
-- `vsa-events-gallery` — events, recaps, gallery, calendar controls, and publishing behavior.
-- `vsa-points-attendance-guardian` — attendance, points, leaderboard, merge, and lookup behavior; audit-first/read-only.
-- `vsa-house-system` — House pages, archives, profiles, routing, and standings display.
-- `vsa-cabinet-leadership` — cabinet pages, archives, admin, and current leadership content.
-- `vsa-ai-knowledge` — Ask VSA, AI knowledge content, admin UI, and Edge Function privacy.
-- `vsa-applications-forms` — application windows, statuses, and public form-link safety.
-- `vsa-storage-egress` — Storage URL and egress audits; dry-run/review-only migration work.
-- `vsa-testing-qa` — build, lint, tests, route QA, and regression checks.
-- `vsa-docs-acceptance` — runbooks, acceptance criteria, PR checklists, and contributor docs.
+The canonical roster — every playbook with its edit/audit mode and one-line use case — is **`.claude/agents/README.md`**. Do not maintain a second copy here: read that registry, then the matching `.claude/agents/<name>.md` file, to route. The two read-only guardians are `vsa-architecture-guardian` and `vsa-points-attendance-guardian` (audit-first; they identify risk and recommend scoped follow-ups, never broad edits).
 
 ### Domain-critical facts
 
@@ -265,7 +255,7 @@ Codex inherits this `AGENTS.md` as its contract and follows `docs/ai/AGENTIC-ENG
 - **Stop if there are unexpected uncommitted changes in the working tree.** Don't overwrite in-progress work.
 - Branch names: `<scope>/<short-description>` (e.g. `feat/event-end-date`, `fix/house-leaderboard`, `chore/audit-content`). AI-generated branches are often prefixed `claude/` or `codex/`.
 - PRs are small and focused — one feature or fix per PR. No bundled unrelated changes.
-- There is no automated CI test gate; run lint and build locally before pushing.
+- CI runs lint, tests, build, CodeQL, and Trivy on every PR to `main` (`.github/workflows/deploy.yml`), but it is **not a protected merge gate** while `main` has no branch protection — nothing mechanically blocks merging a red PR. Local verification before pushing is therefore the real gate; treat a red CI run as blocking by convention. (Re-check with `gh api repos/hhavynn/vsa-website/branches/main/protection` — a 404 means still unprotected.)
 
 ```bash
 git checkout -b feat/my-feature

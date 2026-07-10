@@ -22,12 +22,7 @@ Examples:
 
 Keep PRs scoped and reviewable.
 
-Before opening a PR, include verification results when applicable:
-
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
-- `git diff --check`
+Before opening a PR, include proportional verification results. The definitive ownership model, final-gate matrix, acceptable warnings, manual-QA runbooks, and golden-test inventory live in `.claude/skills/vsa-validation-and-qa/SKILL.md`. Run `git diff --check` for every change; run lint, build, broader tests, security checks, and manual QA only when the changed artifacts and risk make them relevant. Do not repeat a successful check unless a later semantic change invalidated its evidence.
 
 Do not commit secrets, generated local files, Graphify output, local settings, or unrelated changes.
 
