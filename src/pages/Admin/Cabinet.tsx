@@ -9,6 +9,7 @@ import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
 import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
+import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
 
 interface CabinetMember {
   id: string;
@@ -153,7 +154,7 @@ export default function AdminCabinet() {
   const currentCabinetYear = getCurrentCabinetYear(cabinetYears);
   const [members, setMembers] = useState<CabinetMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'create' | 'manage'>('manage');
+  const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'roles'>('manage');
 
   // Which cabinet year the admin is currently editing
   const [selectedAdminYearId, setSelectedAdminYearId] = useState<string | null>(null);
@@ -471,18 +472,18 @@ export default function AdminCabinet() {
           </p>
         </div>
         <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-          {(['manage', 'create'] as const).map((tab, i) => (
+          {(['manage', 'create', 'roles'] as const).map((tab, i) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
               style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-              {tab === 'manage' ? 'Manage' : 'Add Member'}
+              {tab === 'manage' ? 'Manage' : tab === 'roles' ? 'Role Descriptions' : 'Add Member'}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Cabinet year selector */}
-      <div className="flex flex-wrap items-center gap-4 border-b px-6 py-4 sm:px-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      {activeTab !== 'roles' && (
+        <div className="flex flex-wrap items-center gap-4 border-b px-6 py-4 sm:px-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)', whiteSpace: 'nowrap' }}>
           Cabinet Year
         </span>
@@ -518,10 +519,14 @@ export default function AdminCabinet() {
           </div>
         )}
       </div>
+      )}
 
       <div className="p-4 sm:p-6 lg:p-8">
-      <div className="scrapbook-paper min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        {activeTab === 'create' ? (
+      {activeTab === 'roles' ? (
+        <AdminCabinetRoleDescriptions />
+      ) : (
+        <div className="scrapbook-paper min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+          {activeTab === 'create' ? (
           <div className="p-6 sm:p-8">
             <h2 className="mb-6 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Add Cabinet Member</h2>
             <form onSubmit={handleCreateMember} className="space-y-5">
@@ -667,6 +672,8 @@ export default function AdminCabinet() {
           </div>
         )}
       </div>
+      )}
+      </div>
 
       {/* Edit Modal */}
       {selectedMember && (
@@ -771,7 +778,6 @@ export default function AdminCabinet() {
           <option key={role} value={role} />
         ))}
       </datalist>
-      </div>
     </div>
   );
 }
