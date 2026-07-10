@@ -53,9 +53,7 @@ Important corrections:
 4. Make the smallest routing/display fix; report root cause first if unclear.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Use the focused archive/year-routing proof and protected-domain checklist that match the change; the parent broadens once for integration risk.
 
 ## Manual QA expectations
 - Visit current and archive House years; confirm correct, year-appropriate data.

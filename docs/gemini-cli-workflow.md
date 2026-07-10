@@ -17,7 +17,8 @@ Before reading files speculatively, use Graphify to find the most relevant entry
 The repository contains specialized playbooks in `.claude/agents/`. Gemini should map these to its own context:
 - Identify the domain (e.g., "House System").
 - Read the corresponding file (e.g., `.claude/agents/vsa-house-system.md`).
-- Acknowledge with "Playbooks read: vsa-house-system".
+- Select it without requiring the user to know its name.
+- If native delegation is unavailable, execute implementation and review as separate, bounded playbook passes per canonical workflow §§5 and 9.
 
 ### 3. Safety and Constraints
 
@@ -34,13 +35,10 @@ The `scripts/graphify-run` wrapper ensures `graphify` is accessible even if the 
 
 ## Parity with Claude/Codex
 
-While Gemini does not use "native" subagents in the same way Claude does, it follows the same **Playbook Roster** defined in `AGENTS.md`. By reading these markdown files, Gemini gains the same domain expertise and follows the same safety constraints as other agents.
+While Gemini may not expose the same native subagent mechanics as Claude, it follows the canonical playbook roster in `.claude/agents/README.md`. It preserves specialist boundaries and independent review sequentially when native delegation is unavailable, and never claims a playbook read was a concurrently running agent.
 
-## Verification Checklist
+## Verification ownership
 
-- [ ] `npm run build` passes without errors.
-- [ ] `npm run lint` shows no new warnings.
-- [ ] `CI=true npm test -- --watchAll=false` passes.
-- [ ] No high-risk systems modified unprompted.
-- [ ] No secrets or private data staged.
-- [ ] Final report includes PR title, body, and manual link.
+Follow canonical workflow §13 and `vsa-validation-and-qa`: implementers provide focused proof, reviewers inspect existing evidence and rerun only for a concrete doubt, the parent runs interaction checks, and the final gate broadens once according to risk. Documentation-only or agent-configuration work does not require application lint/build/full Jest unless it changes executable behavior or answers another concrete question.
+
+Always confirm no high-risk system, secret, private data, or unrelated file was modified, and report exact verification and delivery evidence.

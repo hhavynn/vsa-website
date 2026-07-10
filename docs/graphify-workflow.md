@@ -18,7 +18,7 @@ uv tool install graphifyy
 pipx install graphifyy
 ```
 
-After installing, run `graphify . --update` from the repo root to build or refresh the index.
+After installing, run `graphify . --update` from the repo root to build or refresh the index in an interactive maintenance session, not as feature-work ceremony.
 
 ## Calling Graphify from Subagents and Hooks
 
@@ -46,9 +46,11 @@ graphify hook install                 # Install a git hook to auto-update the gr
 graphify hook status                  # Check whether the hook is active
 ```
 
-## How Claude Uses Graphify
+## Conditional query-first policy
 
-Before reading source files for architecture or relationship questions, Claude runs `./scripts/graphify-run query` or `./scripts/graphify-run path` to identify which files are actually relevant. This keeps token usage low and avoids reading unrelated code.
+Use Graphify for uncertain subsystem ownership, broad architecture, caller/callee relationships, impact radius, data-flow or authorization tracing, and relationships across unfamiliar modules. Direct reads are allowed and preferred for an exact known file, an obviously owned page/component, instructions/configuration, verification of an identified location, or low-risk narrow work.
+
+Claude and other harnesses run `./scripts/graphify-run query` or `path` when the structural question benefits from graph traversal. They do not need a graph query before every source read. Graphify narrows navigation; the actual source remains authoritative before edits.
 
 Claude also checks `graphify-out/GRAPH_REPORT.md` when first orienting to an unfamiliar area of the codebase. Graphify is used for query-first discovery only — source files still need targeted verification before any edit.
 
@@ -59,7 +61,7 @@ Claude also checks `graphify-out/GRAPH_REPORT.md` when first orienting to an unf
 
 ## How Codex Uses Graphify
 
-Codex follows the same query-first rule. Before any code change, Codex checks `graphify-out/GRAPH_REPORT.md` for orientation, then uses `./scripts/graphify-run query` to confirm which files are in scope. Source files are opened only after the graph confirms relevance.
+Codex follows the same conditional policy. It may check `graphify-out/GRAPH_REPORT.md` when entering an unfamiliar subsystem, then query specific relationships. For already-scoped work it reads the known files directly. It always verifies implementation-critical graph claims against source.
 
 Codex hooks should reference `./scripts/graphify-run` (or the absolute-path resolved form using `git rev-parse --show-toplevel`) rather than a machine-specific absolute path.
 
@@ -130,4 +132,4 @@ graphify . --update          # build the initial graph
 
 ## Important Reminder
 
-Graphify is a navigation tool. It does not replace tests, manual QA, or careful review of source code before submitting changes. Always verify behavior with `npm run lint`, `npm run build`, and `CI=true npm test -- --watchAll=false` before marking a task complete.
+Graphify is a navigation tool. It does not replace source inspection, tests, manual QA, or review. Verification is selected proportionally through canonical workflow §13 and `vsa-validation-and-qa`; a Graphify query or refresh is never a completion gate by itself.

@@ -44,9 +44,7 @@ Owns events, event recaps, the gallery, Google Calendar buttons, and event publi
 4. Make the smallest UI fix; check mobile layout.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Prove the affected event/gallery behavior or mobile layout with the smallest focused check; the parent owns interaction and final-gate checks.
 
 ## Manual QA expectations
 - Verify public events list shows only published events.

@@ -61,9 +61,9 @@ Legend for Status: **living** = keep current; **snapshot** = dated point-in-time
 | `admin-analytics-setup.md` | GA4 `analytics-proxy` Edge Function secrets + setup | Analytics secrets/scopes change | living |
 | `admin-content-management.md` | `academic_terms` model, year/quarter content management | Term model or admin content flow changes | living |
 | `ask-vsa-assistant.md` | Ask VSA architecture, Gemini model, safety filters, privacy | Assistant prompt/model/knowledge-base changes | living |
-| `claude-subagent-task-template.md` | Copy-paste task prompt for Claude subagents | Subagent roster/fields change | living |
+| `claude-subagent-task-template.md` | Parent-agent internal task contract for Claude specialists | Subagent context/ownership fields change | living |
 | `claude-subagent-workflow.md` | How Claude Code loads `.claude/agents/` subagents | Roster or workflow changes | living |
-| `codex-subagent-task-template.md` | Copy-paste task prompt for Codex playbooks | Roster/fields change | living |
+| `codex-subagent-task-template.md` | Parent-agent internal task contract for Codex specialists/passes | Playbook context/ownership fields change | living |
 | `codex-subagent-workflow.md` | How Codex routes to playbooks via AGENTS.md | Roster or routing changes | living |
 | `data-rights-anonymization-runbook.md` | Manual anonymization procedure (order, RPCs, safeguards) | Data-rights RPCs or policy change | living |
 | `DEPLOYMENT_GUIDE.md` | Beginner tutorial for manual `vercel` CLI deploy | — | **stale-candidate.** Tutorial voice ("puts it on the internet so anyone can access it!"); real deploy path is CI (`deploy.yml` → `npx vercel --prod` on push to `main`). See `vsa-run-and-operate` for the real path. |
@@ -269,7 +269,7 @@ Development here is multi-tool (branches prefixed `claude/`, `codex/`, `gemini/`
 | Doc | Serves |
 |---|---|
 | `docs/claude-subagent-workflow.md` | Claude Code — loads `.claude/agents/*.md` as native subagents with tool grants |
-| `docs/codex-subagent-workflow.md` | Codex — reads the same files as playbooks routed through `AGENTS.md` (no native subagent loading) |
+| `docs/codex-subagent-workflow.md` | Codex — reads the same playbooks, delegates with its own native mechanics when available, or performs sequential specialist passes |
 | `docs/gemini-cli-workflow.md` | Gemini CLI — Research → Strategy → Execution lifecycle, playbook routing via `GEMINI.md` |
 
 The 12-playbook roster with edit/audit modes lives canonically in `.claude/agents/README.md`. `AGENTS.md`, `GEMINI.md`, and `vsa-change-control` point at it instead of duplicating it, and `src/__meta__/playbookRoster.test.ts` fails if the README registry drifts from the actual `.claude/agents/*.md` files. The per-tool workflow docs (`docs/*-subagent-workflow.md`) keep task-type→playbook quick references for routing; refresh those when a playbook is added, renamed, or removed.

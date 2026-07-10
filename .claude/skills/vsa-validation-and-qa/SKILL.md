@@ -1,6 +1,6 @@
 ---
 name: vsa-validation-and-qa
-description: Load before claiming any VSA-website change is "done" or "verified", when deciding whether a change needs tests, when adding or modifying Jest tests, when a reviewer asks for acceptance criteria or manual QA evidence, or when routing to the right QA checklist (RLS, leaderboard, accessibility, route QA, degraded mode). Provides the evidence bar (exact lint/build/test commands + acceptable-warning rule), the golden test inventory and what it protects, how to add a test in this CRA/Jest setup, when tests are mandatory vs optional, and manual-QA runbooks for the riskiest change types.
+description: Load before claiming any VSA-website change is "done" or "verified", when deciding who owns which checks, whether a change needs tests, when adding or modifying Jest tests, when a reviewer asks for acceptance criteria or manual QA evidence, or when routing to the right QA checklist (RLS, leaderboard, accessibility, route QA, degraded mode). Provides the proportional verification-ownership model, final-gate commands and acceptable-warning rule, golden test inventory, test-writing guidance, and manual-QA runbooks.
 ---
 
 # VSA Validation & QA
@@ -24,29 +24,45 @@ Jargon used below — **RLS**: Row Level Security, Postgres per-row access polic
 
 ---
 
-## 1. The evidence bar
+## 1. The evidence bar and ownership model
 
-A change is **verified** only when ALL FOUR gates pass. Run gates 1–3 locally, in this order (fastest feedback first):
+A change is verified when the checks assigned by its artifact type, behavior, integration surface, and risk all pass. Before running any check, identify the question it answers. Do not rerun an unchanged scope when successful evidence already answers that question and no relevant semantic change occurred.
 
-```bash
-npm run lint                          # Gate 1 — ESLint over src/**/*.{ts,tsx}
-npm run build                         # Gate 2 — production build (CRA + strict TypeScript)
-CI=true npm test -- --watchAll=false  # Gate 3 — full Jest suite, one-shot (no watch mode)
+### Ownership
+
+- **Implementer:** run the smallest meaningful proof of owned behavior: the changed test file, affected component/integration test, or focused manual reproduction. Do not run the full suite/build by default unless shared infrastructure, concrete regression risk, or the task brief makes that broader question yours.
+- **Reviewer:** read-only by default. Inspect the diff, acceptance criteria, invariants, and implementer evidence. Rerun only for a concrete unanswered doubt; an agent handoff does not invalidate evidence.
+- **Parent/controller:** accept valid focused evidence. Run an integration check only when completed concerns interact, and own integration rather than delegating the whole result.
+- **Final gate:** after semantic edits and formatting are complete, broaden once according to risk.
+
+Preferred final-gate order:
+
+```text
+format
+→ lint/static analysis relevant to changed artifacts
+→ focused integration tests
+→ broader relevant tests once
+→ production build if application/runtime behavior changed
+→ RLS/security checks if relevant
+→ manual/browser checks if relevant
+→ final review
 ```
 
-Gate 4 is **manual exercise of every affected surface** — actually load the routes you touched (see section 7 for per-change-type runbooks). No command substitutes for this; the automated suite is small and logic-only (section 2) and cannot catch a broken page.
+The complete Jest suite (`CI=true npm test -- --watchAll=false`) is normally a final-gate check for cross-cutting/high-risk application changes, shared infrastructure, or CI—not documentation-only work, agent configuration, isolated copy, one narrow test change, or every subagent task. `npm run build` is required when application/runtime configuration, dependencies, or generated application behavior changed; it is not evidence for Markdown-only edits.
+
+Formatting-only or whitespace-only changes do not invalidate broader successful evidence. A new run must answer a new question.
 
 **Acceptable warnings.** AGENTS.md (§ Testing) states the rule exactly:
 
 > "Existing jsdom, ThemeProvider, and Framer Motion console warnings are acceptable when the test command exits successfully."
 
-That is the complete allowlist. Exit code 0 with those warnings = pass. Any *new* warning class, or a nonzero exit, is a failure you must resolve — not annotate away.
+That is the complete allowlist when Jest is part of the selected evidence. Exit code 0 with those warnings = pass. Any *new* warning class, or a nonzero exit, is a failure you must resolve — not annotate away.
 
 **Why local verification is the real gate (as of 2026-07-06):**
 
 - CI *does* run checks: `.github/workflows/deploy.yml` runs `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build` on `pull_request` targeting `main`.
 - But `main` has **no branch protection**: `gh api repos/{owner}/{repo}/branches/main/protection` returns 404 "Branch not protected". Nothing on GitHub blocks a merge (or a direct push) when CI is red.
-- AGENTS.md now states this distinction directly: CI runs, but it is not a protected merge gate while `main` remains unprotected. Your local run is the enforcement mechanism.
+- AGENTS.md now states this distinction directly: CI runs, but it is not a protected merge gate while `main` remains unprotected. Proportional local verification is the enforcement mechanism.
 
 Re-check branch protection if this ever changes:
 
@@ -63,9 +79,9 @@ gh api repos/{owner}/{repo}/branches/main/protection   # 404 = still unprotected
 
 ---
 
-## 2. Test inventory — the golden set (as of 2026-07-10)
+## 2. Test inventory — the golden set (reviewed 2026-07-10)
 
-The suite is **eleven files** (re-verify with `find src -name "*.test.ts*" | sort`). It is entirely metadata, pure-logic, and smoke tests — no repository, RLS, or full-page behavior is covered. Know what each certifies and, more importantly, what nothing certifies.
+Derive the current file set with `find src -name "*.test.ts*" | sort`; never trust a copied count. The inventory below explains what the current metadata, pure-logic, and smoke tests certify—and, more importantly, what nothing certifies.
 
 | File | What it certifies | Why it exists |
 |---|---|---|
@@ -160,7 +176,7 @@ Notes on the pattern: plain `describe`/`it`, exact expected values (not shape as
 
 > "Any change requires clear acceptance criteria and tests."
 
-Concretely, before merge a protected-domain change must have: (a) written acceptance criteria (section 6) agreed *before* coding, (b) new or updated tests pinning the changed behavior, (c) all four evidence gates green, (d) the relevant manual checklist run (leaderboard checklist for anything touching standings — section 5). Whether the change is permissible at all is `vsa-change-control`'s territory; this skill only defines the evidence it must carry.
+Concretely, before merge a protected-domain change must have: (a) written acceptance criteria (section 6) agreed *before* coding, (b) new or updated focused tests pinning the changed behavior, (c) the assigned final gates green, and (d) the relevant manual checklist run (leaderboard checklist for anything touching standings — section 5). Whether the change is permissible at all is `vsa-change-control`'s territory; this skill only defines the evidence it must carry.
 
 **REQUIRED — domain-fact changes.** If you legitimately change House history data or seasonal boundaries, update `legacyHouseArchive.test.ts` / `seasonalState.test.ts` in the same PR with the corrected facts. A red golden test is doing its job; never delete or loosen it to get green.
 
@@ -196,7 +212,7 @@ Pick every row that matches your change; run all that apply.
 
 Write acceptance criteria **before coding**, as observable, testable outcomes — each one something a reviewer can check true/false without reading the diff. "Improve the events page" is not a criterion; "the calendar button stays inside its card at 375px width" is.
 
-The repo template is `docs/claude-subagent-task-template.md` (fields: Subagent, Goal, Current problem, Scope, Out of scope, Likely files, Safety rules, **Acceptance criteria**, Verification commands, Manual QA, Final response format). Its verification-commands block is exactly the section 1 gates. The template's own filled example, verbatim — this is the calibration for how specific criteria should be:
+The repo template is `docs/claude-subagent-task-template.md` (fields include Subagent, Goal, Current problem, owned/forbidden scope, safety rules, **Acceptance criteria**, focused verification, Manual QA, and final report). Its focused-verification block assigns only the question that specialist owns. The filled example is the calibration for how specific criteria should be:
 
 ```
 Goal:
@@ -221,7 +237,7 @@ Rules of thumb:
 
 ## 7. Manual QA runbooks for the riskiest recurring change types
 
-These are the change types that historically break in ways no command catches. Run the matching runbook as Gate 4.
+These are the change types that historically break in ways no command catches. Run the matching runbook when that surface is part of the selected final evidence.
 
 ### A. Public content change (copy, launch content, program pages)
 

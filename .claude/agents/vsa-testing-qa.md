@@ -44,9 +44,7 @@ Owns testing and QA: route QA, build/lint/test failures, regression checks, and 
 4. Re-run the relevant command to confirm green.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Reproduce the original failure and rerun the smallest covering check after the fix; run broader suites only at the assigned final gate or when shared infrastructure creates a concrete regression question.
 
 ## Manual QA expectations
 - Provide a route-by-route checklist for affected areas.

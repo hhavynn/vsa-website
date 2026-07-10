@@ -8,9 +8,9 @@ Root **`AGENTS.md`** is the authoritative governance contract. For any non-trivi
 
 Claude-specific mechanics:
 - **Skills** (`.claude/skills/vsa-*`) are trigger-rich and load on demand via the Skill tool. Load the **owning** skill for the fact you need (skill router in the workflow doc §4) — never all 16. For risky work, load the owner explicitly rather than waiting for a trigger.
-- **Subagents** (`.claude/agents/vsa-*`) are domain personas — invoke the matching one natively when its scope fits (e.g. "use the vsa-house-system subagent"). Skills ≠ subagents; don't merge them, and only claim a subagent ran if you actually invoked one. Don't invoke every subagent ceremonially.
+- **Subagents** (`.claude/agents/vsa-*`) are domain personas — infer and invoke the matching one natively when bounded specialization or independent review materially helps. The user need not name it. Skills ≠ subagents; only claim a subagent ran if you actually invoked one. Follow the cross-harness delegation and context contract in workflow §§5 and 9.
 - **Graphify** before broad grep for structural questions; **Repomix** (`npx repomix`) for a narrow slice after scope is known; **Impeccable** (skill) for meaningful UI work, combined with `vsa-design-system-reference`, never replacing it.
-- **Superpowers** is installed — use its native flow for meaningful work; the workflow doc §6 summarizes the methodology.
+- **Superpowers** is installed — route its methods proportionally by task shape and risk per workflow §6; repository governance overrides generic ceremony.
 - Preserve protected user files (`.claude/settings.local.json`, `.gitignore` local edits); never route around `vsa-change-control`.
 - The nested **`.claude/CLAUDE.md`** is **not** a competing authority — it exists only for scoped Claude Code wiring (the `/graphify` slash-command trigger). This root `CLAUDE.md` and `AGENTS.md` govern; the nested file just wires a tool.
 
@@ -83,4 +83,4 @@ graphify . --update                                    # Refresh the graph if it
 
 **What stays local:** `graphify-out/cost.json` and the cache directory are gitignored and must not be committed. Keep graph-output changes (`graphify-out/*.md`, `graph.json`, `graph.html`) in a separate commit (`chore: update graphify graph`) rather than mixing them into feature PRs.
 
-**Workflow rule:** Run `./scripts/graphify-run query` or `./scripts/graphify-run path` before opening files speculatively. Only read source files directly after the graph confirms they are relevant. If Graphify is not installed, fall back to targeted `grep`/`find` searches rather than reading entire directories. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks for it.
+**Workflow rule:** Use `./scripts/graphify-run query` or `path` before broad or architectural search when ownership, relationships, or impact radius are unclear. Directly read known source, instruction, and configuration files; Graphify is not a prerequisite for already-scoped work. Verify graph findings against source. If Graphify is unavailable, fall back to targeted `rg`/direct reads. Do not install or rebuild Graphify inside a feature PR unless the task explicitly asks for it.

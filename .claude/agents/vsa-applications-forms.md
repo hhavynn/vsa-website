@@ -54,9 +54,7 @@ Owns admin-managed application windows for ACE, House Fall/Winter/Spring, Intern
 4. Verify default close time (11:59 PM) behavior is intact.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Use the focused application-window test and public/admin state proof; the parent owns any broader final gate.
 
 ## Manual QA expectations
 - Toggle a window active/closed/future; confirm public link appears only when active.

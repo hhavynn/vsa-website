@@ -51,9 +51,7 @@ Owns the Ask VSA assistant, the AI knowledge base, the admin AI knowledge UI, an
 4. Make the smallest scoped change.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Focus on the changed retrieval/prompt/admin behavior and privacy assertions; run broader application/security gates once only when the change warrants them.
 
 ## Manual QA expectations
 - Trigger an assistant failure; confirm a friendly unavailable state.

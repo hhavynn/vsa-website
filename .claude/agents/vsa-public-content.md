@@ -42,9 +42,7 @@ Owns public-facing copy and content: homepage, program pages (ACE, intern progra
 4. Make the smallest copy/UI change that satisfies the task.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Focus on the affected public/degraded surface and content safety; the parent owns any broader final gate.
 
 ## Manual QA expectations
 - Load the affected public page; confirm copy renders and no private data appears.

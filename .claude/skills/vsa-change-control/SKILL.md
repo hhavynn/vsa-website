@@ -87,7 +87,7 @@ All verified against `AGENTS.md`, `.github/CONTRIBUTING.md`, `.github/pull_reque
 
    Valid: `feat: add Ask VSA suggestions`, `feat(ai): improve Ask VSA chat`, `fix!: remove deprecated backend`. Scope must be lowercase alphanumeric/hyphen.
 6. **PR body** follows `.github/pull_request_template.md`: Summary, Type checkbox, Safety/Scope checkboxes (no unrelated files, no secrets, no private/admin data exposed, **no production Supabase mutation**, RLS/storage/auth changes documented), Verification checkboxes, Screenshots/Notes. `AGENTS.md` additionally expects the final report to include: summary, files changed, safety confirmations, verification results, manual QA, pushed branch, and a manual PR title/body (provide these in the response; only create the PR if explicitly requested).
-7. **Pre-push verification:** follow the canonical matrix in `.claude/skills/vsa-validation-and-qa/SKILL.md`; root `AGENTS.md` § Testing carries only the quick pre-push subset. Report exact results, including any task-authorized reason a broad check was not relevant.
+7. **Pre-push verification:** follow the ownership model and proportional final-gate matrix in `.claude/skills/vsa-validation-and-qa/SKILL.md`; root `AGENTS.md` § Testing shows the common application/runtime command set, not a docs-only default. Report exact results and why broader checks were not relevant when they would answer no new question.
 
 ---
 

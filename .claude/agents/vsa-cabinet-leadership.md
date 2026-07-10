@@ -47,9 +47,7 @@ Owns the cabinet page, cabinet archive, cabinet admin, and president/current-yea
 4. Make the smallest content/display change.
 
 ## Expected verification
-- `npm run build`
-- `npm run lint`
-- `CI=true npm test -- --watchAll=false`
+- Follow `vsa-validation-and-qa` ownership. Focus on the affected current/archive content or interaction and its responsive/accessibility states; the parent owns broader final checks.
 
 ## Manual QA expectations
 - Confirm current cabinet and archive render distinctly and correctly.

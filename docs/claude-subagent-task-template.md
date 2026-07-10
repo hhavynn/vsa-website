@@ -1,6 +1,6 @@
-# Claude Subagent Task Template (VSA Website)
+# Claude Internal Specialist Task Template (VSA Website)
 
-Copy this template when asking Claude to work with a VSA subagent. Fill in every field. Keep tasks scoped to one domain/subagent where possible.
+The parent agent fills this template after inferring the workflow from the user's natural-language request. Users do not need to name a subagent or provide these fields. Keep one coherent concern per specialist.
 
 ```
 Subagent to use:
@@ -12,14 +12,23 @@ Goal:
 Current problem:
   <what's wrong now, with the route/page/file if known>
 
-Scope:
-  <exactly what may change>
+Owned files or subsystem:
+  <exact ownership boundary>
 
-Out of scope:
-  <what must NOT change — protected logic, schema, RLS, other domains>
+Forbidden files or systems:
+  <what must NOT change — shared files, protected logic, schema, RLS, other domains>
 
 Likely files:
   <best-guess files/paths; the subagent can confirm>
+
+Relevant invariants and constraints:
+  <only the architecture, privacy, security, and domain rules this concern needs>
+
+Targeted context:
+  <specific Graphify findings and source/Repomix excerpts; never the full transcript or repository>
+
+Permission:
+  <read-only or edit>
 
 Safety rules:
   - No schema / RLS / migration changes
@@ -33,10 +42,12 @@ Acceptance criteria:
   - <observable, testable outcome 1>
   - <observable, testable outcome 2>
 
-Verification commands:
-  - npm run build
-  - npm run lint
-  - CI=true npm test -- --watchAll=false
+Focused verification:
+  - <smallest test/reproduction proving owned behavior>
+  - <broader check only if this concern owns the question>
+
+Expected deliverable:
+  <diff/report, evidence, concerns, and exact files touched>
 
 Manual QA:
   - <route(s) to visit and what to confirm>
@@ -63,10 +74,10 @@ Current problem:
   On /events, the "Add to Google Calendar" button overflows its card on
   narrow screens.
 
-Scope:
+Owned files or subsystem:
   Event card button layout/styling only.
 
-Out of scope:
+Forbidden files or systems:
   Event data, publish/draft filtering, points, schema, RLS.
 
 Likely files:
@@ -81,10 +92,9 @@ Acceptance criteria:
   - Button stays within the card on mobile and desktop
   - No regression to other event card content
 
-Verification commands:
-  - npm run build
-  - npm run lint
-  - CI=true npm test -- --watchAll=false
+Focused verification:
+  - Inspect the affected event-card component diff
+  - Load /events at mobile and desktop widths; confirm button fits
 
 Manual QA:
   - Load /events at mobile and desktop widths; confirm button fits

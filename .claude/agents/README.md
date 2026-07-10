@@ -1,6 +1,6 @@
 # VSA Claude Project Subagents
 
-Project-level Claude Code subagents for the VSA at UCSD website. Ask Claude to use one explicitly, e.g. _"Use the vsa-house-system subagent to ..."_.
+Project-level domain playbooks for the VSA at UCSD website. The parent agent selects the relevant playbook automatically from the user's natural-language request; users do not need to know this roster. Claude Code may invoke these natively, while other harnesses apply them through their own delegation mechanics or sequential specialist passes.
 
 | Subagent | Mode | One-line use case |
 | --- | --- | --- |
@@ -19,4 +19,4 @@ Project-level Claude Code subagents for the VSA at UCSD website. Ask Claude to u
 
 **Audit-first / read-only:** `vsa-architecture-guardian`, `vsa-points-attendance-guardian`.
 
-See `docs/claude-subagent-workflow.md` for usage guidance and `docs/claude-subagent-task-template.md` for a copy-paste task template.
+See `docs/claude-subagent-workflow.md` for usage guidance and `docs/claude-subagent-task-template.md` for the parent agent's internal specialist contract.
