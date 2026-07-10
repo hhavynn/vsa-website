@@ -248,6 +248,47 @@ export interface Database {
           updated_at?: string;
         };
       };
+      cabinet_role_descriptions: {
+        Row: {
+          role_slug: string;
+          role_name: string;
+          board_group: string;
+          short_description: string;
+          responsibilities: string[];
+          works_with: string[];
+          best_fit_for: string[];
+          aliases: string[];
+          display_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          role_slug: string;
+          role_name: string;
+          board_group: string;
+          short_description: string;
+          responsibilities?: string[];
+          works_with?: string[];
+          best_fit_for?: string[];
+          aliases?: string[];
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          role_slug?: string;
+          role_name?: string;
+          board_group?: string;
+          short_description?: string;
+          responsibilities?: string[];
+          works_with?: string[];
+          best_fit_for?: string[];
+          aliases?: string[];
+          display_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       chat_logs: {
         Row: {
           id: string;

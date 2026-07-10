@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cabinetRoles, CabinetRoleExplorerItem } from '../../../data/cabinetRoleExplorer';
+import { useCabinetRoles } from '../../../hooks/useCabinetRoles';
+import { CabinetRoleDescription } from '../../../data/repos/cabinetRolesRepository';
 
-type BoardGroup = CabinetRoleExplorerItem['boardGroup'];
+type BoardGroup = string;
 
 const ALL_GROUPS: BoardGroup[] = [
   "Executive Board",
@@ -12,7 +13,7 @@ const ALL_GROUPS: BoardGroup[] = [
   "Finance & Operations"
 ];
 
-function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleExplorerItem; expanded: boolean; onToggle: () => void }) {
+function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleDescription; expanded: boolean; onToggle: () => void }) {
   return (
     <div className="overflow-hidden rounded-xl border transition-all" style={{ borderColor: expanded ? 'var(--brand)' : 'var(--color-border)', background: 'var(--color-surface)' }}>
       <button
@@ -22,15 +23,10 @@ function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleExplorerItem;
       >
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>{role.roleName}</h4>
-            {role.status === 'new' && (
-              <span className="rounded-full bg-brand-100 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-                Newer Role
-              </span>
-            )}
+            <h4 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>{role.role_name}</h4>
           </div>
           <p className="mt-1 font-sans text-sm leading-snug" style={{ color: 'var(--color-text2)' }}>
-            {role.shortDescription}
+            {role.short_description}
           </p>
         </div>
         <div className="ml-4 shrink-0 rounded-full p-2 transition-colors" style={{ background: 'var(--color-surface2)', color: 'var(--color-text3)' }}>
@@ -59,25 +55,14 @@ function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleExplorerItem;
                 <div>
                   <h5 className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Responsibilities</h5>
                   <ul className="mt-2 list-inside list-disc space-y-1.5 font-sans text-sm" style={{ color: 'var(--color-text)' }}>
-                    {role.responsibilities.map((req, i) => <li key={i}>{req}</li>)}
+                    {role.responsibilities?.map((req, i) => <li key={i}>{req}</li>)}
                   </ul>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <h5 className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Skills Built</h5>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {role.skillsBuilt.map((skill) => (
-                        <span key={skill} className="rounded border px-2 py-0.5 font-sans text-[11px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text2)' }}>
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
                     <h5 className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Works Closely With</h5>
-                    <p className="mt-1 font-sans text-sm" style={{ color: 'var(--color-text)' }}>{role.worksWith.join(', ')}</p>
+                    <p className="mt-1 font-sans text-sm" style={{ color: 'var(--color-text)' }}>{role.works_with?.join(', ') || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -85,15 +70,9 @@ function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleExplorerItem;
               <div className="mt-6 rounded-lg p-4" style={{ background: 'var(--color-surface2)' }}>
                 <h5 className="font-sans text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Great Fit If...</h5>
                 <ul className="mt-2 list-inside list-disc space-y-1 font-sans text-sm" style={{ color: 'var(--color-text)' }}>
-                  {role.bestFitFor.map((fit, i) => <li key={i}>{fit}</li>)}
+                  {role.best_fit_for?.map((fit, i) => <li key={i}>{fit}</li>)}
                 </ul>
               </div>
-
-              {role.historyNote && (
-                <p className="mt-4 font-sans text-xs italic" style={{ color: 'var(--color-text3)' }}>
-                  * {role.historyNote}
-                </p>
-              )}
             </div>
           </motion.div>
         )}
@@ -106,13 +85,18 @@ export function CabinetRoleExplorer() {
   const [activeGroup, setActiveGroup] = useState<BoardGroup | 'All'>('All');
   const [expandedRoleSlug, setExpandedRoleSlug] = useState<string | null>(null);
 
+  const { data: cabinetRoles, isLoading } = useCabinetRoles();
+
   const filteredRoles = useMemo(() => {
-    let roles = [...cabinetRoles].sort((a, b) => a.displayOrder - b.displayOrder);
+    const rolesData = cabinetRoles ? [...cabinetRoles] : [];
+    let roles = rolesData.sort((a, b) => (a.display_order ?? 99) - (b.display_order ?? 99));
     if (activeGroup !== 'All') {
-      roles = roles.filter(r => r.boardGroup === activeGroup);
+      roles = roles.filter(r => r.board_group === activeGroup);
     }
     return roles;
-  }, [activeGroup]);
+  }, [activeGroup, cabinetRoles]);
+
+  if (isLoading) return null;
 
   return (
     <section className="mx-auto mt-16 max-w-5xl px-4 sm:mt-24 sm:px-6 lg:px-8">
@@ -167,10 +151,10 @@ export function CabinetRoleExplorer() {
       <div className="space-y-3">
         {filteredRoles.map((role) => (
           <RoleCard
-            key={role.roleSlug}
+            key={role.role_slug}
             role={role}
-            expanded={expandedRoleSlug === role.roleSlug}
-            onToggle={() => setExpandedRoleSlug(prev => prev === role.roleSlug ? null : role.roleSlug)}
+            expanded={expandedRoleSlug === role.role_slug}
+            onToggle={() => setExpandedRoleSlug(prev => prev === role.role_slug ? null : role.role_slug)}
           />
         ))}
       </div>

@@ -14,6 +14,9 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { CabinetRoleExplorer } from '../components/features/cabinet/CabinetRoleExplorer';
+import { useCabinetRoles } from '../hooks/useCabinetRoles';
+import { CabinetRoleModal } from '../components/features/cabinet/CabinetRoleModal';
+import { matchCabinetRole } from '../utils/matchCabinetRole';
 
 type CabinetMember = CabinetMemberRaw;
 
@@ -260,11 +263,13 @@ function ExecutiveRolePanel({
   members,
   className = '',
   patternIndex = 0,
+  onRoleClick,
 }: {
   role: string;
   members: CabinetMember[];
   className?: string;
   patternIndex?: number;
+  onRoleClick?: (role: string) => void;
 }) {
   const pattern = SUPPORTING_EXEC_PATTERNS[patternIndex % SUPPORTING_EXEC_PATTERNS.length];
 
@@ -326,9 +331,12 @@ function ExecutiveRolePanel({
             Executive Core
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="scrapbook-sticker scrapbook-sticker-teal text-[11px] tracking-[0.06em] px-3.5 py-[7px]">
+            <button
+              className="scrapbook-sticker scrapbook-sticker-teal text-[11px] tracking-[0.06em] px-3.5 py-[7px] hover:scale-[1.03] transition-transform cursor-pointer"
+              onClick={() => onRoleClick?.(role)}
+            >
               {role}
-            </span>
+            </button>
             <span
               className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]"
               style={{ color: 'var(--color-text3)' }}
@@ -373,7 +381,7 @@ function ExecutiveRolePanel({
   );
 }
 
-function ExecutiveFeaturePanel({ role, members }: { role: string; members: CabinetMember[] }) {
+function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; members: CabinetMember[]; onRoleClick?: (role: string) => void }) {
   const isPresident = rolePriority(role) === 0;
 
   return (
@@ -403,9 +411,12 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
             <div className="h-1 w-1 rounded-full bg-brand-500 animate-pulse" />
           )}
         </div>
-        <span className={`scrapbook-sticker ${isPresident ? 'scrapbook-sticker-teal scale-110 origin-left' : 'scrapbook-sticker-teal'}`}>
+        <button
+          className={`scrapbook-sticker ${isPresident ? 'scrapbook-sticker-teal scale-110 origin-left hover:scale-[1.13]' : 'scrapbook-sticker-teal hover:scale-[1.03]'} transition-transform cursor-pointer`}
+          onClick={() => onRoleClick?.(role)}
+        >
           {role}
-        </span>
+        </button>
       </div>
 
       <div className={`grid gap-0 ${members.length > 1 ? 'lg:grid-cols-2' : ''}`}>
@@ -476,7 +487,7 @@ function ExecutiveFeaturePanel({ role, members }: { role: string; members: Cabin
   );
 }
 
-function DeptSpreadCard({ role, members }: { role: string; members: CabinetMember[] }) {
+function DeptSpreadCard({ role, members, onRoleClick }: { role: string; members: CabinetMember[]; onRoleClick?: (role: string) => void }) {
   return (
     <section
       className="scrapbook-dept p-6"
@@ -509,9 +520,12 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
                 <p className="font-serif text-[16px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
                 </p>
-                <p className="mt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400">
+                <button
+                  className="mt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.08em] text-brand-600 dark:text-brand-400 hover:opacity-80 text-left transition-opacity"
+                  onClick={() => onRoleClick?.(member.role)}
+                >
                   {member.role}
-                </p>
+                </button>
                 {formatMeta(member) && (
                   <p className="mt-2 font-sans text-[11px] leading-relaxed opacity-90" style={{ color: 'var(--color-text2)' }}>
                     {formatMeta(member)}
@@ -542,7 +556,7 @@ function DeptSpreadCard({ role, members }: { role: string; members: CabinetMembe
   );
 }
 
-function CompactMemberCard({ member, index }: { member: CabinetMember; index?: number }) {
+function CompactMemberCard({ member, index, onRoleClick }: { member: CabinetMember; index?: number; onRoleClick?: (role: string) => void }) {
   // Deterministic rotation
   const rotationClass = typeof index === 'number' ? (index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right') : '';
 
@@ -560,9 +574,12 @@ function CompactMemberCard({ member, index }: { member: CabinetMember; index?: n
           <p className="font-sans text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>
             {member.name}
           </p>
-          <p className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <button
+            className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-brand-600 dark:text-brand-400 hover:opacity-80 text-left transition-opacity"
+            onClick={() => onRoleClick?.(member.role)}
+          >
             {member.role}
-          </p>
+          </button>
           {formatMeta(member) && (
             <p className="mt-1.5 font-sans text-[11px] leading-relaxed opacity-80" style={{ color: 'var(--color-text2)' }}>
               {formatMeta(member)}
@@ -611,6 +628,12 @@ export function Cabinet() {
   const requestedYear = searchParams.get('year')?.trim() || null;
   const { cabinetYears, loading: loadingCabinetYears } = useCabinetYears();
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [activeRoleName, setActiveRoleName] = useState<string | null>(null);
+
+  const { data: roles = [] } = useCabinetRoles();
+  // Resolve the clicked member title to a role via tolerant matching
+  // (handles Co-chair prefixes, ampersands, acronyms, and admin-set aliases).
+  const activeRole = matchCabinetRole(roles, activeRoleName);
 
   const { data: yearIdsData, isLoading: loadingYearIds } = useCabinetMemberYearIds();
   const hasLegacyMembers = yearIdsData?.hasLegacyMembers ?? false;
@@ -724,6 +747,12 @@ export function Cabinet() {
     <>
       <PageTitle title={isInvalidYearQuery ? 'Cabinet Year Not Found' : 'Cabinet'} />
       {isDegraded && <DegradedModeBanner sourceName="cabinet" />}
+
+      <CabinetRoleModal
+        isOpen={!!activeRole}
+        role={activeRole}
+        onClose={() => setActiveRoleName(null)}
+      />
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
@@ -903,7 +932,7 @@ export function Cabinet() {
                       className="cabinet-card mx-auto"
                       style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
                     >
-                      <ExecutiveFeaturePanel role={role} members={roleMembers} />
+                      <ExecutiveFeaturePanel role={role} members={roleMembers} onRoleClick={setActiveRoleName} />
                     </motion.div>
                   ))}
               </motion.div>
@@ -923,7 +952,7 @@ export function Cabinet() {
                       key={role}
                       variants={itemVariants}
                     >
-                      <ExecutiveRolePanel role={role} members={roleMembers} patternIndex={idx} />
+                      <ExecutiveRolePanel role={role} members={roleMembers} patternIndex={idx} onRoleClick={setActiveRoleName} />
                     </motion.div>
                   ))}
               </motion.div>
@@ -964,7 +993,7 @@ export function Cabinet() {
                     className="cabinet-card"
                     style={cabCardStyle(idx, DEPT_PATTERNS, generalRoles.length)}
                   >
-                    <DeptSpreadCard role={role} members={roleMembers} />
+                    <DeptSpreadCard role={role} members={roleMembers} onRoleClick={setActiveRoleName} />
                   </motion.div>
                 ))}
               </motion.div>
@@ -1029,7 +1058,7 @@ export function Cabinet() {
                 className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
               >
                 {other.map((member, index) => (
-                  <CompactMemberCard key={member.id} member={member} index={index} />
+                  <CompactMemberCard key={member.id} member={member} index={index} onRoleClick={setActiveRoleName} />
                 ))}
               </motion.div>
             </section>
