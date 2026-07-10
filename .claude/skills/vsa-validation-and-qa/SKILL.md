@@ -223,7 +223,7 @@ These are the change types that historically break in ways no command catches. R
 ### A. Public content change (copy, launch content, program pages)
 
 1. Load the changed route logged out. Confirm the new content, no placeholder text, no broken images.
-2. Grep your diff for private data: no emails, check-in codes, real application URLs for closed/future windows (AGENTS.md never-do list; form-link rules live with `vsa-applications-forms` / `vsa-change-control`).
+2. Grep your diff for private data: no emails, check-in codes, real application URLs for closed/future windows (AGENTS.md never-do list; form-link rules live with the `vsa-applications-forms` playbook agent and the `vsa-change-control` skill).
 3. Domain-fact spot check: presidents, House names, and years must match AGENTS.md "Domain-critical facts" — never invent Houses or members.
 4. Degraded mode (section 5 step 4): the changed page still renders fallback content when Supabase is unreachable.
 5. Both themes: toggle light/dark; new copy must use semantic tokens (no invisible gray-on-gray text in dark mode).

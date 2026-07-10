@@ -10,6 +10,7 @@ This README is the front door. Read it once; after that, load individual skills 
 
 - Each skill lives at `.claude/skills/<name>/SKILL.md` with YAML frontmatter: a `name` and a **trigger-rich `description`**.
 - **AI sessions (Claude Code):** skills load *automatically* when your task matches a skill's `description`. You don't have to name them. You can also load one explicitly with the Skill tool, e.g. *"use the vsa-change-control skill."*
+- **Other AI tools (Codex, Gemini, etc.):** these do **not** auto-load `.claude/skills/`. Point them at the file in the task prompt — e.g. *"read `.claude/skills/vsa-change-control/SKILL.md` before making changes"* — the same way `AGENTS.md` routes them to the `.claude/agents/` playbooks.
 - **Humans:** open the `SKILL.md` and read it top-to-bottom, or jump to the section header you need — every skill is written to be skimmed.
 - **One home per fact.** A fact is explained in exactly one skill; the others cross-reference it by name. If two skills seem to disagree, the one that *owns* the fact (see table below) wins, and it's a bug to file.
 
@@ -76,14 +77,15 @@ When you touch the codebase, keep the skills honest:
 - **Run the re-verification commands** in a skill's `Provenance and maintenance` section; if reality changed, fix the skill text and re-date-stamp it. (`vsa-docs-and-writing` owns the full maintenance protocol and a known-drift table.)
 - **New incident resolved?** Add an entry to `vsa-failure-archaeology` (and a one-line trap pointer in `vsa-debugging-playbook` if it cost debugging time).
 - **New env var / secret / config?** Update `vsa-config-and-flags` and `.env.example`.
-- **Adding a skill?** One home per fact, a trigger-rich `description`, a "When NOT to use" block, and a `Provenance and maintenance` section. Keep to the existing house style (single-line `description:`, imperative runbook voice).
+- **Adding a skill?** One home per fact, a trigger-rich `description`, a "When NOT to use" block, and a `Provenance and maintenance` section. Keep to the existing house style (single-line `description:`, imperative runbook voice). **Also add a row to this README's "Pick a skill" table** — it drifts silently otherwise.
 
 Quick health check:
 
 ```bash
-# All 16 skills present with frontmatter + provenance:
+# All 16 skills present with frontmatter + provenance (expect "1 name, yes provenance" per row;
+# body text may legitimately mention these strings, so check only the frontmatter head):
 for f in .claude/skills/vsa-*/SKILL.md; do
-  echo "$(basename $(dirname $f)): $(grep -c '^name:' $f) name, $(grep -c 'Provenance and maintenance' $f) provenance"
+  echo "$(basename $(dirname $f)): $(head -3 $f | grep -c '^name:') name, $(grep -q 'Provenance and maintenance' $f && echo yes || echo NO) provenance"
 done
 
 # Diagnostics helpers still run:

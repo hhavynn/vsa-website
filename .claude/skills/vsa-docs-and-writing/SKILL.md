@@ -98,6 +98,7 @@ When you make the change on the left, the docs on the right are part of the SAME
 | Incident resolved / dead-end confirmed | Incident entry in `vsa-failure-archaeology` skill (template §5.2); one-paragraph trap pointer in `vsa-debugging-playbook` if it cost debugging time |
 | New npm script / operational script | `AGENTS.md` "Other useful commands" if general-purpose; runbook home is `vsa-run-and-operate` |
 | New/renamed `.claude/agents/` playbook | `.claude/agents/README.md` roster + `AGENTS.md` "VSA playbook roster" + `GEMINI.md` routing list + both subagent-workflow docs (all five lists must stay in sync) |
+| New/renamed `.claude/skills/` skill | "Pick a skill" routing table + fact-ownership table in `.claude/skills/README.md`, plus the roster in §6.4 of this skill |
 | Graphify graph refresh (`graphify-out/*`) | Separate `chore: update graphify graph` commit — never mixed into a feature PR (§4.4) |
 | House/president/application-key domain facts | `AGENTS.md` "Domain-critical facts" — the ONLY home; skills cite it |
 | Test added/removed | `AGENTS.md` "Current test files" list (it enumerates them explicitly) — **this list is currently stale (D8): it names 3, actual = 10.** The authoritative inventory is `vsa-validation-and-qa` §2; correct `AGENTS.md` to match. |
