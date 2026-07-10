@@ -12,6 +12,7 @@ Claude-specific mechanics:
 - **Graphify** before broad grep for structural questions; **Repomix** (`npx repomix`) for a narrow slice after scope is known; **Impeccable** (skill) for meaningful UI work, combined with `vsa-design-system-reference`, never replacing it.
 - **Superpowers** is installed — use its native flow for meaningful work; the workflow doc §6 summarizes the methodology.
 - Preserve protected user files (`.claude/settings.local.json`, `.gitignore` local edits); never route around `vsa-change-control`.
+- The nested **`.claude/CLAUDE.md`** is **not** a competing authority — it exists only for scoped Claude Code wiring (the `/graphify` slash-command trigger). This root `CLAUDE.md` and `AGENTS.md` govern; the nested file just wires a tool.
 
 ## Commands
 
@@ -38,15 +39,9 @@ REACT_APP_OPENAI_API_KEY=   # optional, for chat assistant
 
 This is a Create React App (TypeScript) project for the Vietnamese Student Association website. The backend is entirely Supabase (PostgreSQL + Auth + Storage).
 
-**Provider hierarchy** (`App.tsx`):
-```
-ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider > AppRoutes > PointsProvider
-```
+**Provider hierarchy:** defined in `src/App.tsx` — read it there rather than trusting a copy (it has drifted before). Re-derive the current nesting with `grep -n "Provider" src/App.tsx`.
 
-**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages. Three route tiers:
-- Public: `/`, `/events`, `/leaderboard`, `/cabinet`, `/gallery`, etc.
-- Protected (auth required): `/profile`, `/points`, `/feedback`
-- Admin (admin flag required): `/admin`, `/admin/events`, `/admin/gallery`, `/admin/feedback`
+**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages, organized into three tiers — **Public** (e.g. `/`, `/events`, `/leaderboard`), **Protected** (auth required, e.g. `/profile`), and **Admin** (admin flag required, under `/admin/*`). The exact route set changes over time; read `src/routes/index.tsx` for the current list (admin routes: `grep -n "admin/" src/routes/index.tsx`).
 
 **Data layer** (`src/data/`):
 - `src/data/repos/` — Repository classes (`EventsRepository`, etc.) that wrap all Supabase queries. Use the exported singleton instances (e.g., `eventsRepository`).
@@ -56,7 +51,7 @@ ErrorBoundary > QueryClientProvider (react-query) > ThemeProvider > AuthProvider
 
 **Supabase client** (`src/lib/supabase.ts`): Singleton pattern. Import `supabase` directly for one-off queries, or use the repository layer for structured access.
 
-**Key Supabase tables**: `events`, `event_attendance`, `user_profiles`
+**Key Supabase tables**: schema source of truth is `supabase/migrations/` (types mirrored in `src/types/database.ts`). The public leaderboard and the authenticated check-in flow use **different** tables (two coexisting points systems) — see `docs/leaderboard-system.md`. Don't rely on a short table list here; it has been incomplete/misleading before.
 
 **Forms**: react-hook-form + zod schemas (defined in `src/schemas/index.ts`).
 

@@ -22,10 +22,10 @@ Examples:
 
 Keep PRs scoped and reviewable.
 
-Before opening a PR, include verification results when applicable:
+Before opening a PR, include verification results when applicable. This is the quick pre-push summary; the definitive matrix — acceptable warnings, per-change-type manual-QA runbooks, and the golden-test inventory — lives in `.claude/skills/vsa-validation-and-qa/SKILL.md`.
 
-- `npm run build`
 - `npm run lint`
+- `npm run build`
 - `CI=true npm test -- --watchAll=false`
 - `git diff --check`
 

@@ -7,6 +7,8 @@ description: Load before claiming any VSA-website change is "done" or "verified"
 
 **What this skill is for.** This is the definition of "verified" for the VSA website. It tells you exactly what evidence a change needs before it can be called done: which commands must pass, which warnings are acceptable, which tests exist and what they certify, when new tests are mandatory, and which manual-QA runbook to execute for your change type. The core stance: **"it compiles" is not evidence.** A green `tsc` pass proves only that the types line up — not that the leaderboard is right, the route loads, or the mobile drawer still opens.
 
+**This skill is the canonical validation runbook.** `AGENTS.md`, `GEMINI.md`, `.github/CONTRIBUTING.md`, and `vsa-change-control` point here for the definitive matrix and carry at most a minimal pre-push summary — keep the authoritative command matrix and manual-QA runbooks here so they have one home. (The acceptable-warnings rule quoted in §1 is itself governed by `AGENTS.md` § Testing; this skill quotes it, it does not own it.)
+
 **When NOT to use this skill:**
 
 | If you need… | Go to |
@@ -44,7 +46,7 @@ That is the complete allowlist. Exit code 0 with those warnings = pass. Any *new
 
 - CI *does* run checks: `.github/workflows/deploy.yml` runs `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build` on `pull_request` targeting `main`.
 - But `main` has **no branch protection**: `gh api repos/{owner}/{repo}/branches/main/protection` returns 404 "Branch not protected". Nothing on GitHub blocks a merge (or a direct push) when CI is red.
-- AGENTS.md says "There is no automated CI test gate; run lint and build locally before pushing." Resolution of the apparent contradiction: CI runs and reports, but it does not *gate* — so treat AGENTS.md as correct in spirit. Your local run is the enforcement mechanism.
+- AGENTS.md now states this distinction directly: CI runs, but it is not a protected merge gate while `main` remains unprotected. Your local run is the enforcement mechanism.
 
 Re-check branch protection if this ever changes:
 
@@ -61,12 +63,13 @@ gh api repos/{owner}/{repo}/branches/main/protection   # 404 = still unprotected
 
 ---
 
-## 2. Test inventory — the golden set (as of 2026-07-07)
+## 2. Test inventory — the golden set (as of 2026-07-10)
 
-The suite is **ten files** (re-verify with `find src -name "*.test.ts*" | sort`). It is entirely pure-logic and smoke tests — no repository, RLS, or full-page behavior is covered. Know what each certifies and, more importantly, what nothing certifies.
+The suite is **eleven files** (re-verify with `find src -name "*.test.ts*" | sort`). It is entirely metadata, pure-logic, and smoke tests — no repository, RLS, or full-page behavior is covered. Know what each certifies and, more importantly, what nothing certifies.
 
 | File | What it certifies | Why it exists |
 |---|---|---|
+| `src/__meta__/playbookRoster.test.ts` | The canonical `.claude/agents/README.md` registry lists exactly the playbook files present on disk, excluding `README.md`; detects omissions and dangling registry entries without hard-coding the roster in the test. | **Protects workflow metadata.** Harness adapters point to one canonical registry, so roster drift must fail CI instead of silently producing different routing across tools. |
 | `src/App.test.tsx` | The full app (provider hierarchy + router) renders without throwing, against the mocked Supabase client from `setupTests.ts`. | Smoke test — catches provider-order breakage and import-time crashes in `App.tsx`. |
 | `src/data/legacyHouseArchive.test.ts` | The House archive's exact year list (2018-2019 → 2025-2026); 2020-2021 is an `unconfirmed` gap with no Houses; 2019-2020 = designer Houses (Gucci, Comme des Garçons, Supreme, Yves Saint Laurent); 2023-2024 = beverage Houses (Ca Phe Sua Da, Banana Milk, Matcha, Yakult); 2024-2025 = three Sanrio Houses; the gap year is excluded from verified years. | **Protects domain facts.** House-year mapping has been repeatedly corrupted by agents inventing or shuffling Houses (AGENTS.md "Domain-critical facts" pins these years). This test makes the history executable — an agent that "fixes" the archive breaks the build. |
 | `src/utils/seasonalState.test.ts` | Seasonal boundaries in America/Los_Angeles: summer break starts June 15 and ends September 15 (exclusive); `shouldUseSummerEmptyState` only fires when no active items exist. | **Protects domain facts.** The academic-year clock drives visible site behavior (empty states, seasonal content); off-by-one date bugs here silently change the public site twice a year. See `vsa-seasonal-operations` for the full clock. |
@@ -263,9 +266,9 @@ Then: keyboard/focus pass on any new interactive element (a11y items, section 5)
 
 Sources (repo, branch `codex/reactbits-ui`, as of 2026-07-06):
 
-- `AGENTS.md` — §Testing (acceptable-warnings rule, quoted verbatim), §PR/branch conventions ("no automated CI test gate"), §Things to never do, §Domain-critical facts.
+- `AGENTS.md` — §Testing (acceptable-warnings rule, quoted verbatim), §PR/branch conventions (CI runs but is not a protected merge gate), §Things to never do, §Domain-critical facts.
 - `package.json` — scripts and `jest.transformIgnorePatterns`.
-- `src/App.test.tsx`, `src/data/legacyHouseArchive.test.ts`, `src/utils/seasonalState.test.ts`, `src/setupTests.ts` — read in full.
+- `src/__meta__/playbookRoster.test.ts`, `src/App.test.tsx`, `src/data/legacyHouseArchive.test.ts`, `src/utils/seasonalState.test.ts`, `src/setupTests.ts` — read in full.
 - `src/lib/supabase.ts` (env throw at line 13), `src/utils/isSupabaseUnavailable.ts` (degraded-mode detection).
 - `.claude/agents/vsa-testing-qa.md`, `.claude/agents/vsa-points-attendance-guardian.md` (quoted).
 - `docs/rls-verification-checklist.md`, `docs/leaderboard-test-checklist.md`, `docs/final-compliance-reaudit.md` (dated 2026-06-19), `docs/claude-subagent-task-template.md` (example quoted verbatim).
@@ -275,7 +278,7 @@ Sources (repo, branch `codex/reactbits-ui`, as of 2026-07-06):
 Re-verify volatile facts:
 
 ```bash
-find src -name "*.test.ts*" | sort                               # test inventory — 10 files as of 2026-07-07?
+find src -name "*.test.ts*" | sort                               # current test inventory; do not trust a fixed count
 grep -n "acceptable" AGENTS.md                                    # acceptable-warnings rule unchanged?
 grep -n "transformIgnorePatterns" -A 3 package.json               # jest quirk unchanged?
 grep -n "pull_request\|npm run lint\|npm test\|npm run build" .github/workflows/deploy.yml
