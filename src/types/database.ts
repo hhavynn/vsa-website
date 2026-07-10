@@ -257,6 +257,7 @@ export interface Database {
           responsibilities: string[];
           works_with: string[];
           best_fit_for: string[];
+          aliases: string[];
           display_order: number;
           created_at: string;
           updated_at: string;
@@ -269,6 +270,7 @@ export interface Database {
           responsibilities?: string[];
           works_with?: string[];
           best_fit_for?: string[];
+          aliases?: string[];
           display_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -281,6 +283,7 @@ export interface Database {
           responsibilities?: string[];
           works_with?: string[];
           best_fit_for?: string[];
+          aliases?: string[];
           display_order?: number;
           created_at?: string;
           updated_at?: string;

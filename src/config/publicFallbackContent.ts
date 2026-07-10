@@ -256,6 +256,7 @@ export const FALLBACK_CABINET_ROLES = [
     ],
     works_with: ['President', 'UVSA SoCal', 'External VSAs'],
     best_fit_for: ['Social butterflies', 'Networkers', 'Drivers/Logisticians'],
+    aliases: ['Intercollegiate Council', 'ICC', 'External Vice President / ICC'],
     display_order: 3
   },
   {
@@ -301,6 +302,7 @@ export const FALLBACK_CABINET_ROLES = [
     ],
     works_with: ['VCN Exec Producer', 'Cast', 'Dance Coordinators', 'Cabinet'],
     best_fit_for: ['Creative visionaries', 'Theater lovers', 'Strong managers'],
+    aliases: ['VCN Director & Executive Producer', 'Vietnamese Culture Night Director', 'VCN Chair'],
     display_order: 6
   },
   {
@@ -346,6 +348,7 @@ export const FALLBACK_CABINET_ROLES = [
     ],
     works_with: ['IVP', 'General Members', 'Family Heads'],
     best_fit_for: ['Mentors', 'Community builders', 'Approachable individuals'],
+    aliases: ['Anh Chi Em Chair', 'ACE (Anh Chi Em) Chair'],
     display_order: 9
   },
   {
@@ -376,6 +379,7 @@ export const FALLBACK_CABINET_ROLES = [
     ],
     works_with: ['Media Director', 'Historian', 'Events Chair'],
     best_fit_for: ['Videographers', 'Social media savvy', 'Storytellers'],
+    aliases: ['PR Chair', 'Public Relations / Media Chair'],
     display_order: 11
   },
   {
@@ -421,6 +425,7 @@ export const FALLBACK_CABINET_ROLES = [
     ],
     works_with: ['CRC', 'Fundraising Chair', 'EVP'],
     best_fit_for: ['Volunteers', 'Advocates', 'Community-minded people'],
+    aliases: ['Culture & Philanthropy Chair', 'CPC'],
     display_order: 14
   },
   {

@@ -28,6 +28,7 @@ export function AdminCabinetRoleDescriptions() {
   const [responsibilitiesText, setResponsibilitiesText] = useState('');
   const [worksWithText, setWorksWithText] = useState('');
   const [bestFitForText, setBestFitForText] = useState('');
+  const [aliasesText, setAliasesText] = useState('');
 
   const handleEdit = (role: CabinetRoleDescription) => {
     setSelectedRole(role);
@@ -36,6 +37,7 @@ export function AdminCabinetRoleDescriptions() {
     setResponsibilitiesText((role.responsibilities || []).join('\n'));
     setWorksWithText((role.works_with || []).join(', '));
     setBestFitForText((role.best_fit_for || []).join('\n'));
+    setAliasesText((role.aliases || []).join(', '));
   };
 
   const handleCreate = () => {
@@ -48,12 +50,14 @@ export function AdminCabinetRoleDescriptions() {
     setResponsibilitiesText('');
     setWorksWithText('');
     setBestFitForText('');
+    setAliasesText('');
   };
 
   const handleCancel = () => {
     setSelectedRole(null);
     setIsCreating(false);
     setFormData({});
+    setAliasesText('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,6 +76,7 @@ export function AdminCabinetRoleDescriptions() {
       responsibilities: responsibilitiesText.split('\n').map(s => s.trim()).filter(Boolean),
       works_with: worksWithText.split(',').map(s => s.trim()).filter(Boolean),
       best_fit_for: bestFitForText.split('\n').map(s => s.trim()).filter(Boolean),
+      aliases: aliasesText.split(',').map(s => s.trim()).filter(Boolean),
     };
 
     try {
@@ -149,6 +154,14 @@ export function AdminCabinetRoleDescriptions() {
           </div>
 
           <div>
+            <label className={labelCls}>Title Aliases (comma separated)</label>
+            <input type="text" value={aliasesText} onChange={e => setAliasesText(e.target.value)} className={inputCls} placeholder="Co-Events Chair, Anh Chi Em Chair, ICC" />
+            <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+              Alternate member titles that should open this role (Co-… variants, acronyms, or combined titles). Matching ignores case, punctuation, and a leading “Co-”.
+            </p>
+          </div>
+
+          <div>
             <label className={labelCls}>Great Fit If... (one per line)</label>
             <textarea value={bestFitForText} onChange={e => setBestFitForText(e.target.value)} className={inputCls} rows={4} placeholder="You are highly organized..." />
           </div>
@@ -184,7 +197,7 @@ export function AdminCabinetRoleDescriptions() {
           Add Role Description
         </button>
       </div>
-      
+
       {roles.length === 0 ? (
         <div className="p-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
           No role descriptions found.

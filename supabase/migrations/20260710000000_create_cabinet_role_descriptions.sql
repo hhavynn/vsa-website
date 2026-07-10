@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS public.cabinet_role_descriptions (
   responsibilities text[] NOT NULL DEFAULT '{}',
   works_with text[] NOT NULL DEFAULT '{}',
   best_fit_for text[] NOT NULL DEFAULT '{}',
+  -- Alternate member titles (co-chair variants, acronyms, combined titles)
+  -- that should resolve to this role when a visitor clicks a role sticker.
+  aliases text[] NOT NULL DEFAULT '{}',
   display_order integer NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -44,7 +47,7 @@ CREATE POLICY "Admins can delete cabinet role descriptions"
   );
 
 -- Insert initial data
-INSERT INTO public.cabinet_role_descriptions 
+INSERT INTO public.cabinet_role_descriptions
   (role_slug, role_name, board_group, short_description, responsibilities, works_with, best_fit_for, display_order)
 VALUES
   ('president', 'President', 'Executive Board', 'The face and primary leader of the organization, responsible for guiding cabinet vision, overseeing all board members, and ensuring VSA meets its cultural, social, and academic goals.', ARRAY['Oversee and manage the entire Executive and General Board.', 'Facilitate weekly cabinet and general body meetings.', 'Serve as the primary liaison to UCSD CSI and the university.', 'Manage crisis resolution and high-level organizational strategy.'], ARRAY['Entire Cabinet', 'UCSD CSI', 'UVSA', 'Alumni'], ARRAY['Visionary leaders', 'Strong communicators', 'Experienced board members'], 1),
@@ -62,3 +65,11 @@ VALUES
   ('fundraising-chair', 'Fundraising Chair', 'Finance & Operations', 'The driving force behind VSA''s independent revenue through food sales, sponsorships, and events.', ARRAY['Plan and execute food fundraisers on Library Walk.', 'Organize restaurant fundraisers (e.g., boba/food nights).', 'Seek out sponsorships or grants for VSA.', 'Work with Treasurer to manage fundraiser profits.'], ARRAY['Treasurer', 'Events Chair'], ARRAY['Hustlers', 'Foodies', 'Sales-oriented people'], 13),
   ('cpc', 'Cultural Philanthropy Chair', 'Culture & External', 'The advocate for community service, cultural awareness, and philanthropic outreach within VSA.', ARRAY['Plan volunteering events and community service opportunities for members.', 'Promote cultural awareness and historical education within the general body.', 'Connect with local San Diego Vietnamese cultural organizations, community groups, and charters to build exposure, outreach, and partnership opportunities for VSA.', 'Organize fundraising campaigns and events for philanthropic causes.'], ARRAY['CRC', 'Fundraising Chair', 'EVP'], ARRAY['Volunteers', 'Advocates', 'Community-minded people'], 14),
   ('crc', 'Community Relations Chair', 'Culture & External', 'The primary coordinator for the House System and cabinet liaison for San Diego community involvement.', ARRAY['Serves as the main cabinet point person for the House System, coordinating house engagement, communication, and house-related planning across VSA.', 'Support House Heads and Parents in planning house events, tracking standings, and fostering house spirit.', 'Connect VSA members with external San Diego community events and local cultural activities.', 'Coordinate inter-house competitions and joint activities to maintain general member engagement.'], ARRAY['CPC', 'EVP', 'President', 'House Heads', 'ACE Chair'], ARRAY['Organizers', 'Community builders', 'House system enthusiasts'], 15);
+
+-- Seed title aliases so member titles that differ from the canonical role name
+-- (co-chair variants, acronyms, combined/legacy titles) still resolve correctly.
+UPDATE public.cabinet_role_descriptions SET aliases = ARRAY['Intercollegiate Council', 'ICC', 'External Vice President / ICC'] WHERE role_slug = 'evp';
+UPDATE public.cabinet_role_descriptions SET aliases = ARRAY['VCN Director & Executive Producer', 'Vietnamese Culture Night Director', 'VCN Chair'] WHERE role_slug = 'vcn-director';
+UPDATE public.cabinet_role_descriptions SET aliases = ARRAY['Anh Chi Em Chair', 'ACE (Anh Chi Em) Chair'] WHERE role_slug = 'ace-chair';
+UPDATE public.cabinet_role_descriptions SET aliases = ARRAY['PR Chair', 'Public Relations / Media Chair'] WHERE role_slug = 'pr-chair';
+UPDATE public.cabinet_role_descriptions SET aliases = ARRAY['Culture & Philanthropy Chair', 'CPC'] WHERE role_slug = 'cpc';

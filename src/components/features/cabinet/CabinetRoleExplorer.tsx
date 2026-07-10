@@ -84,7 +84,7 @@ function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleDescription; 
 export function CabinetRoleExplorer() {
   const [activeGroup, setActiveGroup] = useState<BoardGroup | 'All'>('All');
   const [expandedRoleSlug, setExpandedRoleSlug] = useState<string | null>(null);
-  
+
   const { data: cabinetRoles, isLoading } = useCabinetRoles();
 
   const filteredRoles = useMemo(() => {

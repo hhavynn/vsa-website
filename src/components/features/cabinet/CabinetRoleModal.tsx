@@ -35,6 +35,46 @@ export function CabinetRoleModal({ isOpen, role, onClose }: CabinetRoleModalProp
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Focus trap: keep Tab / Shift+Tab cycling within the dialog so keyboard
+  // focus cannot reach the (inert) page behind the modal.
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = modalRef.current;
+    if (!node) return;
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+      if (focusable.length === 0) {
+        e.preventDefault();
+        node.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey) {
+        if (active === first || active === node) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    node.addEventListener('keydown', handleTab);
+    return () => node.removeEventListener('keydown', handleTab);
+  }, [isOpen, role]);
+
   // Lock body scroll
   useEffect(() => {
     if (isOpen) {
