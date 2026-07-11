@@ -1,21 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
 import { memo, useMemo } from 'react';
-import { GetInvolvedDropdown } from './GetInvolvedDropdown';
+import { ExplorePanel } from './ExplorePanel';
 
 interface NavItem {
   path: string;
   label: string;
 }
 
-// Desktop-only flat nav items. "Home" is intentionally omitted — the logo
-// handles home navigation. "Get Involved" is handled by GetInvolvedDropdown.
+// Desktop-only pinned nav items. "Home" is intentionally omitted — the logo
+// handles home navigation. Everything else (Calendar, House, Points, Gallery,
+// Cabinet, UVSA, WNC, program pages) lives in the shared ExplorePanel so
+// desktop and mobile read from one destination map instead of two.
 const FLAT_NAV_ITEMS: NavItem[] = [
-  { path: '/events',       label: 'Events' },
-  { path: '/calendar',     label: 'Calendar' },
-  { path: '/leaderboard',  label: 'Leaderboard' },
-  { path: '/gallery',      label: 'Gallery' },
-  { path: '/cabinet',      label: 'Cabinet' },
-  { path: '/uvsa-network', label: 'UVSA' },
+  { path: '/events',      label: 'Events' },
+  { path: '/leaderboard', label: 'Leaderboard' },
 ];
 
 export const NavLinks = memo(function NavLinks() {
@@ -48,8 +46,8 @@ export const NavLinks = memo(function NavLinks() {
         </Link>
       ))}
 
-      {/* Get Involved — separate component with flyout dropdown */}
-      <GetInvolvedDropdown />
+      {/* Explore — shared three-group flyout (Quick Links / Get Involved / Explore) */}
+      <ExplorePanel />
     </div>
   );
 });
