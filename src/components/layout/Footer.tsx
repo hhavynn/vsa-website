@@ -85,7 +85,7 @@ const Footer: React.FC = () => {
               </div>
               {group.links.map((link) => (
                 <Link
-                  key={link.to}
+                  key={link.label}
                   to={link.to}
                   className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]"
                 >
