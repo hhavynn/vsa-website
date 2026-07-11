@@ -1,51 +1,13 @@
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { UserMenu } from './UserMenu';
+import { QUICK_LINKS, GET_INVOLVED, EXPLORE_LINKS, isRouteActive } from './navConfig';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface NavLink {
-  path: string;
-  label: string;
-  emoji?: string;
-  description?: string;
-}
-
-// ─── Link groups ──────────────────────────────────────────────────────────────
-
-const QUICK_LINKS: NavLink[] = [
-  { path: '/events',      label: 'Events',         emoji: '📅' },
-  { path: '/calendar',    label: 'Calendar',       emoji: '🗓️' },
-  { path: '/points',      label: 'Find My Points', emoji: '🎯' },
-  { path: '/leaderboard', label: 'Leaderboard',    emoji: '⭐' },
-];
-
-const INVOLVEMENT_LINKS: NavLink[] = [
-  { path: '/get-involved',  label: 'Get Involved',  emoji: '👋', description: 'Start here' },
-  { path: '/house',         label: 'House',          emoji: '🏠', description: 'Fams + competition' },
-  { path: '/ace',           label: 'ACE',            emoji: '🌱', description: 'Big/Little mentorship' },
-  { path: '/intern-program',label: 'Intern Program', emoji: '📋', description: 'Run VSA with cabinet' },
-  { path: '/vcn',           label: 'VCN',            emoji: '🎭', description: 'Performing arts' },
-];
-
-const EXPLORE_LINKS: NavLink[] = [
-  { path: '/',              label: "Wrapped '25–'26", emoji: '🎁' },
-  { path: '/gallery',       label: 'Gallery',        emoji: '📷' },
-  { path: '/cabinet',       label: 'Cabinet',        emoji: '🗂️' },
-  { path: '/uvsa-network',  label: 'UVSA Network',   emoji: '🌐' },
-  { path: '/wild-n-culture',label: 'Wild N Culture',  emoji: '🎉' },
-];
-
-const INVOLVEMENT_PREFIXES = INVOLVEMENT_LINKS.map((l) => l.path);
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isRouteActive(pathname: string, path: string) {
-  if (path === '/') return pathname === '/';
-  return pathname === path || pathname.startsWith(path + '/');
-}
+// Shares QUICK_LINKS / GET_INVOLVED / EXPLORE_LINKS with the desktop
+// ExplorePanel (navConfig.ts) — same three groups, same order, on both
+// breakpoints, so mobile and desktop no longer disagree about the site map.
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -118,15 +80,9 @@ interface MobileDrawerProps {
 
 export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
   const location = useLocation();
-  const [involvementExpanded, setInvolvementExpanded] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
-
-  // Collapse involvement accordion when drawer closes
-  useEffect(() => {
-    if (!isOpen) setInvolvementExpanded(false);
-  }, [isOpen]);
 
   // Close drawer on route change
   useEffect(() => { onClose(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,10 +149,6 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
       previouslyFocusedRef.current = null;
     };
   }, [isOpen, onClose]);
-
-  const isInvolvementActive = INVOLVEMENT_PREFIXES.some((p) =>
-    isRouteActive(location.pathname, p)
-  );
 
   // Render via portal so the overlay sits above the nav's stacking context
   const drawerContent = (
@@ -281,79 +233,23 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
                 </div>
               </section>
 
-              {/* Get Involved — accordion */}
+              {/* Get Involved — flat list, same six items and order as the
+                  desktop Explore panel's Get Involved group */}
               <section aria-label="Get Involved programs" className="mb-5">
                 <SectionLabel>Get Involved</SectionLabel>
-
-                {/* Accordion toggle */}
-                <button
-                  type="button"
-                  onClick={() => setInvolvementExpanded((v) => !v)}
-                  aria-expanded={involvementExpanded}
-                  aria-controls="mobile-involvement-links"
-                  className={`
-                    flex min-h-[48px] w-full items-center gap-3 rounded-xl px-3 py-3 transition-colors duration-100
-                    ${isInvolvementActive
-                      ? 'bg-[var(--color-surface2)]'
-                      : 'hover:bg-[var(--color-surface2)]'
-                    }
-                  `}
-                >
-                  <span className="shrink-0 text-[18px] leading-none" aria-hidden="true">👋</span>
-                  <div className="min-w-0 flex-1 text-left">
-                    <div
-                      className={`font-sans text-[14px] font-semibold leading-snug ${isInvolvementActive ? 'text-[var(--brand)]' : 'text-[var(--color-text2)]'}`}
-                    >
-                      Get Involved
-                    </div>
-                    <div
-                      className="font-sans text-[11px] leading-snug"
-                      style={{ color: 'var(--color-text3)' }}
-                    >
-                      Programs and ways to join
-                    </div>
-                  </div>
-                  <svg
-                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${involvementExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    style={{ color: 'var(--color-text3)' }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* Expanded links */}
-                <AnimatePresence initial={false}>
-                  {involvementExpanded && (
-                    <motion.div
-                      id="mobile-involvement-links"
-                      initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: 'easeInOut' }}
-                      className="overflow-hidden"
-                    >
-                      <div
-                        className="ml-3 mt-0.5 space-y-0.5 border-l pl-3"
-                        style={{ borderColor: 'var(--color-border)' }}
-                      >
-                        {INVOLVEMENT_LINKS.map((link) => (
-                          <DrawerLink
-                            key={link.path}
-                            to={link.path}
-                            label={link.label}
-                            description={link.description}
-                            active={isRouteActive(location.pathname, link.path)}
-                            onClick={onClose}
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <div className="space-y-0.5">
+                  {GET_INVOLVED.map((link) => (
+                    <DrawerLink
+                      key={link.path}
+                      to={link.path}
+                      label={link.label}
+                      emoji={link.emoji}
+                      description={link.description}
+                      active={isRouteActive(location.pathname, link.path)}
+                      onClick={onClose}
+                    />
+                  ))}
+                </div>
               </section>
 
               {/* Explore */}

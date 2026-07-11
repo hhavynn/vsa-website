@@ -1,8 +1,32 @@
 import { memo, useCallback, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { NavLogo } from './NavLogo';
 import { NavLinks } from './NavLinks';
 import { UserMenu } from './UserMenu';
 import { MobileDrawer } from './MobileDrawer';
+
+function FindMyPointsShortcut() {
+  const { pathname } = useLocation();
+  const active = pathname === '/points';
+  return (
+    <Link
+      to="/points"
+      aria-label="Find My Points"
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-sans text-[12.5px] font-bold transition-colors duration-150 ${
+        active
+          ? 'border-[var(--brand)] bg-[var(--brand)] text-[#f8fbfb]'
+          : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--brand)] hover:text-[var(--brand)]'
+      }`}
+    >
+      <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" strokeWidth={1.8} />
+        <circle cx="12" cy="12" r="4" strokeWidth={1.8} />
+        <circle cx="12" cy="12" r="0.6" fill="currentColor" />
+      </svg>
+      Find My Points
+    </Link>
+  );
+}
 
 export const NavigationShell = memo(function NavigationShell() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -47,7 +71,10 @@ export const NavigationShell = memo(function NavigationShell() {
             </button>
           </div>
 
-          <UserMenu />
+          <div className="hidden items-center gap-2.5 md:flex">
+            <FindMyPointsShortcut />
+            <UserMenu />
+          </div>
         </div>
       </div>
 

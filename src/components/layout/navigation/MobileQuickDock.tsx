@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { ComponentType } from "react";
-import { FiAward, FiCalendar, FiHome, FiImage } from "react-icons/fi";
+import { FiCalendar, FiFlag, FiHome, FiTarget } from "react-icons/fi";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { cn } from "../../../lib/utils";
+import { DOCK_ITEMS } from "./navConfig";
 
 type DockItem = {
   label: string;
@@ -14,15 +15,26 @@ type DockItem = {
 
 const HomeIcon = FiHome as unknown as DockItem["icon"];
 const EventsIcon = FiCalendar as unknown as DockItem["icon"];
-const GalleryIcon = FiImage as unknown as DockItem["icon"];
-const PointsIcon = FiAward as unknown as DockItem["icon"];
+const HouseIcon = FiFlag as unknown as DockItem["icon"];
+const PointsIcon = FiTarget as unknown as DockItem["icon"];
 
-const dockItems: DockItem[] = [
-  { label: "Home", to: "/", icon: HomeIcon },
-  { label: "Events", to: "/events", icon: EventsIcon },
-  { label: "Gallery", to: "/gallery", icon: GalleryIcon },
-  { label: "Points", to: "/leaderboard", icon: PointsIcon },
-];
+const DOCK_ICONS: Record<string, DockItem["icon"]> = {
+  "/": HomeIcon,
+  "/events": EventsIcon,
+  "/house": HouseIcon,
+  "/points": PointsIcon,
+};
+
+// Sourced from the shared nav config (navConfig.ts) so this stays in sync
+// with the desktop Explore panel and the mobile drawer. Points here
+// deliberately routes to /points, not /leaderboard — the previous version's
+// "Points" label pointed at the roster instead of the personal lookup it
+// promised.
+const dockItems: DockItem[] = DOCK_ITEMS.map((item) => ({
+  label: item.label === 'Find My Points' ? 'Points' : item.label,
+  to: item.path,
+  icon: DOCK_ICONS[item.path] ?? HomeIcon,
+}));
 
 const hiddenPathPrefixes = ["/admin", "/signin"];
 
