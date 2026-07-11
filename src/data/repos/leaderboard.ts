@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity, HouseYearlyPoints, MemberYearlyPoints } from '../../types';
+import { HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity, HouseYearlyPoints, MemberEventHistoryEntry, MemberHouseBadge, MemberYearlyPoints } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export class LeaderboardRepository {
@@ -126,6 +126,50 @@ export class LeaderboardRepository {
       }
       return byHouse;
     }, 'Failed to fetch house member rankings');
+  }
+
+  /**
+   * A member's individually attended events (public profile modal). Reads
+   * the public-safe member_event_history view -- never the base
+   * member_event_attendance table, which is not anon-readable.
+   */
+  async getMemberEventHistory(memberId: string, academicYearStart?: number): Promise<MemberEventHistoryEntry[]> {
+    return withErrorHandling(async () => {
+      let query = supabase
+        .from('member_event_history')
+        .select('*')
+        .eq('member_id', memberId)
+        .order('event_date', { ascending: false });
+
+      if (typeof academicYearStart === 'number') {
+        query = query.eq('academic_year_start', academicYearStart);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []) as MemberEventHistoryEntry[];
+    }, 'Failed to fetch member event history');
+  }
+
+  /** A member's House for the given year (or all-time), if they have one. */
+  async getMemberHouseBadge(memberId: string, academicYearStart: number | 'all'): Promise<MemberHouseBadge | null> {
+    return withErrorHandling(async () => {
+      const table = academicYearStart === 'all' ? 'house_member_all_time_points' : 'house_member_yearly_points';
+      let query = supabase
+        .from(table)
+        .select('house, house_profile_id, display_name, accent_color')
+        .eq('member_id', memberId)
+        .limit(1);
+
+      if (academicYearStart !== 'all') {
+        query = query.eq('academic_year_start', academicYearStart);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      const row = data?.[0] as MemberHouseBadge | undefined;
+      return row ?? null;
+    }, 'Failed to fetch member house badge');
   }
 
   async getYearsWithData(): Promise<number[]> {

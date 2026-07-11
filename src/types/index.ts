@@ -357,6 +357,25 @@ export interface HouseMemberRankEntry {
   latest_activity_at: string | null;
 }
 
+export interface MemberEventHistoryEntry {
+  member_id: string;
+  event_id: string;
+  event_name: string;
+  event_date: string;
+  event_end_date: string | null;
+  event_type: Event['event_type'];
+  points_earned: number;
+  academic_year_start: number | null;
+  academic_year_end: number | null;
+}
+
+export interface MemberHouseBadge {
+  house: string;
+  house_profile_id: string;
+  display_name: string;
+  accent_color: string | null;
+}
+
 export interface HouseYearlyPoints {
   house: string;
   house_profile_id: string;

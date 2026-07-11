@@ -16,7 +16,9 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { photoRequestsRepository } from '../data/repos/photoRequests';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
-import { HouseRecentActivity } from '../types';
+import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
+import { formatDateOnly } from '../lib/dateOnly';
+import { HouseRecentActivity, MemberEventHistoryEntry, MemberHouseBadge } from '../types';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { Link } from 'react-router-dom';
 
@@ -216,11 +218,13 @@ function PublicMemberProfileModal({
   member,
   avatarUrl,
   activeTab,
+  selectedYear,
   onClose,
 }: {
   member: LeaderboardEntry;
   avatarUrl: string | null;
   activeTab: 'points' | 'events';
+  selectedYear: SelectedYear | null;
   onClose: () => void;
 }) {
   const displayName = getMemberDisplayName(member);
@@ -229,6 +233,42 @@ function PublicMemberProfileModal({
   const secondaryMetric = activeTab === 'points' ? member.events_attended.toLocaleString() : member.points.toLocaleString();
   const primaryLabel = activeTab === 'points' ? 'Points' : 'Events';
   const secondaryLabel = activeTab === 'points' ? 'Events attended' : 'Points';
+  const avgPointsPerEvent = member.events_attended > 0 ? member.points / member.events_attended : 0;
+
+  const [eventHistory, setEventHistory] = useState<MemberEventHistoryEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
+  const [houseBadge, setHouseBadge] = useState<MemberHouseBadge | null>(null);
+
+  // Individual event history + House badge are separate, additive fetches
+  // against public-safe views -- neither reads nor writes points/ranking data.
+  useEffect(() => {
+    let isCurrent = true;
+    setLoadingHistory(true);
+    setHistoryError(false);
+
+    const yearFilter = selectedYear === 'all' || selectedYear === null ? undefined : selectedYear;
+    leaderboardRepository
+      .getMemberEventHistory(member.id, yearFilter)
+      .then((history) => { if (isCurrent) setEventHistory(history); })
+      .catch(() => { if (isCurrent) setHistoryError(true); })
+      .finally(() => { if (isCurrent) setLoadingHistory(false); });
+
+    leaderboardRepository
+      .getMemberHouseBadge(member.id, selectedYear ?? 'all')
+      .then((badge) => { if (isCurrent) setHouseBadge(badge); })
+      .catch(() => { if (isCurrent) setHouseBadge(null); });
+
+    return () => { isCurrent = false; };
+  }, [member.id, selectedYear]);
+
+  const typeBreakdown = useMemo(() => {
+    const counts = new Map<MemberEventHistoryEntry['event_type'], number>();
+    eventHistory.forEach((entry) => {
+      counts.set(entry.event_type, (counts.get(entry.event_type) ?? 0) + 1);
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [eventHistory]);
 
   return (
     <BottomSheet
@@ -255,6 +295,17 @@ function PublicMemberProfileModal({
               <div className="mt-3 flex flex-wrap gap-2">
                 {member.rank <= 3 && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
                 <StickerBadge color="primary" size="sm">{primaryLabel.toUpperCase()}</StickerBadge>
+                {houseBadge && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wide"
+                    style={{
+                      borderColor: houseBadge.accent_color ?? 'var(--border)',
+                      color: houseBadge.accent_color ?? 'var(--text2)',
+                    }}
+                  >
+                    {houseBadge.display_name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -277,6 +328,61 @@ function PublicMemberProfileModal({
             <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text3)]">{secondaryLabel}</p>
             <p className="mt-1 font-mono text-2xl font-black text-[var(--text)]">{secondaryMetric}</p>
           </div>
+        </div>
+
+        {member.events_attended > 0 && (
+          <p className="mt-2 font-mono text-[10px] font-semibold text-[var(--text3)]">
+            avg {avgPointsPerEvent.toFixed(1)} pts/event
+          </p>
+        )}
+
+        {typeBreakdown.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {typeBreakdown.map(([type, count]) => (
+              <span
+                key={type}
+                className="rounded-full border border-[var(--border)] bg-[var(--surface2)] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-wide text-[var(--text2)]"
+              >
+                {EVENT_TYPE_LABELS[type] ?? type} × {count}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-5 border-t border-[var(--border)] pt-4">
+          <h3 className="mb-3 font-serif text-base font-bold text-[var(--text)]">Events attended</h3>
+          {loadingHistory ? (
+            <div className="space-y-2" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded-md bg-[var(--surface2)]" />
+              ))}
+            </div>
+          ) : historyError ? (
+            <p className="font-sans text-xs text-[var(--text3)]">Couldn't load event history right now.</p>
+          ) : eventHistory.length === 0 ? (
+            <p className="font-sans text-xs text-[var(--text3)]">No events recorded for this view yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {eventHistory.map((entry) => (
+                <li
+                  key={entry.event_id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-sans text-sm font-semibold text-[var(--text)]">{entry.event_name}</p>
+                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-[var(--text3)]">
+                      {formatDateOnly(entry.event_date, 'MMM d, yyyy')}
+                      {' · '}
+                      {EVENT_TYPE_LABELS[entry.event_type] ?? entry.event_type}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-mono text-sm font-bold text-[var(--brand)]">
+                    +{entry.points_earned}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="mt-5 border-t border-[var(--border)] pt-4">
@@ -909,6 +1015,7 @@ export function Leaderboard() {
           member={selectedMember}
           avatarUrl={memberAvatars.get(selectedMember.id) ?? null}
           activeTab={activeTab}
+          selectedYear={selectedYear}
           onClose={() => setSelectedMember(null)}
         />
       )}
