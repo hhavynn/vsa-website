@@ -1,6 +1,7 @@
-import { type CSSProperties, useMemo } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { houseEventsRepository } from '../../../data/repos/houseEvents';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
@@ -83,12 +84,21 @@ function NextEventCard() {
     refetchOnWindowFocus: false,
   });
 
-  const nextEvent = events[0] ?? null;
+  const stack = events.slice(0, 3);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const safeIndex = stack.length > 0 ? Math.min(activeIndex, stack.length - 1) : 0;
+  const nextEvent = stack[safeIndex] ?? null;
   const nextHouseEvent = houseEvents[0] ?? null;
-  const otherEvents = events.slice(1, 3);
   const timeLabel = nextEvent ? getEventTimeLabel(nextEvent) : null;
   const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(nextEvent || nextHouseEvent));
   const summerMessage = getSummerBreakMessage('homepage');
+  const shouldReduceMotion = useReducedMotion();
+
+  const goToIndex = (i: number) => {
+    if (stack.length === 0) return;
+    setActiveIndex(((i % stack.length) + stack.length) % stack.length);
+  };
+  const goNext = () => goToIndex(safeIndex + 1);
 
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
@@ -151,37 +161,81 @@ function NextEventCard() {
         </div>
       ) : (
         <>
-          <div className="rounded-lg border p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
-              {formatEventDateRange(nextEvent.date, nextEvent.end_date)}
-              {timeLabel ? ` / ${timeLabel}` : ''}
-            </div>
-            <h4 className="line-clamp-2 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
-              {nextEvent.name}
-            </h4>
-            <div className="mt-3 flex flex-wrap gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
-              {nextEvent.location && <span>{nextEvent.location}</span>}
-              {nextEvent.points > 0 && <span>{nextEvent.points} pts</span>}
-            </div>
+          <div className="relative">
+            {/* Ghost cards peeking out behind the active one — only when there's
+                more than one upcoming event to stack. Decorative, aria-hidden. */}
+            {stack.length > 2 && (
+              <div
+                aria-hidden
+                className="absolute inset-x-3 top-1 h-full rounded-lg border"
+                style={{ borderColor: 'var(--border)', background: 'var(--surface2)', transform: 'rotate(2deg)', opacity: 0.45 }}
+              />
+            )}
+            {stack.length > 1 && (
+              <div
+                aria-hidden
+                className="absolute inset-x-1.5 top-0.5 h-full rounded-lg border"
+                style={{ borderColor: 'var(--border)', background: 'var(--surface2)', transform: 'rotate(-1.5deg)', opacity: 0.7 }}
+              />
+            )}
+
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={nextEvent.id}
+                initial={shouldReduceMotion ? false : { opacity: 0, x: 20, rotate: 1.5 }}
+                animate={{ opacity: 1, x: 0, rotate: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16, rotate: -2, scale: 0.97 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
+                className="relative rounded-lg border p-4"
+                style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}
+              >
+                <div className="mb-2 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+                  {formatEventDateRange(nextEvent.date, nextEvent.end_date)}
+                  {timeLabel ? ` / ${timeLabel}` : ''}
+                </div>
+                <h4 className="line-clamp-2 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
+                  {nextEvent.name}
+                </h4>
+                <div className="mt-3 flex flex-wrap gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
+                  {nextEvent.location && <span>{nextEvent.location}</span>}
+                  {nextEvent.points > 0 && <span>{nextEvent.points} pts</span>}
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          {otherEvents.length > 0 && (
-            <div className="space-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
-                Later soon
+          {stack.length > 1 && (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5" role="group" aria-label="Upcoming events">
+                {stack.map((event, i) => (
+                  <button
+                    key={event.id}
+                    type="button"
+                    aria-current={i === safeIndex ? 'true' : undefined}
+                    aria-label={`Show event ${i + 1} of ${stack.length}: ${event.name}`}
+                    onClick={() => goToIndex(i)}
+                    className="h-1.5 rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                    style={{
+                      width: i === safeIndex ? 16 : 6,
+                      background: i === safeIndex ? 'var(--brand)' : 'var(--border)',
+                    }}
+                  />
+                ))}
               </div>
-              {otherEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0" style={{ borderColor: 'var(--border)' }}>
-                  <span className="truncate font-sans text-[13px] font-medium" style={{ color: 'var(--text2)' }}>
-                    {event.name}
-                  </span>
-                  <span className="shrink-0 font-mono text-[10px] uppercase" style={{ color: 'var(--text3)' }}>
-                    {formatDateOnly(event.date, 'MMM d')}
-                  </span>
-                </div>
-              ))}
+              <button
+                type="button"
+                onClick={goNext}
+                className="font-mono text-[11px] uppercase tracking-wider transition-opacity duration-150 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                style={{ color: 'var(--brand)' }}
+              >
+                Next event →
+              </button>
             </div>
           )}
+
+          <span className="sr-only" aria-live="polite">
+            {stack.length > 1 ? `Showing event ${safeIndex + 1} of ${stack.length}: ${nextEvent.name}` : ''}
+          </span>
 
           {nextHouseEvent && (
             <Link to="/house-system" className="rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
