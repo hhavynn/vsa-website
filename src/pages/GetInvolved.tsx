@@ -1,8 +1,26 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
 import { OpenOpportunities } from '../components/features/home/OpenOpportunities';
+
+// Same stagger-reveal shape already used on UVSANetwork/Cabinet/Gallery --
+// intentionally not a new motion vocabulary.
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 const programs = [
   {
@@ -150,51 +168,58 @@ export function GetInvolved() {
 
         <div id="programs" className="mb-10">
           <Label className="mb-6 text-[var(--accent)]">Programs</Label>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <motion.div
+            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+          >
             {programs.map((program, index) => (
-              <Link
-                key={program.id}
-                to={program.link}
-                className={`scrapbook-paper group flex min-h-full flex-col items-start gap-4 p-5 transition-transform duration-150 scrapbook-hover-tilt sm:p-6 ${index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}`}
-              >
-                <span className="scrapbook-pin" aria-hidden />
-                <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
-                  <div className="w-[28px] shrink-0 pt-1">
-                    <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="mb-2 flex flex-wrap items-center gap-3">
-                      <span className="min-w-0 font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
-                        {program.title}
-                      </span>
-                      <span className="scrapbook-sticker scrapbook-sticker-coral">
-                        {program.tag}
+              <motion.div key={program.id} variants={itemVariants}>
+                <Link
+                  to={program.link}
+                  className={`scrapbook-paper group flex min-h-full flex-col items-start gap-4 p-5 transition-transform duration-150 scrapbook-hover-tilt sm:p-6 ${index % 2 === 0 ? 'scrapbook-rotate-sm-left' : 'scrapbook-rotate-sm-right'}`}
+                >
+                  <span className="scrapbook-pin" aria-hidden />
+                  <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
+                    <div className="w-[28px] shrink-0 pt-1">
+                      <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>
+                        {String(index + 1).padStart(2, '0')}
                       </span>
                     </div>
-                    <p className="max-w-[560px] break-words font-sans text-sm leading-[1.7]" style={{ color: 'var(--text2)' }}>
-                      {program.description}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {program.details.map((detail) => (
-                        <span
-                          key={detail}
-                          className="rounded-sm border px-2 py-0.5 font-sans text-[11px]"
-                          style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}
-                        >
-                          {detail}
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-3">
+                        <span className="min-w-0 font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
+                          {program.title}
                         </span>
-                      ))}
+                        <span className="scrapbook-sticker scrapbook-sticker-coral">
+                          {program.tag}
+                        </span>
+                      </div>
+                      <p className="max-w-[560px] break-words font-sans text-sm leading-[1.7]" style={{ color: 'var(--text2)' }}>
+                        {program.description}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {program.details.map((detail) => (
+                          <span
+                            key={detail}
+                            className="rounded-sm border px-2 py-0.5 font-sans text-[11px]"
+                            style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}
+                          >
+                            {detail}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <span className="mt-auto font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)]" style={{ color: 'var(--text3)' }}>
-                  Learn more -&gt;
-                </span>
-              </Link>
+                  <span className="mt-auto font-sans text-sm transition-colors duration-150 group-hover:text-[var(--brand)]" style={{ color: 'var(--text3)' }}>
+                    Learn more -&gt;
+                  </span>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
 
         <div className="border-t pt-8" style={{ borderColor: 'var(--border)' }}>
