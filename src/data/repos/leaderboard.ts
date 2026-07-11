@@ -157,13 +157,23 @@ export class LeaderboardRepository {
       const table = academicYearStart === 'all' ? 'house_member_all_time_points' : 'house_member_yearly_points';
       let query = supabase
         .from(table)
-        .select('house, house_profile_id, display_name, accent_color')
-        .eq('member_id', memberId)
-        .limit(1);
+        .select('house, house_profile_id, display_name, accent_color, academic_year_start, latest_activity_at')
+        .eq('member_id', memberId);
 
       if (academicYearStart !== 'all') {
         query = query.eq('academic_year_start', academicYearStart);
       }
+
+      // Both views can return more than one row per member -- house_member_
+      // all_time_points has one row per (member, House, academic year), and
+      // house_member_yearly_points can too if a member switched Houses
+      // mid-year. Order deterministically (newest year, then most recent
+      // activity) before taking the top row so the badge is stable rather
+      // than whatever PostgREST happens to return first.
+      query = query
+        .order('academic_year_start', { ascending: false })
+        .order('latest_activity_at', { ascending: false, nullsFirst: false })
+        .limit(1);
 
       const { data, error } = await query;
       if (error) throw error;
