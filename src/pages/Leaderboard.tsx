@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
@@ -93,10 +94,47 @@ function TapeAccent({ position = 'top-left', color = 'primary' }: { position?: '
   const bg = color === 'primary' ? 'var(--tape-teal)' : color === 'accent' ? 'var(--tape-coral)' : 'var(--tape-gold)';
   const rotation = position === 'top-left' ? '-15deg' : '15deg';
   return (
-    <div 
+    <div
       className={`absolute z-10 h-5 w-16 opacity-60 ${position === 'top-left' ? 'left-[-12px] top-0' : 'right-[-12px] top-0'}`}
       style={{ background: bg, transform: `rotate(${rotation})`, borderRadius: '2px' }}
     />
+  );
+}
+
+// Small "distance to the rank above" caption, purely derived from the
+// already-fetched, already-ranked entries array — reads entry.rank and the
+// neighboring entry's already-computed points/events_attended, no new
+// queries or sorting. Renders nothing for rank 1 or when there's no entry
+// directly above (e.g. a filtered search result with a gap in ranks).
+function RankGapNote({
+  entries,
+  entry,
+  metric,
+}: {
+  entries: LeaderboardEntry[];
+  entry: LeaderboardEntry;
+  metric: 'points' | 'events';
+}) {
+  if (entry.rank <= 1) return null;
+  const above = entries[entry.rank - 2];
+  if (!above) return null;
+
+  const currentValue = metric === 'points' ? entry.points : entry.events_attended;
+  const aboveValue = metric === 'points' ? above.points : above.events_attended;
+  const gap = aboveValue - currentValue;
+
+  if (gap <= 0) {
+    return (
+      <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--brand)' }}>
+        tied w/ #{entry.rank - 1}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--text3)' }}>
+      +{gap.toLocaleString()} to #{entry.rank - 1}
+    </div>
   );
 }
 
@@ -789,6 +827,7 @@ export function Leaderboard() {
                         <div className="font-mono text-2xl font-black leading-none" style={{ color: 'var(--text)' }}>
                           <AnimatedCounter value={activeTab === 'points' ? entry.points : entry.events_attended} />
                         </div>
+                        <RankGapNote entries={entries} entry={entry} metric={activeTab} />
                       </div>
 
                       {/* Secondary Stat (Desktop Only) */}
@@ -892,15 +931,34 @@ function PodiumIndividual({
   memberAvatars: Map<string, string>;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const first = top3[0];
   const second = top3[1];
   const third = top3[2];
   if (!first) return null;
 
+  const getValue = (entry: LeaderboardEntry | undefined) =>
+    entry ? (activeTab === 'points' ? entry.points : entry.events_attended) : null;
+  const firstVal = getValue(first);
+  const secondVal = getValue(second);
+  const thirdVal = getValue(third);
+
   const cards = [
-    { entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const },
-    { entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true },
-    { entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const },
+    {
+      entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const,
+      riser: 64, revealDelay: 0.15,
+      gap: firstVal !== null && secondVal !== null ? firstVal - secondVal : null, gapLabel: 'to pass #1',
+    },
+    {
+      entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
+      riser: 96, revealDelay: 0.3,
+      gap: firstVal !== null && secondVal !== null ? firstVal - secondVal : null, gapLabel: 'ahead of #2',
+    },
+    {
+      entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const,
+      riser: 40, revealDelay: 0,
+      gap: secondVal !== null && thirdVal !== null ? secondVal - thirdVal : null, gapLabel: 'to pass #2',
+    },
   ];
 
   return (
@@ -919,13 +977,21 @@ function PodiumIndividual({
           const Icon = card.icon;
 
           return (
-            <div
+            <motion.div
               key={card.entry.id}
-              className={`${card.order} relative ${isFirst ? 'md:scale-110 md:z-10' : 'md:opacity-90'} md:rotate-[var(--podium-rotate)]`}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{
+                duration: shouldReduceMotion ? 0 : 0.5,
+                delay: shouldReduceMotion ? 0 : card.revealDelay,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className={`${card.order} relative ${isFirst ? 'md:scale-110 md:z-10' : ''} md:rotate-[var(--podium-rotate)]`}
               style={{ '--podium-rotate': `${card.rotation}deg` } as CSSProperties}
             >
               <PushPin color={card.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
-              
+
               <div
                 role="button"
                 tabIndex={0}
@@ -992,9 +1058,30 @@ function PodiumIndividual({
                   <div className={`font-mono font-black ${isFirst ? 'text-4xl text-[var(--accent)]' : 'text-3xl text-[var(--text)]'}`}>
                     <AnimatedCounter value={value} />
                   </div>
+                  {card.gap !== null && (
+                    <div
+                      className="mt-1.5 font-mono text-[10px] font-bold uppercase tracking-wide"
+                      style={{ color: isFirst ? 'var(--accent)' : 'var(--text3)' }}
+                    >
+                      {card.gap > 0 ? `+${card.gap.toLocaleString()} ${card.gapLabel}` : 'tied'}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+
+              {/* Riser — gives the podium real elevation instead of three
+                  same-height cards in a row. Desktop only; on a single mobile
+                  column there's no "side by side height" to stage. */}
+              <div
+                aria-hidden
+                className="relative hidden overflow-hidden rounded-b-lg border-2 border-t-0 md:flex md:items-center md:justify-center"
+                style={{ height: card.riser, borderColor: card.color, background: `${card.color}12` }}
+              >
+                <span className="font-mono text-5xl font-black opacity-15" style={{ color: card.color }}>
+                  {card.rank}
+                </span>
+              </div>
+            </motion.div>
           );
         })}
       </div>
