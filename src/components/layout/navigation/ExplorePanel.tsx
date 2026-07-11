@@ -65,7 +65,7 @@ export function ExplorePanel() {
       className="relative"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
-      onFocus={() => { cancelClose(); setOpen(true); }}
+      onFocus={cancelClose}
       onBlur={(e) => {
         if (!containerRef.current?.contains(e.relatedTarget as Node)) {
           scheduleClose();
