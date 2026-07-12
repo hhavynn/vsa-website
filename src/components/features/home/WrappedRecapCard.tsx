@@ -245,7 +245,7 @@ const LAST_THINGS: { emoji: string; text: string }[] = [
 
 export function WrappedRecapCard() {
   return (
-    <section className="scrapbook-board border-t border-[var(--border)]">
+    <section id="wrapped" className="scrapbook-board scroll-mt-24 border-t border-[var(--border)]">
       <div className="vsa-container py-12 sm:py-16">
         {/* Hero */}
         <div className="grid gap-9 lg:grid-cols-[1fr_minmax(0,360px)] lg:items-end">
