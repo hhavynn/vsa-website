@@ -21,8 +21,9 @@ import {
 import { ThisWeekInVSA } from "../components/features/home/ThisWeekInVSA";
 import { OpenOpportunities } from "../components/features/home/OpenOpportunities";
 import { WrappedRecapCard } from "../components/features/home/WrappedRecapCard";
+import { useRef } from "react";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { FALLBACK_LINKS } from "../config/publicFallbackContent";
 import { SplitText } from "../components/ui/SplitText";
@@ -236,6 +237,17 @@ function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
 
 export function Home() {
   const shouldReduceMotion = useReducedMotion();
+  const heroRef = useRef<HTMLElement>(null);
+  // Scoped to the hero element (not whole-page scroll) -- progress 0 when the
+  // hero's top hits the viewport top, 1 when its bottom does. No pinning: the
+  // hero occupies exactly the same scroll distance as before, this just
+  // derives a value from scrolling past it.
+  const { scrollYProgress: heroScrollProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroBgY = useTransform(heroScrollProgress, [0, 1], [0, -60]);
+  const heroContentOpacity = useTransform(heroScrollProgress, [0, 0.8], [1, 0]);
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const today = getTodayDateOnly();
@@ -277,20 +289,31 @@ export function Home() {
       <PageTitle title="Home" />
       {eventsError && <DegradedModeBanner sourceName="events" />}
 
-      <section className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16">
-        <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
-        {/* Tape accent for the whole board */}
-        <div
-          className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20"
-          style={{
-            background:
-              "repeating-linear-gradient(-45deg, var(--tape-gold) 0 10px, rgba(255,255,255,0.1) 10px 14px)",
-            transform: "rotate(-0.5deg)",
-            borderRadius: "2px",
-          }}
-        />
+      <section
+        ref={heroRef}
+        className="scrapbook-board relative flex min-h-[calc(100vh-60px)] items-center justify-center overflow-hidden pt-12 sm:pt-16"
+      >
+        <motion.div
+          className="pointer-events-none absolute inset-0"
+          style={{ y: shouldReduceMotion ? 0 : heroBgY }}
+        >
+          <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
+          {/* Tape accent for the whole board */}
+          <div
+            className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20"
+            style={{
+              background:
+                "repeating-linear-gradient(-45deg, var(--tape-gold) 0 10px, rgba(255,255,255,0.1) 10px 14px)",
+              transform: "rotate(-0.5deg)",
+              borderRadius: "2px",
+            }}
+          />
+        </motion.div>
 
-        <div className="vsa-container relative z-10 w-full">
+        <motion.div
+          className="vsa-container relative z-10 w-full"
+          style={{ opacity: shouldReduceMotion ? 1 : heroContentOpacity }}
+        >
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
             <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
               <div
@@ -455,7 +478,7 @@ export function Home() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       <ThisWeekInVSA />
