@@ -1,4 +1,8 @@
-import { comparePointsThenEvents, PointsRankable } from './leaderboardRanking';
+import {
+  comparePointsThenEvents,
+  getLeaderboardGap,
+  PointsRankable,
+} from './leaderboardRanking';
 
 const m = (points: number, events_attended: number): PointsRankable => ({
   points,
@@ -32,5 +36,28 @@ describe('comparePointsThenEvents', () => {
       m(30, 4), // tier 30 — most events in its tier
     ].sort(comparePointsThenEvents);
     expect(sorted).toEqual([m(30, 4), m(30, 1), m(20, 9), m(20, 2)]);
+  });
+
+  it('uses the events-attended gap instead of calling equal-point members tied', () => {
+    expect(getLeaderboardGap(m(20, 8), m(20, 5), 'points')).toEqual({
+      metric: 'events',
+      value: 3,
+    });
+  });
+
+  it('calls points leaderboard entries tied only when points and events attended match', () => {
+    expect(getLeaderboardGap(m(20, 8), m(20, 8), 'points')).toEqual({
+      metric: 'tie',
+    });
+  });
+
+  it('preserves the displayed metric for ordinary gaps and event-tab ties', () => {
+    expect(getLeaderboardGap(m(25, 2), m(20, 99), 'points')).toEqual({
+      metric: 'points',
+      value: 5,
+    });
+    expect(getLeaderboardGap(m(25, 3), m(20, 3), 'events')).toEqual({
+      metric: 'tie',
+    });
   });
 });

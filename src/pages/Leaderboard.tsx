@@ -20,7 +20,7 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { formatDateOnly } from '../lib/dateOnly';
 import { HouseRecentActivity, MemberEventHistoryEntry, MemberHouseBadge } from '../types';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
-import { comparePointsThenEvents } from '../utils/leaderboardRanking';
+import { comparePointsThenEvents, getLeaderboardGap, LeaderboardGap } from '../utils/leaderboardRanking';
 import { Link } from 'react-router-dom';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
@@ -122,11 +122,9 @@ function RankGapNote({
   const above = entries[entry.rank - 2];
   if (!above) return null;
 
-  const currentValue = metric === 'points' ? entry.points : entry.events_attended;
-  const aboveValue = metric === 'points' ? above.points : above.events_attended;
-  const gap = aboveValue - currentValue;
+  const gap = getLeaderboardGap(above, entry, metric);
 
-  if (gap <= 0) {
+  if (gap.metric === 'tie') {
     return (
       <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--brand)' }}>
         tied w/ #{entry.rank - 1}
@@ -136,9 +134,21 @@ function RankGapNote({
 
   return (
     <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--text3)' }}>
-      +{gap.toLocaleString()} to #{entry.rank - 1}
+      {getGapCaption(gap, `to #${entry.rank - 1}`)}
     </div>
   );
+}
+
+function getGapCaption(
+  gap: Exclude<LeaderboardGap, { metric: 'tie' }>,
+  label: string,
+  eventTiebreakDirection: 'more' | 'fewer' = 'fewer'
+) {
+  if (gap.metric === 'events') {
+    return `${gap.value.toLocaleString()} ${eventTiebreakDirection} event${gap.value === 1 ? '' : 's'} — tiebreaker`;
+  }
+
+  return `+${gap.value.toLocaleString()} ${label}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1045,27 +1055,21 @@ function PodiumIndividual({
   const third = top3[2];
   if (!first) return null;
 
-  const getValue = (entry: LeaderboardEntry | undefined) =>
-    entry ? (activeTab === 'points' ? entry.points : entry.events_attended) : null;
-  const firstVal = getValue(first);
-  const secondVal = getValue(second);
-  const thirdVal = getValue(third);
-
   const cards = [
     {
       entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const,
       riser: 64, revealDelay: 0.15,
-      gap: firstVal !== null && secondVal !== null ? firstVal - secondVal : null, gapLabel: 'to pass #1',
+      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'to pass #1', eventTiebreakDirection: 'fewer' as const,
     },
     {
       entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
       riser: 96, revealDelay: 0.3,
-      gap: firstVal !== null && secondVal !== null ? firstVal - secondVal : null, gapLabel: 'ahead of #2',
+      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'ahead of #2', eventTiebreakDirection: 'more' as const,
     },
     {
       entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const,
       riser: 40, revealDelay: 0,
-      gap: secondVal !== null && thirdVal !== null ? secondVal - thirdVal : null, gapLabel: 'to pass #2',
+      gap: second && third ? getLeaderboardGap(second, third, activeTab) : null, gapLabel: 'to pass #2', eventTiebreakDirection: 'fewer' as const,
     },
   ];
 
@@ -1171,7 +1175,9 @@ function PodiumIndividual({
                       className="mt-1.5 font-mono text-[10px] font-bold uppercase tracking-wide"
                       style={{ color: isFirst ? 'var(--accent)' : 'var(--text3)' }}
                     >
-                      {card.gap > 0 ? `+${card.gap.toLocaleString()} ${card.gapLabel}` : 'tied'}
+                      {card.gap.metric === 'tie'
+                        ? 'tied'
+                        : getGapCaption(card.gap, card.gapLabel, card.eventTiebreakDirection)}
                     </div>
                   )}
                 </div>
