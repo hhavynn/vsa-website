@@ -7,6 +7,7 @@ import { Suspense, useEffect } from 'react';
 import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
+import { keepHashTargetInView } from '../../utils/hashScroll';
 
 function ScrollManager() {
   const { pathname, search, hash } = useLocation();
@@ -20,28 +21,10 @@ function ScrollManager() {
       return;
     }
 
-    // Hash present (e.g. /#wrapped): scroll the target element into view. It
-    // may live on a lazily-loaded page whose content mounts a few frames after
-    // the route changes, so retry on animation frames (bounded ~3s) until the
-    // element exists, then scroll. Its `scroll-mt-*` offsets the fixed header.
+    // Home can change height after its async sections resolve, so keep the
+    // anchor aligned briefly after it first appears.
     const id = decodeURIComponent(hash.slice(1));
-    let cancelled = false;
-    let frames = 0;
-
-    const tryScroll = () => {
-      if (cancelled) return;
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ block: 'start', behavior: 'auto' });
-        return;
-      }
-      if (frames++ < 180) requestAnimationFrame(tryScroll);
-    };
-    requestAnimationFrame(tryScroll);
-
-    return () => {
-      cancelled = true;
-    };
+    return keepHashTargetInView(id);
   }, [pathname, search, hash]);
 
   return null;
