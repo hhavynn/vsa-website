@@ -20,6 +20,7 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { formatDateOnly } from '../lib/dateOnly';
 import { HouseRecentActivity, MemberEventHistoryEntry, MemberHouseBadge } from '../types';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
+import { comparePointsThenEvents } from '../utils/leaderboardRanking';
 import { Link } from 'react-router-dom';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
@@ -509,7 +510,7 @@ export function Leaderboard() {
         }));
       }
 
-      setByPoints(members.sort((a, b) => b.points - a.points).map((member, index) => ({ ...member, rank: index + 1 })));
+      setByPoints(members.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
       setByEvents(
         [...members]
           .sort((a, b) => b.events_attended - a.events_attended)
@@ -551,7 +552,7 @@ export function Leaderboard() {
 
         if (!isCurrentRequest) return;
 
-        setByPoints(members.sort((a, b) => b.points - a.points).map((member, index) => ({ ...member, rank: index + 1 })));
+        setByPoints(members.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
         setByEvents(
           [...members]
             .sort((a, b) => b.events_attended - a.events_attended)
