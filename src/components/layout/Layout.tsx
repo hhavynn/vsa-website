@@ -8,12 +8,40 @@ import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 
-function ScrollToTop() {
+function ScrollManager() {
   const { pathname, search, hash } = useLocation();
 
   useEffect(() => {
-    if (hash || typeof window === 'undefined') return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (typeof window === 'undefined') return;
+
+    // No hash: normal behavior — jump to the top on every navigation.
+    if (!hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      return;
+    }
+
+    // Hash present (e.g. /#wrapped): scroll the target element into view. It
+    // may live on a lazily-loaded page whose content mounts a few frames after
+    // the route changes, so retry on animation frames (bounded ~3s) until the
+    // element exists, then scroll. Its `scroll-mt-*` offsets the fixed header.
+    const id = decodeURIComponent(hash.slice(1));
+    let cancelled = false;
+    let frames = 0;
+
+    const tryScroll = () => {
+      if (cancelled) return;
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ block: 'start', behavior: 'auto' });
+        return;
+      }
+      if (frames++ < 180) requestAnimationFrame(tryScroll);
+    };
+    requestAnimationFrame(tryScroll);
+
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, search, hash]);
 
   return null;
@@ -25,7 +53,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
-      <ScrollToTop />
+      <ScrollManager />
       <NavigationShell />
 
       <main id="main-content" className="flex-grow pt-[60px]">
