@@ -295,7 +295,13 @@ export function Home() {
       >
         <motion.div
           className="pointer-events-none absolute inset-0"
-          style={{ y: shouldReduceMotion ? 0 : heroBgY }}
+          style={{
+            y: shouldReduceMotion ? 0 : heroBgY,
+            // Promote to its own compositor layer so the scroll-linked parallax
+            // translate runs on the GPU instead of repainting the large
+            // ThreadsBackground SVG + mix-blend tape on every scroll frame.
+            willChange: shouldReduceMotion ? undefined : "transform",
+          }}
         >
           <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
           {/* Tape accent for the whole board */}
@@ -312,7 +318,13 @@ export function Home() {
 
         <motion.div
           className="vsa-container relative z-10 w-full"
-          style={{ opacity: shouldReduceMotion ? 1 : heroContentOpacity }}
+          style={{
+            opacity: shouldReduceMotion ? 1 : heroContentOpacity,
+            // Promote to its own compositor layer so the scroll-linked fade is a
+            // GPU alpha composite on a cached texture, not a per-frame
+            // group-opacity re-render of the entire foreground subtree.
+            willChange: shouldReduceMotion ? undefined : "opacity",
+          }}
         >
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
             <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
