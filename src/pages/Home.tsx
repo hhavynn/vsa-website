@@ -248,6 +248,17 @@ export function Home() {
   });
   const heroBgY = useTransform(heroScrollProgress, [0, 1], [0, -60]);
   const heroContentOpacity = useTransform(heroScrollProgress, [0, 0.8], [1, 0]);
+  // Only hold the compositor-layer promotion while the hero is in/approaching
+  // view; release it (-> "auto") once the hero has scrolled past so we don't
+  // retain two full-viewport GPU textures for the whole page lifetime. These
+  // are MotionValues, so they only write to the DOM when the string actually
+  // changes (once each way at the boundary), not on every scroll frame.
+  const heroBgWillChange = useTransform(heroScrollProgress, (p) =>
+    p < 1 ? "transform" : "auto",
+  );
+  const heroContentWillChange = useTransform(heroScrollProgress, (p) =>
+    p < 0.8 ? "opacity" : "auto",
+  );
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const today = getTodayDateOnly();
@@ -295,7 +306,14 @@ export function Home() {
       >
         <motion.div
           className="pointer-events-none absolute inset-0"
-          style={{ y: shouldReduceMotion ? 0 : heroBgY }}
+          style={{
+            y: shouldReduceMotion ? 0 : heroBgY,
+            // Promote to its own compositor layer so the scroll-linked parallax
+            // translate runs on the GPU instead of repainting the large
+            // ThreadsBackground SVG + mix-blend tape on every scroll frame.
+            // Released to "auto" once the hero is out of view (see above).
+            willChange: shouldReduceMotion ? undefined : heroBgWillChange,
+          }}
         >
           <ThreadsBackground reducedMotion={Boolean(shouldReduceMotion)} />
           {/* Tape accent for the whole board */}
@@ -312,7 +330,14 @@ export function Home() {
 
         <motion.div
           className="vsa-container relative z-10 w-full"
-          style={{ opacity: shouldReduceMotion ? 1 : heroContentOpacity }}
+          style={{
+            opacity: shouldReduceMotion ? 1 : heroContentOpacity,
+            // Promote to its own compositor layer so the scroll-linked fade is a
+            // GPU alpha composite on a cached texture, not a per-frame
+            // group-opacity re-render of the entire foreground subtree.
+            // Released to "auto" once the content has fully faded (see above).
+            willChange: shouldReduceMotion ? undefined : heroContentWillChange,
+          }}
         >
           <div className="grid min-h-[calc(100vh-60px)] items-center gap-8 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
             <div className="relative mx-auto mb-[-1.5rem] w-[min(210px,58vw)] rotate-[3deg] lg:hidden">
