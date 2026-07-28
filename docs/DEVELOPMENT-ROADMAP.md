@@ -1,6 +1,8 @@
 # Development roadmap
 
-A grounded backlog for the VSA website: **15 epics, 93 sub-issues** (#205–#312), created 2026-07-28.
+A grounded backlog for the VSA website: **15 epics, 92 open sub-issues** (#205–#312), created 2026-07-28.
+
+> [#252](https://github.com/hhavynn/vsa-website/issues/252) (regroup admin nav) was closed as not planned — the command palette (#250) makes it largely moot.
 
 Every issue was written against the code as it exists — file paths, line counts, and config values in the issue bodies were verified, not assumed. Where an issue proposes something ambitious, it says what already exists so nobody rebuilds a feature that's half-built.
 
@@ -17,7 +19,7 @@ This document is the index. The issues are the source of truth.
 | [#207](https://github.com/hhavynn/vsa-website/issues/207) | Auth — member accounts + admin auth hardening | auth | 6 | P1 |
 | [#208](https://github.com/hhavynn/vsa-website/issues/208) | Ask VSA — answer quality, knowledge ops, cost control | ask-vsa | 6 | P1 |
 | [#209](https://github.com/hhavynn/vsa-website/issues/209) | Mobile UI/UX — public page polish and touch ergonomics | mobile | 7 | P1 |
-| [#210](https://github.com/hhavynn/vsa-website/issues/210) | Admin DX — navigation and information architecture | admin-dx | 5 | P1 |
+| [#210](https://github.com/hhavynn/vsa-website/issues/210) | Admin DX — navigation and information architecture | admin-dx | 4 | P1 |
 | [#211](https://github.com/hhavynn/vsa-website/issues/211) | Admin DX — workflow efficiency, bulk ops, safety rails | admin-dx | 6 | P1 |
 | [#212](https://github.com/hhavynn/vsa-website/issues/212) | Navigation & findability | nav | 6 | P1 |
 | [#213](https://github.com/hhavynn/vsa-website/issues/213) | New school year — dynamic content and de-hardcoding | new-year | 6 | **P0** ⏰ |
@@ -73,7 +75,7 @@ Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#
 
 VSA's real workflow is: the responsible chair drafts a form → it's approved → a release date is set → it goes out as an Instagram post. Site work that depends on that chain **cannot be finished on engineering time alone**, no matter the priority.
 
-Currently tagged: [#271](https://github.com/hhavynn/vsa-website/issues/271) (needs every chair's dates), [#252](https://github.com/hhavynn/vsa-website/issues/252), [#276](https://github.com/hhavynn/vsa-website/issues/276), [#277](https://github.com/hhavynn/vsa-website/issues/277) (House Reveal — Community Relations chair), [#283](https://github.com/hhavynn/vsa-website/issues/283), [#284](https://github.com/hhavynn/vsa-website/issues/284), [#286](https://github.com/hhavynn/vsa-website/issues/286), [#288](https://github.com/hhavynn/vsa-website/issues/288).
+Currently tagged: [#271](https://github.com/hhavynn/vsa-website/issues/271) (needs every chair's dates), [#276](https://github.com/hhavynn/vsa-website/issues/276), [#277](https://github.com/hhavynn/vsa-website/issues/277) (House Reveal — Community Relations chair), [#283](https://github.com/hhavynn/vsa-website/issues/283), [#284](https://github.com/hhavynn/vsa-website/issues/284), [#286](https://github.com/hhavynn/vsa-website/issues/286), [#288](https://github.com/hhavynn/vsa-website/issues/288).
 
 **Most of these split.** The engineering half (gating logic, admin preview, payload-leak verification, year mapping) is almost never blocked — only the content half is. Do the unblocked half early so the chair's delivery becomes a content entry rather than a build under deadline. #277's comment shows the split in detail.
 
