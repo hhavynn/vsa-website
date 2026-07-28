@@ -1,6 +1,6 @@
 # Development roadmap
 
-A grounded backlog for the VSA website: **15 epics, 92 open sub-issues** (#205–#312), created 2026-07-28.
+A grounded backlog for the VSA website: **17 epics, 107 open sub-issues** (#205–#329), created 2026-07-28.
 
 > [#252](https://github.com/hhavynn/vsa-website/issues/252) (regroup admin nav) was closed as not planned — the command palette (#250) makes it largely moot.
 
@@ -29,6 +29,8 @@ This document is the index. The issues are the source of truth.
 | [#217](https://github.com/hhavynn/vsa-website/issues/217) | Testing & QA foundation | testing | 7 | **P0** |
 | [#218](https://github.com/hhavynn/vsa-website/issues/218) | Performance, accessibility, platform health | perf / a11y | 7 | P1 |
 | [#304](https://github.com/hhavynn/vsa-website/issues/304) | AI/agentic workflow — repo legibility for agents and humans | ai-workflow / docs | 8 | P1 |
+| [#313](https://github.com/hhavynn/vsa-website/issues/313) | Accessibility — WCAG 2.2 AA beyond automated tooling | a11y | 8 | P1 |
+| [#314](https://github.com/hhavynn/vsa-website/issues/314) | Contributor environment — start cleanly on any machine | devex | 7 | **P0** |
 
 ⏰ = calendar-bound
 
@@ -54,6 +56,15 @@ Calendar-bound. The academic year rolls over in September, and the site currentl
 
 Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#263](https://github.com/hhavynn/vsa-website/issues/263) (the nav label — small, urgent), [#271](https://github.com/hhavynn/vsa-website/issues/271) (launch checklist, **rehearsed** against a preview environment).
 
+### #314 — Contributor environment, before anyone is invited
+
+Two verified blockers make the documented setup path fail:
+
+- **`.env.example` omits `REACT_APP_SUPABASE_ANON_KEY`** ([#323](https://github.com/hhavynn/vsa-website/issues/323)). It's required — copy the file as instructed and the app throws `Missing Supabase environment variables`.
+- **Node version disagrees three ways** ([#324](https://github.com/hhavynn/vsa-website/issues/324)): CI pins 20, `Dockerfile` uses `node:18-alpine`, and there is no `.nvmrc` or `engines` field.
+
+Fix both before the first invite. Then hand [#326](https://github.com/hhavynn/vsa-website/issues/326) (from-zero verification) to the new contributor — they're the only person who can genuinely test it.
+
 ### #219 and #299 — Two standing security/cost gaps
 
 - [#219](https://github.com/hhavynn/vsa-website/issues/219) — `vercel.json` ships `Strict-Transport-Security: max-age=0` while `docs/security-headers-and-csp.md` documents a 1-year policy. `max-age=0` is the value that disables HSTS. **Check `git blame` before changing it** — it may have been set deliberately to flush a bad policy from browser caches, in which case the doc is what needs fixing.
@@ -63,7 +74,7 @@ Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#
 
 ## 3. Labels
 
-**Area:** `area:security` `area:auth` `area:ask-vsa` `area:mobile` `area:admin-dx` `area:nav` `area:new-year` `area:feature` `area:testing` `area:perf` `area:a11y`
+**Area:** `area:security` `area:auth` `area:ask-vsa` `area:mobile` `area:admin-dx` `area:nav` `area:new-year` `area:feature` `area:testing` `area:perf` `area:a11y` `area:ai-workflow` `area:docs` `area:devex`
 
 **Type:** `type:epic` `type:bug` `type:enhancement` `type:chore`
 
@@ -121,11 +132,13 @@ To convert an epic: open it, find the **Sub-issues** panel, *Add existing issue*
 
 | # | Issue | Why it's a good start |
 |---|---|---|
-| [#295](https://github.com/hhavynn/vsa-website/issues/295) | Contributor guide + PR checklist | Learn the rules by writing them down |
-| [#220](https://github.com/hhavynn/vsa-website/issues/220) | Fix the security-headers doc | Docs-only; teaches the security posture |
+| [#326](https://github.com/hhavynn/vsa-website/issues/326) | Verify from-zero setup on their OS | They're the only person who can truly test it — and it's their first hour anyway |
+| [#295](https://github.com/hhavynn/vsa-website/issues/295) | Expand CONTRIBUTING.md | Learn the rules by writing them down |
+| [#317](https://github.com/hhavynn/vsa-website/issues/317) | Screen-reader test the core journeys | No code knowledge needed; teaches the whole product |
 | [#263](https://github.com/hhavynn/vsa-website/issues/263) | Remove hardcoded year from nav label | Small, real, ships something urgent |
-| [#262](https://github.com/hhavynn/vsa-website/issues/262) | Surface orphaned public routes | Forces reading the router and nav config |
 | [#243](https://github.com/hhavynn/vsa-website/issues/243) | Mobile audit | No code knowledge needed; steers the roadmap |
+
+Then: [#220](https://github.com/hhavynn/vsa-website/issues/220) (security-headers doc), [#262](https://github.com/hhavynn/vsa-website/issues/262) (orphaned routes), [#318](https://github.com/hhavynn/vsa-website/issues/318) (Vietnamese `lang` attributes), [#321](https://github.com/hhavynn/vsa-website/issues/321) (landmarks and headings), [#307](https://github.com/hhavynn/vsa-website/issues/307) (protected-domain comments in source).
 
 Then, once they've got their bearings: [#266](https://github.com/hhavynn/vsa-website/issues/266) (404 page), [#294](https://github.com/hhavynn/vsa-website/issues/294) (route smoke tests), [#254](https://github.com/hhavynn/vsa-website/issues/254) (admin breadcrumbs), [#280](https://github.com/hhavynn/vsa-website/issues/280) (gallery↔event linking), [#272](https://github.com/hhavynn/vsa-website/issues/272) (fallback content).
 
@@ -168,6 +181,8 @@ A post-creation audit against the actual repo found three issues proposing thing
 | [#290](https://github.com/hhavynn/vsa-website/issues/290) | `.github/workflows/deploy.yml` already runs `npm ci` → lint → test (with coverage) → build on every PR to `main`, Node pinned to 20 | Explicit `tsc --noEmit`, branch-protection verification, coverage reporting |
 | [#230](https://github.com/hhavynn/vsa-website/issues/230) | Same workflow already runs **CodeQL** + **Trivy** with SARIF upload | Dependabot, secret push protection, pinning `trivy-action@master`, a triage rule |
 | [#295](https://github.com/hhavynn/vsa-website/issues/295) | `.github/CONTRIBUTING.md` + a strong `pull_request_template.md` + `pr-title.yml` enforcing the Conventional Commits regex | Protected domains, freeze windows, never-do list, env setup — none of which the existing file covers |
+| [#281](https://github.com/hhavynn/vsa-website/issues/281) | `ThisWeekInVSA.tsx` already has the event stack, House events, summer empty state, skeletons, reduced motion | Closing-soon application deadlines |
+| [#284](https://github.com/hhavynn/vsa-website/issues/284) | `EventRecapEditor` exists — but it's an **internal cabinet post-mortem** (budget notes, what failed, risks), not a public feature. Has an `is_public_highlight_published` flag | Surfacing the public highlight, with a whitelist of public-safe fields |
 
 **Lesson for future issue-writing here:** this repo is further along than its documentation suggests. Check `.github/`, `scripts/`, and `package.json` scripts before proposing infrastructure.
 
