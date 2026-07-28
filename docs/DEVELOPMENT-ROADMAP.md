@@ -82,6 +82,8 @@ Fix both before the first invite. Then hand [#326](https://github.com/hhavynn/vs
 
 **Workflow:** `good first issue` · `needs-decision` (owner call required) · `gated:change-control` (protected domain — sign-off required) · `blocked:external` (waiting on another cabinet chair)
 
+**Agent routing:** `agent:claude` · `agent:codex` · `agent:antigravity` — see §6.
+
 ### `blocked:external`
 
 VSA's real workflow is: the responsible chair drafts a form → it's approved → a release date is set → it goes out as an Instagram post. Site work that depends on that chain **cannot be finished on engineering time alone**, no matter the priority.
@@ -160,7 +162,57 @@ A reasonable split: one person on #217 + #213/#214 (the time-critical, high-cont
 
 ---
 
-## 6. Guardrails encoded in every issue
+## 6. Assigning work to AI agents
+
+Issues on this board are written to be agent-ready: each carries acceptance criteria, an owning skill/playbook, and the guardrails for its domain. That's deliberate — an agent handed one of these has what it needs without a human naming tools or files.
+
+### ⚠️ Before assigning anything
+
+**`main` has no branch protection.** `AGENTS.md` L258 states this plainly: CI runs on every PR but "is **not a protected merge gate** … nothing mechanically blocks merging a red PR."
+
+One careful human on an unprotected `main` is manageable. Several AI agents opening PRs against it is not. Verify and fix first:
+
+```bash
+gh api repos/hhavynn/vsa-website/branches/main/protection   # 404 = unprotected
+```
+
+Enable: require the `test` job to pass, require one approving review, and require review from Code Owners so `.github/CODEOWNERS` becomes a real gate rather than a suggestion.
+
+### How each agent receives work
+
+| Agent | Mechanism | Contract it reads |
+|---|---|---|
+| **Claude** | The Claude GitHub App is installed — comment `@claude` on an issue, or start a session at claude.ai/code | `CLAUDE.md` → `AGENTS.md` |
+| **Codex** | Connect the repo in the Codex interface and assign a task per issue | `AGENTS.md` directly (L229 addresses Codex explicitly) |
+| **Antigravity** | An IDE, not a task runner — clone locally, open, point it at the issue URL | `ANTIGRAVITY.md` |
+
+A useful phrasing for Claude or Codex:
+
+> Implement #NNN. Follow `AGENTS.md` and `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`. Branch `claude/<scope>-<desc>`. Run the final-gate checks and open a PR with evidence.
+
+Antigravity suits hands-on local sessions where you're steering; Claude and Codex suit async issue-driven work.
+
+### Routing labels
+
+`agent:claude` · `agent:codex` · `agent:antigravity`
+
+Applied as a starter set, not exhaustively:
+
+- **`agent:codex`** — [#220](https://github.com/hhavynn/vsa-website/issues/220), [#318](https://github.com/hhavynn/vsa-website/issues/318), [#321](https://github.com/hhavynn/vsa-website/issues/321), [#329](https://github.com/hhavynn/vsa-website/issues/329) — docs and mechanical work, cheap to run in parallel
+- **`agent:claude`** — [#251](https://github.com/hhavynn/vsa-website/issues/251), [#316](https://github.com/hhavynn/vsa-website/issues/316), [#319](https://github.com/hhavynn/vsa-website/issues/319) — multi-file changes needing judgement
+- **`agent:antigravity`** — [#245](https://github.com/hhavynn/vsa-website/issues/245) — visual iteration that benefits from a local browser loop
+
+Add an `Agent` field to Project #4 to see ownership in the table view, and label before starting so two agents don't pick up the same issue.
+
+### What never goes to an unattended agent
+
+- Anything labelled **`gated:change-control`** — attendance import, points calculation, House membership, leaderboard, RLS. Owner review on every line.
+- Anything labelled **`blocked:external`** — the blocker is a person, not a keyboard.
+- Anything touching a path in `.github/CODEOWNERS`.
+
+Branch prefixes stay per-agent (`claude/`, `codex/`, `antigravity/`) per `AGENTS.md` L256, so authorship is legible in the branch list.
+
+## 7. Guardrails encoded in every issue
 
 Each issue carries the constraints relevant to its area. The recurring ones:
 
@@ -172,7 +224,7 @@ Each issue carries the constraints relevant to its area. The recurring ones:
 
 ---
 
-## 7. Rescoped after audit (2026-07-28)
+## 8. Rescoped after audit (2026-07-28)
 
 A post-creation audit against the actual repo found three issues proposing things that **already exist**. All three were rescoped rather than closed, because a real gap remained inside each:
 
@@ -186,7 +238,7 @@ A post-creation audit against the actual repo found three issues proposing thing
 
 **Lesson for future issue-writing here:** this repo is further along than its documentation suggests. Check `.github/`, `scripts/`, and `package.json` scripts before proposing infrastructure.
 
-## 8. Known gaps in this roadmap
+## 9. Known gaps in this roadmap
 
 Stated plainly so nobody mistakes the backlog for a complete picture:
 

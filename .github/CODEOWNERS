@@ -1,0 +1,106 @@
+# CODEOWNERS — review gate for protected and high-blast-radius paths
+#
+# Why this file exists
+# --------------------
+# Work on this repo is increasingly done by AI agents (Claude, Codex,
+# Antigravity) opening PRs from `claude/`, `codex/`, and `antigravity/`
+# branches. Agents are good at scoped, well-specified changes and bad at
+# knowing which changes are irreversible. This file makes the owner a
+# required reviewer on the paths where a mistake is expensive, slow to
+# detect, or impossible to undo.
+#
+# The protected domains below come from `AGENTS.md` and
+# `.claude/skills/vsa-change-control/`. That skill is authoritative; this
+# file is the mechanical enforcement of a subset of it. If the two ever
+# disagree, AGENTS.md wins and this file is wrong.
+#
+# NOTE: CODEOWNERS only *requests* review by default. It becomes a real
+# gate when branch protection on `main` enables "Require review from Code
+# Owners". As of the last check, `main` had no branch protection at all
+# (AGENTS.md L258) — verify with:
+#   gh api repos/hhavynn/vsa-website/branches/main/protection
+# A 404 means this file is advisory only.
+
+# ---------------------------------------------------------------------
+# Default — everything else needs no specific owner
+# ---------------------------------------------------------------------
+# (intentionally no global rule; unowned paths stay reviewable by anyone)
+
+# ---------------------------------------------------------------------
+# Database, RLS, and privileged server code
+# ---------------------------------------------------------------------
+# Migrations define the real security boundary. RLS is what actually
+# protects member data — the client-side admin check is convenience only.
+/supabase/migrations/            @hhavynn
+/supabase/functions/             @hhavynn
+
+# ---------------------------------------------------------------------
+# Protected domain: points, attendance, leaderboard
+# ---------------------------------------------------------------------
+# Two unreconciled points systems exist (docs/leaderboard-system.md).
+# Changes here can silently alter what every member sees as their score,
+# including for past academic years.
+/src/data/repos/leaderboard.ts   @hhavynn
+/src/data/repos/points.ts        @hhavynn
+/src/data/repos/importJobs.ts    @hhavynn
+/src/utils/leaderboardRanking.ts @hhavynn
+/src/lib/memberMatching.ts       @hhavynn
+/src/hooks/useEventAttendance.ts @hhavynn
+/src/pages/Admin/Import.tsx      @hhavynn
+/src/pages/Admin/Points.tsx      @hhavynn
+/src/pages/Admin/MergeSuggestions.tsx @hhavynn
+
+# ---------------------------------------------------------------------
+# Protected domain: House membership and frozen historical data
+# ---------------------------------------------------------------------
+# House year mapping is a documented recurring source of data confusion
+# (vsa-failure-archaeology). The archive files are frozen history — they
+# are correct as-is and must not be "modernized" to derive their years.
+/src/pages/Admin/Houses.tsx      @hhavynn
+/src/data/legacyHouseArchive.ts  @hhavynn
+/src/utils/housePublicPointOverrides.ts @hhavynn
+
+# ---------------------------------------------------------------------
+# Public URL exposure: application windows
+# ---------------------------------------------------------------------
+# Closed and future application URLs must never reach a public payload.
+/src/lib/applicationLinks.ts        @hhavynn
+/src/data/repos/applicationLinks.ts @hhavynn
+
+# ---------------------------------------------------------------------
+# Auth boundary and Supabase client
+# ---------------------------------------------------------------------
+/src/routes/AdminRoute.tsx       @hhavynn
+/src/hooks/useAdmin.ts           @hhavynn
+/src/context/AuthContext.tsx     @hhavynn
+/src/lib/supabase.ts             @hhavynn
+
+# ---------------------------------------------------------------------
+# Seasonal / academic-year logic
+# ---------------------------------------------------------------------
+# Timezone- and year-boundary-sensitive. Errors here surface once a year,
+# during recruitment, at peak traffic.
+/src/lib/academicTerms.ts        @hhavynn
+/src/utils/seasonalState.ts      @hhavynn
+
+# ---------------------------------------------------------------------
+# Governance, agent contracts, and skills
+# ---------------------------------------------------------------------
+# An agent editing its own operating contract is a failure mode worth
+# gating explicitly.
+/AGENTS.md                       @hhavynn
+/CLAUDE.md                       @hhavynn
+/GEMINI.md                       @hhavynn
+/ANTIGRAVITY.md                  @hhavynn
+/.claude/                        @hhavynn
+/docs/ai/                        @hhavynn
+/.github/CODEOWNERS              @hhavynn
+
+# ---------------------------------------------------------------------
+# CI, deployment, and runtime configuration
+# ---------------------------------------------------------------------
+/.github/workflows/              @hhavynn
+/vercel.json                     @hhavynn
+/Dockerfile                      @hhavynn
+/nginx.conf                      @hhavynn
+/.env.example                    @hhavynn
