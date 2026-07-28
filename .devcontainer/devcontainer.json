@@ -1,0 +1,41 @@
+// Dev container for the VSA website.
+//
+// Works in GitHub Codespaces (browser, nothing to install) and in VS Code
+// locally via the Dev Containers extension.
+//
+// Node is pinned to 20 to match .github/workflows/deploy.yml. See issue #324
+// — the production Dockerfile still uses 18 and should be aligned separately.
+//
+// CREDENTIALS: never put Supabase values in this file — it is committed.
+// Set them as Codespaces *repository secrets* instead:
+//   Repo Settings > Secrets and variables > Codespaces > New repository secret
+//     REACT_APP_SUPABASE_URL
+//     REACT_APP_SUPABASE_ANON_KEY
+// Codespaces exposes those as environment variables, and Create React App
+// reads REACT_APP_* straight from the environment — so no .env.local file is
+// needed in a Codespace, and contributors never handle credentials directly.
+{
+  "name": "VSA Website",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+
+  // Installs dependencies once, when the container is first created.
+  "postCreateCommand": "npm ci",
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "VSA site",
+      "onAutoForward": "openPreview"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}
