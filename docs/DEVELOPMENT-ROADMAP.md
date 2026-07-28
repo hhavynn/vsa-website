@@ -180,17 +180,34 @@ Enable: require the `test` job to pass, require one approving review, and requir
 
 ### How each agent receives work
 
-| Agent | Mechanism | Contract it reads |
-|---|---|---|
-| **Claude** | The Claude GitHub App is installed — comment `@claude` on an issue, or start a session at claude.ai/code | `CLAUDE.md` → `AGENTS.md` |
-| **Codex** | Connect the repo in the Codex interface and assign a task per issue | `AGENTS.md` directly (L229 addresses Codex explicitly) |
-| **Antigravity** | An IDE, not a task runner — clone locally, open, point it at the issue URL | `ANTIGRAVITY.md` |
+**Preferred path: GitHub Agent HQ.** Claude and Codex can be added directly to an issue's **Assignees** field alongside Copilot. Assigning one starts it working and it opens a draft PR. Multiple agents can be assigned to the same issue to compare approaches.
 
-A useful phrasing for Claude or Codex:
+This requires enabling agents for this repository first — see "Enabling Agent HQ" below. Until then, use the fallback column.
+
+| Agent | Primary (Agent HQ) | Fallback | Contract it reads |
+|---|---|---|---|
+| **Claude** | Assign in the Assignees field | `@claude` comment (the GitHub App is installed), or claude.ai/code | `CLAUDE.md` → `AGENTS.md` |
+| **Codex** | Assign in the Assignees field | Connect the repo in the Codex interface | `AGENTS.md` directly (L229 addresses Codex explicitly) |
+| **Antigravity** | — not a GitHub-integrated agent | Clone locally, open the IDE, point it at the issue URL | `ANTIGRAVITY.md` |
+
+Antigravity suits hands-on local sessions where you're steering. Claude and Codex suit async issue-driven work.
+
+When using a fallback path, a useful phrasing:
 
 > Implement #NNN. Follow `AGENTS.md` and `docs/ai/AGENTIC-ENGINEERING-WORKFLOW.md`. Branch `claude/<scope>-<desc>`. Run the final-gate checks and open a PR with evidence.
 
-Antigravity suits hands-on local sessions where you're steering; Claude and Codex suit async issue-driven work.
+### Enabling Agent HQ for this repository
+
+Agent HQ is **opt-in per repository**, and the account that **owns** the repo must enable it — so it does not carry over from another account's projects.
+
+1. Confirm which account holds the Copilot subscription. Claude and Codex require **Copilot Pro, Pro+, Business, or Enterprise**.
+2. On the owning account (`hhavynn`): **Settings → Copilot → Cloud agent**.
+3. Toggle **Claude** and/or **Codex** on.
+4. Add `hhavynn/vsa-website` to the allowed repositories — it's an allowlist, not account-wide.
+
+Agents then appear in the Assignees picker with an **AI** badge.
+
+⚠️ Because assignment now *starts work*, the CODEOWNERS and branch-protection setup below stops being housekeeping and becomes the actual safety boundary. An assigned agent can open a PR against `main` without a human in the loop.
 
 ### Routing labels
 
