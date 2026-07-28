@@ -1,6 +1,6 @@
 # Development roadmap
 
-A grounded backlog for the VSA website: **14 epics, 85 sub-issues** (#205–#303), created 2026-07-28.
+A grounded backlog for the VSA website: **15 epics, 93 sub-issues** (#205–#312), created 2026-07-28.
 
 Every issue was written against the code as it exists — file paths, line counts, and config values in the issue bodies were verified, not assumed. Where an issue proposes something ambitious, it says what already exists so nobody rebuilds a feature that's half-built.
 
@@ -26,6 +26,7 @@ This document is the index. The issues are the source of truth.
 | [#216](https://github.com/hhavynn/vsa-website/issues/216) | New features — cabinet tooling and institutional memory | feature | 5 | P2 |
 | [#217](https://github.com/hhavynn/vsa-website/issues/217) | Testing & QA foundation | testing | 7 | **P0** |
 | [#218](https://github.com/hhavynn/vsa-website/issues/218) | Performance, accessibility, platform health | perf / a11y | 7 | P1 |
+| [#304](https://github.com/hhavynn/vsa-website/issues/304) | AI/agentic workflow — repo legibility for agents and humans | ai-workflow / docs | 8 | P1 |
 
 ⏰ = calendar-bound
 
@@ -66,7 +67,15 @@ Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#
 
 **Priority:** `priority:P0` `priority:P1` `priority:P2`
 
-**Workflow:** `good first issue` · `needs-decision` (owner call required) · `gated:change-control` (protected domain — sign-off required)
+**Workflow:** `good first issue` · `needs-decision` (owner call required) · `gated:change-control` (protected domain — sign-off required) · `blocked:external` (waiting on another cabinet chair)
+
+### `blocked:external`
+
+VSA's real workflow is: the responsible chair drafts a form → it's approved → a release date is set → it goes out as an Instagram post. Site work that depends on that chain **cannot be finished on engineering time alone**, no matter the priority.
+
+Currently tagged: [#271](https://github.com/hhavynn/vsa-website/issues/271) (needs every chair's dates), [#252](https://github.com/hhavynn/vsa-website/issues/252), [#276](https://github.com/hhavynn/vsa-website/issues/276), [#277](https://github.com/hhavynn/vsa-website/issues/277) (House Reveal — Community Relations chair), [#283](https://github.com/hhavynn/vsa-website/issues/283), [#284](https://github.com/hhavynn/vsa-website/issues/284), [#286](https://github.com/hhavynn/vsa-website/issues/286), [#288](https://github.com/hhavynn/vsa-website/issues/288).
+
+**Most of these split.** The engineering half (gating logic, admin preview, payload-leak verification, year mapping) is almost never blocked — only the content half is. Do the unblocked half early so the chair's delivery becomes a content entry rather than a build under deadline. #277's comment shows the split in detail.
 
 Labels were auto-created by the issues API and default to grey. Colouring them in repo settings makes the board far more readable; it takes about two minutes.
 
@@ -148,7 +157,19 @@ Each issue carries the constraints relevant to its area. The recurring ones:
 
 ---
 
-## 7. Known gaps in this roadmap
+## 7. Rescoped after audit (2026-07-28)
+
+A post-creation audit against the actual repo found three issues proposing things that **already exist**. All three were rescoped rather than closed, because a real gap remained inside each:
+
+| Issue | What already existed | What survived |
+|---|---|---|
+| [#290](https://github.com/hhavynn/vsa-website/issues/290) | `.github/workflows/deploy.yml` already runs `npm ci` → lint → test (with coverage) → build on every PR to `main`, Node pinned to 20 | Explicit `tsc --noEmit`, branch-protection verification, coverage reporting |
+| [#230](https://github.com/hhavynn/vsa-website/issues/230) | Same workflow already runs **CodeQL** + **Trivy** with SARIF upload | Dependabot, secret push protection, pinning `trivy-action@master`, a triage rule |
+| [#295](https://github.com/hhavynn/vsa-website/issues/295) | `.github/CONTRIBUTING.md` + a strong `pull_request_template.md` + `pr-title.yml` enforcing the Conventional Commits regex | Protected domains, freeze windows, never-do list, env setup — none of which the existing file covers |
+
+**Lesson for future issue-writing here:** this repo is further along than its documentation suggests. Check `.github/`, `scripts/`, and `package.json` scripts before proposing infrastructure.
+
+## 8. Known gaps in this roadmap
 
 Stated plainly so nobody mistakes the backlog for a complete picture:
 
