@@ -56,8 +56,7 @@ cp .env.example .env.local
 REACT_APP_SUPABASE_URL=https://<project-ref>.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=<anon public key>
 
-# Optional analytics (both consumed only in src/lib/analytics.ts)
-REACT_APP_PLAUSIBLE_DOMAIN=
+# Optional analytics (consumed only in src/lib/analytics.ts)
 REACT_APP_GA4_MEASUREMENT_ID=
 ```
 
@@ -67,7 +66,6 @@ Where each credential comes from:
 |---|---|---|
 | `REACT_APP_SUPABASE_URL` | Supabase dashboard → Project Settings → API → Project URL | Yes — app throws on boot without it (`src/lib/supabase.ts` L9–13) |
 | `REACT_APP_SUPABASE_ANON_KEY` | Same page → `anon` `public` API key (safe for browsers; RLS enforces access) | Yes — same throw |
-| `REACT_APP_PLAUSIBLE_DOMAIN` (+ optional `REACT_APP_PLAUSIBLE_API_HOST`, `_SCRIPT_SRC`, `_MANUAL_INIT`) | Plausible site settings | No |
 | `REACT_APP_GA4_MEASUREMENT_ID` | Google Analytics 4 property | No |
 | `REACT_APP_OPENAI_API_KEY` | Mentioned in `README.md`/`AGENTS.md` dev-setup blocks, but **consumed nowhere in `src/`** (verified by grep 2026-07-06). Legacy — the Ask VSA assistant runs server-side via the `vsa-ai-assistant` Edge Function. Omit it. | No |
 

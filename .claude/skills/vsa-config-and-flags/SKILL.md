@@ -35,12 +35,11 @@ Re-verify: `grep -rn "process.env.REACT_APP" src --include="*.ts" --include="*.t
 | `REACT_APP_SUPABASE_ANON_KEY` | YES | Same three files as above | Same boot failure | Production |
 | `REACT_APP_GA4_MEASUREMENT_ID` | No | `src/lib/analytics.ts` (`GA_ID`) | `initGA()` returns early — analytics silently disabled | Production (optional) |
 | `REACT_APP_SUPABASE_IMAGE_TRANSFORMS` | No | `src/lib/supabaseImages.ts` (`ENABLE_IMAGE_TRANSFORMS = === 'true'`) | Defaults OFF — plain URLs, no render/image transform params | Experimental flag, default-off (egress guard; see `vsa-failure-archaeology`) |
-| `REACT_APP_PLAUSIBLE_DOMAIN` (+ `_API_HOST`, `_SCRIPT_SRC`, `_MANUAL_INIT`) | No | **NOTHING** — as of 2026-07-06 no code in `src/`, `public/`, or `scripts/` reads any `PLAUSIBLE` var | No effect at all | Dead/aspirational — listed in `.env.example` only |
 | `REACT_APP_OPENAI_API_KEY` | No | **NOTHING in code.** Appears only in `README.md` ("optional, legacy — current Ask VSA assistant runs server-side via Supabase Edge Functions") | No effect | Legacy — safe to omit everywhere. Do NOT reintroduce a client-side AI key |
 
 Notes:
 - `src/setupTests.ts` injects fake `REACT_APP_SUPABASE_URL/_ANON_KEY` values so Jest never needs a real `.env.local`.
-- **Drift alert (as of 2026-07-06):** `.env.example` lists `REACT_APP_SUPABASE_URL`, the four `REACT_APP_PLAUSIBLE_*` vars, and `REACT_APP_GA4_MEASUREMENT_ID` — but is MISSING the required `REACT_APP_SUPABASE_ANON_KEY` (README's env section does list it). Trust the table above; the required pair is URL + ANON_KEY. Re-verify: `grep -c "ANON_KEY" .env.example` (0 = still drifted).
+- **Drift resolved (2026-07-28):** `.env.example` previously omitted the required `REACT_APP_SUPABASE_ANON_KEY` and listed four dead `REACT_APP_PLAUSIBLE_*` vars. Both are fixed — the file now lists the required URL + ANON_KEY pair and GA4 only. **GA4 is the analytics system; Plausible was never wired to anything and has been removed repo-wide** (owner-confirmed 2026-07-28). Re-verify: `grep -c "ANON_KEY" .env.example` (expect 1) and `grep -ric plausible .env.example README.md` (expect 0).
 - `process.env.NODE_ENV` is used in `src/components/common/PageError.tsx` and `ErrorBoundary.tsx` (dev-only error detail) — set by CRA automatically, never set it yourself.
 
 ## 2. Script/tooling env vars (Node scripts in `scripts/`)
@@ -180,7 +179,7 @@ Then:
 3. **New config TABLE ⇒ full RLS treatment**: enable RLS, admin policies via `user_profiles.is_admin`, and if you add any VIEW, apply revoke-all-then-grant-SELECT (the ALTER DEFAULT PRIVILEGES / auto-updatable-view gotcha — see `vsa-supabase-security-reference` before writing the migration).
 4. **Never publicly expose inactive/closed values** (application_links masking is the precedent).
 5. **Update `.env.example`** for any new frontend/script env var (placeholder value + comment; never a real value). Note the existing drift in §1 — don't make it worse.
-6. **Wire every consumer or don't add it**: the dead `REACT_APP_PLAUSIBLE_*` block shows what unconsumed config drift looks like.
+6. **Wire every consumer or don't add it**: the `REACT_APP_PLAUSIBLE_*` block sat in `.env.example` for months reading nothing, and was removed 2026-07-28 — that is what unconsumed config drift costs.
 7. **Classify the change** with `vsa-change-control` (config touching points/attendance/leaderboard/RLS is gated).
 8. **Update THIS skill's catalog** and its re-verification command.
 
@@ -200,5 +199,5 @@ cat vercel.json                                                           # §5 
 ls supabase/migrations | grep -i "setting\|application_link\|publish\|knowledge\|ai_assistant"  # §6 DB config
 grep -n "application_key in" -A 12 supabase/migrations/20260604000000_create_application_links.sql  # §6 nine keys
 node -e "console.log(require('./package.json').jest, require('./package.json').browserslist)"       # §7 build config
-grep -rn "PLAUSIBLE\|OPENAI" src scripts public 2>/dev/null               # §1 dead-config check (expect no hits)
+grep -rn "PLAUSIBLE\|OPENAI" src scripts public .env.example 2>/dev/null  # §1 dead-config check (expect no hits)
 ```

@@ -166,7 +166,7 @@ Admin uploads image → Supabase Storage + DB row updated → Database Webhook (
 
 ## 7. Analytics operations (one paragraph)
 
-Two separate systems share the word "analytics": (1) public page-view tracking in the React app, gated by user consent (`src/context/AnalyticsConsentContext.tsx` + `src/components/common/RouteTracker.tsx`) and configured via `REACT_APP_GA4_MEASUREMENT_ID` / `REACT_APP_PLAUSIBLE_DOMAIN`; (2) the admin reporting page `/admin/analytics`, which calls the `analytics-proxy` Edge Function to pull GA4 report data server-side using Google OAuth refresh-token secrets (§4 table; setup and failure modes in `docs/admin-analytics-setup.md` — e.g. `invalid_grant` means mint a new refresh token). The measurement ID and the reporting credentials are independent: setting one never fixes the other. Env-var catalog: `vsa-config-and-flags`; consent-UX conventions: `vsa-design-system-reference`.
+Two separate systems share the word "analytics": (1) public page-view tracking in the React app, gated by user consent (`src/context/AnalyticsConsentContext.tsx` + `src/components/common/RouteTracker.tsx`) and configured via `REACT_APP_GA4_MEASUREMENT_ID`; (2) the admin reporting page `/admin/analytics`, which calls the `analytics-proxy` Edge Function to pull GA4 report data server-side using Google OAuth refresh-token secrets (§4 table; setup and failure modes in `docs/admin-analytics-setup.md` — e.g. `invalid_grant` means mint a new refresh token). The measurement ID and the reporting credentials are independent: setting one never fixes the other. Env-var catalog: `vsa-config-and-flags`; consent-UX conventions: `vsa-design-system-reference`.
 
 ## 8. What lands where
 

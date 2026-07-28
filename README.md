@@ -10,7 +10,7 @@ The website for the Vietnamese Student Association at UCSD — built with Create
 - **Points & leaderboard** — attendance import, points calculation, and a public leaderboard
 - **House system** — current and archived house years, standings, and per-house detail pages
 - **Privacy / data rights** — public feedback form, privacy page, and an admin data-rights anonymization workflow
-- **Analytics** — Plausible and/or GA4 via an `analytics-proxy` Edge Function
+- **Analytics** — consent-gated GA4 in the app, plus admin reporting via an `analytics-proxy` Edge Function
 
 Member account self-service (`/profile`) is intentionally parked for this release; `/points` remains a public, no-login lookup.
 
@@ -44,12 +44,15 @@ Copy `.env.example` to `.env.local` and fill in:
 ```env
 REACT_APP_SUPABASE_URL=
 REACT_APP_SUPABASE_ANON_KEY=
-REACT_APP_OPENAI_API_KEY=   # optional, legacy — current Ask VSA assistant runs server-side via Supabase Edge Functions
 
-# Optional analytics
-REACT_APP_PLAUSIBLE_DOMAIN=
+# Optional analytics — not needed for local development
 REACT_APP_GA4_MEASUREMENT_ID=
 ```
+
+Those two Supabase variables are the only ones required to boot. Never put an
+API key in a `REACT_APP_*` variable — they are compiled into the public client
+bundle. The AI assistant's keys are Supabase Edge Function secrets, set
+server-side.
 
 Never commit `.env` or `.env.local` — they're gitignored.
 
