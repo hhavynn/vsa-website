@@ -49,20 +49,20 @@ jobs:
 
   # Security Scanning
   #
-  # This repository is PRIVATE, and SARIF upload to a private repo requires
-  # GitHub Code Security (Advanced Security), which needs GitHub Team or
-  # Enterprise. So `github/codeql-action/upload-sarif` could never succeed here
-  # — it failed every run with a code-scanning-not-enabled error.
+  # This repository is PRIVATE, and code scanning (SARIF upload, the Security
+  # tab, CodeQL results) is not available on private repos without a paid plan.
+  # The previous `codeql-action/upload-sarif` step therefore failed every run.
+  # There was also a `codeql-action/init` with no matching `analyze` step, so it
+  # built a CodeQL database nothing consumed. Between them, this job produced no
+  # security findings at all.
   #
-  # There was also a `codeql-action/init` step with no matching `analyze` step,
-  # so it built a CodeQL database that nothing ever analysed. Between the two,
-  # this job produced no security findings at all.
+  # Decision (owner, 2026-07-29): not worth paying for. Trivy reports to the job
+  # log instead — free, and enough for a project this size.
   #
-  # Trivy now reports to the job log instead. To restore Security-tab
-  # integration, either make the repo public or add GitHub Code Security, then
-  # re-add: `security-events: write` + `actions: read` permissions, Trivy
-  # `format: sarif` with `output:`, and a `codeql-action/upload-sarif` step.
-  # For real CodeQL scanning you additionally need an `analyze` step.
+  # If this repo is ever made PUBLIC, code scanning becomes free: re-add
+  # `security-events: write` + `actions: read`, switch Trivy back to
+  # `format: sarif` with `output:`, and add a `codeql-action/upload-sarif` step.
+  # Real CodeQL scanning would also need an `analyze` step, which never existed.
   security:
     runs-on: ubuntu-latest
     needs: test

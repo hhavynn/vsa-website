@@ -171,15 +171,31 @@ Issues on this board are written to be agent-ready: each carries acceptance crit
 
 ### ⚠️ Before assigning anything
 
-**`main` has no branch protection.** `AGENTS.md` L258 states this plainly: CI runs on every PR but "is **not a protected merge gate** … nothing mechanically blocks merging a red PR."
+**`main` has no branch protection, and on this repo it may not be possible to add any.** `AGENTS.md` L258 states the situation: CI runs on every PR but "is **not a protected merge gate** … nothing mechanically blocks merging a red PR."
 
-One careful human on an unprotected `main` is manageable. Several AI agents opening PRs against it is not. Verify and fix first:
+This repo is **private**, and on GitHub Free, branch protection and rulesets are **public-repo only** — private repos need GitHub Pro (personal) or Team (organization). So `.github/CODEOWNERS` currently auto-requests review but gates nothing.
 
 ```bash
 gh api repos/hhavynn/vsa-website/branches/main/protection   # 404 = unprotected
 ```
 
-Enable: require the `test` job to pass, require one approving review, and require review from Code Owners so `.github/CODEOWNERS` becomes a real gate rather than a suggestion.
+Three honest options:
+
+| Option | Cost | Effect |
+|---|---|---|
+| **Make the repo public** | free | Branch protection, rulesets, CODEOWNERS enforcement, code scanning and secret scanning all become available |
+| **GitHub Pro** | ~$4/mo | Branch protection + CODEOWNERS enforcement on the private repo. Code scanning still needs Team/Enterprise |
+| **Stay as-is** | free | No mechanical gate. Review discipline is a human convention |
+
+The owner's decision (2026-07-29) was **not to pay**, so the third option is in effect unless the repo goes public.
+
+**What that means in practice:** nothing stops a red PR — or an AI agent's PR touching a protected domain — from being merged. Until that changes, treat these as manual rules:
+
+- Don't merge a PR with a red `test` job.
+- Read the diff on anything matching a path in `.github/CODEOWNERS`, especially points, attendance, House membership, leaderboard, and migrations.
+- Never let an unattended agent merge its own work.
+
+The `gated:change-control` and `blocked:external` labels exist precisely because the platform isn't enforcing anything here.
 
 ### How each agent receives work
 
