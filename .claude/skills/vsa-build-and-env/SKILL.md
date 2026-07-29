@@ -26,7 +26,7 @@ description: Load when setting up the VSA website dev environment from scratch, 
 
 | Source | Says |
 |---|---|
-| `README.md` ("Prerequisites") | Node.js 18+ — stale, predates the 22 alignment |
+| `README.md` ("Prerequisites") | Node.js 22 (points at `.nvmrc`) |
 | `.github/workflows/deploy.yml` (`NODE_VERSION: '22'`, line 17) | CI lints/tests/builds on Node 22 |
 | `.github/workflows/migrate-images.yml`, `migrate-event-images.yml` | Node 22 |
 | `Dockerfile` (line 2) | `node:22-alpine` (container build only) |
@@ -67,7 +67,7 @@ Where each credential comes from:
 | `REACT_APP_SUPABASE_URL` | Supabase dashboard → Project Settings → API → Project URL | Yes — app throws on boot without it (`src/lib/supabase.ts` L9–13) |
 | `REACT_APP_SUPABASE_ANON_KEY` | Same page → `anon` `public` API key (safe for browsers; RLS enforces access) | Yes — same throw |
 | `REACT_APP_GA4_MEASUREMENT_ID` | Google Analytics 4 property | No |
-| `REACT_APP_OPENAI_API_KEY` | Mentioned in `README.md`/`AGENTS.md` dev-setup blocks, but **consumed nowhere in `src/`** (verified by grep 2026-07-06). Legacy — the Ask VSA assistant runs server-side via the `vsa-ai-assistant` Edge Function. Omit it. | No |
+| `REACT_APP_OPENAI_API_KEY` | **Removed from `README.md`, `CLAUDE.md`, and `AGENTS.md` on 2026-07-29** and consumed nowhere in `src/`. `OPENAI_API_KEY` (no `REACT_APP_` prefix) is real but is a server-side Edge Function secret read by `supabase/functions/secure-ai`. Never reintroduce a client-side AI key — `REACT_APP_*` ships in the public bundle. | No |
 
 CRA only exposes env vars prefixed `REACT_APP_` to the browser bundle, and they are **baked in at build time** — after editing `.env.local`, restart `npm start`. Never commit `.env*` files (`.gitignore` lines 16–23 cover them; committing secrets is on the AGENTS.md never-do list). Full config-axis catalog: `vsa-config-and-flags`.
 
@@ -139,7 +139,7 @@ supabase secrets set GEMINI_API_KEY=<key>
 | `src/react-app-env.d.ts` is auto-generated | One line: `/// <reference types="react-scripts" />` | AGENTS.md never-do: don't touch it; CRA regenerates it | Never edit |
 | `.gitignore` may carry local-only edits | AGENTS.md startup rule | Staging it commits someone's local setup | Never stage `.gitignore` unless explicitly requested |
 | Tests default to watch mode | `npm test` is CRA watch mode; CI runs `CI=true npm test -- --coverage --watchAll=false` (deploy.yml line 42) | A bare `npm test` hangs an agent/CI session forever | Always `CI=true npm test -- --watchAll=false` in non-interactive contexts |
-| `.env.example` is incomplete | Missing `REACT_APP_SUPABASE_ANON_KEY` line (section 1.3) | `Missing Supabase environment variables` crash on boot after a faithful `cp` | Add the anon key line manually |
+| ~~`.env.example` is incomplete~~ | RESOLVED 2026-07-29 (#323) — the anon key line is present and required vars are marked | Was a `Missing Supabase environment variables` crash after a faithful `cp` | `cp .env.example .env.local` now works as documented |
 | Env vars baked at build time | CRA inlines `REACT_APP_*` during build; Docker bakes them via build `ARG`s | Editing `.env.local` does nothing to a running dev server or an existing Docker image | Restart `npm start` / rebuild the image |
 | Node version mismatch across sources | RESOLVED 2026-07-29 — CI, `.nvmrc`, `engines`, Dockerfile, devcontainer all say 22 | Was a local-vs-CI build difference | `nvm use` in the repo root |
 | `npm install` rewrites the lockfile | `package-lock.json` churn in diffs | Noisy/unreviewable PRs | Use `npm ci` for clean envs; don't commit unintended lockfile changes |

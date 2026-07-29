@@ -187,12 +187,16 @@ Leave this running while you work. **`Ctrl + C`** stops it.
 ### The other commands
 
 ```bash
-npm test          # run the tests
-npm run lint      # check code style
-npm run build     # produce the production bundle
+CI=true npm test -- --watchAll=false    # run the tests once
+npm run lint                            # check code style
+npm run build                           # produce the production bundle
 ```
 
 Run all three before opening a pull request. CI runs them too, and a red PR won't get merged.
+
+> **Why the test command looks like that.** Plain `npm test` starts Jest in **watch mode** — it runs the tests, then sits there waiting for you to edit a file, and never exits. That's useful while you're actively writing tests, but it will look like your terminal has frozen. `CI=true ... --watchAll=false` runs everything once and exits, which is what you want before a PR.
+>
+> If you do end up stuck in watch mode: press `q` to quit, or `Ctrl + C`.
 
 ---
 

@@ -56,14 +56,16 @@ Calendar-bound. The academic year rolls over in September, and the site currentl
 
 Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#263](https://github.com/hhavynn/vsa-website/issues/263) (the nav label — small, urgent), [#271](https://github.com/hhavynn/vsa-website/issues/271) (launch checklist, **rehearsed** against a preview environment).
 
-### #314 — Contributor environment, before anyone is invited
+### #314 — Contributor environment
 
-Two verified blockers make the documented setup path fail:
+The two blockers that made the documented setup path fail are **fixed** (2026-07-29):
 
-- **`.env.example` omits `REACT_APP_SUPABASE_ANON_KEY`** ([#323](https://github.com/hhavynn/vsa-website/issues/323)). It's required — copy the file as instructed and the app throws `Missing Supabase environment variables`.
-- **Node version disagrees three ways** ([#324](https://github.com/hhavynn/vsa-website/issues/324)): CI pins 20, `Dockerfile` uses `node:18-alpine`, and there is no `.nvmrc` or `engines` field.
+- ✅ **`.env.example` was missing `REACT_APP_SUPABASE_ANON_KEY`** ([#323](https://github.com/hhavynn/vsa-website/issues/323), closed) — copying the file as documented produced an app that threw `Missing Supabase environment variables`. The file now marks both required vars and warns that `REACT_APP_*` ships in the public bundle.
+- ✅ **Node disagreed three ways** ([#324](https://github.com/hhavynn/vsa-website/issues/324)) — CI said 20, `Dockerfile` said 18, nothing else said anything. Everything is now on **Node 22**: `.nvmrc`, `engines`, `deploy.yml`, both image-migration workflows, `Dockerfile`, and the devcontainer. Verified on 22.22.2 — `npm ci`, lint, 126 tests, and build all pass.
 
-Fix both before the first invite. Then hand [#326](https://github.com/hhavynn/vsa-website/issues/326) (from-zero verification) to the new contributor — they're the only person who can genuinely test it.
+Also landed: `.devcontainer/devcontainer.json` ([#325](https://github.com/hhavynn/vsa-website/issues/325)) and [`docs/FIRST-TIME-SETUP.md`](FIRST-TIME-SETUP.md) for contributors new to git and the terminal.
+
+**What remains:** hand [#326](https://github.com/hhavynn/vsa-website/issues/326) (from-zero verification) to the new contributor — they're the only person who can genuinely test a clean setup, and it's their first hour anyway. #324 stays open for confirming Vercel's Node version; #325 stays open until someone has actually launched a Codespace from the devcontainer.
 
 ### #219 and #299 — Two standing security/cost gaps
 
