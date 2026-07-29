@@ -26,12 +26,12 @@ description: Load when setting up the VSA website dev environment from scratch, 
 
 | Source | Says |
 |---|---|
-| `README.md` ("Prerequisites") | Node.js 18+ |
-| `.github/workflows/deploy.yml` (`NODE_VERSION: '20'`, line 17) | CI lints/tests/builds on Node 20 |
-| `.github/workflows/migrate-images.yml`, `migrate-event-images.yml` | Node 20 |
-| `Dockerfile` (line 2) | `node:18-alpine` (container build only) |
+| `README.md` ("Prerequisites") | Node.js 18+ — stale, predates the 22 alignment |
+| `.github/workflows/deploy.yml` (`NODE_VERSION: '22'`, line 17) | CI lints/tests/builds on Node 22 |
+| `.github/workflows/migrate-images.yml`, `migrate-event-images.yml` | Node 22 |
+| `Dockerfile` (line 2) | `node:22-alpine` (container build only) |
 
-**Recommendation: use Node 20** — it is what CI runs, so a build that passes locally on 20 matches the gate. There is no `.nvmrc` or `engines` field in `package.json` (verified 2026-07-06), so nothing enforces this locally; check with `node --version`.
+**Use Node 22** — CI, `.nvmrc`, `engines`, the Dockerfile, and the devcontainer all agree as of 2026-07-29 (#324). `.nvmrc` exists, so `nvm use` inside the repo resolves it; `engines: ">=22"` makes npm warn on a mismatch (advisory, not enforced). Verified 2026-07-29 on Node 22.22.2: `npm ci`, `npm run build`, `npm run lint`, and all 15 test suites / 126 tests pass.
 
 ### 1.2 Install dependencies
 
@@ -50,7 +50,7 @@ Do NOT run `npm audit fix --force` or upgrade `typescript`/`react-scripts` casua
 cp .env.example .env.local
 ```
 
-**TRAP:** `.env.example` (as of 2026-07-06) does NOT contain `REACT_APP_SUPABASE_ANON_KEY` — it only has `REACT_APP_SUPABASE_URL` plus analytics vars. You must add the anon key line yourself or the app will crash on boot (see section 2). Final `.env.local` for normal development:
+**Fixed 2026-07-29:** `.env.example` previously omitted `REACT_APP_SUPABASE_ANON_KEY`, so copying it produced an app that crashed on boot. It now lists both required vars and marks them as required. Final `.env.local` for normal development:
 
 ```env
 REACT_APP_SUPABASE_URL=https://<project-ref>.supabase.co
@@ -141,7 +141,7 @@ supabase secrets set GEMINI_API_KEY=<key>
 | Tests default to watch mode | `npm test` is CRA watch mode; CI runs `CI=true npm test -- --coverage --watchAll=false` (deploy.yml line 42) | A bare `npm test` hangs an agent/CI session forever | Always `CI=true npm test -- --watchAll=false` in non-interactive contexts |
 | `.env.example` is incomplete | Missing `REACT_APP_SUPABASE_ANON_KEY` line (section 1.3) | `Missing Supabase environment variables` crash on boot after a faithful `cp` | Add the anon key line manually |
 | Env vars baked at build time | CRA inlines `REACT_APP_*` during build; Docker bakes them via build `ARG`s | Editing `.env.local` does nothing to a running dev server or an existing Docker image | Restart `npm start` / rebuild the image |
-| Node version mismatch across sources | README 18+, CI 20, Dockerfile 18-alpine | Local-vs-CI build differences | Use Node 20 locally |
+| Node version mismatch across sources | RESOLVED 2026-07-29 — CI, `.nvmrc`, `engines`, Dockerfile, devcontainer all say 22 | Was a local-vs-CI build difference | `nvm use` in the repo root |
 | `npm install` rewrites the lockfile | `package-lock.json` churn in diffs | Noisy/unreviewable PRs | Use `npm ci` for clean envs; don't commit unintended lockfile changes |
 
 ---
@@ -150,7 +150,7 @@ supabase secrets set GEMINI_API_KEY=<key>
 
 ### 5.1 Optional: Docker/nginx local run
 
-Not needed for daily dev (`npm start` is faster); useful for verifying the production container. Multi-stage `Dockerfile` (node:18-alpine build → nginx:alpine serving `build/` with `nginx.conf`); `docker-compose.yml` maps host 3000 → container 80 and passes the two Supabase vars as build args:
+Not needed for daily dev (`npm start` is faster); useful for verifying the production container. Multi-stage `Dockerfile` (node:22-alpine build → nginx:alpine serving `build/` with `nginx.conf`); `docker-compose.yml` maps host 3000 → container 80 and passes the two Supabase vars as build args:
 
 ```bash
 REACT_APP_SUPABASE_URL=... REACT_APP_SUPABASE_ANON_KEY=... docker compose up --build

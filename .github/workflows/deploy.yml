@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   REGISTRY: ghcr.io
   IMAGE_NAME: hhavynn/vsa-website
 
@@ -54,6 +54,10 @@ jobs:
     permissions:
       security-events: write
       contents: read
+      # Required by github/codeql-action/upload-sarif to look up the workflow
+      # run. Without it the upload fails with:
+      #   "Resource not accessible by integration - .../workflow-runs"
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

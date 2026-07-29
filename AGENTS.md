@@ -105,7 +105,7 @@ cp .env.example .env.local
 # Fill in:
 #   REACT_APP_SUPABASE_URL=
 #   REACT_APP_SUPABASE_ANON_KEY=
-#   REACT_APP_OPENAI_API_KEY=   # optional — AI assistant feature
+#   (those two are the only required vars; never put an API key in a REACT_APP_* var — they ship in the public bundle)
 
 # 3. Start dev server
 npm start          # http://localhost:3000

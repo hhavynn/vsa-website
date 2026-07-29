@@ -25,7 +25,7 @@ Member account self-service (`/profile`) is intentionally parked for this releas
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22 (see `.nvmrc` — run `nvm use` in the repo root)
 - npm
 - A Supabase project (for local development against real data)
 

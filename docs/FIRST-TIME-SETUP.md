@@ -72,7 +72,7 @@ Use the email tied to your GitHub account so your commits link to your profile.
 
 ### Node
 
-Node runs JavaScript outside a browser. This project needs **version 20** — newer isn't better here, it will break the build.
+Node runs JavaScript outside a browser. This project uses **version 22** — the same version CI builds with, so a build that passes on your machine matches the one that runs on GitHub.
 
 Rather than installing Node directly, install **nvm**, which lets you switch versions per project. Real projects pin different versions; this will come up again.
 
@@ -82,22 +82,22 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 ```
 Then **close and reopen your terminal**, and run:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 **Windows:** install [nvm-windows](https://github.com/coreybutler/nvm-windows/releases) (`nvm-setup.exe`), reopen the terminal, then:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 Verify:
 ```bash
-node --version    # should print v20.something
+node --version    # should print v22.something
 ```
 
-> This repo has a `.nvmrc` file containing `20`. In a project with one, `nvm use` picks the right version automatically — no need to remember.
+> This repo has a `.nvmrc` file containing `22`. In a project with one, running `nvm use` inside the project folder picks the right version automatically — no need to remember it.
 
 ### VS Code
 
@@ -270,7 +270,7 @@ Most problems have been hit before and written down.
 |---|---|
 | `Missing Supabase environment variables` | `.env.local` is missing, misnamed, or missing a variable. It must be in the project root. |
 | Changes don't show up | Restart `npm start` — env vars are only read at startup. |
-| `npm ci` fails | Check `node --version` is 20. If not, `nvm use 20`. |
+| `npm ci` fails | Check `node --version` is 22. If not, `nvm use 22`. |
 | `command not found: npm` | Node isn't installed or the terminal needs reopening. |
 | Tests fail with `Unexpected token 'export'` | Known issue — see `.claude/skills/vsa-build-and-env/`. |
 | Permission denied when pushing | The invite wasn't accepted, or you need to authenticate — see the clone step. |

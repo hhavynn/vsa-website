@@ -23,7 +23,7 @@ description: Load when running or deploying the VSA website, or operating its pr
 
 ## 1. Local run
 
-`npm start` serves the CRA (Create React App) dev server on `http://localhost:3000`. `npm run build` emits a static bundle into `build/` (`npm run build:production` is an identical alias — both run `react-scripts build`, see `package.json`). Both need `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` in `.env.local`; without them the app boots into degraded mode or errors — see `vsa-build-and-env` for the from-zero runbook and setup traps. An optional Docker path exists (`Dockerfile`: node:18-alpine build stage → nginx stage serving `build/` on port 80 with an SPA `try_files $uri $uri/ /index.html` fallback in `nginx.conf`; `docker-compose.yml` wraps it) — useful for a local prod-like check, **not** part of the production deploy path (see §2).
+`npm start` serves the CRA (Create React App) dev server on `http://localhost:3000`. `npm run build` emits a static bundle into `build/` (`npm run build:production` is an identical alias — both run `react-scripts build`, see `package.json`). Both need `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` in `.env.local`; without them the app boots into degraded mode or errors — see `vsa-build-and-env` for the from-zero runbook and setup traps. An optional Docker path exists (`Dockerfile`: node:22-alpine build stage → nginx stage serving `build/` on port 80 with an SPA `try_files $uri $uri/ /index.html` fallback in `nginx.conf`; `docker-compose.yml` wraps it) — useful for a local prod-like check, **not** part of the production deploy path (see §2).
 
 ```bash
 npm start                        # dev server on :3000
