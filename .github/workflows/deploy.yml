@@ -48,37 +48,42 @@ jobs:
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
 
   # Security Scanning
+  #
+  # This repository is PRIVATE, and SARIF upload to a private repo requires
+  # GitHub Code Security (Advanced Security), which needs GitHub Team or
+  # Enterprise. So `github/codeql-action/upload-sarif` could never succeed here
+  # — it failed every run with a code-scanning-not-enabled error.
+  #
+  # There was also a `codeql-action/init` step with no matching `analyze` step,
+  # so it built a CodeQL database that nothing ever analysed. Between the two,
+  # this job produced no security findings at all.
+  #
+  # Trivy now reports to the job log instead. To restore Security-tab
+  # integration, either make the repo public or add GitHub Code Security, then
+  # re-add: `security-events: write` + `actions: read` permissions, Trivy
+  # `format: sarif` with `output:`, and a `codeql-action/upload-sarif` step.
+  # For real CodeQL scanning you additionally need an `analyze` step.
   security:
     runs-on: ubuntu-latest
     needs: test
     permissions:
-      security-events: write
       contents: read
-      # Required by github/codeql-action/upload-sarif to look up the workflow
-      # run. Without it the upload fails with:
-      #   "Resource not accessible by integration - .../workflow-runs"
-      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'trivy-results.sarif'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          # Report only. The CRA dependency tree currently carries dozens of
+          # HIGH/CRITICAL transitive advisories, so failing on them would make
+          # CI permanently red without telling anyone anything new. Choosing a
+          # threshold to actually gate on is tracked in #230.
+          exit-code: '0'
 
   # Build and Push Docker Image
   build:
