@@ -283,6 +283,18 @@ If you're stuck for more than 20 minutes, **ask.** Include what you ran and the 
 
 ---
 
+## Working with AI agents
+
+This repo is set up so AI coding agents (Claude Code, Codex, Gemini CLI) can work on it safely — domain knowledge, specialist playbooks, guardrails, and a pre-built map of the codebase, **all committed to the repo**. You get it automatically when you clone.
+
+You don't have to use it. But it's genuinely the fastest way to learn this codebase, because you can ask it things like *"explain how points get from an event to the leaderboard"* and get a real answer.
+
+👉 **[Working with AI agents on this repo](ai/AGENT-TOOLCHAIN-SETUP.md)** — what's already here, what you install yourself, and how to use it.
+
+Read it after you've got the app running, not before.
+
+---
+
 ## Good first issues
 
 Look for the **`good first issue`** label. Some need no coding at all — auditing the site on your phone, testing it with a screen reader — and those are genuinely useful, not busywork.

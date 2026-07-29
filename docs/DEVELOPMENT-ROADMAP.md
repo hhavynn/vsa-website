@@ -128,9 +128,10 @@ To convert an epic: open it, find the **Sub-issues** panel, *Add existing issue*
 
 ### Before they start
 
-1. Invite them as a collaborator.
-2. Point them at [#295](https://github.com/hhavynn/vsa-website/issues/295) — writing the contributor guide **is** the onboarding. They learn the rules by documenting them, and the review corrects their understanding before they touch anything protected.
-3. Make sure they read `AGENTS.md` and skim the `.claude/skills/vsa-*` library. The governance here is unusually rich and not guessable.
+1. Invite them as a collaborator (the repo is private — they can't clone until they accept).
+2. Send them [`docs/FIRST-TIME-SETUP.md`](FIRST-TIME-SETUP.md). It assumes no prior git or terminal experience and explains why each step exists.
+3. Then [`docs/ai/AGENT-TOOLCHAIN-SETUP.md`](ai/AGENT-TOOLCHAIN-SETUP.md) — the agent skills, playbooks, and guardrails are all committed, so they work on a fresh clone. Only Superpowers, Impeccable, and the Graphify binary are per-machine installs.
+4. Make sure they read `AGENTS.md`. The governance here is unusually rich and not guessable — and asking an agent to explain the codebase is the fastest way in.
 
 ### Suggested first five issues, in order
 
