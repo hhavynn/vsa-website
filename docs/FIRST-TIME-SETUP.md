@@ -72,7 +72,7 @@ Use the email tied to your GitHub account so your commits link to your profile.
 
 ### Node
 
-Node runs JavaScript outside a browser. This project needs **version 20** — newer isn't better here, it will break the build.
+Node runs JavaScript outside a browser. This project uses **version 22** — the same version CI builds with, so a build that passes on your machine matches the one that runs on GitHub.
 
 Rather than installing Node directly, install **nvm**, which lets you switch versions per project. Real projects pin different versions; this will come up again.
 
@@ -82,22 +82,22 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 ```
 Then **close and reopen your terminal**, and run:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 **Windows:** install [nvm-windows](https://github.com/coreybutler/nvm-windows/releases) (`nvm-setup.exe`), reopen the terminal, then:
 ```bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 Verify:
 ```bash
-node --version    # should print v20.something
+node --version    # should print v22.something
 ```
 
-> This repo has a `.nvmrc` file containing `20`. In a project with one, `nvm use` picks the right version automatically — no need to remember.
+> This repo has a `.nvmrc` file containing `22`. In a project with one, running `nvm use` inside the project folder picks the right version automatically — no need to remember it.
 
 ### VS Code
 
@@ -187,12 +187,16 @@ Leave this running while you work. **`Ctrl + C`** stops it.
 ### The other commands
 
 ```bash
-npm test          # run the tests
-npm run lint      # check code style
-npm run build     # produce the production bundle
+CI=true npm test -- --watchAll=false    # run the tests once
+npm run lint                            # check code style
+npm run build                           # produce the production bundle
 ```
 
 Run all three before opening a pull request. CI runs them too, and a red PR won't get merged.
+
+> **Why the test command looks like that.** Plain `npm test` starts Jest in **watch mode** — it runs the tests, then sits there waiting for you to edit a file, and never exits. That's useful while you're actively writing tests, but it will look like your terminal has frozen. `CI=true ... --watchAll=false` runs everything once and exits, which is what you want before a PR.
+>
+> If you do end up stuck in watch mode: press `q` to quit, or `Ctrl + C`.
 
 ---
 
@@ -270,12 +274,24 @@ Most problems have been hit before and written down.
 |---|---|
 | `Missing Supabase environment variables` | `.env.local` is missing, misnamed, or missing a variable. It must be in the project root. |
 | Changes don't show up | Restart `npm start` — env vars are only read at startup. |
-| `npm ci` fails | Check `node --version` is 20. If not, `nvm use 20`. |
+| `npm ci` fails | Check `node --version` is 22. If not, `nvm use 22`. |
 | `command not found: npm` | Node isn't installed or the terminal needs reopening. |
 | Tests fail with `Unexpected token 'export'` | Known issue — see `.claude/skills/vsa-build-and-env/`. |
 | Permission denied when pushing | The invite wasn't accepted, or you need to authenticate — see the clone step. |
 
 If you're stuck for more than 20 minutes, **ask.** Include what you ran and the exact error text. Being stuck is not a failure state; staying quiet about it is the only real mistake.
+
+---
+
+## Working with AI agents
+
+This repo is set up so AI coding agents (Claude Code, Codex, Gemini CLI) can work on it safely — domain knowledge, specialist playbooks, guardrails, and a pre-built map of the codebase, **all committed to the repo**. You get it automatically when you clone.
+
+You don't have to use it. But it's genuinely the fastest way to learn this codebase, because you can ask it things like *"explain how points get from an event to the leaderboard"* and get a real answer.
+
+👉 **[Working with AI agents on this repo](ai/AGENT-TOOLCHAIN-SETUP.md)** — what's already here, what you install yourself, and how to use it.
+
+Read it after you've got the app running, not before.
 
 ---
 

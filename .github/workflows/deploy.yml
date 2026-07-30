@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   REGISTRY: ghcr.io
   IMAGE_NAME: hhavynn/vsa-website
 
@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -48,33 +48,42 @@ jobs:
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
 
   # Security Scanning
+  #
+  # This repository is PRIVATE, and code scanning (SARIF upload, the Security
+  # tab, CodeQL results) is not available on private repos without a paid plan.
+  # The previous `codeql-action/upload-sarif` step therefore failed every run.
+  # There was also a `codeql-action/init` with no matching `analyze` step, so it
+  # built a CodeQL database nothing consumed. Between them, this job produced no
+  # security findings at all.
+  #
+  # Decision (owner, 2026-07-29): not worth paying for. Trivy reports to the job
+  # log instead — free, and enough for a project this size.
+  #
+  # If this repo is ever made PUBLIC, code scanning becomes free: re-add
+  # `security-events: write` + `actions: read`, switch Trivy back to
+  # `format: sarif` with `output:`, and add a `codeql-action/upload-sarif` step.
+  # Real CodeQL scanning would also need an `analyze` step, which never existed.
   security:
     runs-on: ubuntu-latest
     needs: test
     permissions:
-      security-events: write
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
+        uses: actions/checkout@v5
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          # Report only. The CRA dependency tree currently carries dozens of
+          # HIGH/CRITICAL transitive advisories, so failing on them would make
+          # CI permanently red without telling anyone anything new. Choosing a
+          # threshold to actually gate on is tracked in #230.
+          exit-code: '0'
 
   # Build and Push Docker Image
   build:
@@ -86,13 +95,13 @@ jobs:
       packages: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -100,7 +109,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -110,7 +119,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -129,7 +138,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check for Vercel secrets
         id: check-vercel
@@ -144,7 +153,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.check-vercel.outputs.vercel-available == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
 

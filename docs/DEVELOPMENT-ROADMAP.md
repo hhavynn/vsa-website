@@ -56,14 +56,16 @@ Calendar-bound. The academic year rolls over in September, and the site currentl
 
 Start: [#267](https://github.com/hhavynn/vsa-website/issues/267) (inventory), [#263](https://github.com/hhavynn/vsa-website/issues/263) (the nav label — small, urgent), [#271](https://github.com/hhavynn/vsa-website/issues/271) (launch checklist, **rehearsed** against a preview environment).
 
-### #314 — Contributor environment, before anyone is invited
+### #314 — Contributor environment
 
-Two verified blockers make the documented setup path fail:
+The two blockers that made the documented setup path fail are **fixed** (2026-07-29):
 
-- **`.env.example` omits `REACT_APP_SUPABASE_ANON_KEY`** ([#323](https://github.com/hhavynn/vsa-website/issues/323)). It's required — copy the file as instructed and the app throws `Missing Supabase environment variables`.
-- **Node version disagrees three ways** ([#324](https://github.com/hhavynn/vsa-website/issues/324)): CI pins 20, `Dockerfile` uses `node:18-alpine`, and there is no `.nvmrc` or `engines` field.
+- ✅ **`.env.example` was missing `REACT_APP_SUPABASE_ANON_KEY`** ([#323](https://github.com/hhavynn/vsa-website/issues/323), closed) — copying the file as documented produced an app that threw `Missing Supabase environment variables`. The file now marks both required vars and warns that `REACT_APP_*` ships in the public bundle.
+- ✅ **Node disagreed three ways** ([#324](https://github.com/hhavynn/vsa-website/issues/324)) — CI said 20, `Dockerfile` said 18, nothing else said anything. Everything is now on **Node 22**: `.nvmrc`, `engines`, `deploy.yml`, both image-migration workflows, `Dockerfile`, and the devcontainer. Verified on 22.22.2 — `npm ci`, lint, 126 tests, and build all pass.
 
-Fix both before the first invite. Then hand [#326](https://github.com/hhavynn/vsa-website/issues/326) (from-zero verification) to the new contributor — they're the only person who can genuinely test it.
+Also landed: `.devcontainer/devcontainer.json` ([#325](https://github.com/hhavynn/vsa-website/issues/325)) and [`docs/FIRST-TIME-SETUP.md`](FIRST-TIME-SETUP.md) for contributors new to git and the terminal.
+
+**What remains:** hand [#326](https://github.com/hhavynn/vsa-website/issues/326) (from-zero verification) to the new contributor — they're the only person who can genuinely test a clean setup, and it's their first hour anyway. #324 stays open for confirming Vercel's Node version; #325 stays open until someone has actually launched a Codespace from the devcontainer.
 
 ### #219 and #299 — Two standing security/cost gaps
 
@@ -126,9 +128,10 @@ To convert an epic: open it, find the **Sub-issues** panel, *Add existing issue*
 
 ### Before they start
 
-1. Invite them as a collaborator.
-2. Point them at [#295](https://github.com/hhavynn/vsa-website/issues/295) — writing the contributor guide **is** the onboarding. They learn the rules by documenting them, and the review corrects their understanding before they touch anything protected.
-3. Make sure they read `AGENTS.md` and skim the `.claude/skills/vsa-*` library. The governance here is unusually rich and not guessable.
+1. Invite them as a collaborator (the repo is private — they can't clone until they accept).
+2. Send them [`docs/FIRST-TIME-SETUP.md`](FIRST-TIME-SETUP.md). It assumes no prior git or terminal experience and explains why each step exists.
+3. Then [`docs/ai/AGENT-TOOLCHAIN-SETUP.md`](ai/AGENT-TOOLCHAIN-SETUP.md) — the agent skills, playbooks, and guardrails are all committed, so they work on a fresh clone. Only Superpowers, Impeccable, and the Graphify binary are per-machine installs.
+4. Make sure they read `AGENTS.md`. The governance here is unusually rich and not guessable — and asking an agent to explain the codebase is the fastest way in.
 
 ### Suggested first five issues, in order
 
@@ -168,15 +171,31 @@ Issues on this board are written to be agent-ready: each carries acceptance crit
 
 ### ⚠️ Before assigning anything
 
-**`main` has no branch protection.** `AGENTS.md` L258 states this plainly: CI runs on every PR but "is **not a protected merge gate** … nothing mechanically blocks merging a red PR."
+**`main` has no branch protection, and on this repo it may not be possible to add any.** `AGENTS.md` L258 states the situation: CI runs on every PR but "is **not a protected merge gate** … nothing mechanically blocks merging a red PR."
 
-One careful human on an unprotected `main` is manageable. Several AI agents opening PRs against it is not. Verify and fix first:
+This repo is **private**, and on GitHub Free, branch protection and rulesets are **public-repo only** — private repos need GitHub Pro (personal) or Team (organization). So `.github/CODEOWNERS` currently auto-requests review but gates nothing.
 
 ```bash
 gh api repos/hhavynn/vsa-website/branches/main/protection   # 404 = unprotected
 ```
 
-Enable: require the `test` job to pass, require one approving review, and require review from Code Owners so `.github/CODEOWNERS` becomes a real gate rather than a suggestion.
+Three honest options:
+
+| Option | Cost | Effect |
+|---|---|---|
+| **Make the repo public** | free | Branch protection, rulesets, CODEOWNERS enforcement, code scanning and secret scanning all become available |
+| **GitHub Pro** | ~$4/mo | Branch protection + CODEOWNERS enforcement on the private repo. Code scanning still needs Team/Enterprise |
+| **Stay as-is** | free | No mechanical gate. Review discipline is a human convention |
+
+The owner's decision (2026-07-29) was **not to pay**, so the third option is in effect unless the repo goes public.
+
+**What that means in practice:** nothing stops a red PR — or an AI agent's PR touching a protected domain — from being merged. Until that changes, treat these as manual rules:
+
+- Don't merge a PR with a red `test` job.
+- Read the diff on anything matching a path in `.github/CODEOWNERS`, especially points, attendance, House membership, leaderboard, and migrations.
+- Never let an unattended agent merge its own work.
+
+The `gated:change-control` and `blocked:external` labels exist precisely because the platform isn't enforcing anything here.
 
 ### How each agent receives work
 

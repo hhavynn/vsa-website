@@ -14,12 +14,26 @@
 # file is the mechanical enforcement of a subset of it. If the two ever
 # disagree, AGENTS.md wins and this file is wrong.
 #
-# NOTE: CODEOWNERS only *requests* review by default. It becomes a real
-# gate when branch protection on `main` enables "Require review from Code
-# Owners". As of the last check, `main` had no branch protection at all
-# (AGENTS.md L258) — verify with:
+# ⚠️  READ THIS BEFORE RELYING ON IT: this file is currently ADVISORY ONLY.
+#
+# CODEOWNERS only *requests* review. It becomes an actual merge gate via
+# branch protection ("Require review from Code Owners") — and on a PRIVATE
+# repository, branch protection and rulesets require a paid plan (GitHub Pro
+# for a personal account; Team for an organization). On GitHub Free they are
+# public-repo only.
+#
+# So right now this file documents ownership and auto-requests review. It
+# does NOT stop anyone — human or AI agent — from merging a change to any
+# path below. Treat review of these paths as a convention you enforce by
+# hand, not something the platform enforces for you.
+#
+# It becomes a real gate, with no edits needed here, if either:
+#   - the repository is made public (branch protection is then free), or
+#   - the account moves to a plan that includes it.
+#
+# Verify current state:
 #   gh api repos/hhavynn/vsa-website/branches/main/protection
-# A 404 means this file is advisory only.
+# A 404 means unprotected — this file is advisory.
 
 # ---------------------------------------------------------------------
 # Default — everything else needs no specific owner

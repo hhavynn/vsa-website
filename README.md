@@ -25,11 +25,19 @@ Member account self-service (`/profile`) is intentionally parked for this releas
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22 (see `.nvmrc` — run `nvm use` in the repo root)
 - npm
 - A Supabase project (for local development against real data)
 
 ## Getting Started
+
+> **New to git, the terminal, or contributing through GitHub?** Start with
+> **[docs/FIRST-TIME-SETUP.md](docs/FIRST-TIME-SETUP.md)** — it walks through the same steps
+> from zero and explains why each one exists.
+>
+> **Working with AI agents?** See
+> **[docs/ai/AGENT-TOOLCHAIN-SETUP.md](docs/ai/AGENT-TOOLCHAIN-SETUP.md)** — the skills,
+> playbooks, and guardrails are committed to this repo and work out of the box.
 
 ### 1. Install dependencies
 
