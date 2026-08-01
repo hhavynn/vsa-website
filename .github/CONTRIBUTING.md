@@ -47,6 +47,15 @@ The full list is in `AGENTS.md` under "Things to never do." A few that trip up n
 
 `<scope>/<short-description>`, e.g. `feat/event-end-date`, `fix/house-leaderboard`, `chore/audit-content`. AI-agent branches are prefixed by agent (`claude/…`, `codex/…`, `gemini/…`, `antigravity/…`).
 
+## Dependencies and the lockfile
+
+- **Use `npm ci` for setup and in CI** — it installs from `package-lock.json` exactly and never modifies it. Use `npm install` only when you are intentionally changing which packages are installed.
+- **Lockfile changes go in their own commit**, never mixed into a feature diff. A PR that changes `package-lock.json` alongside feature code makes the lockfile diff unreviable.
+- **Adding a dependency requires explicit justification** — small, actively maintained, and worth the bundle cost. See issue #300 for bundle-size tracking. `AGENTS.md` prohibits adding heavy dependencies without explicit justification.
+- **Never run `npm run eject`** — ejecting CRA is permanent and irreversible (`AGENTS.md`: "Things to never do").
+- **Major upgrades of `react-scripts`, `react-query`, `typescript`, or `tailwindcss` are `vsa-change-control` items** (see issue #301) — they are high-risk framework changes and must never happen casually. Follow the `vsa-change-control` gating path documented in `AGENTS.md`.
+- **Dependabot** (issue #230, not yet merged) will open automated dependency-bump PRs when that work lands. Merging a Dependabot PR is a judgement call — read the diff, check the changelog, and verify CI passes before merging.
+
 ## Dual points systems
 
 There are **two coexisting points/attendance systems** in this codebase: the public leaderboard (`member_event_attendance` + `events` + `academic_terms`) and authenticated check-ins (`event_attendance` + `user_points`). This is a known, deliberate (if temporary) split — consolidating them is documented future work, not a bug to "fix" in passing. Read `docs/leaderboard-system.md` before touching either one.
