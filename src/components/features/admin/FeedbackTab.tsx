@@ -126,9 +126,9 @@ const FeedbackTab: React.FC = () => {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const { error } = await (supabase as any).from('feedback').update({ status: newStatus }).eq('id', id);
+      const { error } = await supabase.from('feedback').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
-      toast.success(`Marked as ${FEEDBACK_STATUS_LABELS[newStatus as keyof typeof FEEDBACK_STATUS_LABELS].toLowerCase()}`);
+      toast.success(`Marked as ${FEEDBACK_STATUS_LABELS[newStatus].toLowerCase()}`);
       fetchFeedbacks();
     } catch (error) {
       console.error('Error updating feedback status:', error);
