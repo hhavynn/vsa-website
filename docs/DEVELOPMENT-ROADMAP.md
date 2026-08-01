@@ -86,6 +86,8 @@ Also landed: `.devcontainer/devcontainer.json` ([#325](https://github.com/hhavyn
 
 **Agent routing:** `agent:claude` · `agent:codex` · `agent:antigravity` — see §6.
 
+**Milestones:** see §10.
+
 ### `blocked:external`
 
 VSA's real workflow is: the responsible chair drafts a form → it's approved → a release date is set → it goes out as an Instagram post. Site work that depends on that chain **cannot be finished on engineering time alone**, no matter the priority.
@@ -282,3 +284,49 @@ Stated plainly so nobody mistakes the backlog for a complete picture:
 - **Effort not estimated.** Priorities reflect impact and urgency, not cost. Add a `Size` field during grooming.
 - **`secure-ai` Edge Function** — its relationship to `vsa-ai-assistant` is unclear from source; [#229](https://github.com/hhavynn/vsa-website/issues/229) resolves whether it's live or vestigial.
 - **Feature issues (#215, #216) are proposals, not commitments.** Several may already be partly built — `EventRecapEditor.tsx` and `ThisWeekInVSA.tsx` in particular. Read before building.
+
+---
+
+## 10. Milestones
+
+Five milestones covering all 125 issues (#205–#329), closed ones included. They answer *"what are we working toward next"* — the epics already answer *"what is this about"*, so milestones are deliberately time- and goal-shaped rather than another category axis.
+
+**These must be created by hand** (Issues → Milestones → New milestone). Milestone numbers are assigned sequentially, so **create them in exactly this order** or the mapping below won't line up.
+
+| # | Milestone | Due | Goal |
+|---|---|---|---|
+| 1 | **Contributor onboarding** | ASAP | A new contributor can clone, run, and ship a first PR without help |
+| 2 | **September rollover** | 2026-09-01 | The site flips to the new academic year without a developer |
+| 3 | **Safety net — testing & security** | — | Invariants enforced by CI rather than by memory |
+| 4 | **Product polish — mobile, nav, a11y, perf** | — | The student-facing experience is good on a phone and usable by everyone |
+| 5 | **Tooling & features** | — | Admin DX, new features, and the AI/agentic workflow |
+
+Milestones 1 and 2 are the only ones with real deadlines. 3 is the highest-leverage. 4 and 5 are ongoing.
+
+### Issue → milestone mapping
+
+**M1 — Contributor onboarding** (12)
+`230` `236` `295` `307` `314` `323`✅ `324` `325` `326` `327`✅ `328` `329`
+
+**M2 — September rollover** (15)
+`213` `214` `239` `263` `267` `268` `269` `270` `271` `272` `273` `274` `275` `276` `277`
+
+**M3 — Safety net: testing & security** (22)
+`205` `206` `217` `219` `220` `221` `222` `223` `224` `225` `226` `227` `228` `229` `232` `290` `291` `292` `293` `294` `296` `310`
+
+**M4 — Product polish** (33)
+`209` `212` `218` `231` `242` `243` `244` `245` `246` `247` `248` `249` `261` `262` `264` `265` `266` `297` `298` `299` `300` `301` `302` `303` `313` `315` `316` `317` `318` `319` `320` `321` `322`
+
+**M5 — Tooling & features** (43)
+`207` `208` `210` `211` `215` `216` `233` `234` `235` `237` `238` `240` `241` `250` `251` `252`✅ `253` `254` `255` `256` `257` `258` `259` `260` `278` `279` `280` `281` `282` `283` `284` `285` `286` `287` `288` `289` `304` `305` `306` `308` `309` `311` `312`
+
+✅ = closed. The three closed issues are milestoned so the completed work still shows against its goal: [#323](https://github.com/hhavynn/vsa-website/issues/323) and [#327](https://github.com/hhavynn/vsa-website/issues/327) were part of getting the environment working (M1); [#252](https://github.com/hhavynn/vsa-website/issues/252) was closed as not planned but belongs to the admin-DX group (M5).
+
+### A note on where epics sit
+
+An epic carries the same milestone as the bulk of its children, so a milestone's progress bar tracks something real. Two epics are deliberately split from their children:
+
+- **#218** (performance/a11y) sits in M4 with its children, but its accessibility children moved to epic **#313**, which is also M4.
+- **#207** (auth) sits in M5, but its two security-shaped children — **#232** (session expiry tests) and **#235** (sign-in hardening) — are split: #232 → M3 with the other test work, #235 stays M5.
+
+Where a child's deadline differs from its epic's, the child's deadline wins. **#239** (stale Ask VSA knowledge) belongs to epic #208 in M5, but it has a September deadline, so it sits in M2.
