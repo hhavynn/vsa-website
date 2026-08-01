@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
@@ -414,6 +415,7 @@ function PublicMemberProfileModal({
 export function Leaderboard() {
   const { terms, loading: termsLoading } = useAcademicTerms();
   const { yearsWithData, loading: yearsWithDataLoading } = useLeaderboardYears();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [byPoints, setByPoints] = useState<LeaderboardEntry[]>([]);
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [houseStandings, setHouseStandings] = useState<HouseStanding[]>([]);
@@ -422,12 +424,47 @@ export function Leaderboard() {
   const [houseLoading, setHouseLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);
   const [isDegradedMode, setIsDegradedMode] = useState(false);
-  const [activeView, setActiveView] = useState<'individual' | 'houses'>('individual');
+  const [activeView, setActiveView] = useState<'individual' | 'houses'>(
+    searchParams.get('view') === 'houses' ? 'houses' : 'individual'
+  );
   const [activeTab, setActiveTab] = useState<'points' | 'events'>('points');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
   const [selectedMember, setSelectedMember] = useState<LeaderboardEntry | null>(null);
+
+  // Keep the view toggle in sync with the URL so a link to ?view=houses lands
+  // on the right tab, and switching tabs updates the URL for sharing.
+  const setView = useCallback(
+    (view: 'individual' | 'houses') => {
+      setActiveView(view);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (view === 'houses') {
+            next.set('view', 'houses');
+          } else {
+            next.delete('view');
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'houses' && activeView !== 'houses') {
+      setActiveView('houses');
+    } else if (view !== 'houses' && activeView !== 'individual') {
+      setActiveView('individual');
+    }
+    // Only react to external URL changes (e.g. back/forward, shared links);
+    // setView already updates activeView directly on user interaction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const academicYears = useMemo<AcademicYearOption[]>(() => {
     const years = new Map<number, AcademicYearOption>();
@@ -783,7 +820,7 @@ export function Leaderboard() {
               {(['individual', 'houses'] as const).map((view) => (
                 <button
                   key={view}
-                  onClick={() => setActiveView(view)}
+                  onClick={() => setView(view)}
                   className={`vsa-filter-btn px-6 py-2.5 font-bold transition-all ${activeView === view ? 'active scale-105 shadow-md' : ''}`}
                 >
                   {view === 'individual' ? 'Individual' : 'House'}
