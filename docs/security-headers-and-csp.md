@@ -10,9 +10,17 @@ The production Vercel configuration applies a small set of browser security head
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Sends the full referrer on same-origin requests, only the origin cross-origin, and no referrer on HTTPS-to-HTTP downgrades. |
 | `Permissions-Policy` | Disables accelerometer, Bluetooth, camera, geolocation, gyroscope, magnetometer, microphone, payment, and USB | Prevents the application and embedded content from requesting browser capabilities the site does not use. |
 | `X-Frame-Options` | `DENY` | Prevents the VSA site itself from being framed, reducing clickjacking risk. This does not prevent the site from embedding approved third-party media. |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Instructs browsers to use HTTPS for the current host and its subdomains for one year. `preload` is intentionally omitted. |
+| `Strict-Transport-Security` | `max-age=0` | Intentionally disables HSTS so browsers clear cached policies instead of pinning HTTPS for this host. This preserves UCSD captive-portal Wi-Fi compatibility; `preload` is deliberately omitted. |
 
 The global header route uses Vercel's `continue` behavior so the existing static-asset caching, `index.html` caching, filesystem handling, and SPA fallback routes continue to run unchanged. It remains in the legacy `routes` array to guarantee that the header rule executes before this project's legacy terminating SPA fallback.
+
+## HSTS decision
+
+HSTS is intentionally disabled as of PR #187, merged 2026-07-08. That PR changed `Strict-Transport-Security` to `max-age=0` after a cached one-year HSTS policy caused `net::ERR_CERT_AUTHORITY_INVALID` on `UCSD-GUEST` captive-portal Wi-Fi. Students were locked out because the browser rejected the captive portal's interception before the portal could complete.
+
+The tradeoff is known and accepted: the site does not receive HSTS protection against SSL-stripping or downgrade attacks while this header remains `max-age=0`.
+
+Revisit this only after proving that captive-portal detection still works, for example by validating a short, ramped `max-age` against campus Wi-Fi on a Vercel preview before promoting it. `preload` remains deliberately omitted.
 
 ## CSP rollout decision
 
