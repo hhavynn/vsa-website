@@ -1,0 +1,96 @@
+{
+  "issue": 219,
+  "reviewer": "claude-opus-5 (controller)",
+  "reviewed_at": "2026-08-01",
+  "base_sha": "dd2d585c0832f8bde0fa43334f11a3bc985c29d0",
+  "branch": "codex/issue-219-hsts-doc",
+  "decision": "approved",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "severity": "info",
+      "file": "docs/security-headers-and-csp.md",
+      "location": "line 15, 'legacy routes array' sentence",
+      "problem": "The doc still describes vercel.json as using a legacy `routes` array; it now uses a `headers` array.",
+      "why_it_matters": "Separate documentation drift, unrelated to HSTS.",
+      "required_outcome": "None here. Correctly left untouched - this is issue #220's scope. Combining it would mix two issues in one PR."
+    }
+  ],
+  "verification_performed": [
+    {
+      "check": "git diff --stat vs base",
+      "result": "1 file changed, 9 insertions(+), 1 deletion(-) - docs/security-headers-and-csp.md only",
+      "passed": true
+    },
+    {
+      "check": "git diff -- vercel.json (the critical constraint)",
+      "result": "empty (0 lines) - production header config provably unchanged",
+      "passed": true
+    },
+    {
+      "check": "git status --short",
+      "result": "only ' M docs/security-headers-and-csp.md' plus untracked .agent-handoff/ (never staged)",
+      "passed": true
+    },
+    {
+      "check": "Full diff read line by line against plan requirements",
+      "result": "HSTS row states max-age=0 and 'Intentionally disables HSTS'; new '## HSTS decision' section records PR #187, merged 2026-07-08, the ERR_CERT_AUTHORITY_INVALID / UCSD-GUEST captive-portal cause, the accepted SSL-stripping tradeoff, revisit conditions, and continued omission of preload. Mirrors the existing 'CSP rollout decision' section style as instructed.",
+      "passed": true
+    },
+    {
+      "check": "Non-goals respected",
+      "result": "vercel.json untouched; no preload added; CSP sections untouched; #220's legacy-routes drift left alone; no source, test, or migration files touched",
+      "passed": true
+    }
+  ],
+  "verification_not_performed": [
+    {
+      "command": "npm run lint",
+      "reason": "Lints TypeScript under src/. The diff touches zero TypeScript. Not run, and NOT claimed to pass."
+    },
+    {
+      "command": "npm test",
+      "reason": "Jest suite. The diff is a single markdown file and cannot affect test outcomes; the worktree also has no node_modules installed. Not run, and NOT claimed to pass."
+    },
+    {
+      "command": "npm run build",
+      "reason": "Markdown is not part of the build. Not run, and NOT claimed to pass."
+    },
+    {
+      "command": "curl -I on a Vercel preview",
+      "reason": "Acceptance criterion in #219 is conditional on raising max-age. No header value changed, so there is no header behavior to verify. N/A by design, not skipped."
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "criterion": "Determine whether max-age=0 was deliberate (git blame + owner confirmation), record in PR",
+      "met": true,
+      "evidence": "Commit ac484dbd / PR #187 'fix: clear HSTS max-age to prevent captive portal blocking', merged 2026-07-08T20:30:11Z by the repo owner, with an explicit written rationale. Recorded in the PR body."
+    },
+    {
+      "criterion": "Confirm every production subdomain serves valid HTTPS before raising max-age",
+      "met": true,
+      "evidence": "N/A - max-age is not being raised. Criterion is explicitly conditional."
+    },
+    {
+      "criterion": "If raising: ramp rather than jumping to a year",
+      "met": true,
+      "evidence": "N/A - not raising. The ramp requirement is preserved in the doc as the condition for any future revisit."
+    },
+    {
+      "criterion": "vercel.json and docs/security-headers-and-csp.md agree",
+      "met": true,
+      "evidence": "Doc now documents max-age=0, matching shipped vercel.json exactly."
+    },
+    {
+      "criterion": "Verified on a Vercel preview with curl -I before promoting",
+      "met": true,
+      "evidence": "N/A - no header value changed, so production response headers are bit-for-bit identical."
+    }
+  ],
+  "required_verification": [],
+  "ready_for_pr": true,
+  "high_risk": false,
+  "recommended_pr_state": "ready",
+  "pr_state_reasoning": "Documentation-only. No migrations, RLS, auth, admin authorization, member data, storage policies, secrets, or deployment configuration touched. vercel.json is provably unchanged, so production runtime behavior is identical."
+}

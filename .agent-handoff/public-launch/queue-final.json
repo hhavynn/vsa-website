@@ -1,0 +1,32 @@
+{
+  "completed": "2026-08-01",
+  "base_sha": "dd2d585c",
+  "total_audited": 8,
+  "outcomes": {
+    "pr_created": [219, 229, 356],
+    "blocked_external": [226, 353, 357, 359],
+    "relabeled_not_a_launch_blocker": [352],
+    "already_resolved": [],
+    "duplicate": [],
+    "obsolete": []
+  },
+  "prs": [
+    { "issue": 219, "pr": 360, "state": "ready", "ci": "test=pass security=pass", "closes_issue": true },
+    { "issue": 229, "pr": 361, "state": "draft", "ci": "test=pass security=pass", "closes_issue": false, "high_risk": true },
+    { "issue": 356, "pr": 362, "state": "ready", "ci": "test=pass security=pass", "closes_issue": false }
+  ],
+  "settings_changed_by_controller": [
+    "private_vulnerability_reporting: false -> true (prerequisite for SECURITY.md link to be live)"
+  ],
+  "corrections_issued": [
+    "Both trigger-* Edge Functions DO enforce inbound shared-secret auth (x-image-migration-secret, 401). Earlier claim of 'no inbound authorization' in #347/#352 was wrong - grep searched for Authorization/is_admin and missed a custom header. Corrections posted to #347 and #352; blocks:public-launch removed from #352."
+  ],
+  "pre_existing_defects_found": [
+    "deno check fails on origin/main with 14 type errors (SupabaseClient generics around logUsage). Verified identical on base and branch - not introduced. This is the gap #296 tracks."
+  ],
+  "worktrees_retained": [
+    "C:/Users/xiate/Documents/CS/vsa-worktrees/issue-219",
+    "C:/Users/xiate/Documents/CS/vsa-worktrees/issue-229",
+    "C:/Users/xiate/Documents/CS/vsa-worktrees/issue-356"
+  ]
+}

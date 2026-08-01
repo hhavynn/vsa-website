@@ -1,0 +1,89 @@
+{
+  "generated": "2026-08-01",
+  "base_sha": "dd2d585c0832f8bde0fa43334f11a3bc985c29d0",
+  "controller": "claude-opus-5",
+  "implementer": "codex-cli 0.146.0",
+  "preflight": {
+    "repo_root": "C:/Users/xiate/Documents/CS/vsa-website",
+    "remote": "https://github.com/hhavynn/vsa-website.git",
+    "codex_installed_this_session": true,
+    "codex_noninteractive_cmd": "codex exec --cd <worktree> -s danger-full-access --color never -o <outfile> <prompt>",
+    "codex_auth": "Logged in using ChatGPT",
+    "sandbox_note": "Default Windows sandbox runner fails with CreateProcessAsUserW error 5 (Access is denied) for ALL child processes. -s danger-full-access is required for Codex to run any shell command. Work is confined to per-issue git worktrees.",
+    "gh_auth": "hhavynn, scopes: gist read:org repo workflow (missing read:project/project)",
+    "node": "v22.18.0",
+    "npm": "10.9.3"
+  },
+  "queue": [
+    {
+      "number": 219,
+      "title": "Fix HSTS: vercel.json ships max-age=0 while docs specify a 1-year policy",
+      "priority": 1,
+      "category": "security-transport",
+      "status": "in_progress",
+      "finding": "max-age=0 was DELIBERATE. Commit ac484dbd / PR #187 (merged 2026-07-08) set it to fix UCSD-GUEST captive portal lockout (ERR_CERT_AUTHORITY_INVALID). Issue premise is inverted: config is correct, doc is stale.",
+      "decision": "Do NOT raise max-age. Update docs/security-headers-and-csp.md to match config and record the dated rationale. Issue explicitly prescribes this branch.",
+      "worktree": "C:/Users/xiate/Documents/CS/vsa-worktrees/issue-219",
+      "branch": "codex/issue-219-hsts-doc",
+      "depends_on": []
+    },
+    {
+      "number": 229,
+      "title": "Audit Edge Function secret handling and CORS across all 5 functions",
+      "priority": 2,
+      "category": "security-authz",
+      "status": "pending",
+      "notes": "trigger-* inbound caller authorization unverified. analytics-proxy sends ACAO '*'. Blocks #352 conceptually (secure-ai vestigial determination).",
+      "depends_on": []
+    },
+    {
+      "number": 352,
+      "title": "Prevent denial of wallet on the four unrate-limited Edge Functions",
+      "priority": 3,
+      "category": "security-cost",
+      "status": "pending",
+      "notes": "One criterion depends on #229's secure-ai vestigial determination.",
+      "depends_on": [229]
+    },
+    {
+      "number": 226,
+      "title": "Re-audit what an anonymous visitor can read today",
+      "priority": 4,
+      "category": "security-exposure",
+      "status": "pending",
+      "notes": "Likely external blocker: needs live Supabase credentials to enumerate anon-reachable objects."
+    },
+    {
+      "number": 356,
+      "title": "Add SECURITY.md and enable private vulnerability reporting",
+      "priority": 5,
+      "category": "launch-content",
+      "status": "pending",
+      "notes": "SECURITY.md is a repo edit (Codex). Private vulnerability reporting is a GitHub settings toggle (not a repo edit)."
+    },
+    {
+      "number": 357,
+      "title": "Protect the main branch - CODEOWNERS is currently inert and main auto-deploys",
+      "priority": 6,
+      "category": "repo-settings",
+      "status": "pending",
+      "notes": "Core work is GitHub settings, not source. Solo-maintainer approval question needs owner decision."
+    },
+    {
+      "number": 359,
+      "title": "Decide the license, and settle the code-vs-content question",
+      "priority": 7,
+      "category": "needs-decision",
+      "status": "pending",
+      "notes": "Owner/legal decision. Not inferable from repository evidence. Likely blocked_external."
+    },
+    {
+      "number": 353,
+      "title": "[P0] Rotate the OpenAI API key exposed in public git history",
+      "priority": 8,
+      "category": "security-credential",
+      "status": "pending",
+      "notes": "Severity is P0 but the required action is a vendor credential operation only a human with OpenAI dashboard access can perform. Not a repo edit. Likely blocked_external; useful controller work = confirm whether secure-ai is vestigial so no key need be reissued."
+    }
+  ]
+}

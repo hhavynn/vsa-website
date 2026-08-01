@@ -1,0 +1,7 @@
+{
+  "issue": 329,
+  "outcome": "pr_created",
+  "detail": "Stacked as commit 93dab9e7 onto already-open PR #333 (branch codex/expand-contributing-guide), not a new PR.",
+  "revision_cycles_used": 0,
+  "implementer": "agy (claude-sonnet-4-6)"
+}
