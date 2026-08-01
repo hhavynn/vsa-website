@@ -15,6 +15,17 @@ Don't have Supabase credentials yet? Syntactically-valid placeholders (e.g. `htt
 
 For the full from-zero runbook and every known setup trap (CRA script wrapping, the Jest ESM allowlist, the pinned TypeScript version, and more) — load the `vsa-build-and-env` skill, or read `.claude/skills/vsa-build-and-env/SKILL.md` if you're not working in an environment with skills support.
 
+### Dev container (alternative setup)
+
+`.devcontainer/devcontainer.json` is an **alternative to local install, not a replacement**. It works in two environments:
+
+- **GitHub Codespaces** — open the repo on GitHub, click "Code → Codespaces → Create codespace." No local installation required; the browser (or VS Code connected to the Codespace) handles everything.
+- **VS Code Dev Containers** — clone locally, open in VS Code, and accept the "Reopen in Container" prompt (requires the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) and Docker).
+
+In both cases the container is pinned to **Node 22** (matching `.nvmrc`, the Dockerfile, and CI), runs `npm ci` automatically on creation, forwards **port 3000**, and preinstalls the ESLint, Prettier, and Tailwind CSS VS Code extensions.
+
+**Credentials in a Codespace:** never put Supabase values in `devcontainer.json` — it is committed. Set them as **Codespaces repository secrets** instead: Repo Settings → Secrets and variables → Codespaces → New repository secret, and add `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY`. Codespaces exposes those as environment variables, and Create React App reads `REACT_APP_*` straight from the environment — so no `.env.local` file is needed in a Codespace, and contributors never handle credentials directly.
+
 ## Protected domains
 
 Some parts of this codebase are **gated** or **forbidden to touch without an explicit request**, because they hold real production data for 600+ members. In plain terms:
