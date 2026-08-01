@@ -15,6 +15,16 @@ Don't have Supabase credentials yet? Syntactically-valid placeholders (e.g. `htt
 
 For the full from-zero runbook and every known setup trap (CRA script wrapping, the Jest ESM allowlist, the pinned TypeScript version, and more) — load the `vsa-build-and-env` skill, or read `.claude/skills/vsa-build-and-env/SKILL.md` if you're not working in an environment with skills support.
 
+### Platform verification status (issue #326)
+
+**Windows** — verified 2026-07-31 in both Git Bash and PowerShell on Node 22.18.0 / npm 10.9.3: `npm ci` (1419 packages, expected CRA transitive-advisory noise), `npm run lint` (exit 0, clean), `CI=true npm test -- --watchAll=false` (15 suites, 126 tests, all passed), and `npm run build` all succeeded. No workarounds were needed beyond the existing `node ./node_modules/react-scripts/bin/react-scripts.js` script wrapping — which is load-bearing and **must stay** (see below).
+
+**Linux** — continuously verified by CI: `.github/workflows/deploy.yml` runs `npm ci`, `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build` on `ubuntu-latest` for every PR to `main`.
+
+**macOS** — **not verified.** No team member or CI runner has done a fresh from-zero setup on macOS. If you are the first contributor to do so, please update this note with your Node version, any deviations, and the date.
+
+**Why the npm scripts wrap react-scripts in `node`** — all CRA scripts in `package.json` are `node ./node_modules/react-scripts/bin/react-scripts.js <cmd>` instead of bare `react-scripts <cmd>`. This is load-bearing: reverting to bare `react-scripts build` breaks the Vercel build with a bin-permission error (commits `96ba2eee` and `edd9c161`, "run react-scripts via node to bypass vercel bin permissions"; the `Dockerfile` needs `chmod +x node_modules/.bin/*` for the same reason). Do not "clean up" these scripts without first re-verifying the Vercel deploy path.
+
 ### Dev container (alternative setup)
 
 `.devcontainer/devcontainer.json` is an **alternative to local install, not a replacement**. It works in two environments:
