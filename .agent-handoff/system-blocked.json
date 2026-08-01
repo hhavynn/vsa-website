@@ -1,0 +1,13 @@
+{
+  "status": "resolved",
+  "component": "antigravity_cli",
+  "checked_at": "2026-08-01",
+  "resolution": "User authenticated agy (ran it interactively once). Re-verified: agy models returns a real model list (gemini-3.x, claude-sonnet-4-6, claude-opus-4-6-thinking, gpt-oss-120b). Smoke test in an isolated scratch dir succeeded: `agy -p \"Read hello.txt ... reply with exactly its contents\" --model claude-sonnet-4-6 --new-project --dangerously-skip-permissions --print-timeout 4m` returned the correct file contents, exit code 0.",
+  "operational_notes": [
+    "No --cwd flag exists (contrary to the originally-described invocation pattern). Scoping is via the process's actual working directory (Set-Location before invoking) plus --add-dir for extra directories.",
+    "An unqualified invocation (no --model, no --new-project) against a directory agy has never seen timed out after 5 minutes with 'Error: timeout waiting for response', exit 1. Explicit --model and --new-project resolved it. Always pass both.",
+    "Invocations should run backgrounded — even the trivial one-line smoke-test prompt took real wall-clock time.",
+    "agy agents / --agent refers to Antigravity's own internal named-agent presets (currently empty on this account), not this repo's .claude/agents/ playbooks. Playbooks are read as file content and included in the prompt, not selected via --agent."
+  ],
+  "not_done": "No source-code changes have been made under this workflow yet. #324 and #328 were closed with no code changes required. Real controller-loop issues (#325/#329/#326 doc additions, #236, #307, #230) start now."
+}

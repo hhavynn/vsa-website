@@ -1,0 +1,20 @@
+{
+  "issue": 329,
+  "decision": "approved",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "note": "The 'major upgrades are vsa-change-control items' claim cites issue #301, which covers react-scripts/TypeScript/react-query by title but does not explicitly name tailwindcss. Acceptable: the section frames this as a general high-risk-framework-change rule (consistent with the vsa-change-control skill's Gated tier), not as a fabricated fact about #301's scope specifically."
+    }
+  ],
+  "required_verification": [
+    "git diff --check -- .github/CONTRIBUTING.md : clean, re-run independently",
+    "grep -n \"npm run eject\" AGENTS.md -> line 286, exact match confirmed independently",
+    "grep -n \"heavy dependencies\" AGENTS.md -> line 280, exact match confirmed independently",
+    "grep -n \"npm ci\" .github/workflows/deploy.yml -> line 36, confirmed independently",
+    "gh api issues/300, issues/301 -> both real, topically match the citations",
+    "git status --short -> exactly one tracked file changed (.github/CONTRIBUTING.md); package-lock.json untouched"
+  ],
+  "ready_for_pr": true,
+  "pr_note": "Not a new PR - this stacks as an additional commit on the already-open PR #333 (branch codex/expand-contributing-guide), which is the correct target per the issue's own text (\"Best written by whoever does #295, since it's a section of the same file\")."
+}

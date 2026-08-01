@@ -1,0 +1,19 @@
+{
+  "issue": 325,
+  "agy_exit_code": 0,
+  "decision": "approved",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "note": "Acceptance criterion 'Verified in both VS Code Dev Containers and a Codespace' remains genuinely unmet — correctly disclosed rather than fabricated in antigravity-result.md and in the diff's framing. This is a real gap requiring a human with VS Code/a Codespace; it is not something this controller loop can close. Leaving the GitHub issue open with this noted rather than closing it."
+    }
+  ],
+  "required_verification": [
+    "grep devcontainer.json for image/postCreateCommand/forwardPorts/extensions -> all 5 claims match exactly, verified independently",
+    "git diff --check -- .github/CONTRIBUTING.md -> exit 0, clean",
+    "grep for leaked credential values (supabase.co, JWT eyJ prefix) in the diff -> none found, only pre-existing placeholder text",
+    "git status --short -> exactly one tracked file changed"
+  ],
+  "ready_for_pr": true,
+  "pr_note": "Stacks as an additional commit on already-open PR #333 (branch codex/expand-contributing-guide), consistent with #329's handling and the issue's own file-sharing note."
+}
