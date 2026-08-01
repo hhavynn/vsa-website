@@ -1,3 +1,6 @@
+// NOT a security boundary. This hook controls what renders in the browser (UX gate).
+// Real enforcement is Postgres RLS on the underlying tables — see docs/auth-model.md.
+// Never rely on this hook alone to protect sensitive data or API access.
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../lib/supabase';
