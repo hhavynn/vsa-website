@@ -1,28 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.22.4";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Required Supabase secrets:
 // supabase secrets set GEMINI_API_KEY="..."
 // supabase secrets set GEMINI_MODEL="gemini-3.1-flash-lite"
 // Deploy with: supabase functions deploy vsa-ai-assistant
-
-const allowedOrigins = new Set([
-  "https://www.vsaatucsd.com",
-  "https://vsaatucsd.com",
-  "http://localhost:3000",
-  "http://localhost:5173",
-]);
-
-function corsHeaders(req: Request) {
-  const origin = req.headers.get("origin") ?? "";
-  return {
-    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://www.vsaatucsd.com",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
-}
 
 const FALLBACK_MESSAGE =
   "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates.";
