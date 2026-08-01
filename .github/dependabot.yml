@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # npm — keep a two-person team's PR queue manageable by grouping routine
+  # minor/patch bumps into a single weekly PR; majors open individually so
+  # each breaking change gets a deliberate review.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions — pin updates surface as individual PRs (one action at a
+  # time) so they're easy to audit.  Weekly cadence matches npm above.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
