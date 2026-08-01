@@ -1,3 +1,7 @@
+// Protected domain — attendance import. This page writes to member_event_attendance
+// and creates member rows; changes here directly affect points and event history for
+// real members. Do not modify import logic unless explicitly requested.
+// Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';

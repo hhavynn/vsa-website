@@ -1,3 +1,8 @@
+// Protected domain — leaderboard and points calculation. Do not modify attendance
+// import, points calculation, House membership, or leaderboard calculation logic
+// unless explicitly requested. Two coexisting points systems exist; a "simple fix"
+// in one can silently corrupt the other. Authority: AGENTS.md § "Things to never do";
+// vsa-change-control § 1 (Forbidden tier); docs/leaderboard-system.md.
 import { supabase } from '../../lib/supabase';
 import { HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity, HouseYearlyPoints, MemberEventHistoryEntry, MemberHouseBadge, MemberYearlyPoints } from '../../types';
 import { withErrorHandling } from '../errors';

@@ -1,6 +1,11 @@
 /**
  * Public-safe static fallback content for key areas of the site.
  * Used only when Supabase is temporarily unavailable — never as admin source of truth.
+ *
+ * Public-bundle warning: CRA compiles everything under src/ into the client bundle.
+ * This file is readable by anyone who opens browser dev tools. Never add private,
+ * admin-only, or sensitive data here. Authority: AGENTS.md § "Things to never do"
+ * (don't expose private member data, emails, check-in codes, or admin notes publicly).
  */
 
 export const FALLBACK_LINKS = {

@@ -1,3 +1,7 @@
+// Application URL masking — closed or future application URLs must never be exposed
+// publicly. maskTargetUrl() here mirrors the SQL masking in the public_application_links
+// view; both must agree. Authority: AGENTS.md § "Domain-critical facts";
+// vsa-seasonal-operations § 2 (public_application_links view masking logic).
 import { ApplicationKey, ApplicationStatus } from '../types';
 
 // Ordered list of the application keys this MVP supports, with human-readable

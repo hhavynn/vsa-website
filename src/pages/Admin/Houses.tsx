@@ -1,3 +1,7 @@
+// Protected domain — House membership. This page writes to house_memberships and
+// updates members.house; errors here directly alter member-to-House associations
+// for the current year. Do not modify membership logic unless explicitly requested.
+// Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
