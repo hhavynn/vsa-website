@@ -1,3 +1,8 @@
+// Frozen historical data — do not casually refactor or re-seed. Legacy House seeding
+// previously clobbered current-year (2025-2026) House rows and required a restore
+// migration (20260601010000_restore_mario_house_assets.sql). Any future seed or
+// backfill must be conflict-preserving and must never touch current-year rows.
+// Authority: vsa-failure-archaeology entry 5; AGENTS.md § "Things to never do".
 export type LegacyHouseArchiveStatus = 'verified' | 'unconfirmed' | 'current';
 
 export interface LegacyHouseArchiveYear {

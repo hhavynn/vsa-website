@@ -1,9 +1,14 @@
 /**
  * officialPublicHousePoints2025_2026
- * 
+ *
  * These are the House Chair's official public 2025-2026 totals.
  * They override public display only and do not change calculated/admin values.
- * 
+ *
+ * Frozen historical data — do not "modernize" or refactor these values. The numbers
+ * here are official House Chair figures, not recalculated totals. Changing them
+ * changes what members see on the public leaderboard. Authority: vsa-failure-archaeology
+ * entry 5 (House-year content mix-ups); AGENTS.md § "Things to never do".
+ *
  * Official totals for 2025-2026:
  * - Bowser: 247
  * - Donkey Kong: 215

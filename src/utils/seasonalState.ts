@@ -1,3 +1,7 @@
+// Timezone and year-boundary sensitive. Summer-break boundaries (SUMMER_BREAK_START /
+// SUMMER_BREAK_END) are hardcoded month/day constants computed in America/Los_Angeles
+// time. Review and update them when the next academic year calendar is finalized, and
+// update seasonalState.test.ts in the same PR. Authority: vsa-seasonal-operations § 1.
 export const VSA_TIME_ZONE = 'America/Los_Angeles';
 
 const SUMMER_BREAK_START = { month: 6, day: 15 };

@@ -1,3 +1,7 @@
+// Year-boundary sensitive. getAcademicQuarter() and getAcademicYearStart() derive
+// quarter from the JavaScript Date's local month, not the America/Los_Angeles timezone
+// used in seasonalState.ts — be consistent when pairing these utilities across a
+// single user-facing date. Authority: vsa-seasonal-operations § 1.
 export type AcademicQuarter = 'fall' | 'winter' | 'spring' | 'summer';
 
 export interface AcademicTermMeta {

@@ -1,3 +1,7 @@
+// Sanctioned repo-layer deviation. The architecture rule is that all Supabase
+// access goes through src/data/repos/ — this hook is a deliberate exception because
+// it handles interactive check-in state that doesn't fit the standard repo pattern.
+// Do not copy this pattern elsewhere. Authority: AGENTS.md § "Things to never do".
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
