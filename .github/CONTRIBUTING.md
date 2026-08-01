@@ -77,6 +77,13 @@ The full list is in `AGENTS.md` under "Things to never do." A few that trip up n
 - **Major upgrades of `react-scripts`, `react-query`, `typescript`, or `tailwindcss` are `vsa-change-control` items** (see issue #301) — they are high-risk framework changes and must never happen casually. Follow the `vsa-change-control` gating path documented in `AGENTS.md`.
 - **Dependabot** (issue #230, not yet merged) will open automated dependency-bump PRs when that work lands. Merging a Dependabot PR is a judgement call — read the diff, check the changelog, and verify CI passes before merging.
 
+## Licensing expectations
+
+Code contributions to this repository are contributed under the MIT License for
+the software code. Do not commit third-party assets, member photographs, or other
+non-code content unless you have confirmed the rights needed for this public
+repository and documented any license or usage limits clearly in the PR.
+
 ## Dual points systems
 
 There are **two coexisting points/attendance systems** in this codebase: the public leaderboard (`member_event_attendance` + `events` + `academic_terms`) and authenticated check-ins (`event_attendance` + `user_points`). This is a known, deliberate (if temporary) split — consolidating them is documented future work, not a bug to "fix" in passing. Read `docs/leaderboard-system.md` before touching either one.

@@ -156,4 +156,7 @@ Serves the app at [http://localhost:3000](http://localhost:3000). This isn't req
 
 ## License
 
-No LICENSE file is currently checked into this repository.
+Original software code authored for this repository is licensed under the
+[MIT License](LICENSE). Non-code content is not MIT-licensed; see
+[NOTICE.md](NOTICE.md) for the code-vs-content boundary, including photographs,
+VSA name/logo/marks, site copy, archives, member data, and third-party assets.
