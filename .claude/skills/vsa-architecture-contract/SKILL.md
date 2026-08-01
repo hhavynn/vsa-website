@@ -27,7 +27,7 @@ Jargon used below — defined once: **CRA** = Create React App (the build toolin
 Browser
   └─ CRA SPA (React 18, TypeScript 4.9, react-router v6, react-query v3, Tailwind v3)
        ├─ reads/writes → Supabase (Postgres + Auth + Storage + Deno Edge Functions)
-       │     Edge Functions: analytics-proxy, secure-ai, trigger-event-image-migration,
+       │     Edge Functions: analytics-proxy, trigger-event-image-migration,
        │                     trigger-house-event-image-migration, vsa-ai-assistant
        └─ served by → Vercel static hosting (zero-config CRA build)
              vercel.json: security headers on all routes, immutable cache for /static,

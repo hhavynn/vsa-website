@@ -267,9 +267,10 @@ Secrets are **Supabase function secrets** read via `Deno.env.get(...)` inside `s
 | Function | Secrets used |
 |---|---|
 | `vsa-ai-assistant` | `GEMINI_API_KEY`, `GEMINI_MODEL` (optional override), `VSA_AI_ASSISTANT_ENABLED` (kill switch, `"false"` disables), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| `secure-ai` (legacy) | `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
 | `analytics-proxy` | `SUPABASE_URL`, `SUPABASE_ANON_KEY` |
 | `trigger-event-image-migration` / `trigger-house-event-image-migration` | `IMAGE_MIGRATION_WEBHOOK_SECRET`, `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`, `GITHUB_DISPATCH_EVENT_TYPE` / `GITHUB_DISPATCH_EVENT_TYPE_HOUSE` |
+
+Retired function note: `secure-ai` was removed from repo source in issue #353 after source search found no callers. It used `OPENAI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` historically, but no current `supabase/functions` code consumes `OPENAI_API_KEY`. Deleting the directory does not undeploy the function; production cleanup still requires deleting the deployed function and unsetting the secret.
 
 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` are injected by the platform. Functions holding the service-role key bypass RLS — treat their code as a security boundary, like a DEFINER function.
 
@@ -288,7 +289,7 @@ Behavior rules live in that prompt; volatile facts live in the `ai_knowledge_bas
 
 Written 2026-07-06 on branch `codex/reactbits-ui` (HEAD `368fbf63`). All claims verified against the working tree on that date.
 
-**Sources read in full**: `supabase/migrations/20260619000000_emergency_security_hardening.sql`, `20260619040000_minimize_public_member_exposure.sql`, `20260620000000_move_check_in_code_to_secrets_table.sql`, `20260620010000_harden_attendance_rls.sql`, `20260620020000_fix_user_profiles_rls_recursion.sql`, `20260701000000_add_member_photo_requests.sql`; `scripts/verify-rls-security.mjs` (env handling, lines 1–90); `docs/rls-verification-checklist.md` (§1–3); `supabase/functions/vsa-ai-assistant/index.ts` (SYSTEM_PROMPT + env reads); `AGENTS.md` ("Things to never do"). **Sources read in relevant part** (revoke/grant + function-hardening sections): `20260619010000`, `20260619020000`, `20260619030000`, `20260620020000_add_data_rights_anonymization.sql`, `20260526000002_create_ai_assistant_tables.sql`, `20260704000000_ai_knowledge_v2_schema.sql`; env reads in `supabase/functions/{secure-ai,analytics-proxy,trigger-event-image-migration,trigger-house-event-image-migration}/index.ts`.
+**Sources read in full**: `supabase/migrations/20260619000000_emergency_security_hardening.sql`, `20260619040000_minimize_public_member_exposure.sql`, `20260620000000_move_check_in_code_to_secrets_table.sql`, `20260620010000_harden_attendance_rls.sql`, `20260620020000_fix_user_profiles_rls_recursion.sql`, `20260701000000_add_member_photo_requests.sql`; `scripts/verify-rls-security.mjs` (env handling, lines 1–90); `docs/rls-verification-checklist.md` (§1–3); `supabase/functions/vsa-ai-assistant/index.ts` (SYSTEM_PROMPT + env reads); `AGENTS.md` ("Things to never do"). **Sources read in relevant part** (revoke/grant + function-hardening sections): `20260619010000`, `20260619020000`, `20260619030000`, `20260620020000_add_data_rights_anonymization.sql`, `20260526000002_create_ai_assistant_tables.sql`, `20260704000000_ai_knowledge_v2_schema.sql`; current env reads in `supabase/functions/{analytics-proxy,trigger-event-image-migration,trigger-house-event-image-migration,vsa-ai-assistant}/index.ts`; historical env reads in deleted `supabase/functions/secure-ai/index.ts` before issue #353.
 
 **Known drift points — re-verify before relying on:**
 

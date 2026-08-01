@@ -67,7 +67,7 @@ Where each credential comes from:
 | `REACT_APP_SUPABASE_URL` | Supabase dashboard → Project Settings → API → Project URL | Yes — app throws on boot without it (`src/lib/supabase.ts` L9–13) |
 | `REACT_APP_SUPABASE_ANON_KEY` | Same page → `anon` `public` API key (safe for browsers; RLS enforces access) | Yes — same throw |
 | `REACT_APP_GA4_MEASUREMENT_ID` | Google Analytics 4 property | No |
-| `REACT_APP_OPENAI_API_KEY` | **Removed from `README.md`, `CLAUDE.md`, and `AGENTS.md` on 2026-07-29** and consumed nowhere in `src/`. `OPENAI_API_KEY` (no `REACT_APP_` prefix) is real but is a server-side Edge Function secret read by `supabase/functions/secure-ai`. Never reintroduce a client-side AI key — `REACT_APP_*` ships in the public bundle. | No |
+| `REACT_APP_OPENAI_API_KEY` | **Removed from `README.md`, `CLAUDE.md`, and `AGENTS.md` on 2026-07-29** and consumed nowhere in `src/`. `OPENAI_API_KEY` (no `REACT_APP_` prefix) has no current repo consumer after issue #353 removed the legacy `secure-ai` Edge Function. Never reintroduce a client-side AI key — `REACT_APP_*` ships in the public bundle. | No |
 
 CRA only exposes env vars prefixed `REACT_APP_` to the browser bundle, and they are **baked in at build time** — after editing `.env.local`, restart `npm start`. Never commit `.env*` files (`.gitignore` lines 16–23 cover them; committing secrets is on the AGENTS.md never-do list). Full config-axis catalog: `vsa-config-and-flags`.
 
@@ -114,8 +114,9 @@ For real data, auth, and admin flows you need an actual Supabase project. (Apply
 |---|---|---|
 | `vsa-ai-assistant` | `GEMINI_API_KEY` (required); `GEMINI_MODEL`, `VSA_AI_ASSISTANT_ENABLED` (optional; `"false"` = kill switch) | Ask VSA chat |
 | `analytics-proxy` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GA4_PROPERTY_ID` | Admin analytics dashboard |
-| `secure-ai` | `OPENAI_API_KEY` | Legacy AI endpoint |
 | `trigger-event-image-migration` / `trigger-house-event-image-migration` | `IMAGE_MIGRATION_WEBHOOK_SECRET`, `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`; optional `GITHUB_DISPATCH_EVENT_TYPE` / `GITHUB_DISPATCH_EVENT_TYPE_HOUSE` | Kick image-migration GitHub workflows |
+
+`secure-ai` was removed from the repo in issue #353. Removing the directory does not undeploy the Supabase function; a human still needs to delete the deployed function and unset `OPENAI_API_KEY`.
 
 ```bash
 supabase functions deploy vsa-ai-assistant

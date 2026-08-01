@@ -304,7 +304,7 @@ Required checks:
 8. How should group photos, Google Photos, and repo-hosted migrated images be handled?
 9. Who owns external forms/albums and performs provider-side action?
 10. How long should feedback, applications, raw imports, import summaries, legacy chat, AI metadata, requests, and audit hashes remain?
-11. Is legacy `secure-ai`/`chat_logs` deployed or retired?
+11. Legacy `secure-ai` source was removed in issue #353 after repo search found no callers; confirm production function deletion and decide retention for `chat_logs`.
 12. Should current member delete/bulk-delete be disabled or replaced?
 13. What secure export delivery and expiration are approved?
 14. What retention exceptions are allowed and who approves them?

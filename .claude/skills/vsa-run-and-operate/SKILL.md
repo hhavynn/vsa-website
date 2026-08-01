@@ -93,15 +93,16 @@ Follow-up data migrations `20260704000001_ai_knowledge_v2_dedupe.sql` and `20260
 
 ## 4. Edge Function operations
 
-Five Deno Edge Functions live in `supabase/functions/` (verify: `ls supabase/functions`). "Edge Function" = Deno TypeScript deployed to Supabase's runtime, invoked at `https://<project-ref>.supabase.co/functions/v1/<name>`.
+Four Deno Edge Functions live in `supabase/functions/` (verify: `ls supabase/functions`). "Edge Function" = Deno TypeScript deployed to Supabase's runtime, invoked at `https://<project-ref>.supabase.co/functions/v1/<name>`.
 
 | Function | Purpose | Secrets it reads (`Deno.env.get`) |
 |---|---|---|
 | `vsa-ai-assistant` | Current "Ask VSA" public assistant, Gemini-backed; behavior rules in its `SYSTEM_PROMPT`, volatile facts from `ai_knowledge_base` rows | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (auto-provided), `GEMINI_API_KEY`, `GEMINI_MODEL` (optional override), `VSA_AI_ASSISTANT_ENABLED` (kill switch — set to `"false"` to disable) |
-| `secure-ai` | Legacy OpenAI-backed chat proxy (zod-validated requests, CORS-pinned to vsaatucsd.com/localhost) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY` |
 | `analytics-proxy` | Serves GA4 report data to `/admin/analytics` (`src/pages/Admin/Analytics.tsx` invokes it) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` (OAuth refresh-token flow, NOT a service account), `GA4_PROPERTY_ID` (numeric ID, not `G-…`), `SUPABASE_URL`, `SUPABASE_ANON_KEY` |
 | `trigger-event-image-migration` | DB-webhook receiver: validates secret, checks `events.image_url` changed and points at Supabase Storage, fires GitHub `repository_dispatch` | `IMAGE_MIGRATION_WEBHOOK_SECRET`, `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`, `GITHUB_DISPATCH_EVENT_TYPE` (optional, default `event-image-migration-requested`) |
 | `trigger-house-event-image-migration` | Same, for `house_events` | `IMAGE_MIGRATION_WEBHOOK_SECRET`, `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`, `GITHUB_DISPATCH_EVENT_TYPE_HOUSE` (optional, default `house-event-image-migration-requested`) |
+
+Historical cleanup: `secure-ai` was removed from the repository in issue #353. Deleting the directory does not undeploy a Supabase Edge Function; after merge, run `supabase functions delete secure-ai` and `supabase secrets unset OPENAI_API_KEY`.
 
 Operations:
 
