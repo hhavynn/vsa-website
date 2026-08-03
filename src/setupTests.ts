@@ -8,19 +8,28 @@ import '@testing-library/jest-dom';
 process.env.REACT_APP_SUPABASE_URL = 'https://test.supabase.co';
 process.env.REACT_APP_SUPABASE_ANON_KEY = 'test-anon-key';
 
-// Mock window.matchMedia for testing
+// Mock window.matchMedia for testing.
+//
+// Deliberately a plain function, NOT jest.fn(). Create React App sets
+// `resetMocks: true`, which strips the implementation off every jest.fn()
+// before each test — including ones installed here. When this was a jest.fn(),
+// `window.matchMedia(...)` returned undefined in every test, so ThemeProvider
+// threw on `.matches` during render and any component tree wrapped in an
+// ErrorBoundary silently rendered the error state instead of the app.
+// A plain function survives resetMocks. Do not "modernise" this to jest.fn().
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  configurable: true,
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
+    addListener: () => undefined, // deprecated
+    removeListener: () => undefined, // deprecated
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+  }),
 });
 
 // Mock Supabase client

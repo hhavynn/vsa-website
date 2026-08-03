@@ -130,8 +130,26 @@ export class SupabaseMock {
   private defaults = new Map<string, QueryResult>();
   private recorded: RecordedQuery[] = [];
 
+  /**
+   * Signed-out auth stubs. The providers touch exactly six methods
+   * (getSession, getUser, onAuthStateChange, signInWithPassword, signUp,
+   * signOut); anything beyond that should be added deliberately rather than
+   * auto-stubbed, so an untested auth path fails loudly.
+   */
+  readonly auth = {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: null }),
+    onAuthStateChange: (_callback?: unknown) => ({
+      data: { subscription: { unsubscribe: () => undefined } },
+    }),
+    signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
+    signUp: async () => ({ data: { user: null, session: null }, error: null }),
+    signOut: async () => ({ error: null }),
+  };
+
   /** The object to substitute for the real `supabase` client. */
   readonly client = {
+    auth: this.auth,
     from: (table: string) => {
       const record: RecordedQuery = { table, calls: [] };
       this.recorded.push(record);
