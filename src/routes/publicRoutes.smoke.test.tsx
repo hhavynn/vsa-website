@@ -9,19 +9,19 @@
  * change, a throw during first render — passed CI and shipped straight to
  * production, because main auto-deploys.
  *
- * These tests do not assert page content, deliberately. Content changes every
- * academic year and asserting on copy would make this suite a maintenance tax
- * that gets deleted. What they assert is that **the route mounts and does not
- * fall into the ErrorBoundary** — see the KNOWN LIMITATION note at the bottom
- * for the failure mode this does not yet cover.
+ * These tests do not assert page copy, deliberately. Content changes every
+ * academic year and asserting on wording would make this suite a maintenance
+ * tax that gets deleted instead of maintained. What they assert is that the
+ * route **mounts, settles, and renders something** — see the note at the
+ * bottom for exactly which failures that does and does not cover.
  *
- * Data is served by the recording Supabase mock with empty results, so each
- * page renders its empty/degraded state. That is the correct thing to smoke
- * test — it is also exactly what a visitor sees during summer break, and what
- * they would see if the database were unreachable.
+ * Data is served by the recording Supabase mock with empty results, so every
+ * page renders its empty state. That is the right thing to smoke test: it is
+ * what a visitor sees during summer break, and what they would see if the
+ * database were unreachable.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -110,7 +110,7 @@ describe('public routes render without crashing (#294)', () => {
     consoleError.mockRestore();
   });
 
-  it.each(PUBLIC_ROUTES)('%s mounts and stays out of the error boundary', async (path) => {
+  it.each(PUBLIC_ROUTES)('%s mounts, settles, and renders content', async (path) => {
     renderRoute(path);
 
     // Assert something POSITIVE, and let findBy* do the waiting.
@@ -122,39 +122,61 @@ describe('public routes render without crashing (#294)', () => {
     // against nothing at all. Waiting for <main> to exist forces the route to
     // have actually mounted before anything is asserted.
     //
-    // See the KNOWN LIMITATION note at the bottom for what this still misses.
+    // See the note at the bottom for the full catches/misses list.
     const main = await screen.findByRole('main');
     expect(main).toBeInTheDocument();
 
     // And it must not have fallen back to the error boundary.
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+
+    // THE ASSERTION WITH TEETH: the page must actually settle.
+    //
+    // Two conditions, and both are load-bearing:
+    //   - non-empty, because the skeletons render pure markup with no text, so
+    //     an unsettled page reads as ''.
+    //   - not still on the loader, because when a page component throws during
+    //     render the outer ErrorBoundary never engages — Layout's own
+    //     <Suspense fallback={<PageLoader />}> keeps the nav, main and footer
+    //     intact and the page area sits on "Loading..." forever. Without this
+    //     clause a thrown page reads as non-empty and passes.
+    //
+    // Verified in both directions by mutation; see the note below.
+    //
+    // Expressed as one assertion on a descriptive string rather than two
+    // expects, both to satisfy testing-library/no-wait-for-multiple-assertions
+    // and so a timeout reports what the page was actually stuck on.
+    await waitFor(
+      () => {
+        const text = main.textContent?.trim() ?? '';
+        const settled = text !== '' && !/^loading/i.test(text);
+        expect(settled ? 'settled' : `unsettled: "${text.slice(0, 60)}"`).toBe('settled');
+      },
+      { timeout: 5000 }
+    );
   });
 
   /**
-   * KNOWN LIMITATION — read before trusting this suite.
+   * WHAT THIS SUITE DOES AND DOES NOT CATCH — verified by mutation.
    *
-   * These tests catch a route that fails to MOUNT: a bad import, a module-load
-   * throw, a provider-ordering break, a missing export. They do NOT catch a
-   * page component that throws during render.
+   * Catches:
+   *   - a route that fails to mount (bad import, module-load throw,
+   *     provider-ordering break, missing export) — <main> never appears;
+   *   - a page component that throws during render — the page area is pinned
+   *     on "Loading..." forever and never settles;
+   *   - a page that renders nothing at all.
    *
-   * That was established by mutation, not assumed. Injecting
-   * `throw new Error(...)` into the Events page leaves this suite green,
-   * because Layout wraps its <Outlet> in its own
-   * <Suspense fallback={<PageLoader />}>: the nav, <main> and footer all render
-   * normally and the page area sits on "Loading..." indefinitely. The outer
-   * ErrorBoundary never engages, so there is no error copy to assert on.
+   * Proven, not assumed: injecting `throw new Error(...)` into the Events page
+   * fails exactly one test (/events, by timeout) and leaves the other 23
+   * passing. Removing the throw returns the suite to 24/24.
    *
-   * Asserting "the loader clears and <main> is non-empty" would close that
-   * gap, but it cannot be turned on yet: against an empty database
-   * /events, /leaderboard and /gallery render a completely empty <main> with
-   * no empty state at all, and several other routes keep a section spinner up
-   * forever. Those are pre-existing degraded-mode defects, and encoding them
-   * as failing tests here would mean shipping a red suite.
+   * The subtle part worth preserving: when a page throws, the outer
+   * ErrorBoundary never engages. Layout wraps its <Outlet> in its own
+   * <Suspense fallback={<PageLoader />}>, so nav, <main> and footer render
+   * normally while the page area spins indefinitely. Users see an eternal
+   * loader rather than an error. That is why "no error-boundary copy" is not
+   * sufficient on its own and the settle assertion carries the weight.
    *
-   * The follow-up, in order:
-   *   1. Fix the degraded-mode rendering so every public route renders
-   *      *something* when the database returns no rows.
-   *   2. Then add `expect(main.textContent).not.toBe('')` and a loader-cleared
-   *      assertion here, which also closes the throw-during-render gap.
+   * Does not catch: wrong content, broken styling, or a page that renders a
+   * plausible-looking but incorrect state. Those need per-page tests.
    */
 });
