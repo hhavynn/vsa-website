@@ -54,7 +54,13 @@ const PUBLIC_ROUTES = [
   '/house',
   '/house/archive',
   '/house/archive/2025-2026',
+  // Historical House detail: year + house slug together. These are declared as
+  // multi-line <Route> elements in routes/index.tsx and are easy to miss when
+  // eyeballing the file — they resolve HouseDetail through a different path
+  // than /house/:houseSlug does.
+  '/house/archive/2025-2026/dragon',
   '/house/year/2025-2026',
+  '/house/year/2025-2026/dragon',
   '/house/dragon',
   '/house-system',
   '/intern-program',
@@ -66,7 +72,14 @@ const PUBLIC_ROUTES = [
   '/points',
   '/feedback',
   '/privacy',
+  // Member accounts are intentionally parked for this release, but the route
+  // is public and reachable, so it still has to render.
+  '/profile',
   '/admin/login',
+  // Redirects to /admin/login; included so the redirect itself is covered.
+  '/signin',
+  // The catch-all NotFound page. Public-facing and easy to forget.
+  '/definitely-not-a-real-route',
 ];
 
 function renderRoute(path: string) {

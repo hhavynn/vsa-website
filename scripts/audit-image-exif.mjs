@@ -47,8 +47,13 @@ const TIFF_TAGS = {
   0x0132: 'DateTime',
   0x013b: 'Artist',
   0x8298: 'Copyright',
+  // Pointer to the nested Exif sub-IFD. Cameras put the capture timestamps
+  // there, NOT in IFD0, so without following this pointer DateTimeOriginal is
+  // never found and the timestamp half of this audit silently reports nothing.
+  0x8769: 'ExifIFD',
   0x8825: 'GPSIFD',
   0x9003: 'DateTimeOriginal',
+  0x9004: 'DateTimeDigitized',
 };
 
 const GPS_TAGS = {
@@ -97,6 +102,16 @@ function readIfd(view, tiffStart, ifdOffset, little, tagMap, depth = 0) {
         const gps = readIfd(view, tiffStart, gpsOffset, little, GPS_TAGS, 1);
         if (Object.keys(gps).length > 0) out.GPS = gps;
       }
+    } else if (name === 'ExifIFD') {
+      if (depth === 0) {
+        // Descend into the Exif sub-IFD and merge its tags up. Existing
+        // top-level values win, so IFD0's DateTime is not clobbered.
+        const exifOffset = tiffStart + view.getUint32(entry + 8, little);
+        const nested = readIfd(view, tiffStart, exifOffset, little, tagMap, 1);
+        for (const [key, value] of Object.entries(nested)) {
+          if (out[key] === undefined) out[key] = value;
+        }
+      }
     } else if (type === 2) {
       // ASCII, NUL-terminated.
       const bytes = new Uint8Array(view.buffer, view.byteOffset + valueOffset, byteLength);
@@ -120,22 +135,69 @@ function readIfd(view, tiffStart, ifdOffset, little, tagMap, depth = 0) {
   return out;
 }
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const EXIF_MARKER = Buffer.from([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
+
+/**
+ * Every offset in the file where a TIFF header might begin, most reliable first.
+ *
+ * Three containers put it in three different places, and only one of them uses
+ * the "Exif\0\0" marker:
+ *
+ *   - JPEG APP1 / HEIC: "Exif\0\0" then the TIFF header.
+ *   - PNG: the spec's `eXIf` chunk holds the TIFF payload with NO marker at
+ *     all. Marker-only searching misses these entirely — a PNG carrying GPS
+ *     would be reported clean, which for a script whose job is gating location
+ *     disclosure is the one failure that matters.
+ *   - Standalone TIFF: the file simply starts with the header.
+ */
+function candidateTiffOffsets(buffer) {
+  const offsets = [];
+
+  // Standalone TIFF.
+  if (buffer.length >= 4) {
+    const order = buffer.readUInt16BE(0);
+    if (order === 0x4949 || order === 0x4d4d) offsets.push(0);
+  }
+
+  // PNG eXIf chunk: [4-byte length][4-byte type][data][4-byte CRC].
+  if (buffer.length > 8 && buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    let position = 8;
+    while (position + 8 <= buffer.length) {
+      const length = buffer.readUInt32BE(position);
+      const type = buffer.toString('ascii', position + 4, position + 8);
+      const dataStart = position + 8;
+      if (type === 'eXIf') offsets.push(dataStart);
+      if (type === 'IEND') break;
+      // 4 length + 4 type + data + 4 CRC
+      const next = dataStart + length + 4;
+      if (next <= position) break; // malformed; refuse to loop forever
+      position = next;
+    }
+  }
+
+  // Marker-prefixed payloads. Collect every occurrence, not just the first:
+  // in HEIC the string also appears inside the `infe` item-info box several KB
+  // ahead of the real payload, and trusting the first hit made this script
+  // silently skip every HEIC — the straight-from-camera originals, which are
+  // exactly the files most likely to carry GPS.
+  for (
+    let index = buffer.indexOf(EXIF_MARKER);
+    index !== -1;
+    index = buffer.indexOf(EXIF_MARKER, index + 1)
+  ) {
+    offsets.push(index + EXIF_MARKER.length);
+  }
+
+  return offsets;
+}
+
 /** Locate the EXIF block and parse it. Returns null when there is none. */
 function readExif(buffer) {
-  // "Exif\0\0" precedes the TIFF header in JPEG APP1, PNG eXIf, and HEIC alike,
-  // so searching for it avoids writing three container parsers.
-  //
-  // The first match is not always the real one: in HEIC the string also appears
-  // inside the `infe` item-info box, several KB before the actual EXIF payload.
-  // Trusting the first hit made this script silently skip every HEIC — i.e. the
-  // straight-from-camera originals, which are exactly the files most likely to
-  // carry GPS. So keep scanning until a match is followed by a valid TIFF header.
-  const marker = Buffer.from([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
   const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.length);
 
-  for (let index = buffer.indexOf(marker); index !== -1; index = buffer.indexOf(marker, index + 1)) {
-    const tiffStart = index + marker.length;
-    if (tiffStart + 8 > buffer.length) return null;
+  for (const tiffStart of candidateTiffOffsets(buffer)) {
+    if (tiffStart + 8 > buffer.length) continue;
 
     const byteOrder = buffer.readUInt16BE(tiffStart);
     if (byteOrder !== 0x4949 && byteOrder !== 0x4d4d) continue;

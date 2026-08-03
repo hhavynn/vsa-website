@@ -78,51 +78,65 @@ const CHAINABLE = [
 /** Terminal methods that resolve to a single row rather than a list. */
 const SINGLE_ROW = ['single', 'maybeSingle'] as const;
 
-class MockQueryBuilder<T = unknown> implements PromiseLike<QueryResult<T>> {
-  private settled = false;
+type ChainableMethod = (typeof CHAINABLE)[number];
+type SingleRowMethod = (typeof SINGLE_ROW)[number];
 
-  constructor(
-    private readonly record: RecordedQuery,
-    private readonly resolveResult: (table: string, singleRow: boolean) => QueryResult<T>
-  ) {
-    for (const method of CHAINABLE) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this as any)[method] = (...args: unknown[]) => {
-        this.record.calls.push({ method, args });
-        return this;
-      };
-    }
+/**
+ * The builder's public shape, derived from the method lists above so the two
+ * cannot drift apart.
+ */
+export type MockQueryBuilder<T = unknown> = {
+  [K in ChainableMethod]: (...args: unknown[]) => MockQueryBuilder<T>;
+} & {
+  [K in SingleRowMethod]: (...args: unknown[]) => Promise<QueryResult<T>>;
+} & PromiseLike<QueryResult<T>>;
 
-    for (const method of SINGLE_ROW) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this as any)[method] = (...args: unknown[]) => {
-        this.record.calls.push({ method, args });
-        this.settled = true;
-        return Promise.resolve(this.resolveResult(this.record.table, true));
-      };
-    }
+/**
+ * Builds the recording query builder.
+ *
+ * Methods are installed dynamically from the lists above rather than written
+ * out one by one, but the result is still fully typed: the scratch object is
+ * `Record<string, unknown>` and is narrowed once through `unknown` at the
+ * return. AGENTS.md forbids `any` outright, so there is none here.
+ */
+function createQueryBuilder<T>(
+  record: RecordedQuery,
+  resolveResult: (table: string, singleRow: boolean) => QueryResult<T>
+): MockQueryBuilder<T> {
+  const builder: Record<string, unknown> = {};
+  // Held on an object rather than a bare `let` so the closures installed in the
+  // loops below capture a stable reference (satisfies no-loop-func).
+  const state = { settled: false };
+
+  for (const method of CHAINABLE) {
+    builder[method] = (...args: unknown[]) => {
+      record.calls.push({ method, args });
+      return builder;
+    };
   }
 
-  /**
-   * Makes the builder awaitable, matching PostgREST: `await supabase.from(t).select()`
-   * resolves without any terminal call.
-   */
-  then<TResult1 = QueryResult<T>, TResult2 = never>(
+  for (const method of SINGLE_ROW) {
+    builder[method] = (...args: unknown[]) => {
+      record.calls.push({ method, args });
+      state.settled = true;
+      return Promise.resolve(resolveResult(record.table, true));
+    };
+  }
+
+  // Makes the builder awaitable, matching PostgREST: `await supabase.from(t)
+  // .select()` resolves with no terminal call. When a terminal method already
+  // consumed the result, awaiting again must not pull a second queued result
+  // and silently desynchronise the queue.
+  builder.then = <TResult1 = QueryResult<T>, TResult2 = never>(
     onfulfilled?: ((value: QueryResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-  ): PromiseLike<TResult1 | TResult2> {
-    if (this.settled) {
-      // A terminal method already consumed the result; awaiting again would
-      // pull a second queued result and silently desynchronise the queue.
-      return Promise.resolve(
-        this.resolveResult(this.record.table, true)
-      ).then(onfulfilled as never, onrejected as never);
-    }
-    return Promise.resolve(this.resolveResult(this.record.table, false)).then(
+  ): PromiseLike<TResult1 | TResult2> =>
+    Promise.resolve(resolveResult(record.table, state.settled)).then(
       onfulfilled as never,
       onrejected as never
     );
-  }
+
+  return builder as unknown as MockQueryBuilder<T>;
 }
 
 export class SupabaseMock {
@@ -153,12 +167,12 @@ export class SupabaseMock {
     from: (table: string) => {
       const record: RecordedQuery = { table, calls: [] };
       this.recorded.push(record);
-      return new MockQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
+      return createQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
     },
     rpc: (fn: string, args?: unknown) => {
       const record: RecordedQuery = { table: `rpc:${fn}`, calls: [{ method: 'rpc', args: [args] }] };
       this.recorded.push(record);
-      return new MockQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
+      return createQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
     },
   };
 
