@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Adjust in production to specific domains
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from "../_shared/cors.ts"
 
 class AnalyticsError extends Error {
   status: number
@@ -18,10 +13,10 @@ class AnalyticsError extends Error {
   }
 }
 
-function jsonResponse(body: Record<string, unknown>, status = 200) {
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   })
 }
 
@@ -120,11 +115,11 @@ function getGa4Error(status: number, responseBody: any, reportName: string) {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders(req) })
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }, 405)
+    return jsonResponse(req, { error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }, 405)
   }
 
   try {
@@ -206,7 +201,7 @@ serve(async (req) => {
     }
 
     // Process and return simplified data
-    return jsonResponse({
+    return jsonResponse(req, {
       summary: reportData.rows?.reduce((acc: any, row: any) => {
         acc.users += parseInt(row.metricValues[0].value);
         acc.sessions += parseInt(row.metricValues[1].value);
@@ -236,7 +231,7 @@ serve(async (req) => {
       message: analyticsError.message,
     })
 
-    return jsonResponse({
+    return jsonResponse(req, {
       error: analyticsError.message,
       code: analyticsError.code,
     }, analyticsError.status)
