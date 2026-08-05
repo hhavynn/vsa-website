@@ -226,7 +226,7 @@ The component self-excludes from production builds (`process.env.NODE_ENV === 'd
 
 ### Supabase Edge Function logs
 
-Five Edge Functions exist under `supabase/functions/` (analytics-proxy, secure-ai, trigger-event-image-migration, trigger-house-event-image-migration, vsa-ai-assistant). Read their runtime logs either in the Dashboard (**Edge Functions → select function → Logs**) or via CLI:
+Four Edge Functions exist under `supabase/functions/` (analytics-proxy, trigger-event-image-migration, trigger-house-event-image-migration, vsa-ai-assistant). Read their runtime logs either in the Dashboard (**Edge Functions → select function → Logs**) or via CLI:
 
 ```bash
 supabase functions logs vsa-ai-assistant --project-ref <PROJECT_REF>

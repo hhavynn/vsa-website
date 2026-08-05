@@ -280,5 +280,5 @@ Stated plainly so nobody mistakes the backlog for a complete picture:
 
 - **Not verified at runtime.** Issues were written from source, migrations, and docs. Nothing was checked against the running production site — the mobile audit ([#243](https://github.com/hhavynn/vsa-website/issues/243)) and the baselines ([#297](https://github.com/hhavynn/vsa-website/issues/297)) exist to close that gap, and their findings should re-rank their epics.
 - **Effort not estimated.** Priorities reflect impact and urgency, not cost. Add a `Size` field during grooming.
-- **`secure-ai` Edge Function** — its relationship to `vsa-ai-assistant` is unclear from source; [#229](https://github.com/hhavynn/vsa-website/issues/229) resolves whether it's live or vestigial.
+- **`secure-ai` Edge Function** — resolved by [#353](https://github.com/hhavynn/vsa-website/issues/353): repo source was removed after source search found no callers. Production cleanup is still manual; deleting the directory does not undeploy the function or unset `OPENAI_API_KEY`.
 - **Feature issues (#215, #216) are proposals, not commitments.** Several may already be partly built — `EventRecapEditor.tsx` and `ThisWeekInVSA.tsx` in particular. Read before building.

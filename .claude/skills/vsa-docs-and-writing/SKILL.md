@@ -48,7 +48,7 @@ Remaining (fix in a `docs:` PR when convenient; until then trust the "truth" col
 
 | # | Claim | Where | Truth (evidence) |
 |---|---|---|---|
-| ~~D4~~ | ~~`REACT_APP_OPENAI_API_KEY` described as the AI-assistant key~~ | ~~`CLAUDE.md` env setup and `AGENTS.md` dev setup~~ | **RESOLVED 2026-07-29.** Removed from `CLAUDE.md`, `AGENTS.md`, and `README.md`. It was worse than stale: `REACT_APP_*` vars compile into the public bundle, so the instruction would have published a live key. `OPENAI_API_KEY` (unprefixed) remains a real server-side Edge Function secret for `supabase/functions/secure-ai`. |
+| ~~D4~~ | ~~`REACT_APP_OPENAI_API_KEY` described as the AI-assistant key~~ | ~~`CLAUDE.md` env setup and `AGENTS.md` dev setup~~ | **RESOLVED 2026-07-29; updated 2026-08-01 by #353.** Removed from public setup docs because `REACT_APP_*` vars compile into the public bundle. The legacy `secure-ai` Edge Function source was later deleted, so `OPENAI_API_KEY` has no current repo consumer; production still needs the deployed function deleted and the Supabase secret unset manually. |
 
 ---
 

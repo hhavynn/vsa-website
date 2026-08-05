@@ -38,10 +38,10 @@ Those two are the only variables required to boot. Analytics vars are optional
 and unnecessary for local development.
 
 **Never put an API key in a `REACT_APP_*` variable** — they are compiled into
-the public client bundle. The AI assistant's keys (`GEMINI_API_KEY` for
-`vsa-ai-assistant`, `OPENAI_API_KEY` for `secure-ai`) are **Supabase Edge
-Function secrets**, set server-side and never exposed to the client. See
-`.claude/skills/vsa-config-and-flags/`.
+the public client bundle. The Ask VSA assistant's `GEMINI_API_KEY` is a
+**Supabase Edge Function secret**, set server-side and never exposed to the
+client. The legacy `secure-ai` function was removed from the repo; no current
+repo code consumes `OPENAI_API_KEY`. See `.claude/skills/vsa-config-and-flags/`.
 
 ## Architecture
 

@@ -35,7 +35,7 @@ Re-verify: `grep -rn "process.env.REACT_APP" src --include="*.ts" --include="*.t
 | `REACT_APP_SUPABASE_ANON_KEY` | YES | Same three files as above | Same boot failure | Production |
 | `REACT_APP_GA4_MEASUREMENT_ID` | No | `src/lib/analytics.ts` (`GA_ID`) | `initGA()` returns early — analytics silently disabled | Production (optional) |
 | `REACT_APP_SUPABASE_IMAGE_TRANSFORMS` | No | `src/lib/supabaseImages.ts` (`ENABLE_IMAGE_TRANSFORMS = === 'true'`) | Defaults OFF — plain URLs, no render/image transform params | Experimental flag, default-off (egress guard; see `vsa-failure-archaeology`) |
-| `REACT_APP_OPENAI_API_KEY` | No | **NOTHING in code.** Appears only in `README.md` ("optional, legacy — current Ask VSA assistant runs server-side via Supabase Edge Functions") | No effect | Legacy — safe to omit everywhere. Do NOT reintroduce a client-side AI key |
+| `REACT_APP_OPENAI_API_KEY` | No | **NOTHING in code.** Removed from public setup docs in 2026-07 and never needed by the current Ask VSA assistant, which runs server-side via `vsa-ai-assistant`. | No effect | Legacy — safe to omit everywhere. Do NOT reintroduce a client-side AI key |
 
 Notes:
 - `src/setupTests.ts` injects fake `REACT_APP_SUPABASE_URL/_ANON_KEY` values so Jest never needs a real `.env.local`.
@@ -85,7 +85,6 @@ Re-verify: `grep -rn "Deno.env.get" supabase/functions`
 | `GEMINI_API_KEY` | `vsa-ai-assistant` | Ask VSA LLM calls; absent → assistant errors |
 | `GEMINI_MODEL` | `vsa-ai-assistant` | Model override; defaults to `DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"` (`index.ts` line ~32, as of 2026-07-06) |
 | `VSA_AI_ASSISTANT_ENABLED` | `vsa-ai-assistant` | **Kill switch**: set to string `"false"` to disable the assistant; any other value (or unset) = enabled |
-| `OPENAI_API_KEY` | `secure-ai` | Legacy server-side OpenAI path — as of 2026-07-06 NO frontend code calls `secure-ai` (the live assistant calls `/functions/v1/vsa-ai-assistant`; re-verify: `grep -rn "secure-ai" src`). Also referenced by `supabase/config.toml` line 74 for local dev |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GA4_PROPERTY_ID` | `analytics-proxy` | GA4 Data API OAuth quartet; each is `getRequiredEnv` — absent → structured error (`GOOGLE_OAUTH_*` / `GA4_*` codes) returned to admin dashboard |
 | `IMAGE_MIGRATION_WEBHOOK_SECRET` | `trigger-event-image-migration`, `trigger-house-event-image-migration` | Shared secret the caller must present; absent/mismatch → request rejected |
 | `GITHUB_DISPATCH_TOKEN` | both trigger-* functions | PAT used to fire `repository_dispatch` to GitHub |
@@ -93,7 +92,7 @@ Re-verify: `grep -rn "Deno.env.get" supabase/functions`
 | `GITHUB_DISPATCH_EVENT_TYPE` | `trigger-event-image-migration` | Defaults to `event-image-migration-requested` |
 | `GITHUB_DISPATCH_EVENT_TYPE_HOUSE` | `trigger-house-event-image-migration` | Defaults to `house-event-image-migration-requested` |
 
-All of these are production-load-bearing except `secure-ai`'s `OPENAI_API_KEY` (legacy path — the live assistant is `vsa-ai-assistant`/Gemini).
+Retired secret: `OPENAI_API_KEY` belonged to the legacy `secure-ai` path, which was removed from repo source in issue #353 after source search found no callers. No current `supabase/functions` code reads it. Deleting the directory does not undeploy the function or unset the Supabase secret; those remain manual production cleanup steps.
 
 ## 4. GitHub Actions secrets
 
@@ -160,7 +159,7 @@ Re-verify: `node -e "const p=require('./package.json');console.log(Object.keys(p
 | `tsconfig.json` | `strict: true`, `noEmit: true` (CRA's Babel does the emitting), `jsx: react-jsx`, `target: es5`, `isolatedModules: true` |
 | `package.json » jest` | `transformIgnorePatterns: ["node_modules/(?!(zod|@hookform/resolvers)/)"]` — the fix for zod's ESM "Unexpected token 'export'" in Jest. Extend the parenthesized list if a new ESM-only dep breaks tests (traps: `vsa-build-and-env`) |
 | `package.json » browserslist` | production: `>0.2%, not dead, not op_mini all`; development: last 1 chrome/firefox/safari |
-| `supabase/config.toml` | Local Supabase CLI stack config; line 74 wires `openai_api_key = "env(OPENAI_API_KEY)"` for local AI features |
+| `supabase/config.toml` | Local Supabase CLI stack config; line 74 still contains Supabase Studio's `openai_api_key = "env(OPENAI_API_KEY)"`. This is not a VSA Edge Function consumer; no current `supabase/functions` code reads it after issue #353. |
 
 ## 8. How to add a new configuration axis — checklist
 
