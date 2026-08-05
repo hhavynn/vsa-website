@@ -1,0 +1,31 @@
+{
+  "recorded_at": "2026-08-01T18:00:00Z",
+  "blocker": "codex_unavailable",
+  "severity": "blocks_all_implementation",
+  "summary": "Codex CLI is not installed and no authentication material exists in this environment. Per the controller contract, Claude must not substitute itself or its subagents as the implementation agent, so no repository-file changes were made.",
+  "preflight_evidence": {
+    "which_codex": "not found on PATH",
+    "filesystem_search": "find / -maxdepth 5 -iname 'codex*' matched only two unrelated repository docs (docs/codex-subagent-task-template.md, docs/codex-subagent-workflow.md)",
+    "searched_paths": ["~/.local/bin", "/usr/local/bin", "/usr/bin", "/opt", "~/.npm-global/bin", "~/.cargo/bin", "~/bin"],
+    "npm_global_root": "/opt/node22/lib/node_modules - contains @anthropic-ai, chromedriver, corepack, eslint, http-server, nodemon, npm, playwright, pnpm, prettier; no codex",
+    "codex_config_dir": "~/.codex does not exist",
+    "auth_env_vars": "no OPENAI_*, CODEX_*, or CHATGPT_* variables present",
+    "codex_version": "not runnable",
+    "codex_help": "not runnable",
+    "noninteractive_syntax": "undeterminable - cannot inspect an uninstalled CLI",
+    "smoke_test": "not attempted - no binary"
+  },
+  "secondary_environment_gaps": {
+    "gh_cli": "not installed; GitHub operations performed via authenticated GitHub MCP server instead",
+    "supabase_mcp": "connected but every tool call returns 'MCP tool call requires approval'; this session is non-interactive so approval cannot be granted",
+    "git_clone_depth": "shallow - 72 of ~729 commits, so history-wide scans are not sound",
+    "blocked_git_operations": "git rebase --skip and git push --force-with-lease are denied by the permission classifier"
+  },
+  "action_required_to_unblock": [
+    "Install the Codex CLI in this environment (e.g. npm i -g @openai/codex), OR provision an environment image that includes it.",
+    "Provide Codex authentication that is valid and authorized for this repository. Note: issue #353 concerns a leaked OpenAI key, so the exposed credential must not be reused here.",
+    "Re-run this workflow; preflight steps 8-13 will then be satisfiable."
+  ],
+  "what_proceeded_without_codex": "Full milestone audit, per-issue investigation, and classification - none of which require repository-file edits.",
+  "what_did_not_proceed": "Branch/worktree creation for implementation, Codex invocation, code or test changes, commits of repository files, pull requests, merges, and issue closure that depends on merged work."
+}

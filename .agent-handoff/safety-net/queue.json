@@ -1,0 +1,265 @@
+{
+  "milestone": "Safety net — testing & security",
+  "milestone_number": 3,
+  "audited_at": "2026-08-01T18:30:00Z",
+  "open_issues_total": 20,
+  "epics": 3,
+  "work_issues": 17,
+  "controller_state": "implementation_blocked",
+  "blocking_condition": "codex_unavailable — see system-blocked.json",
+  "environment_findings": {
+    "graphify": "NOT installed (binary absent; scripts/graphify-run reports 'Graphify is not installed'). Stale graphify-out/graph.json present but unusable without the binary. Per instructions, not installed/updated; fell back to targeted rg + source inspection.",
+    "gh_cli": "absent; GitHub operations via authenticated MCP server",
+    "supabase_mcp": "connected but all calls return 'requires approval'; non-interactive session cannot approve",
+    "clone_depth": "shallow (72 of ~729 commits)",
+    "repo_visibility": "PUBLIC (\"private\": false, verified via API 2026-08-01)"
+  },
+  "cross_cutting_findings": [
+    {
+      "id": "CC-1",
+      "severity": "high",
+      "title": "The CI security job's governing rationale is stale and self-sealing",
+      "evidence": ".github/workflows/deploy.yml L52-56 and L80-84 assert 'This repository is PRIVATE' and that code scanning + secret scanning are 'confirmed UNAVAILABLE on this private repo without a paid GitHub plan', instructing 'do not re-investigate this as an open question; the answer is a paid-plan upgrade.' The repository is now public (verified via API: \"private\": false, \"visibility\": \"public\"). CodeQL code scanning and secret scanning are both free on public repositories. Issue #353 independently confirms secret scanning is already live — alert #1 fired when the repo went public on 2026-07-31.",
+      "impact": "A comment telling future maintainers not to re-investigate is now actively wrong, and it guards the single largest gap in the security job. The job today runs Trivy only, with exit-code 0 (report-only) and no SARIF upload, so it produces no enforced findings whatsoever.",
+      "affects": [290, 225, 296],
+      "recommended_action": "Re-enable CodeQL (init + analyze + upload-sarif) now that it is free, and correct the stale comments. Belongs to #290."
+    },
+    {
+      "id": "CC-2",
+      "severity": "medium",
+      "title": "#290's 'what already exists' table no longer matches the workflow",
+      "evidence": "Issue says the security job runs 'CodeQL init (javascript) + Trivy fs scan -> SARIF upload'. Actual active steps are checkout + Trivy only; every codeql reference in the file is inside a comment block (L53-56, L64-65). Issue says 'Node is pinned to 20'; the workflow sets NODE_VERSION: '22' (L17). Issue asks to confirm whether 'develop' is still used; `git ls-remote --heads origin` returns no refs/heads/develop, so it is dead and should be dropped from the push trigger.",
+      "impact": "Three of the issue's stated premises are false, so an implementer working from the issue body alone would produce wrong changes.",
+      "affects": [290],
+      "recommended_action": "Rescope #290 against the current workflow before implementing."
+    },
+    {
+      "id": "CC-3",
+      "severity": "info",
+      "title": "Two milestone issues are blocked independently of Codex",
+      "evidence": "#226 requires enumerating anon-key-reachable objects against a live database. #225 requires RLS_TEST_* credentials and a designated non-production Supabase project. Neither is satisfiable from repository evidence, and the Supabase MCP server cannot be approved in a non-interactive session.",
+      "impact": "These two remain blocked even after Codex is restored.",
+      "affects": [225, 226]
+    }
+  ],
+  "issues": [
+    {
+      "number": 205,
+      "title": "[Epic] Security — browser headers, CSP rollout, and transport hardening",
+      "type": "epic",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "reason": "Aggregate epic. Closes when children #220-#224 close. No independent implementable work.",
+      "children": [220, 221, 222, 223, 224]
+    },
+    {
+      "number": 206,
+      "title": "[Epic] Security — RLS, secrets, and public data exposure hardening",
+      "type": "epic",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "reason": "Aggregate epic. Children #225-#228 plus #226. No independent implementable work.",
+      "children": [225, 226, 227, 228]
+    },
+    {
+      "number": 217,
+      "title": "[Epic] Testing & QA foundation",
+      "type": "epic",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "reason": "Aggregate epic. Children #290-#296 plus #310. No independent implementable work.",
+      "children": [290, 291, 292, 293, 294, 296, 310]
+    },
+    {
+      "number": 226,
+      "title": "Re-audit what an anonymous visitor can read today",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["live_database_access", "codex_unavailable"],
+      "codex_independent_blocker": true,
+      "investigation": "Acceptance criteria require enumerating every table/view/RPC reachable with the anon key against the live project. Supabase MCP is connected but every call returns 'requires approval', unattainable in a non-interactive session. scripts/verify-rls-security.mjs needs REACT_APP_SUPABASE_* and RLS_TEST_* credentials absent from the repo.",
+      "prior_triage": "Already commented 2026-08-01; no new information to add, so no duplicate comment posted.",
+      "ready_when_unblocked": false
+    },
+    {
+      "number": 225,
+      "title": "Run RLS verification in CI so security regressions fail the build",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["rls_test_credentials", "non_production_supabase_project", "codex_unavailable"],
+      "codex_independent_blocker": true,
+      "investigation": "scripts/verify-rls-security.mjs exists (441 lines) and is the intended instrument. Wiring it into CI needs RLS_TEST_* secrets and an owner decision on which project it runs against — the issue itself requires that decision be recorded deliberately. Guardrail forbids running destructive verification against production.",
+      "ready_when_unblocked": false,
+      "note": "The workflow scaffolding could be written by Codex, but the issue cannot be closed until the project + credential decision is made by a human."
+    },
+    {
+      "number": 292,
+      "title": "Add a test that fails if draft content reaches a public consumer",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "The runtime behavior already exists — public consumers filter drafts via .eq('is_published', true) in src/data/repos/events.ts (L61, L376), src/data/repos/houseEvents.ts (6 call sites), with an explicit include_unpublished escape hatch at events.ts:90 for admin paths. What is missing is any test guarding it: zero test files under src/data. This is a pure test-authoring issue against existing, correct behavior — low risk, high value.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified"
+    },
+    {
+      "number": 291,
+      "title": "Add repository-layer tests for the data access layer",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "24 repository modules under src/data/repos/. Zero repository tests exist (the single src/data test is legacyHouseArchive.test.ts, which does not cover a repo class). This is the foundational test-infrastructure issue: #292, #293 and #294 all benefit from the Supabase mocking harness this establishes.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified",
+      "sequencing": "Do FIRST among the testing cluster — it establishes the mocking harness the others reuse."
+    },
+    {
+      "number": 293,
+      "title": "Add characterization tests for points and leaderboard before any refactor",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "labels_note": "gated:change-control — touches a protected domain (points/leaderboard)",
+      "investigation": "Protected-domain work per vsa-change-control. Characterization tests must capture current behavior exactly, including quirks, before any refactor. Depends on the harness from #291.",
+      "ready_when_unblocked": true,
+      "depends_on": [291]
+    },
+    {
+      "number": 310,
+      "title": "Make the dual points systems impossible to miss",
+      "priority": "P0",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "Documentation/guardrail issue about the two coexisting points systems (public leaderboard vs authenticated check-in), documented in docs/leaderboard-system.md. Docs-and-comments scope; no runtime risk.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified"
+    },
+    {
+      "number": 294,
+      "title": "Add route-level smoke tests for every public page",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "15 test files exist, all unit-level (utils/, schemas/, lib/). No route or page-level rendering tests. src/routes/index.tsx lazy-loads pages across public/protected/admin tiers.",
+      "ready_when_unblocked": true,
+      "depends_on": [291]
+    },
+    {
+      "number": 296,
+      "title": "Add Edge Function tests and type checking to CI",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "6 Edge Functions under supabase/functions/ (_shared, analytics-proxy, secure-ai, trigger-event-image-migration, trigger-house-event-image-migration, vsa-ai-assistant). No deno.json config found. Known pre-existing failure: `deno check` reports 14 SupabaseClient generic errors on origin/main, tracked separately. That pre-existing breakage must be resolved or explicitly scoped out, or this issue's CI gate lands permanently red.",
+      "ready_when_unblocked": true,
+      "hazard": "Pre-existing deno check failures on main will block a naive CI gate."
+    },
+    {
+      "number": 290,
+      "title": "Close the remaining gaps in the existing CI pipeline",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "premises_stale": true,
+      "investigation": "See CC-1 and CC-2. Verified gaps that remain genuinely true: no typecheck script in package.json (confirmed absent) and no tsc --noEmit CI step; coverage generated then discarded; branch protection absent (established in #357: 404 Branch not protected). Verified stale premises: security job has no CodeQL and no SARIF upload (comments only); Node is 22 not 20; 'develop' does not exist as a remote branch.",
+      "ready_when_unblocked": true,
+      "requires_rescope": true
+    },
+    {
+      "number": 232,
+      "title": "Define and test admin session expiry and sign-out behavior",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "Auth-domain issue over src/context/AuthContext.tsx and the useAdmin() hook. Note the repository's standing rule, recorded in PR #335: useAdmin() is NOT a security boundary. Any test must assert the server-side boundary, not the client-side gate.",
+      "ready_when_unblocked": true
+    },
+    {
+      "number": 227,
+      "title": "Add RLS regression tests for each historical security incident",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "labels_note": "gated:change-control",
+      "investigation": "Requires the incident chronicle in vsa-failure-archaeology as the source list. Likely shares the credential blocker with #225 for any test that executes against a real database; a static policy-assertion approach could avoid it.",
+      "ready_when_unblocked": "partial",
+      "depends_on": [225]
+    },
+    {
+      "number": 228,
+      "title": "Add an RLS/grants checklist to the migration authoring process",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "Docs/process issue. The domain knowledge already exists in the vsa-supabase-security-reference skill, including the auto-updatable-view / default-privileges gotcha and its revoke-then-grant fix. Scope is transcribing it into the migration authoring workflow.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified"
+    },
+    {
+      "number": 224,
+      "title": "Enforce CSP in production and add a config-vs-docs drift check",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable", "depends_on_221_222_223"],
+      "investigation": "vercel.json currently sends NO CSP header of any kind — verified: headers array contains only X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options, Strict-Transport-Security. Enforcement is the LAST step of the CSP rollout and must not precede #221/#222/#223.",
+      "ready_when_unblocked": false,
+      "depends_on": [221, 222, 223]
+    },
+    {
+      "number": 223,
+      "title": "Ship Content-Security-Policy-Report-Only and inventory production violations",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable", "depends_on_221"],
+      "investigation": "docs/security-headers-and-csp.md L27 states neither enforced nor report-only CSP is sent yet — confirmed against vercel.json. The doc explicitly requires a report collector to exist first, or report-only produces no actionable telemetry.",
+      "ready_when_unblocked": false,
+      "depends_on": [221]
+    },
+    {
+      "number": 222,
+      "title": "Remove or nonce the inline theme bootstrap script (CSP blocker)",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "CONFIRMED LIVE. public/index.html L39-55 contains an inline <script> IIFE reading localStorage 'theme' and applying a class to documentElement for FOUC prevention before first paint. This is the concrete blocker to a CSP without unsafe-inline. It is independent of the collector work and can proceed in parallel with #221.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified",
+      "sequencing": "Do FIRST in the CSP cluster alongside #221 — it unblocks #223 and #224.",
+      "hazard": "Removing it naively reintroduces a flash of unstyled content; a nonce or hash approach preserves the pre-paint behavior."
+    },
+    {
+      "number": 221,
+      "title": "Stand up a CSP violation report collector with documented retention",
+      "priority": "P1",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "investigation": "Prerequisite for #223 per the doc's own rollout order. Involves a new endpoint plus a documented retention/access policy — a privacy-relevant decision surface.",
+      "ready_when_unblocked": true,
+      "sequencing": "Do FIRST in the CSP cluster alongside #222."
+    },
+    {
+      "number": 220,
+      "title": "Update security-headers doc to match the current vercel.json structure",
+      "priority": "P2",
+      "classification": "blocked_external",
+      "blocked_by": ["codex_unavailable"],
+      "labels_note": "agent:codex — explicitly designated for Codex",
+      "investigation": "CONFIRMED STILL OPEN. docs/security-headers-and-csp.md L15 still contains verbatim the stale paragraph the issue quotes: 'The global header route uses Vercel's `continue` behavior ... It remains in the legacy `routes` array ...'. The current vercel.json has no routes array — it uses top-level headers + rewrites. PR #360 touched this file but only added the HSTS rationale (correctly scoped; the issue explicitly says leave the HSTS row alone). The header table itself is accurate. Remaining work is L15 plus the vanished caching claims.",
+      "ready_when_unblocked": true,
+      "readiness": "fully_specified",
+      "note": "Lowest-risk issue in the milestone: docs-only, zero runtime impact, single stale paragraph. Best first task when Codex returns."
+    }
+  ],
+  "recommended_execution_order_when_unblocked": [
+    "220 (docs-only warm-up, validates the Codex loop end to end)",
+    "291 (foundational test harness — unblocks 292, 293, 294)",
+    "292 (draft-leak guard; behavior already correct, test-only)",
+    "222 + 221 (parallel; both unblock the CSP chain)",
+    "290 (rescope first against CC-1/CC-2, then implement; re-enable CodeQL)",
+    "294, 296, 310, 228, 232",
+    "293 (protected domain — characterization tests, change-control gated)",
+    "223 -> 224 (CSP chain, strictly after 221/222)",
+    "227 (after 225's credential decision)",
+    "225, 226 (require human credential/project decisions regardless of Codex)"
+  ]
+}

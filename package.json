@@ -44,6 +44,7 @@
     "analyze:all": "npm run build && npx source-map-explorer 'build/static/**/*.{js,css}'",
     "lint": "eslint src/**/*.{ts,tsx}",
     "format": "prettier --write src/**/*.{ts,tsx}",
+    "audit:image-exif": "node scripts/audit-image-exif.mjs",
     "migrate:images:dry": "tsx scripts/migrate-supabase-images-to-public.ts",
     "migrate:images:apply": "tsx scripts/migrate-supabase-images-to-public.ts --apply",
     "migrate:house-assets:dry": "tsx scripts/migrate-supabase-images-to-public.ts --category houses",
