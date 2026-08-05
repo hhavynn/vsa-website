@@ -1,0 +1,7 @@
+{
+  "issue": 325,
+  "outcome": "pr_created",
+  "detail": "Stacked as commit cd27b1b9 onto already-open PR #333. Issue left OPEN (not closed) — the 'verified in VS Code Dev Containers and a Codespace' criterion is a genuine, disclosed gap requiring a human.",
+  "revision_cycles_used": 0,
+  "implementer": "agy (claude-sonnet-4-6)"
+}

@@ -1,0 +1,99 @@
+{
+  "issue": 229,
+  "slice": "CORS + per-function audit doc (3 of 5 acceptance criteria)",
+  "reviewer": "claude-opus-5 (controller)",
+  "reviewed_at": "2026-08-01",
+  "base_sha": "dd2d585c0832f8bde0fa43334f11a3bc985c29d0",
+  "branch": "codex/issue-229-cors-audit",
+  "decision": "approved",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "severity": "medium",
+      "file": "supabase/functions/secure-ai/index.ts",
+      "location": "lines 97-117",
+      "problem": "secure-ai authenticates the caller but does not check admin status - any authenticated user can invoke a paid OpenAI call.",
+      "why_it_matters": "Cost exposure from any logged-in account, not just admins.",
+      "required_outcome": "Out of scope here. Belongs to #352 (cost controls) and is moot if secure-ai is deleted as vestigial. Recorded in the audit doc."
+    },
+    {
+      "severity": "low",
+      "file": "supabase/functions/trigger-event-image-migration/index.ts",
+      "location": "line 38",
+      "problem": "Shared-secret comparison uses !== rather than a constant-time compare.",
+      "why_it_matters": "Theoretical timing side channel; low practical risk for a shared secret over a network.",
+      "required_outcome": "Not addressed - the trigger functions are deliberately untouched in this PR. Noted for a future hardening pass."
+    }
+  ],
+  "verification_performed": [
+    {
+      "check": "git diff --stat vs base",
+      "result": "3 modified (analytics-proxy, secure-ai, vsa-ai-assistant), 2 new untracked (supabase/functions/_shared/cors.ts, docs/edge-function-security-audit.md). No file outside the planned set.",
+      "passed": true
+    },
+    {
+      "check": "git diff on both trigger-* functions (hard constraint)",
+      "result": "0 lines. Provably untouched.",
+      "passed": true
+    },
+    {
+      "check": "Leftover Access-Control-Allow-Origin literals",
+      "result": "Exactly one, inside _shared/cors.ts. The '*' in analytics-proxy and the invalid comma-joined value in secure-ai are both gone.",
+      "passed": true
+    },
+    {
+      "check": "analytics-proxy jsonResponse signature change threaded through ALL call sites",
+      "result": "Manually enumerated: definition at :16 plus calls at :122, :204, :234. All three pass req as first arg. Zero missed call sites.",
+      "passed": true
+    },
+    {
+      "check": "vsa-ai-assistant emitted headers byte-identical",
+      "result": "Shared module defaults (allowlist of 4 origins, DEFAULT_ORIGIN, allowed headers/methods strings, Vary: Origin) match the original inline implementation exactly. Called with no options, so allowCredentials is falsy and no credentials header is emitted - matching the original.",
+      "passed": true
+    },
+    {
+      "check": "secure-ai credentials preserved safely",
+      "result": "Local wrapper calls sharedCorsHeaders(req, { allowCredentials: true }). Credentials are now only ever paired with a single concrete origin, never '*'.",
+      "passed": true
+    },
+    {
+      "check": "deno check on the 4 changed/added function files (branch)",
+      "result": "14 errors, exit 1.",
+      "passed": false,
+      "note": "See baseline comparison below - NOT introduced by this branch."
+    },
+    {
+      "check": "deno check BASELINE on unmodified base (run in the issue-219 worktree, same base sha, docs-only change)",
+      "result": "14 errors, exit 1. Identical count and category (SupabaseClient generic mismatches around logUsage, from esm.sh resolving a newer supabase-js than the code targets).",
+      "passed": false,
+      "note": "PRE-EXISTING on main. This branch introduces ZERO new type errors. Exactly the gap #296 exists to close."
+    }
+  ],
+  "verification_not_performed": [
+    {
+      "command": "Live unauthenticated request against deployed trigger-* functions",
+      "reason": "Requires issuing requests to production Edge Functions. Not done autonomously. Remains an OPEN criterion of #229."
+    },
+    {
+      "command": "Supabase invocation-log review for secure-ai",
+      "reason": "Production telemetry, not in the repo. Remains an OPEN criterion of #229."
+    },
+    {
+      "command": "npm test / npm run lint / npm run build",
+      "reason": "No frontend or src/ file changed. Not run, and NOT claimed to pass."
+    }
+  ],
+  "acceptance_criteria": [
+    { "criterion": "Per function: secrets, privileges, who may call, how enforced", "met": true, "evidence": "docs/edge-function-security-audit.md, table with source line references per function." },
+    { "criterion": "Verify trigger-* reject unauthenticated callers - TEST IT, don't read it", "met": false, "evidence": "BLOCKED - requires live production requests. Source-level shared-secret check confirmed at lines 35-40 of both, but the criterion explicitly demands a live test." },
+    { "criterion": "CORS reviewed per function; no permissive '*' on a privileged function", "met": true, "evidence": "analytics-proxy '*' removed; secure-ai invalid comma-joined ACAO removed; both now use the shared allowlist. trigger-* correctly have no CORS." },
+    { "criterion": "No secret returned in a response body or error message", "met": true, "evidence": "grep for err.message/error.message/String(err)/.stack across supabase/functions/*/index.ts returns no matches; per-function column in the audit doc confirms fixed public messages." },
+    { "criterion": "Determine whether secure-ai is still used", "met": false, "evidence": "BLOCKED - needs Supabase invocation logs." }
+  ],
+  "closes_issue": false,
+  "closes_issue_reasoning": "2 of 5 acceptance criteria are external blockers. PR references #229 but must NOT close it.",
+  "ready_for_pr": true,
+  "high_risk": true,
+  "recommended_pr_state": "draft",
+  "pr_state_reasoning": "Touches Supabase Edge Functions that hold secrets and perform privileged actions. Narrowing CORS can break a legitimate browser caller. Requires manual `supabase functions deploy` and human verification against the real admin analytics page and Ask VSA before it is live."
+}
