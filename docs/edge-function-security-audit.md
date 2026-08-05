@@ -5,12 +5,14 @@ Date: 2026-08-01
 This audit covers the four current Supabase Edge Functions in `supabase/functions/` and records the historical `secure-ai` removal from issue #353.
 It resolves the repository-answerable CORS and response-body secret checks for issue #229, but it is not a complete closure audit.
 
-Issue #353 update: `supabase/functions/secure-ai/` was removed from the repository after re-verifying that repo source had no callers. That repository deletion does not undeploy a live Supabase Edge Function and does not unset Supabase secrets. A human must still run:
+Issue #353 update: `supabase/functions/secure-ai/` was removed from the repository after re-verifying that repo source had no callers.
 
-```bash
-supabase functions delete secure-ai
-supabase secrets unset OPENAI_API_KEY
-```
+Production state was then checked directly against project `sxephkrekdztmkptyzca` on 2026-08-05, which corrected one assumption and closed the other item:
+
+- **`secure-ai` was never deployed.** `supabase functions list` returns exactly four ACTIVE functions — `analytics-proxy`, `vsa-ai-assistant`, `trigger-event-image-migration`, `trigger-house-event-image-migration`. `supabase functions delete secure-ai` was therefore a no-op and was not run.
+- **`OPENAI_API_KEY` has been unset** (`supabase secrets unset OPENAI_API_KEY`). Before removal, no deployed function read it: `vsa-ai-assistant` runs on `GEMINI_API_KEY`, and no `Deno.env.get("OPENAI_API_KEY")` exists anywhere under `supabase/functions/`. All four functions remained ACTIVE afterwards.
+
+**Still open, and not repo-actionable:** the exposed key remains valid until it is revoked in the OpenAI dashboard. Unsetting the Supabase secret removes this project's copy; it does not invalidate the credential. Issue #353 stays open until revocation happens.
 
 ## Shared CORS Decision
 
@@ -40,5 +42,5 @@ The production admin analytics page is expected to run on the production site or
 ## Open Items
 
 - The live unauthenticated-call test against both `trigger-*` deployed functions has not been performed. Repository source shows the shared-secret check, but the issue criterion asks for live production requests.
-- `secure-ai`'s repository vestigial status is resolved by issue #353: source search found no callers and the directory was removed. Production state remains external to the repo; deletion still requires `supabase functions delete secure-ai`, and `OPENAI_API_KEY` still requires `supabase secrets unset OPENAI_API_KEY`.
+- `secure-ai`'s vestigial status is fully resolved. Source search found no callers, the directory was removed, and a direct production check on 2026-08-05 confirmed the function was never deployed. `OPENAI_API_KEY` has been unset from the project's secrets. The only remaining action is revoking the exposed key in the OpenAI dashboard, which is outside both the repo and the Supabase project.
 - This work should not close issue #229. It only resolves the repo-answerable CORS and response-body audit slice.
