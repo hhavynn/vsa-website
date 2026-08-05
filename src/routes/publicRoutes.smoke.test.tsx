@@ -166,7 +166,11 @@ describe('public routes render without crashing (#294)', () => {
       },
       { timeout: 5000 }
     );
-  });
+  }, 20000);
+  // Per-test budget must exceed the waits above: findByRole can spend 1s and
+  // the settle waitFor 5s, so Jest's 5s default kills the test before its own
+  // waitFor can time out. Heavy routes (/, /feedback) hit this under parallel
+  // suite load while passing in isolation.
 
   /**
    * WHAT THIS SUITE DOES AND DOES NOT CATCH — verified by mutation.
