@@ -9,7 +9,16 @@ export interface Event {
   location: string;
   points: number;
   event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
-  check_in_form_url: string;
+  /**
+   * Admin-only operational check-in URL.
+   *
+   * Optional because anon cannot select it: migration
+   * 20260820000000_restrict_anon_event_columns.sql grants anon an explicit
+   * column allowlist that excludes it (#379), so public read paths return an
+   * `Event` without this field. Admin paths run as `authenticated` and still
+   * receive it.
+   */
+  check_in_form_url?: string;
   image_url?: string | null;
   thumbnail_url?: string | null;
   is_code_expired: boolean;
@@ -446,8 +455,8 @@ export interface UVSASchool {
   recurring_events: string[];
   logo_url: string | null;
   image_url: string | null;
-  confidence_level: UVSAConfidenceLevel;
-  verification_notes: string | null;
+  confidence_level?: UVSAConfidenceLevel;
+  verification_notes?: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -474,8 +483,14 @@ export interface ExternalEvent {
   status: ExternalEventStatus;
   photo_album_url: string | null;
   recap: string | null;
-  source_notes: string | null;
-  confidence_level: UVSAConfidenceLevel;
+  /**
+   * Internal editorial fields. Optional because anon cannot select them:
+   * migration 20260820000002_restrict_anon_uvsa_columns.sql grants anon an
+   * explicit column allowlist that excludes both (#382). Admin paths run as
+   * `authenticated` and still receive them.
+   */
+  source_notes?: string | null;
+  confidence_level?: UVSAConfidenceLevel;
   is_featured: boolean;
   created_at: string;
   updated_at: string;
