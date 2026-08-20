@@ -1,5 +1,12 @@
 -- Reconcile EXECUTE grants on public-schema functions (#381).
 --
+-- APPLIED TO PRODUCTION 2026-08-20 (project sxephkrekdztmkptyzca) as migration
+-- `reconcile_function_execute_grants`. Post-apply verification passed: anon can
+-- execute exactly one function (record_event_interest); no unpinned SECURITY
+-- DEFINER functions remain; authenticated retains check_in_to_event and
+-- smart_merge_members. Numbered ...003 to avoid colliding with
+-- 20260820000002_restrict_anon_uvsa_columns.sql on the #384 branch.
+--
 -- Do not edit; write a new migration to adjust.
 --
 -- ---------------------------------------------------------------------------
