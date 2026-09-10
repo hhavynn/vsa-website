@@ -12,7 +12,7 @@ The production Vercel configuration applies a small set of browser security head
 | `X-Frame-Options` | `DENY` | Prevents the VSA site itself from being framed, reducing clickjacking risk. This does not prevent the site from embedding approved third-party media. |
 | `Strict-Transport-Security` | `max-age=0` | Intentionally disables HSTS so browsers clear cached policies instead of pinning HTTPS for this host. This preserves UCSD captive-portal Wi-Fi compatibility; `preload` is deliberately omitted. |
 
-The global header route uses Vercel's `continue` behavior so the existing static-asset caching, `index.html` caching, filesystem handling, and SPA fallback routes continue to run unchanged. It remains in the legacy `routes` array to guarantee that the header rule executes before this project's legacy terminating SPA fallback.
+The top-level `headers` rule applies these headers to `/(.*)`. A separate top-level `rewrites` rule sends `/(.*)` to `/index.html` for the single-page application fallback. The current configuration has no legacy `routes` array and does not define explicit static-asset or `index.html` caching rules.
 
 ## HSTS decision
 
@@ -77,4 +77,4 @@ On a Vercel preview, verify response headers on the document and a static asset,
 
 ## Rollback
 
-If a header causes a production regression, revert the header route in `vercel.json` and redeploy. Prefer removing only the implicated directive or capability after reproducing the issue on a preview. Do not disable analytics consent, weaken authentication, broaden data access, or add a permissive CSP as a workaround. HSTS remains cached by browsers for its advertised lifetime, which is why this change does not use `preload`; confirm HTTPS coverage for any production subdomains before release.
+If a header causes a production regression, revert the affected entry in the top-level `headers` rule in `vercel.json` and redeploy. Prefer removing only the implicated directive or capability after reproducing the issue on a preview. Do not disable analytics consent, weaken authentication, broaden data access, or add a permissive CSP as a workaround. HSTS remains cached by browsers for its advertised lifetime, which is why this change does not use `preload`; confirm HTTPS coverage for any production subdomains before release.
