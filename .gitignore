@@ -49,3 +49,4 @@ yarn-error.log*
 /graphify-out/cost.json
 /graphify-out/.graphify_labels.json
 /graphify-out/.graphify_root
+/graphify-out/.rebuild.lock
