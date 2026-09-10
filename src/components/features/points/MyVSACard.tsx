@@ -144,26 +144,29 @@ function useRecentAttendance(memberId: string) {
     enabled: !!memberId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      // member_event_history, not the raw ledger: /points is a public route, and
+      // anon lost SELECT on member_event_attendance in 20260820000001 (#380).
+      // The view already joins the event, so the columns arrive flat instead of
+      // nested, and it filters to published events.
       const { data, error } = await supabase
-        .from('member_event_attendance')
-        .select('event_id, points_earned, events(id, name, date, event_type)')
+        .from('member_event_history')
+        .select('event_id, points_earned, event_name, event_date, event_type')
         .eq('member_id', memberId);
 
       if (error) throw error;
 
       return ((data ?? []) as any[])
-        .map((row) => {
-          const ev = Array.isArray(row.events) ? row.events[0] : row.events;
-          if (!ev) return null;
-          return {
-            event_id: row.event_id,
-            points_earned: row.points_earned ?? 0,
-            name: ev.name ?? '',
-            date: ev.date ?? '',
-            event_type: ev.event_type ?? 'other',
-          } as AttendedEvent;
-        })
-        .filter((r): r is AttendedEvent => r !== null && r.date !== '')
+        .map(
+          (row) =>
+            ({
+              event_id: row.event_id,
+              points_earned: row.points_earned ?? 0,
+              name: row.event_name ?? '',
+              date: row.event_date ?? '',
+              event_type: row.event_type ?? 'other',
+            }) as AttendedEvent
+        )
+        .filter((r): r is AttendedEvent => r.date !== '')
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 3);
     },

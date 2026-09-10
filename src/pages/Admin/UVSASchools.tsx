@@ -145,7 +145,9 @@ function schoolToForm(school: UVSASchool): SchoolForm {
     recurring_events: listToText(school.recurring_events),
     logo_url: school.logo_url || "",
     image_url: school.image_url || "",
-    confidence_level: school.confidence_level,
+    // Optional on the shared type because anon cannot select it (#382); this
+    // admin page reads the full row as `authenticated`, so it is always present.
+    confidence_level: school.confidence_level ?? 'low',
     verification_notes: school.verification_notes || "",
     is_active: school.is_active,
     sort_order: school.sort_order,

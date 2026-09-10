@@ -9,6 +9,21 @@ export interface ExternalEventFilters {
   limit?: number;
 }
 
+/**
+ * Every `external_events` column an anonymous visitor may read, with the joined
+ * school restricted to its own public columns.
+ *
+ * `source_notes` and `confidence_level` are deliberately absent: migration
+ * 20260820000002_restrict_anon_uvsa_columns.sql revokes anon's table-wide SELECT
+ * on both tables and re-grants only the public columns (#382). A `select('*')`
+ * therefore fails for anon, and the nested `uvsa_schools(*)` fails for the same
+ * reason — so both sides of the join must name their columns.
+ *
+ * Admin reads run as `authenticated`, which keeps table-level SELECT.
+ */
+const PUBLIC_EXTERNAL_EVENT_COLUMNS =
+  'id, uvsa_school_id, title, event_type, date, academic_term_id, location, description, points, rsvp_url, ride_form_url, instagram_url, host_info_url, ride_info, status, photo_album_url, recap, is_featured, created_at, updated_at, uvsa_school:uvsa_schools(id, school_name, short_name, slug, system_type, city, vsa_name, instagram_url, linktree_url, website_url, facebook_url, youtube_url, tiktok_url, description, known_for, recurring_events, logo_url, image_url, is_active, sort_order, created_at, updated_at)' as const;
+
 export class ExternalEventsRepository {
   /**
    * Get external events with optional filters
@@ -17,7 +32,7 @@ export class ExternalEventsRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('external_events')
-        .select('*, uvsa_school:uvsa_schools(*)');
+        .select(PUBLIC_EXTERNAL_EVENT_COLUMNS);
 
       if (filters.status) {
         query = query.eq('status', filters.status);
@@ -52,7 +67,10 @@ export class ExternalEventsRepository {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      // supabase-js types a to-one embed as an array; PostgREST returns a single
+      // object at runtime. The previous `select('*, ...)` string was untyped, so
+      // this mismatch existed but was invisible. Runtime shape is unchanged.
+      return (data ?? []) as unknown as ExternalEvent[];
     }, 'Failed to fetch external events');
   }
 
@@ -79,13 +97,14 @@ export class ExternalEventsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('external_events')
-        .select('*, uvsa_school:uvsa_schools(*)')
+        .select(PUBLIC_EXTERNAL_EVENT_COLUMNS)
         .eq('id', id)
         .single();
 
       if (error) throw error;
       if (!data) throw new NotFoundError('External event not found', 'external_events', id);
-      return data;
+      // See the embed-cardinality note in getEvents.
+      return data as unknown as ExternalEvent;
     }, 'Failed to fetch external event');
   }
 

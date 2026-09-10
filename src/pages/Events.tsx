@@ -490,7 +490,10 @@ export function Events() {
 
     // 2. Attendance stats
     supabase
-      .from('member_event_attendance')
+      // member_event_history, not the raw ledger: anon lost SELECT on
+      // member_event_attendance in 20260820000001 (#380). The view carries the
+      // same three columns and additionally filters to published events.
+      .from('member_event_history')
       .select('event_id, member_id, points_earned')
       .in('event_id', archivedEventIds)
       .then(async ({ data: attendanceRows }) => {

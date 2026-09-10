@@ -50,6 +50,21 @@ export interface PublishedPastEventArchiveAvailability {
   hasUnassignedEvents: boolean;
 }
 
+/**
+ * Every `events` column an anonymous visitor may read.
+ *
+ * `check_in_form_url` is deliberately absent: migration
+ * 20260820000000_restrict_anon_event_columns.sql revokes anon's table-wide
+ * SELECT and re-grants only these columns (#379). A `select('*')` against
+ * `events` therefore fails for anon with a permission error, so public read
+ * paths must name their columns explicitly.
+ *
+ * Admin paths run as `authenticated`, which keeps table-level SELECT and can
+ * still read and write the form URL.
+ */
+const PUBLIC_EVENT_COLUMNS =
+  'id, name, description, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url, is_code_expired, is_published, academic_term_id, created_at, updated_at' as const;
+
 export class EventsRepository {
   async getPublishedPastEventArchiveAvailability(
     dateTo: string
@@ -84,7 +99,7 @@ export class EventsRepository {
   async getEvents(filters: EventFilters = {}): Promise<EventWithAttendance[]> {
     return withErrorHandling(async () => {
       // Step 1: fetch events (simple select). Avoid embedded aggregates which can cause 400s.
-      let eventsQuery = supabase.from('events').select('*');
+      let eventsQuery = supabase.from('events').select(PUBLIC_EVENT_COLUMNS);
 
       // Apply filters
       if (!filters.include_unpublished) eventsQuery = eventsQuery.eq('is_published', true);
@@ -138,7 +153,7 @@ export class EventsRepository {
       // Fetch event
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .select('*')
+        .select(PUBLIC_EVENT_COLUMNS)
         .eq('id', id)
         .single();
 
