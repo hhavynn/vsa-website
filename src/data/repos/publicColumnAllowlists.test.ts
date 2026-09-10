@@ -28,7 +28,9 @@ function read(relativePath: string): string {
 
 /** The literal assigned to a `const NAME = '...' as const;` declaration. */
 function columnConstant(fileContents: string, constName: string): string {
-  const pattern = new RegExp(`${constName}\\s*=\\s*'([^']*)'`);
+  // Matches both a plain literal ('a, b') and a template literal
+  // (`${OTHER}, c`), since the admin projection is built from the public one.
+  const pattern = new RegExp(`${constName}\\s*=\\s*['\`]([^'\`]*)['\`]`);
   const match = fileContents.match(pattern);
   if (!match) {
     throw new Error(`Could not find the ${constName} column literal`);
@@ -48,6 +50,39 @@ describe("anon column allowlists stay closed", () => {
     // passing merely because the parse returned something empty.
     expect(columns).toContain("id");
     expect(columns).toContain("is_published");
+  });
+
+  it("the ADMIN events projection keeps check_in_form_url (#384 review, P1)", () => {
+    // Regression guard for silent data loss.
+    //
+    // The admin Events page loads its list with `include_unpublished: true` and
+    // edits rows in place. If that projection omits check_in_form_url, the
+    // field arrives `undefined`, the edit form renders blank, and saving writes
+    // an empty string over a real operational URL. Nothing else in the suite
+    // catches that -- it is a write path, and the read tests all pass.
+    const source = read("data/repos/events.ts");
+
+    const admin = columnConstant(source, "ADMIN_EVENT_COLUMNS");
+    expect(admin).toContain("check_in_form_url");
+
+    // The two lists must stay in sync. ADMIN is spelled out as its own literal
+    // (supabase-js parses the select string at the type level, so a template
+    // literal degrades to `string`), which means drift is possible -- hence
+    // this assertion rather than trusting the two to match by construction.
+    const publicCols = columnConstant(source, "PUBLIC_EVENT_COLUMNS");
+    expect(admin).toBe(`${publicCols}, check_in_form_url`);
+
+    // And the admin projection must actually be wired to the admin flag.
+    expect(source).toMatch(
+      /include_unpublished\s*\?\s*ADMIN_EVENT_COLUMNS\s*:\s*PUBLIC_EVENT_COLUMNS/
+    );
+  });
+
+  it("updateEvent does not write undefined fields over stored values", () => {
+    // Defence in depth for the same failure mode: a narrowed projection yields
+    // `undefined`, and spreading that into an update nulls the column.
+    const source = read("data/repos/events.ts");
+    expect(source).toMatch(/value\s*!==\s*undefined/);
   });
 
   it("the public UVSA school select excludes internal editorial columns (#382)", () => {

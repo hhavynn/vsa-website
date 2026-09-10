@@ -65,6 +65,23 @@ export interface PublishedPastEventArchiveAvailability {
 const PUBLIC_EVENT_COLUMNS =
   'id, name, description, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url, is_code_expired, is_published, academic_term_id, created_at, updated_at' as const;
 
+/**
+ * The admin projection: every public column PLUS `check_in_form_url`.
+ *
+ * The admin Events page loads its list through `getEvents({ include_unpublished:
+ * true })` and edits rows in place. If that list is fetched with
+ * PUBLIC_EVENT_COLUMNS, `check_in_form_url` arrives `undefined`, the edit form
+ * renders blank, and saving writes `'' `over a real URL -- silently destroying
+ * an operational check-in link (#384 review, P1).
+ *
+ * `include_unpublished` is the admin signal: its only callers are
+ * src/pages/Admin/Events.tsx and src/pages/Admin/ContentCalendar.tsx, both
+ * admin-gated and running as `authenticated`, which keeps table-level SELECT.
+ * Anonymous visitors never set it and never receive this projection.
+ */
+const ADMIN_EVENT_COLUMNS =
+  'id, name, description, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url, is_code_expired, is_published, academic_term_id, created_at, updated_at, check_in_form_url' as const;
+
 export class EventsRepository {
   async getPublishedPastEventArchiveAvailability(
     dateTo: string
@@ -99,7 +116,19 @@ export class EventsRepository {
   async getEvents(filters: EventFilters = {}): Promise<EventWithAttendance[]> {
     return withErrorHandling(async () => {
       // Step 1: fetch events (simple select). Avoid embedded aggregates which can cause 400s.
-      let eventsQuery = supabase.from('events').select(PUBLIC_EVENT_COLUMNS);
+      // Admin callers need check_in_form_url back; public callers must not get
+      // it. See ADMIN_EVENT_COLUMNS.
+      //
+      // Explicit generics rather than letting supabase-js parse the select
+      // string: the projection is chosen at runtime, so the argument is a UNION
+      // of two literals and the type-level parser rejects a union outright
+      // (ParserError). Naming the row type keeps `events` typed as Event[]
+      // instead of collapsing.
+      let eventsQuery = supabase
+        .from('events')
+        .select<string, Event>(
+          filters.include_unpublished ? ADMIN_EVENT_COLUMNS : PUBLIC_EVENT_COLUMNS
+        );
 
       // Apply filters
       if (!filters.include_unpublished) eventsQuery = eventsQuery.eq('is_published', true);
@@ -225,10 +254,19 @@ export class EventsRepository {
    */
   async updateEvent(id: string, eventData: UpdateEventFormData): Promise<Event> {
     return withErrorHandling(async () => {
+      // Drop keys that are `undefined` before writing. `undefined` means "this
+      // field was never loaded" -- which is exactly what a narrowed projection
+      // produces -- and spreading it would overwrite a stored value with null.
+      // An explicit `''` or `null` still writes, so clearing a field from the
+      // admin form keeps working.
+      const patch = Object.fromEntries(
+        Object.entries(eventData).filter(([, value]) => value !== undefined)
+      );
+
       const { data, error } = await supabase
         .from('events')
         .update({
-          ...eventData,
+          ...patch,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
