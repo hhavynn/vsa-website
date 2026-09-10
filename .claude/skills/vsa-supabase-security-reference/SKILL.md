@@ -81,6 +81,37 @@ Functions default to INVOKER (run with the caller's privileges, RLS applies). `S
 2. An **internal admin/caller guard** where needed, because DEFINER skips RLS: e.g. `smart_merge_members` starts with `IF NOT EXISTS (... is_admin = true) THEN RAISE EXCEPTION` (`20260619000000_emergency_security_hardening.sql`).
 3. **Explicit execute grants**: `REVOKE ... FROM PUBLIC/anon; GRANT EXECUTE ... TO authenticated;` — Postgres grants EXECUTE to PUBLIC by default, so a forgotten revoke exposes the function to anon.
 
+> **`FROM PUBLIC` is the load-bearing half — `FROM anon` alone does nothing.**
+> `anon` is a *member of* PUBLIC. Revoking from `anon` removes a grant it does
+> not rely on and leaves the PUBLIC grant intact, so the function stays
+> anon-executable. The revoke succeeds silently and changes nothing.
+>
+> This is not hypothetical: a live `pg_catalog` inventory on 2026-08-20 (#381)
+> found **29 of 35** public functions anon-executable, 25 of them through this
+> exact mistake — including `check_in_to_event`, whose revoke was written three
+> separate times (`20260619000000` L237, `20260619050000` L159, `20260620000000`
+> L185) and never took effect. The live ACL showed no `anon=X` entry at all: the
+> revokes applied, to the wrong grantee.
+>
+> The functions that were correctly locked (`is_admin_user`,
+> `approve_member_photo_request`, the data-rights family) are precisely the ones
+> whose migrations wrote `from public`. Always write **both**:
+>
+> ```sql
+> revoke execute on function public.my_fn(uuid) from public, anon;
+> grant  execute on function public.my_fn(uuid) to authenticated;
+> ```
+>
+> Verify after applying — this must return only functions anon is *meant* to
+> reach:
+>
+> ```sql
+> select p.proname
+> from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+> where n.nspname = 'public' and p.prokind = 'f'
+>   and has_function_privilege('anon', p.oid, 'EXECUTE');
+> ```
+
 ### 1.5 Views under RLS (danger zone)
 
 A plain `CREATE VIEW` is **owned by the migration role** and behaves like a DEFINER function: querying it does **not** apply the base tables' RLS. This repo uses that intentionally (e.g. `my_member_photo_requests` exposes only the caller's rows via a `WHERE r.user_id = auth.uid()` filter and `security_barrier = true`), but it means **the view's own grants are the only access control**. See section 2 for the mandatory pattern. Additional trap: a *simple* view (single table, no aggregates/joins) is **auto-updatable** — Postgres lets clients INSERT/UPDATE/DELETE *through* it into the base table, past that table's RLS, if grants allow.
@@ -238,7 +269,8 @@ Migrations are **forward-only** ("Do not edit; write a new migration to adjust" 
 **Every new FUNCTION (especially SECURITY DEFINER):**
 - [ ] `SET search_path = ''` and schema-qualify all references.
 - [ ] Internal guard first (`is_admin_user(auth.uid())` or `auth.uid()` identity check) — DEFINER bypasses RLS, the function body is the security boundary.
-- [ ] `revoke all on function ... from public;` (and `anon`), then `grant execute` to the intended role.
+- [ ] `revoke execute on function ... from public, anon;` then `grant execute` to the intended role. **`from public` is mandatory and `from anon` alone is a no-op** — anon inherits EXECUTE through PUBLIC. See the callout in section 1.4; this single omission caused #381.
+- [ ] Pin `search_path` on **every** SECURITY DEFINER function, including trigger functions. Prefer `ALTER FUNCTION ... SET search_path = ''` when hardening an existing one, so the body is provably unchanged. `''` is safe only if every reference is schema-qualified — check the body first.
 - [ ] Never trust client-supplied user IDs or point values — derive from `auth.uid()` and server data (section 3).
 
 **Every new STORAGE bucket:** private unless proven public; write policies on `storage.objects` scoped by `bucket_id` and folder; admin-gate reads of private buckets (pattern: `member-photo-requests`, section 1.6).
