@@ -1,7 +1,7 @@
 import React from 'react';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 
-export type FamAccent = 'teal' | 'coral' | 'gold';
+export type FamAccent = 'teal' | 'rose' | 'lavender';
 export type FamPattern = 'sunburst' | 'wave' | 'dots' | 'arches' | 'lantern' | 'leaves';
 
 interface PaletteEntry {
@@ -12,9 +12,9 @@ interface PaletteEntry {
 }
 
 const PALETTE: Record<FamAccent, PaletteEntry> = {
-  teal:  { ink: '#1e8878', wash: '#d2efec', deep: '#0f5a4f', cream: '#f5f1ea' },
-  coral: { ink: '#e8623a', wash: '#fde0d4', deep: '#a83a18', cream: '#fdf2eb' },
-  gold:  { ink: '#d4841a', wash: '#fbe8c4', deep: '#7a4806', cream: '#fbf3e2' },
+  teal:  { ink: '#1ba8a0', wash: '#c8f2ee', deep: '#0f5c58', cream: '#f5f1ea' },
+  rose: { ink: '#e06b8f', wash: '#fde0ea', deep: '#a84468', cream: '#fdf0f4' },
+  lavender:  { ink: '#9b7fc7', wash: '#ece0f8', deep: '#5c4688', cream: '#f4eff8' },
 };
 
 interface FamCoverProps {

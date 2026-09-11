@@ -22,14 +22,14 @@ interface AccentPalette {
 
 const ACCENTS: Record<'light' | 'dark', Record<FamAccent, AccentPalette>> = {
   light: {
-    teal:  { fill: '#1e8878', dark: '#0f5a4f', ring: 'rgba(30,136,120,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
-    coral: { fill: '#e8623a', dark: '#a83a18', ring: 'rgba(232,98,58,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
-    gold:  { fill: '#d4841a', dark: '#7a4806', ring: 'rgba(212,132,26,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
+    teal:  { fill: '#1ba8a0', dark: '#0f5c58', ring: 'rgba(27,168,160,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
+    rose: { fill: '#e06b8f', dark: '#a84468', ring: 'rgba(224,107,143,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
+    lavender:  { fill: '#9b7fc7', dark: '#5c4688', ring: 'rgba(155,127,199,0.18)', edge: '#c4b8a8', label: '#142028', sub: '#4a6b68', node2bg: '#ffffff' },
   },
   dark: {
-    teal:  { fill: '#3bbdb5', dark: '#0d6a62', ring: 'rgba(59,189,181,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
-    coral: { fill: '#f07858', dark: '#a83a18', ring: 'rgba(240,120,88,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
-    gold:  { fill: '#e8a838', dark: '#7a4806', ring: 'rgba(232,168,56,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
+    teal:  { fill: '#45d4c8', dark: '#0e6b65', ring: 'rgba(69,212,200,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
+    rose: { fill: '#f08da8', dark: '#a84468', ring: 'rgba(240,141,168,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
+    lavender:  { fill: '#b9a0de', dark: '#5c4688', ring: 'rgba(185,160,222,0.22)', edge: '#1a3038', label: '#e4d8c8', sub: '#6a9a94', node2bg: '#0d1a20' },
   },
 };
 

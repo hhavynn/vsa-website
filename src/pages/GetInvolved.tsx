@@ -101,7 +101,7 @@ export function GetInvolved() {
             <div className="scrapbook-paper overflow-hidden p-5 sm:p-6 lg:p-7">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <Label className="text-[var(--accent)]">New Member Start Here</Label>
-                <span className="scrapbook-sticker scrapbook-sticker-coral">Start Here</span>
+                <span className="scrapbook-sticker scrapbook-sticker-rose">Start Here</span>
               </div>
               <h2 className="vsa-section-title mb-5">
                 Your VSA
@@ -193,7 +193,7 @@ export function GetInvolved() {
                         <span className="min-w-0 font-sans text-[17px] font-semibold" style={{ color: 'var(--text)' }}>
                           {program.title}
                         </span>
-                        <span className="scrapbook-sticker scrapbook-sticker-coral">
+                        <span className="scrapbook-sticker scrapbook-sticker-rose">
                           {program.tag}
                         </span>
                       </div>

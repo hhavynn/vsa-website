@@ -7,8 +7,8 @@
   /* Light (default) */
   --bg:           #f5f1ea;
   --bg-2:         #fdf7f0;
-  --hero-grad-a:  #fde0d4;
-  --hero-grad-b:  #d2efec;
+  --hero-grad-a:  #fde0ea;
+  --hero-grad-b:  #c8f2ee;
   --hero-grad-c:  #f9f4ec;
   --surface:      #ffffff;
   --surface-2:    #fdf7f0;
@@ -22,16 +22,16 @@
   --text-3:       #90aaa8;
   --text-on-ink:  #f5f1ea;
   --text-on-ink-muted: rgba(245,241,234,0.7);
-  --brand:        #1e8878;
-  --brand-strong: #0f5a4f;
-  --brand-soft:   #d2efec;
-  --accent:       #e8623a;
-  --accent-soft:  #fde0d4;
-  --accent-strong:#a83a18;
-  --gold:         #d4841a;
-  --gold-soft:    #fbe8c4;
-  --gold-strong:  #7a4806;
-  --watermark:    rgba(30,136,120,0.07);
+  --brand:        #1ba8a0;
+  --brand-strong: #0f5c58;
+  --brand-soft:   #c8f2ee;
+  --accent:       #e06b8f;
+  --accent-soft:  #fde0ea;
+  --accent-strong:#a84468;
+  --gold:         #9b7fc7;
+  --gold-soft:    #ece0f8;
+  --gold-strong:  #5c4688;
+  --watermark:    rgba(27,168,160,0.07);
   --grain-a:      rgba(20,32,40,0.18);
   --grain-b:      rgba(20,32,40,0.12);
   --shadow-card:  0 1px 0 rgba(196,184,168,0.4), 0 8px 24px rgba(20,32,40,0.04);
@@ -51,8 +51,8 @@
 .ace-app.is-dark {
   --bg:           #080e14;
   --bg-2:         #0d1a20;
-  --hero-grad-a:  rgba(232,98,58,0.14);
-  --hero-grad-b:  rgba(59,189,181,0.16);
+  --hero-grad-a:  rgba(224,107,143,0.14);
+  --hero-grad-b:  rgba(69,212,200,0.16);
   --hero-grad-c:  #0a1218;
   --surface:      #0d1a20;
   --surface-2:    #122430;
@@ -66,16 +66,16 @@
   --text-3:       #547b78;
   --text-on-ink:  #e4d8c8;
   --text-on-ink-muted: rgba(228,216,200,0.66);
-  --brand:        #3bbdb5;
-  --brand-strong: #0d6a62;
-  --brand-soft:   rgba(59,189,181,0.16);
-  --accent:       #f07858;
-  --accent-soft:  rgba(240,120,88,0.18);
-  --accent-strong:#f29279;
-  --gold:         #e8a838;
-  --gold-soft:    rgba(232,168,56,0.16);
-  --gold-strong:  #f0bf60;
-  --watermark:    rgba(59,189,181,0.06);
+  --brand:        #45d4c8;
+  --brand-strong: #0e6b65;
+  --brand-soft:   rgba(69,212,200,0.16);
+  --accent:       #f08da8;
+  --accent-soft:  rgba(240,141,168,0.18);
+  --accent-strong:#f2a0b8;
+  --gold:         #b9a0de;
+  --gold-soft:    rgba(185,160,222,0.16);
+  --gold-strong:  #d0b8f0;
+  --watermark:    rgba(69,212,200,0.06);
   --grain-a:      rgba(255,255,255,0.06);
   --grain-b:      rgba(255,255,255,0.04);
   --shadow-card:  0 1px 0 rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3);
@@ -131,18 +131,18 @@
   border: 1px solid;
 }
 .ace-app .ace-pill-default { background: var(--surface-2); color: var(--text); border-color: var(--border); }
-.ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(30,136,120,0.25); }
-.ace-app .ace-pill-coral { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(232,98,58,0.25); }
-.ace-app .ace-pill-gold  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(212,132,26,0.25); }
+.ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(27,168,160,0.25); }
+.ace-app .ace-pill-rose { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(224,107,143,0.25); }
+.ace-app .ace-pill-lavender  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(155,127,199,0.25); }
 .ace-app .ace-pill-live  { background: var(--brand); color: var(--text-on-ink); border-color: var(--brand); }
 .ace-app .ace-pill-dot {
   width: 6px; height: 6px; border-radius: 999px;
   background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28);
 }
 .ace-app.is-dark .ace-pill-live  { color: #061013; }
-.ace-app.is-dark .ace-pill-teal  { color: #b0eee9; }
-.ace-app.is-dark .ace-pill-coral { color: #f7c4b1; }
-.ace-app.is-dark .ace-pill-gold  { color: #f2d088; }
+.ace-app.is-dark .ace-pill-teal  { color: #b4f4ed; }
+.ace-app.is-dark .ace-pill-rose { color: #f7c4d4; }
+.ace-app.is-dark .ace-pill-lavender  { color: #d8c4f0; }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .ace-app .ace-btn {
@@ -185,7 +185,7 @@
   right: 8%;
   height: 24px;
   border-radius: 3px;
-  background: repeating-linear-gradient(-45deg, rgba(212,132,26,0.24) 0 8px, rgba(255,255,255,0.14) 8px 12px);
+  background: repeating-linear-gradient(-45deg, rgba(155,127,199,0.24) 0 8px, rgba(255,255,255,0.14) 8px 12px);
   transform: rotate(-0.7deg);
   opacity: 0.55;
   pointer-events: none;
@@ -204,8 +204,8 @@
   background-image:
     radial-gradient(1.2px 1.2px at 20% 30%, var(--grain-a) 50%, transparent 51%),
     radial-gradient(1px 1px at 60% 80%, var(--grain-b) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 80% 20%, rgba(232,98,58,0.22) 50%, transparent 51%),
-    radial-gradient(1px 1px at 40% 60%, rgba(30,136,120,0.18) 50%, transparent 51%);
+    radial-gradient(1.5px 1.5px at 80% 20%, rgba(224,107,143,0.22) 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 60%, rgba(27,168,160,0.18) 50%, transparent 51%);
   background-size: 220px 220px, 180px 180px, 260px 260px, 200px 200px;
 }
 .ace-app .ace-hero-inner { position: relative; z-index: 2; }
@@ -323,7 +323,7 @@
   width: 76px;
   height: 20px;
   border-radius: 3px;
-  background: repeating-linear-gradient(45deg, rgba(59,189,181,0.24) 0 8px, rgba(255,255,255,0.16) 8px 12px);
+  background: repeating-linear-gradient(45deg, rgba(69,212,200,0.24) 0 8px, rgba(255,255,255,0.16) 8px 12px);
   transform: translateX(-50%) rotate(-2deg);
   pointer-events: none;
 }
@@ -349,8 +349,8 @@
 }
 .ace-app .ace-fam-viet { font-style: italic; font-size: 16px; }
 .ace-app .ace-fam-viet-teal  { color: var(--brand); }
-.ace-app .ace-fam-viet-coral { color: var(--accent); }
-.ace-app .ace-fam-viet-gold  { color: var(--gold); }
+.ace-app .ace-fam-viet-rose { color: var(--accent); }
+.ace-app .ace-fam-viet-lavender  { color: var(--gold); }
 .ace-app .ace-fam-meta {
   margin-top: 10px;
   font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
@@ -364,7 +364,7 @@
   font-size: 13px; font-weight: 600; color: var(--brand);
 }
 .ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-strong); }
-.ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6cd8d1; }
+.ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6ee0d8; }
 .ace-app .ace-graveyard-section {
   border-top: 1px solid var(--border);
   padding-top: 28px;
@@ -503,8 +503,8 @@
   text-transform: uppercase;
 }
 .ace-app .ace-sheet-eyebrow-teal  { color: var(--brand); }
-.ace-app .ace-sheet-eyebrow-coral { color: var(--accent); }
-.ace-app .ace-sheet-eyebrow-gold  { color: var(--gold); }
+.ace-app .ace-sheet-eyebrow-rose { color: var(--accent); }
+.ace-app .ace-sheet-eyebrow-lavender  { color: var(--gold); }
 .ace-app .ace-sheet-title {
   margin-top: 2px;
   font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
@@ -512,8 +512,8 @@
 }
 .ace-app .ace-sheet-viet { font-style: italic; }
 .ace-app .ace-sheet-viet-teal  { color: var(--brand-strong); }
-.ace-app .ace-sheet-viet-coral { color: var(--accent-strong); }
-.ace-app .ace-sheet-viet-gold  { color: var(--gold-strong); }
+.ace-app .ace-sheet-viet-rose { color: var(--accent-strong); }
+.ace-app .ace-sheet-viet-lavender  { color: var(--gold-strong); }
 .ace-app .ace-sheet-meta {
   margin-top: 6px;
   font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
@@ -538,11 +538,11 @@
 .ace-app .ace-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .ace-app .ace-legend-swatch { width: 14px; height: 14px; border-radius: 999px; display: inline-block; }
 .ace-app .ace-legend-swatch-fill-teal  { background: var(--brand); }
-.ace-app .ace-legend-swatch-fill-coral { background: var(--accent); }
-.ace-app .ace-legend-swatch-fill-gold  { background: var(--gold); }
+.ace-app .ace-legend-swatch-fill-rose { background: var(--accent); }
+.ace-app .ace-legend-swatch-fill-lavender  { background: var(--gold); }
 .ace-app .ace-legend-swatch-ring-teal  { background: var(--surface); border: 2px solid var(--brand); }
-.ace-app .ace-legend-swatch-ring-coral { background: var(--surface); border: 2px solid var(--accent); }
-.ace-app .ace-legend-swatch-ring-gold  { background: var(--surface); border: 2px solid var(--gold); }
+.ace-app .ace-legend-swatch-ring-rose { background: var(--surface); border: 2px solid var(--accent); }
+.ace-app .ace-legend-swatch-ring-lavender  { background: var(--surface); border: 2px solid var(--gold); }
 .ace-app .ace-sheet-treewrap {
   flex: 1; overflow: hidden;
   position: relative;
@@ -655,12 +655,12 @@
   border: 2px solid; flex-shrink: 0; color: #fff;
 }
 .ace-app .ace-rail-avatar-teal  { background: var(--brand);  border-color: var(--brand-strong); }
-.ace-app .ace-rail-avatar-coral { background: var(--accent); border-color: var(--accent-strong); }
-.ace-app .ace-rail-avatar-gold  { background: var(--gold);   border-color: var(--gold-strong); }
+.ace-app .ace-rail-avatar-rose { background: var(--accent); border-color: var(--accent-strong); }
+.ace-app .ace-rail-avatar-lavender  { background: var(--gold);   border-color: var(--gold-strong); }
 .ace-app .ace-rail-avatar.is-little { background: var(--surface); }
 .ace-app .ace-rail-avatar-teal.is-little  { color: var(--brand); }
-.ace-app .ace-rail-avatar-coral.is-little { color: var(--accent); }
-.ace-app .ace-rail-avatar-gold.is-little  { color: var(--gold); }
+.ace-app .ace-rail-avatar-rose.is-little { color: var(--accent); }
+.ace-app .ace-rail-avatar-lavender.is-little  { color: var(--gold); }
 
 .ace-app .ace-rail-name { font-size: 15px; font-weight: 600; color: var(--text); font-family: "DM Sans", sans-serif; }
 .ace-app .ace-rail-role { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--text-2); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
@@ -686,12 +686,12 @@
   color: #fff; flex-shrink: 0;
 }
 .ace-app .ace-rail-chip-dot-teal  { background: var(--brand); }
-.ace-app .ace-rail-chip-dot-coral { background: var(--accent); }
-.ace-app .ace-rail-chip-dot-gold  { background: var(--gold); }
+.ace-app .ace-rail-chip-dot-rose { background: var(--accent); }
+.ace-app .ace-rail-chip-dot-lavender  { background: var(--gold); }
 .ace-app .ace-rail-chip-dot.is-little { background: var(--surface); border: 1.5px solid currentColor; }
 .ace-app .ace-rail-chip-dot-teal.is-little  { color: var(--brand); }
-.ace-app .ace-rail-chip-dot-coral.is-little { color: var(--accent); }
-.ace-app .ace-rail-chip-dot-gold.is-little  { color: var(--gold); }
+.ace-app .ace-rail-chip-dot-rose.is-little { color: var(--accent); }
+.ace-app .ace-rail-chip-dot-lavender.is-little  { color: var(--gold); }
 .ace-app .ace-rail-empty {
   font-size: 12.5px; color: var(--text-3); font-style: italic;
 }
@@ -786,8 +786,8 @@
   border-radius: 2px 2px 0 0;
 }
 .ace-app .ace-famtabs-tab-teal.is-active::after  { background: var(--brand); }
-.ace-app .ace-famtabs-tab-coral.is-active::after { background: var(--accent); }
-.ace-app .ace-famtabs-tab-gold.is-active::after  { background: var(--gold); }
+.ace-app .ace-famtabs-tab-rose.is-active::after { background: var(--accent); }
+.ace-app .ace-famtabs-tab-lavender.is-active::after  { background: var(--gold); }
 
 .ace-app .ace-famtabs-tab-viet {
   font-family: "DM Serif Display", serif;
@@ -822,11 +822,11 @@
   color: var(--text);
 }
 .ace-app .ace-famtabs-panel-name-teal  { color: var(--brand-strong); }
-.ace-app .ace-famtabs-panel-name-coral { color: var(--accent-strong); }
-.ace-app .ace-famtabs-panel-name-gold  { color: var(--gold-strong); }
+.ace-app .ace-famtabs-panel-name-rose { color: var(--accent-strong); }
+.ace-app .ace-famtabs-panel-name-lavender  { color: var(--gold-strong); }
 .ace-app.is-dark .ace-famtabs-panel-name-teal  { color: var(--brand); }
-.ace-app.is-dark .ace-famtabs-panel-name-coral { color: var(--accent); }
-.ace-app.is-dark .ace-famtabs-panel-name-gold  { color: var(--gold); }
+.ace-app.is-dark .ace-famtabs-panel-name-rose { color: var(--accent); }
+.ace-app.is-dark .ace-famtabs-panel-name-lavender  { color: var(--gold); }
 .ace-app .ace-famtabs-panel-viet {
   font-family: "DM Serif Display", serif;
   font-style: italic;
@@ -880,8 +880,8 @@
   overflow: hidden;
 }
 .ace-app .ace-famhead-avatar-teal  { background: var(--brand);  border: 2px solid var(--brand-strong); }
-.ace-app .ace-famhead-avatar-coral { background: var(--accent); border: 2px solid var(--accent-strong); }
-.ace-app .ace-famhead-avatar-gold  { background: var(--gold);   border: 2px solid var(--gold-strong); }
+.ace-app .ace-famhead-avatar-rose { background: var(--accent); border: 2px solid var(--accent-strong); }
+.ace-app .ace-famhead-avatar-lavender  { background: var(--gold);   border: 2px solid var(--gold-strong); }
 .ace-app .ace-famhead-avatar.is-placeholder {
   background: var(--surface-2);
   border-style: dashed;

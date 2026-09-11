@@ -18,7 +18,7 @@ export function ThisWeekStrip({ items, todayStr, onSelectItem }: Props) {
   return (
     <section aria-label="Happening this week">
       <div className="mb-3 flex items-center gap-3">
-        <span className="scrapbook-sticker scrapbook-sticker-coral px-2.5 py-1 text-[10px]">
+        <span className="scrapbook-sticker scrapbook-sticker-rose px-2.5 py-1 text-[10px]">
           This Week
         </span>
         <span className="font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
@@ -58,7 +58,7 @@ export function ThisWeekStrip({ items, todayStr, onSelectItem }: Props) {
                   {item.categoryLabel}
                 </span>
                 {(item.points ?? 0) > 0 && (
-                  <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">
+                  <span className="scrapbook-sticker scrapbook-sticker-lavender px-2 py-0.5 text-[9px]">
                     +{item.points} pts
                   </span>
                 )}

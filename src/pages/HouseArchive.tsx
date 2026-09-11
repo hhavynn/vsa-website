@@ -11,15 +11,15 @@ const STATUS_LABEL: Record<LegacyHouseArchiveYear['status'], string> = {
 
 const STATUS_CLASS: Record<LegacyHouseArchiveYear['status'], string> = {
   verified: 'scrapbook-sticker-teal',
-  unconfirmed: 'scrapbook-sticker-gold',
-  current: 'scrapbook-sticker-coral',
+  unconfirmed: 'scrapbook-sticker-lavender',
+  current: 'scrapbook-sticker-rose',
 };
 
 function ArchiveYearCard({ entry, featured = false }: { entry: LegacyHouseArchiveYear; featured?: boolean }) {
   return (
     <article
       className={`scrapbook-paper p-5 sm:p-6 ${featured ? 'lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8' : ''}`}
-      style={{ borderColor: entry.status === 'unconfirmed' ? 'var(--tape-gold)' : 'var(--color-border)' }}
+      style={{ borderColor: entry.status === 'unconfirmed' ? 'var(--tape-lavender)' : 'var(--color-border)' }}
     >
       <div>
         <div className="flex flex-wrap items-center gap-2">

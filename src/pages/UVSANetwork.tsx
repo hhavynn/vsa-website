@@ -255,7 +255,7 @@ export default function UVSANetwork() {
             >
               {useSummerExternalsEmptyState ? (
                 <div className="mx-auto max-w-2xl space-y-3">
-                  <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                  <span className="scrapbook-sticker scrapbook-sticker-lavender inline-flex">
                     {summerExternalsMessage.badge}
                   </span>
                   <p

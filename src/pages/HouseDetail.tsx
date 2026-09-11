@@ -206,7 +206,7 @@ export function HouseDetail() {
       <>
         <PageTitle title="House Year Not Found" />
         <div className="vsa-container py-24 text-center">
-          <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">404</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender mb-6">404</span>
           <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House year not found</h1>
           <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
             This House archive year is not available. Choose a year from the House archive instead.
@@ -225,7 +225,7 @@ export function HouseDetail() {
       <>
         <PageTitle title="House Not Found" />
         <div className="vsa-container py-24 text-center">
-          <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">404</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender mb-6">404</span>
           <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House page not found</h1>
           <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
             This House may not be configured for the current year yet, or the URL might be incorrect.
@@ -259,9 +259,9 @@ export function HouseDetail() {
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>
-                {isArchive && <span className="scrapbook-sticker scrapbook-sticker-gold">Archive</span>}
-                {rank && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
+                <span className="scrapbook-sticker scrapbook-sticker-lavender">{activeYearLabel}</span>
+                {isArchive && <span className="scrapbook-sticker scrapbook-sticker-lavender">Archive</span>}
+                {rank && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-rose">Rank #{rank}</span>}
                 {standing && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>
               <h1 className="vsa-page-title">{house.emoji ? `${house.emoji} ` : ''}{label}</h1>

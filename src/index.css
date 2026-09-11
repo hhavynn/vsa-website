@@ -31,19 +31,19 @@
    (via tailwind.config.js color aliases) and inline styles where needed.
    Dark mode flips via html.dark (set by ThemeContext FOUC script).
 
-   Palette drawn from the VSA logo:
-     Teal sky   → primary brand color
-     Coral/red  → accent (lantern)
-     Warm gold  → accent (clouds)
+   Palette drawn from the VSA butterfly logo:
+     Turquoise  → primary brand color
+     Rose/pink  → accent
+     Lavender   → accent
      Cream      → light-mode backgrounds
    ─────────────────────────────────────────────────────────────────────── */
 :root {
-  --color-bg:            #f5f1ea;   /* warm parchment — logo's cream warmth */
+  --color-bg:            #f5f1ea;   /* warm parchment */
   --color-surface:       #ffffff;
   --color-surface2:      #fdf7f0;   /* warm off-white */
   --color-border:        #e0d8ce;   /* warm border */
   --color-border-strong: #c4b8a8;   /* warm strong border */
-  --color-text:          #142028;   /* dark teal-charcoal */
+  --color-text:          #142028;   /* dark charcoal */
   --color-text2:         #4a6b68;   /* mid teal-sage */
   --color-text3:         #90aaa8;   /* muted teal */
   --color-nav:           rgba(245, 241, 234, 0.96);
@@ -51,15 +51,15 @@
   --color-input:         #fdf7f0;
   --color-sidebar:       #ffffff;
   --color-sidebar-border:#e0d8ce;
-  --color-sidebar-active:#eef8f7;   /* light teal tint */
-  --color-brand:         #1e8878;   /* primary teal CTA */
-  --color-accent:        #e8623a;   /* coral accent */
-  --color-gold:          #d4841a;   /* gold accent */
-  --teal: #2a9d8f;
-  --coral: #e8623a;
-  --gold: #d4841a;
-  --teal-l: #3bbdb5;
-  --teal-d: #1e7068;
+  --color-sidebar-active:#e8faf8;   /* light turquoise tint */
+  --color-brand:         #1ba8a0;   /* primary turquoise CTA */
+  --color-accent:        #e06b8f;   /* rose accent */
+  --color-gold:          #9b7fc7;   /* lavender accent */
+  --teal: #25b8ad;
+  --coral: #e06b8f;
+  --gold: #9b7fc7;
+  --teal-l: #45d4c8;
+  --teal-d: #158f86;
   --trans: 0.2s ease;
   --trans-slow: 0.5s ease;
   --color-surface3: #f5ede0;
@@ -77,17 +77,17 @@
   --brand: var(--color-brand);
   --accent: var(--color-accent);
   --gold-t: var(--color-gold);
-  --glow: rgba(30, 136, 120, 0.08);
-  --glow-coral: rgba(232, 98, 58, 0.08);
+  --glow: rgba(27, 168, 160, 0.08);
+  --glow-coral: rgba(224, 107, 143, 0.08);
   --nav-bg: var(--color-nav);
   --card-bg: var(--color-surface);
   --shimmer: rgba(20, 32, 40, 0.02);
   --paper-shadow: 0 1px 0 rgba(196, 184, 168, 0.55), 0 12px 26px rgba(20, 32, 40, 0.08);
   --paper-shadow-hover: 0 1px 0 rgba(196, 184, 168, 0.65), 0 18px 34px rgba(20, 32, 40, 0.13);
   --paper-edge: rgba(196, 184, 168, 0.7);
-  --tape-teal: rgba(59, 189, 181, 0.28);
-  --tape-coral: rgba(232, 98, 58, 0.24);
-  --tape-gold: rgba(212, 132, 26, 0.26);
+  --tape-teal: rgba(69, 212, 200, 0.28);
+  --tape-coral: rgba(224, 107, 143, 0.24);
+  --tape-gold: rgba(155, 127, 199, 0.26);
   --pin-shadow: rgba(20, 32, 40, 0.18);
 }
 
@@ -505,20 +505,20 @@
   }
 
   .scrapbook-sticker-teal {
-    border-color: rgba(30, 136, 120, 0.35);
-    background: rgba(30, 136, 120, 0.1);
+    border-color: rgba(27, 168, 160, 0.35);
+    background: rgba(27, 168, 160, 0.1);
     color: var(--brand);
   }
 
-  .scrapbook-sticker-coral {
-    border-color: rgba(232, 98, 58, 0.35);
-    background: rgba(232, 98, 58, 0.1);
+  .scrapbook-sticker-rose {
+    border-color: rgba(224, 107, 143, 0.35);
+    background: rgba(224, 107, 143, 0.1);
     color: var(--accent);
   }
 
-  .scrapbook-sticker-gold {
-    border-color: rgba(212, 132, 26, 0.35);
-    background: rgba(212, 132, 26, 0.12);
+  .scrapbook-sticker-lavender {
+    border-color: rgba(155, 127, 199, 0.35);
+    background: rgba(155, 127, 199, 0.12);
     color: var(--gold-t);
   }
 
@@ -583,7 +583,7 @@
     transition: opacity var(--trans);
     background: radial-gradient(
       220px circle at var(--spot-x, 50%) var(--spot-y, 0%),
-      rgba(59, 189, 181, 0.18),
+      rgba(69, 212, 200, 0.18),
       transparent 68%
     );
   }
@@ -604,7 +604,7 @@
       opacity: 0.55;
       background: radial-gradient(
         160px circle at 50% 0%,
-        rgba(59, 189, 181, 0.1),
+        rgba(69, 212, 200, 0.1),
         transparent 70%
       );
     }
@@ -624,10 +624,10 @@
   .scrapbook-tape-teal::before {
     background: repeating-linear-gradient(45deg, var(--tape-teal) 0 9px, rgba(255, 255, 255, 0.2) 9px 13px);
   }
-  .scrapbook-tape-coral::before {
+  .scrapbook-tape-rose::before {
     background: repeating-linear-gradient(-45deg, var(--tape-coral) 0 9px, rgba(255, 255, 255, 0.18) 9px 13px);
   }
-  .scrapbook-tape-gold::before {
+  .scrapbook-tape-lavender::before {
     background: repeating-linear-gradient(45deg, var(--tape-gold) 0 9px, rgba(255, 255, 255, 0.18) 9px 13px);
   }
 
@@ -860,8 +860,8 @@
     background:
       linear-gradient(90deg, rgba(20, 32, 40, 0.035) 1px, transparent 1px),
       linear-gradient(0deg, rgba(20, 32, 40, 0.03) 1px, transparent 1px),
-      radial-gradient(120% 80% at 100% 0%, rgba(30, 136, 120, 0.16) 0%, transparent 55%),
-      radial-gradient(90% 70% at 0% 100%, rgba(232, 98, 58, 0.12) 0%, transparent 55%),
+      radial-gradient(120% 80% at 100% 0%, rgba(27, 168, 160, 0.16) 0%, transparent 55%),
+      radial-gradient(90% 70% at 0% 100%, rgba(224, 107, 143, 0.12) 0%, transparent 55%),
       linear-gradient(180deg, var(--color-surface2) 0%, var(--color-bg) 100%);
     background-size: 34px 34px, 34px 34px, auto, auto, auto;
     padding: 44px 52px 46px;
@@ -885,8 +885,8 @@
     background:
       linear-gradient(90deg, rgba(228, 216, 200, 0.035) 1px, transparent 1px),
       linear-gradient(0deg, rgba(228, 216, 200, 0.03) 1px, transparent 1px),
-      radial-gradient(120% 80% at 100% 0%, rgba(59, 189, 181, 0.14) 0%, transparent 55%),
-      radial-gradient(90% 70% at 0% 100%, rgba(240, 120, 88, 0.11) 0%, transparent 55%),
+      radial-gradient(120% 80% at 100% 0%, rgba(69, 212, 200, 0.14) 0%, transparent 55%),
+      radial-gradient(90% 70% at 0% 100%, rgba(240, 141, 168, 0.11) 0%, transparent 55%),
       linear-gradient(180deg, var(--color-surface2) 0%, var(--color-bg) 100%);
     background-size: 34px 34px, 34px 34px, auto, auto, auto;
   }
@@ -897,9 +897,9 @@
     opacity: 0.45;
     pointer-events: none;
     background-image:
-      radial-gradient(1.2px 1.2px at 20% 30%, rgba(212, 132, 26, 0.22) 50%, transparent 51%),
-      radial-gradient(1px 1px at 60% 80%, rgba(30, 136, 120, 0.18) 50%, transparent 51%),
-      radial-gradient(1.4px 1.4px at 82% 24%, rgba(232, 98, 58, 0.2) 50%, transparent 51%);
+      radial-gradient(1.2px 1.2px at 20% 30%, rgba(155, 127, 199, 0.22) 50%, transparent 51%),
+      radial-gradient(1px 1px at 60% 80%, rgba(27, 168, 160, 0.18) 50%, transparent 51%),
+      radial-gradient(1.4px 1.4px at 82% 24%, rgba(224, 107, 143, 0.2) 50%, transparent 51%);
     background-size: 220px 220px, 180px 180px, 260px 260px;
   }
 
@@ -974,7 +974,7 @@
     right: -24px;
     bottom: -36px;
     z-index: 1;
-    color: rgba(30, 136, 120, 0.1);
+    color: rgba(27, 168, 160, 0.1);
     font-family: "DM Serif Display", Georgia, serif;
     font-size: clamp(76px, 15vw, 150px);
     font-style: italic;
@@ -985,7 +985,7 @@
   }
 
   .dark .program-watermark {
-    color: rgba(59, 189, 181, 0.09);
+    color: rgba(69, 212, 200, 0.09);
   }
 
   .program-section {
@@ -1314,8 +1314,8 @@
     justify-content: center;
     gap: 8px;
     background:
-      radial-gradient(circle at 30% 24%, rgba(232, 98, 58, 0.16), transparent 30%),
-      radial-gradient(circle at 70% 74%, rgba(30, 136, 120, 0.16), transparent 32%),
+      radial-gradient(circle at 30% 24%, rgba(224, 107, 143, 0.16), transparent 30%),
+      radial-gradient(circle at 70% 74%, rgba(27, 168, 160, 0.16), transparent 32%),
       var(--color-surface2);
     color: var(--color-text3);
   }
@@ -1534,23 +1534,23 @@
 }
 
 html.dark {
-  --color-bg:            #080e14;   /* midnight teal-black */
-  --color-surface:       #0d1a20;   /* deep teal dark */
+  --color-bg:            #080e14;   /* midnight dark */
+  --color-surface:       #0d1a20;   /* deep dark */
   --color-surface2:      #122430;   /* slightly lighter */
-  --color-border:        #1a3038;   /* dark teal border */
+  --color-border:        #1a3038;   /* dark border */
   --color-border-strong: #2a4850;   /* stronger border */
   --color-text:          #e4d8c8;   /* warm cream */
-  --color-text2:         #6a9a94;   /* mid teal */
+  --color-text2:         #6a9a94;   /* mid muted */
   --color-text3:         #2a5050;   /* deep muted */
   --color-nav:           rgba(8, 14, 20, 0.96);
   --color-nav-border:    #1a3038;
   --color-input:         #122430;
   --color-sidebar:       #0d1a20;
   --color-sidebar-border:#1a3038;
-  --color-sidebar-active:rgba(59, 189, 181, 0.08);
-  --color-brand:         #3bbdb5;   /* lighter teal for dark mode */
-  --color-accent:        #f07858;   /* lighter coral for dark mode */
-  --color-gold:          #e8a838;   /* lighter gold for dark mode */
+  --color-sidebar-active:rgba(69, 212, 200, 0.08);
+  --color-brand:         #45d4c8;   /* turquoise for dark mode */
+  --color-accent:        #f08da8;   /* rose for dark mode */
+  --color-gold:          #b9a0de;   /* lavender for dark mode */
   --color-surface3: #1a3040;
   --bg: var(--color-bg);
   --bg2: var(--color-surface);
@@ -1566,17 +1566,17 @@ html.dark {
   --brand: var(--color-brand);
   --accent: var(--color-accent);
   --gold-t: var(--color-gold);
-  --glow: rgba(59, 189, 181, 0.15);
-  --glow-coral: rgba(240, 120, 88, 0.12);
+  --glow: rgba(69, 212, 200, 0.15);
+  --glow-coral: rgba(240, 141, 168, 0.12);
   --nav-bg: var(--color-nav);
   --card-bg: var(--color-surface);
   --shimmer: rgba(248, 251, 251, 0.03);
   --paper-shadow: 0 1px 0 rgba(0, 0, 0, 0.42), 0 14px 30px rgba(0, 0, 0, 0.36);
   --paper-shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.55), 0 18px 38px rgba(0, 0, 0, 0.48);
   --paper-edge: rgba(42, 72, 80, 0.82);
-  --tape-teal: rgba(59, 189, 181, 0.2);
-  --tape-coral: rgba(240, 120, 88, 0.2);
-  --tape-gold: rgba(232, 168, 56, 0.2);
+  --tape-teal: rgba(69, 212, 200, 0.2);
+  --tape-coral: rgba(240, 141, 168, 0.2);
+  --tape-gold: rgba(185, 160, 222, 0.2);
   --pin-shadow: rgba(0, 0, 0, 0.5);
 }
 

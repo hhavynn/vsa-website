@@ -19,7 +19,7 @@ import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../
 import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
 
 function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'coral' | 'gold'; position?: 'top' | 'top-left' | 'top-right' }) {
-  const colorVar = color === 'teal' ? 'var(--tape-teal)' : color === 'coral' ? 'var(--tape-coral)' : 'var(--tape-gold)';
+  const colorVar = color === 'teal' ? 'var(--tape-teal)' : color === 'coral' ? 'var(--tape-rose)' : 'var(--tape-lavender)';
   const style: CSSProperties = {
     position: 'absolute',
     width: '48px',
@@ -122,7 +122,7 @@ function NextEventCard() {
       ) : !nextEvent ? (
         <div className="flex flex-1 flex-col justify-center">
           {useSummerEmptyState && (
-            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+            <span className="scrapbook-sticker scrapbook-sticker-lavender mb-3 w-fit">
               {summerMessage.badge}
             </span>
           )}
@@ -326,7 +326,7 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
       ) : !hasStandings ? (
         <div className="flex flex-1 flex-col justify-center">
           {useSummerEmptyState && (
-            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+            <span className="scrapbook-sticker scrapbook-sticker-lavender mb-3 w-fit">
               {summerMessage.badge}
             </span>
           )}
@@ -466,7 +466,7 @@ function LatestMemoryCard() {
       ) : !memory ? (
         <div className="flex flex-1 flex-col justify-center">
           {useSummerEmptyState && (
-            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
+            <span className="scrapbook-sticker scrapbook-sticker-lavender mb-3 w-fit">
               {summerMessage.badge}
             </span>
           )}
@@ -555,7 +555,7 @@ export function ThisWeekInVSA() {
       <div className="vsa-container">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <span className="scrapbook-sticker scrapbook-sticker-coral mb-3">Weekly Check-In</span>
+            <span className="scrapbook-sticker scrapbook-sticker-rose mb-3">Weekly Check-In</span>
             <h2 id="this-week-in-vsa-title" className="vsa-section-title">
               This Week
               <br />

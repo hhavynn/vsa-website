@@ -321,7 +321,7 @@ function ExecutiveRolePanel({
         <div
           className="rounded-t-lg px-5 pt-[18px] pb-4"
           style={{
-            background: 'linear-gradient(135deg, rgba(59,189,181,0.10) 0%, transparent 62%)',
+            background: 'linear-gradient(135deg, rgba(69,212,200,0.10) 0%, transparent 62%)',
           }}
         >
           <div
@@ -399,8 +399,8 @@ function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; m
         style={{
           borderColor: 'var(--color-border)',
           background: isPresident
-            ? 'linear-gradient(135deg, rgba(30,136,120,0.12) 0%, transparent 60%)'
-            : 'linear-gradient(135deg, rgba(30,136,120,0.06) 0%, transparent 60%)',
+            ? 'linear-gradient(135deg, rgba(27,168,160,0.12) 0%, transparent 60%)'
+            : 'linear-gradient(135deg, rgba(27,168,160,0.06) 0%, transparent 60%)',
         }}
       >
         <div className="flex items-center gap-2 mb-2">
@@ -965,7 +965,7 @@ export function Cabinet() {
               <div className="mb-10 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="scrapbook-sticker scrapbook-sticker-coral">General Board</span>
+                    <span className="scrapbook-sticker scrapbook-sticker-rose">General Board</span>
                     <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
                       {genBoard.length} {genBoard.length === 1 ? 'member' : 'members'}
                     </span>
@@ -1006,7 +1006,7 @@ export function Cabinet() {
               <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="scrapbook-sticker scrapbook-sticker-gold">Interns</span>
+                    <span className="scrapbook-sticker scrapbook-sticker-lavender">Interns</span>
                     <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
                       {interns.length} {interns.length === 1 ? 'intern' : 'interns'}
                     </span>
@@ -1072,7 +1072,7 @@ export function Cabinet() {
             >
               <CabinetRoleExplorer />
               <section className="mt-12 text-center">
-                <span className="scrapbook-sticker scrapbook-sticker-coral mb-3 inline-block">Join Cabinet</span>
+                <span className="scrapbook-sticker scrapbook-sticker-rose mb-3 inline-block">Join Cabinet</span>
                 <div className="flex justify-center">
                   <ApplicationCTA
                     applicationKeys="cabinet_application"

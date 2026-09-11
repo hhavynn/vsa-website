@@ -115,7 +115,7 @@ export function NewMemberChecklist() {
               New Member <span className="italic">Checklist</span>
             </h3>
           </div>
-          <span className="scrapbook-sticker scrapbook-sticker-gold shrink-0">Passport</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender shrink-0">Passport</span>
         </div>
       </div>
 

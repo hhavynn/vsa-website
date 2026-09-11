@@ -321,7 +321,7 @@ export function Home() {
             className="absolute top-6 left-1/4 right-1/4 h-6 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none z-20"
             style={{
               background:
-                "repeating-linear-gradient(-45deg, var(--tape-gold) 0 10px, rgba(255,255,255,0.1) 10px 14px)",
+                "repeating-linear-gradient(-45deg, var(--tape-lavender) 0 10px, rgba(255,255,255,0.1) 10px 14px)",
               transform: "rotate(-0.5deg)",
               borderRadius: "2px",
             }}
@@ -498,7 +498,7 @@ export function Home() {
                   decoding="async"
                 />
               </div>
-              <p className="scrapbook-sticker scrapbook-sticker-gold mt-8 text-center scrapbook-rotate-sm-right">
+              <p className="scrapbook-sticker scrapbook-sticker-lavender mt-8 text-center scrapbook-rotate-sm-right">
                 Est. 1977 / Nonprofit / Open to all UCSD students
               </p>
             </div>

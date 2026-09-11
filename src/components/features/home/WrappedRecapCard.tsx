@@ -5,14 +5,14 @@ type Tone = "teal" | "coral" | "gold";
 
 const STICKER_CLASS: Record<Tone, string> = {
   teal: "scrapbook-sticker-teal",
-  coral: "scrapbook-sticker-coral",
-  gold: "scrapbook-sticker-gold",
+  coral: "scrapbook-sticker-rose",
+  gold: "scrapbook-sticker-lavender",
 };
 
 const TAPE_CLASS: Record<Tone, string> = {
   teal: "scrapbook-tape-teal",
-  coral: "scrapbook-tape-coral",
-  gold: "scrapbook-tape-gold",
+  coral: "scrapbook-tape-rose",
+  gold: "scrapbook-tape-lavender",
 };
 
 function GhostNumber({ value }: { value: string }) {
@@ -250,7 +250,7 @@ export function WrappedRecapCard() {
         {/* Hero */}
         <div className="grid gap-9 lg:grid-cols-[1fr_minmax(0,360px)] lg:items-end">
           <div>
-            <span className="scrapbook-sticker scrapbook-sticker-coral">🎁 Year in Review</span>
+            <span className="scrapbook-sticker scrapbook-sticker-rose">🎁 Year in Review</span>
             <h1 className="mt-5 font-serif text-[42px] font-black leading-[0.98] tracking-[-0.02em] text-text-primary sm:text-[58px]">
               VSA Wrapped 2025–2026
             </h1>
@@ -286,7 +286,7 @@ export function WrappedRecapCard() {
         {/* Chapter Two — House race */}
         <section className="relative mt-[72px] border-t border-dashed border-[var(--border2)] pt-11">
           <GhostNumber value="02" />
-          <span className="scrapbook-sticker scrapbook-sticker-gold">Chapter Two · House Race</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender">Chapter Two · House Race</span>
           <div className="mt-6 grid gap-9 lg:grid-cols-[0.85fr_1fr] lg:items-start">
             <div>
               <div className="text-[34px] leading-none" aria-hidden>
@@ -304,7 +304,7 @@ export function WrappedRecapCard() {
             </div>
 
             <div className="scrapbook-paper scrapbook-tape-teal p-6" style={{ transform: "rotate(0.8deg)" }}>
-              <span className="scrapbook-sticker scrapbook-sticker-gold">Final Standings</span>
+              <span className="scrapbook-sticker scrapbook-sticker-lavender">Final Standings</span>
               <div className="mt-4 grid gap-3">
                 {STANDINGS.map((house) => (
                   <div

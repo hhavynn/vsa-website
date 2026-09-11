@@ -194,7 +194,7 @@ function PastEventMemoryCard({
     <motion.div 
       whileHover={{ y: -4, rotate: 0 }}
       transition={{ duration: 0.2 }}
-      className={`scrapbook-photo group/spotlight relative min-w-[82vw] snap-start overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.22),transparent_46%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 sm:before:opacity-0 md:min-w-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
+      className={`scrapbook-photo group/spotlight relative min-w-[82vw] snap-start overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(69,212,200,0.22),transparent_46%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 sm:before:opacity-0 md:min-w-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
     >
       {/* Image with optional gallery overlay */}
       <div className="relative">
@@ -236,7 +236,7 @@ function PastEventMemoryCard({
 
         {/* Term sticker + type */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">{termCode}</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender px-2 py-0.5 text-[9px]">{termCode}</span>
           <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>{termLabel}</span>
           <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>·</span>
           <span className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
@@ -295,7 +295,7 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
   const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
 
   return (
-    <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
+    <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(69,212,200,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
         {imageUrl ? (
           <img
@@ -601,7 +601,7 @@ export function Events() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
-          <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
+          <span className="scrapbook-sticker scrapbook-sticker-rose mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions.
@@ -793,7 +793,7 @@ export function Events() {
                 >
                   {latestArchiveActionLabel}
                 </a>
-                <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                <span className="scrapbook-sticker scrapbook-sticker-lavender inline-flex">
                   {summerEventsMessage.badge}
                 </span>
                 <div>

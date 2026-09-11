@@ -115,7 +115,7 @@ export function MobileQuickDock() {
               cn(
                 "group relative flex h-12 min-w-0 flex-col items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
                 isActive
-                  ? "bg-brand-500 text-white shadow-[0_10px_24px_rgba(59,189,181,0.3)]"
+                  ? "bg-brand-500 text-white shadow-[0_10px_24px_rgba(69,212,200,0.3)]"
                   : "text-text-secondary hover:bg-surface2 hover:text-text-primary",
               )
             }

@@ -52,7 +52,7 @@ const SCOPES: { key: CalendarScope; label: string }[] = [
 function SummerEmptyCard({ message }: { message: ReturnType<typeof getSummerBreakMessage> }) {
   return (
     <div className="scrapbook-empty mx-auto max-w-lg py-10 text-center">
-      <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 inline-flex">
+      <span className="scrapbook-sticker scrapbook-sticker-lavender mb-3 inline-flex">
         {message.badge}
       </span>
       <h2 className="font-sans text-lg font-bold" style={{ color: 'var(--text)' }}>

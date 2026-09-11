@@ -29,11 +29,11 @@ const itemVariants = {
 };
 
 const albumPatterns = [
-  { rotate: '-1.4deg', offset: '0px', height: '236px', span: 4, tape: 'var(--tape-gold)', tapeX: '48%', tapeRotate: '-2deg' },
+  { rotate: '-1.4deg', offset: '0px', height: '236px', span: 4, tape: 'var(--tape-lavender)', tapeX: '48%', tapeRotate: '-2deg' },
   { rotate: '1.1deg', offset: '22px', height: '292px', span: 4, tape: 'var(--tape-teal)', tapeX: '56%', tapeRotate: '1.5deg' },
-  { rotate: '-0.7deg', offset: '8px', height: '210px', span: 4, tape: 'var(--tape-coral)', tapeX: '42%', tapeRotate: '-1deg' },
+  { rotate: '-0.7deg', offset: '8px', height: '210px', span: 4, tape: 'var(--tape-rose)', tapeX: '42%', tapeRotate: '-1deg' },
   { rotate: '1.6deg', offset: '-6px', height: '256px', span: 5, tape: 'var(--tape-teal)', tapeX: '50%', tapeRotate: '2deg' },
-  { rotate: '-1.1deg', offset: '28px', height: '238px', span: 3, tape: 'var(--tape-gold)', tapeX: '62%', tapeRotate: '-2.5deg' },
+  { rotate: '-1.1deg', offset: '28px', height: '238px', span: 3, tape: 'var(--tape-lavender)', tapeX: '62%', tapeRotate: '-2.5deg' },
 ];
 
 function getAlbumStyle(index: number): CSSProperties {
@@ -109,7 +109,7 @@ export default function Gallery() {
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
-          <span className="scrapbook-sticker scrapbook-sticker-gold mb-4">Memory Wall</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender mb-4">Memory Wall</span>
           <h1 className="vsa-page-title">Gallery</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
             {totalCount} albums from GBMs, retreats, cultural programs, and VSA traditions.
@@ -122,7 +122,7 @@ export default function Gallery() {
           <div className="scrapbook-empty" role="status">
             {useSummerGalleryEmptyState ? (
               <div className="mx-auto max-w-xl space-y-3 text-center">
-                <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
+                <span className="scrapbook-sticker scrapbook-sticker-lavender inline-flex">
                   {summerGalleryMessage.badge}
                 </span>
                 <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--text)' }}>
@@ -197,12 +197,12 @@ export default function Gallery() {
 
                     <div className="gallery-memory-caption">
                       <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <span className="scrapbook-sticker scrapbook-sticker-gold">
+                        <span className="scrapbook-sticker scrapbook-sticker-lavender">
                           {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
                         </span>
                         {album.event && (
                           <span
-                            className="scrapbook-sticker scrapbook-sticker-coral"
+                            className="scrapbook-sticker scrapbook-sticker-rose"
                             title={`From event: ${album.event.name}`}
                           >
                             From event

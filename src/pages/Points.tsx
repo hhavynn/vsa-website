@@ -23,7 +23,7 @@ export default function Points() {
             <div className="relative z-10">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <span
-                  className="scrapbook-sticker scrapbook-sticker-coral"
+                  className="scrapbook-sticker scrapbook-sticker-rose"
                   style={{ transform: 'rotate(-2deg)' }}
                 >
                   POINTS LOOKUP

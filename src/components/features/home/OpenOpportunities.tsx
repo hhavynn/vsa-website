@@ -33,7 +33,7 @@ export function OpenOpportunities({ compact = false }: OpenOpportunitiesProps) {
   return (
     <div>
       <div className="mb-1">
-        <span className="scrapbook-sticker scrapbook-sticker-coral mb-3 inline-block">
+        <span className="scrapbook-sticker scrapbook-sticker-rose mb-3 inline-block">
           Apply Now
         </span>
         <h2

@@ -90,12 +90,12 @@ export function WildNCulture() {
             {(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) && (
               <div className="program-hero-actions">
                 {dynamicEventVisible && eventStatusLabel && (
-                  <span className="scrapbook-sticker scrapbook-sticker-coral">
+                  <span className="scrapbook-sticker scrapbook-sticker-rose">
                     {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
                   </span>
                 )}
                 {dynamicEventVisible && eventMeta.length > 0 && (
-                  <span className="scrapbook-sticker scrapbook-sticker-gold">
+                  <span className="scrapbook-sticker scrapbook-sticker-lavender">
                     {eventMeta.join(' · ')}
                   </span>
                 )}
@@ -113,7 +113,7 @@ export function WildNCulture() {
                   <span className="scrapbook-sticker">{eventContent.body}</span>
                 )}
                 {!eventContent && WNC_CONFIG.date && (
-                  <span className="scrapbook-sticker scrapbook-sticker-gold">
+                  <span className="scrapbook-sticker scrapbook-sticker-lavender">
                     {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
                   </span>
                 )}

@@ -184,12 +184,12 @@ function useUpcomingEvents() {
 
 const TYPE_STICKER: Record<string, string> = {
   gbm: 'scrapbook-sticker-teal',
-  mixer: 'scrapbook-sticker-coral',
-  vcn: 'scrapbook-sticker-coral',
-  wildn_culture: 'scrapbook-sticker-coral',
+  mixer: 'scrapbook-sticker-rose',
+  vcn: 'scrapbook-sticker-rose',
+  wildn_culture: 'scrapbook-sticker-rose',
   winter_retreat: 'scrapbook-sticker-purple',
-  other: 'scrapbook-sticker-gold',
-  external_event: 'scrapbook-sticker-gold',
+  other: 'scrapbook-sticker-lavender',
+  external_event: 'scrapbook-sticker-lavender',
 };
 
 function RecentActivity({ memberId }: { memberId: string }) {
@@ -226,7 +226,7 @@ function RecentActivity({ memberId }: { memberId: string }) {
             <div className="truncate font-serif text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>{ev.name}</div>
             <div className="font-mono text-[9px] uppercase tracking-wider opacity-60" style={{ color: 'var(--color-text3)' }}>{ev.event_type}</div>
           </div>
-          <div className={`scrapbook-sticker ${TYPE_STICKER[ev.event_type] ?? 'scrapbook-sticker-gold'} px-2 py-0.5 text-[9px]`}>
+          <div className={`scrapbook-sticker ${TYPE_STICKER[ev.event_type] ?? 'scrapbook-sticker-lavender'} px-2 py-0.5 text-[9px]`}>
             +{ev.points_earned}
           </div>
         </li>

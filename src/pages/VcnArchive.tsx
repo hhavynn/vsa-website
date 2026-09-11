@@ -60,7 +60,7 @@ function ArchiveCard({ entry }: { entry: VCNArchiveEntry }) {
               </span>
             )}
             {entry.is_featured && (
-              <span className="scrapbook-sticker scrapbook-sticker-coral">
+              <span className="scrapbook-sticker scrapbook-sticker-rose">
                 Featured
               </span>
             )}

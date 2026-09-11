@@ -3,15 +3,15 @@ import { CalendarCategory, CalendarItem } from '../../../utils/calendar';
 // Accent colors for calendar dots/badges. House items use the house's own
 // accent color instead; applications use the scrapbook gold.
 const CATEGORY_COLORS: Record<CalendarCategory, string> = {
-  gbm: '#1e8878',
+  gbm: '#1ba8a0',
   mixer: '#3b82f6',
   vcn: '#a855f7',
-  wildn_culture: '#e8623a',
+  wildn_culture: '#e06b8f',
   winter_retreat: '#0ea5e9',
   external_event: '#64748b',
   other: '#8a94a6',
-  house: '#d4841a',
-  application: '#d4841a',
+  house: '#9b7fc7',
+  application: '#9b7fc7',
 };
 
 export function getItemColor(item: CalendarItem): string {

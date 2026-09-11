@@ -16,8 +16,8 @@ interface Props {
 
 const STICKER_CLASS: Record<StickerTone, string> = {
   teal: 'scrapbook-sticker-teal',
-  coral: 'scrapbook-sticker-coral',
-  gold: 'scrapbook-sticker-gold',
+  coral: 'scrapbook-sticker-rose',
+  gold: 'scrapbook-sticker-lavender',
 };
 
 /** Shared section shell for Wrapped chapters: ghost number + sticker + heading. */

@@ -30,7 +30,7 @@ const QuestionIcon = ({ className }: { className?: string }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StickerBadge({ children, rotation = 0, color = 'primary' }: { children: React.ReactNode; rotation?: number; color?: 'primary' | 'accent' | 'gold' }) {
-  const colorClass = color === 'primary' ? 'scrapbook-sticker-teal' : color === 'accent' ? 'scrapbook-sticker-coral' : 'scrapbook-sticker-gold';
+  const colorClass = color === 'primary' ? 'scrapbook-sticker-teal' : color === 'accent' ? 'scrapbook-sticker-rose' : 'scrapbook-sticker-lavender';
   return (
     <span 
       className={`scrapbook-sticker ${colorClass}`}

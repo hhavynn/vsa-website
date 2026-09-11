@@ -20,8 +20,8 @@ export function DegradedModeBanner({
       <div
         className={`rounded-lg border px-4 py-3 font-sans text-sm leading-relaxed ${className}`}
         style={{
-          borderColor: 'var(--tape-gold)',
-          background: 'color-mix(in srgb, var(--tape-gold) 8%, var(--color-surface))',
+          borderColor: 'var(--tape-lavender)',
+          background: 'color-mix(in srgb, var(--tape-lavender) 8%, var(--color-surface))',
           color: 'var(--color-text2)',
         }}
         role="status"
@@ -59,8 +59,8 @@ export function DegradedModeBanner({
     <div
       className={`w-full border-b px-4 py-3 font-sans text-sm leading-relaxed ${className}`}
       style={{
-        borderColor: 'var(--tape-gold)',
-        background: 'color-mix(in srgb, var(--tape-gold) 10%, var(--color-surface))',
+        borderColor: 'var(--tape-lavender)',
+        background: 'color-mix(in srgb, var(--tape-lavender) 10%, var(--color-surface))',
         color: 'var(--color-text2)',
       }}
       role="status"
@@ -69,7 +69,7 @@ export function DegradedModeBanner({
       <div className="vsa-container flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider"
-          style={{ background: 'var(--tape-gold)', color: '#000' }}
+          style={{ background: 'var(--tape-lavender)', color: '#000' }}
         >
           Notice
         </span>

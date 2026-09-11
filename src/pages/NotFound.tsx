@@ -19,7 +19,7 @@ export function NotFound() {
           <p className="font-serif text-[80px] leading-none tracking-[-0.04em] text-brand-600 dark:text-brand-400 sm:text-[120px]">
             404
           </p>
-          <span className="scrapbook-sticker scrapbook-sticker-gold mt-3 inline-flex">Page not found</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender mt-3 inline-flex">Page not found</span>
           <h1 className="mt-5 font-serif text-3xl leading-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
             This page wandered off from the VSA family.
           </h1>

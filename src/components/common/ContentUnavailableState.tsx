@@ -26,7 +26,7 @@ export function ContentUnavailableState({
     >
       <div
         className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2"
-        style={{ borderColor: 'var(--tape-gold)', color: 'var(--tape-gold)' }}
+        style={{ borderColor: 'var(--tape-lavender)', color: 'var(--tape-lavender)' }}
         aria-hidden
       >
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6">

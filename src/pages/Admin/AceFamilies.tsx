@@ -809,7 +809,7 @@ export default function AdminAceFamilies() {
                     </div>
                   )}
                   {importPreview.warnings.length > 0 && (
-                    <ul className="mt-2 list-disc pl-4" style={{ color: '#d4841a' }}>
+                    <ul className="mt-2 list-disc pl-4" style={{ color: '#9b7fc7' }}>
                       {importPreview.warnings.map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}

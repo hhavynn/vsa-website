@@ -73,7 +73,7 @@ const TrendUpIcon = ({ className }: { className?: string }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StickerBadge({ children, rotation = 0, color = 'primary', size = 'md' }: { children: React.ReactNode; rotation?: number; color?: 'primary' | 'accent' | 'gold'; size?: 'sm' | 'md' }) {
-  const colorClass = color === 'primary' ? 'scrapbook-sticker-teal' : color === 'accent' ? 'scrapbook-sticker-coral' : 'scrapbook-sticker-gold';
+  const colorClass = color === 'primary' ? 'scrapbook-sticker-teal' : color === 'accent' ? 'scrapbook-sticker-rose' : 'scrapbook-sticker-lavender';
   return (
     <span 
       className={`scrapbook-sticker ${colorClass} ${size === 'sm' ? 'px-2 py-1 text-[9px]' : ''}`}
@@ -95,7 +95,7 @@ function PushPin({ color = 'accent', className = '' }: { color?: 'primary' | 'ac
 }
 
 function TapeAccent({ position = 'top-left', color = 'primary' }: { position?: 'top-left' | 'top-right'; color?: 'primary' | 'accent' | 'gold' }) {
-  const bg = color === 'primary' ? 'var(--tape-teal)' : color === 'accent' ? 'var(--tape-coral)' : 'var(--tape-gold)';
+  const bg = color === 'primary' ? 'var(--tape-teal)' : color === 'accent' ? 'var(--tape-rose)' : 'var(--tape-lavender)';
   const rotation = position === 'top-left' ? '-15deg' : '15deg';
   return (
     <div
@@ -1099,7 +1099,7 @@ function PodiumIndividual({
       gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'to pass #1', eventTiebreakDirection: 'fewer' as const,
     },
     {
-      entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
+      entry: first, rank: 1, order: 'order-1 md:order-2', color: '#9b7fc7', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
       riser: 96, revealDelay: 0.3,
       gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'ahead of #2', eventTiebreakDirection: 'more' as const,
     },

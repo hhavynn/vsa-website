@@ -316,7 +316,7 @@ function HouseLegacyPreview() {
                 key={entry.academicYear}
                 to="/house/archive"
                 className="scrapbook-paper group p-4 transition-transform hover:-translate-y-1"
-                style={{ borderColor: entry.status === 'unconfirmed' ? 'var(--tape-gold)' : 'var(--color-border)' }}
+                style={{ borderColor: entry.status === 'unconfirmed' ? 'var(--tape-lavender)' : 'var(--color-border)' }}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
@@ -642,7 +642,7 @@ export function House() {
       <>
         <PageTitle title="House Year Not Found" />
         <div className="vsa-container py-24 text-center">
-          <span className="scrapbook-sticker scrapbook-sticker-gold mb-6">404</span>
+          <span className="scrapbook-sticker scrapbook-sticker-lavender mb-6">404</span>
           <h1 className="font-serif text-[42px] leading-tight" style={{ color: 'var(--color-text)' }}>House year not found</h1>
           <p className="mx-auto mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: 'var(--color-text3)' }}>
             This House archive year is not available. Choose a year from the House archive instead.
@@ -673,7 +673,7 @@ export function House() {
                 {activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.
               </p>
               <div className="program-hero-actions">
-                <span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>
+                <span className="scrapbook-sticker scrapbook-sticker-lavender">Check back after House Reveal</span>
               </div>
             </div>
             <div className="program-watermark">houses</div>
@@ -737,15 +737,15 @@ export function House() {
             </p>
             <div className="program-hero-actions">
               {isArchive && (
-                <Link to="/house" className="scrapbook-sticker scrapbook-sticker-gold">
+                <Link to="/house" className="scrapbook-sticker scrapbook-sticker-lavender">
                   ← Back to Current Year
                 </Link>
               )}
-              {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>}
+              {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-lavender">{activeYearLabel}</span>}
               {summerBreak && !isArchive ? (
-                <span className="scrapbook-sticker scrapbook-sticker-gold">Summer break</span>
+                <span className="scrapbook-sticker scrapbook-sticker-lavender">Summer break</span>
               ) : leader && (
-                <span className="scrapbook-sticker scrapbook-sticker-coral">
+                <span className="scrapbook-sticker scrapbook-sticker-rose">
                   {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
                 </span>
               )}

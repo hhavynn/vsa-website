@@ -39,12 +39,12 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
           {item.categoryLabel}
         </span>
         {item.deadlineKind && (
-          <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">
+          <span className="scrapbook-sticker scrapbook-sticker-lavender px-2 py-0.5 text-[9px]">
             {item.deadlineKind === 'opens' ? 'Applications open' : 'Deadline'}
           </span>
         )}
         {(item.points ?? 0) > 0 && (
-          <span className="scrapbook-sticker scrapbook-sticker-gold px-2 py-0.5 text-[9px]">
+          <span className="scrapbook-sticker scrapbook-sticker-lavender px-2 py-0.5 text-[9px]">
             +{item.points} pts
           </span>
         )}

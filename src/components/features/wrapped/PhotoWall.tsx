@@ -12,7 +12,7 @@ const ROTATIONS = [
   '',
 ];
 
-const TAPES = ['scrapbook-tape-teal', 'scrapbook-tape-coral', 'scrapbook-tape-gold'];
+const TAPES = ['scrapbook-tape-teal', 'scrapbook-tape-rose', 'scrapbook-tape-lavender'];
 
 interface Props {
   albums: GalleryAlbum[];

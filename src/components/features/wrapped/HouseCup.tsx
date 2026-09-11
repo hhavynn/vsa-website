@@ -53,7 +53,7 @@ export function HouseCup({ houses }: Props) {
           className="scrapbook-photo relative overflow-hidden p-6 text-center scrapbook-rotate-sm-left"
           style={{ borderColor: `${houseColor(winner)}88` }}
         >
-          <span className="scrapbook-sticker scrapbook-sticker-gold px-2.5 py-1 text-[10px]">
+          <span className="scrapbook-sticker scrapbook-sticker-lavender px-2.5 py-1 text-[10px]">
             House Cup Champions
           </span>
           {winner.image_url && (

@@ -6,32 +6,32 @@ module.exports = {
     extend: {
       // ─── Brand tokens ─────────────────────────────────────────────────────
       colors: {
-        // VSA Teal — primary accent, drawn from the logo's sky palette.
-        // 600 = light-mode primary (#1e8878), 400 = dark-mode primary (#3bbdb5).
+        // VSA Turquoise — primary accent, drawn from the butterfly logo.
+        // 600 = light-mode primary (#1ba8a0), 400 = dark-mode primary (#45d4c8).
         brand: {
-          50:  '#eef8f7',
-          100: '#d2efec',
-          200: '#a6deda',
-          300: '#6ccac2',
-          400: '#3bbdb5',  // dark mode primary
-          500: '#2aa49c',
-          600: '#1e8878',  // light mode primary CTA
-          700: '#196e60',  // hover
-          800: '#165850',
-          900: '#134545',
-          950: '#0a2828',
+          50:  '#e8faf8',
+          100: '#c8f2ee',
+          200: '#96e3dc',
+          300: '#5dd4c9',
+          400: '#45d4c8',  // dark mode primary
+          500: '#25b8ad',
+          600: '#1ba8a0',  // light mode primary CTA
+          700: '#158f86',  // hover
+          800: '#12756e',
+          900: '#0f5c58',
+          950: '#083533',
         },
-        // Coral accent — lantern red-orange from the logo.
-        coral: {
-          400: '#f07858',
-          500: '#e8623a',
-          600: '#d44e2a',
+        // Rose accent — soft pink from the butterfly logo.
+        rose: {
+          400: '#f08da8',
+          500: '#e06b8f',
+          600: '#c95578',
         },
-        // Gold accent — warm cloud amber from the logo.
-        gold: {
-          400: '#e8a838',
-          500: '#d4841a',
-          600: '#b86c10',
+        // Lavender accent — pastel purple from the butterfly logo.
+        lavender: {
+          400: '#b9a0de',
+          500: '#9b7fc7',
+          600: '#7d62ab',
         },
         // Semantic surface/text tokens — driven by CSS custom properties so
         // dark mode flips automatically without repeating dark: variants everywhere.

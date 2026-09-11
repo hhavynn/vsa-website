@@ -88,8 +88,8 @@ function StickerBadge({
     color === "primary"
       ? "scrapbook-sticker-teal"
       : color === "accent"
-        ? "scrapbook-sticker-coral"
-        : "scrapbook-sticker-gold";
+        ? "scrapbook-sticker-rose"
+        : "scrapbook-sticker-lavender";
   return (
     <span
       className={`scrapbook-sticker ${colorClass} ${size === "sm" ? "px-2 py-1 text-[9px]" : ""}`}

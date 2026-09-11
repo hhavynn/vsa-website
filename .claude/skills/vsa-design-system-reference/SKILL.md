@@ -27,9 +27,9 @@ Note: the **`impeccable`** design skill (generic frontend-craft playbook) is ins
 
 | Palette | Steps | Anchors | Role |
 |---|---|---|---|
-| `brand` (VSA teal, from the logo's sky) | 50–950 | **600 = `#1e8878` light-mode primary CTA**, **400 = `#3bbdb5` dark-mode primary**, 700 = `#196e60` hover | Primary interactive color |
-| `coral` (lantern red-orange) | 400/500/600 | 500 = `#e8623a` | Accent |
-| `gold` (cloud amber) | 400/500/600 | 500 = `#d4841a` | Accent |
+| `brand` (VSA turquoise, from the butterfly logo) | 50–950 | **600 = `#1ba8a0` light-mode primary CTA**, **400 = `#45d4c8` dark-mode primary**, 700 = `#158f86` hover | Primary interactive color |
+| `rose` (soft pink accent) | 400/500/600 | 500 = `#e06b8f` | Accent |
+| `lavender` (pastel purple) | 400/500/600 | 500 = `#9b7fc7` | Accent |
 
 **Rule (AGENTS.md "Styling"):** prefer `brand-600` in light mode / `brand-400` in dark mode for primary interactive elements. `Button` variant `primary` is the canonical example: `bg-brand-600 … dark:bg-brand-400 dark:text-[#050810]`.
 
@@ -50,7 +50,7 @@ The variables live in `src/index.css` — light values under `:root`, dark under
 
 **Hard rule (AGENTS.md):** never hardcode `text-gray-900` / `bg-white` pairs. Use the semantic tokens.
 
-The palette story (documented in the `src/index.css` header comment): teal sky → primary, coral lantern → accent, warm gold clouds → accent, cream → light backgrounds. All drawn from the VSA logo. New colors must fit this story or not exist.
+The palette story (documented in the `src/index.css` header comment): turquoise → primary, soft rose → accent, pastel lavender → accent, cream → light backgrounds. All drawn from the VSA butterfly logo. New colors must fit this story or not exist.
 
 ## 2. Typography, spacing, radii, shadows (tailwind.config.js)
 

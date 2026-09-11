@@ -3,7 +3,7 @@ import { FamAccent, FamPattern } from '../components/features/ace/FamCover';
 import { TreeNode } from '../components/features/ace/FamilyTree';
 
 const PATTERNS: FamPattern[] = ['sunburst', 'wave', 'dots', 'arches', 'lantern', 'leaves'];
-const ACCENTS: FamAccent[] = ['teal', 'coral', 'gold'];
+const ACCENTS: FamAccent[] = ['teal', 'rose', 'lavender'];
 
 // Vietnamese number words 1..12 for fams without an explicit viet name.
 const VIET_NUMBERS = [
@@ -40,9 +40,9 @@ export function accentFromThemeColor(hex: string | null | undefined, fallbackSee
   const { r, g, b } = rgb;
   // Compare distance to each accent's canonical color.
   const ANCHORS: Record<FamAccent, [number, number, number]> = {
-    teal:  [30, 136, 120],
-    coral: [232, 98, 58],
-    gold:  [212, 132, 26],
+    teal:  [27, 168, 160],
+    rose: [224, 107, 143],
+    lavender:  [155, 127, 199],
   };
   let best: FamAccent = 'teal';
   let bestD = Infinity;
