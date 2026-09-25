@@ -1,4 +1,7 @@
-import { type CSSProperties, useMemo, useState } from 'react';
+import { type ComponentType, type CSSProperties, useMemo, useState } from 'react';
+import { type IconBaseProps } from 'react-icons';
+import { FiArrowUpRight, FiStar } from 'react-icons/fi';
+import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -18,6 +21,9 @@ import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../constants/houses';
 import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
 
+const ArrowUpRightIcon = FiArrowUpRight as ComponentType<IconBaseProps>;
+const StarIcon = FiStar as ComponentType<IconBaseProps>;
+
 function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'coral' | 'gold'; position?: 'top' | 'top-left' | 'top-right' }) {
   const colorVar = color === 'teal' ? 'var(--tape-teal)' : color === 'coral' ? 'var(--tape-coral)' : 'var(--tape-gold)';
   const style: CSSProperties = {
@@ -36,7 +42,7 @@ function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'cor
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text3)' }}>
+    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-primary">
       {children}
     </div>
   );
@@ -103,7 +109,7 @@ function NextEventCard() {
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
       <TapeStrip color="teal" position="top-left" />
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <SectionLabel>Next up</SectionLabel>
           <h3 className="mt-1 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
@@ -186,19 +192,29 @@ function NextEventCard() {
                 animate={{ opacity: 1, x: 0, rotate: 0 }}
                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16, rotate: -2, scale: 0.97 }}
                 transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
-                className="relative rounded-lg border p-4"
-                style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}
+                className="relative overflow-hidden rounded-lg border border-border-strong bg-surface2"
               >
-                <div className="mb-2 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
-                  {formatEventDateRange(nextEvent.date, nextEvent.end_date)}
-                  {timeLabel ? ` / ${timeLabel}` : ''}
-                </div>
-                <h4 className="line-clamp-2 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
-                  {nextEvent.name}
-                </h4>
-                <div className="mt-3 flex flex-wrap gap-2 font-sans text-xs" style={{ color: 'var(--text3)' }}>
-                  {nextEvent.location && <span>{nextEvent.location}</span>}
-                  {nextEvent.points > 0 && <span>{nextEvent.points} pts</span>}
+                {(nextEvent.thumbnail_url || nextEvent.image_url) && (
+                  <img
+                    src={getSupabaseImageUrl(nextEvent.thumbnail_url || nextEvent.image_url, { width: 480, resize: 'contain', quality: 80 })}
+                    alt={`${nextEvent.name} event poster`}
+                    className="h-52 w-full border-b border-border-strong object-contain p-3"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                )}
+                <div className="p-4">
+                  <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-text-primary">
+                    {formatEventDateRange(nextEvent.date, nextEvent.end_date)}
+                    {timeLabel ? ` / ${timeLabel}` : ''}
+                  </div>
+                  <h4 className="line-clamp-2 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
+                    {nextEvent.name}
+                  </h4>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-sans text-xs text-text-primary">
+                    {nextEvent.location && <span>{nextEvent.location}</span>}
+                    {nextEvent.points > 0 && <span>{nextEvent.points} {nextEvent.points === 1 ? 'point' : 'points'}</span>}
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -214,18 +230,16 @@ function NextEventCard() {
                     aria-current={i === safeIndex ? 'true' : undefined}
                     aria-label={`Show event ${i + 1} of ${stack.length}: ${event.name}`}
                     onClick={() => goToIndex(i)}
-                    className="h-1.5 rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                    style={{
-                      width: i === safeIndex ? 16 : 6,
-                      background: i === safeIndex ? 'var(--brand)' : 'var(--border)',
-                    }}
-                  />
+                    className="flex h-11 w-8 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                  >
+                    <span aria-hidden className={cn('h-1.5 rounded-full', i === safeIndex ? 'w-4 bg-brand-600 dark:bg-brand-400' : 'w-1.5 bg-text-secondary')} />
+                  </button>
                 ))}
               </div>
               <button
                 type="button"
                 onClick={goNext}
-                className="font-mono text-[11px] uppercase tracking-wider transition-opacity duration-150 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                className="min-h-[44px] font-mono text-[11px] uppercase tracking-wider transition-opacity duration-150 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                 style={{ color: 'var(--brand)' }}
               >
                 Next event →
@@ -317,29 +331,29 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
           Current House Standings
         </h3>
         <p className="mt-2 font-sans text-sm" style={{ color: 'var(--text2)' }}>
-          See which House is leading this week.
+          {hasStandings ? 'See which House is leading this week.' : 'A new year of House memories is ahead.'}
         </p>
       </div>
 
       {isLoading ? (
         <CardSkeleton />
       ) : !hasStandings ? (
-        <div className="flex flex-1 flex-col justify-center">
-          {useSummerEmptyState && (
-            <span className="scrapbook-sticker scrapbook-sticker-gold mb-3 w-fit">
-              {summerMessage.badge}
+        <>
+          <div className="my-auto rounded-lg border border-gold-500/40 bg-gold-400/10 p-5">
+            <span className="mb-3 inline-flex rounded-sm bg-surface px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-label text-text-primary">
+              {useSummerEmptyState ? summerMessage.badge : 'Coming soon'}
             </span>
-          )}
-          <p className="font-serif text-xl leading-tight" style={{ color: 'var(--text)' }}>
-            {useSummerEmptyState ? summerMessage.title : 'House standings are still being updated'}
-          </p>
-          <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
-            {useSummerEmptyState ? summerMessage.body : 'Check back soon.'}
-          </p>
-          <Link to="/leaderboard?view=houses" className="mt-4 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+            <p className="font-serif text-3xl leading-tight text-text-primary">
+              {useSummerEmptyState ? summerMessage.title : 'Standings will be back soon'}
+            </p>
+            <p className="mt-3 font-sans text-sm leading-relaxed text-text-primary">
+              {useSummerEmptyState ? summerMessage.body : 'We’ll update this space as House announcements and points are released. Check back for the first standings!'}
+            </p>
+          </div>
+          <Link to="/leaderboard?view=houses" className="mt-auto font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
             Full standings
           </Link>
-        </div>
+        </>
       ) : (
         <>
           <div className="space-y-2">
@@ -522,24 +536,26 @@ function LatestMemoryCard() {
 
 function FindMyPointsCard() {
   return (
-    <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
+    <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-5 p-5 sm:p-6">
       <TapeStrip color="teal" position="top-right" />
       <div>
-        <SectionLabel>Points lookup</SectionLabel>
-        <h3 className="mt-1 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
+        <SectionLabel>Your VSA journey</SectionLabel>
+        <h3 className="mt-1 font-serif text-3xl leading-tight text-text-primary">
           Find My Points
         </h3>
       </div>
-      <div className="flex flex-1 flex-col justify-center">
-        <p className="max-w-[280px] font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
-          Check your points without logging in.
+      <div className="my-auto rounded-lg border border-brand-600/30 bg-brand-50 p-5 dark:border-brand-400/30 dark:bg-brand-950">
+        <StarIcon className="mb-5 h-8 w-8 text-brand-700 dark:text-brand-400" aria-hidden />
+        <p className="font-serif text-4xl leading-tight text-text-primary">Every event adds up.</p>
+        <p className="mt-3 font-sans text-sm leading-relaxed text-text-primary">
+          Revisit the events you’ve been part of and see the points you’ve earned along the way.
         </p>
-        <Link to="/points" className="mt-5 w-fit vsa-btn-primary py-2 text-xs">
-          Find My Points
+        <Link to="/points" className="mt-6 inline-flex min-h-[44px] w-full items-center justify-between gap-2 rounded bg-brand-700 px-4 py-3 font-sans text-sm font-semibold text-brand-50 hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 dark:bg-brand-400 dark:text-brand-950 dark:hover:bg-brand-300">
+          Find My Points <ArrowUpRightIcon className="h-4 w-4 shrink-0" aria-hidden />
         </Link>
       </div>
-      <Link to="/leaderboard" className="font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-        Full leaderboard
+      <Link to="/leaderboard" className="mt-auto font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
+        Explore the leaderboard →
       </Link>
     </div>
   );

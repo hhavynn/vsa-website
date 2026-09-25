@@ -46,7 +46,7 @@ const baseEvent: Event = {
   id: 'e1',
   name: 'Fall GBM',
   description: 'First GBM of the year',
-  date: '2026-10-02T00:00:00+00:00',
+  date: '2026-10-02T19:00:00+00:00',
   start_time: '19:00:00',
   end_time: '21:00:00',
   end_date: null,
@@ -154,6 +154,22 @@ describe('applicationToCalendarItems', () => {
 });
 
 describe('buildGoogleCalendarUrl', () => {
+  it('keeps a late UTC timestamp on its San Diego date in the calendar and export', () => {
+    const item = vsaEventToCalendarItem({
+      ...baseEvent,
+      date: '2026-10-01T01:00:00+00:00',
+      end_date: '2026-09-30',
+      start_time: '18:00:00',
+      end_time: '20:00:00',
+    });
+    expect(item.date).toBe('2026-09-30');
+    expect(itemOccursOn(item, '2026-09-30')).toBe(true);
+    expect(itemOccursOn(item, '2026-10-01')).toBe(false);
+    const url = new URL(buildGoogleCalendarUrl(item));
+    expect(url.searchParams.get('dates')).toBe('20260930T180000/20260930T200000');
+    expect(url.searchParams.get('ctz')).toBe('America/Los_Angeles');
+  });
+
   it('builds a timed event URL with LA timezone', () => {
     const url = buildGoogleCalendarUrl(vsaEventToCalendarItem(baseEvent));
     expect(url).toContain('calendar.google.com/calendar/render');

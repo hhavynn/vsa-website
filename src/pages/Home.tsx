@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { useQuery } from "react-query";
 import { EVENT_TYPE_LABELS } from "../constants/eventTypes";
@@ -12,7 +11,6 @@ import {
   getSupabaseImageSrcSet,
   getSupabaseImageUrl,
 } from "../lib/supabaseImages";
-import { parseDateOnly } from "../lib/dateOnly";
 import {
   formatEventDateRange,
   formatEventTime,
@@ -21,14 +19,25 @@ import {
 import { ThisWeekInVSA } from "../components/features/home/ThisWeekInVSA";
 import { OpenOpportunities } from "../components/features/home/OpenOpportunities";
 import { WrappedRecapCard } from "../components/features/home/WrappedRecapCard";
-import { useRef } from "react";
+import { type ComponentType, useRef } from "react";
+import { type IconBaseProps } from "react-icons";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "framer-motion";
 import { DegradedModeBanner } from "../components/common/DegradedModeBanner";
 import { FALLBACK_LINKS } from "../config/publicFallbackContent";
 import { SplitText } from "../components/ui/SplitText";
 import { ThreadsBackground } from "../components/ui/ThreadsBackground";
-import { SpotlightCard } from "../components/ui/SpotlightCard";
+import { FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
+import { cn } from "../lib/utils";
+
+const CalendarIcon = FiCalendar as ComponentType<IconBaseProps>;
+const ClockIcon = FiClock as ComponentType<IconBaseProps>;
+const MapPinIcon = FiMapPin as ComponentType<IconBaseProps>;
 
 const pillars = [
   {
@@ -76,162 +85,83 @@ function getEventTimeLabel(
   return null;
 }
 
-function EventRow({ event }: { event: PublicEventPreview }) {
-  const d = parseDateOnly(event.date);
-
-  return (
-    <motion.div
-      whileHover={{ y: -2, scale: 1.01 }}
-      transition={{ duration: 0.2 }}
-      className="vsa-event-row scrapbook-note px-4 py-4"
-    >
-      <div
-        className="border-r pr-4 text-center"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div
-          className="font-sans text-[9px] uppercase tracking-[0.1em]"
-          style={{ color: "var(--text3)" }}
-        >
-          {d ? format(d, "MMM") : ""}
-        </div>
-        <div
-          className="font-serif text-[32px] leading-[1.1]"
-          style={{ color: "var(--text)" }}
-        >
-          {d ? format(d, "d") : ""}
-        </div>
-      </div>
-      <div className="min-w-0">
-        <div
-          className="truncate font-sans text-[15px] font-semibold"
-          style={{ color: "var(--text)" }}
-        >
-          {event.name}
-        </div>
-        {event.location && (
-          <div
-            className="mt-1 truncate font-sans text-xs"
-            style={{ color: "var(--text3)" }}
-          >
-            {event.location}
-          </div>
-        )}
-      </div>
-      <Badge
-        label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
-        color={TYPE_COLOR[event.event_type] ?? "gray"}
-        className="hidden sm:inline-flex"
-      />
-    </motion.div>
-  );
-}
-
-function FeaturedEventHome({ event }: { event: PublicEventPreview }) {
-  const d = parseDateOnly(event.date);
+function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
   const imageUrl = event.thumbnail_url || event.image_url;
   const timeLabel = getEventTimeLabel(event);
 
   return (
-    <SpotlightCard className="mb-6 rounded-none border-0 bg-transparent">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="scrapbook-paper flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[1fr_0.75fr]"
-      >
-      <div
-        className="flex flex-col justify-center p-6 sm:p-8 lg:border-r"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          <Badge
-            label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
-            color={TYPE_COLOR[event.event_type] ?? "gray"}
+    <article
+      className={cn(
+        "scrapbook-paper flex min-w-0 flex-col sm:flex-row",
+        !imageUrl && "sm:justify-center",
+      )}
+    >
+      {imageUrl && (
+        <div className="flex shrink-0 items-center justify-center rounded-t-lg border-b border-border-strong bg-surface2 p-4 sm:w-2/5 sm:rounded-l-lg sm:rounded-tr-none sm:border-b-0 sm:border-r">
+          <img
+            src={getSupabaseImageUrl(imageUrl, {
+              width: 640,
+              resize: "contain",
+              quality: 80,
+            })}
+            alt={`${event.name} event poster`}
+            className="h-64 w-full object-contain sm:h-72"
+            loading="lazy"
+            decoding="async"
           />
-          <span
-            className="font-mono text-[10px] uppercase tracking-[.04em]"
-            style={{ color: "var(--text3)" }}
-          >
-            {formatEventDateRange(event.date, event.end_date)}
-            {timeLabel ? ` / ${timeLabel}` : ""}
-          </span>
         </div>
-        <h3
-          className="mb-2 line-clamp-2 font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[32px]"
-          style={{ color: "var(--text)" }}
-        >
+      )}
+      <div className="flex min-w-0 flex-1 flex-col items-start p-5 sm:p-6">
+        <Badge
+          label={EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+          color={TYPE_COLOR[event.event_type] ?? "gray"}
+        />
+        <h3 className="mt-3 font-serif text-3xl leading-tight text-text-primary sm:text-4xl">
           {event.name}
         </h3>
-        {event.points > 0 && (
-          <p
-            className="mb-4 font-sans text-sm leading-relaxed"
-            style={{ color: "var(--text2)" }}
-          >
-            {event.points} points available.
-          </p>
-        )}
-        {event.location && (
-          <div
-            className="mb-6 flex items-center gap-2 font-sans text-xs uppercase tracking-wide"
-            style={{ color: "var(--text3)" }}
-          >
-            <span className="h-1 w-1 rounded-full bg-brand-500" />
-            {event.location}
+        <dl className="my-5 space-y-2 font-sans text-sm text-text-primary">
+          <div className="flex items-start gap-2">
+            <dt>
+              <CalendarIcon className="mt-0.5 shrink-0" aria-hidden />
+              <span className="sr-only">Date</span>
+            </dt>
+            <dd>{formatEventDateRange(event.date, event.end_date)}</dd>
           </div>
-        )}
-        <div>
-          <Link to="/events" className="vsa-btn-primary py-2 text-xs">
-            View Details -&gt;
-          </Link>
-        </div>
-      </div>
-      <div className="relative flex flex-col justify-center bg-[var(--surface2)] p-6 lg:p-8">
-        <div className="scrapbook-photo relative mx-auto w-full max-w-[320px] rotate-[1.5deg]">
-          {imageUrl ? (
-            <img
-              src={getSupabaseImageUrl(imageUrl, {
-                width: 600,
-                height: 800,
-                resize: "contain",
-                quality: 75,
-              })}
-              alt={event.name}
-              className="max-h-[360px] w-full object-contain lg:max-h-none"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="flex aspect-[4/5] items-center justify-center p-8 text-center">
-              <span
-                className="font-serif text-2xl italic leading-tight"
-                style={{ color: "var(--text3)" }}
-              >
-                {event.name}
-              </span>
+          {timeLabel && (
+            <div className="flex items-start gap-2">
+              <dt>
+                <ClockIcon className="mt-0.5 shrink-0" aria-hidden />
+                <span className="sr-only">Time</span>
+              </dt>
+              <dd>{timeLabel}</dd>
             </div>
           )}
-        </div>
-        <div
-          className="absolute top-4 right-4 rounded-lg border bg-white/80 px-2.5 py-2 text-center shadow-sm backdrop-blur-md dark:bg-zinc-900/80"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <div
-            className="font-serif text-2xl leading-none"
-            style={{ color: "var(--text)" }}
+          {event.location && (
+            <div className="flex items-start gap-2">
+              <dt>
+                <MapPinIcon className="mt-0.5 shrink-0" aria-hidden />
+                <span className="sr-only">Location</span>
+              </dt>
+              <dd>{event.location}</dd>
+            </div>
+          )}
+        </dl>
+        <div className="mt-auto flex w-full flex-wrap items-center justify-between gap-3 border-t border-border-strong pt-4">
+          <Link
+            to="/events"
+            aria-label={`View details for ${event.name}`}
+            className="inline-flex min-h-[44px] items-center gap-2 font-sans text-sm font-semibold text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-brand-400"
           >
-            {d ? format(d, "d") : ""}
-          </div>
-          <div
-            className="mt-0.5 font-mono text-[9px] uppercase tracking-wider"
-            style={{ color: "var(--text3)" }}
-          >
-            {d ? format(d, "MMM") : ""}
-          </div>
+            Event details <span aria-hidden>→</span>
+          </Link>
+          {event.points > 0 && (
+            <span className="font-mono text-xs text-text-primary">
+              {event.points} {event.points === 1 ? "point" : "points"}
+            </span>
+          )}
         </div>
       </div>
-      </motion.div>
-    </SpotlightCard>
+    </article>
   );
 }
 
@@ -294,7 +224,7 @@ export function Home() {
   const presidentsPhotoUrl =
     presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
 
-  const [featured, ...rest] = upcomingEvents;
+  const featured = upcomingEvents[0];
   return (
     <>
       <PageTitle title="Home" />
@@ -581,31 +511,24 @@ export function Home() {
       <RevealOnScrollWrapper>
         <section className="vsa-section scrapbook-board">
           <div className="vsa-container">
-            <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-              <div className="relative">
-                <span
-                  className="scrapbook-pin -left-4 top-0 hidden lg:block"
-                  aria-hidden
-                />
-                <div className="vsa-section-label">Events</div>
-                <h2 className="vsa-section-title">
-                  Upcoming
-                  <br />
-                  <em>events.</em>
-                </h2>
-                <div className="mt-7">
+            <div className="space-y-8">
+              <div className="flex flex-wrap items-end justify-between gap-5">
+                <div>
+                  <div className="vsa-section-label">Events</div>
+                  <h2 className="vsa-section-title">
+                    Upcoming <em>events.</em>
+                  </h2>
+                  <p className="mt-3 max-w-md font-sans text-base text-text-primary">
+                    Make room for your next VSA memory.
+                  </p>
+                </div>
+                <div>
                   <Link to="/events" className="vsa-btn-primary">
                     See All Events
                   </Link>
                 </div>
               </div>
               <div>
-                <div
-                  className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.1em]"
-                  style={{ color: "var(--text3)" }}
-                >
-                  Upcoming
-                </div>
                 {eventsError ? (
                   <div
                     className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right space-y-3"
@@ -663,24 +586,10 @@ export function Home() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-4">
-                    <div className="scrapbook-rotate-sm-right">
-                      <FeaturedEventHome event={featured} />
-                    </div>
-                    <div className="space-y-3">
-                      {rest.slice(0, 2).map((event, idx) => (
-                        <div
-                          key={event.id}
-                          className={
-                            idx % 2 === 0
-                              ? "scrapbook-rotate-sm-left"
-                              : "scrapbook-rotate-sm-right"
-                          }
-                        >
-                          <EventRow event={event} />
-                        </div>
-                      ))}
-                    </div>
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    {upcomingEvents.slice(0, 3).map((event) => (
+                      <UpcomingEventCard key={event.id} event={event} />
+                    ))}
                   </div>
                 )}
               </div>
