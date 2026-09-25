@@ -1,3 +1,5 @@
+import { getYearRank } from './yearNormalizer';
+
 export function normalizeEmail(value: string | null | undefined): string {
   return (value ?? '').trim().toLowerCase();
 }
@@ -530,6 +532,46 @@ export function matchAttendanceImportRows(
   });
 }
 
+/**
+ * Decides whether an attendance import may move a matched member's year, and
+ * to what.
+ *
+ * Year is the one enrichment field that legitimately changes over time: a
+ * member who was a 2nd year last season is a 3rd year this one, and the form
+ * they just filled in is the current source of truth. The previous fill-only
+ * rule (`!member.year`) only ever wrote the field when it was empty, so every
+ * returning member stayed frozen at whatever standing they were first imported
+ * with, however many seasons ago.
+ *
+ * Advancing only forward keeps that fix from creating the opposite bug.
+ * Attendance for a past event is imported from a CSV collected at that time,
+ * so a backfill would otherwise rewind a member's standing. A strictly greater
+ * rank is required; lateral moves and genuine downgrades stay a deliberate
+ * admin edit on the Members page rather than a silent side effect of an
+ * import.
+ *
+ * Returns the value to write, or null to leave the member's year alone.
+ */
+export function resolveMemberYearAdvance(
+  storedYear: string | null | undefined,
+  csvYear: string,
+  invalidYear: boolean,
+): string | null {
+  if (!csvYear || invalidYear) return null;
+
+  const stored = (storedYear ?? '').trim();
+  if (!stored) return csvYear;
+  if (stored === csvYear) return null;
+
+  const csvRank = getYearRank(csvYear);
+  if (csvRank === null) return null;
+
+  const storedRank = getYearRank(stored);
+  if (storedRank === null) return csvYear;
+
+  return csvRank > storedRank ? csvYear : null;
+}
+
 export function getSafeAttendanceMemberEnrichment(
   row: AttendanceMatchResult,
   members: AttendanceImportMember[],
@@ -551,7 +593,8 @@ export function getSafeAttendanceMemberEnrichment(
 
   if (safeHighConfidenceMatch) {
     if (!member.college && row.csvCollege) updates.college = row.csvCollege;
-    if (!member.year && row.csvYear && !row.invalidYear) updates.year = row.csvYear;
+    const advancedYear = resolveMemberYearAdvance(member.year, row.csvYear, row.invalidYear);
+    if (advancedYear) updates.year = advancedYear;
   }
 
   return updates;
