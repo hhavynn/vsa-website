@@ -125,7 +125,7 @@ function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
               <CalendarIcon className="mt-0.5 shrink-0" aria-hidden />
               <span className="sr-only">Date</span>
             </dt>
-            <dd>{formatEventDateRange(event.date, event.end_date)}</dd>
+            <dd>{formatEventDateRange(event.date, event.end_date, event.start_time)}</dd>
           </div>
           {timeLabel && (
             <div className="flex items-start gap-2">

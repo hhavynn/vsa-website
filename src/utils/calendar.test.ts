@@ -46,7 +46,7 @@ const baseEvent: Event = {
   id: 'e1',
   name: 'Fall GBM',
   description: 'First GBM of the year',
-  date: '2026-10-02T19:00:00+00:00',
+  date: '2026-10-02T00:00:00+00:00',
   start_time: '19:00:00',
   end_time: '21:00:00',
   end_date: null,
@@ -168,6 +168,17 @@ describe('buildGoogleCalendarUrl', () => {
     const url = new URL(buildGoogleCalendarUrl(item));
     expect(url.searchParams.get('dates')).toBe('20260930T180000/20260930T200000');
     expect(url.searchParams.get('ctz')).toBe('America/Los_Angeles');
+  });
+
+  it('keeps a real 5 PM local start on the prior day when it lands at UTC midnight', () => {
+    const item = vsaEventToCalendarItem({
+      ...baseEvent,
+      start_time: '17:00:00',
+      end_time: '19:00:00',
+    });
+    expect(item.date).toBe('2026-10-01');
+    expect(new URL(buildGoogleCalendarUrl(item)).searchParams.get('dates'))
+      .toBe('20261001T170000/20261001T190000');
   });
 
   it('builds a timed event URL with LA timezone', () => {

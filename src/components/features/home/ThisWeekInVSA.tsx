@@ -205,7 +205,7 @@ function NextEventCard() {
                 )}
                 <div className="p-4">
                   <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-text-primary">
-                    {formatEventDateRange(nextEvent.date, nextEvent.end_date)}
+                    {formatEventDateRange(nextEvent.date, nextEvent.end_date, nextEvent.start_time)}
                     {timeLabel ? ` / ${timeLabel}` : ''}
                   </div>
                   <h4 className="line-clamp-2 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>

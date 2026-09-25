@@ -651,7 +651,7 @@ export function Events() {
                     {featured.start_time && featured.end_time
                       ? `${format(new Date(featured.date), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
                       : featured.end_date && featured.end_date !== featured.date.slice(0, 10)
-                        ? formatEventDateRange(featured.date, featured.end_date)
+                        ? formatEventDateRange(featured.date, featured.end_date, featured.start_time)
                         : format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
                   </span>
                 </div>
@@ -749,7 +749,7 @@ export function Events() {
                         {event.start_time && event.end_time
                           ? `${format(new Date(event.date), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
                           : event.end_date && event.end_date !== event.date.slice(0, 10)
-                            ? formatEventDateRange(event.date, event.end_date)
+                            ? formatEventDateRange(event.date, event.end_date, event.start_time)
                             : format(new Date(event.date), 'MMM d / h:mm a')}
                       </span>
                     </div>
