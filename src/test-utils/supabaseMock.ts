@@ -244,27 +244,27 @@ export const supabaseMock = new SupabaseMock();
 /**
  * Builds an error shaped like a real PostgREST failure.
  *
- * This matters more than it looks. In @supabase/supabase-js 2.50.0,
- * `PostgrestError extends Error` and carries `code`/`details`/`hint`. That is
- * exactly the shape `withErrorHandling` sniffs for before routing through
- * `normalizeSupabaseError`. A test that throws a plain object instead would
- * fall through to the generic "Unknown error occurred" branch and would prove
- * the opposite of what it claims.
+ * This matters more than it looks, and the previous version of this helper had it
+ * backwards. `PostgrestError` does extend `Error` in @supabase/supabase-js 2.50.0,
+ * but the client only *constructs* one when the caller opts into
+ * `.throwOnError()`. On the `{ data, error }` path that every repository in
+ * `src/data/repos/` uses, `PostgrestBuilder` assigns a **plain object literal**
+ * instead.
+ *
+ * So returning an `Error` here made the mock strictly friendlier than production:
+ * it satisfied the old `instanceof Error` gate in `withErrorHandling`, the tests
+ * went green, and the real plain-object payload fell through to the generic
+ * "Unknown error occurred" branch in the browser — which is exactly the bug
+ * users hit submitting a photo request.
+ *
+ * This now returns the plain object the client actually produces. Keep it that
+ * way: a mock that is easier to handle than reality proves nothing.
  */
 export function postgrestError(
   message: string,
   code?: string,
   details = '',
   hint = ''
-): Error & { code?: string; details: string; hint: string } {
-  const error = new Error(message) as Error & {
-    code?: string;
-    details: string;
-    hint: string;
-  };
-  error.name = 'PostgrestError';
-  error.code = code;
-  error.details = details;
-  error.hint = hint;
-  return error;
+): { message: string; code?: string; details: string; hint: string } {
+  return { message, code, details, hint };
 }
