@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react';
+// House shown here is the member's membership for the CURRENT academic year,
+// read from house_memberships. `members.house` is a legacy display cache that
+// still holds last season's value and is an input to the Admin -> Houses
+// backfill; it is deliberately left untouched.
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
@@ -6,6 +10,8 @@ import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
 import { normalizeEmail } from '../../lib/memberMatching';
+import { formatAcademicYear, getAcademicYearStart } from '../../lib/academicTerms';
+import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +21,10 @@ interface Member {
   last_name: string;
   college: string | null;
   year: string | null;
+  /** Legacy cache on `members`; may hold a previous season's House. */
   house: string | null;
+  /** Membership for the current academic year, or null when unassigned. */
+  current_house: string | null;
   email: string | null;
   points: number;
   events_attended: number;
@@ -86,6 +95,7 @@ export default function AdminMembers() {
   const [search, setSearch] = useState('');
   const [showReviewOnly, setShowReviewOnly] = useState(false);
   const [houseFilter, setHouseFilter] = useState<'all' | 'unassigned' | string>('all');
+  const [houseLookupFailed, setHouseLookupFailed] = useState(false);
 
   // Sorting
   type SortKey = 'name' | 'house' | 'points' | 'events_attended';
@@ -123,7 +133,32 @@ export default function AdminMembers() {
       .select('id, first_name, last_name, college, year, house, email, points, events_attended, created_at, needs_review')
       .order('points', { ascending: false });
     if (error) toast.error('Failed to load members.');
-    setMembers((data ?? []) as Member[]);
+
+    // House for THIS academic year only. Reading members.house here is what
+    // made the list keep showing last season's Houses after the year rolled
+    // over; that column is a cache and is never year-scoped.
+    const today = new Date();
+    let houseByMemberId = new Map<string, string>();
+    let houseLookupFailed = false;
+    try {
+      houseByMemberId = await houseMembershipsRepository.getHouseLabelsByMemberId(
+        getAcademicYearStart(today),
+        today.toISOString().slice(0, 10),
+      );
+    } catch {
+      // Treating a failed lookup as "no memberships" would render every member
+      // as confidently Unassigned across the table, the KPI, the filters and
+      // the CSV. For protected House data an unknown state has to stay
+      // visibly unknown.
+      houseLookupFailed = true;
+      toast.error('Could not load current-year House memberships. House is shown as unknown.');
+    }
+    setHouseLookupFailed(houseLookupFailed);
+
+    setMembers(((data ?? []) as Omit<Member, 'current_house'>[]).map(m => ({
+      ...m,
+      current_house: houseByMemberId.get(m.id) ?? null,
+    })));
     setLoading(false);
   }
 
@@ -134,8 +169,8 @@ export default function AdminMembers() {
     .filter(m => showReviewOnly ? m.needs_review : true)
     .filter(m => {
       if (houseFilter === 'all') return true;
-      if (houseFilter === 'unassigned') return !m.house;
-      return m.house === houseFilter;
+      if (houseFilter === 'unassigned') return !m.current_house;
+      return m.current_house === houseFilter;
     })
     .filter(m => {
       const q = search.toLowerCase();
@@ -143,7 +178,7 @@ export default function AdminMembers() {
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
         (m.college ?? '').toLowerCase().includes(q) ||
         (m.year ?? '').toLowerCase().includes(q) ||
-        (m.house ?? '').toLowerCase().includes(q) ||
+        (m.current_house ?? '').toLowerCase().includes(q) ||
         (m.email ?? '').toLowerCase().includes(q)
       );
     })
@@ -152,7 +187,7 @@ export default function AdminMembers() {
       if (sortKey === 'name') {
         cmp = `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
       } else if (sortKey === 'house') {
-        cmp = (a.house ?? '').localeCompare(b.house ?? '');
+        cmp = (a.current_house ?? '').localeCompare(b.current_house ?? '');
       } else if (sortKey === 'points') {
         cmp = a.points - b.points;
       } else {
@@ -290,8 +325,17 @@ export default function AdminMembers() {
     load();
   }
 
+  // Derived from this year's memberships rather than the HOUSE_OPTIONS
+  // constant, which is the 2025-2026 roster and would offer filters that match
+  // nothing once the Houses for a new year differ.
+  const currentHouseOptions = useMemo(
+    () => Array.from(new Set(members.map(m => m.current_house).filter((h): h is string => !!h))).sort(),
+    [members],
+  );
+
   const needsReviewCount = members.filter(m => m.needs_review).length;
-  const unassignedHouseCount = members.filter(m => !m.house).length;
+  const unassignedHouseCount = members.filter(m => !m.current_house).length;
+  const unassignedHouseDisplay = houseLookupFailed ? '—' : String(unassignedHouseCount);
 
   // Stat card values
   const activeCount = members.filter(m => m.events_attended > 0).length;
@@ -314,7 +358,7 @@ export default function AdminMembers() {
           onClick={() => {
             const rows = [
               ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.house ?? '', m.points, m.events_attended]),
+              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
             ];
             const csv = rows.map(r => r.join(',')).join('\n');
             const a = document.createElement('a');
@@ -356,7 +400,7 @@ export default function AdminMembers() {
             </div>
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
               <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Unassigned House</p>
-              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{unassignedHouseCount}</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{unassignedHouseDisplay}</p>
               <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>members</p>
             </div>
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
@@ -410,8 +454,8 @@ export default function AdminMembers() {
             >
               <option value="all">All houses</option>
               <option value="unassigned">Unassigned</option>
-              {HOUSE_OPTIONS.map(house => (
-                <option key={house} value={house}>{HOUSE_LABELS[house]}</option>
+              {currentHouseOptions.map(house => (
+                <option key={house} value={house}>{house}</option>
               ))}
             </select>
           </div>
@@ -469,9 +513,11 @@ export default function AdminMembers() {
                         <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">{m.college || '—'}</td>
                         {/* HOUSE */}
                         <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">
-                          {m.house ? (
+                          {houseLookupFailed ? (
+                            <span className="text-[12px] text-[var(--color-text3)]">Unknown</span>
+                          ) : m.current_house ? (
                             <span className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
-                              {m.house}
+                              {m.current_house}
                             </span>
                           ) : <span className="text-[12px] text-[var(--color-text3)]">Unassigned</span>}
                         </td>
@@ -525,7 +571,11 @@ export default function AdminMembers() {
               <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="optional - helps identify duplicates" className={inputCls} />
             </Field>
-            <Field label="House">
+            <Field label="House (legacy cache — not this year's assignment)">
+              <p className="mb-1 text-[11px] text-[var(--color-text3)]">
+                Assign Houses for {formatAcademicYear(getAcademicYearStart(new Date()))} on Admin &rarr; Houses. This field only
+                updates the legacy <code>members.house</code> value the Houses backfill reads.
+              </p>
               <select value={editForm.house} onChange={e => setEditForm(f => ({ ...f, house: e.target.value }))} className={inputCls}>
                 <option value="">Unassigned</option>
                 {HOUSE_OPTIONS.map(house => (
