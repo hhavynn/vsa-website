@@ -8,7 +8,7 @@
 import { ApplicationStatus, Event, HouseEvent, PublicApplicationLink } from '../types';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { HOUSE_COLORS, HouseName, normalizeHouse } from '../constants/houses';
-import { buildGcalTimedDates } from '../lib/eventTime';
+import { buildGcalTimedDates, getEventDateOnly } from '../lib/eventTime';
 import { parseDateOnly, toDateOnlyString } from '../lib/dateOnly';
 import { getLosAngelesDateOnly } from './losAngelesDate';
 import { getHousePagePath } from './houseSlug';
@@ -85,7 +85,7 @@ export function vsaEventToCalendarItem(event: Event): CalendarItem {
     source: 'vsa',
     title: event.name,
     description: event.description || null,
-    date: toDateOnlyString(event.date),
+    date: getEventDateOnly(event.date),
     endDate: event.end_date ? toDateOnlyString(event.end_date) : null,
     startTime: event.start_time ?? null,
     endTime: event.end_time ?? null,

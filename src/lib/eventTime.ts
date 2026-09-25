@@ -1,6 +1,8 @@
 // Utilities for event start/end time display and Google Calendar URL generation.
 // Avoids timezone-shift bugs by keeping date and time handling separate.
 
+import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+
 /**
  * Format a SQL time value like "19:00:00" or "19:00" to "7:00 PM".
  */
@@ -31,11 +33,13 @@ function timeToGcalPart(time: string): string {
 }
 
 /**
- * Extract the date portion "YYYY-MM-DD" from an ISO timestamp or date string.
- * Safe: never calls `new Date("YYYY-MM-DD")` which shifts dates in negative UTC offsets.
+ * Event timestamps are stored in UTC while the entered event day is in San Diego.
+ * Keep bare dates unchanged for House events and calendar items.
  */
-function extractDateOnly(isoOrDate: string): string {
-  return isoOrDate.slice(0, 10);
+export function getEventDateOnly(isoOrDate: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(isoOrDate)
+    ? isoOrDate
+    : getLosAngelesDateOnly(new Date(isoOrDate));
 }
 
 /**
@@ -50,7 +54,7 @@ function dateToPart(ymd: string): string {
  * Returns "YYYYMMDDTHHMMSS/YYYYMMDDTHHMMSS" (local time, paired with ctz param).
  */
 export function buildGcalTimedDates(eventDate: string, startTime: string, endTime: string): string {
-  const day = dateToPart(extractDateOnly(eventDate));
+  const day = dateToPart(getEventDateOnly(eventDate));
   const start = timeToGcalPart(startTime);
   const end = timeToGcalPart(endTime);
   return `${day}T${start}/${day}T${end}`;
@@ -62,7 +66,7 @@ export function buildGcalTimedDates(eventDate: string, startTime: string, endTim
  * If endDate is provided and differs from the start, it spans multiple days.
  */
 export function buildGcalAllDayDates(isoDate: string, endDate?: string | null): string {
-  const startDay = dateToPart(extractDateOnly(isoDate));
+  const startDay = dateToPart(getEventDateOnly(isoDate));
   if (endDate) {
     const endDay = dateToPart(endDate);
     if (endDay !== startDay) {
@@ -85,8 +89,8 @@ export function buildGcalAllDayDates(isoDate: string, endDate?: string | null): 
  * isoDate is a full ISO timestamp; endDate is "YYYY-MM-DD" or null.
  */
 export function formatEventDateRange(isoDate: string, endDate?: string | null): string {
-  const startStr = isoDate.slice(0, 10); // "YYYY-MM-DD"
-  if (!endDate || endDate === startStr) {
+  const startStr = getEventDateOnly(isoDate);
+  if (!endDate || endDate <= startStr) {
     const [y, mo, d] = startStr.split('-').map(Number);
     const date = new Date(y, mo - 1, d);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
