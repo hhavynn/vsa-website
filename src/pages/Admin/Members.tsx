@@ -11,6 +11,7 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
 import { normalizeEmail } from '../../lib/memberMatching';
 import { formatAcademicYear, getAcademicYearStart } from '../../lib/academicTerms';
+import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ export default function AdminMembers() {
   const [search, setSearch] = useState('');
   const [showReviewOnly, setShowReviewOnly] = useState(false);
   const [houseFilter, setHouseFilter] = useState<'all' | 'unassigned' | string>('all');
+  const [houseLookupFailed, setHouseLookupFailed] = useState(false);
 
   // Sorting
   type SortKey = 'name' | 'house' | 'points' | 'events_attended';
@@ -135,23 +137,23 @@ export default function AdminMembers() {
     // House for THIS academic year only. Reading members.house here is what
     // made the list keep showing last season's Houses after the year rolled
     // over; that column is a cache and is never year-scoped.
-    const { data: memberships, error: membershipError } = await supabase
-      .from('house_memberships')
-      .select('member_id, house_page_assets(display_name, house_key)')
-      .eq('academic_year_start', getAcademicYearStart(new Date()));
-    if (membershipError) toast.error('Failed to load current-year House memberships.');
-
-    type HouseProfileRef = { display_name?: string | null; house_key?: string | null };
-    const houseByMemberId = new Map<string, string>();
-    for (const row of memberships ?? []) {
-      // PostgREST returns a many-to-one embed as an object, but older clients
-      // and some relationship shapes hand back a single-element array. Accept
-      // both rather than silently rendering every member as unassigned.
-      const embedded = row.house_page_assets as HouseProfileRef | HouseProfileRef[] | null;
-      const profile = Array.isArray(embedded) ? embedded[0] ?? null : embedded;
-      const label = profile?.display_name ?? profile?.house_key ?? null;
-      if (label) houseByMemberId.set(row.member_id as string, label);
+    const today = new Date();
+    let houseByMemberId = new Map<string, string>();
+    let houseLookupFailed = false;
+    try {
+      houseByMemberId = await houseMembershipsRepository.getHouseLabelsByMemberId(
+        getAcademicYearStart(today),
+        today.toISOString().slice(0, 10),
+      );
+    } catch {
+      // Treating a failed lookup as "no memberships" would render every member
+      // as confidently Unassigned across the table, the KPI, the filters and
+      // the CSV. For protected House data an unknown state has to stay
+      // visibly unknown.
+      houseLookupFailed = true;
+      toast.error('Could not load current-year House memberships. House is shown as unknown.');
     }
+    setHouseLookupFailed(houseLookupFailed);
 
     setMembers(((data ?? []) as Omit<Member, 'current_house'>[]).map(m => ({
       ...m,
@@ -333,6 +335,7 @@ export default function AdminMembers() {
 
   const needsReviewCount = members.filter(m => m.needs_review).length;
   const unassignedHouseCount = members.filter(m => !m.current_house).length;
+  const unassignedHouseDisplay = houseLookupFailed ? '—' : String(unassignedHouseCount);
 
   // Stat card values
   const activeCount = members.filter(m => m.events_attended > 0).length;
@@ -355,7 +358,7 @@ export default function AdminMembers() {
           onClick={() => {
             const rows = [
               ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', m.current_house ?? '', m.points, m.events_attended]),
+              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
             ];
             const csv = rows.map(r => r.join(',')).join('\n');
             const a = document.createElement('a');
@@ -397,7 +400,7 @@ export default function AdminMembers() {
             </div>
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
               <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Unassigned House</p>
-              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{unassignedHouseCount}</p>
+              <p className="font-serif text-[32px] leading-none" style={{ color: 'var(--color-text)' }}>{unassignedHouseDisplay}</p>
               <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>members</p>
             </div>
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
@@ -510,7 +513,9 @@ export default function AdminMembers() {
                         <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">{m.college || '—'}</td>
                         {/* HOUSE */}
                         <td className="text-[13px] px-4 py-3 text-[var(--color-text2)]">
-                          {m.current_house ? (
+                          {houseLookupFailed ? (
+                            <span className="text-[12px] text-[var(--color-text3)]">Unknown</span>
+                          ) : m.current_house ? (
                             <span className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
                               {m.current_house}
                             </span>
