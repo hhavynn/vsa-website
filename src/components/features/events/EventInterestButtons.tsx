@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { eventsRepository } from '../../../data/repos/events';
+import { eventsRepository, type EventInterestAction } from '../../../data/repos/events';
 import { EventInterestCounts } from '../../../types';
 import toast from 'react-hot-toast';
 
@@ -24,23 +24,45 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
   }, [eventId]);
 
   const handleSignal = async (signal: 'interested' | 'going') => {
-    if (userSignal || loading) return;
+    if (loading) return;
+
+    let action: EventInterestAction;
+    if (userSignal === signal) {
+      action = signal === 'interested' ? 'clear_interested' : 'clear_going';
+    } else if (userSignal === null) {
+      action = signal;
+    } else {
+      action = signal === 'interested' ? 'switch_to_interested' : 'switch_to_going';
+    }
 
     setLoading(true);
     try {
-      await eventsRepository.recordInterest(eventId, signal);
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}${eventId}`, signal);
-      setUserSignal(signal);
-      
-      // Optimistic update
+      await eventsRepository.recordInterest(eventId, action);
+      if (userSignal === signal) {
+        localStorage.removeItem(`${STORAGE_KEY_PREFIX}${eventId}`);
+        setUserSignal(null);
+      } else {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}${eventId}`, signal);
+        setUserSignal(signal);
+      }
+
+      const interestedAdded = action === 'interested' || action === 'switch_to_interested';
+      const interestedRemoved = action === 'clear_interested' || action === 'switch_to_going';
+      const goingAdded = action === 'going' || action === 'switch_to_going';
+      const goingRemoved = action === 'clear_going' || action === 'switch_to_interested';
+
       setCounts(prev => ({
         event_id: eventId,
-        interested_count: (prev?.interested_count || 0) + (signal === 'interested' ? 1 : 0),
-        going_count: (prev?.going_count || 0) + (signal === 'going' ? 1 : 0),
+        interested_count: Math.max(0, (prev?.interested_count || 0) + Number(interestedAdded) - Number(interestedRemoved)),
+        going_count: Math.max(0, (prev?.going_count || 0) + Number(goingAdded) - Number(goingRemoved)),
         updated_at: new Date().toISOString()
       }));
 
-      toast.success(signal === 'interested' ? "Marked as interested!" : "Marked as going!");
+      if (userSignal === signal) {
+        toast.success('Removed your response.');
+      } else {
+        toast.success(signal === 'interested' ? 'Marked as interested!' : 'Marked as going!');
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to record interest. Please try again.");
@@ -61,9 +83,11 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
       )}
       <div className={`flex flex-wrap gap-2 ${compact ? 'lg:justify-end' : ''}`}>
         <button
+          type="button"
           onClick={() => handleSignal('interested')}
-          disabled={!!userSignal || loading}
-          className={`flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+          disabled={loading}
+          aria-pressed={userSignal === 'interested'}
+          className={`flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
             userSignal === 'interested'
               ? 'bg-brand-600 text-white shadow-sm'
               : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]'
@@ -74,9 +98,11 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
         </button>
 
         <button
+          type="button"
           onClick={() => handleSignal('going')}
-          disabled={!!userSignal || loading}
-          className={`flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+          disabled={loading}
+          aria-pressed={userSignal === 'going'}
+          className={`flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
             userSignal === 'going'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]'

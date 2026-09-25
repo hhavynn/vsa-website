@@ -9,6 +9,14 @@ export interface EventWithAttendance extends Event {
   interest_counts?: EventInterestCounts | null;
 }
 
+export type EventInterestAction =
+  | 'interested'
+  | 'going'
+  | 'clear_interested'
+  | 'clear_going'
+  | 'switch_to_interested'
+  | 'switch_to_going';
+
 export type PublicEventPreview = Pick<
   Event,
   | 'id'
@@ -220,7 +228,7 @@ export class EventsRepository {
   /**
    * Record public interest in an event
    */
-  async recordInterest(eventId: string, signal: 'interested' | 'going'): Promise<void> {
+  async recordInterest(eventId: string, signal: EventInterestAction): Promise<void> {
     return withErrorHandling(async () => {
       const { error } = await supabase.rpc('record_event_interest', {
         p_event_id: eventId,
