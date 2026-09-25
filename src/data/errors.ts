@@ -1,5 +1,3 @@
-import { PostgrestError } from '@supabase/supabase-js';
-
 export interface ApiError {
   message: string;
   code?: string;
@@ -68,10 +66,17 @@ export class NotFoundError extends Error {
 
 /**
  * Normalizes Supabase errors into standardized error types
+ *
+ * The message is deliberately NOT prefixed with the caller's context.
+ * `isSupabaseUnavailable()` classifies outages by substring-matching the message,
+ * and several contexts in this codebase read "Failed to fetch <thing>" — which
+ * contains its `'failed to fetch'` outage signal. Prefixing would make every
+ * error from those call sites look like a Supabase outage and render fallback
+ * content over a real bug.
  */
-export function normalizeSupabaseError(error: PostgrestError): DatabaseError {
+export function normalizeSupabaseError(error: ApiError): DatabaseError {
   const { message, code, details, hint } = error;
-  
+
   // Map common PostgreSQL error codes to user-friendly messages
   const errorMessages: Record<string, string> = {
     '23505': 'This record already exists',
@@ -84,9 +89,42 @@ export function normalizeSupabaseError(error: PostgrestError): DatabaseError {
     'PGRST302': 'JWT invalid',
   };
 
-  const friendlyMessage = errorMessages[code] || message || 'Database error occurred';
-  
+  const friendlyMessage =
+    (code ? errorMessages[code] : undefined) || message || 'Database error occurred';
+
   return new DatabaseError(friendlyMessage, code, details, hint);
+}
+
+/**
+ * Detects the object PostgREST puts in `{ error }`.
+ *
+ * This is deliberately a structural check, and `ApiError` is deliberately the
+ * return type rather than `PostgrestError`.
+ * `@supabase/postgrest-js` only constructs a real `PostgrestError` when the caller
+ * opts into `.throwOnError()`; on the `{ data, error }` path it assigns a **plain
+ * object literal** (`PostgrestBuilder.js`, the `error: { message, details, hint,
+ * code }` branch). Every repository in `src/data/repos/` checks `{ error }` and
+ * rethrows it, so what reaches `withErrorHandling` is a plain object that fails
+ * `instanceof Error` — and, because `PostgrestError` is a class, is not
+ * assignable to it either. One PostgREST branch emits `{ message }` alone, so
+ * every field but `message` is optional.
+ *
+ * `message` alone is not enough to match on — plenty of things carry a message.
+ * Requiring `code` or `details` alongside it is what distinguishes a PostgREST
+ * payload from an arbitrary object.
+ */
+export function isPostgrestErrorShape(value: unknown): value is ApiError {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.message === 'string' &&
+    ('code' in candidate || 'details' in candidate)
+  );
+}
+
+/** Matches the network-failure heuristic this module has always used. */
+function looksLikeNetworkFailure(message: string): boolean {
+  return message.includes('fetch') || message.includes('network');
 }
 
 /**
@@ -103,14 +141,25 @@ export async function withErrorHandling<T>(
       throw error;
     }
 
-    if (error instanceof Error) {
-      // Check if it's a Supabase error
-      if ('code' in error && 'details' in error) {
-        throw normalizeSupabaseError(error as PostgrestError);
+    // Checked BEFORE `instanceof Error`, because the PostgREST payload is a plain
+    // object and would otherwise fall all the way through to the generic
+    // "Unknown error occurred" branch — discarding the real cause (an RLS denial,
+    // a constraint violation, a trigger's RAISE) before anyone can read it.
+    //
+    // This also mattered for degraded mode: `isSupabaseUnavailable()` matches on
+    // message and code fragments, so a quota or outage error rewritten as
+    // "<context>: Unknown error occurred" matched none of its signals and public
+    // pages rendered an error instead of fallback content.
+    if (isPostgrestErrorShape(error)) {
+      if (looksLikeNetworkFailure(error.message)) {
+        throw new NetworkError(error.message);
       }
+      throw normalizeSupabaseError(error);
+    }
 
+    if (error instanceof Error) {
       // Network errors
-      if (error.message.includes('fetch') || error.message.includes('network')) {
+      if (looksLikeNetworkFailure(error.message)) {
         throw new NetworkError(error.message);
       }
 
