@@ -85,7 +85,7 @@ export function vsaEventToCalendarItem(event: Event): CalendarItem {
     source: 'vsa',
     title: event.name,
     description: event.description || null,
-    date: getEventDateOnly(event.date),
+    date: getEventDateOnly(event.date, event.start_time),
     endDate: event.end_date ? toDateOnlyString(event.end_date) : null,
     startTime: event.start_time ?? null,
     endTime: event.end_time ?? null,

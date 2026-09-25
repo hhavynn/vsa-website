@@ -24,6 +24,19 @@ describe('San Diego event dates', () => {
       .toBe('20260930T180000/20260930T200000');
   });
 
+  it('preserves a legacy UTC-midnight event date in labels and Google Calendar', () => {
+    expect(formatEventDateRange('2026-10-02T00:00:00Z')).toBe('Oct 2');
+    expect(formatEventDateRange('2026-10-02T00:00:00+00:00', null, '19:00:00')).toBe('Oct 2');
+    expect(buildGcalTimedDates('2026-10-02T00:00:00+00:00', '19:00:00', '21:00:00'))
+      .toBe('20261002T190000/20261002T210000');
+  });
+
+  it('uses the local day when UTC midnight is a real 5 PM start instant', () => {
+    expect(formatEventDateRange('2026-10-02T00:00:00Z', null, '17:00:00')).toBe('Oct 1');
+    expect(buildGcalTimedDates('2026-10-02T00:00:00Z', '17:00:00', '19:00:00'))
+      .toBe('20261001T170000/20261001T190000');
+  });
+
   it('respects standard time, explicit offsets, and date-only House/calendar inputs', () => {
     expect(buildGcalTimedDates('2026-12-02T02:00:00Z', '18:00', '20:00'))
       .toBe('20261201T180000/20261201T200000');
