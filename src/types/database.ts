@@ -1935,6 +1935,13 @@ export interface Database {
       };
     };
     Functions: {
+      record_event_interest: {
+        Args: {
+          p_event_id: string;
+          p_signal: string;
+        };
+        Returns: undefined;
+      };
       create_events_table: {
         Args: Record<PropertyKey, never>;
         Returns: Json;

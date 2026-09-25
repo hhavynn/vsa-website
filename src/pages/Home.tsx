@@ -6,6 +6,7 @@ import { Badge, BadgeColor } from "../components/ui/Badge";
 import { usePresidentsContent } from "../hooks/usePresidentsContent";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { eventsRepository, PublicEventPreview } from "../data/repos/events";
+import { EventInterestButtons } from "../components/features/events/EventInterestButtons";
 import { splitPresidentsMessage } from "../data/presidentsContent";
 import {
   getSupabaseImageSrcSet,
@@ -159,6 +160,13 @@ function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
               {event.points} {event.points === 1 ? "point" : "points"}
             </span>
           )}
+        </div>
+        <div className="mt-3 w-full">
+          <EventInterestButtons
+            eventId={event.id}
+            initialCounts={event.interest_counts ?? null}
+            compact
+          />
         </div>
       </div>
     </article>
