@@ -473,7 +473,8 @@ export default function AdminImport() {
         createdAttendanceCount = insertedAttendance?.length ?? 0;
       }
 
-      // 3. Fill missing profile fields on matched members using import data
+      // 3. Fill missing profile fields on matched members, and advance year
+      //    when the CSV reports a higher standing than the one on record.
       const toEnrich = toUpdate
         .map(r => ({
           memberId: r.matchedMember!.id,
@@ -879,7 +880,7 @@ export default function AdminImport() {
                             <span className="inline-flex items-center gap-1">
                               <ActionBadge color="green" label={getActionLabel(row)} />
                               {hasMemberEnrichment(row, matchedMembersSnapshot) && (
-                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled during import">✉</span>
+                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled, and year advanced, during import">✉</span>
                               )}
                             </span>
                           )}
@@ -984,7 +985,7 @@ export default function AdminImport() {
                                 <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Manual override — will create a new member</div>
                               )}
                               {effectiveStatus === 'match' && hasMemberEnrichment(row, matchedMembersSnapshot) && (
-                                <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Missing profile fields will be merged during import</div>
+                                <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Profile fields will be filled or year advanced during import</div>
                               )}
                             </span>
                           ) : isHighConfidenceOverride ? (
