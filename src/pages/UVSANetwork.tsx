@@ -396,7 +396,7 @@ export default function UVSANetwork() {
                   "Have fun, meet other schools, and bring the energy back to UCSD!",
                 ].map((step, i) => (
                   <li key={i} className="flex gap-4 items-start">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--brand)] text-[var(--color-on-brand)] flex items-center justify-center text-xs font-bold">
                       {i + 1}
                     </span>
                     <p className="font-sans text-[var(--text2)] leading-tight">

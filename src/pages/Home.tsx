@@ -200,7 +200,11 @@ export function Home() {
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
   const today = getTodayDateOnly();
-  const { data: upcomingEvents = [], isError: eventsError } = useQuery<
+  const {
+    data: upcomingEvents = [],
+    isError: eventsError,
+    isLoading: upcomingEventsLoading,
+  } = useQuery<
     PublicEventPreview[]
   >({
     queryKey: ["home", "upcoming-events-section", today],
@@ -578,6 +582,15 @@ export function Home() {
                     >
                       View events page
                     </Link>
+                  </div>
+                ) : upcomingEventsLoading ? (
+                  <div
+                    className="scrapbook-empty font-sans text-sm scrapbook-rotate-sm-right"
+                    style={{ color: "var(--text2)" }}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <p>Loading upcoming events…</p>
                   </div>
                 ) : !featured ? (
                   <div

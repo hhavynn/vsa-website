@@ -362,7 +362,7 @@ export default function AdminAiKnowledge() {
           <button
             type="button"
             onClick={startNewSnippet}
-            className="inline-flex w-fit rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            className="inline-flex w-fit rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
           >
             New snippet
           </button>
@@ -832,7 +832,7 @@ export default function AdminAiKnowledge() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-[var(--brand)] px-5 py-2.5 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg bg-[var(--brand)] px-5 py-2.5 font-sans text-sm font-semibold text-[var(--color-on-brand)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>

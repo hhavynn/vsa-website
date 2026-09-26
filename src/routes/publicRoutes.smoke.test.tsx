@@ -30,6 +30,7 @@ import { SiteSettingsProvider } from '../context/SiteSettingsContext';
 import { AnalyticsConsentProvider } from '../context/AnalyticsConsentContext';
 import AppRoutes from './index';
 import { supabaseMock } from '../test-utils/supabaseMock';
+import { eventsRepository } from '../data/repos/events';
 
 jest.mock('../lib/supabase', () => ({
   get supabase() {
@@ -196,4 +197,46 @@ describe('public routes render without crashing (#294)', () => {
    * Does not catch: wrong content, broken styling, or a page that renders a
    * plausible-looking but incorrect state. Those need per-page tests.
    */
+});
+
+describe('homepage upcoming-events loading state', () => {
+  const originalIntersectionObserver = globalThis.IntersectionObserver;
+
+  beforeEach(() => {
+    supabaseMock.reset();
+    Object.defineProperty(globalThis, 'IntersectionObserver', {
+      configurable: true,
+      value: class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    });
+  });
+
+  afterEach(() => {
+    if (originalIntersectionObserver) {
+      Object.defineProperty(globalThis, 'IntersectionObserver', {
+        configurable: true,
+        value: originalIntersectionObserver,
+      });
+    } else {
+      delete (globalThis as Partial<typeof globalThis>).IntersectionObserver;
+    }
+  });
+
+  it('does not present an empty state while the event query is pending', async () => {
+    const pendingQuery = jest
+      .spyOn(eventsRepository, 'getPublicUpcomingPreview')
+      .mockImplementation(() => new Promise(() => undefined));
+
+    try {
+      renderRoute('/');
+
+      expect(await screen.findByText(/loading upcoming events/i)).toBeInTheDocument();
+      expect(screen.queryByText(/no upcoming events posted yet/i)).not.toBeInTheDocument();
+    } finally {
+      pendingQuery.mockRestore();
+    }
+  });
 });

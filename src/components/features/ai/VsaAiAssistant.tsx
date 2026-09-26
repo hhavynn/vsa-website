@@ -649,7 +649,7 @@ export function VsaAiAssistant() {
                             <button
                               onClick={() => submitFeedback(message)}
                               disabled={feedbackSubmitting}
-                              className="rounded bg-[var(--brand)] px-3 py-1 font-sans text-[10px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                              className="rounded bg-[var(--brand)] px-3 py-1 font-sans text-[10px] font-bold text-[var(--color-on-brand)] transition-opacity hover:opacity-90 disabled:opacity-50"
                             >
                               {feedbackSubmitting ? 'Sending...' : 'Submit'}
                             </button>

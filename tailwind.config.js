@@ -7,18 +7,18 @@ module.exports = {
       // ─── Brand tokens ─────────────────────────────────────────────────────
       colors: {
         // VSA Teal — primary accent, drawn from the logo's sky palette.
-        // 600 = light-mode primary (#1e8878), 400 = dark-mode primary (#3bbdb5).
+        // 600 = light-mode primary (#176e63), 400 = dark-mode primary (#3bbdb5).
         brand: {
           50:  '#eef8f7',
           100: '#d2efec',
           200: '#a6deda',
           300: '#6ccac2',
           400: '#3bbdb5',  // dark mode primary
-          500: '#2aa49c',
-          600: '#1e8878',  // light mode primary CTA
-          700: '#196e60',  // hover
-          800: '#165850',
-          900: '#134545',
+          500: '#207d72',
+          600: '#176e63',  // light mode primary CTA
+          700: '#145a52',  // hover
+          800: '#104b45',
+          900: '#0d3c38',
           950: '#0a2828',
         },
         // Coral accent — lantern red-orange from the logo.
