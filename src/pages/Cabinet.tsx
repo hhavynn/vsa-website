@@ -806,7 +806,7 @@ export function Cabinet() {
               {isInvalidYearQuery && (
                 <Link
                   to="/cabinet"
-                  className="mt-5 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                  className="mt-5 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity hover:opacity-90"
                 >
                   View current Cabinet
                 </Link>
@@ -874,7 +874,7 @@ export function Cabinet() {
             </p>
             <Link
               to="/cabinet"
-              className="mt-6 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+              className="mt-6 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity hover:opacity-90"
             >
               View current Cabinet
             </Link>

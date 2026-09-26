@@ -270,7 +270,7 @@ function UpcomingActivity() {
               </div>
             </div>
             <div className="shrink-0">
-               <Link to="/events" className="rounded-full bg-[var(--color-surface2)] p-1 text-[var(--color-text3)] transition-colors group-hover:bg-[var(--brand)] group-hover:text-white">
+               <Link to="/events" className="rounded-full bg-[var(--color-surface2)] p-1 text-[var(--color-text3)] transition-colors group-hover:bg-[var(--brand)] group-hover:text-[var(--color-on-brand)]">
                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                </Link>
             </div>
@@ -486,4 +486,3 @@ export function MyVSACard({
     </div>
   );
 }
-

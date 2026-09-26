@@ -14,7 +14,7 @@ function FindMyPointsShortcut() {
       aria-label="Find My Points"
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-sans text-[12.5px] font-bold transition-colors duration-150 ${
         active
-          ? 'border-[var(--brand)] bg-[var(--brand)] text-[#f8fbfb]'
+          ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--color-on-brand)]'
           : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--brand)] hover:text-[var(--brand)]'
       }`}
     >
@@ -57,7 +57,7 @@ export const NavigationShell = memo(function NavigationShell() {
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation-drawer"
               aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] bg-[var(--surface2)] text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border2)] bg-[var(--surface2)] text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
             >
               {isMobileMenuOpen ? (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

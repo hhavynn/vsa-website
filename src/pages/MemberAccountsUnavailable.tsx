@@ -18,7 +18,7 @@ export function MemberAccountsUnavailable() {
           </p>
           <Link
             to="/"
-            className="mt-7 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-[#f8fbfb] transition-opacity duration-150 hover:opacity-90"
+            className="mt-7 inline-flex rounded-lg bg-[var(--brand)] px-4 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity duration-150 hover:opacity-90"
           >
             Return Home
           </Link>

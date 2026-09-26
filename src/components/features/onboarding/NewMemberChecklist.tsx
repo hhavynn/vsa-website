@@ -20,7 +20,7 @@ function ChecklistItem({ step, title, description, link, completed }: ChecklistI
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold transition-colors',
           completed
             ? 'border-green-500 bg-green-500 text-white'
-            : 'border-[var(--border2)] text-[var(--brand)] group-hover:border-[var(--brand)] group-hover:bg-[var(--brand)] group-hover:text-[#f8fbfb]'
+            : 'border-[var(--border2)] text-[var(--brand)] group-hover:border-[var(--brand)] group-hover:bg-[var(--brand)] group-hover:text-[var(--color-on-brand)]'
         )}>
           {completed ? (
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
