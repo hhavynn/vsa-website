@@ -84,6 +84,30 @@ describe('vsaEventToCalendarItem', () => {
 });
 
 describe('houseEventToCalendarItem', () => {
+  it('keeps a non-2025 House with its own name and accent color', () => {
+    const houseEvent = {
+      id: 'he-new',
+      house_profile_id: 'hp-new',
+      academic_year_start: 2026,
+      academic_year_end: 2027,
+      title: 'New House Social',
+      slug: null,
+      description: null,
+      event_date: '2026-11-12',
+      start_time: null,
+      end_time: null,
+      location: null,
+      image_url: null,
+      image_thumbnail_url: null,
+      gallery_url: null,
+      houses: [{ house_key: 'lotus', house: 'Lotus', display_name: 'Lotus', accent_color: '#22c55e', academic_year_start: 2026 }],
+    } as unknown as Parameters<typeof houseEventToCalendarItem>[0];
+
+    const item = houseEventToCalendarItem(houseEvent);
+    expect(item.houses).toEqual([{ name: 'Lotus', color: '#22c55e', pagePath: '/house/lotus' }]);
+    expect(matchesCategoryFilter(item, 'house', 'Lotus')).toBe(true);
+  });
+
   it('normalizes house tags and links to the house page', () => {
     const houseEvent = {
       id: 'h1',

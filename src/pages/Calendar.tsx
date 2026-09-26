@@ -16,7 +16,6 @@ import { ThisWeekStrip } from '../components/features/calendar/ThisWeekStrip';
 import { eventsRepository } from '../data/repos/events';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { applicationLinksRepository } from '../data/repos/applicationLinks';
-import { HouseName } from '../constants/houses';
 import {
   CalendarCategoryFilter,
   CalendarItem,
@@ -35,6 +34,7 @@ import {
   matchesScope,
   vsaEventToCalendarItem,
 } from '../utils/calendar';
+import type { CalendarHouseTag } from '../utils/calendar';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -121,7 +121,7 @@ export function Calendar() {
   const [view, setView] = useState<CalendarView>('board');
   const [scope, setScope] = useState<CalendarScope>('upcoming');
   const [activeFilter, setActiveFilter] = useState<CalendarCategoryFilter>('all');
-  const [activeHouse, setActiveHouse] = useState<HouseName | null>(null);
+  const [activeHouse, setActiveHouse] = useState<string | null>(null);
   const [pointsOnly, setPointsOnly] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => {
     const [year, month] = todayStr.split('-').map(Number);
@@ -142,10 +142,10 @@ export function Calendar() {
     return options;
   }, [items]);
 
-  const houseOptions = useMemo<HouseName[]>(() => {
-    const names = new Set<HouseName>();
-    for (const item of items) for (const house of item.houses) names.add(house.name);
-    return Array.from(names);
+  const houseOptions = useMemo<CalendarHouseTag[]>(() => {
+    const byName = new Map<string, CalendarHouseTag>();
+    for (const item of items) for (const house of item.houses) if (!byName.has(house.name)) byName.set(house.name, house);
+    return Array.from(byName.values());
   }, [items]);
 
   const showPointsToggle = useMemo(() => items.some(isPointsEligible), [items]);
