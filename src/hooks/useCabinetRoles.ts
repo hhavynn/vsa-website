@@ -5,6 +5,16 @@ import { FALLBACK_CABINET_ROLES } from '../config/publicFallbackContent';
 
 export const CABINET_ROLES_QUERY_KEY = 'cabinet_roles';
 
+// PGRST205 / 42P01: the table is not in the database yet (its migration is
+// applied manually), so the public explorer should still show the curated
+// fallback roles instead of an empty grid.
+const MISSING_TABLE_CODES = new Set(['PGRST205', '42P01']);
+
+function isMissingTable(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && MISSING_TABLE_CODES.has(code);
+}
+
 export function useCabinetRoles() {
   return useQuery({
     queryKey: [CABINET_ROLES_QUERY_KEY],
@@ -12,7 +22,7 @@ export function useCabinetRoles() {
       try {
         return await cabinetRolesRepository.getAllRoles();
       } catch (error) {
-        if (isSupabaseUnavailable(error)) {
+        if (isSupabaseUnavailable(error) || isMissingTable(error)) {
           return FALLBACK_CABINET_ROLES as CabinetRoleDescription[];
         }
         throw error;

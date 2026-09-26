@@ -99,15 +99,17 @@ function CTABlock({
       </div>
     );
   } else if (status === 'not_open') {
+    // The admin-authored message wins: it is where leadership announces the
+    // real open date. Page-level fallbacks only cover rows without one.
     body = (
       <MutedMessage>
-        {fallback?.not_open || link?.before_open_message || defaults.before}
+        {link?.before_open_message || fallback?.not_open || defaults.before}
       </MutedMessage>
     );
   } else if (status === 'closed') {
     body = (
       <MutedMessage>
-        {fallback?.closed || link?.after_close_message || defaults.after}
+        {link?.after_close_message || fallback?.closed || defaults.after}
       </MutedMessage>
     );
   } else {

@@ -38,6 +38,26 @@ export class HouseAssetsRepository {
     }
   }
 
+  async getAllPublishedAssets(): Promise<HousePageAsset[]> {
+    try {
+      const { data, error } = await supabase
+        .from('published_house_page_assets')
+        .select('*')
+        .order('academic_year_start', { ascending: false })
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.warn('Using fallback house assets:', error.message);
+        return [];
+      }
+
+      return normalizeAssets((data ?? []) as unknown as HousePageAsset[]);
+    } catch (error) {
+      console.warn('Using fallback house assets:', error);
+      return [];
+    }
+  }
+
   async getAdminAssets(academicYearStart: number): Promise<HousePageAsset[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
