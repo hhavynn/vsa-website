@@ -42,7 +42,7 @@ const TARGETS: Target[] = [
     section_key: 'current_cycle',
     label: 'ACE Current Cycle',
     description: 'Application status, cycle label, form link, and deadline for /ace.',
-    defaultTitle: 'Spring 2026 Cycle',
+    defaultTitle: 'Current ACE Cycle',
     display_order: 10,
   },
   {

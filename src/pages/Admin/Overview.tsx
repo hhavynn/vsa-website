@@ -4,6 +4,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { FadeContent } from '../../components/ui/FadeContent';
 import { supabase } from '../../lib/supabase';
 import { getApplicationStatus } from '../../lib/applicationLinks';
+import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 
 interface OverviewStats {
   members: number;
@@ -26,6 +27,7 @@ interface OverviewStats {
   eventsMissingImage: number;
   eventsMissingLocation: number;
   housesCurrentCount: number;
+  housesCurrentYearStart: number | null;
   housesMissingImage: number;
   housesMissingParents: number;
   galleryCount: number;
@@ -84,6 +86,7 @@ const DEFAULT_STATS: OverviewStats = {
   eventsMissingImage: 0,
   eventsMissingLocation: 0,
   housesCurrentCount: 0,
+  housesCurrentYearStart: null,
   housesMissingImage: 0,
   housesMissingParents: 0,
   galleryCount: 0,
@@ -487,12 +490,15 @@ export default function AdminOverview() {
         supabase.from('events').select('*', { count: 'exact', head: true }).or('location.is.null,location.eq.""'),
       ]);
 
+      const activeTermRes = await supabase.from('academic_terms').select('academic_year_start').eq('is_active', true).maybeSingle();
+      const housesCurrentYearStart = activeTermRes.data?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+
       const [
         housesCurrentRes,
         housesMissingImageRes,
         housesMissingParentsRes,
       ] = await Promise.all([
-        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).eq('academic_year_start', 2025),
+        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).eq('academic_year_start', housesCurrentYearStart ?? -1),
         supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).is('image_url', null),
         supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).or('house_parent_heading.is.null,house_parent_image_url.is.null'),
       ]);
@@ -607,6 +613,7 @@ export default function AdminOverview() {
         eventsMissingImage: eventsMissingImageRes.count ?? 0,
         eventsMissingLocation: eventsMissingLocationRes.count ?? 0,
         housesCurrentCount: housesCurrentRes.count ?? 0,
+        housesCurrentYearStart,
         housesMissingImage: housesMissingImageRes.count ?? 0,
         housesMissingParents: housesMissingParentsRes.count ?? 0,
         galleryCount: galleryCountRes.count ?? 0,
@@ -842,7 +849,7 @@ export default function AdminOverview() {
                 </HealthGroupCard>
 
                 <HealthGroupCard title="Houses" to="/admin/houses">
-                  <HealthItem label="Current House profiles (2025)" value={stats.housesCurrentCount} status={stats.housesCurrentCount === 0 ? 'error' : 'good'} />
+                  <HealthItem label={`Current House profiles (${stats.housesCurrentYearStart ? formatAcademicYear(stats.housesCurrentYearStart) : 'active year'})`} value={stats.housesCurrentCount} status={stats.housesCurrentCount === 0 ? 'warning' : 'good'} />
                   <HealthItem label="Missing House images" value={stats.housesMissingImage} status={stats.housesMissingImage > 0 ? 'warning' : 'good'} />
                   <HealthItem label="Missing House parents" value={stats.housesMissingParents} status={stats.housesMissingParents > 0 ? 'warning' : 'good'} />
                 </HealthGroupCard>
