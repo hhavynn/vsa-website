@@ -27,7 +27,7 @@
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.7.0",
     "react-query": "^3.39.3",
-    "react-router-dom": "^6.30.1",
+    "react-router-dom": "^6.30.6",
     "tailwind-merge": "^3.6.0",
     "typescript": "^4.9.5",
     "web-vitals": "^6.0.1",
