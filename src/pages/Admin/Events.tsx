@@ -511,7 +511,7 @@ export default function AdminEvents() {
               <form onSubmit={handleCreateEvent} className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className={inputCls} required placeholder="Spring GBM" /></div>
-                  <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
+                  <div><label className={labelCls}>Location *</label><input type="text" value={newEvent.location ?? ''} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className={inputCls} required placeholder="Price Center Ballroom" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Start date *</label>
@@ -539,7 +539,7 @@ export default function AdminEvents() {
                       {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
-                  <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                  <div><label className={labelCls}>Points *</label><input type="number" value={newEvent.points ?? ''} onChange={e => setNewEvent({...newEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
                   <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={newEvent.check_in_form_url} onChange={e => setNewEvent({...newEvent, check_in_form_url: e.target.value})} className={inputCls} placeholder="https://forms.google.com/..." /></div>
                   <AcademicTermSelect
                     value={newEvent.academic_term_id}
@@ -564,7 +564,7 @@ export default function AdminEvents() {
                     </span>
                   </span>
                 </label>
-                <div><label className={labelCls}>Description *</label><textarea value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={4} required placeholder="Describe the event." /></div>
+                <div><label className={labelCls}>Description *</label><textarea value={newEvent.description ?? ''} onChange={e => setNewEvent({...newEvent, description: e.target.value})} className={inputCls} rows={4} required placeholder="Describe the event." /></div>
                 <div>
                   <label className={labelCls}>Image</label>
                   <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
@@ -633,7 +633,7 @@ export default function AdminEvents() {
               <form onSubmit={handleEditSubmit} className="space-y-5 p-6 sm:p-8">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
                   <div><label className={labelCls}>Title *</label><input type="text" value={selectedEvent.name} onChange={e => setSelectedEvent({...selectedEvent, name: e.target.value})} className={inputCls} required /></div>
-                  <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
+                  <div><label className={labelCls}>Location *</label><input type="text" value={selectedEvent.location ?? ''} onChange={e => setSelectedEvent({...selectedEvent, location: e.target.value})} className={inputCls} required /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Start date *</label>
@@ -662,7 +662,7 @@ export default function AdminEvents() {
                       {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
-                  <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
+                  <div><label className={labelCls}>Points *</label><input type="number" value={selectedEvent.points ?? ''} onChange={e => setSelectedEvent({...selectedEvent, points: Number(e.target.value)})} min="0" max="1000" className={inputCls} required /></div>
                   <div><label className={labelCls}>Check-in Form URL</label><input type="url" value={selectedEvent.check_in_form_url || ''} onChange={e => setSelectedEvent({...selectedEvent, check_in_form_url: e.target.value})} className={inputCls} /></div>
                   <AcademicTermSelect
                     value={selectedEvent.academic_term_id}
@@ -707,7 +707,7 @@ export default function AdminEvents() {
                     </span>
                   </span>
                 </label>
-                <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={4} required /></div>
+                <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description ?? ''} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={4} required /></div>
                 <div>
                   <label className={labelCls}>Check-in Code</label>
                   <div className="mt-1 flex gap-2">

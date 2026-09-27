@@ -4,10 +4,10 @@ import { UserProfileFormData, SignInFormData, SignUpFormData } from '../../schem
 import { AuthUser } from '@supabase/supabase-js';
 
 export interface UserProfile extends AuthUser {
-  first_name: string;
-  last_name: string;
-  is_admin: boolean;
-  avatar_url?: string;
+  first_name: string | null;
+  last_name: string | null;
+  is_admin: boolean | null;
+  avatar_url: string | null;
 }
 
 export class AuthRepository {
@@ -165,7 +165,7 @@ export class AuthRepository {
   async isUserAdmin(userId: string): Promise<boolean> {
     return withErrorHandling(async () => {
       const profile = await this.getUserProfile(userId);
-      return profile.is_admin;
+      return profile.is_admin === true;
     }, 'Failed to check admin status');
   }
 

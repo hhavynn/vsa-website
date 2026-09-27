@@ -26,7 +26,7 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
     } else {
       url.searchParams.append('dates', buildGcalAllDayDates(event.date));
     }
-    url.searchParams.append('details', event.description);
+    url.searchParams.append('details', event.description ?? '');
     url.searchParams.append('location', event.location || '');
     window.open(url.toString(), '_blank');
   };

@@ -191,7 +191,7 @@ function PastEventMemoryCard({
   const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : stats?.topHouse?.trim() || null;
   const houseColor = houseKey ? HOUSE_COLORS[houseKey] : houseLabel ? 'var(--brand)' : null;
   const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '') : '';
-  const hasPoints = event.points > 0;
+  const hasPoints = (event.points ?? 0) > 0;
   const hasTotalPoints = stats && stats.totalPoints > 0;
 
   // Deterministic rotation
