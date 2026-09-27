@@ -5,6 +5,14 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Shape of the jsonb returned by public.check_in_to_event.
+type CheckInRpcResult = {
+  success: boolean;
+  error?: string;
+  event_name?: string;
+  points_earned?: number;
+};
+
 export function useEventAttendance() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -21,17 +29,18 @@ export function useEventAttendance() {
       // event a code belongs to or reads the stored code itself.
       const { data, error: rpcError } = await supabase
         .rpc('check_in_to_event', { p_code: code });
+      const result = data as CheckInRpcResult | null;
 
       if (rpcError) {
         console.error('Error calling check_in_to_event:', rpcError);
         throw rpcError;
       }
 
-      if (!data?.success) {
-        return { success: false as const, error: data?.error ?? 'Failed to check in' };
+      if (!result?.success) {
+        return { success: false as const, error: result?.error ?? 'Failed to check in' };
       }
 
-      return { success: true as const, eventName: data.event_name as string | undefined };
+      return { success: true as const, eventName: result.event_name };
     } catch (err) {
       console.error('Error in checkInWithCode:', err);
       setError(err instanceof Error ? err : new Error('Failed to check in'));
@@ -147,10 +156,10 @@ export function useEventAttendance() {
         throw error;
       }
 
-      // Transform the data to ensure event is a single object
+      // events is a many-to-one join, so PostgREST returns an object, not an array.
       const transformedData = data?.map(record => ({
         ...record,
-        event: record.events[0]
+        event: record.events
       }));
 
       return transformedData;

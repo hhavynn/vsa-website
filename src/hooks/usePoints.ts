@@ -107,7 +107,7 @@ export function usePoints() {
   };
 
   return { 
-    points: userPoints?.total_points || 0, 
+    points: userPoints?.points || 0, 
     loading, 
     error, 
     addPoints, 
