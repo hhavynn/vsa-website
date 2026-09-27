@@ -1,6 +1,9 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling, NotFoundError } from '../errors';
 import { UVSASchool } from '../../types';
+import { Database } from '../../types/database';
+
+type UVSASchoolInsert = Database['public']['Tables']['uvsa_schools']['Insert'];
 
 /**
  * Every `uvsa_schools` column an anonymous visitor may read.
@@ -23,7 +26,7 @@ export class UVSASchoolsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('uvsa_schools')
-        .select(PUBLIC_UVSA_SCHOOL_COLUMNS)
+        .select<string, UVSASchool>(PUBLIC_UVSA_SCHOOL_COLUMNS)
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
 
@@ -39,7 +42,7 @@ export class UVSASchoolsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('uvsa_schools')
-        .select('*')
+        .select<string, UVSASchool>('*')
         .order('sort_order', { ascending: true });
 
       if (error) throw error;
@@ -54,7 +57,7 @@ export class UVSASchoolsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('uvsa_schools')
-        .select(PUBLIC_UVSA_SCHOOL_COLUMNS)
+        .select<string, UVSASchool>(PUBLIC_UVSA_SCHOOL_COLUMNS)
         .eq('id', id)
         .single();
 
@@ -71,7 +74,7 @@ export class UVSASchoolsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('uvsa_schools')
-        .select(PUBLIC_UVSA_SCHOOL_COLUMNS)
+        .select<string, UVSASchool>(PUBLIC_UVSA_SCHOOL_COLUMNS)
         .eq('slug', slug)
         .single();
 
@@ -88,8 +91,8 @@ export class UVSASchoolsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('uvsa_schools')
-        .upsert(school)
-        .select()
+        .upsert(school as UVSASchoolInsert)
+        .select<string, UVSASchool>()
         .single();
 
       if (error) throw error;

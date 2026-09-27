@@ -124,7 +124,7 @@ export class AuthRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('*')
+        .select<string, Omit<UserProfile, keyof AuthUser>>('*')
         .eq('id', userId)
         .single();
 

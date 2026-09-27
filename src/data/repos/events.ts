@@ -190,7 +190,7 @@ export class EventsRepository {
       // Fetch event
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .select(PUBLIC_EVENT_COLUMNS)
+        .select<string, Event>(PUBLIC_EVENT_COLUMNS)
         .eq('id', id)
         .single();
 
@@ -247,7 +247,7 @@ export class EventsRepository {
       const { data, error } = await supabase
         .from('events')
         .insert([eventData])
-        .select()
+        .select<string, Event>()
         .single();
 
       if (error) throw error;
@@ -278,7 +278,7 @@ export class EventsRepository {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select()
+        .select<string, Event>()
         .single();
 
       if (error) throw error;

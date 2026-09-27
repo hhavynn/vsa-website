@@ -28,12 +28,12 @@ export function MemberDashboard() {
       try {
         const { data: pointsData, error: pointsError } = await supabase
           .from('user_points')
-          .select('total_points')
+          .select('points')
           .eq('user_id', user.id)
           .single();
 
         if (pointsError) throw pointsError;
-        const currentPoints = pointsData?.total_points || 0;
+        const currentPoints = pointsData?.points || 0;
         setPoints(currentPoints);
 
         const { data: attendanceData, error: attendanceError } = await supabase
@@ -45,10 +45,12 @@ export function MemberDashboard() {
 
         let eventsData: Event[] = [];
         if (attendanceData && attendanceData.length > 0) {
-          const eventIds = attendanceData.map(a => a.event_id);
+          const eventIds = attendanceData
+            .map(a => a.event_id)
+            .filter((id): id is string => id !== null);
           const { data: fetchedEvents, error: eventsError } = await supabase
             .from('events')
-            .select('*')
+            .select<string, Event>('*')
             .in('id', eventIds);
 
           if (eventsError) throw eventsError;
