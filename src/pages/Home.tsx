@@ -155,7 +155,7 @@ function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
           >
             Event details <span aria-hidden>→</span>
           </Link>
-          {(event.points ?? 0) > 0 && (
+          {event.points > 0 && (
             <span className="font-mono text-xs text-text-primary">
               {event.points} {event.points === 1 ? "point" : "points"}
             </span>

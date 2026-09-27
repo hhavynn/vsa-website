@@ -652,7 +652,7 @@ function ExternalEventCard({
 }) {
   const schoolName = event.uvsa_school?.short_name || "Unknown School";
   const isUCSD = event.uvsa_school?.slug === "ucsd";
-  const isSpecialPointEvent = isUCSD && (event.points ?? 0) > 4;
+  const isSpecialPointEvent = isUCSD && event.points > 4;
 
   // Deterministic rotation
   const rotationClass =
