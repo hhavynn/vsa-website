@@ -1,5 +1,8 @@
 -- Restrict events / members / attendance writes to admins.
 --
+-- APPLIED to production 2026-09-27 (schema_migrations version 20260927214500),
+-- after a rolled-back dry run; the filename matches the recorded version.
+--
 -- ---------------------------------------------------------------------------
 -- WHY
 -- ---------------------------------------------------------------------------
