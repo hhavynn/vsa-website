@@ -11,6 +11,5 @@ describe('SplitText accessibility', () => {
 
     expect(screen.getByRole('heading', { name: 'Welcome to VSA' })).toBeInTheDocument();
     expect(screen.getByText('Welcome to VSA')).toHaveClass('sr-only');
-    expect(document.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
   });
 });

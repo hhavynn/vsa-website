@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { MobileDrawer } from './MobileDrawer';
@@ -29,27 +30,26 @@ describe('MobileDrawer keyboard accessibility', () => {
     );
 
     const opener = screen.getByRole('button', { name: 'Open navigation menu' });
-    opener.focus();
-    fireEvent.click(opener);
+    await userEvent.click(opener);
 
-    const dialog = screen.getByRole('dialog', { name: 'Navigation menu' });
-    const focusable = Array.from(
-      dialog.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )
-    );
+    const firstLink = screen.getByRole('link', { name: 'VSA at UCSD' });
+    const lastButton = screen.getByRole('button', { name: 'Account actions' });
+    const focusableCount = screen.getAllByRole('link').length + 2;
 
-    expect(focusable.length).toBeGreaterThan(1);
-    await waitFor(() => expect(document.activeElement).toBe(focusable[0]));
+    await waitFor(() => expect(firstLink).toHaveFocus());
 
-    focusable[focusable.length - 1].focus();
-    fireEvent.keyDown(document, { key: 'Tab' });
-    expect(document.activeElement).toBe(focusable[0]);
+    for (let index = 1; index < focusableCount; index += 1) {
+      userEvent.tab();
+    }
+    expect(lastButton).toHaveFocus();
 
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(focusable[focusable.length - 1]);
+    userEvent.tab();
+    expect(firstLink).toHaveFocus();
 
-    fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() => expect(document.activeElement).toBe(opener));
+    userEvent.tab({ shift: true });
+    expect(lastButton).toHaveFocus();
+
+    userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 });
