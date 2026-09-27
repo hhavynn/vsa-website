@@ -55,7 +55,10 @@
   --color-brand:         #176e63;   /* primary teal CTA */
   --color-on-brand:      #ffffff;
   --color-accent:        #e8623a;   /* coral accent */
+  --color-accent-text:   #a83a18;   /* coral for text on light surfaces */
+  --color-on-accent:     #061014;
   --color-gold:          #d4841a;   /* gold accent */
+  --color-gold-text:     #7a4806;   /* gold for text on light surfaces */
   --teal: #2a9d8f;
   --coral: #e8623a;
   --gold: #d4841a;
@@ -197,7 +200,7 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 16px;
-    color: var(--accent);
+    color: var(--color-accent-text);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -337,7 +340,7 @@
   .vsa-filter-btn.active {
     border-color: var(--brand);
     background: var(--brand);
-    color: #f8fbfb;
+    color: var(--color-on-brand);
   }
 
   .scrapbook-board {
@@ -487,13 +490,13 @@
   .scrapbook-sticker-coral {
     border-color: rgba(232, 98, 58, 0.35);
     background: rgba(232, 98, 58, 0.1);
-    color: var(--accent);
+    color: var(--color-accent-text);
   }
 
   .scrapbook-sticker-gold {
     border-color: rgba(212, 132, 26, 0.35);
     background: rgba(212, 132, 26, 0.12);
-    color: var(--gold-t);
+    color: var(--color-gold-text);
   }
 
   .scrapbook-select {
@@ -1525,7 +1528,10 @@ html.dark {
   --color-brand:         #3bbdb5;   /* lighter teal for dark mode */
   --color-on-brand:      #061014;
   --color-accent:        #f07858;   /* lighter coral for dark mode */
+  --color-accent-text:   #f07858;
+  --color-on-accent:     #061014;
   --color-gold:          #e8a838;   /* lighter gold for dark mode */
+  --color-gold-text:     #e8a838;
   --color-surface3: #1a3040;
   --bg: var(--color-bg);
   --bg2: var(--color-surface);

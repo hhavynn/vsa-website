@@ -86,7 +86,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
 
             {/* House Points */}
             <div className="flex gap-4">
-              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] shadow-sm">
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[color:var(--color-accent-text)] shadow-sm">
                 <StarIcon className="h-5 w-5" />
               </div>
               <div>
@@ -101,7 +101,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
 
             {/* Academic Terms */}
             <div className="flex gap-4">
-              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-t)]/10 text-[var(--gold-t)] shadow-sm">
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--gold-t)]/10 text-[color:var(--color-gold-text)] shadow-sm">
                 <CalendarIcon className="h-5 w-5" />
               </div>
               <div>
@@ -137,7 +137,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
         <div className="scrapbook-note relative p-6 sm:p-8" style={{ background: 'var(--surface2)' }}>
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex gap-4">
-              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--accent)] text-[var(--accent)] shadow-inner">
+              <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--accent)] text-[color:var(--color-accent-text)] shadow-inner">
                 <QuestionIcon className="h-5 w-5" />
               </div>
               <div>

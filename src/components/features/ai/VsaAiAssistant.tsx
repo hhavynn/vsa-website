@@ -763,7 +763,7 @@ export function VsaAiAssistant() {
             style={{ borderColor: 'var(--color-border)' }}
             aria-expanded={isOpen}
             aria-controls="vsa-ai-assistant-panel"
-            aria-label={isOpen ? 'Close VSA AI Assistant' : 'Open VSA AI Assistant'}
+            aria-label={isOpen ? 'Ask VSA (close assistant)' : 'Ask VSA (open assistant)'}
           >
             <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">

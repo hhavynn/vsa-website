@@ -372,7 +372,7 @@ export function Home() {
                     >
                       <span
                         className="font-mono text-[10px]"
-                        style={{ color: "var(--accent)" }}
+                        style={{ color: "var(--color-accent-text)" }}
                       >
                         {pillar.n}
                       </span>
@@ -653,7 +653,7 @@ export function Home() {
                     </div>
                     <div
                       className="mt-1 font-serif text-xl italic"
-                      style={{ color: "var(--accent)" }}
+                      style={{ color: "var(--color-accent-text)" }}
                     >
                       {signatureName}
                     </div>

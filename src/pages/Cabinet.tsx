@@ -814,12 +814,14 @@ export function Cabinet() {
               {publicCabinetYears.length > 0 && (
                 <div className="mt-5 max-w-xs">
                   <label
+                    htmlFor="cabinet-year-select"
                     className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]"
                     style={{ color: 'var(--color-text3)' }}
                   >
                     Cabinet Year
                   </label>
                   <select
+                    id="cabinet-year-select"
                     value={selectorValue}
                     onChange={(event) => handleCabinetYearChange(event.target.value)}
                     className="scrapbook-select"

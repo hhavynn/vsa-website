@@ -36,7 +36,7 @@ function ChecklistItem({ step, title, description, link, completed }: ChecklistI
             <h4 className="font-sans text-[15px] font-semibold leading-tight text-[var(--text)] transition-colors group-hover:text-[var(--brand)]">
               {title}
             </h4>
-            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.1em] opacity-80 transition-opacity group-hover:opacity-100" style={{ color: 'var(--gold-t)' }}>
+            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.1em] transition-opacity group-hover:opacity-100" style={{ color: 'var(--color-gold-text)' }}>
               Open
             </span>
           </div>
@@ -130,7 +130,7 @@ export function NewMemberChecklist() {
           <p className="font-sans text-sm font-semibold" style={{ color: 'var(--text)' }}>
             Ready when you are.
           </p>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--accent)' }}>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-accent-text)' }}>
             8 stamps to start your VSA story
           </p>
         </div>
