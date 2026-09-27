@@ -5,6 +5,8 @@
 *Status: Implementation-Ready / Needs Live Verification*  
 *Prepared by: AI Coding Assistant*  
 
+> **Accessibility follow-up (September 26, 2026):** Production Lighthouse route scores, light/dark contrast measurements, keyboard checks, and remaining VoiceOver/policy verification are recorded in [the September accessibility audit](accessibility-audit-2026-09.md).
+
 > [!IMPORTANT]
 > **DISCLAIMER:** This report provides technical and architectural compliance assessments based on project-specific guidelines, industry best practices, and code audits. It does **not** constitute legal advice. For formal GDPR, CCPA, or ADA compliance, consult legal counsel and official UC San Diego advisors.
 
@@ -33,9 +35,9 @@ The application has successfully transitioned from an unhardened client-authorit
 - **Keyboard Navigation:** Verified that standard clickable components (e.g., buttons, links, tabs) utilize logical tab indexes, can be triggered via `Enter`/`Space`, and display visible focus states.
 
 ### Remaining Frontend / Manual QA
-- **Mobile Drawer:** Verify that keyboard focus traps inside the mobile navigation menu when open, and restores to the menu button on close.
-- **Dynamic Alerts (Toasts):** Confirm that `react-hot-toast` announcements are correctly read by screen-readers using appropriate ARIA live regions (`role="status"` or `aria-live="polite"`).
-- **Color Contrast:** Verify color contrast ratios (minimum 4.5:1 for normal text) under both light and dark mode settings, specifically for secondary text (`var(--color-text3)`) and brand colors.
+- [x] **Mobile Drawer:** Verified with keyboard against the production build at a 390px viewport; focus enters, Tab and Shift+Tab wrap, Escape closes, and focus returns to the menu button. Also covered by `src/components/layout/navigation/MobileDrawer.test.tsx`.
+- [ ] **Dynamic Alerts (Toasts):** The app-level `react-hot-toast` live region has `role="status"` and polite announcements, but a VoiceOver spoken-output pass remains outstanding.
+- [x] **Color Contrast:** Standard text colors, dedicated coral/gold text colors, active filter foregrounds, and ACE palette text pairs pass 4.5:1 in light and dark themes. Exact ratios are in [the September accessibility audit](accessibility-audit-2026-09.md).
 
 ---
 
@@ -110,7 +112,7 @@ The application has successfully transitioned from an unhardened client-authorit
 
 ### Browser Accessibility Checks
 - [ ] Navigate the entire page using only `Tab` and `Shift + Tab`; verify focus indicators are clearly visible on every interactive element.
-- [ ] Open the mobile nav drawer, press `Tab`; confirm focus loops inside the drawer and does not bleed into the background page.
+- [x] Open the mobile nav drawer, press `Tab` and `Shift + Tab`; confirm focus wraps within the drawer and restores to the opener on close. Manually checked against the production build and covered by `src/components/layout/navigation/MobileDrawer.test.tsx`.
 - [ ] Trigger an error (e.g., invalid check-in code); verify the screen reader reads the toast alert automatically.
 
 ### Public-Page Checks

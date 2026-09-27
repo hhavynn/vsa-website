@@ -227,7 +227,7 @@ function AwardCard({ award }: { award: Award }) {
       <h3 className="mt-3 font-serif text-[22px] font-black leading-[1.15] tracking-[-0.01em] text-text-primary">
         {award.title}
       </h3>
-      <p className="mt-2 font-sans text-[14px] font-bold leading-[1.4] text-[var(--accent)]">{award.winner}</p>
+      <p className="mt-2 font-sans text-[14px] font-bold leading-[1.4] text-[color:var(--color-accent-text)]">{award.winner}</p>
       <p className="mt-3 font-sans text-[13.5px] leading-[1.7] text-text-secondary">{award.blurb}</p>
     </article>
   );
@@ -316,13 +316,13 @@ export function WrappedRecapCard() {
                     </span>
                     <span
                       className="flex-1 font-serif text-[22px] font-black leading-[1.1]"
-                      style={{ color: house.champion ? "var(--gold-t)" : "var(--text)" }}
+                      style={{ color: house.champion ? "var(--color-gold-text)" : "var(--text)" }}
                     >
                       {house.name}
                     </span>
                     <span
                       className="font-mono text-[13px] font-bold tracking-[0.04em]"
-                      style={{ color: house.champion ? "var(--gold-t)" : "var(--text2)" }}
+                      style={{ color: house.champion ? "var(--color-gold-text)" : "var(--text2)" }}
                     >
                       {house.points}
                     </span>

@@ -155,7 +155,7 @@ export default function Gallery() {
                     href={album.google_photos_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${album.title} photo album (opens in a new tab)`}
+                    aria-label={`${album.title}. Opens in a new tab`}
                     className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
@@ -176,7 +176,7 @@ export default function Gallery() {
                               quality: 72,
                             })}
                             sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                            alt={album.title}
+                            alt=""
                             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
                             loading="lazy"
                             decoding="async"
@@ -209,9 +209,9 @@ export default function Gallery() {
                           </span>
                         )}
                       </div>
-                      <h3 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
+                      <h2 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
                         {album.title}
-                      </h3>
+                      </h2>
                       {album.description && (
                         <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
                           {album.description}

@@ -821,6 +821,7 @@ export function Leaderboard() {
                 <button
                   key={view}
                   onClick={() => setView(view)}
+                  aria-pressed={activeView === view}
                   className={`vsa-filter-btn px-6 py-2.5 font-bold transition-all ${activeView === view ? 'active scale-105 shadow-md' : ''}`}
                 >
                   {view === 'individual' ? 'Individual' : 'House'}
@@ -835,9 +836,10 @@ export function Leaderboard() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
+                    aria-pressed={activeTab === tab}
                     className={`rounded-full border-2 px-4 py-1.5 font-mono text-[10px] font-bold tracking-wider transition-all ${
                       activeTab === tab 
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-sm' 
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
                         : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
                     }`}
                   >
@@ -852,6 +854,7 @@ export function Leaderboard() {
               <select
                 value={selectedYear ?? ''}
                 onChange={(e) => handleSelectedYearChange(e.target.value)}
+                aria-label="Select academic year"
                 className="scrapbook-select bg-[var(--surface)] font-mono text-xs font-bold"
               >
                 <option value="all">ALL-TIME</option>
@@ -1115,7 +1118,7 @@ function PodiumIndividual({
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="h-8 w-2 rounded-full bg-[var(--accent)]" />
         <h3 className="font-serif text-2xl font-bold">Top Performers</h3>
-        <StarIcon className="h-5 w-5 text-[var(--accent)]" />
+        <StarIcon className="h-5 w-5 text-[color:var(--color-accent-text)]" />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 md:items-end">
@@ -1210,7 +1213,7 @@ function PodiumIndividual({
                   {card.gap !== null && (
                     <div
                       className="mt-1.5 font-mono text-[10px] font-bold uppercase tracking-wide"
-                      style={{ color: isFirst ? 'var(--accent)' : 'var(--text3)' }}
+                      style={{ color: isFirst ? 'var(--color-accent-text)' : 'var(--text3)' }}
                     >
                       {card.gap.metric === 'tie'
                         ? 'tied'
@@ -1267,7 +1270,7 @@ function HouseStandingsWall({
       <div className="flex items-center gap-3 px-2">
         <div className="h-8 w-2 rounded-full bg-[var(--gold-t)]" />
         <h3 className="font-serif text-2xl font-bold">House Competition</h3>
-        <TrophyIcon className="h-6 w-6 text-[var(--gold-t)]" />
+        <TrophyIcon className="h-6 w-6 text-[color:var(--color-gold-text)]" />
       </div>
 
       <div className="space-y-8">
@@ -1307,7 +1310,7 @@ function HouseStandingsWall({
                       >
                         <span className="font-mono text-3xl font-black sm:text-4xl" style={{ color }}>{standing.rank}</span>
                       </div>
-                      {isFirst && <CrownIcon className="absolute -right-2 -top-2 h-8 w-8 text-[var(--gold-t)] drop-shadow-sm" />}
+                      {isFirst && <CrownIcon className="absolute -right-2 -top-2 h-8 w-8 text-[color:var(--color-gold-text)] drop-shadow-sm" />}
                     </div>
 
                     <div className="min-w-0">
@@ -1366,7 +1369,7 @@ function HouseStandingsWall({
                       <span>AVG CHECK-INS PER MEMBER: <span className="text-[var(--text)]">{standing.average_points_per_member?.toFixed(1) ?? '0.0'}</span></span>
                     </div>
                     {isFirst && (
-                      <div className="flex items-center gap-1.5 rounded-full bg-[var(--gold-t)]/10 px-3 py-1 text-[var(--gold-t)]">
+                      <div className="flex items-center gap-1.5 rounded-full bg-[var(--gold-t)]/10 px-3 py-1 text-[color:var(--color-gold-text)]">
                         <CrownIcon className="h-3 w-3" />
                         <span>1ST PLACE CHAMPIONS</span>
                       </div>
@@ -1384,7 +1387,7 @@ function HouseStandingsWall({
           <PushPin color="primary" className="left-10 top-2" />
           <div className="scrapbook-paper p-6 sm:p-8">
             <div className="mb-6 flex items-center gap-3">
-              <BoltIcon className="h-5 w-5 text-[var(--accent)]" />
+              <BoltIcon className="h-5 w-5 text-[color:var(--color-accent-text)]" />
               <h3 className="font-serif text-xl font-bold">Recent House Activity</h3>
             </div>
             

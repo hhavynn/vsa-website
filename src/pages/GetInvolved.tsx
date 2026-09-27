@@ -100,7 +100,7 @@ export function GetInvolved() {
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] xl:gap-8">
             <div className="scrapbook-paper overflow-hidden p-5 sm:p-6 lg:p-7">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <Label className="text-[var(--accent)]">New Member Start Here</Label>
+                <Label className="text-[color:var(--color-accent-text)]">New Member Start Here</Label>
                 <span className="scrapbook-sticker scrapbook-sticker-coral">Start Here</span>
               </div>
               <h2 className="vsa-section-title mb-5">
@@ -115,10 +115,10 @@ export function GetInvolved() {
 
               <div className="mt-6 rounded-lg border p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--accent)' }}>
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-accent-text)' }}>
                     Route preview
                   </span>
-                  <span className="rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ borderColor: 'var(--border2)', color: 'var(--gold-t)' }}>
+                  <span className="rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ borderColor: 'var(--border2)', color: 'var(--color-gold-text)' }}>
                     VSA Passport
                   </span>
                 </div>
@@ -167,7 +167,7 @@ export function GetInvolved() {
         </div>
 
         <div id="programs" className="mb-10">
-          <Label className="mb-6 text-[var(--accent)]">Programs</Label>
+          <Label className="mb-6 text-[color:var(--color-accent-text)]">Programs</Label>
           <motion.div
             className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
             variants={containerVariants}
@@ -184,7 +184,7 @@ export function GetInvolved() {
                   <span className="scrapbook-pin" aria-hidden />
                   <div className="flex w-full min-w-0 items-start gap-4 sm:gap-6">
                     <div className="w-[28px] shrink-0 pt-1">
-                      <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>
+                      <span className="font-mono text-[11px]" style={{ color: 'var(--color-accent-text)' }}>
                         {String(index + 1).padStart(2, '0')}
                       </span>
                     </div>
@@ -223,7 +223,7 @@ export function GetInvolved() {
         </div>
 
         <div className="border-t pt-8" style={{ borderColor: 'var(--border)' }}>
-          <Label className="mb-5 text-[var(--accent)]">More Ways to Get Involved</Label>
+          <Label className="mb-5 text-[color:var(--color-accent-text)]">More Ways to Get Involved</Label>
           <div className="flex flex-wrap gap-2.5">
             {extraLinks.map((item) => (
               <Link

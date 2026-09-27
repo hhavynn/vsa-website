@@ -19,15 +19,17 @@
   --border-strong:#c4b8a8;
   --text:         #142028;
   --text-2:       #4a6b68;
-  --text-3:       #90aaa8;
+  --text-3:       #556f6c;
   --text-on-ink:  #f5f1ea;
   --text-on-ink-muted: rgba(245,241,234,0.7);
   --brand:        #1e8878;
   --brand-strong: #0f5a4f;
+  --brand-text:   #0f5a4f;
   --brand-soft:   #d2efec;
   --accent:       #e8623a;
   --accent-soft:  #fde0d4;
   --accent-strong:#a83a18;
+  --text-on-accent:#061014;
   --gold:         #d4841a;
   --gold-soft:    #fbe8c4;
   --gold-strong:  #7a4806;
@@ -63,15 +65,17 @@
   --border-strong:#2a4850;
   --text:         #e4d8c8;
   --text-2:       #8eb0aa;
-  --text-3:       #547b78;
+  --text-3:       #6c928d;
   --text-on-ink:  #e4d8c8;
   --text-on-ink-muted: rgba(228,216,200,0.66);
   --brand:        #3bbdb5;
   --brand-strong: #0d6a62;
+  --brand-text:   #6cd8d1;
   --brand-soft:   rgba(59,189,181,0.16);
   --accent:       #f07858;
   --accent-soft:  rgba(240,120,88,0.18);
   --accent-strong:#f29279;
+  --text-on-accent:#061014;
   --gold:         #e8a838;
   --gold-soft:    rgba(232,168,56,0.16);
   --gold-strong:  #f0bf60;
@@ -134,12 +138,12 @@
 .ace-app .ace-pill-teal  { background: var(--brand-soft);  color: var(--brand-strong);  border-color: rgba(30,136,120,0.25); }
 .ace-app .ace-pill-coral { background: var(--accent-soft); color: var(--accent-strong); border-color: rgba(232,98,58,0.25); }
 .ace-app .ace-pill-gold  { background: var(--gold-soft);   color: var(--gold-strong);   border-color: rgba(212,132,26,0.25); }
-.ace-app .ace-pill-live  { background: var(--brand); color: var(--text-on-ink); border-color: var(--brand); }
+.ace-app .ace-pill-live  { background: var(--brand-strong); color: var(--text-on-ink); border-color: var(--brand-strong); }
 .ace-app .ace-pill-dot {
   width: 6px; height: 6px; border-radius: 999px;
   background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.28);
 }
-.ace-app.is-dark .ace-pill-live  { color: #061013; }
+.ace-app.is-dark .ace-pill-live  { background: var(--brand); color: #061013; border-color: var(--brand); }
 .ace-app.is-dark .ace-pill-teal  { color: #b0eee9; }
 .ace-app.is-dark .ace-pill-coral { color: #f7c4b1; }
 .ace-app.is-dark .ace-pill-gold  { color: #f2d088; }
@@ -153,10 +157,10 @@
   min-height: 44px; text-decoration: none;
 }
 .ace-app .ace-btn-primary {
-  background: var(--brand); color: #f8fbfb; border-color: var(--brand);
+  background: var(--brand-strong); color: #f8fbfb; border-color: var(--brand-strong);
 }
 .ace-app .ace-btn-primary:hover { transform: translateY(-1px); background: var(--brand-strong); border-color: var(--brand-strong); }
-.ace-app.is-dark .ace-btn-primary { color: #061013; }
+.ace-app.is-dark .ace-btn-primary { background: var(--brand); color: #061013; border-color: var(--brand); }
 .ace-app .ace-btn-secondary {
   background: transparent; color: var(--text); border-color: var(--border-strong);
 }
@@ -215,7 +219,7 @@
   font-size: 60px; line-height: 0.96; letter-spacing: -0.035em; color: var(--text);
   font-weight: 400;
 }
-.ace-app .ace-hero-script { font-style: italic; color: var(--accent); }
+.ace-app .ace-hero-script { font-style: italic; color: var(--accent-strong); }
 .ace-app .ace-hero-meta {
   max-width: 36ch; margin: 6px 0 0;
   font-size: 14px; line-height: 1.55; color: var(--text-2);
@@ -348,9 +352,9 @@
   display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
 }
 .ace-app .ace-fam-viet { font-style: italic; font-size: 16px; }
-.ace-app .ace-fam-viet-teal  { color: var(--brand); }
-.ace-app .ace-fam-viet-coral { color: var(--accent); }
-.ace-app .ace-fam-viet-gold  { color: var(--gold); }
+.ace-app .ace-fam-viet-teal  { color: var(--brand-text); }
+.ace-app .ace-fam-viet-coral { color: var(--accent-strong); }
+.ace-app .ace-fam-viet-gold  { color: var(--gold-strong); }
 .ace-app .ace-fam-meta {
   margin-top: 10px;
   font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
@@ -361,9 +365,9 @@
   margin-top: 14px; padding-top: 12px;
   border-top: 1px dashed var(--border-strong);
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: var(--brand);
+  font-size: 13px; font-weight: 600; color: var(--brand-text);
 }
-.ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-strong); }
+.ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-text); }
 .ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6cd8d1; }
 .ace-app .ace-graveyard-section {
   border-top: 1px solid var(--border);
@@ -449,12 +453,12 @@
 .ace-app .ace-faq-q:hover { background: var(--surface-2); }
 .ace-app .ace-faq-plus {
   width: 24px; height: 24px; border-radius: 999px;
-  background: var(--bg-2); color: var(--brand);
+  background: var(--bg-2); color: var(--brand-text);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 16px; font-weight: 700; line-height: 1; flex-shrink: 0;
 }
-.ace-app .ace-faq-row.is-open .ace-faq-plus { background: var(--brand); color: #fff; }
-.ace-app.is-dark .ace-faq-row.is-open .ace-faq-plus { color: #061013; }
+.ace-app .ace-faq-row.is-open .ace-faq-plus { background: var(--brand-strong); color: #fff; }
+.ace-app.is-dark .ace-faq-row.is-open .ace-faq-plus { background: var(--brand); color: #061013; }
 .ace-app .ace-faq-a {
   padding: 0 16px 16px;
   font-size: 13.5px; line-height: 1.65; color: var(--text-2);
@@ -502,16 +506,16 @@
   font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.ace-app .ace-sheet-eyebrow-teal  { color: var(--brand); }
-.ace-app .ace-sheet-eyebrow-coral { color: var(--accent); }
-.ace-app .ace-sheet-eyebrow-gold  { color: var(--gold); }
+.ace-app .ace-sheet-eyebrow-teal  { color: var(--brand-text); }
+.ace-app .ace-sheet-eyebrow-coral { color: var(--accent-strong); }
+.ace-app .ace-sheet-eyebrow-gold  { color: var(--gold-strong); }
 .ace-app .ace-sheet-title {
   margin-top: 2px;
   font-family: "DM Serif Display", serif; font-size: 26px; line-height: 1;
   letter-spacing: -0.02em; color: var(--text);
 }
 .ace-app .ace-sheet-viet { font-style: italic; }
-.ace-app .ace-sheet-viet-teal  { color: var(--brand-strong); }
+.ace-app .ace-sheet-viet-teal  { color: var(--brand-text); }
 .ace-app .ace-sheet-viet-coral { color: var(--accent-strong); }
 .ace-app .ace-sheet-viet-gold  { color: var(--gold-strong); }
 .ace-app .ace-sheet-meta {
@@ -654,13 +658,13 @@
   font-family: "DM Serif Display", serif; font-style: italic; font-size: 26px;
   border: 2px solid; flex-shrink: 0; color: #fff;
 }
-.ace-app .ace-rail-avatar-teal  { background: var(--brand);  border-color: var(--brand-strong); }
-.ace-app .ace-rail-avatar-coral { background: var(--accent); border-color: var(--accent-strong); }
-.ace-app .ace-rail-avatar-gold  { background: var(--gold);   border-color: var(--gold-strong); }
+.ace-app .ace-rail-avatar-teal  { background: var(--brand-strong);  border-color: var(--brand-strong); }
+.ace-app .ace-rail-avatar-coral { background: var(--accent); border-color: var(--accent-strong); color: var(--text-on-accent); }
+.ace-app .ace-rail-avatar-gold  { background: var(--gold);   border-color: var(--gold-strong); color: var(--text-on-accent); }
 .ace-app .ace-rail-avatar.is-little { background: var(--surface); }
-.ace-app .ace-rail-avatar-teal.is-little  { color: var(--brand); }
-.ace-app .ace-rail-avatar-coral.is-little { color: var(--accent); }
-.ace-app .ace-rail-avatar-gold.is-little  { color: var(--gold); }
+.ace-app .ace-rail-avatar-teal.is-little  { color: var(--brand-text); }
+.ace-app .ace-rail-avatar-coral.is-little { color: var(--accent-strong); }
+.ace-app .ace-rail-avatar-gold.is-little  { color: var(--gold-strong); }
 
 .ace-app .ace-rail-name { font-size: 15px; font-weight: 600; color: var(--text); font-family: "DM Sans", sans-serif; }
 .ace-app .ace-rail-role { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--text-2); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px; }
@@ -685,13 +689,13 @@
   font-family: "DM Serif Display", serif; font-style: italic; font-size: 12px;
   color: #fff; flex-shrink: 0;
 }
-.ace-app .ace-rail-chip-dot-teal  { background: var(--brand); }
-.ace-app .ace-rail-chip-dot-coral { background: var(--accent); }
-.ace-app .ace-rail-chip-dot-gold  { background: var(--gold); }
+.ace-app .ace-rail-chip-dot-teal  { background: var(--brand-strong); }
+.ace-app .ace-rail-chip-dot-coral { background: var(--accent); color: var(--text-on-accent); }
+.ace-app .ace-rail-chip-dot-gold  { background: var(--gold); color: var(--text-on-accent); }
 .ace-app .ace-rail-chip-dot.is-little { background: var(--surface); border: 1.5px solid currentColor; }
-.ace-app .ace-rail-chip-dot-teal.is-little  { color: var(--brand); }
-.ace-app .ace-rail-chip-dot-coral.is-little { color: var(--accent); }
-.ace-app .ace-rail-chip-dot-gold.is-little  { color: var(--gold); }
+.ace-app .ace-rail-chip-dot-teal.is-little  { color: var(--brand-text); }
+.ace-app .ace-rail-chip-dot-coral.is-little { color: var(--accent-strong); }
+.ace-app .ace-rail-chip-dot-gold.is-little  { color: var(--gold-strong); }
 .ace-app .ace-rail-empty {
   font-size: 12.5px; color: var(--text-3); font-style: italic;
 }
@@ -824,9 +828,9 @@
 .ace-app .ace-famtabs-panel-name-teal  { color: var(--brand-strong); }
 .ace-app .ace-famtabs-panel-name-coral { color: var(--accent-strong); }
 .ace-app .ace-famtabs-panel-name-gold  { color: var(--gold-strong); }
-.ace-app.is-dark .ace-famtabs-panel-name-teal  { color: var(--brand); }
-.ace-app.is-dark .ace-famtabs-panel-name-coral { color: var(--accent); }
-.ace-app.is-dark .ace-famtabs-panel-name-gold  { color: var(--gold); }
+.ace-app.is-dark .ace-famtabs-panel-name-teal  { color: var(--brand-text); }
+.ace-app.is-dark .ace-famtabs-panel-name-coral { color: var(--accent-strong); }
+.ace-app.is-dark .ace-famtabs-panel-name-gold  { color: var(--gold-strong); }
 .ace-app .ace-famtabs-panel-viet {
   font-family: "DM Serif Display", serif;
   font-style: italic;
@@ -879,9 +883,9 @@
   color: #fff; font-weight: 400;
   overflow: hidden;
 }
-.ace-app .ace-famhead-avatar-teal  { background: var(--brand);  border: 2px solid var(--brand-strong); }
-.ace-app .ace-famhead-avatar-coral { background: var(--accent); border: 2px solid var(--accent-strong); }
-.ace-app .ace-famhead-avatar-gold  { background: var(--gold);   border: 2px solid var(--gold-strong); }
+.ace-app .ace-famhead-avatar-teal  { background: var(--brand-strong);  border: 2px solid var(--brand-strong); }
+.ace-app .ace-famhead-avatar-coral { background: var(--accent); border: 2px solid var(--accent-strong); color: var(--text-on-accent); }
+.ace-app .ace-famhead-avatar-gold  { background: var(--gold);   border: 2px solid var(--gold-strong); color: var(--text-on-accent); }
 .ace-app .ace-famhead-avatar.is-placeholder {
   background: var(--surface-2);
   border-style: dashed;

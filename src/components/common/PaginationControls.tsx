@@ -75,6 +75,7 @@ export function PaginationControls({
         <div className={`flex items-center justify-between px-4 pt-3 pb-1`}>
           <select
             value={rowsPerPage}
+            aria-label="Results per page"
             onChange={e =>
               onRowsPerPageChange(
                 e.target.value === 'all'
