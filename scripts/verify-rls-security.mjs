@@ -199,63 +199,90 @@ async function runTests() {
     } else {
       const authUser = (await userClient.auth.getUser()).data.user;
 
-      // Attempt to directly insert a row into event_attendance
-      const { data: attInsData, error: attInsError } = await userClient
+      // Write probes are non-destructive: if RLS wrongly allows a write, the
+      // probe still changes nothing. Inserts collide with a constraint that is
+      // checked after RLS (unknown event -> 23503, existing row -> 23505), and
+      // updates write a row's current values back with .select() so the
+      // affected-row count is visible.
+      const expectInsertDenied = (label, error) => {
+        if (error?.code === '42501') {
+          reportPass(`ordinary user cannot insert ${label} (RLS)`);
+        } else if (error?.code === '23503' || error?.code === '23505') {
+          reportFail(`ordinary user passed RLS inserting ${label}; only a constraint stopped it (${error.code})`);
+        } else {
+          reportFail(`ordinary user insert into ${label} gave unexpected result: ${JSON.stringify(error)}`);
+        }
+      };
+      const expectNoRowsUpdated = (label, data, error) => {
+        if (error) {
+          reportPass(`ordinary user cannot update ${label} (${error.message || error.code})`);
+        } else if (data && data.length > 0) {
+          reportFail(`ordinary user updated ${data.length} ${label} row(s) directly (no-op values; nothing changed)`);
+        } else {
+          reportPass(`ordinary user cannot update ${label} (0 rows updated due to RLS)`);
+        }
+      };
+
+      const { error: attInsError } = await userClient
         .from('event_attendance')
-        .insert([{
-          event_id: testEventId,
-          user_id: authUser.id,
-          points_earned: 100,
-          check_in_type: 'code'
-        }]);
+        .insert([{ event_id: dummyUuid, user_id: authUser.id, points_earned: 0, check_in_type: 'code' }]);
+      expectInsertDenied('event_attendance', attInsError);
 
-      if (attInsError) {
-        reportPass(`ordinary user cannot insert event_attendance directly (${attInsError.message || attInsError.code})`);
-      } else {
-        reportFail('ordinary user inserted event_attendance directly without error!');
-      }
-
-      // Attempt to directly update points_earned in event_attendance
-      const { data: attUpData, error: attUpError } = await userClient
+      const { data: ownAttendance } = await userClient
         .from('event_attendance')
-        .update({ points_earned: 999 })
-        .eq('event_id', testEventId);
-
-      if (attUpError) {
-        reportPass(`ordinary user cannot update event_attendance (${attUpError.message || attUpError.code})`);
-      } else if (attUpData && attUpData.length > 0) {
-        reportFail('ordinary user updated event_attendance directly!');
+        .select('id, points_earned')
+        .eq('user_id', authUser.id)
+        .limit(1);
+      if (!ownAttendance || ownAttendance.length === 0) {
+        reportSkip('ordinary user event_attendance update probe (test user has no attendance rows)');
       } else {
-        reportPass('ordinary user cannot update event_attendance (0 rows updated due to RLS)');
+        const { data, error } = await userClient
+          .from('event_attendance')
+          .update({ points_earned: ownAttendance[0].points_earned })
+          .eq('id', ownAttendance[0].id)
+          .select('id');
+        expectNoRowsUpdated('event_attendance', data, error);
       }
 
-      // Attempt to directly insert nonzero user_points
-      const { data: ptsInsData, error: ptsInsError } = await userClient
+      const { error: ptsInsError } = await userClient
         .from('user_points')
-        .insert([{
-          user_id: authUser.id,
-          total_points: 100,
-          points: 100
-        }]);
+        .insert([{ user_id: authUser.id, points: 0 }]);
+      expectInsertDenied('user_points', ptsInsError);
 
-      if (ptsInsError) {
-        reportPass(`ordinary user cannot insert nonzero user_points (${ptsInsError.message || ptsInsError.code})`);
+      const { data: ownPoints } = await userClient
+        .from('user_points')
+        .select('points')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+      if (!ownPoints) {
+        reportSkip('ordinary user user_points update probe (test user has no user_points row)');
       } else {
-        reportFail('ordinary user inserted nonzero user_points directly!');
+        const { data, error } = await userClient
+          .from('user_points')
+          .update({ points: ownPoints.points })
+          .eq('user_id', authUser.id)
+          .select('user_id');
+        expectNoRowsUpdated('user_points', data, error);
       }
 
-      // Attempt to update points / total_points in user_points
-      const { data: ptsUpData, error: ptsUpError } = await userClient
-        .from('user_points')
-        .update({ total_points: 9999, points: 9999 })
-        .eq('user_id', authUser.id);
-
-      if (ptsUpError) {
-        reportPass(`ordinary user cannot update user_points (${ptsUpError.message || ptsUpError.code})`);
-      } else if (ptsUpData && ptsUpData.length > 0) {
-        reportFail('ordinary user updated user_points directly!');
-      } else {
-        reportPass('ordinary user cannot update user_points (0 rows updated due to RLS)');
+      // Public tables: readable by everyone, writable only by admins.
+      const publicWriteProbes = [
+        { table: 'events', column: 'name' },
+        { table: 'members', column: 'first_name' },
+        { table: 'member_event_attendance', column: 'points_earned' },
+      ];
+      for (const { table, column } of publicWriteProbes) {
+        const { data: rows } = await userClient.from(table).select(`id, ${column}`).limit(1);
+        if (!rows || rows.length === 0) {
+          reportSkip(`ordinary user ${table} update probe (no readable rows)`);
+          continue;
+        }
+        const { data, error } = await userClient
+          .from(table)
+          .update({ [column]: rows[0][column] })
+          .eq('id', rows[0].id)
+          .select('id');
+        expectNoRowsUpdated(table, data, error);
       }
 
       // Attempt to read event_check_in_secrets
@@ -395,32 +422,19 @@ async function runTests() {
           }
         }
 
-        // Try direct insert on user_points
-        const { data: admPtsData, error: admPtsError } = await adminClient
+        // user_points is server-authoritative: only SECURITY DEFINER code
+        // (check_in_to_event, the signup trigger) writes it, so even admins get
+        // no client write policy. Probe with the admin's own existing row so an
+        // unexpected allow hits the primary key (23505) instead of writing.
+        const adminUser = (await adminClient.auth.getUser()).data.user;
+        const { error: admPtsError } = await adminClient
           .from('user_points')
-          .insert([{
-            user_id: testUserId,
-            total_points: 10
-          }])
-          .select();
+          .insert([{ user_id: adminUser.id, points: 0 }]);
 
-        if (admPtsError && admPtsError.code !== '23505') { // Code 23505 is unique violation, which is a structural pass (RLS allowed it)
-          reportFail(`admin direct insert user_points failed: ${admPtsError.message}`);
+        if (admPtsError?.code === '42501') {
+          reportPass('admin cannot write user_points directly (server-authoritative)');
         } else {
-          reportPass('admin can directly insert user_points');
-          
-          if (admPtsData && admPtsData.length > 0) {
-            const { error: admPtsDelError } = await adminClient
-              .from('user_points')
-              .delete()
-              .eq('user_id', testUserId);
-
-            if (admPtsDelError) {
-              reportFail(`admin direct delete user_points cleanup failed: ${admPtsDelError.message}`);
-            } else {
-              reportPass('admin can directly delete user_points (cleanup)');
-            }
-          }
+          reportFail(`admin passed RLS inserting user_points: ${JSON.stringify(admPtsError)}`);
         }
       }
     }
