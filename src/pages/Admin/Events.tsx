@@ -16,7 +16,8 @@ import { EventRecapEditor } from '../../components/features/admin/EventRecapEdit
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
-import { isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
+import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
+import { losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
@@ -129,23 +130,25 @@ export default function AdminEvents() {
   const [editUploading, setEditUploading] = useState(false);
   const [editCheckInCode, setEditCheckInCode] = useState('');
 
-  const formatDateForInput = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    const y = date.getFullYear();
-    const mo = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${mo}-${d}`;
+  // Event days and times are San Diego wall-clock values; never read them in
+  // the admin's device timezone.
+  const formatDateForInput = (dateString: string, startTime?: string | null) => {
+    if (!dateString || isNaN(new Date(dateString).getTime())) return '';
+    return getEventDateOnly(dateString, startTime);
   };
 
   const formatStartTimeForInput = (dateString: string) => {
-    if (!dateString) return '';
+    // Date-only values and legacy UTC-midnight rows carry no real start time.
+    if (!dateString || /^\d{4}-\d{2}-\d{2}$/.test(dateString)) return '';
+    if (/T00:00:00(?:\.0+)?(?:Z|\+00:00)$/i.test(dateString)) return '';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
-    const h = String(date.getHours()).padStart(2, '0');
-    const mi = String(date.getMinutes()).padStart(2, '0');
-    return `${h}:${mi}`;
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Los_Angeles',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(date);
   };
 
   const getTermLabel = (termId?: string | null, dateString?: string | null) => {
@@ -180,7 +183,7 @@ export default function AdminEvents() {
     const suggestedTerm = findTermForDate(dateValue, terms);
     setSelectedEvent((prev) => {
       if (!prev) return prev;
-      const prevDateOnly = prev.date ? prev.date.slice(0, 10) : null;
+      const prevDateOnly = prev.date ? formatDateForInput(prev.date, prev.start_time) : null;
       // Only auto-update end_date if it was matching the old start date (or unset)
       const shouldAutoUpdate = !prev.end_date || prev.end_date === prevDateOnly;
       return {
@@ -289,7 +292,7 @@ export default function AdminEvents() {
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Combine date + start_time into a full local datetime for the date column.
       const startTime = newEvent.start_time || '00:00';
-      const isoDate = new Date(`${newEvent.date}T${startTime}`).toISOString();
+      const isoDate = losAngelesDateTimeToIso(newEvent.date, startTime);
       const academicTermId = await resolveAcademicTermId(isoDate, newEvent.academic_term_id);
       const { data: createdEvent, error } = await supabase.from('events').insert([{
         name: newEvent.name, description: newEvent.description,
@@ -353,11 +356,9 @@ export default function AdminEvents() {
         thumbnailUrl = null;
       }
       // Rebuild date ISO from date-only + start_time (date input returns "YYYY-MM-DD").
-      const dateOnly = selectedEvent.date.slice(0, 10);
-      const startTimePart = selectedEvent.start_time || '00:00';
-      const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEvent.date)
-        ? new Date(`${dateOnly}T${startTimePart}`).toISOString()
-        : new Date(selectedEvent.date).toISOString();
+      const dateOnly = formatDateForInput(selectedEvent.date, selectedEvent.start_time);
+      const startTimePart = selectedEvent.start_time || formatStartTimeForInput(selectedEvent.date) || '00:00';
+      const isoDate = losAngelesDateTimeToIso(dateOnly, startTimePart);
       const academicTermId = await resolveAcademicTermId(isoDate, selectedEvent.academic_term_id);
       const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;
       const { error } = await supabase.from('events').update({
@@ -636,11 +637,11 @@ export default function AdminEvents() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Start date *</label>
-                      <input type="date" value={formatDateForInput(selectedEvent.date)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required />
+                      <input type="date" value={formatDateForInput(selectedEvent.date, selectedEvent.start_time)} onChange={e => handleSelectedEventDateChange(e.target.value)} className={inputCls} required />
                     </div>
                     <div>
                       <label className={labelCls}>End date</label>
-                      <input type="date" value={selectedEvent.end_date ?? formatDateForInput(selectedEvent.date)} min={formatDateForInput(selectedEvent.date) || undefined} onChange={e => setSelectedEvent({...selectedEvent, end_date: e.target.value || null})} className={inputCls} />
+                      <input type="date" value={selectedEvent.end_date ?? formatDateForInput(selectedEvent.date, selectedEvent.start_time)} min={formatDateForInput(selectedEvent.date, selectedEvent.start_time) || undefined} onChange={e => setSelectedEvent({...selectedEvent, end_date: e.target.value || null})} className={inputCls} />
                       <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>Leave as start date for single-day events.</p>
                     </div>
                   </div>

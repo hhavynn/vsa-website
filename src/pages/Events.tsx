@@ -1,6 +1,6 @@
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { formatEventDateRange, formatEventTimeRange } from '../lib/eventTime';
+import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../lib/eventTime';
 import { useEffect, useMemo, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
@@ -13,10 +13,10 @@ import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../constants/houses'
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
-import { formatDateOnly } from '../lib/dateOnly';
+import { formatDateOnly, parseDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
-import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { formatLosAngelesClock, getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
@@ -73,6 +73,13 @@ interface EventMemoryStats {
 }
 
 type ArchiveTermOption = AcademicTerm | { id: 'unassigned'; label: 'Unassigned Dates' };
+
+// The San Diego calendar day of an event, as a local-midnight Date for
+// date-fns formatting. Formatting the raw timestamp would use the viewer's
+// timezone and shift evening events to the next day outside Pacific time.
+function eventDay(event: Pick<Event, 'date' | 'start_time'>): Date {
+  return parseDateOnly(getEventDateOnly(event.date, event.start_time)) ?? new Date(event.date);
+}
 
 function sortTermsByDateDesc(a: AcademicTerm, b: AcademicTerm) {
   const aDate = a.starts_on ? new Date(a.starts_on).getTime() : a.display_order;
@@ -177,7 +184,7 @@ function PastEventMemoryCard({
   terms: AcademicTerm[];
   index: number;
 }) {
-  const d = parseISO(event.date);
+  const d = eventDay(event);
   const termCode = getEventTermCode(event, terms);
   const termLabel = getEventTermLabel(event, terms);
   const houseKey = stats?.topHouse ? normalizeHouse(stats.topHouse) : null;
@@ -649,10 +656,10 @@ export function Events() {
                   />
                   <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                     {featured.start_time && featured.end_time
-                      ? `${format(new Date(featured.date), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
-                      : featured.end_date && featured.end_date !== featured.date.slice(0, 10)
+                      ? `${format(eventDay(featured), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
+                      : featured.end_date && featured.end_date !== getEventDateOnly(featured.date, featured.start_time)
                         ? formatEventDateRange(featured.date, featured.end_date, featured.start_time)
-                        : format(new Date(featured.date), 'MMM d / EEEE / h:mm a')}
+                        : `${format(eventDay(featured), 'MMM d / EEEE')} / ${formatLosAngelesClock(featured.date)}`}
                   </span>
                 </div>
                 <h2 className="mb-4 font-serif text-[32px] leading-[1.05] tracking-[-0.03em] sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
@@ -693,10 +700,10 @@ export function Events() {
                   style={{ borderColor: 'rgba(255,255,255,0.25)', background: 'rgba(5, 9, 18, 0.45)' }}
                 >
                   <div className="font-serif leading-none tracking-[-0.04em] text-brand-400" style={{ fontSize: 44 }}>
-                    {format(new Date(featured.date), 'd')}
+                    {format(eventDay(featured), 'd')}
                   </div>
                   <div className="mt-1 font-mono text-[10px] uppercase tracking-[.1em] text-white/80">
-                    {format(new Date(featured.date), 'MMMM yyyy')}
+                    {format(eventDay(featured), 'MMMM yyyy')}
                   </div>
                 </div>
               </div>
@@ -729,13 +736,13 @@ export function Events() {
 
                   <div className="order-2 border-b pb-4 text-center sm:order-1 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4" style={{ borderColor: 'var(--color-border)' }}>
                     <div className="font-mono text-[10px] uppercase tracking-[.08em]" style={{ color: 'var(--color-text3)' }}>
-                      {format(new Date(event.date), 'MMM')}
+                      {format(eventDay(event), 'MMM')}
                     </div>
                     <div className="mt-1 font-serif text-[38px] leading-none" style={{ color: 'var(--color-text)' }}>
-                      {format(new Date(event.date), 'd')}
+                      {format(eventDay(event), 'd')}
                     </div>
                     <div className="mt-1 font-mono text-[10px] uppercase tracking-[.08em]" style={{ color: 'var(--color-text3)' }}>
-                      {format(new Date(event.date), 'EEE')}
+                      {format(eventDay(event), 'EEE')}
                     </div>
                   </div>
 
@@ -747,10 +754,10 @@ export function Events() {
                       />
                       <span className="font-mono text-[11px] uppercase tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                         {event.start_time && event.end_time
-                          ? `${format(new Date(event.date), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
-                          : event.end_date && event.end_date !== event.date.slice(0, 10)
+                          ? `${format(eventDay(event), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
+                          : event.end_date && event.end_date !== getEventDateOnly(event.date, event.start_time)
                             ? formatEventDateRange(event.date, event.end_date, event.start_time)
-                            : format(new Date(event.date), 'MMM d / h:mm a')}
+                            : `${format(eventDay(event), 'MMM d')} / ${formatLosAngelesClock(event.date)}`}
                       </span>
                     </div>
                     <h3 className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
