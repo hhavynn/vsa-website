@@ -7,7 +7,7 @@ export interface Event {
   end_time?: string | null;
   end_date?: string | null;
   location: string | null;
-  points: number | null;
+  points: number;
   event_type: 'gbm' | 'mixer' | 'winter_retreat' | 'vcn' | 'wildn_culture' | 'external_event' | 'other';
   /**
    * Admin-only operational check-in URL.
@@ -474,7 +474,7 @@ export interface ExternalEvent {
   academic_term_id: string | null;
   location: string | null;
   description: string | null;
-  points: number | null;
+  points: number;
   rsvp_url: string | null;
   ride_form_url: string | null;
   instagram_url: string | null;

@@ -987,7 +987,7 @@ export type Database = {
         Row: {
           academic_term_id: string | null;
           check_in_form_url: string | null;
-          created_at: string | null;
+          created_at: string;
           date: string;
           description: string | null;
           end_date: string | null;
@@ -995,19 +995,19 @@ export type Database = {
           event_type: string | null;
           id: string;
           image_url: string | null;
-          is_code_expired: boolean | null;
+          is_code_expired: boolean;
           is_published: boolean;
           location: string | null;
           name: string;
-          points: number | null;
+          points: number;
           start_time: string | null;
           thumbnail_url: string | null;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           academic_term_id?: string | null;
           check_in_form_url?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           date: string;
           description?: string | null;
           end_date?: string | null;
@@ -1015,19 +1015,19 @@ export type Database = {
           event_type?: string | null;
           id?: string;
           image_url?: string | null;
-          is_code_expired?: boolean | null;
+          is_code_expired?: boolean;
           is_published?: boolean;
           location?: string | null;
           name: string;
-          points?: number | null;
+          points?: number;
           start_time?: string | null;
           thumbnail_url?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           academic_term_id?: string | null;
           check_in_form_url?: string | null;
-          created_at?: string | null;
+          created_at?: string;
           date?: string;
           description?: string | null;
           end_date?: string | null;
@@ -1035,14 +1035,14 @@ export type Database = {
           event_type?: string | null;
           id?: string;
           image_url?: string | null;
-          is_code_expired?: boolean | null;
+          is_code_expired?: boolean;
           is_published?: boolean;
           location?: string | null;
           name?: string;
-          points?: number | null;
+          points?: number;
           start_time?: string | null;
           thumbnail_url?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -1057,74 +1057,74 @@ export type Database = {
       external_events: {
         Row: {
           academic_term_id: string | null;
-          confidence_level: string | null;
-          created_at: string | null;
+          confidence_level: string;
+          created_at: string;
           date: string | null;
           description: string | null;
           event_type: string | null;
           host_info_url: string | null;
           id: string;
           instagram_url: string | null;
-          is_featured: boolean | null;
+          is_featured: boolean;
           location: string | null;
           photo_album_url: string | null;
-          points: number | null;
+          points: number;
           recap: string | null;
           ride_form_url: string | null;
           ride_info: string | null;
           rsvp_url: string | null;
           source_notes: string | null;
-          status: string | null;
+          status: string;
           title: string;
-          updated_at: string | null;
+          updated_at: string;
           uvsa_school_id: string | null;
         };
         Insert: {
           academic_term_id?: string | null;
-          confidence_level?: string | null;
-          created_at?: string | null;
+          confidence_level?: string;
+          created_at?: string;
           date?: string | null;
           description?: string | null;
           event_type?: string | null;
           host_info_url?: string | null;
           id?: string;
           instagram_url?: string | null;
-          is_featured?: boolean | null;
+          is_featured?: boolean;
           location?: string | null;
           photo_album_url?: string | null;
-          points?: number | null;
+          points?: number;
           recap?: string | null;
           ride_form_url?: string | null;
           ride_info?: string | null;
           rsvp_url?: string | null;
           source_notes?: string | null;
-          status?: string | null;
+          status?: string;
           title: string;
-          updated_at?: string | null;
+          updated_at?: string;
           uvsa_school_id?: string | null;
         };
         Update: {
           academic_term_id?: string | null;
-          confidence_level?: string | null;
-          created_at?: string | null;
+          confidence_level?: string;
+          created_at?: string;
           date?: string | null;
           description?: string | null;
           event_type?: string | null;
           host_info_url?: string | null;
           id?: string;
           instagram_url?: string | null;
-          is_featured?: boolean | null;
+          is_featured?: boolean;
           location?: string | null;
           photo_album_url?: string | null;
-          points?: number | null;
+          points?: number;
           recap?: string | null;
           ride_form_url?: string | null;
           ride_info?: string | null;
           rsvp_url?: string | null;
           source_notes?: string | null;
-          status?: string | null;
+          status?: string;
           title?: string;
-          updated_at?: string | null;
+          updated_at?: string;
           uvsa_school_id?: string | null;
         };
         Relationships: [
@@ -1146,7 +1146,7 @@ export type Database = {
       };
       feedback: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           description: string;
           email: string | null;
           id: string;
@@ -1154,11 +1154,11 @@ export type Database = {
           status: string;
           title: string;
           type: string;
-          updated_at: string | null;
+          updated_at: string;
           user_id: string | null;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           description: string;
           email?: string | null;
           id?: string;
@@ -1166,11 +1166,11 @@ export type Database = {
           status?: string;
           title: string;
           type: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           description?: string;
           email?: string | null;
           id?: string;
@@ -1178,7 +1178,7 @@ export type Database = {
           status?: string;
           title?: string;
           type?: string;
-          updated_at?: string | null;
+          updated_at?: string;
           user_id?: string | null;
         };
         Relationships: [];
@@ -1282,17 +1282,17 @@ export type Database = {
       };
       house_event_houses: {
         Row: {
-          created_at: string | null;
+          created_at: string;
           house_event_id: string;
           house_page_asset_id: string;
         };
         Insert: {
-          created_at?: string | null;
+          created_at?: string;
           house_event_id: string;
           house_page_asset_id: string;
         };
         Update: {
-          created_at?: string | null;
+          created_at?: string;
           house_event_id?: string;
           house_page_asset_id?: string;
         };
@@ -2546,7 +2546,7 @@ export type Database = {
           stat_competitions_label: string;
           stat_school_count_label: string;
           upcoming_heading: string;
-          updated_at: string | null;
+          updated_at: string;
         };
         Insert: {
           empty_state_message?: string;
@@ -2566,7 +2566,7 @@ export type Database = {
           stat_competitions_label?: string;
           stat_school_count_label?: string;
           upcoming_heading?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Update: {
           empty_state_message?: string;
@@ -2586,32 +2586,32 @@ export type Database = {
           stat_competitions_label?: string;
           stat_school_count_label?: string;
           upcoming_heading?: string;
-          updated_at?: string | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
       uvsa_schools: {
         Row: {
           city: string | null;
-          confidence_level: string | null;
-          created_at: string | null;
+          confidence_level: string;
+          created_at: string;
           description: string | null;
           facebook_url: string | null;
           id: string;
           image_url: string | null;
           instagram_url: string | null;
-          is_active: boolean | null;
-          known_for: string[] | null;
+          is_active: boolean;
+          known_for: string[];
           linktree_url: string | null;
           logo_url: string | null;
-          recurring_events: string[] | null;
+          recurring_events: string[];
           school_name: string;
           short_name: string;
           slug: string;
-          sort_order: number | null;
+          sort_order: number;
           system_type: string;
           tiktok_url: string | null;
-          updated_at: string | null;
+          updated_at: string;
           verification_notes: string | null;
           vsa_name: string | null;
           website_url: string | null;
@@ -2619,25 +2619,25 @@ export type Database = {
         };
         Insert: {
           city?: string | null;
-          confidence_level?: string | null;
-          created_at?: string | null;
+          confidence_level?: string;
+          created_at?: string;
           description?: string | null;
           facebook_url?: string | null;
           id?: string;
           image_url?: string | null;
           instagram_url?: string | null;
-          is_active?: boolean | null;
-          known_for?: string[] | null;
+          is_active?: boolean;
+          known_for?: string[];
           linktree_url?: string | null;
           logo_url?: string | null;
-          recurring_events?: string[] | null;
+          recurring_events?: string[];
           school_name: string;
           short_name: string;
           slug: string;
-          sort_order?: number | null;
+          sort_order?: number;
           system_type: string;
           tiktok_url?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           verification_notes?: string | null;
           vsa_name?: string | null;
           website_url?: string | null;
@@ -2645,25 +2645,25 @@ export type Database = {
         };
         Update: {
           city?: string | null;
-          confidence_level?: string | null;
-          created_at?: string | null;
+          confidence_level?: string;
+          created_at?: string;
           description?: string | null;
           facebook_url?: string | null;
           id?: string;
           image_url?: string | null;
           instagram_url?: string | null;
-          is_active?: boolean | null;
-          known_for?: string[] | null;
+          is_active?: boolean;
+          known_for?: string[];
           linktree_url?: string | null;
           logo_url?: string | null;
-          recurring_events?: string[] | null;
+          recurring_events?: string[];
           school_name?: string;
           short_name?: string;
           slug?: string;
-          sort_order?: number | null;
+          sort_order?: number;
           system_type?: string;
           tiktok_url?: string | null;
-          updated_at?: string | null;
+          updated_at?: string;
           verification_notes?: string | null;
           vsa_name?: string | null;
           website_url?: string | null;

@@ -213,7 +213,7 @@ function NextEventCard() {
                   </h4>
                   <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-sans text-xs text-text-primary">
                     {nextEvent.location && <span>{nextEvent.location}</span>}
-                    {(nextEvent.points ?? 0) > 0 && <span>{nextEvent.points} {nextEvent.points === 1 ? 'point' : 'points'}</span>}
+                    {nextEvent.points > 0 && <span>{nextEvent.points} {nextEvent.points === 1 ? 'point' : 'points'}</span>}
                   </div>
                 </div>
               </motion.div>
