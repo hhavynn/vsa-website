@@ -12,7 +12,6 @@ interface Feedback {
   description: string;
   created_at: string;
   status: string;
-  priority?: string;
 }
 
 const FEEDBACK_TYPE_LABELS: Record<string, string> = {
@@ -30,12 +29,6 @@ const FEEDBACK_STATUS_LABELS: Record<string, string> = {
   closed: 'Closed',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-};
-
 const selectCls =
   'h-9 min-w-[170px] rounded border px-3 text-sm transition-colors focus:outline-none focus:ring-0';
 
@@ -50,9 +43,6 @@ function badgeTone(value?: string) {
     improvement: { color: '#1e8878', borderColor: '#a6deda', background: '#eef8f7' },
     event: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
     other: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
-    low: { color: 'var(--color-text3)', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' },
-    medium: { color: '#8c6a14', borderColor: '#e6d39b', background: '#fff7df' },
-    high: { color: '#b42318', borderColor: '#f2c7c3', background: '#fff1f0' },
   };
 
   return tones[value ?? ''] ?? tones.other;
@@ -239,11 +229,6 @@ const FeedbackTab: React.FC = () => {
                     <span className="rounded border px-2 py-0.5 text-[11px] font-medium" style={badgeTone(feedback.type)}>
                       {FEEDBACK_TYPE_LABELS[feedback.type]}
                     </span>
-                    {feedback.priority && (
-                      <span className="rounded border px-2 py-0.5 text-[11px] font-medium" style={badgeTone(feedback.priority)}>
-                        {PRIORITY_LABELS[feedback.priority]}
-                      </span>
-                    )}
                   </div>
 
                   <h3 className="text-base font-semibold tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>

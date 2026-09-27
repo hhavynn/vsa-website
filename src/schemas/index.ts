@@ -49,7 +49,6 @@ export const FeedbackSchema = z.object({
   type: z.enum(['bug', 'feature', 'improvement', 'event', 'other']),
   title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
   description: z.string().min(1, 'Description is required').max(1000, 'Description must be less than 1000 characters'),
-  priority: z.enum(['low', 'medium', 'high']),
   name: z.string().max(100, 'Name must be less than 100 characters').optional(),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
 });
