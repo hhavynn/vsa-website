@@ -32,6 +32,29 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom has no IntersectionObserver, but every browser the site supports does.
+// framer-motion's whileInView (RevealOnScrollWrapper) constructs one on mount,
+// so without this stub any page using it throws into the ErrorBoundary under
+// test. It never reports an intersection, so in-view content stays at its
+// initial state. Plain class for the same resetMocks reason as matchMedia.
+class IntersectionObserverStub {
+  readonly root = null;
+  readonly rootMargin = '';
+  readonly thresholds: ReadonlyArray<number> = [];
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  configurable: true,
+  value: IntersectionObserverStub,
+});
+
 // Mock Supabase client
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
