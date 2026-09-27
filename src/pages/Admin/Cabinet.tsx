@@ -347,6 +347,9 @@ export default function AdminCabinet() {
 
       const { error } = await supabase.from('cabinet_members').insert([{
         ...newMember,
+        name: newMember.name,
+        role: newMember.role,
+        category: newMember.category,
         image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
         cabinet_year_id: resolveCabinetYearId(newMember.cabinet_year_id),

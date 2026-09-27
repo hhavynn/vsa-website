@@ -2,11 +2,9 @@ import { supabase } from '../../lib/supabase';
 import { withErrorHandling, ValidationError } from '../errors';
 
 export interface UserPoints {
-  id: string;
   user_id: string;
-  total_points: number;
-  created_at: string;
-  updated_at: string;
+  points: number;
+  last_updated: string | null;
 }
 
 export interface PointsLeaderboardEntry {
@@ -20,11 +18,11 @@ export interface PointsLeaderboardEntry {
 
 export interface PointsHistoryEntry {
   id: string;
-  event_id: string;
+  event_id: string | null;
   event_name: string;
-  points_earned: number;
-  check_in_type: 'code' | 'manual';
-  checked_in_at: string;
+  points_earned: number | null;
+  check_in_type: string | null;
+  checked_in_at: string | null;
 }
 
 export interface PointsStats {
@@ -48,34 +46,9 @@ export class PointsRepository {
         .single();
 
       if (error) throw error;
-      if (!data) {
-        // Create initial points record if it doesn't exist
-        return this.initializeUserPoints(userId);
-      }
 
       return data;
     }, 'Failed to fetch user points');
-  }
-
-  /**
-   * Initialize user points (called when user doesn't have a points record)
-   */
-  async initializeUserPoints(userId: string): Promise<UserPoints> {
-    return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('user_points')
-        .insert([{
-          user_id: userId,
-          total_points: 0,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!data) throw new ValidationError('Failed to initialize user points');
-
-      return data;
-    }, 'Failed to initialize user points');
   }
 
   /**
@@ -99,14 +72,14 @@ export class PointsRepository {
         .from('user_points')
         .select(`
           user_id,
-          total_points,
+          points,
           user_profiles!inner(
             first_name,
             last_name,
             avatar_url
           )
         `)
-        .order('total_points', { ascending: false })
+        .order('points', { ascending: false })
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
@@ -117,7 +90,7 @@ export class PointsRepository {
         first_name: (entry.user_profiles as any).first_name,
         last_name: (entry.user_profiles as any).last_name,
         avatar_url: (entry.user_profiles as any).avatar_url,
-        total_points: entry.total_points,
+        total_points: entry.points,
         rank: offset + index + 1,
       }));
     }, 'Failed to fetch leaderboard');
@@ -181,14 +154,14 @@ export class PointsRepository {
       const { data: rankData } = await supabase
         .from('user_points')
         .select('user_id')
-        .gte('total_points', userPoints.total_points);
+        .gte('points', userPoints.points);
 
       const averagePointsPerEvent = eventsAttended 
-        ? userPoints.total_points / eventsAttended 
+        ? userPoints.points / eventsAttended 
         : 0;
 
       return {
-        total_points: userPoints.total_points,
+        total_points: userPoints.points,
         events_attended: eventsAttended || 0,
         average_points_per_event: Math.round(averagePointsPerEvent * 100) / 100,
         rank: rankData ? rankData.length : 1,
@@ -207,7 +180,7 @@ export class PointsRepository {
       const { data, error } = await supabase
         .from('user_points')
         .select('user_id')
-        .gte('total_points', userPoints.total_points);
+        .gte('points', userPoints.points);
 
       if (error) throw error;
 
@@ -235,8 +208,8 @@ export class PointsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('user_points')
-        .select('total_points')
-        .order('total_points', { ascending: true });
+        .select('points')
+        .order('points', { ascending: true });
 
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -249,7 +222,7 @@ export class PointsRepository {
         };
       }
 
-      const points = data.map(entry => entry.total_points);
+      const points = data.map(entry => entry.points);
       const total = points.reduce((sum, point) => sum + point, 0);
       const average = total / points.length;
       const median = points[Math.floor(points.length / 2)];

@@ -5,10 +5,27 @@ import {
   DataRightsExportBundle,
   DataRightsExportBundleSchema,
 } from '../../schemas';
-import { Database } from '../../types/database';
+import {
+  Database,
+  DataRightsRequestPriority,
+  DataRightsRequestStatus,
+  DataRightsRequestType,
+  DataRightsVerificationStatus,
+} from '../../types/database';
 import { withErrorHandling } from '../errors';
 
-export type DataRightsRequest = Database['public']['Tables']['data_rights_requests']['Row'];
+type DataRightsRequestRow = Database['public']['Tables']['data_rights_requests']['Row'];
+
+// The generator emits these check-constrained text columns as plain string.
+export type DataRightsRequest = Omit<
+  DataRightsRequestRow,
+  'request_type' | 'status' | 'verification_status' | 'priority'
+> & {
+  request_type: DataRightsRequestType;
+  status: DataRightsRequestStatus;
+  verification_status: DataRightsVerificationStatus;
+  priority: DataRightsRequestPriority;
+};
 export type DataRightsRequestEvent = Database['public']['Tables']['data_rights_request_events']['Row'];
 
 export type DataRightsRequestInput = Omit<

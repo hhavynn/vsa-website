@@ -18,15 +18,8 @@ interface AttendanceRecord extends EventAttendance { event: Event; }
 interface UserProfile {
   first_name: string | null;
   last_name: string | null;
-  college: string | null;
-  year: string | null;
 }
 
-const UCSD_COLLEGES = [
-  'Revelle College','Muir College','Marshall College','Eleanor Roosevelt College',
-  'Roosevelt College','Sixth College','Seventh College','Eighth College',
-];
-const YEARS = ['1st Year','2nd Year','3rd Year','4th Year','5th Year+','1st Year Transfer','2nd Year Transfer'];
 
 const inputStyle = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -42,20 +35,20 @@ export function Profile() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({ totalEvents: 0, eventsThisMonth: 0 });
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '' });
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from('user_profiles')
-      .select('first_name, last_name, college, year')
+      .select('first_name, last_name')
       .eq('id', user.id)
       .single()
       .then(({ data, error }) => {
         if (!error && data) {
           setUserProfile(data);
-          setEditForm({ first_name: data.first_name ?? '', last_name: data.last_name ?? '', college: data.college ?? '', year: data.year ?? '' });
+          setEditForm({ first_name: data.first_name ?? '', last_name: data.last_name ?? '' });
         }
       });
   }, [user]);
@@ -64,7 +57,7 @@ export function Profile() {
     if (!user) return;
     getUserAttendance(user.id).then(data => {
       if (data) {
-        const valid = data.filter(r => r.event != null);
+        const valid = data.filter(r => r.event != null) as AttendanceRecord[];
         setAttendance(valid);
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -80,12 +73,10 @@ export function Profile() {
       const { error } = await supabase.from('user_profiles').update({
         first_name: editForm.first_name.trim(),
         last_name: editForm.last_name.trim(),
-        college: editForm.college || null,
-        year: editForm.year || null,
         updated_at: new Date().toISOString(),
       }).eq('id', user.id);
       if (error) throw error;
-      setUserProfile({ first_name: editForm.first_name.trim(), last_name: editForm.last_name.trim(), college: editForm.college || null, year: editForm.year || null });
+      setUserProfile({ first_name: editForm.first_name.trim(), last_name: editForm.last_name.trim() });
       setEditOpen(false);
       toast.success('Profile updated!');
     } catch {
@@ -124,11 +115,6 @@ export function Profile() {
               {displayName}
             </h1>
             <p className="font-sans text-sm mt-1" style={{ color: 'var(--color-text2)' }}>{user.email}</p>
-            {(userProfile?.college || userProfile?.year) && (
-              <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text3)' }}>
-                {[userProfile.year, userProfile.college].filter(Boolean).join(' · ')}
-              </p>
-            )}
           </div>
         </div>
 
@@ -235,23 +221,6 @@ export function Profile() {
                   <input type="text" value={editForm.last_name} onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))} style={inputStyle} />
                 </div>
               </div>
-              <div>
-                <Label className="mb-1.5">College</Label>
-                <select value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))} style={inputStyle}>
-                  <option value="">— Select college —</option>
-                  {UCSD_COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label className="mb-1.5">Year</Label>
-                <select value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))} style={inputStyle}>
-                  <option value="">— Select year —</option>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-              <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                Your college and year are used to accurately match your attendance from event sign-in sheets.
-              </p>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

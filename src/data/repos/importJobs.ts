@@ -2,7 +2,10 @@ import { supabase } from '../../lib/supabase';
 import { withErrorHandling } from '../errors';
 import { Database, ImportRowDecision, Json } from '../../types/database';
 
-type ImportJobRow = Database['public']['Tables']['import_job_rows']['Row'];
+// decision is a check-constrained text column; the generator emits it as string.
+type ImportJobRow = Omit<Database['public']['Tables']['import_job_rows']['Row'], 'decision'> & {
+  decision: ImportRowDecision;
+};
 type ImportJob = Database['public']['Tables']['import_jobs']['Row'];
 type ImportJobInsert = Database['public']['Tables']['import_jobs']['Insert'];
 type ImportJobRowInsert = Database['public']['Tables']['import_job_rows']['Insert'];
@@ -66,7 +69,7 @@ export class ImportJobsRepository {
         .order('source_row_index', { ascending: true });
 
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as ImportJobRow[];
     }, 'Failed to fetch import job rows');
   }
 

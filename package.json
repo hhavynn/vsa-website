@@ -8,10 +8,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
-    "@supabase/ssr": "0.6.1",
-    "@supabase/supabase-js": "2.50.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.1",
     "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.2",
+    "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^16.18.0",

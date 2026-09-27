@@ -1,6 +1,9 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling, NotFoundError } from '../errors';
 import { ExternalEvent } from '../../types';
+import { Database } from '../../types/database';
+
+type ExternalEventInsert = Database['public']['Tables']['external_events']['Insert'];
 
 export interface ExternalEventFilters {
   status?: ExternalEvent['status'];
@@ -81,7 +84,7 @@ export class ExternalEventsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('external_events')
-        .select('*, uvsa_school:uvsa_schools(*)')
+        .select<string, ExternalEvent>('*, uvsa_school:uvsa_schools(*)')
         .order('date', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -115,8 +118,8 @@ export class ExternalEventsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('external_events')
-        .upsert(event)
-        .select()
+        .upsert(event as ExternalEventInsert)
+        .select<string, ExternalEvent>()
         .single();
 
       if (error) throw error;

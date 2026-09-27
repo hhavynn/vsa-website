@@ -58,7 +58,7 @@ export class UVSANetworkSettingsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from("uvsa_network_page_settings")
-        .select("*")
+        .select<string, UVSANetworkPageSettings>("*")
         .eq("id", "main")
         .maybeSingle();
 
@@ -74,7 +74,7 @@ export class UVSANetworkSettingsRepository {
       const { data, error } = await supabase
         .from("uvsa_network_page_settings")
         .upsert(settings)
-        .select("*")
+        .select<string, UVSANetworkPageSettings>("*")
         .single();
 
       if (error) throw error;

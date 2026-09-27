@@ -191,7 +191,7 @@ export default function LaunchChecklist() {
 
       // ── 1. Academic terms ──────────────────────────────────────────────────
       const [activeTermsRes, totalTermsRes] = await Promise.all([
-        supabase.from('academic_terms').select('id', { count: 'exact', head: true }).eq('is_current', true),
+        supabase.from('academic_terms').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('academic_terms').select('id', { count: 'exact', head: true }),
       ]);
 

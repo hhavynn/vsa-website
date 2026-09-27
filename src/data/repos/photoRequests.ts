@@ -90,7 +90,11 @@ export class PhotoRequestsRepository {
         .from('public_member_avatars')
         .select('member_id, avatar_url');
       if (error) throw error;
-      return new Map((data ?? []).map((row) => [row.member_id, row.avatar_url]));
+      const avatars = new Map<string, string>();
+      for (const row of data ?? []) {
+        if (row.member_id && row.avatar_url) avatars.set(row.member_id, row.avatar_url);
+      }
+      return avatars;
     }, 'Failed to fetch member avatars');
   }
 
@@ -165,7 +169,7 @@ export class PhotoRequestsRepository {
         p_request_id: request.id,
         p_approved_path: approvedPath,
         p_public_url: urlData.publicUrl,
-        p_matched_member_id: matchedMemberId ?? null,
+        p_matched_member_id: matchedMemberId ?? undefined,
       });
       if (rpcError) {
         // Don't leave an unapproved image published in the public bucket.
@@ -187,7 +191,7 @@ export class PhotoRequestsRepository {
     return withErrorHandling(async () => {
       const { error } = await supabase.rpc('reject_member_photo_request', {
         p_request_id: request.id,
-        p_admin_note: adminNote?.trim() || null,
+        p_admin_note: adminNote?.trim() || undefined,
       });
       if (error) throw error;
 
@@ -209,7 +213,7 @@ export class PhotoRequestsRepository {
     return withErrorHandling(async () => {
       const { error } = await supabase.rpc('remove_member_photo_request', {
         p_request_id: request.id,
-        p_admin_note: adminNote?.trim() || null,
+        p_admin_note: adminNote?.trim() || undefined,
       });
       if (error) throw error;
 

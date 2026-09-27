@@ -10,7 +10,7 @@ interface Feedback {
   type: string;
   title: string;
   description: string;
-  created_at: string;
+  created_at: string | null;
   status: string;
 }
 
@@ -262,7 +262,7 @@ const FeedbackTab: React.FC = () => {
                 </div>
 
                 <div className="text-xs lg:min-w-[180px] lg:text-right" style={{ color: 'var(--color-text3)' }}>
-                  {new Date(feedback.created_at).toLocaleString()}
+                  {feedback.created_at ? new Date(feedback.created_at).toLocaleString() : '—'}
                 </div>
               </div>
 
