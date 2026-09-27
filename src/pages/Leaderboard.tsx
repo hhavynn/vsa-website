@@ -937,6 +937,7 @@ export function Leaderboard() {
                   key={entry.id}
                   role="button"
                   tabIndex={0}
+                  aria-label={`Open profile for ${getMemberDisplayName(entry)}`}
                   onClick={() => setSelectedMember(entry)}
                   onKeyDown={event => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -1146,6 +1147,7 @@ function PodiumIndividual({
               <div
                 role="button"
                 tabIndex={0}
+                aria-label={`Open profile for ${getMemberDisplayName(card.entry)}`}
                 onClick={() => onSelectMember(card.entry)}
                 onKeyDown={event => {
                   if (event.key === 'Enter' || event.key === ' ') {

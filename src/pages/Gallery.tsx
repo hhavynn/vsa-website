@@ -155,11 +155,11 @@ export default function Gallery() {
                     href={album.google_photos_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`${album.title}. Opens in a new tab`}
                     className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
                   >
-                    <span className="sr-only">Opens in a new tab</span>
                     <div className="gallery-memory-image relative">
                       {coverUrl ? (
                         <>
