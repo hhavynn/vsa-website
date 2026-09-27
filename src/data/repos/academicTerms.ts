@@ -26,6 +26,18 @@ export class AcademicTermsRepository {
       const meta = getAcademicTermMeta(value);
       if (!meta) return null;
 
+      // Reuse an existing term untouched: admins set real quarter dates and
+      // labels in /admin/years, and saving an event must not reset them to
+      // the generic month-boundary defaults.
+      const { data: existing, error: existingError } = await supabase
+        .from('academic_terms')
+        .select('*')
+        .eq('code', meta.code)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existing) return existing as AcademicTerm;
+
       const range = getAcademicTermDateRange(meta.quarter, meta.calendarYear);
       const displayOrder = getAcademicTermDisplayOrder(meta.quarter, meta.academicYearStart);
 

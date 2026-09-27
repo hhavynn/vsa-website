@@ -47,10 +47,6 @@ const HOUSE_EMOJI: Record<HouseName, string> = {
 // STATIC DATA
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface HouseData {
-  house: HouseName;
-}
-
 interface HouseParent {
   name: string;
   house: string;
@@ -58,8 +54,6 @@ interface HouseParent {
   bio: string;
   photo?: string;
 }
-
-const HOUSES: HouseData[] = (['Boo', 'Bowser', 'Toad', 'Donkey Kong'] as HouseName[]).map((house) => ({ house }));
 
 const HOUSE_PARENTS: HouseParent[] = [
   // Example — replace with actual House Parents each year:
@@ -541,7 +535,7 @@ export function House() {
       ? houseAssets.map((asset) => ({ house: asset.house_key ?? asset.house, asset }))
       : isArchive
         ? (legacyArchiveEntry?.houses ?? []).map((house) => ({ house, asset: undefined }))
-        : HOUSES.map(({ house }) => ({ house, asset: houseAssetsByName.get(house) }));
+        : [];
 
   useEffect(() => {
     let isMounted = true;
@@ -699,7 +693,7 @@ export function House() {
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <Link to="/house" className="vsa-btn-primary font-sans text-sm">
-                    View 2025-2026 Houses →
+                    View Current House Program →
                   </Link>
                   <Link to="/house/archive" className="vsa-btn-ghost font-sans text-sm">
                     Explore House Archive
@@ -819,6 +813,21 @@ export function House() {
             <div className="program-eyebrow">
               {isArchive ? `${activeYearLabel} Houses` : 'The Four Houses'}
             </div>
+            {displayedHouses.length === 0 && !isArchive && (
+              <div className="scrapbook-empty mb-5 p-6 text-center">
+                <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                  {activeYearLabel} Houses have not been announced yet
+                </p>
+                <p className="mx-auto mt-2 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                  Check back after House Reveal for the official theme, assignments, and House Parents. Follow{' '}
+                  <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a>{' '}
+                  on Instagram for announcements.
+                </p>
+                <Link to={`/house/year/${formatAcademicYear(currentYear - 1)}`} className="vsa-btn-ghost mt-5 inline-flex font-sans text-sm">
+                  View {formatAcademicYear(currentYear - 1)} Houses →
+                </Link>
+              </div>
+            )}
             {displayedHouses.length === 0 && isArchive && (
               <div className="scrapbook-empty mb-5 p-6 text-center">
                 <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>

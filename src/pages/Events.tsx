@@ -181,8 +181,8 @@ function PastEventMemoryCard({
   const termCode = getEventTermCode(event, terms);
   const termLabel = getEventTermLabel(event, terms);
   const houseKey = stats?.topHouse ? normalizeHouse(stats.topHouse) : null;
-  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : null;
-  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : null;
+  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : stats?.topHouse?.trim() || null;
+  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : houseLabel ? 'var(--brand)' : null;
   const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '') : '';
   const hasPoints = event.points > 0;
   const hasTotalPoints = stats && stats.totalPoints > 0;
@@ -254,7 +254,7 @@ function PastEventMemoryCard({
                 {hasTotalPoints ? `${stats!.totalPoints.toLocaleString()} total` : ''}
               </span>
             )}
-            {houseKey && houseLabel && houseColor && (
+            {houseLabel && houseColor && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
                 style={{ background: houseColor }}

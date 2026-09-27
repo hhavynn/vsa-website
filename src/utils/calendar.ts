@@ -7,7 +7,7 @@
 
 import { ApplicationStatus, Event, HouseEvent, PublicApplicationLink } from '../types';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
-import { HOUSE_COLORS, HouseName, normalizeHouse } from '../constants/houses';
+import { HOUSE_COLORS, normalizeHouse } from '../constants/houses';
 import { buildGcalTimedDates, getEventDateOnly } from '../lib/eventTime';
 import { parseDateOnly, toDateOnlyString } from '../lib/dateOnly';
 import { getLosAngelesDateOnly } from './losAngelesDate';
@@ -18,7 +18,7 @@ export type CalendarSource = 'vsa' | 'house' | 'application';
 export type CalendarCategory = Event['event_type'] | 'house' | 'application';
 
 export interface CalendarHouseTag {
-  name: HouseName;
+  name: string;
   color: string;
   pagePath: string;
 }
@@ -107,11 +107,14 @@ export function houseEventToCalendarItem(event: HouseEvent): CalendarItem {
     event.houses && event.houses.length > 0 ? event.houses : event.house ? [event.house] : [];
   const houses: CalendarHouseTag[] = [];
   for (const asset of assets) {
-    const name = normalizeHouse(asset.house_key || asset.house || asset.display_name);
+    // Canonical names for the 2025-2026 Houses; any other year's House keeps
+    // the name and accent color from its published profile.
+    const known = normalizeHouse(asset.house_key || asset.house || asset.display_name);
+    const name = known ?? (asset.display_name || asset.house || asset.house_key)?.trim();
     if (name && !houses.some((h) => h.name === name)) {
       houses.push({
         name,
-        color: asset.accent_color || HOUSE_COLORS[name],
+        color: asset.accent_color || (known ? HOUSE_COLORS[known] : 'var(--brand)'),
         pagePath: getHousePagePath(asset),
       });
     }
@@ -279,7 +282,7 @@ export type CalendarCategoryFilter =
 export function matchesCategoryFilter(
   item: CalendarItem,
   filter: CalendarCategoryFilter,
-  house: HouseName | null = null
+  house: string | null = null
 ): boolean {
   switch (filter) {
     case 'all':

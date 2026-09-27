@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
@@ -11,7 +11,7 @@ import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta, parseYearSlug } from '../lib/academicTerms';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { HousePageAsset, HouseYearlyPoints } from '../types';
-import { matchesHouseSlug } from '../utils/houseSlug';
+import { houseSlugFromKey, matchesHouseSlug } from '../utils/houseSlug';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { Label } from '../components/ui/Label';
 import { HouseEventCard } from '../components/features/house/HouseEventCard';
@@ -123,6 +123,26 @@ export function HouseDetail() {
     matchesHouseSlug(asset.display_name, houseSlug)
   ) ?? null;
 
+  // Year-less links (/house/bowser) resolve to the current year. Once a new
+  // year starts, older Houses only exist in earlier years, so fall back to
+  // the most recent year that published a House with this slug.
+  const needsYearFallback = !yearSlug && !housesLoading && activeYear !== null && !house;
+  const { data: allPublishedHouses = [], isLoading: fallbackLoading } = useQuery({
+    queryKey: ['house-detail', 'all-published-assets'],
+    queryFn: () => houseAssetsRepository.getAllPublishedAssets(),
+    enabled: needsYearFallback,
+    staleTime: 10 * 60 * 1000,
+    cacheTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const fallbackHouse = needsYearFallback
+    ? allPublishedHouses.find((asset) =>
+      matchesHouseSlug(asset.house_key, houseSlug) ||
+      matchesHouseSlug(asset.house, houseSlug) ||
+      matchesHouseSlug(asset.display_name, houseSlug)
+    ) ?? null
+    : null;
+
   const { data: rawStandings = [] } = useQuery({
     queryKey: ['house-detail', 'standings', activeYear],
     queryFn: () => activeYear ? leaderboardRepository.getYearlyHouseLeaderboard(activeYear) : Promise.resolve([]),
@@ -197,8 +217,17 @@ export function HouseDetail() {
 
   const isDegraded = isSupabaseUnavailable(pastError);
 
-  if (termsLoading || housesLoading) {
+  if (termsLoading || housesLoading || (needsYearFallback && fallbackLoading)) {
     return <PageLoader message="Loading House page..." />;
+  }
+
+  if (fallbackHouse) {
+    return (
+      <Navigate
+        replace
+        to={`/house/year/${formatAcademicYear(fallbackHouse.academic_year_start)}/${houseSlugFromKey(fallbackHouse.house_key || fallbackHouse.house || fallbackHouse.display_name)}`}
+      />
+    );
   }
 
   if (invalidYearSlug) {

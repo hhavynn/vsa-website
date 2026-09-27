@@ -1,4 +1,4 @@
-import { HOUSE_COLORS, HouseName } from '../../../constants/houses';
+import type { CalendarHouseTag } from '../../../utils/calendar';
 import { CalendarCategoryFilter } from '../../../utils/calendar';
 
 export interface CalendarFilterOption {
@@ -11,9 +11,9 @@ interface Props {
   activeFilter: CalendarCategoryFilter;
   onFilterChange: (filter: CalendarCategoryFilter) => void;
   /** Houses that actually have events in the loaded window */
-  houseOptions: HouseName[];
-  activeHouse: HouseName | null;
-  onHouseChange: (house: HouseName | null) => void;
+  houseOptions: Pick<CalendarHouseTag, 'name' | 'color'>[];
+  activeHouse: string | null;
+  onHouseChange: (house: string | null) => void;
   pointsOnly: boolean;
   onPointsOnlyChange: (value: boolean) => void;
   /** Hide the points toggle when nothing in the window is points-eligible */
@@ -74,17 +74,17 @@ export function CalendarFilters({
           {houseOptions.map((house) => (
             <button
               type="button"
-              key={house}
-              onClick={() => onHouseChange(activeHouse === house ? null : house)}
-              aria-pressed={activeHouse === house}
-              className={`vsa-filter-btn ${activeHouse === house ? 'active' : ''}`}
+              key={house.name}
+              onClick={() => onHouseChange(activeHouse === house.name ? null : house.name)}
+              aria-pressed={activeHouse === house.name}
+              className={`vsa-filter-btn ${activeHouse === house.name ? 'active' : ''}`}
             >
               <span
                 className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                style={{ background: HOUSE_COLORS[house] }}
+                style={{ background: house.color }}
                 aria-hidden
               />
-              {house}
+              {house.name}
             </button>
           ))}
         </div>

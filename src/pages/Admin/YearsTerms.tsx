@@ -397,7 +397,7 @@ export default function AdminYearsTerms() {
               )}
               {activeTerm && (
                 <p className="mt-4 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                  Current event planning term: {activeTerm.label}.
+                  Current event planning term: {activeTerm.label}. The active term switches automatically each night once the next term&apos;s start date has passed, so keep start dates accurate.
                 </p>
               )}
             </div>
