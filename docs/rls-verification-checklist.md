@@ -73,7 +73,7 @@ By default, the script only performs read-only checks that cannot affect product
 - **Anon: event secrets check** — attempts to query the `event_check_in_secrets` table. Expects access denied or empty list.
 - **Anon: data rights RPC check** — attempts to call preview/export functions. Expects access denied.
 - **Anon: data rights requests check** — attempts to query requests history. Expects access denied or empty list.
-- **User: points check** — attempts to update points totals. Expects RLS block.
+- **User: write probes** — attempts to insert into `event_attendance` and `user_points`, and to update `event_attendance`, `user_points`, `events`, `members` and `member_event_attendance`. Expects RLS block (`42501` on insert, 0 rows on update). The probes are non-destructive even if RLS is broken: inserts target an unknown event or the user's existing row, so a constraint rejects them after RLS lets them through (reported as FAIL), and updates write each row's current values back.
 - **User: event secrets check** — attempts to read secrets. Expects access denied or empty list.
 - **User: data rights check** — attempts to read data rights requests or call admin RPCs. Expects access denied.
 - **Admin: read check** — attempts to read event secrets and data rights requests. Expects success.
@@ -85,11 +85,11 @@ By default, the script only performs read-only checks that cannot affect product
 
 If you set `RLS_ALLOW_MUTATION_TESTS=true`, the script will run active write checks.
 > [!WARNING]
-> These checks will perform actual `INSERT` and `DELETE` queries on `event_attendance` and `user_points`. They will attempt to clean up after themselves, but they are not recommended for production.
+> These checks insert and then delete a real `event_attendance` row. They clean up after themselves, but they are not recommended for production.
 
 These checks cover:
 - **Admin: direct manual insert support** — verifies that admins can manually check in members directly via the dashboard by writing to `event_attendance`.
-- **Admin: direct user points update** — verifies that admin accounts can write directly to `user_points` when adjusting leaderboards.
+- **Admin: no direct `user_points` writes** — verifies that even admins cannot write `user_points` from the client; it is server-authoritative (written only by `check_in_to_event` and the signup trigger). Non-destructive: the probe targets the admin's existing row.
 
 ---
 
