@@ -5,6 +5,8 @@ import {
   DatabaseError,
   ValidationError,
   NetworkError,
+  AuthorizationError,
+  toUserMessage,
 } from './errors';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 
@@ -203,5 +205,41 @@ describe('normalizeSupabaseError', () => {
     expect(normalizeSupabaseError(realPostgrestPayload('', '')).message).toBe(
       'Database error occurred'
     );
+  });
+});
+
+describe('toUserMessage', () => {
+  const FALLBACK = 'Something went wrong.';
+
+  it('never exposes Postgres internals from a normalized database error', () => {
+    const error = normalizeSupabaseError({
+      message: 'new row violates row-level security policy for table "member_photo_requests"',
+      code: 'XX999',
+      details: 'Failing row contains (secret@example.com)',
+      hint: 'Grant INSERT on member_photo_requests',
+    });
+    const shown = toUserMessage(error, FALLBACK);
+    expect(shown).toBe(FALLBACK);
+    expect(shown).not.toMatch(/member_photo_requests|secret@example\.com|Grant/);
+  });
+
+  it('passes through messages our own database functions raise for users', () => {
+    const error = new DatabaseError('Too many pending photo requests. Please try again later or contact VSA.', 'P0001');
+    expect(toUserMessage(error, FALLBACK)).toBe(error.message);
+  });
+
+  it('passes through repository validation messages', () => {
+    expect(toUserMessage(new ValidationError('Consent is required.'), FALLBACK)).toBe('Consent is required.');
+  });
+
+  it('maps classes to distinct, non-revealing messages', () => {
+    expect(toUserMessage(new NetworkError('TypeError: Failed to fetch https://x.supabase.co'), FALLBACK)).toMatch(/connection/);
+    expect(toUserMessage(new AuthorizationError(), FALLBACK)).toMatch(/permission/);
+    expect(toUserMessage(new DatabaseError('Insufficient permissions', '42501'), FALLBACK)).toMatch(/permission/);
+  });
+
+  it('uses the fallback for plain errors and non-errors', () => {
+    expect(toUserMessage(new Error('relation "public.x" does not exist'), FALLBACK)).toBe(FALLBACK);
+    expect(toUserMessage('boom', FALLBACK)).toBe(FALLBACK);
   });
 });

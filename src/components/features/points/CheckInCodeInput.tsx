@@ -34,7 +34,7 @@ export function CheckInCodeInput({ onPointsAdded }: CheckInCodeInputProps) {
       }
     } catch (err) {
       console.error('Error submitting code:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit code. Please try again.');
+      setError('Failed to submit code. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -57,10 +57,9 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
       onSuccess?.();
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to submit feedback. Please try again.';
       setFormError('root', {
         type: 'manual',
-        message: errorMessage
+        message: 'Failed to submit feedback. Please try again.',
       });
     }
   };
