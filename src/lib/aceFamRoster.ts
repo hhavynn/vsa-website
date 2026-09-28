@@ -2,8 +2,8 @@ import { AceFamilyMember } from "../types";
 
 // The current ACE fam lineup. Each slot shows on the ACE page even before an
 // admin creates the fam in Supabase (it renders as a "coming soon" placeholder).
-// Icons are served from public/images/ace/fams/; a slot without one falls back
-// to the generated pattern cover.
+// Icons are served from public/images/ace/fams/; a slot with iconUrl null falls
+// back to the generated pattern cover.
 
 export interface ActiveFamSlot {
   name: string;
@@ -30,7 +30,7 @@ export const ACTIVE_FAM_SLOTS: ActiveFamSlot[] = [
   {
     name: "Underwater",
     slug: "underwater",
-    iconUrl: null,
+    iconUrl: `${ICON_DIR}/underwater.webp`,
     heads: ["Kirsten Ngo", "Tristan Vu"],
   },
   {
@@ -48,7 +48,7 @@ export const ACTIVE_FAM_SLOTS: ActiveFamSlot[] = [
   {
     name: "Cross",
     slug: "cross",
-    iconUrl: null,
+    iconUrl: `${ICON_DIR}/cross.webp`,
     heads: ["Anh Thu Vo", "Simon Li"],
   },
   {

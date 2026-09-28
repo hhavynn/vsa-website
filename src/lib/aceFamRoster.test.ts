@@ -39,9 +39,10 @@ describe("ACE fam roster", () => {
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
-  it("points every icon at a file that ships in public/", () => {
+  it("gives every fam an icon that ships in public/", () => {
     const publicDir = path.resolve(__dirname, "..", "..", "public");
-    ACTIVE_FAM_SLOTS.filter((slot) => slot.iconUrl).forEach((slot) => {
+    ACTIVE_FAM_SLOTS.forEach((slot) => {
+      expect(slot.iconUrl).not.toBeNull();
       expect(fs.existsSync(path.join(publicDir, slot.iconUrl!))).toBe(true);
     });
   });
