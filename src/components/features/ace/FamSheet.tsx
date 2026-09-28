@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { AceFamily, AceFamilyMember } from '../../../types';
 import { getDisplayFamName, isDeadFam, membersToTreeNodes } from '../../../lib/aceFamilyAdapter';
+import { getFamIconUrl } from '../../../lib/aceFamRoster';
 import { FamilyTree, TreeNode } from './FamilyTree';
 import { FamAccent } from './FamCover';
 
@@ -414,6 +415,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const displayName = getDisplayFamName(family.name);
   const deadFam = isDeadFam(family.name);
+  const iconUrl = getFamIconUrl(family.slug);
 
   const treeNodes = useMemo<TreeNode[]>(() => membersToTreeNodes(members), [members]);
   const pan = usePannableTree(`${family.id}:${treeNodes.length}`);
@@ -470,6 +472,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
         <div className="ace-sheet-grabber" />
 
         <div className="ace-sheet-head">
+          {iconUrl && <img className="ace-sheet-icon" src={iconUrl} alt="" decoding="async" />}
           <div className="ace-sheet-head-left">
             <div className={`ace-sheet-eyebrow ace-sheet-eyebrow-${accent}`}>
               Family{viet ? ` · ${viet}` : ''}{deadFam ? ' · Graveyard' : ''}
