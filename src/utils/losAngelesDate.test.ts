@@ -1,4 +1,9 @@
-import { formatLosAngelesClock, getLosAngelesDateOnly, losAngelesDateTimeToIso } from './losAngelesDate';
+import {
+  formatLosAngelesClock,
+  getLosAngelesDateOnly,
+  isExistingLosAngelesWallClock,
+  losAngelesDateTimeToIso,
+} from './losAngelesDate';
 import { buildGcalTimedDates } from '../lib/eventTime';
 
 describe('losAngelesDateTimeToIso', () => {
@@ -32,5 +37,18 @@ describe('Google Calendar dates for evening events', () => {
     expect(buildGcalTimedDates('2026-10-03T00:30:00+00:00', '17:30:00', '20:30:00')).toBe(
       '20261002T173000/20261002T203000'
     );
+  });
+});
+
+describe('isExistingLosAngelesWallClock', () => {
+  it('rejects a time skipped when clocks spring forward', () => {
+    expect(isExistingLosAngelesWallClock('2026-03-08', '02:30')).toBe(false);
+  });
+
+  it('accepts times either side of the gap and ordinary times', () => {
+    expect(isExistingLosAngelesWallClock('2026-03-08', '01:59')).toBe(true);
+    expect(isExistingLosAngelesWallClock('2026-03-08', '03:00')).toBe(true);
+    expect(isExistingLosAngelesWallClock('2026-10-01', '19:00')).toBe(true);
+    expect(isExistingLosAngelesWallClock('2026-10-01')).toBe(true);
   });
 });

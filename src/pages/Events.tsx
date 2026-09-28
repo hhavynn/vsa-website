@@ -16,7 +16,7 @@ import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly, parseDateOnly } from '../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
-import { formatLosAngelesClock, getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
@@ -659,7 +659,7 @@ export function Events() {
                       ? `${format(eventDay(featured), 'MMM d / EEEE')} / ${formatEventTimeRange(featured.start_time, featured.end_time)}`
                       : featured.end_date && featured.end_date !== getEventDateOnly(featured.date, featured.start_time)
                         ? formatEventDateRange(featured.date, featured.end_date, featured.start_time)
-                        : `${format(eventDay(featured), 'MMM d / EEEE')} / ${formatLosAngelesClock(featured.date)}`}
+                        : format(eventDay(featured), 'MMM d / EEEE')}
                   </span>
                 </div>
                 <h2 className="mb-4 font-serif text-[32px] leading-[1.05] tracking-[-0.03em] sm:text-[42px]" style={{ color: 'var(--color-text)' }}>
@@ -757,7 +757,7 @@ export function Events() {
                           ? `${format(eventDay(event), 'MMM d')} / ${formatEventTimeRange(event.start_time, event.end_time)}`
                           : event.end_date && event.end_date !== getEventDateOnly(event.date, event.start_time)
                             ? formatEventDateRange(event.date, event.end_date, event.start_time)
-                            : `${format(eventDay(event), 'MMM d')} / ${formatLosAngelesClock(event.date)}`}
+                            : format(eventDay(event), 'MMM d')}
                       </span>
                     </div>
                     <h3 className="font-sans text-[18px] font-semibold tracking-[-0.02em]" style={{ color: 'var(--color-text)' }}>
