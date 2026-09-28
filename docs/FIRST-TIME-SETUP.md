@@ -231,9 +231,11 @@ Get in the habit of running `git diff` before every commit. It's how you catch t
 **Commit it:**
 
 ```bash
-git add .
+git add src/components/features/events/EventCard.tsx   # name the files you changed
 git commit -m "fix: correct spacing on event cards"
 ```
+
+Stage the files you meant to change by name rather than `git add .`, which also sweeps in unrelated edits such as the local `.gitignore` change from setup.
 
 The message format matters here — it must start with `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `style:`, `perf:`, `ci:`, `build:`, `revert:`, or `security:`. A GitHub check rejects PR titles that don't. It's called Conventional Commits and it's widespread.
 

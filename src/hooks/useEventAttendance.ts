@@ -1,10 +1,11 @@
 // Points system: CHECK-IN (event_attendance + user_points, written by the
 // check_in_to_event RPC and admin manual check-in) — not the public leaderboard,
 // which never reads these tables. See docs/leaderboard-system.md (top).
-// Sanctioned repo-layer deviation. The architecture rule is that all Supabase
-// access goes through src/data/repos/ — this hook is a deliberate exception because
-// it handles interactive check-in state that doesn't fit the standard repo pattern.
-// Do not copy this pattern elsewhere. Authority: AGENTS.md § "Things to never do".
+// Known repo-layer deviation, not a sanctioned exception. AGENTS.md requires all
+// Supabase access to go through src/data/repos/; this hook queries directly for
+// historical reasons. vsa-architecture-contract records it as an open legacy
+// deviation, with moving it into pointsRepository as candidate cleanup (#234).
+// Do not copy this pattern elsewhere.
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 

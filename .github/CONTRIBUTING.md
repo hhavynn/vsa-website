@@ -17,7 +17,7 @@ For the full from-zero runbook and every known setup trap (CRA script wrapping, 
 
 ### Platform verification status (issue #326)
 
-**Windows** — verified 2026-07-31 in both Git Bash and PowerShell on Node 22.18.0 / npm 10.9.3: `npm ci` (1419 packages, expected CRA transitive-advisory noise), `npm run lint` (exit 0, clean), `CI=true npm test -- --watchAll=false` (15 suites, 126 tests, all passed), and `npm run build` all succeeded. No workarounds were needed beyond the existing `node ./node_modules/react-scripts/bin/react-scripts.js` script wrapping — which is load-bearing and **must stay** (see below).
+**Windows** — verified 2026-07-31 in both Git Bash and PowerShell on Node 22.18.0 / npm 10.9.3: `npm ci` (1419 packages, expected CRA transitive-advisory noise), `npm run lint` (exit 0, clean), `CI=true npm test -- --watchAll=false` (15 suites, 126 tests, all passed; in PowerShell the equivalent is `$env:CI = 'true'; npm test -- --watchAll=false`, since `CI=true cmd` is POSIX-only syntax), and `npm run build` all succeeded. No workarounds were needed beyond the existing `node ./node_modules/react-scripts/bin/react-scripts.js` script wrapping — which is load-bearing and **must stay** (see below).
 
 **Linux** — continuously verified by CI: `.github/workflows/deploy.yml` runs `npm ci`, `npm run lint`, `CI=true npm test -- --coverage --watchAll=false`, and `npm run build` on `ubuntu-latest` for every PR to `main`.
 

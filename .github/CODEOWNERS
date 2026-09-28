@@ -85,6 +85,8 @@
 # Auth boundary and Supabase client
 # ---------------------------------------------------------------------
 /src/routes/AdminRoute.tsx       @hhavynn
+/src/routes/ProtectedRoute.tsx   @hhavynn
+/src/data/repos/auth.ts          @hhavynn
 /src/hooks/useAdmin.ts           @hhavynn
 /src/context/AuthContext.tsx     @hhavynn
 /src/lib/supabase.ts             @hhavynn

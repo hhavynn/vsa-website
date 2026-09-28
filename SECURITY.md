@@ -24,7 +24,7 @@ Please include a short summary, the affected surface, a minimal proof of concept
 
 ## Out of Scope
 
-- Known transitive Create React App dependency advisories. Reason: the CI security job already treats recurring transitive CRA advisories as background noise and applies the triage rule documented in `.github/workflows/deploy.yml`.
+- Scanner output or version-only reports about known transitive Create React App dependency advisories, **without a demonstrated impact** on the deployed site. Reason: CI already tracks these (triage rule in `.github/workflows/deploy.yml`). A transitive advisory you can actually exploit against the live site is in scope; please report it.
 - Missing security headers already tracked in #205, #219, and #224. Reason: those are known hardening issues, so duplicate reports do not help.
 - Anything already filed as an open issue. Reason: maintainers are already tracking it; if you have new sensitive impact information, report privately and reference only the issue number.
 - Findings that require physical access, social engineering of members, or account takeover of a real student. Reason: those actions are outside authorized testing and can harm real people.

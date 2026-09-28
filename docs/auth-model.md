@@ -103,7 +103,15 @@ Everything nested inside the `<Route element={<AdminRoute />}>` wrapper. `AdminR
 
 ### What neither provides
 
-Neither checks RLS. Neither prevents a client from bypassing the browser and calling the Supabase REST API directly with a valid JWT. **RLS on `user_profiles`, `events`, and all other sensitive tables is the actual enforcement.** The Postgres policies are the authoritative source of truth for what data a given authenticated user can read or write.
+Neither checks RLS. Neither prevents a client from bypassing the browser and calling the Supabase REST API directly with a valid JWT. **For direct table access, RLS on `user_profiles`, `events`, and the other sensitive tables is the actual enforcement.**
+
+RLS is not the only server-side boundary, though. Some paths deliberately bypass table policies, and each relies on its own checks:
+
+- **`SECURITY DEFINER` functions** run as their owner and skip RLS on the tables they touch. `check_in_to_event`, for example, reads `event_check_in_secrets` despite that table's RLS. Their boundary is the EXECUTE grant (`anon` / `authenticated`) plus the caller checks inside the function body.
+- **Views** created by the migration role behave like definer objects: their `WHERE` clause and column list, and their grants (revoke-then-grant), are the access control, not the base table's policies.
+- **Edge Functions using the service role** bypass RLS entirely. Their boundary is their own auth/secret check before any query.
+
+When auditing or adding any of these, check the grant, filter, or in-function check, not just the table's policies.
 
 The rule of thumb: `AdminRoute` decides what the browser renders; RLS decides what data the database returns.
 
@@ -115,7 +123,7 @@ General member accounts are deliberately parked in the current release. This is 
 
 History: an admin-only sign-in redesign was introduced, reverted within ~22 hours, and then reintroduced deliberately via PR #28. The current model is:
 
-- Sign-in exists for admins only.
+- The **shipped sign-in UI and admin panel** are admin-only: `SignInForm` signs a non-admin straight back out. **Supabase Auth itself is not restricted.** `AuthContext.signIn()` wraps an unrestricted `signInWithPassword`, and email sign-up is currently enabled (#429), so anyone can hold an `authenticated` session by calling the Auth API directly. Threat-model the `authenticated` role as "any stranger", not "an admin".
 - General members browse publicly and use the `/points` ("Find My Points") page to look up their points without an account.
 - `/profile` renders `MemberAccountsUnavailable` — a placeholder component that says "Not currently enabled" and links back to `/`.
 
