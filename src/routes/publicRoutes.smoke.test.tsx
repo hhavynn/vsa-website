@@ -159,9 +159,14 @@ describe('public routes render without crashing (#294)', () => {
     // Expressed as one assertion on a descriptive string rather than two
     // expects, both to satisfy testing-library/no-wait-for-multiple-assertions
     // and so a timeout reports what the page was actually stuck on.
+    //
+    // Re-query <main> on every attempt instead of reading the node captured
+    // above. A captured node keeps its text after the page unmounts, so reading
+    // it proved nothing for routes that tore down mid-test (#394). getByRole is
+    // also unique-by-default, so a page that renders two <main> landmarks fails.
     await waitFor(
       () => {
-        const text = main.textContent?.trim() ?? '';
+        const text = screen.getByRole('main').textContent?.trim() ?? '';
         const settled = text !== '' && !/^loading/i.test(text);
         expect(settled ? 'settled' : `unsettled: "${text.slice(0, 60)}"`).toBe('settled');
       },

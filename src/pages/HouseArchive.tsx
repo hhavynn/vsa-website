@@ -105,7 +105,7 @@ export function HouseArchive() {
         </div>
       </div>
 
-      <main className="vsa-container py-12 lg:py-16">
+      <div className="vsa-container py-12 lg:py-16">
         <section className="mb-10 rounded border p-5 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
           <div>
             <div className="font-mono text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--color-text3)' }}>
@@ -143,7 +143,7 @@ export function HouseArchive() {
             No private Drive links, check-in sheets, rosters, payment details, or member records are shown here. The public archive only summarizes House names, themes, and member-friendly notes.
           </p>
         </section>
-      </main>
+      </div>
     </>
   );
 }

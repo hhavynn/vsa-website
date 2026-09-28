@@ -309,7 +309,7 @@ export default function AdminApplications() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]" style={{ padding: '20px 28px' }}>
-        <main className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-4">
           <section aria-label="Filter application windows" className="rounded-md border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -400,7 +400,7 @@ export default function AdminApplications() {
               </div>
             )}
           </section>
-        </main>
+        </div>
 
         <aside className="h-fit rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-5 flex items-start justify-between gap-4">
