@@ -101,8 +101,23 @@ function isInternalUrl(url: string) {
   return url.startsWith("/") && !url.startsWith("//");
 }
 
-function isSafeUrl(url: string) {
-  return /^https?:\/\//i.test(url) || isInternalUrl(url);
+function sanitizeUrl(url: string): string | null {
+  const trimmed = url.trim();
+
+  if (isInternalUrl(trimmed)) {
+    return trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 // Drop markers the model left unbalanced (e.g. a truncated "**Note:") so raw
@@ -127,11 +142,12 @@ export function renderInline(text: string, keyPrefix = "i"): ReactNode[] {
 
     if (label !== undefined) {
       const children = renderInline(label, `${key}-l`);
-      if (!isSafeUrl(url)) {
+      const safeUrl = sanitizeUrl(url);
+      if (!safeUrl) {
         nodes.push(...children);
-      } else if (isInternalUrl(url)) {
+      } else if (isInternalUrl(safeUrl)) {
         nodes.push(
-          <Link key={key} to={url} className={LINK_CLASS}>
+          <Link key={key} to={safeUrl} className={LINK_CLASS}>
             {children}
           </Link>,
         );
@@ -139,7 +155,7 @@ export function renderInline(text: string, keyPrefix = "i"): ReactNode[] {
         nodes.push(
           <a
             key={key}
-            href={url}
+            href={safeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className={LINK_CLASS}
