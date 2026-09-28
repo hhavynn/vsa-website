@@ -1,0 +1,67 @@
+name: RLS verification
+
+# Runs scripts/verify-rls-security.mjs against the production Supabase project
+# (it is the only project; there is no staging). Closes #225.
+#
+# Why production is acceptable here:
+#   - The anonymous section is read-only.
+#   - The signed-in sections (enabled only when RLS_TEST_* secrets exist) use
+#     non-destructive probes since #428: inserts collide with a constraint that
+#     is checked after RLS, and updates write a row's current values back.
+#   - RLS_ALLOW_MUTATION_TESTS is deliberately never set here, so the admin
+#     manual-check-in insert/delete probe never runs in CI.
+#
+# Why a schedule as well as PRs: RLS regressions here have come from database
+# changes made outside PRs (#422, #423 found dashboard-created policies), which
+# no code change would trigger. The daily run catches those.
+#
+# When it fails: the log names the table/column/RPC and the issue it guards.
+# Treat it as a security incident, not a flaky test. See
+# docs/rls-verification-checklist.md.
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '17 15 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # Secrets are not passed to pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify RLS and grants
+        run: node scripts/verify-rls-security.mjs
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+          # Optional: signed-in sections are skipped until these are configured.
+          RLS_TEST_USER_EMAIL: ${{ secrets.RLS_TEST_USER_EMAIL }}
+          RLS_TEST_USER_PASSWORD: ${{ secrets.RLS_TEST_USER_PASSWORD }}
+          RLS_TEST_ADMIN_EMAIL: ${{ secrets.RLS_TEST_ADMIN_EMAIL }}
+          RLS_TEST_ADMIN_PASSWORD: ${{ secrets.RLS_TEST_ADMIN_PASSWORD }}
+          RLS_TEST_EVENT_ID: ${{ secrets.RLS_TEST_EVENT_ID }}
+          RLS_TEST_MEMBER_ID: ${{ secrets.RLS_TEST_MEMBER_ID }}
