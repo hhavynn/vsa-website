@@ -26,8 +26,41 @@
       "big": null
     },
     {
+      "name": "Patrick Vo",
+      "big": "Alex Orr",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tony Lam",
+      "big": "Patrick Vo",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Shayna Quach",
+      "big": "Tony Lam",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Aaron Tran",
+      "big": "Shayna Quach",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jeffrey Ha",
+      "big": "Aaron Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
       "name": "Alex Nguyen",
-      "big": null
+      "big": "Jeffrey Ha",
+      "added_term": "legacy",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Alexandre Nguyen\""
     },
     {
       "name": "Fatima Dong",
@@ -85,12 +118,6 @@
       "big": "Alex Nguyen",
       "confidence": "confirmed",
       "notes": "Owner lineage correction, 2026-09-28"
-    },
-    {
-      "name": "Patrick Vo",
-      "big": "Alex Orr",
-      "added_term": "legacy",
-      "confidence": "confirmed"
     },
     {
       "name": "Emi Do",
@@ -213,12 +240,6 @@
       "confidence": "inferred-high"
     },
     {
-      "name": "Tony Lam",
-      "big": "Patrick Vo",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Paul Hoang",
       "big": "Patrick Vo",
       "added_term": "legacy",
@@ -258,12 +279,6 @@
       "name": "Katie Truong",
       "big": "Nicole Tran",
       "added_term": "FA23",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Shayna Quach",
-      "big": "Tony Lam",
-      "added_term": "legacy",
       "confidence": "confirmed"
     },
     {
@@ -340,12 +355,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Aaron Tran",
-      "big": "Shayna Quach",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Brendan Lee",
       "big": "Shayna Quach",
       "added_term": "legacy",
@@ -407,12 +416,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Jeffrey Ha",
-      "big": "Aaron Tran",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Matt Dzoan",
       "big": "Aaron Tran",
       "added_term": "legacy",
@@ -445,12 +448,6 @@
     {
       "name": "Allison Ngo",
       "big": "Long Ngo",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Alexandre Nguyen",
-      "big": "Jeffrey Ha",
       "added_term": "legacy",
       "confidence": "confirmed"
     },

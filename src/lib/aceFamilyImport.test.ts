@@ -106,9 +106,9 @@ const EXPECTED: Record<
   },
   "down.json": { family: "Down", people: 139, links: 135, roots: 4 },
   "moon.json": { family: "Moon", people: 30, links: 25, roots: 5 },
-  "bang-mi.json": { family: "Bang Mi", people: 54, links: 51, roots: 3 },
+  "bang-mi.json": { family: "Bang Mi", people: 52, links: 49, roots: 3 },
   "nsf.json": { family: "NSF", people: 145, links: 139, roots: 6 },
-  "cross.json": { family: "Cross", people: 82, links: 75, roots: 7 },
+  "cross.json": { family: "Cross", people: 81, links: 75, roots: 6 },
   "dead-attractive-af-aaf.json": {
     family: "(Dead) Attractive AF (AAF)",
     people: 37,
@@ -317,8 +317,9 @@ describe("ACE family import files", () => {
       "Wilson Nguyen",
       "Trinity Bui",
     ]);
-    // Alexandre Nguyen == Alex Nguyen is unconfirmed, so they stay apart.
-    expect(lineageOf(cross, "Vy Do (Vicky)")).toEqual([
+    // Owner-confirmed: the legacy "Alexandre Nguyen" is Vy Do (Vicky)'s big.
+    expect(lineageOf(cross, "Vy Do (Vicky)").slice(-3)).toEqual([
+      "Jeffrey Ha",
       "Alex Nguyen",
       "Vy Do (Vicky)",
     ]);
@@ -362,6 +363,7 @@ describe("ACE family import files", () => {
         "Catherine M Hoang",
         "Preston J Shin",
         "Vicky Do",
+        "Alexandre Nguyen",
       ],
       "bang-mi.json": ["Deric Chu"],
     };
@@ -372,6 +374,11 @@ describe("ACE family import files", () => {
   });
 
   it("keeps Sweatpants and Sunshine pairings out of these fams", () => {
+    // Sweatpants' Helen Tran -> Tien Vo was once inferred into Bang Mi.
+    const bangMiNames = loadFam("bang-mi.json").members.map((m) => m.name);
+    expect(
+      bangMiNames.filter((n) => ["Helen Tran", "Tien Vo"].includes(n)),
+    ).toEqual([]);
     Object.keys(EXPECTED).forEach((file) => {
       const names = loadFam(file).members.map((m) => m.name);
       expect(
