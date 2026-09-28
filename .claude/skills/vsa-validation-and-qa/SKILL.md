@@ -79,7 +79,7 @@ gh api repos/{owner}/{repo}/branches/main/protection   # 404 = still unprotected
 
 ---
 
-## 2. Test inventory — the golden set (reviewed 2026-07-10)
+## 2. Test inventory — the golden set (reviewed 2026-09-28; completeness enforced by `src/__meta__/testInventory.test.ts`)
 
 Derive the current file set with `find src -name "*.test.ts*" | sort`; never trust a copied count. The inventory below explains what the current metadata, pure-logic, and smoke tests certify—and, more importantly, what nothing certifies.
 
@@ -96,12 +96,32 @@ Derive the current file set with `find src -name "*.test.ts*" | sort`; never tru
 | `src/lib/dateOnly.test.ts` | `toDateOnlyString` / `parseDateOnly`: parse `YYYY-MM-DD` as **local** calendar dates (no timezone shift), reject impossible dates (e.g. Feb 31), fall back to `parseISO` for other strings. | Date-only rendering has caused off-by-one display bugs; this pins the safe parsing behavior. |
 | `src/schemas/dataRightsRequests.test.ts` | `DataRightsRequestFormSchema` / `DataRightsDependencyPreviewSchema`: accept only non-destructive, read-only metadata; reject destructive action fields, raw content, invalid identifiers, and oversized notes; require an independent reviewer. | **Privacy/safety.** Keeps the data-rights workflow read-only-by-construction (see `docs/data-rights-anonymization-runbook.md`). |
 | `src/schemas/memberPhotoRequests.test.ts` | `MemberPhotoRequestFormSchema`: requires explicit `consent === true`; rejects missing name, invalid email, oversized notes, and unknown fields. | Enforces consent + input bounds on the public member-photo-request form. |
+| `src/__meta__/skillsRoster.test.ts` | The `.claude/skills/README.md` routing table and the §6.4 roster in `vsa-docs-and-writing` both list exactly the `vsa-*` skill directories on disk; every backticked/bold `vsa-*` name in the governance docs resolves to a skill or playbook agent (#305). | **Protects workflow metadata**, like `playbookRoster.test.ts`. |
+| `src/__meta__/testInventory.test.ts` | Every `*.test.ts(x)` file under `src/` has a row in this table, and every row points at a file that exists. | Keeps this inventory honest; it was months stale before this guard existed. |
+| `src/routes/publicRoutes.smoke.test.tsx` | Every public route (incl. parameterised House/VCN routes, `/signin` redirect and the 404) mounts, renders exactly one live `<main>`, and settles past its loader (#294, #394). | **Catches blank or crashing pages** before `main` auto-deploys. |
+| `src/pages/HouseYearRollover.test.tsx` | Before a new year's Houses are published, `/house` shows the not-announced state, and year-less House links redirect to the latest year that published that House (#412). | **Protects domain facts** during the yearly turnover. |
+| `src/data/repos/events.test.ts`, `src/data/repos/houseEvents.test.ts` | Public event reads filter `is_published = true` (discovered by reflection, so new public methods are covered), admin reads see drafts, ordering, and permission errors surface (#291, #292). | **Privacy:** drafts never reach public pages. |
+| `src/data/repos/draftLeakGuards.test.ts` | Same draft guard for ACE families, program content and VCN archives: public reads use a `published_*` view or filter `is_published`, admin reads see drafts (#292). | **Privacy.** |
+| `src/data/repos/applicationLinks.test.ts` | Public application reads use only `public_application_links` and drop any URL for a non-open window, for all nine keys (#273). | **Safety rule:** closed/future application URLs are never public. |
+| `src/lib/applicationWindowBoundaries.test.ts` | Admin-entered window times are San Diego time; every key flips at the exact open/close instant; DST boundaries; malformed or nonexistent times and close-before-open fail closed (#274). Also run under four machine TZs by `npm run test:timezones`. | **Safety rule** + timezone correctness. |
+| `src/utils/seasonalBoundaries.test.ts` | Summer break flips at San Diego midnight on Jun 15 / Sep 15 (and not on the UTC date); active items suppress the summer empty state; each page renders its own summer copy (#270). Also run by `npm run test:timezones`. | **Domain facts:** the site's seasonal behaviour. |
+| `src/data/repos/publicColumnAllowlists.test.ts` | The anon events projection excludes `check_in_form_url`; the admin projection keeps it; `updateEvent` never writes undefined fields (#379, #395). | **Privacy/regression.** |
+| `src/data/repos/academicTerms.test.ts`, `src/data/repos/houseMemberships.test.ts` | `ensureTermForDate` never overwrites admin-set term dates; House membership reads are constrained to the current year's effective interval. | **Data integrity** for terms and House display. |
+| `src/data/errors.test.ts` | Supabase error payloads normalize correctly (not "Unknown error occurred"); `toUserMessage` never exposes table/column/policy names, `details` or `hint`, while passing through our own `RAISE` text and validation messages (#351, #410). | **Privacy/security:** no database internals in the UI. |
+| `src/components/features/auth/SignInForm.test.ts` | Admin sign-in failures give one generic message (no account enumeration via "Email not confirmed"), except rate limiting and connection errors (#235). | **Security.** |
+| `src/components/common/ApplicationCTA.test.tsx` | Admin-authored before-open / after-close messages take precedence over page fallback copy. | Applications UX. |
+| `src/components/layout/navigation/MobileDrawer.test.tsx`, `src/components/common/PaginationControls.test.tsx`, `src/components/ui/SplitText.test.tsx` | Drawer traps Tab and restores focus on Escape; page-size selector has an accessible name; animated split text is exposed to assistive tech (#414). | **Accessibility regressions.** |
+| `src/lib/eventTime.test.ts`, `src/utils/losAngelesDate.test.ts` | Event date ranges and San Diego ↔ instant conversions, including DST days (#415). | Timezone correctness. |
+| `src/data/repos/pointsSystemsBoundary.test.ts` | The public leaderboard repository never reads the check-in tables (`event_attendance`, `user_points`, `check_in_to_event`), and the check-in repository never reads leaderboard tables or views; every method is discovered by reflection and must run to completion (#310). | **Protects the dual-points-systems boundary** (see `docs/leaderboard-system.md`). |
+| `src/utils/leaderboardRanking.test.ts` | Leaderboard tie-breaking: points first, then events attended; equal on both is a tie. | **Leaderboard-adjacent** (ordering only, not aggregation). |
+| `src/data/wrappedEdition.test.ts` | The Wrapped nav/footer label comes from the published edition's year label, not a literal (#263). | Seasonal content. |
+| `src/utils/generateSlug.test.ts`, `src/utils/hashScroll.test.ts`, `src/utils/matchCabinetRole.test.ts` | Slug generation; hash-link scrolling to late-rendered targets; cabinet role-title normalization. | Utility behaviour. |
 
 **Still unprotected — where you have NO automated safety net:**
 
 - **Points / attendance / leaderboard _calculation_** — no direct tests. `memberMatching.test.ts` covers import _matching_ and `wrapped.test.ts` covers standings _sorting_, but the canonical points math and leaderboard aggregation are exercised only by manual QA + the leaderboard checklist (section 5). This is the most protected domain in the repo (section 4).
-- **All repositories in `src/data/repos/`** — no tests; every Supabase query path is exercised only by humans.
-- **Routing, auth gating, admin gating, and all feature components** — only the top-level smoke test.
+- **Most repositories in `src/data/repos/`** — covered: events, houseEvents, ACE/program content/VCN draft guards, applicationLinks, academicTerms, houseMemberships, column allowlists. The rest (gallery, cabinet, members, points, import, AI knowledge, …) are exercised only by humans (#291).
+- **Auth gating, admin gating, and most feature components** — public routes have a mount/settle smoke test (`publicRoutes.smoke.test.tsx`); admin and protected routes do not.
 - **RLS policies** — deliberately not covered by Jest (client tests can't prove server policy). Covered instead by `scripts/verify-rls-security.mjs` → interpretation guide in `vsa-diagnostics-and-measurement`, runbook pointer in section 5.
 
 Consequence: for any change in an unprotected area, Gate 4 (manual exercise) carries the entire burden. Do not skip it.
