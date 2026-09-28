@@ -337,7 +337,7 @@ export default function AdminResources() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]" style={{ padding: '20px 28px' }}>
-        <main className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-4">
           <section
             className="rounded-md border p-4"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
@@ -473,7 +473,7 @@ export default function AdminResources() {
               </>
             )}
           </section>
-        </main>
+        </div>
 
         <aside
           className="h-fit rounded-md border p-5"
