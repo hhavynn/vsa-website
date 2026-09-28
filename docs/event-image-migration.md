@@ -98,7 +98,7 @@ npm run migrate:images:apply -- --category events --event-id <uuid> --force-appl
 | `--category events` | Restrict to events table (script supports other categories too) |
 | `--event-id <uuid>` | Migrate a single event row |
 | `--limit <n>` | Max rows to process |
-| `--overwrite` | Re-download even if a local file already exists |
+| `--overwrite` | Rewrite output files even when the derived image is identical. Rows still on Supabase Storage are always re-derived and relinked; the file is only rewritten when the image changed (#436). |
 | `--force-apply` | Override the branch guard (use carefully) |
 
 ## Image output

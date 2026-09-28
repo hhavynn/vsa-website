@@ -10,7 +10,7 @@
  *   npm run migrate:images:dry -- --category cabinet --limit 5
  *   npm run migrate:images:apply -- --category cabinet --limit 1
  *   npm run migrate:images:dry                         # scan all categories
- *   npm run migrate:images:apply -- --overwrite        # re-download existing
+ *   npm run migrate:images:apply -- --overwrite        # rewrite files even if unchanged
  *   npm run migrate:images:dry -- --category events --event-id <uuid>
  *   npm run migrate:images:apply -- --category events --event-id <uuid>
  *   npm run migrate:images:dry -- --category house-events --house-event-id <uuid>
@@ -20,7 +20,7 @@
  *
  * Flags:
  *   --apply          Execute writes and DB updates (default: dry run)
- *   --overwrite      Re-download even if local file already exists
+ *   --overwrite      Rewrite output files even when the derived image is identical
  *   --category       Migrate one category only
  *   --limit          Max rows to process
  *   --event-id       Filter to a single event (events category only)
@@ -299,6 +299,10 @@ function downloadBuffer(url: string): Promise<Buffer> {
   });
 }
 
+function fileMatches(filePath: string, contents: Buffer): boolean {
+  return fs.existsSync(filePath) && fs.readFileSync(filePath).equals(contents);
+}
+
 async function compressToWebP(
   buffer: Buffer,
   maxWidth: number,
@@ -401,43 +405,32 @@ async function migrateCategory(
       // ── DRY RUN ──────────────────────────────────────────────────────────
       if (dryRun) {
         const alreadyExists = fs.existsSync(outputAbsolute);
-        const wouldSkip = alreadyExists && !OVERWRITE;
-        if (wouldSkip) stats.skipped++;
         rows.push({
           rowId,
           fieldName: field.name,
           originalUrl: rawUrl,
           localPath: outputAbsolute,
           publicPath,
-          status: wouldSkip ? 'skipped' : 'migrated',
-          reason: wouldSkip
-            ? 'File exists; pass --overwrite to replace'
+          status: 'migrated',
+          reason: alreadyExists
+            ? 'File exists: would re-derive, rewrite only if the image changed, then update DB'
             : 'Would download + compress → update DB',
         });
         log(
           `  [DRY] ${rowId.slice(0, 8)} ${field.name}: ${rawUrl.slice(-50)} → ${publicPath}` +
-            (wouldSkip ? ' (SKIP: exists)' : ''),
+            (alreadyExists ? ' (file exists: relink DB, rewrite if changed)' : ''),
         );
         continue;
       }
 
       // ── APPLY ────────────────────────────────────────────────────────────
 
-      // Skip if file exists and --overwrite not set
-      if (fs.existsSync(outputAbsolute) && !OVERWRITE) {
-        stats.skipped++;
-        rows.push({
-          rowId,
-          fieldName: field.name,
-          originalUrl: rawUrl,
-          localPath: outputAbsolute,
-          publicPath,
-          status: 'skipped',
-          reason: 'File exists; pass --overwrite to replace',
-        });
-        log(`  SKIP ${rowId.slice(0, 8)} ${field.name}: file exists`);
-        continue;
-      }
+      // A row that still points at Storage is always processed, even when the
+      // output file already exists (#436). Skipping it left rows stranded on
+      // Storage forever when a stale admin save restored the Storage URL after
+      // an earlier run. The file is only rewritten when the image differs, so
+      // a re-uploaded picture under the same slug replaces the old one, and
+      // an unchanged one produces no git diff.
 
       // Download
       let imageBuffer: Buffer;
@@ -488,10 +481,15 @@ async function migrateCategory(
 
       // Write file — do this before the DB update so we never update DB
       // without a corresponding local file.
-      fs.mkdirSync(path.dirname(outputAbsolute), { recursive: true });
-      fs.writeFileSync(outputAbsolute, webpBuffer);
-      const kb = (webpBuffer.length / 1024).toFixed(1);
-      log(`  SAVED ${outputAbsolute} (${kb} KB)`);
+      if (!OVERWRITE && fileMatches(outputAbsolute, webpBuffer)) {
+        stats.skipped++;
+        log(`  UNCHANGED ${outputAbsolute} (file matches; relinking DB only)`);
+      } else {
+        fs.mkdirSync(path.dirname(outputAbsolute), { recursive: true });
+        fs.writeFileSync(outputAbsolute, webpBuffer);
+        const kb = (webpBuffer.length / 1024).toFixed(1);
+        log(`  SAVED ${outputAbsolute} (${kb} KB)`);
+      }
 
       // Update DB
       try {
@@ -548,7 +546,7 @@ async function migrateCategory(
   log(`    rows scanned:          ${stats.rowsScanned}`);
   log(`    with Supabase URL:     ${stats.rowsWithSupabaseUrl}`);
   log(`    already local:         ${stats.alreadyLocal}`);
-  log(`    skipped (file exists): ${stats.skipped}`);
+  log(`    unchanged files (DB relinked): ${stats.skipped}`);
   log(`    images downloaded:     ${stats.imagesDownloaded}`);
   log(`    images compressed:     ${stats.imagesCompressed}`);
   log(`    DB rows updated:       ${stats.dbRowsUpdated}`);
