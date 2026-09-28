@@ -1,12 +1,37 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { SignInSchema, type SignInFormData } from '../../../schemas';
 
 const inputCls = 'mt-1 block w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
+
+const ADMIN_CHECK_FAILED = 'Unable to verify admin access.';
+
+/**
+ * Maps a sign-in failure to text that does not reveal whether an account
+ * exists (#235). Supabase already answers "Invalid login credentials" for both
+ * an unknown email and a wrong password, but other Auth errors such as
+ * "Email not confirmed" confirm the address is registered, so everything that
+ * isn't a rate limit or a connection problem gets the same message.
+ * Supabase Auth rate-limits sign-in per IP server-side; the app does not add a
+ * second limiter, which could lock the only admin out.
+ */
+export function signInErrorMessage(error: unknown): string {
+  if (isAuthApiError(error) && error.status === 429) {
+    return 'Too many sign-in attempts. Wait a few minutes and try again.';
+  }
+  if (isAuthRetryableFetchError(error)) {
+    return "Couldn't reach the server. Check your connection and try again.";
+  }
+  if (error instanceof Error && error.message === ADMIN_CHECK_FAILED) {
+    return ADMIN_CHECK_FAILED;
+  }
+  return 'Incorrect email or password.';
+}
 
 export function SignInForm() {
   const navigate = useNavigate();
@@ -39,7 +64,7 @@ export function SignInForm() {
 
       if (error) {
         await signOut();
-        throw new Error('Unable to verify admin access.');
+        throw new Error(ADMIN_CHECK_FAILED);
       }
 
       if (!profile?.is_admin) {
@@ -53,10 +78,9 @@ export function SignInForm() {
 
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
       setFormError('root', {
         type: 'manual',
-        message: errorMessage
+        message: signInErrorMessage(error),
       });
     }
   };
