@@ -2,23 +2,7 @@
   "family": "Underwater",
   "members": [
     {
-      "name": "Amy Q. Tran",
-      "big": null
-    },
-    {
-      "name": "Anh T Nguyen",
-      "big": null
-    },
-    {
-      "name": "Anthony Dang",
-      "big": null
-    },
-    {
       "name": "Brian Tran",
-      "big": null
-    },
-    {
-      "name": "Grace Nguyen",
       "big": null
     },
     {
@@ -26,23 +10,7 @@
       "big": null
     },
     {
-      "name": "Jennifer Ho",
-      "big": null
-    },
-    {
-      "name": "Kelly Nguyen",
-      "big": null
-    },
-    {
       "name": "Nicholas Phommachakr",
-      "big": null
-    },
-    {
-      "name": "Spencer Ho",
-      "big": null
-    },
-    {
-      "name": "Tiffany Luu",
       "big": null
     },
     {
@@ -50,10 +18,102 @@
       "big": null
     },
     {
-      "name": "Spencer",
+      "name": "Jason Le",
+      "big": null
+    },
+    {
+      "name": "Danny Tran",
+      "big": "Brian Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tammy Le",
+      "big": "Danny Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jack Le",
+      "big": "Tammy Le",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Ingrid Dinh",
+      "big": "Jack Le",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Cynthia Shiau",
+      "big": "Ingrid Dinh",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jenny Nguyen",
+      "big": "Cynthia Shiau",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Grace Phuong Nguyen",
+      "big": "Jenny Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: listed as \"Phuong Nguyen\" in older records"
+    },
+    {
+      "name": "Amy Q. Tran",
+      "big": "Grace Phuong Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Grace Nguyen",
+      "big": "Jason Le",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Anthony Dang",
+      "big": "Grace Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Jennifer Ho",
+      "big": "Anthony Dang",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Anh T Nguyen",
+      "big": "Jennifer Ho",
+      "added_term": "FA23",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Anh Nguyen\""
+    },
+    {
+      "name": "Kelly Nguyen",
+      "big": "Jenny Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Spencer Ho",
       "big": "Amy Q. Tran",
       "added_term": "FA22",
-      "confidence": "inferred-high"
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Spencer\""
+    },
+    {
+      "name": "Tiffany Luu",
+      "big": "Grace Nguyen",
+      "added_term": "FA22",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Tiffany Lu\""
     },
     {
       "name": "Linh Dao",
@@ -86,18 +146,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Danny Tran",
-      "big": "Brian Tran",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Tiffany Lu",
-      "big": "Grace Nguyen",
-      "added_term": "FA22",
-      "confidence": "inferred-medium"
-    },
-    {
       "name": "Ryan H Ngo",
       "big": "Grace Nguyen",
       "added_term": "FA22",
@@ -126,12 +174,6 @@
       "big": "Jason Tran",
       "added_term": "FA22",
       "confidence": "inferred-high"
-    },
-    {
-      "name": "Anh Nguyen",
-      "big": "Jennifer Ho",
-      "added_term": "FA23",
-      "confidence": "confirmed"
     },
     {
       "name": "Brandon Tran",
@@ -207,12 +249,6 @@
     },
     {
       "name": "Austin Icewaterz Huynh",
-      "big": "Danny Tran",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Tammy Le",
       "big": "Danny Tran",
       "added_term": "legacy",
       "confidence": "confirmed"
@@ -374,12 +410,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Jack Le",
-      "big": "Tammy Le",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Michelle Cang",
       "big": "Kathy Tram",
       "added_term": "legacy",
@@ -448,12 +478,6 @@
     {
       "name": "Isabella Wynn",
       "big": "Thi Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Ingrid Dinh",
-      "big": "Jack Le",
       "added_term": "legacy",
       "confidence": "confirmed"
     },
@@ -542,32 +566,14 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Cynthia Shiau",
-      "big": "Ingrid Dinh",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Jenny Nguyen",
-      "big": "Cynthia Shiau",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Phuong Nguyen",
-      "big": "Jenny Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Paul Nguyen",
-      "big": "Phuong Nguyen",
+      "big": "Grace Phuong Nguyen",
       "added_term": "FA21",
       "confidence": "inferred-high"
     },
     {
       "name": "Kristina Tran",
-      "big": "Phuong Nguyen",
+      "big": "Grace Phuong Nguyen",
       "added_term": "FA21",
       "confidence": "inferred-high"
     },
@@ -594,6 +600,24 @@
       "big": "Cherie Luu",
       "added_term": "FA24",
       "confidence": "confirmed"
+    },
+    {
+      "name": "Clarkson Phan",
+      "big": "Amy Q. Tran",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Eric Pham",
+      "big": "Amy Q. Tran",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Ashley Nguyen",
+      "big": "Amy Q. Tran",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     }
   ]
 }

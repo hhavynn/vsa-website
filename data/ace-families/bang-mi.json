@@ -315,6 +315,13 @@
       "big": "Tommy Nguyen",
       "added_term": "FA25",
       "confidence": "confirmed"
+    },
+    {
+      "name": "Zihan Liu",
+      "big": "Deric Chau",
+      "added_term": "SP25",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     }
   ]
 }

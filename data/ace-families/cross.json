@@ -10,10 +10,6 @@
       "big": null
     },
     {
-      "name": "Catherine Hoang",
-      "big": null
-    },
-    {
       "name": "Daniel Truong",
       "big": null
     },
@@ -22,28 +18,73 @@
       "big": null
     },
     {
-      "name": "Fatima Dong",
+      "name": "Angelina Phan",
       "big": null
+    },
+    {
+      "name": "Wilson Nguyen",
+      "big": null
+    },
+    {
+      "name": "Alex Nguyen",
+      "big": null
+    },
+    {
+      "name": "Fatima Dong",
+      "big": "Angelina Phan",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Van Nguyen",
+      "big": "Fatima Dong",
+      "added_term": "FA22",
+      "confidence": "inferred-medium"
+    },
+    {
+      "name": "Kira M Nguyen",
+      "big": "Van Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Catherine Hoang",
+      "big": "Kira M Nguyen",
+      "added_term": "FA24",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Catherine M Hoang\""
     },
     {
       "name": "Harrison Nguyen",
-      "big": null
+      "big": "Angelina Phan",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     },
     {
       "name": "Preston Shin",
-      "big": null
+      "big": "Elwood Bui",
+      "added_term": "FA24",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Preston J Shin\""
     },
     {
       "name": "Trinity Bui",
-      "big": null
+      "big": "Wilson Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     },
     {
       "name": "Tyana T Lai",
-      "big": null
+      "big": "Van Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Tyana Lai\""
     },
     {
       "name": "Vy Do (Vicky)",
-      "big": null
+      "big": "Alex Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     },
     {
       "name": "Patrick Vo",
@@ -86,18 +127,6 @@
       "big": "Daniel Truong",
       "added_term": "FA21",
       "confidence": "inferred-high"
-    },
-    {
-      "name": "Preston J Shin",
-      "big": "Elwood Bui",
-      "added_term": "FA24",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Van Nguyen",
-      "big": "Fatima Dong",
-      "added_term": "FA22",
-      "confidence": "inferred-medium"
     },
     {
       "name": "Kayla G. Huynh",
@@ -202,18 +231,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Tyana Lai",
-      "big": "Van Nguyen",
-      "added_term": "FA23",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Kira M Nguyen",
-      "big": "Van Nguyen",
-      "added_term": "FA23",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Angeni Nguyen",
       "big": "Kayla G. Huynh",
       "added_term": "FA23",
@@ -265,12 +282,6 @@
       "name": "Paulina Nguyen",
       "big": "Paul Hoang",
       "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Catherine M Hoang",
-      "big": "Kira M Nguyen",
-      "added_term": "FA24",
       "confidence": "confirmed"
     },
     {
