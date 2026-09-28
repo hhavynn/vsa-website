@@ -2,15 +2,7 @@
   "family": "Down",
   "members": [
     {
-      "name": "Arianna Phan",
-      "big": null
-    },
-    {
       "name": "Danielle Nghiem",
-      "big": null
-    },
-    {
-      "name": "Giale Le",
       "big": null
     },
     {
@@ -18,8 +10,31 @@
       "big": null
     },
     {
-      "name": "Larry Nguyen",
+      "name": "Tram Le",
       "big": null
+    },
+    {
+      "name": "Elizabeth Hoang",
+      "big": null
+    },
+    {
+      "name": "Larry Nguyen",
+      "big": "Elizabeth Hoang",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Arianna Phan",
+      "big": "Larry Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Arianna Pham\""
+    },
+    {
+      "name": "Giale Le",
+      "big": "Tram Le",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     },
     {
       "name": "Camryn Le",
@@ -115,12 +130,6 @@
       "name": "Kevin Huang",
       "big": "Kimberly Sisouk",
       "added_term": "FA24",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Arianna Pham",
-      "big": "Larry Nguyen",
-      "added_term": "FA23",
       "confidence": "confirmed"
     },
     {

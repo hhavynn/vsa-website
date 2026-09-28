@@ -158,6 +158,20 @@
       "big": "Codie Yeung",
       "added_term": "FA25",
       "confidence": "confirmed"
+    },
+    {
+      "name": "Kenny Le",
+      "big": "Codie Yeung",
+      "added_term": "SP25",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Patrick Woo",
+      "big": "Codie Yeung",
+      "added_term": "SP25",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     }
   ]
 }

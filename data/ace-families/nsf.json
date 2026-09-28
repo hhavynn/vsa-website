@@ -2,52 +2,165 @@
   "family": "NSF",
   "members": [
     {
-      "name": "Aidan Nguyen-Tran",
-      "big": null
-    },
-    {
-      "name": "Darren Nguyen",
-      "big": null
-    },
-    {
-      "name": "Edward B Vo",
-      "big": null
-    },
-    {
-      "name": "Emily Dinh",
-      "big": null
-    },
-    {
-      "name": "HenryPV Nguyen",
-      "big": null
-    },
-    {
-      "name": "Katrina Dinh",
-      "big": null
-    },
-    {
-      "name": "Kim D. Tran",
-      "big": null
-    },
-    {
-      "name": "Mailan Doan",
-      "big": null
-    },
-    {
-      "name": "Paige Kwan",
-      "big": null
-    },
-    {
       "name": "Talia Nguyen",
-      "big": null
-    },
-    {
-      "name": "Tracy T Vu",
       "big": null
     },
     {
       "name": "Wilson Zhang",
       "big": null
+    },
+    {
+      "name": "Vivian Dang",
+      "big": null
+    },
+    {
+      "name": "Steven Nguyen",
+      "big": null
+    },
+    {
+      "name": "Leilani Ma",
+      "big": null
+    },
+    {
+      "name": "My Nguyen",
+      "big": null
+    },
+    {
+      "name": "Caesar Nguyen",
+      "big": "Talia Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Kathy Wang",
+      "big": "Caesar Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jonathan Kwok",
+      "big": "Kathy Wang",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Quang Do",
+      "big": "Jonathan Kwok",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Stephanie Nguyen",
+      "big": "Quang Do",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jacqueline Nguyen",
+      "big": "Stephanie Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jamie Doan",
+      "big": "Jacqueline Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Joseph Luu",
+      "big": "Jamie Doan",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Kim D. Tran",
+      "big": "Joseph Luu",
+      "added_term": "FA22",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Kim Tran\""
+    },
+    {
+      "name": "Tracy T Vu",
+      "big": "Kim D. Tran",
+      "added_term": "FA23",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Tracy Vu\""
+    },
+    {
+      "name": "Aidan Nguyen-Tran",
+      "big": "Tracy T Vu",
+      "added_term": "FA24",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Aidan C Nguyen\""
+    },
+    {
+      "name": "Darren Nguyen",
+      "big": "Vivian Dang",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Edward B Vo",
+      "big": "Vivian Dang",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Emily Dinh",
+      "big": "Steven Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Tina Cao",
+      "big": "Stephanie Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Sam Do",
+      "big": "Tina Cao",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "HenryPV Nguyen",
+      "big": "Sam Do",
+      "added_term": "FA21",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Henry Nguyen\""
+    },
+    {
+      "name": "Eleanor Nguyen",
+      "big": "Leilani Ma",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Katrina Dinh",
+      "big": "Eleanor Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Mailan Doan",
+      "big": "Emily Dinh",
+      "added_term": "FA23",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28: same person as \"Mailan N Doan\""
+    },
+    {
+      "name": "Xuan-Mai Nguyen",
+      "big": "My Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
+    },
+    {
+      "name": "Paige Kwan",
+      "big": "Xuan-Mai Nguyen",
+      "confidence": "confirmed",
+      "notes": "Owner lineage correction, 2026-09-28"
     },
     {
       "name": "Vi (Alice) Anh Pham",
@@ -92,12 +205,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Mailan N Doan",
-      "big": "Emily Dinh",
-      "added_term": "FA23",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Julie Trinh",
       "big": "HenryPV Nguyen",
       "added_term": "FA23",
@@ -106,12 +213,6 @@
     {
       "name": "Mindy T Tran",
       "big": "Katrina Dinh",
-      "added_term": "FA23",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Tracy Vu",
-      "big": "Kim D. Tran",
       "added_term": "FA23",
       "confidence": "confirmed"
     },
@@ -140,12 +241,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Caesar Nguyen",
-      "big": "Talia Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Alyssa Nott",
       "big": "Tracy T Vu",
       "added_term": "FA24",
@@ -153,12 +248,6 @@
     },
     {
       "name": "Ai E Phan",
-      "big": "Tracy T Vu",
-      "added_term": "FA24",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Aidan C Nguyen",
       "big": "Tracy T Vu",
       "added_term": "FA24",
       "confidence": "confirmed"
@@ -260,12 +349,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Kathy Wang",
-      "big": "Caesar Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Sarah Bui",
       "big": "Alyssa Nott",
       "added_term": "FA25",
@@ -326,12 +409,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Jonathan Kwok",
-      "big": "Kathy Wang",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Sidney Trinh",
       "big": "Adrian Nguyen",
       "added_term": "legacy",
@@ -370,12 +447,6 @@
     {
       "name": "Duyen Dang",
       "big": "Danthanh Le",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Quang Do",
-      "big": "Jonathan Kwok",
       "added_term": "legacy",
       "confidence": "confirmed"
     },
@@ -431,12 +502,6 @@
     {
       "name": "Leroy Pham",
       "big": "Vy Huynh",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Stephanie Nguyen",
-      "big": "Quang Do",
       "added_term": "legacy",
       "confidence": "confirmed"
     },
@@ -505,18 +570,6 @@
       "confidence": "inferred-high"
     },
     {
-      "name": "Jacqueline Nguyen",
-      "big": "Stephanie Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Tina Cao",
-      "big": "Stephanie Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Vanessa Nguyen",
       "big": "Heidi Tran",
       "added_term": "legacy",
@@ -571,20 +624,8 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Jamie Doan",
-      "big": "Jacqueline Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
       "name": "Ly Nguyen",
       "big": "Jacqueline Nguyen",
-      "added_term": "legacy",
-      "confidence": "confirmed"
-    },
-    {
-      "name": "Sam Do",
-      "big": "Tina Cao",
       "added_term": "legacy",
       "confidence": "confirmed"
     },
@@ -637,12 +678,6 @@
       "confidence": "inferred-high"
     },
     {
-      "name": "Joseph Luu",
-      "big": "Jamie Doan",
-      "added_term": "FA21",
-      "confidence": "inferred-high"
-    },
-    {
       "name": "Megan L Estanol",
       "big": "Jamie Doan",
       "added_term": "FA22",
@@ -657,12 +692,6 @@
     {
       "name": "Julie Nguyen",
       "big": "Ly Nguyen",
-      "added_term": "FA21",
-      "confidence": "inferred-high"
-    },
-    {
-      "name": "Henry Nguyen",
-      "big": "Sam Do",
       "added_term": "FA21",
       "confidence": "inferred-high"
     },
@@ -715,12 +744,6 @@
       "confidence": "confirmed"
     },
     {
-      "name": "Kim Tran",
-      "big": "Joseph Luu",
-      "added_term": "FA22",
-      "confidence": "inferred-high"
-    },
-    {
       "name": "Jenny Nguyen",
       "id_hint": "jenny-nguyen-fa22",
       "big": "Joseph Luu",
@@ -741,13 +764,13 @@
     },
     {
       "name": "Charlie-Bao Tran",
-      "big": "Henry Nguyen",
+      "big": "HenryPV Nguyen",
       "added_term": "FA22",
       "confidence": "inferred-medium"
     },
     {
       "name": "Vickie Nguyen",
-      "big": "Henry Nguyen",
+      "big": "HenryPV Nguyen",
       "added_term": "FA22",
       "confidence": "inferred-medium"
     },
