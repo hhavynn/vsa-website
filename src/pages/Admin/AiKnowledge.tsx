@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { toUserMessage } from '../../data/errors';
 import {
   AI_KNOWLEDGE_CONFIDENCE_LEVELS,
   AI_KNOWLEDGE_FRESHNESS_LEVELS,
@@ -188,7 +189,8 @@ export default function AdminAiKnowledge() {
         }
       } catch (error) {
         if (!mounted) return;
-        setErrorText(error instanceof Error ? error.message : 'Failed to load Ask VSA knowledge snippets.');
+        console.error(error);
+        setErrorText(toUserMessage(error, 'Failed to load Ask VSA knowledge snippets.'));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -309,7 +311,8 @@ export default function AdminAiKnowledge() {
       setForm(toFormState(saved));
       setSuccessText(selectedSnippet ? 'Knowledge snippet saved.' : 'Knowledge snippet created.');
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to save Ask VSA knowledge snippet.');
+      console.error(error);
+      setErrorText(toUserMessage(error, 'Failed to save Ask VSA knowledge snippet.'));
     } finally {
       setSaving(false);
     }
@@ -328,7 +331,8 @@ export default function AdminAiKnowledge() {
       setForm(toFormState(updated));
       setSuccessText(isActive ? 'Knowledge snippet reactivated.' : 'Knowledge snippet deactivated.');
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to update Ask VSA knowledge status.');
+      console.error(error);
+      setErrorText(toUserMessage(error, 'Failed to update Ask VSA knowledge status.'));
     } finally {
       setSaving(false);
     }

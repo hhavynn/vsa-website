@@ -8,6 +8,7 @@ import {
   MemberMatchOption,
 } from '../../../data/repos/photoRequests';
 import { Label } from '../../ui/Label';
+import { toUserMessage } from '../../../data/errors';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -35,7 +36,8 @@ export default function PhotoRequestsTab() {
     try {
       setRequests(await photoRequestsRepository.listPhotoRequests());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load photo requests.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to load photo requests.'));
     } finally {
       setLoading(false);
     }
@@ -131,7 +133,8 @@ function RequestCard({
     try {
       setPreviewUrl(await photoRequestsRepository.getPendingPreviewUrl(request.storage_path_pending));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load preview.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to load preview.'));
     }
   }
 
@@ -156,7 +159,8 @@ function RequestCard({
       toast.success('Photo approved and published.');
       onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to approve.'));
     } finally {
       setBusy(false);
     }
@@ -169,7 +173,8 @@ function RequestCard({
       toast.success('Photo request rejected. Pending file deleted.');
       onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to reject.'));
     } finally {
       setBusy(false);
     }
@@ -183,7 +188,8 @@ function RequestCard({
       toast.success('Approved photo removed.');
       onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to remove.'));
     } finally {
       setBusy(false);
     }
@@ -197,7 +203,8 @@ function RequestCard({
     try {
       setEvents(await photoRequestsRepository.listRequestEvents(request.id));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load audit trail.');
+      console.error(error);
+      toast.error(toUserMessage(error, 'Failed to load audit trail.'));
     }
   }
 

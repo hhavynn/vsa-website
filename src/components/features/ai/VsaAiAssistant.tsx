@@ -335,7 +335,8 @@ export function VsaAiAssistant() {
 
       setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
     } catch (error) {
-      const fallback = error instanceof Error ? error.message : FALLBACK_ASK_VSA.message;
+      console.error('Ask VSA request failed:', error);
+      const fallback = FALLBACK_ASK_VSA.message;
       const assistantMessage: ChatMessage = {
         id: createMessageId(),
         role: 'assistant',

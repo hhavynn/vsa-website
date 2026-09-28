@@ -203,6 +203,9 @@ export function toUserMessage(error: unknown, fallback: string): string {
   if (error instanceof DatabaseError) {
     if (error.code === 'P0001' && error.message) return error.message;
     if (error.code === '42501') return "You don't have permission to do that.";
+    if (error.code === '23505') return 'That already exists.';
+    if (error.code === '23503') return 'That refers to something that no longer exists. Refresh and try again.';
+    if (error.code === '23502') return 'A required field is missing.';
   }
   return fallback;
 }

@@ -238,6 +238,13 @@ describe('toUserMessage', () => {
     expect(toUserMessage(new DatabaseError('Insufficient permissions', '42501'), FALLBACK)).toMatch(/permission/);
   });
 
+  it('maps constraint violations to specific messages without naming the constraint', () => {
+    const dup = normalizeSupabaseError({ message: 'duplicate key value violates unique constraint "ace_families_name_key"', code: '23505' });
+    expect(toUserMessage(dup, FALLBACK)).toBe('That already exists.');
+    expect(toUserMessage(new DatabaseError('x', '23503'), FALLBACK)).toMatch(/no longer exists/);
+    expect(toUserMessage(new DatabaseError('x', '23502'), FALLBACK)).toMatch(/required field/);
+  });
+
   it('uses the fallback for plain errors and non-errors', () => {
     expect(toUserMessage(new Error('relation "public.x" does not exist'), FALLBACK)).toBe(FALLBACK);
     expect(toUserMessage('boom', FALLBACK)).toBe(FALLBACK);
