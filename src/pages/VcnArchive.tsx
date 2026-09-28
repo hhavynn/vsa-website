@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { PageLoader } from '../components/common/PageLoader';
 import { PageError } from '../components/common/PageError';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
@@ -176,19 +177,12 @@ export function VCNArchive() {
       {/* Degraded mode already handled above with full page fallback */}
 
       <div className="program-app">
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">Poster Archive</span>
-            <h1 className="program-title">
-              VCN <span className="program-title-script">Archive</span>
-            </h1>
-            <p className="program-hero-meta">
-              Past productions, preserved through official videos, albums, and production notes.
-            </p>
-          </div>
-          <div className="program-watermark">archive</div>
-        </section>
+        <EditorialHero
+          eyebrow="Poster Archive"
+          title={<>VCN <EditorialHeroScript>Archive</EditorialHeroScript></>}
+          meta="Past productions, preserved through official videos, albums, and production notes."
+          watermark="archive"
+        />
 
         <section className="program-section">
           <div className="program-section-inner">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 
 const highlights = [
   { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances, from traditional Vietnamese dance to contemporary choreography.' },
@@ -34,27 +35,22 @@ export function VCN() {
       <PageTitle title="Vietnamese Culture Night" />
 
       <div className="program-app">
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">Program Booklet</span>
-            <h1 className="program-title">
-              Vietnamese Culture <span className="program-title-script">Night</span>
-            </h1>
-            <p className="program-hero-meta">
-              VSA at UCSD’s annual culture show, built by students through acting, dance, and behind-the-scenes production.
-            </p>
-            <div className="program-hero-actions">
+        <EditorialHero
+          eyebrow="Program Booklet"
+          title={<>Vietnamese Culture <EditorialHeroScript>Night</EditorialHeroScript></>}
+          meta="VSA at UCSD’s annual culture show, built by students through acting, dance, and behind-the-scenes production."
+          watermark="vcn"
+          actions={
+            <>
               <Link to="/vcn/current" className="vsa-btn-primary font-sans text-sm font-medium">
                 This Year's Show →
               </Link>
               <Link to="/vcn/archive" className="vsa-btn-ghost font-sans text-sm">
                 Past Productions
               </Link>
-            </div>
-          </div>
-          <div className="program-watermark">vcn</div>
-        </section>
+            </>
+          }
+        />
 
         <section className="program-section">
           <div className="program-section-inner">

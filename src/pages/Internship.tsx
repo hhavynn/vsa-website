@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
@@ -122,26 +123,17 @@ export function Internship() {
       <PageTitle title="Intern Program" />
 
       <div className="program-app">
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">Leadership Cohort</span>
-            <h1 className="program-title">
-              Intern <span className="program-title-script">Program</span>
-            </h1>
-            <p className="program-hero-meta">
-              A year-long leadership class for students who want to learn how VSA runs, build community, and grow into future cabinet leaders.
-            </p>
-            <div className="program-hero-actions">
-              {cycleContent && statusLabel && cycleContent.status !== 'hidden' && (
-                <span className="scrapbook-sticker scrapbook-sticker-teal">
-                  {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="program-watermark">cohort</div>
-        </section>
+        <EditorialHero
+          eyebrow="Leadership Cohort"
+          title={<>Intern <EditorialHeroScript>Program</EditorialHeroScript></>}
+          meta="A year-long leadership class for students who want to learn how VSA runs, build community, and grow into future cabinet leaders."
+          watermark="cohort"
+          actions={cycleContent && statusLabel && cycleContent.status !== 'hidden' ? (
+            <span className="scrapbook-sticker scrapbook-sticker-teal">
+              {statusLabel}{cycleContent.title ? ` · ${cycleContent.title}` : ''}
+            </span>
+          ) : undefined}
+        />
 
         <section className="program-section">
           <div className="program-section-inner program-section-narrow">

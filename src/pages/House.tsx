@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
@@ -659,22 +660,13 @@ export function House() {
       <>
         <PageTitle title={`House Program ${activeYearLabel}`} />
         <div className="program-app">
-          <section className="program-hero">
-            <div className="program-hero-grain" />
-            <div className="program-hero-inner">
-              <span className="program-hero-kicker">Not announced yet</span>
-              <h1 className="program-title">
-                House <span className="program-title-script">{activeYearLabel}</span>
-              </h1>
-              <p className="program-hero-meta">
-                {activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.
-              </p>
-              <div className="program-hero-actions">
-                <span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>
-              </div>
-            </div>
-            <div className="program-watermark">houses</div>
-          </section>
+          <EditorialHero
+            eyebrow="Not announced yet"
+            title={<>House <EditorialHeroScript>{activeYearLabel}</EditorialHeroScript></>}
+            meta={`${activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.`}
+            watermark="houses"
+            actions={<span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>}
+          />
 
           {/* Year selector */}
           <div className="program-section py-4">
@@ -718,21 +710,15 @@ export function House() {
       <div className="program-app">
 
         {/* ── Hero ── */}
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">
-              {isArchive ? `Archived / ${activeYearLabel}` : 'House Board'}
-            </span>
-            <h1 className="program-title">
-              House <span className="program-title-script">{isArchive ? 'Archive' : 'Program'}</span>
-            </h1>
-            <p className="program-hero-meta">
-              {isArchive 
-                ? `Exploring the memories, standings, and houses from the ${activeYearLabel} school year.`
-                : 'Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.'}
-            </p>
-            <div className="program-hero-actions">
+        <EditorialHero
+          eyebrow={isArchive ? `Archived / ${activeYearLabel}` : 'House Board'}
+          title={<>House <EditorialHeroScript>{isArchive ? 'Archive' : 'Program'}</EditorialHeroScript></>}
+          meta={isArchive
+            ? `Exploring the memories, standings, and houses from the ${activeYearLabel} school year.`
+            : 'Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.'}
+          watermark="houses"
+          actions={
+            <>
               {isArchive && (
                 <Link to="/house" className="scrapbook-sticker scrapbook-sticker-gold">
                   ← Back to Current Year
@@ -746,10 +732,9 @@ export function House() {
                   {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
                 </span>
               )}
-            </div>
-          </div>
-          <div className="program-watermark">houses</div>
-        </section>
+            </>
+          }
+        />
 
         {/* ── Year Selector ── */}
         <div className="program-section py-4">
