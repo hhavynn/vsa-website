@@ -12,9 +12,9 @@ plus the exact member, link and root counts below.
 | `underwater.json` | Underwater | 104 | 99 | 5 | 75 / 24 |
 | `down.json` | Down | 139 | 135 | 4 | 121 / 14 |
 | `moon.json` | Moon | 30 | 25 | 5 | 25 / 0 |
-| `bang-mi.json` | Bang Mi | 54 | 51 | 3 | 43 / 8 |
+| `bang-mi.json` | Bang Mi | 52 | 49 | 3 | 43 / 6 |
 | `nsf.json` | NSF | 145 | 139 | 6 | 114 / 25 |
-| `cross.json` | Cross | 82 | 75 | 7 | 61 / 14 |
+| `cross.json` | Cross | 81 | 75 | 6 | 61 / 14 |
 | `dead-attractive-af-aaf.json` | Attractive AF (AAF), graveyard | 37 | 34 | 3 | 18 / 16 |
 
 Sweatpants and Sunshine are already in the database and are not included.
@@ -75,26 +75,21 @@ applied to the files and marked in each member's `notes`. Identities are joined
 | Underwater | Tiffany Lu → Tiffany Luu; Spencer → Spencer Ho; Anh Nguyen → Anh T Nguyen; Phuong Nguyen → Grace Phuong Nguyen | Jenny Nguyen → Kelly Nguyen; Jason Le → Grace Nguyen → Anthony Dang → Jennifer Ho; Grace Phuong Nguyen → Amy Q. Tran | Jason Le; Amy Q. Tran's older littles Clarkson Phan, Eric Pham, Ashley Nguyen (a different person from NSF's legacy Ashley Nguyen) | 12 → 5 |
 | Down | Arianna Pham → Arianna Phan (already fixed live) | Larry Nguyen → Arianna Phan; Tram Le → Giale Le; Elizabeth Hoang → Larry Nguyen | Tram Le, Elizabeth Hoang | 5 → 4 |
 | NSF | Kim Tran → Kim D. Tran; Tracy Vu → Tracy T Vu; Aidan C Nguyen → Aidan Nguyen-Tran; Mailan N Doan → Mailan Doan; Sam Do's Henry Nguyen → HenryPV Nguyen | Jamie Doan → Joseph Luu → Kim D. Tran → Tracy T Vu → Aidan Nguyen-Tran now one chain; Vivian Dang → Darren Nguyen, Edward B Vo; Steven Nguyen → Emily Dinh; Leilani Ma → Eleanor Nguyen → Katrina Dinh; My Nguyen → Xuan-Mai Nguyen → Paige Kwan | Vivian Dang, Steven Nguyen, Leilani Ma, Eleanor Nguyen, My Nguyen, Xuan-Mai Nguyen | 12 → 6 |
-| Cross | Tyana Lai → Tyana T Lai; Catherine M Hoang → Catherine Hoang; Preston J Shin → Preston Shin | Angelina Phan → Fatima Dong, Harrison Nguyen; Wilson Nguyen → Trinity Bui; Alex Nguyen → Vy Do (Vicky) | Angelina Phan, Wilson Nguyen, Alex Nguyen | 11 → 7 |
-| Bang Mi | — (the SP25 sheet's "Deric Chu" is Deric Chau) | Deric Chau → Zihan Liu (SP25) | Zihan Liu | 3 → 3 |
+| Cross | Tyana Lai → Tyana T Lai; Catherine M Hoang → Catherine Hoang; Preston J Shin → Preston Shin; Alexandre Nguyen → Alex Nguyen | Angelina Phan → Fatima Dong, Harrison Nguyen; Wilson Nguyen → Trinity Bui; Jeffrey Ha → Alex Nguyen → Vy Do (Vicky) | Angelina Phan, Wilson Nguyen | 11 → 6 |
+| Bang Mi | — (the SP25 sheet's "Deric Chu" is Deric Chau) | Deric Chau → Zihan Liu (SP25); removed the inferred Tracy Nguyen → Helen Tran → Tien Vo branch, which is Sweatpants' Helen Tran → Tien Vo | Zihan Liu | 3 → 3 |
 | Moon | — | Codie Yeung → Kenny Le, Patrick Woo (both SP25, siblings) | Kenny Le, Patrick Woo | 5 (intentional FA23 roots) |
 
 Each alias was a leaf whose term leads straight into the kept person's own
 littles (e.g. Kim Tran FA22 → Kim D. Tran's FA23 littles), so every join keeps
 time moving forward. Links with no known term have no `added_term`.
 
+Two joins were confirmed after a second review: Cross's legacy **Alexandre
+Nguyen** is Vy Do (Vicky)'s big **Alex Nguyen**, and Bang Mi's inferred
+**Helen Tran → Tien Vo** is Sweatpants' Helen Tran → Tien Vo (already in the
+Sweatpants tree), so it was removed from Bang Mi.
+
 ### Left open (needs owner confirmation)
 
-- **Cross — Alexandre Nguyen vs Alex Nguyen.** Alexandre is a legacy little of
-  Jeffrey Ha with no littles; Alex Nguyen is Vy Do (Vicky)'s big. The
-  timeline fits and nothing conflicts, but only the name links them, so they
-  stay separate: Alex Nguyen is a root. If confirmed, set Alex Nguyen's big to
-  Jeffrey Ha and remove Alexandre (Cross drops to 6 roots).
-- **Bang Mi — Helen Tran → Tien Vo.** Bang Mi's Helen Tran (big Tracy Nguyen,
-  FA21) and her little Tien Vo (FA22) are *inferred* links. Sweatpants also has
-  Helen Tran → Tien Vo, and there Tien Vo has three littles, so Bang Mi's pair
-  is probably the Sweatpants one. The two Helens have different bigs (Tracy
-  Nguyen vs Linh Nghiem), so they are not merged.
 - **Bang Mi — FA23 same-term rows.** The FA23 official sheet lists Thomas T
   Nguyen and Tiffany T Thai as Vivian Chau's littles *and* as bigs of FA23
   littles (Nhi H Trinh, Tina Le, Mina N. Ho, Amy Nguyen). The links are
