@@ -1,3 +1,7 @@
+// Points system: CHECK-IN (event_attendance + user_points, written by the
+// check_in_to_event RPC and admin manual check-in) — not the public leaderboard,
+// which never reads these tables. See docs/leaderboard-system.md (top).
+
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling, ValidationError } from '../errors';
 

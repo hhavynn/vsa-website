@@ -1,3 +1,6 @@
+// Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
+// system. See the two-systems table at the top of docs/leaderboard-system.md.
+
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
