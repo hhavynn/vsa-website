@@ -58,20 +58,13 @@ describe('application link helpers', () => {
   });
 
   describe('combineLocalDateTime', () => {
-    it('uses the provided time when present', () => {
-      const iso = combineLocalDateTime('2026-06-10', '14:30', '23:59');
-      expect(iso).not.toBeNull();
-      const parsed = new Date(iso!);
-      expect(parsed.getHours()).toBe(14);
-      expect(parsed.getMinutes()).toBe(30);
+    it('reads the provided time as San Diego wall-clock time', () => {
+      // June is PDT (UTC-7).
+      expect(combineLocalDateTime('2026-06-10', '14:30', '23:59')).toBe('2026-06-10T21:30:00.000Z');
     });
 
     it('falls back to the fallback time when the time is blank', () => {
-      const iso = combineLocalDateTime('2026-06-10', '', '23:59');
-      expect(iso).not.toBeNull();
-      const parsed = new Date(iso!);
-      expect(parsed.getHours()).toBe(23);
-      expect(parsed.getMinutes()).toBe(59);
+      expect(combineLocalDateTime('2026-06-10', '', '23:59')).toBe('2026-06-11T06:59:00.000Z');
     });
 
     it('returns null when the date is empty', () => {
