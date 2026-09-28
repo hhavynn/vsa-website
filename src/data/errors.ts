@@ -182,3 +182,27 @@ export function isKnownError(error: unknown): error is DatabaseError | Validatio
          error instanceof NetworkError ||
          error instanceof NotFoundError;
 }
+
+/**
+ * Turns a caught error into text that is safe to show a visitor.
+ *
+ * Since `withErrorHandling` started preserving real Supabase errors (#410), a
+ * raw `error.message` can name tables, columns, constraints and policies. Only
+ * messages this app authored for users pass through: `ValidationError`s thrown
+ * in the repository layer, and `RAISE EXCEPTION` text from our own database
+ * functions (SQLSTATE P0001). Everything else maps to a class-level message or
+ * the caller's fallback. Log the original error for debugging.
+ */
+export function toUserMessage(error: unknown, fallback: string): string {
+  if (error instanceof ValidationError) return error.message;
+  if (error instanceof NetworkError) {
+    return "Couldn't reach the server. Check your connection and try again.";
+  }
+  if (error instanceof AuthenticationError) return 'Please sign in and try again.';
+  if (error instanceof AuthorizationError) return "You don't have permission to do that.";
+  if (error instanceof DatabaseError) {
+    if (error.code === 'P0001' && error.message) return error.message;
+    if (error.code === '42501') return "You don't have permission to do that.";
+  }
+  return fallback;
+}

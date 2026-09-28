@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Label } from '../../ui/Label';
 import { MemberPhotoRequestFormSchema } from '../../../schemas';
 import { photoRequestsRepository } from '../../../data/repos/photoRequests';
+import { toUserMessage } from '../../../data/errors';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -88,8 +89,8 @@ export function PhotoRequestSection({
       setConsent(false);
       setForm(f => ({ ...f, note: '' }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to submit photo request.';
-      setFormError(message);
+      console.error('Error submitting photo request:', error);
+      setFormError(toUserMessage(error, 'Failed to submit photo request. Please try again.'));
     } finally {
       setSubmitting(false);
     }
