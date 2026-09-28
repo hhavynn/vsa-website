@@ -21,6 +21,20 @@ export class AcademicTermsRepository {
     }, 'Failed to fetch academic terms');
   }
 
+  /** The single active term (a unique partial index guarantees at most one), or null. */
+  async getActiveTerm(): Promise<AcademicTerm | null> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('academic_terms')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as AcademicTerm | null) ?? null;
+    }, 'Failed to fetch the active academic term');
+  }
+
   async ensureTermForDate(value: string | Date): Promise<AcademicTerm | null> {
     return withErrorHandling(async () => {
       const meta = getAcademicTermMeta(value);

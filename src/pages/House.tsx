@@ -527,7 +527,10 @@ export function House() {
     enabled: isArchive && activeYear !== null,
   });
 
-  const { assets: houseAssets } = usePublishedHouseAssets(activeYear);
+  const { assets: houseAssets, loading: houseAssetsLoading, error: houseAssetsError } = usePublishedHouseAssets(activeYear);
+  // An empty list while loading (or after a failed request) is not evidence
+  // that the Houses are unannounced; only say so once the query has succeeded.
+  const houseAssetsSettled = !houseAssetsLoading && !houseAssetsError;
   const houseAssetsByName = assetMapByHouse(houseAssets);
   const displayedHouses = isFutureYear
     ? []
@@ -629,7 +632,7 @@ export function House() {
   const summerBreak = isSummerBreak();
   const summerHouseMessage = getSummerBreakMessage('house');
 
-  const showSummerTransition = summerBreak && !isArchive && !isFutureYear && houseAssets.length === 0;
+  const showSummerTransition = summerBreak && !isArchive && !isFutureYear && houseAssetsSettled && houseAssets.length === 0;
 
   if (invalidYearSlug) {
     return (
@@ -813,7 +816,7 @@ export function House() {
             <div className="program-eyebrow">
               {isArchive ? `${activeYearLabel} Houses` : 'The Four Houses'}
             </div>
-            {displayedHouses.length === 0 && !isArchive && (
+            {displayedHouses.length === 0 && !isArchive && houseAssetsSettled && (
               <div className="scrapbook-empty mb-5 p-6 text-center">
                 <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
                   {activeYearLabel} Houses have not been announced yet
