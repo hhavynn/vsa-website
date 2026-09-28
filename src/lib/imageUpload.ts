@@ -1,3 +1,5 @@
+import { ValidationError } from '../data/errors';
+
 export type ImageUploadPreset =
   | 'avatar'
   | 'avatarThumbnail'
@@ -105,7 +107,9 @@ export async function prepareImageForUpload(file: File, preset: ImageUploadPrese
   };
 
   if (file.size > options.maxInputBytes) {
-    throw new Error(`Image is too large. Max upload size is ${Math.round(options.maxInputBytes / MB)} MB.`);
+    // A ValidationError, so toUserMessage() shows it verbatim: it's safe and
+    // actionable, unlike a generic "try again" for a file that will always fail.
+    throw new ValidationError(`Image is too large. Max upload size is ${Math.round(options.maxInputBytes / MB)} MB.`, 'file');
   }
 
   if (!isRasterImage(file)) {
