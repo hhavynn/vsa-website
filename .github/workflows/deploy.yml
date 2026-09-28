@@ -41,6 +41,11 @@ jobs:
       - name: Run tests
         run: CI=true npm test -- --coverage --watchAll=false
 
+      - name: Re-run date-boundary tests in other timezones
+        # Application windows and summer break are defined in San Diego time and
+        # must not shift for a runner or admin elsewhere (#274, #270).
+        run: npm run test:timezones
+
       - name: Build application
         run: npm run build
         env:

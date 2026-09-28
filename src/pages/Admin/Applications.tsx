@@ -466,7 +466,7 @@ export default function AdminApplications() {
               </div>
             </div>
             <p id="application-schedule-help" className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-              Open date can be in the past. Due time defaults to 11:59 PM unless you change it.
+              Dates and times are San Diego (Pacific) time, wherever you are editing from. Open date can be in the past. Due time defaults to 11:59 PM unless you change it.
             </p>
             <div>
               <label htmlFor="application-before-open-message" className={labelCls} style={{ color: 'var(--color-text3)' }}>Before-open message</label>

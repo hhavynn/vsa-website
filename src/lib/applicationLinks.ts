@@ -3,6 +3,9 @@
 // view; both must agree. Authority: AGENTS.md § "Domain-critical facts";
 // vsa-seasonal-operations § 2 (public_application_links view masking logic).
 import { ApplicationKey, ApplicationStatus } from '../types';
+import { losAngelesDateTimeToIso } from '../utils/losAngelesDate';
+
+const VSA_TIME_ZONE = 'America/Los_Angeles';
 
 // Ordered list of the application keys this MVP supports, with human-readable
 // labels for admin dropdowns and public display.
@@ -140,9 +143,14 @@ export function defaultDueDateTime(date: string | Date): Date {
 }
 
 /**
- * Combine a local 'YYYY-MM-DD' date and an optional 'HH:mm' time into an ISO
- * timestamp. When the time is missing, fallbackTime is used (e.g. '23:59' for a
- * due date, '00:00' for an open date). Returns null when the date is empty.
+ * Combine a 'YYYY-MM-DD' date and an optional 'HH:mm' time, both read as San
+ * Diego wall-clock time, into an ISO timestamp (#274). When the time is missing,
+ * fallbackTime is used (e.g. '23:59' for a due date, '00:00' for an open date).
+ * Returns null when the date is empty or malformed, so a bad input can never
+ * produce a window that opens.
+ *
+ * Interpreting the input in the admin's device timezone (the old behaviour)
+ * shifted every window by hours for anyone editing outside Pacific time.
  */
 export function combineLocalDateTime(
   date: string,
@@ -150,49 +158,60 @@ export function combineLocalDateTime(
   fallbackTime: string,
 ): string | null {
   if (!date) return null;
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
+  if (!dateMatch) return null;
+  const [, year, month, day] = dateMatch.map(Number);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (probe.getUTCFullYear() !== year || probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) {
+    return null;
+  }
 
-  const effectiveTime = time && time.trim().length > 0 ? time : fallbackTime;
-  const [hours, minutes] = effectiveTime.split(':').map((part) => Number(part));
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
-  if (!match) return null;
+  const effectiveTime = time && time.trim().length > 0 ? time.trim() : fallbackTime;
+  const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(effectiveTime);
+  if (!timeMatch) return null;
+  const hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  if (hours > 23 || minutes > 59) return null;
 
-  const [, year, month, day] = match;
-  const combined = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number.isNaN(hours) ? 0 : hours,
-    Number.isNaN(minutes) ? 0 : minutes,
-    0,
-    0,
-  );
-
-  if (Number.isNaN(combined.getTime())) return null;
-  return combined.toISOString();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return losAngelesDateTimeToIso(date.trim(), `${pad(hours)}:${pad(minutes)}`);
 }
 
-/** Split an ISO timestamp into local 'YYYY-MM-DD' and 'HH:mm' parts for inputs. */
+/** Split an ISO timestamp into San Diego 'YYYY-MM-DD' and 'HH:mm' parts for inputs. */
 export function splitLocalDateTime(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return { date: '', time: '' };
 
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const date = `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
-  const time = `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
-  return { date, time };
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: VSA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(parsed);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, time: `${get('hour')}:${get('minute')}` };
 }
 
-/** Friendly date/time for public display (no extra date library). */
+/**
+ * Friendly date/time for public display, always in San Diego time with the zone
+ * shown ("Oct 1, 2026, 11:59 PM PDT"), so a visitor elsewhere reads the real
+ * deadline rather than a silently converted one.
+ */
 export function formatApplicationDateTime(value: string | null | undefined): string {
   if (!value) return '';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: VSA_TIME_ZONE,
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZoneName: 'short',
   }).format(parsed);
 }
