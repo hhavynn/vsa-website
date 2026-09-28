@@ -70,6 +70,11 @@ describe('DST transitions do not move a boundary (#274)', () => {
     expect(combineLocalDateTime('2027-03-15', '00:00', '')).toBe('2027-03-15T07:00:00.000Z');
   });
 
+  it('times either side of the spring-forward gap still convert', () => {
+    expect(combineLocalDateTime('2027-03-14', '01:59', '')).toBe('2027-03-14T09:59:00.000Z');
+    expect(combineLocalDateTime('2027-03-14', '03:00', '')).toBe('2027-03-14T10:00:00.000Z');
+  });
+
   it('a midnight deadline on the DST-change day lands on that San Diego date', () => {
     const due = combineLocalDateTime('2026-11-01', '23:59', '')!;
     expect(splitLocalDateTime(due)).toEqual({ date: '2026-11-01', time: '23:59' });
@@ -98,6 +103,7 @@ describe('misconfiguration fails closed (#274)', () => {
     ['impossible day', '2026-02-30', '09:00'],
     ['hour out of range', '2026-10-01', '24:00'],
     ['garbage time', '2026-10-01', 'nine'],
+    ['a time skipped by the March DST change', '2027-03-14', '02:30'],
   ])('admin input with %s produces no timestamp', (_label, date, time) => {
     expect(combineLocalDateTime(date, time, '')).toBeNull();
   });
