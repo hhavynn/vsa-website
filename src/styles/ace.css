@@ -156,6 +156,17 @@
 .ace-app .ace-btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border-strong); }
 .ace-app .ace-btn-ghost:hover { background: var(--surface-2); color: var(--text); }
 
+/* ── Hero (shared EditorialHero, src/index.css) ─────────────── */
+/* The shared hero follows the global theme tokens; pin its palette roles
+   to ACE's own palette so the hero matches the rest of this page. */
+.ace-app .editorial-hero {
+  --eh-text: var(--text);
+  --eh-text-2: var(--text-2);
+  --eh-accent: var(--accent);
+  --eh-accent-strong: var(--accent-strong);
+  --eh-border: var(--border);
+}
+
 /* ── Roles list ──────────────────────────────────────────────── */
 .ace-app .ace-rolelist {
   border-radius: 8px; overflow: hidden;

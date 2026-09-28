@@ -855,21 +855,23 @@
 
   /* ── Editorial hero (src/components/common/EditorialHero.tsx) ──
      The ACE hero's visual system, shared by the program pages (ACE,
-     House, Intern, VCN + current/archive, Wild N' Culture). Values mirror the original
-     src/styles/ace.css hero exactly; the tokens are scoped here so the
-     hero renders identically inside or outside .ace-app. The section is
+     House, Intern, VCN + current/archive, Wild N' Culture). Text, accent
+     and border colors come from the global theme tokens; ACE re-points
+     them at its own page palette in src/styles/ace.css. The section is
      its own size container, so breakpoints track the hero's width. */
   .editorial-hero {
+    /* Palette roles follow the global theme tokens. */
+    --eh-text: var(--color-text);
+    --eh-text-2: var(--color-text2);
+    --eh-accent: var(--color-accent);
+    --eh-accent-strong: var(--color-accent-text);
+    --eh-border: var(--color-border);
+    /* Decorative washes with no global equivalent. */
     --eh-grad-a: #fde0d4;
     --eh-grad-b: #d2efec;
     --eh-grad-c: #f9f4ec;
     --eh-grid: rgba(20, 32, 40, 0.035);
     --eh-grid-2: rgba(20, 32, 40, 0.03);
-    --eh-border: rgba(196, 184, 168, 0.55);
-    --eh-text: #142028;
-    --eh-text-2: #4a6b68;
-    --eh-accent: #e8623a;
-    --eh-accent-strong: #a83a18;
     --eh-watermark: rgba(30, 136, 120, 0.07);
     --eh-grain-a: rgba(20, 32, 40, 0.18);
     --eh-grain-b: rgba(20, 32, 40, 0.12);
@@ -895,11 +897,6 @@
     --eh-grad-c: #0a1218;
     --eh-grid: rgba(228, 216, 200, 0.035);
     --eh-grid-2: rgba(228, 216, 200, 0.03);
-    --eh-border: #1a3038;
-    --eh-text: #e4d8c8;
-    --eh-text-2: #8eb0aa;
-    --eh-accent: #f07858;
-    --eh-accent-strong: #f29279;
     --eh-watermark: rgba(59, 189, 181, 0.06);
     --eh-grain-a: rgba(255, 255, 255, 0.06);
     --eh-grain-b: rgba(255, 255, 255, 0.04);
