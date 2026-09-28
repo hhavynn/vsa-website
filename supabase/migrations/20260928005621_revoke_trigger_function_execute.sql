@@ -1,7 +1,8 @@
 -- Revoke client EXECUTE on trigger functions, make #385's revokes replayable,
 -- and pin the remaining mutable search_paths.
 --
--- Closes #396. NOT YET APPLIED — apply manually after review.
+-- Closes #396. Applied to production 2026-09-28 (schema_migrations version
+-- 20260928005621; the filename matches) with owner approval.
 --
 -- ---------------------------------------------------------------------------
 -- WHY
