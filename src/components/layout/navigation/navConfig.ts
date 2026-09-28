@@ -1,3 +1,5 @@
+import { wrappedNavLabel } from '../../../data/wrappedEdition';
+
 // Single source of truth for site navigation, shared by the desktop Explore
 // panel, the mobile quick-dock, and the mobile drawer — replaces four
 // previously independent, hand-written destination lists.
@@ -26,7 +28,7 @@ export const GET_INVOLVED: NavLink[] = [
 ];
 
 export const EXPLORE_LINKS: NavLink[] = [
-  { path: '/#wrapped', label: "Wrapped '25–'26", emoji: '🎁' },
+  { path: '/#wrapped', label: wrappedNavLabel(), emoji: '🎁' },
   { path: '/gallery', label: 'Gallery', emoji: '📷' },
   { path: '/cabinet', label: 'Cabinet', emoji: '🗂️' },
   { path: '/uvsa-network', label: 'UVSA Network', emoji: '🌐' },
