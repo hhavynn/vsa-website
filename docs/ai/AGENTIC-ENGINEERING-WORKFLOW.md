@@ -74,6 +74,8 @@ Anything touching: **auth, RLS, grants, migrations, points calculation, attendan
 
 The protected-domain list and the annotated never-do list live in root `AGENTS.md` and `vsa-change-control`. Those are authoritative; this section only tells you how hard to work.
 
+**Points work is high-risk twice over:** there are two unreconciled points systems (leaderboard: `member_event_attendance`; check-in: `event_attendance` + `user_points`). Before touching either, read the table at the top of `docs/leaderboard-system.md`.
+
 ---
 
 ## 4. Skill router (load on demand — never all 16)

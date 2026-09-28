@@ -245,6 +245,7 @@ The canonical roster — every playbook with its edit/audit mode and one-line us
 - 2025–2026 Houses are Bowser, Donkey Kong, Boo, and Toad.
 - 2023–2024 Houses are drinks/treats, not designer Houses. Designer Houses belong to 2019–2020; Mario Houses belong only to 2025–2026.
 - Closed or future application URLs must not be exposed publicly.
+- **Two unreconciled points systems.** Public leaderboard, House standings and Find My Points read `member_event_attendance` (via the `member_yearly_points` family of views); signed-in check-in writes `event_attendance` + `user_points` through `check_in_to_event`. Never fix a leaderboard number by writing to the check-in tables. Canonical table: `docs/leaderboard-system.md`.
 - Application keys: `ace_application`, `house_fall`, `house_winter`, `house_spring`, `intern_application`, `cabinet_application`, `vcn_stage_ninja_interest`, `vcn_props_team_interest`, `wnc_team_form`.
 
 ---

@@ -1,3 +1,5 @@
+// Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
+// system. See the two-systems table at the top of docs/leaderboard-system.md.
 // Protected domain — leaderboard and points calculation. Do not modify attendance
 // import, points calculation, House membership, or leaderboard calculation logic
 // unless explicitly requested. Two coexisting points systems exist; a "simple fix"

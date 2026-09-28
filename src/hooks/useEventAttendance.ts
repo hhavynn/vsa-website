@@ -1,3 +1,6 @@
+// Points system: CHECK-IN (event_attendance + user_points, written only by the
+// check_in_to_event RPC) — not the public leaderboard, which never reads these
+// tables. See the two-systems table at the top of docs/leaderboard-system.md.
 // Sanctioned repo-layer deviation. The architecture rule is that all Supabase
 // access goes through src/data/repos/ — this hook is a deliberate exception because
 // it handles interactive check-in state that doesn't fit the standard repo pattern.

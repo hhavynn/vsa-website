@@ -1,3 +1,7 @@
+// Points system: CHECK-IN (event_attendance + user_points, written only by the
+// check_in_to_event RPC) — not the public leaderboard, which never reads these
+// tables. See the two-systems table at the top of docs/leaderboard-system.md.
+
 import { createContext, useContext, ReactNode } from 'react';
 import { usePoints } from '../hooks/usePoints';
 
