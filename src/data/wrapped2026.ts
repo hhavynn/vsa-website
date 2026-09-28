@@ -13,6 +13,8 @@
 //   - admin edits fun awards/copy, then previews + publishes
 // Keeping this config file per-year (wrapped2027.ts, …) keeps that path easy.
 
+import { CURRENT_WRAPPED_YEAR_LABEL } from './wrappedEdition';
+
 export interface WrappedAward {
   emoji: string;
   title: string;
@@ -27,7 +29,7 @@ export interface WrappedSignatureEvent {
 }
 
 export const WRAPPED_2026 = {
-  yearLabel: '2025–2026',
+  yearLabel: CURRENT_WRAPPED_YEAR_LABEL,
   academicYearStart: 2025,
   // Date-only window used for aggregate event counts.
   windowStart: '2025-07-01',

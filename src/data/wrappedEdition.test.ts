@@ -1,4 +1,7 @@
+import fs from 'fs';
+import path from 'path';
 import { CURRENT_WRAPPED_YEAR_LABEL, wrappedNavLabel } from './wrappedEdition';
+import { WRAPPED_2026 } from './wrapped2026';
 import { EXPLORE_LINKS } from '../components/layout/navigation/navConfig';
 
 describe('wrappedNavLabel (#263)', () => {
@@ -14,5 +17,16 @@ describe('wrappedNavLabel (#263)', () => {
   it('drives the nav entry from the published edition, not a literal', () => {
     const wrapped = EXPLORE_LINKS.find((link) => link.path === '/#wrapped');
     expect(wrapped?.label).toBe(wrappedNavLabel(CURRENT_WRAPPED_YEAR_LABEL));
+  });
+
+  it('the rendered recap and its config use the same edition label as the nav', () => {
+    expect(WRAPPED_2026.yearLabel).toBe(CURRENT_WRAPPED_YEAR_LABEL);
+    const card = fs.readFileSync(
+      path.resolve(__dirname, '../components/features/home/WrappedRecapCard.tsx'),
+      'utf8',
+    );
+    // A hardcoded academic-year range in the card could drift from the nav label.
+    expect(card.match(/\b20\d\d\s*[–-]\s*20\d\d\b/g) ?? []).toEqual([]);
+    expect(card).toContain('CURRENT_WRAPPED_YEAR_LABEL');
   });
 });
