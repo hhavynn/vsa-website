@@ -17,7 +17,7 @@ import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
-import { losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
+import { isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
@@ -292,6 +292,10 @@ export default function AdminEvents() {
       const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Combine date + start_time into a full local datetime for the date column.
       const startTime = newEvent.start_time || '00:00';
+      if (!isExistingLosAngelesWallClock(newEvent.date, startTime)) {
+        toast.error("That start time doesn't exist on this date (clocks spring forward). Pick another time.");
+        return;
+      }
       const isoDate = losAngelesDateTimeToIso(newEvent.date, startTime);
       const academicTermId = await resolveAcademicTermId(isoDate, newEvent.academic_term_id);
       const { data: createdEvent, error } = await supabase.from('events').insert([{
@@ -358,6 +362,10 @@ export default function AdminEvents() {
       // Rebuild date ISO from date-only + start_time (date input returns "YYYY-MM-DD").
       const dateOnly = formatDateForInput(selectedEvent.date, selectedEvent.start_time);
       const startTimePart = selectedEvent.start_time || formatStartTimeForInput(selectedEvent.date) || '00:00';
+      if (!isExistingLosAngelesWallClock(dateOnly, startTimePart)) {
+        toast.error("That start time doesn't exist on this date (clocks spring forward). Pick another time.");
+        return;
+      }
       const isoDate = losAngelesDateTimeToIso(dateOnly, startTimePart);
       const academicTermId = await resolveAcademicTermId(isoDate, selectedEvent.academic_term_id);
       const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;

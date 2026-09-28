@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from 'react-query';
 import { eventsRepository, type EventInterestAction } from '../../../data/repos/events';
 import { EventInterestCounts } from '../../../types';
 import toast from 'react-hot-toast';
@@ -15,12 +16,17 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
   const [counts, setCounts] = useState<EventInterestCounts | null>(initialCounts);
   const [userSignal, setUserSignal] = useState<'interested' | 'going' | null>(null);
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
+  // The same instance can be reused for a different event (e.g. /events'
+  // featured card when the type filter changes), so reset both the saved
+  // choice and the counts whenever the event changes.
   useEffect(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${eventId}`);
-    if (saved === 'interested' || saved === 'going') {
-      setUserSignal(saved as 'interested' | 'going');
-    }
+    setUserSignal(saved === 'interested' || saved === 'going' ? saved : null);
+    setCounts(initialCounts);
+    // initialCounts is intentionally read only when the event changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const handleSignal = async (signal: 'interested' | 'going') => {
@@ -50,6 +56,12 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
       const interestedRemoved = action === 'clear_interested' || action === 'switch_to_going';
       const goingAdded = action === 'going' || action === 'switch_to_going';
       const goingRemoved = action === 'clear_going' || action === 'switch_to_interested';
+
+      // Other cached copies of this event's counts (Home preview, /events,
+      // event detail) would otherwise show the old numbers on the next visit.
+      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries(['event', eventId]);
+      queryClient.invalidateQueries(['home', 'upcoming-events-section']);
 
       setCounts(prev => ({
         event_id: eventId,

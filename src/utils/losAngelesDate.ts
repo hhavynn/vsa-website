@@ -54,3 +54,22 @@ export function formatLosAngelesClock(instant: string | Date): string {
     minute: '2-digit',
   }).format(new Date(instant));
 }
+
+/**
+ * False for a San Diego wall-clock time that doesn't exist: the hour skipped
+ * when clocks spring forward (e.g. 2:30 AM on the March DST day). Converting
+ * such a time lands an hour off, so callers should reject it rather than store
+ * an instant that disagrees with the entered start time.
+ */
+export function isExistingLosAngelesWallClock(dateOnly: string, time: string = '00:00'): boolean {
+  const iso = losAngelesDateTimeToIso(dateOnly, time);
+  const [hour = '0', minute = '0'] = time.split(':');
+  const expected = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  const actual = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Los_Angeles',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(iso));
+  return getLosAngelesDateOnly(new Date(iso)) === dateOnly && actual === expected;
+}
