@@ -100,8 +100,9 @@ These checks cover:
 
 ### In CI
 
-`.github/workflows/rls-verify.yml` runs this script on every PR to `main`, on every push to `main`, and daily on a schedule, against production (the only Supabase project). The daily run matters most: past RLS regressions (#422, #423) came from policies created in the dashboard, which no PR would trigger.
+`.github/workflows/rls-verify.yml` runs this script on PRs to `main`, on every push to `main`, and daily on a schedule, against production (the only Supabase project). The daily run matters most: past RLS regressions (#422, #423) came from policies created in the dashboard, which no PR would trigger.
 
+- **Not every PR is checked.** It skips PRs from forks and from Dependabot, because neither receives repository secrets. For those, the check runs on the push to `main` after merge, and on the next daily run. A dependency or fork PR merged without a green `verify` has *not* had production RLS checked before merge.
 - It never sets `RLS_ALLOW_MUTATION_TESTS`, so only the read-only and non-destructive probes run.
 - The signed-in sections are skipped until the `RLS_TEST_*` repository secrets are configured.
 - A failing run names the table, column or RPC and the issue it guards. Treat it as a security incident: check `pg_policies` and grants in production before assuming the test is wrong.

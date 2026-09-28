@@ -92,8 +92,8 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy results to code scanning
-        # Fork PRs get a read-only token and can't upload; skip rather than fail.
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        # Runs for fork PRs too: code scanning accepts SARIF uploads from fork
+        # pull requests, so external contributions get dependency results.
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
