@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
+import { wrappedNavLabel } from '../../data/wrappedEdition';
 
 const socialLinks = [
   {
@@ -29,7 +30,7 @@ const footerGroups = [
       { label: 'Cabinet', to: '/cabinet' },
       { label: 'Gallery', to: '/gallery' },
       { label: 'Leaderboard', to: '/leaderboard' },
-      { label: "Wrapped '25–'26", to: '/#wrapped' },
+      { label: wrappedNavLabel(), to: '/#wrapped' },
       { label: 'Feedback', to: '/feedback' },
     ],
   },
