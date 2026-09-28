@@ -32,6 +32,20 @@ export function useCabinetRoles() {
   });
 }
 
+/**
+ * Admin editor read: no fallback. The curated fallback rows aren't stored
+ * anywhere, so showing them as editable would make every save fail against a
+ * missing table. Surface the error instead. Keyed under the same prefix, so the
+ * mutations below invalidate it too.
+ */
+export function useAdminCabinetRoles() {
+  return useQuery({
+    queryKey: [CABINET_ROLES_QUERY_KEY, 'admin'],
+    queryFn: () => cabinetRolesRepository.getAllRoles(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 export function useUpdateCabinetRole() {
   const queryClient = useQueryClient();
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useCabinetRoles, useUpdateCabinetRole, useCreateCabinetRole, useDeleteCabinetRole } from '../../../hooks/useCabinetRoles';
+import { useAdminCabinetRoles, useUpdateCabinetRole, useCreateCabinetRole, useDeleteCabinetRole } from '../../../hooks/useCabinetRoles';
 import { CabinetRoleDescription } from '../../../data/repos/cabinetRolesRepository';
 import { generateSlug } from '../../../utils/generateSlug';
 
@@ -16,7 +16,7 @@ const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py
 const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
 
 export function AdminCabinetRoleDescriptions() {
-  const { data: roles = [], isLoading } = useCabinetRoles();
+  const { data: roles = [], isLoading, error } = useAdminCabinetRoles();
   const updateRole = useUpdateCabinetRole();
   const createRole = useCreateCabinetRole();
   const deleteRole = useDeleteCabinetRole();
@@ -112,6 +112,14 @@ export function AdminCabinetRoleDescriptions() {
 
   if (isLoading) {
     return <div className="p-8 text-center text-[var(--color-text3)]">Loading role descriptions...</div>;
+  }
+
+  if (error) {
+    return (
+      <div role="alert" className="p-8 text-center text-[var(--color-text3)]">
+        Role descriptions couldn't be loaded, so editing is unavailable right now. The public cabinet page still shows its built-in role descriptions.
+      </div>
+    );
   }
 
   if (isCreating || selectedRole) {

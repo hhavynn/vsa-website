@@ -1,5 +1,5 @@
 import { academicTermsRepository } from './academicTerms';
-import { supabaseMock } from '../../test-utils/supabaseMock';
+import { supabaseMock, postgrestError } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -43,5 +43,28 @@ describe('academicTermsRepository.ensureTermForDate', () => {
 
     expect(term?.code).toBe('WI27');
     expect(supabaseMock.usedMethod('academic_terms', 'upsert')).toBe(true);
+  });
+});
+
+describe('academicTermsRepository.getActiveTerm', () => {
+  beforeEach(() => supabaseMock.reset());
+
+  it('reads the active term through the repository', async () => {
+    supabaseMock.queueResult('academic_terms', { data: WI27, error: null });
+
+    await expect(academicTermsRepository.getActiveTerm()).resolves.toEqual(WI27);
+    expect(supabaseMock.filtersFor('academic_terms')).toContainEqual(['is_active', true]);
+  });
+
+  it('returns null when no term is active', async () => {
+    supabaseMock.queueResult('academic_terms', { data: null, error: null });
+
+    await expect(academicTermsRepository.getActiveTerm()).resolves.toBeNull();
+  });
+
+  it('surfaces a failed lookup instead of returning null', async () => {
+    supabaseMock.queueResult('academic_terms', { data: null, error: postgrestError('permission denied', '42501') });
+
+    await expect(academicTermsRepository.getActiveTerm()).rejects.toThrow();
   });
 });

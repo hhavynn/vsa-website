@@ -5,6 +5,7 @@ import { FadeContent } from '../../components/ui/FadeContent';
 import { supabase } from '../../lib/supabase';
 import { getApplicationStatus } from '../../lib/applicationLinks';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
+import { academicTermsRepository } from '../../data/repos/academicTerms';
 
 interface OverviewStats {
   members: number;
@@ -28,6 +29,7 @@ interface OverviewStats {
   eventsMissingLocation: number;
   housesCurrentCount: number;
   housesCurrentYearStart: number | null;
+  activeTermUnavailable: boolean;
   housesMissingImage: number;
   housesMissingParents: number;
   galleryCount: number;
@@ -87,6 +89,7 @@ const DEFAULT_STATS: OverviewStats = {
   eventsMissingLocation: 0,
   housesCurrentCount: 0,
   housesCurrentYearStart: null,
+  activeTermUnavailable: false,
   housesMissingImage: 0,
   housesMissingParents: 0,
   galleryCount: 0,
@@ -490,8 +493,17 @@ export default function AdminOverview() {
         supabase.from('events').select('*', { count: 'exact', head: true }).or('location.is.null,location.eq.""'),
       ]);
 
-      const activeTermRes = await supabase.from('academic_terms').select('academic_year_start').eq('is_active', true).maybeSingle();
-      const housesCurrentYearStart = activeTermRes.data?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null;
+      // A failed lookup must not silently fall back to the browser-derived year:
+      // the House count would look plausible but could be for the wrong year.
+      let activeTermUnavailable = false;
+      const activeTerm = await academicTermsRepository.getActiveTerm().catch((error: unknown) => {
+        console.error(error);
+        activeTermUnavailable = true;
+        return null;
+      });
+      const housesCurrentYearStart = activeTermUnavailable
+        ? null
+        : activeTerm?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null;
 
       const [
         housesCurrentRes,
@@ -614,6 +626,7 @@ export default function AdminOverview() {
         eventsMissingLocation: eventsMissingLocationRes.count ?? 0,
         housesCurrentCount: housesCurrentRes.count ?? 0,
         housesCurrentYearStart,
+        activeTermUnavailable,
         housesMissingImage: housesMissingImageRes.count ?? 0,
         housesMissingParents: housesMissingParentsRes.count ?? 0,
         galleryCount: galleryCountRes.count ?? 0,
@@ -849,7 +862,13 @@ export default function AdminOverview() {
                 </HealthGroupCard>
 
                 <HealthGroupCard title="Houses" to="/admin/houses">
-                  <HealthItem label={`Current House profiles (${stats.housesCurrentYearStart ? formatAcademicYear(stats.housesCurrentYearStart) : 'active year'})`} value={stats.housesCurrentCount} status={stats.housesCurrentCount === 0 ? 'warning' : 'good'} />
+                  <HealthItem
+                    label={stats.activeTermUnavailable
+                      ? 'Current House profiles (active term could not be loaded)'
+                      : `Current House profiles (${stats.housesCurrentYearStart ? formatAcademicYear(stats.housesCurrentYearStart) : 'active year'})`}
+                    value={stats.activeTermUnavailable ? '—' : stats.housesCurrentCount}
+                    status={stats.activeTermUnavailable || stats.housesCurrentCount === 0 ? 'warning' : 'good'}
+                  />
                   <HealthItem label="Missing House images" value={stats.housesMissingImage} status={stats.housesMissingImage > 0 ? 'warning' : 'good'} />
                   <HealthItem label="Missing House parents" value={stats.housesMissingParents} status={stats.housesMissingParents > 0 ? 'warning' : 'good'} />
                 </HealthGroupCard>
