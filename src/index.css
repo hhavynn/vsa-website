@@ -1020,6 +1020,14 @@
     .editorial-hero-title { font-size: 132px; }
   }
 
+  /* On program pages the hero content sits in the same 1040px column as
+     .program-section/.program-section-inner, so every block shares one
+     left edge. ACE (.ace-app) keeps its own full-bleed gutters. */
+  .program-app .editorial-hero-inner {
+    padding-left: max(52px, calc((100% - 1040px) / 2));
+    padding-right: max(52px, calc((100% - 1040px) / 2));
+  }
+
   .program-section {
     border-top: 1px solid var(--color-border);
     padding: 50px 52px;
@@ -1035,9 +1043,11 @@
     margin-right: auto;
   }
 
+  /* Narrow prose column: same left edge as the 1040px section column,
+     just a shorter measure (not separately centered). */
   .program-section-narrow {
     max-width: 780px;
-    margin-left: auto;
+    margin-left: max(0px, calc((100% - 1040px) / 2));
     margin-right: auto;
   }
 
@@ -1442,6 +1452,11 @@
 
   .program-section {
     padding: 38px 16px;
+  }
+
+  .program-app .editorial-hero-inner {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .program-list-row {

@@ -662,7 +662,7 @@ export function House() {
         <div className="program-app">
           <EditorialHero
             eyebrow="Not announced yet"
-            title={<>House <EditorialHeroScript>{activeYearLabel}</EditorialHeroScript></>}
+            title={<>House <EditorialHeroScript><span className="whitespace-nowrap">{activeYearLabel}</span></EditorialHeroScript></>}
             meta={`${activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.`}
             watermark="houses"
             actions={<span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>}
@@ -678,12 +678,12 @@ export function House() {
           {/* Placeholder card */}
           <section className="program-section">
             <div className="program-section-inner">
-              <div className="scrapbook-paper mx-auto max-w-xl p-8 text-center">
+              <div className="scrapbook-paper p-6 text-center sm:p-8">
                 <span className="scrapbook-sticker mb-6 inline-block">🏠</span>
-                <h2 className="mt-4 font-serif text-[28px] leading-tight" style={{ color: 'var(--color-text)' }}>
+                <h2 className="mx-auto mt-4 max-w-xl font-serif text-[28px] leading-tight" style={{ color: 'var(--color-text)' }}>
                   {activeYearLabel} Houses have not been announced yet
                 </h2>
-                <p className="mt-4 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                <p className="mx-auto mt-4 max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
                   Current House information will be updated once assignments are finalized. Follow <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a> on Instagram for official House Reveal announcements.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
