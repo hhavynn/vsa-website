@@ -1,0 +1,54 @@
+name: CodeQL
+
+# Source analysis for src/ and supabase/functions/ (#355). Separate from
+# deploy.yml on purpose: CodeQL on a CRA + TypeScript codebase produces some
+# false positives, so it reports to the Security tab without blocking deploys.
+# Decide on gating (e.g. fail on `error` severity in src/ or
+# supabase/functions/) once a few runs show the false-positive rate.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '23 14 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config: |
+            paths-ignore:
+              - build
+              - node_modules
+              - public/images
+              - graphify-out
+              - '**/*.test.ts'
+              - '**/*.test.tsx'
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:javascript-typescript'
