@@ -356,20 +356,45 @@ function expandQuerySynonyms(query: string): string {
   return `${query} or ${Array.from(additions).join(" or ")}`;
 }
 
-async function retrieveKnowledge(
-  supabaseClient: ReturnType<typeof createClient>,
-  message: string,
-  currentPage?: string,
-) {
-  const query = [message, currentPage ?? ""].filter(Boolean).join(" ");
-  const expandedQuery = expandQuerySynonyms(query);
+async function matchKnowledge(supabaseClient: ReturnType<typeof createClient>, queryText: string) {
   const { data, error } = await supabaseClient.rpc("match_ai_knowledge_base", {
-    query_text: expandedQuery,
+    query_text: queryText,
     match_limit: 8,
   });
 
   if (error) throw error;
   return (data ?? []) as KnowledgeSnippet[];
+}
+
+/** "when is the next gbm?" -> "when or the or next or gbm" (websearch syntax). */
+function anyWordQuery(query: string): string {
+  const words = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && word !== "or");
+  return Array.from(new Set(words)).join(" or ");
+}
+
+// match_ai_knowledge_base uses websearch_to_tsquery, which ANDs every term: a
+// row must contain every meaningful word of the question. Try that precise
+// match first, and only if it finds nothing fall back to rows matching any
+// word, so small wording changes don't turn an answerable question into the
+// "not sure" fallback. The model still decides whether the context answers it.
+//
+// The current page is deliberately NOT part of the search text. It used to be
+// appended, which made "/events" etc. a required term that no row contains,
+// so the same question answered on one page and failed on another.
+async function retrieveKnowledge(
+  supabaseClient: ReturnType<typeof createClient>,
+  message: string,
+) {
+  const expandedQuery = expandQuerySynonyms(message);
+  const strict = await matchKnowledge(supabaseClient, expandedQuery);
+  if (strict.length > 0) return strict;
+
+  const loose = anyWordQuery(expandedQuery);
+  return loose ? matchKnowledge(supabaseClient, loose) : [];
 }
 
 async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof createClient>) {
@@ -537,7 +562,7 @@ serve(async (req) => {
       return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
     }
 
-    const snippets = await retrieveKnowledge(supabaseClient, parsed.message, parsed.currentPage);
+    const snippets = await retrieveKnowledge(supabaseClient, parsed.message);
     const eventContext = asksForNextEvent(parsed.message)
       ? await getUpcomingEventsContext(supabaseClient)
       : null;
