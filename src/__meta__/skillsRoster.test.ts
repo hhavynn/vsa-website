@@ -66,9 +66,7 @@ function readmeRegistry(): string[] {
 function structuredReferences(file: string): string[] {
   const text = fs.readFileSync(path.join(repoRoot, file), "utf8");
   const names = new Set<string>();
-  for (const match of text.matchAll(/(?:`|\*\*)(vsa-[a-z0-9]+(?:-[a-z0-9]+)*)/g)) {
-    names.add(match[1]);
-  }
+  Array.from(text.matchAll(/(?:`|\*\*)(vsa-[a-z0-9]+(?:-[a-z0-9]+)*)/g)).forEach((match) => names.add(match[1]));
   return Array.from(names);
 }
 
