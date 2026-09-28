@@ -502,6 +502,7 @@
   padding: 6px 18px 14px;
   border-bottom: 1px solid var(--border);
 }
+.ace-app .ace-sheet-head-left { flex: 1; min-width: 0; }
 .ace-app .ace-sheet-eyebrow {
   font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -817,6 +818,19 @@
   border: 1px solid var(--border);
 }
 .ace-app .ace-famtabs-cover > * { width: 100%; height: 100%; }
+
+/* Fam icons (public/images/ace/fams/) — round badges, cropped to fill. */
+.ace-app .ace-famtabs-tab-icon,
+.ace-app .ace-famtabs-icon,
+.ace-app .ace-sheet-icon {
+  flex-shrink: 0;
+  border-radius: 999px;
+  object-fit: cover;
+  background: var(--surface);
+}
+.ace-app .ace-famtabs-tab-icon { width: 20px; height: 20px; border: 1px solid var(--border); }
+.ace-app .ace-famtabs-icon { width: 72px; height: 72px; border: 1px solid var(--border-strong); }
+.ace-app .ace-sheet-icon { width: 44px; height: 44px; border: 1px solid var(--border-strong); }
 
 .ace-app .ace-famtabs-panel-name {
   font-family: "DM Serif Display", serif;

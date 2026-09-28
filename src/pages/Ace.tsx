@@ -18,16 +18,9 @@ import {
 } from '../lib/aceFamilyAdapter';
 import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
+import { ACTIVE_FAM_SLOTS, getFamIconUrl, resolveFamHeads } from '../lib/aceFamRoster';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import '../styles/ace.css';
-
-// Members whose role_label contains these strings are treated as fam heads.
-const FAM_HEAD_KEYWORDS = ['fam head', 'family head', 'head'];
-function isFamHead(roleLabel: string | null): boolean {
-  if (!roleLabel) return false;
-  const lower = roleLabel.toLowerCase();
-  return FAM_HEAD_KEYWORDS.some((kw) => lower.includes(kw));
-}
 
 const ROLES = [
   { role: 'Big',    viet: 'Anh / Chị',  desc: 'A VSA member who helps welcome their Little and show them around the org. Think older sibling, mentor, or trusted friend.' },
@@ -49,17 +42,6 @@ const FAQS = [
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
   { q: 'Do requirements change each cycle?',       a: 'Yes. Eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
   { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
-];
-
-const ACTIVE_FAM_SLOTS = [
-  { name: 'Sweatpants', slug: 'sweatpants' },
-  { name: 'Sunshine', slug: 'sunshine' },
-  { name: 'Underwater', slug: 'underwater' },
-  { name: 'Down', slug: 'down' },
-  { name: 'Moon', slug: 'moon' },
-  { name: 'Cross', slug: 'cross' },
-  { name: 'Bang Mi', slug: 'bang-mi' },
-  { name: 'NSF', slug: 'nsf' },
 ];
 
 interface FamDerived {
@@ -430,7 +412,8 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
   const { family, accent, viet, members, isPlaceholder } = selected;
   const displayName = getDisplayFamName(family.name);
 
-  const famHeads = members.filter((m) => isFamHead(m.role_label));
+  const famHeads = resolveFamHeads(family.slug, members);
+  const iconUrl = getFamIconUrl(family.slug);
   const hasTree = members.length > 0;
 
   return (
@@ -440,6 +423,7 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
         {activeFams.map((f) => {
           const name = getDisplayFamName(f.family.name);
           const active = f.family.id === selectedId;
+          const tabIconUrl = getFamIconUrl(f.family.slug);
           return (
             <button
               key={f.family.id}
@@ -449,6 +433,7 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
               onClick={() => onSelect(f.family.id)}
               type="button"
             >
+              {tabIconUrl && <img className="ace-famtabs-tab-icon" src={tabIconUrl} alt="" loading="lazy" decoding="async" />}
               {name}
               {f.viet && <span className="ace-famtabs-tab-viet">{f.viet}</span>}
             </button>
@@ -460,14 +445,18 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
       <div className="ace-famtabs-panel" role="tabpanel">
         {/* Panel header */}
         <div className="ace-famtabs-panel-head">
-          <div className="ace-famtabs-cover">
-            <FamCover
-              pattern={patternForFamily(family)}
-              accent={accent}
-              imageUrl={family.cover_image_url}
-              alt={displayName}
-            />
-          </div>
+          {iconUrl ? (
+            <img className="ace-famtabs-icon" src={iconUrl} alt={`${displayName} fam icon`} decoding="async" />
+          ) : (
+            <div className="ace-famtabs-cover">
+              <FamCover
+                pattern={patternForFamily(family)}
+                accent={accent}
+                imageUrl={family.cover_image_url}
+                alt={displayName}
+              />
+            </div>
+          )}
           <div className="ace-famtabs-panel-title">
             <div className={`ace-famtabs-panel-name ace-famtabs-panel-name-${accent}`}>{displayName}</div>
             {viet && <div className="ace-famtabs-panel-viet">{viet}</div>}
@@ -488,12 +477,12 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
           <div className="ace-famtabs-sub-label">Fam Head{famHeads.length !== 1 ? 's' : ''}</div>
           <div className="ace-famheads-grid">
             {famHeads.length > 0 ? (
-              famHeads.map((m) => (
+              famHeads.map((head, i) => (
                 <FamHeadCard
-                  key={m.id}
-                  name={m.name}
-                  photoUrl={m.photo_url ?? null}
-                  roleLabel={m.role_label}
+                  key={`${head.name}-${i}`}
+                  name={head.name}
+                  photoUrl={head.photoUrl}
+                  roleLabel={head.roleLabel}
                   accent={accent}
                 />
               ))
