@@ -265,8 +265,13 @@ async function runTests() {
         }
       };
       const expectNoRowsUpdated = (label, data, error) => {
-        if (error) {
+        // Only an authorization error proves RLS/grants rejected the write. Any
+        // other error (schema cache, constraint, trigger, network) means the
+        // probe never reached the policy, so it can't count as a pass.
+        if (error && error.code === '42501') {
           reportPass(`ordinary user cannot update ${label} (${error.message || error.code})`);
+        } else if (error) {
+          reportFail(`ordinary user update of ${label} failed for a non-authorization reason, so RLS was not verified: ${JSON.stringify(error)}`);
         } else if (data && data.length > 0) {
           reportFail(`ordinary user updated ${data.length} ${label} row(s) directly (no-op values; nothing changed)`);
         } else {
@@ -295,16 +300,23 @@ async function runTests() {
         expectNoRowsUpdated('event_attendance', data, error);
       }
 
-      const { error: ptsInsError } = await userClient
-        .from('user_points')
-        .insert([{ user_id: authUser.id, points: 0 }]);
-      expectInsertDenied('user_points', ptsInsError);
-
+      // Read the caller's own row first. The insert probe is only
+      // non-destructive when that row exists: then an RLS bypass hits the
+      // primary key (23505) instead of creating a points row.
       const { data: ownPoints } = await userClient
         .from('user_points')
         .select('points')
         .eq('user_id', authUser.id)
         .maybeSingle();
+      if (!ownPoints) {
+        reportSkip('ordinary user user_points insert probe (no existing row, so the probe could create one)');
+      } else {
+        const { error: ptsInsError } = await userClient
+          .from('user_points')
+          .insert([{ user_id: authUser.id, points: 0 }]);
+        expectInsertDenied('user_points', ptsInsError);
+      }
+
       if (!ownPoints) {
         reportSkip('ordinary user user_points update probe (test user has no user_points row)');
       } else {
@@ -478,14 +490,24 @@ async function runTests() {
         // no client write policy. Probe with the admin's own existing row so an
         // unexpected allow hits the primary key (23505) instead of writing.
         const adminUser = (await adminClient.auth.getUser()).data.user;
-        const { error: admPtsError } = await adminClient
+        const { data: adminPointsRow } = await adminClient
           .from('user_points')
-          .insert([{ user_id: adminUser.id, points: 0 }]);
+          .select('user_id')
+          .eq('user_id', adminUser.id)
+          .maybeSingle();
 
-        if (admPtsError?.code === '42501') {
-          reportPass('admin cannot write user_points directly (server-authoritative)');
+        if (!adminPointsRow) {
+          reportSkip('admin user_points write probe (admin has no user_points row, so the probe could create one)');
         } else {
-          reportFail(`admin passed RLS inserting user_points: ${JSON.stringify(admPtsError)}`);
+          const { error: admPtsError } = await adminClient
+            .from('user_points')
+            .insert([{ user_id: adminUser.id, points: 0 }]);
+
+          if (admPtsError?.code === '42501') {
+            reportPass('admin cannot write user_points directly (server-authoritative)');
+          } else {
+            reportFail(`admin passed RLS inserting user_points: ${JSON.stringify(admPtsError)}`);
+          }
         }
       }
     }
