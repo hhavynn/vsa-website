@@ -297,7 +297,18 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
       const payload = toPayload(uploadedImage);
 
       if (editingEvent) {
-        await houseEventsRepository.updateEvent(editingEvent.id, payload);
+        // Leave the image columns alone unless this edit changed them, so a
+        // form opened before the image-migration pipeline ran can't restore a
+        // Supabase Storage URL (#436).
+        const imageUnchanged =
+          !uploadedImage &&
+          draft.image_url === (editingEvent.image_url ?? '') &&
+          draft.image_thumbnail_url === (editingEvent.image_thumbnail_url ?? '');
+        const { image_url, image_thumbnail_url, ...rest } = payload;
+        await houseEventsRepository.updateEvent(
+          editingEvent.id,
+          imageUnchanged ? rest : payload,
+        );
         if (uploadedImage) {
           await removeHouseEventImage(editingEvent.image_url);
           await removeHouseEventImage(editingEvent.image_thumbnail_url);

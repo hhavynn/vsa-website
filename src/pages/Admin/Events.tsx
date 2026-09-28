@@ -361,11 +361,16 @@ export default function AdminEvents() {
       const isoDate = losAngelesDateTimeToIso(dateOnly, startTimePart);
       const academicTermId = await resolveAcademicTermId(isoDate, selectedEvent.academic_term_id);
       const pointsChanged = selectedEvent.points !== selectedEventOriginalPoints;
+      // Only write the image columns when this edit changed the image. The
+      // form holds the URL from when it was opened; if the image-migration
+      // pipeline moved the image to /images/... since then, writing it back
+      // would restore the Supabase Storage URL (#436).
+      const imageChanged = Boolean(editImageFile) || (!imageUrl && Boolean(selectedEventOriginalImageUrl));
       const { error } = await supabase.from('events').update({
         name: selectedEvent.name, description: selectedEvent.description,
         date: isoDate, location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
-        image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null,
+        ...(imageChanged ? { image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null } : {}),
         is_code_expired: selectedEvent.is_code_expired,
         is_published: selectedEvent.is_published ?? true,
         check_in_form_url: selectedEvent.check_in_form_url || '',
