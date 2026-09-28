@@ -261,8 +261,18 @@ describe('member year advances across seasons (attendance import)', () => {
     expect(resolveMemberYearAdvance('2nd Year', '2nd Year Transfer', false)).toBeNull();
   });
 
-  test('an unrecognised stored year is replaced by a valid one', () => {
+  test('a legacy stored label advances when the CSV reports a higher year', () => {
     expect(resolveMemberYearAdvance('Sophomore', '3rd Year', false)).toBe('3rd Year');
+  });
+
+  test('a legacy stored label is never downgraded (#408 review)', () => {
+    expect(resolveMemberYearAdvance('Senior', '3rd Year', false)).toBeNull();
+    expect(resolveMemberYearAdvance('junior', '2nd Year', false)).toBeNull();
+  });
+
+  test('a stored year the importer cannot rank is preserved, not overwritten', () => {
+    expect(resolveMemberYearAdvance('Alumni', '1st Year', false)).toBeNull();
+    expect(resolveMemberYearAdvance('Grad Student', '4th Year', false)).toBeNull();
   });
 
   test('the whole enrichment path advances year on a high-confidence match', () => {

@@ -552,6 +552,13 @@ export function matchAttendanceImportRows(
  *
  * Returns the value to write, or null to leave the member's year alone.
  */
+const LEGACY_YEAR_LABELS: Record<string, string> = {
+  freshman: '1st Year',
+  sophomore: '2nd Year',
+  junior: '3rd Year',
+  senior: '4th Year',
+};
+
 export function resolveMemberYearAdvance(
   storedYear: string | null | undefined,
   csvYear: string,
@@ -566,8 +573,11 @@ export function resolveMemberYearAdvance(
   const csvRank = getYearRank(csvYear);
   if (csvRank === null) return null;
 
-  const storedRank = getYearRank(stored);
-  if (storedRank === null) return csvYear;
+  // Legacy labels ('Senior', 'Sophomore', …) are still in use on member rows;
+  // rank them on the same scale. A stored value that still can't be ranked is
+  // preserved: overwriting it could silently downgrade the member (#408 review).
+  const storedRank = getYearRank(stored) ?? getYearRank(LEGACY_YEAR_LABELS[stored.toLowerCase()]);
+  if (storedRank === null) return null;
 
   return csvRank > storedRank ? csvYear : null;
 }
