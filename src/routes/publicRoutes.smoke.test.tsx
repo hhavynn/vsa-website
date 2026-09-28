@@ -137,7 +137,10 @@ describe('public routes render without crashing (#294)', () => {
     // have actually mounted before anything is asserted.
     //
     // See the note at the bottom for the full catches/misses list.
-    const main = await screen.findByRole('main');
+    // The lazy route chunk can take over findBy's 1s default to resolve when
+    // the whole suite runs in parallel; /leaderboard, the heaviest page, timed
+    // out here intermittently. 5s matches the settle wait below.
+    const main = await screen.findByRole('main', {}, { timeout: 5000 });
     expect(main).toBeInTheDocument();
 
     // And it must not have fallen back to the error boundary.
@@ -173,7 +176,7 @@ describe('public routes render without crashing (#294)', () => {
       { timeout: 5000 }
     );
   }, 20000);
-  // Per-test budget must exceed the waits above: findByRole can spend 1s and
+  // Per-test budget must exceed the waits above: findByRole can spend 5s and
   // the settle waitFor 5s, so Jest's 5s default kills the test before its own
   // waitFor can time out. Heavy routes (/, /feedback) hit this under parallel
   // suite load while passing in isolation.
