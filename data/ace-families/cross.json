@@ -1,0 +1,477 @@
+{
+  "family": "Cross",
+  "members": [
+    {
+      "name": "Alex Orr",
+      "big": null
+    },
+    {
+      "name": "Asia G Martin",
+      "big": null
+    },
+    {
+      "name": "Catherine Hoang",
+      "big": null
+    },
+    {
+      "name": "Daniel Truong",
+      "big": null
+    },
+    {
+      "name": "Elwood Bui",
+      "big": null
+    },
+    {
+      "name": "Fatima Dong",
+      "big": null
+    },
+    {
+      "name": "Harrison Nguyen",
+      "big": null
+    },
+    {
+      "name": "Preston Shin",
+      "big": null
+    },
+    {
+      "name": "Trinity Bui",
+      "big": null
+    },
+    {
+      "name": "Tyana T Lai",
+      "big": null
+    },
+    {
+      "name": "Vy Do (Vicky)",
+      "big": null
+    },
+    {
+      "name": "Patrick Vo",
+      "big": "Alex Orr",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Emi Do",
+      "big": "Asia G Martin",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Edward H Vu",
+      "big": "Asia G Martin",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Andrew La",
+      "big": "Asia G Martin",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Mai-Phuong Hoang",
+      "big": "Catherine Hoang",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Alan Cao",
+      "big": "Daniel Truong",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "John Nguyen",
+      "big": "Daniel Truong",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Preston J Shin",
+      "big": "Elwood Bui",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Van Nguyen",
+      "big": "Fatima Dong",
+      "added_term": "FA22",
+      "confidence": "inferred-medium"
+    },
+    {
+      "name": "Kayla G. Huynh",
+      "big": "Fatima Dong",
+      "added_term": "FA22",
+      "confidence": "inferred-medium"
+    },
+    {
+      "name": "Tiffany, N, Vo",
+      "big": "Fatima Dong",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Jason T Tran",
+      "big": "Harrison Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Caroline Nguyen",
+      "big": "Harrison Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Rachel Dinh",
+      "big": "Harrison Nguyen",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Simon Li",
+      "big": "Preston Shin",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Natasha Tran",
+      "big": "Preston Shin",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Heidi Nguyen",
+      "big": "Trinity Bui",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Nicole Tran",
+      "big": "Trinity Bui",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Gwendolyn H Tran",
+      "big": "Tyana T Lai",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Valerie Nguyen",
+      "big": "Tyana T Lai",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Carly Chang",
+      "big": "Vy Do (Vicky)",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Vivian V Nguyen",
+      "big": "Vy Do (Vicky)",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Frank Pfeilsticker",
+      "big": "Vy Do (Vicky)",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Tony Lam",
+      "big": "Patrick Vo",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Paul Hoang",
+      "big": "Patrick Vo",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Khanh Ngoc H Nguyen",
+      "big": "Emi Do",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tyana Lai",
+      "big": "Van Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Kira M Nguyen",
+      "big": "Van Nguyen",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Angeni Nguyen",
+      "big": "Kayla G. Huynh",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tracy A Tran",
+      "big": "Kayla G. Huynh",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Johanna Q Nguyen",
+      "big": "Tiffany, N, Vo",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jeffrey Nguyen",
+      "big": "Nicole Tran",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Katie Truong",
+      "big": "Nicole Tran",
+      "added_term": "FA23",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Shayna Quach",
+      "big": "Tony Lam",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Kevin Huynh",
+      "big": "Tony Lam",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Lillian Nguyen",
+      "big": "Tony Lam",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Paulina Nguyen",
+      "big": "Paul Hoang",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Catherine M Hoang",
+      "big": "Kira M Nguyen",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Amanda Y Wang",
+      "big": "Kira M Nguyen",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Hanna Ngo",
+      "big": "Kira M Nguyen",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Russell Ng",
+      "big": "Kira M Nguyen",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Oliver Thai",
+      "big": "Angeni Nguyen",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "John G Ta",
+      "big": "Tracy A Tran",
+      "added_term": "FA24",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Anh Thu Vo",
+      "big": "Tracy A Tran",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Kyleen D. Doan",
+      "big": "Johanna Q Nguyen",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Khanh Le",
+      "id_hint": "khanh-le-fa25",
+      "big": "Johanna Q Nguyen",
+      "added_term": "FA25",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Andy Ke",
+      "big": "Shayna Quach",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Aaron Tran",
+      "big": "Shayna Quach",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Brendan Lee",
+      "big": "Shayna Quach",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Kathy Tran",
+      "big": "Shayna Quach",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "An Vu",
+      "big": "Kevin Huynh",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Khanh Le",
+      "id_hint": "khanh-le-legacy",
+      "big": "Kevin Huynh",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Vi Nguyen",
+      "big": "Kevin Huynh",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Heather Nguyen",
+      "big": "Kevin Huynh",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Vivian Thong",
+      "big": "Lillian Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Long Ngo",
+      "big": "Lillian Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Diana Vo",
+      "big": "Lillian Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Roselynne Nguyen",
+      "big": "Lillian Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jeffrey Ha",
+      "big": "Aaron Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Matt Dzoan",
+      "big": "Aaron Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Brenda Phan",
+      "big": "Brendan Lee",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Dianne Macalincag",
+      "big": "Brendan Lee",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Century Yang",
+      "big": "Kathy Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tracy Nguyen",
+      "big": "Heather Nguyen",
+      "added_term": "SP22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Allison Ngo",
+      "big": "Long Ngo",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Alexandre Nguyen",
+      "big": "Jeffrey Ha",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Nicholas Do",
+      "big": "Century Yang",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Trinni Ton",
+      "big": "Allison Ngo",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Linda Vuong",
+      "big": "Allison Ngo",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Christina Pham",
+      "big": "Linda Vuong",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Jeanine Le",
+      "big": "Linda Vuong",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    }
+  ]
+}

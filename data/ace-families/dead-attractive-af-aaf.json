@@ -1,0 +1,221 @@
+{
+  "family": "(Dead) Attractive AF (AAF)",
+  "members": [
+    {
+      "name": "Vivian Dinh",
+      "big": null
+    },
+    {
+      "name": "Vu Nguyen",
+      "big": null
+    },
+    {
+      "name": "Wilson Do",
+      "big": null
+    },
+    {
+      "name": "Connor Outtrim",
+      "big": "Vivian Dinh",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Rex Le",
+      "big": "Vu Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Chau Le",
+      "big": "Vu Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Andy G.A. Vu",
+      "big": "Wilson Do",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Bryant Nguyen",
+      "big": "Rex Le",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Tram Nguyen",
+      "big": "Rex Le",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Michelle Tran",
+      "big": "Chau Le",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Hoa Ho",
+      "big": "Andy G.A. Vu",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Dominic Tran",
+      "big": "Andy G.A. Vu",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Jacob Hoang",
+      "big": "Andy G.A. Vu",
+      "added_term": "SP23",
+      "confidence": "inferred-medium"
+    },
+    {
+      "name": "Khuyen Lai",
+      "big": "Andy G.A. Vu",
+      "added_term": "SP23",
+      "confidence": "inferred-medium"
+    },
+    {
+      "name": "Monica Pham",
+      "big": "Bryant Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Erica Pham",
+      "big": "Michelle Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "David Nguyen",
+      "big": "Michelle Tran",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Vincent Chau",
+      "big": "Erica Pham",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Desmond Trieu",
+      "big": "Erica Pham",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Grace Nguyen",
+      "big": "Erica Pham",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Dan Ly",
+      "big": "Erica Pham",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Sabrina Nguyen",
+      "big": "David Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Loc Chuong",
+      "big": "David Nguyen",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Victoria Ngo",
+      "big": "Vincent Chau",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Thanh Chau Chu",
+      "big": "Vincent Chau",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Chanly Ly",
+      "big": "Vincent Chau",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Huy G. Le",
+      "big": "Vincent Chau",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Henry Nguyen",
+      "big": "Vincent Chau",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Thang (Tanner) Nguyen",
+      "big": "Desmond Trieu",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Rhee Kang",
+      "big": "Loc Chuong",
+      "added_term": "legacy",
+      "confidence": "confirmed"
+    },
+    {
+      "name": "Jenny Tran",
+      "big": "Victoria Ngo",
+      "added_term": "SP22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Jessica Le",
+      "big": "Victoria Ngo",
+      "added_term": "SP22",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Michelle Pham",
+      "big": "Thanh Chau Chu",
+      "added_term": "FA21",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Theo N Bui",
+      "big": "Huy G. Le",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Anthony Dinh",
+      "big": "Huy G. Le",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Lorenzo S Santo Domingo",
+      "big": "Huy G. Le",
+      "added_term": "SP23",
+      "confidence": "inferred-high"
+    },
+    {
+      "name": "Hannah Nguyen",
+      "big": "Jessica Le",
+      "added_term": "FA22",
+      "confidence": "inferred-high"
+    }
+  ]
+}
