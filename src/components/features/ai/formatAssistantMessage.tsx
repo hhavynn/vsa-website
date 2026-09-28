@@ -102,14 +102,21 @@ function isInternalUrl(url: string) {
 }
 
 function sanitizeUrl(url: string): string | null {
-  const trimmed = url.trim();
+  let encoded: string;
+  try {
+    // Escape spaces, quotes, angle brackets and backslashes (so "/\host" can't
+    // act like "//host"), then restore percent-escapes that were already valid.
+    encoded = encodeURI(url.trim()).replace(/%25([0-9A-Fa-f]{2})/g, "%$1");
+  } catch {
+    return null;
+  }
 
-  if (isInternalUrl(trimmed)) {
-    return trimmed;
+  if (isInternalUrl(encoded)) {
+    return encoded;
   }
 
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(encoded);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return parsed.toString();
     }

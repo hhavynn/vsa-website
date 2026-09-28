@@ -80,6 +80,22 @@ describe("AssistantMessageContent", () => {
     expect(screen.queryByRole("link", { name: "proto" })).toBeNull();
   });
 
+  it("encodes link URLs without double-encoding existing escapes", () => {
+    renderMessage(
+      '[form](https://forms.gle/a%20b"x) and [sneaky](/\\evil.test)',
+    );
+
+    expect(screen.getByRole("link", { name: "form" })).toHaveAttribute(
+      "href",
+      "https://forms.gle/a%20b%22x",
+    );
+    // A backslash would let "/\host" act like "//host"; it stays in-app.
+    expect(screen.getByRole("link", { name: "sneaky" })).toHaveAttribute(
+      "href",
+      "/%5Cevil.test",
+    );
+  });
+
   it("strips unbalanced bold markers left by a truncated answer", () => {
     const { container } = renderMessage("**Note: applications open soon");
     expect(container.textContent).toBe("Note: applications open soon");
