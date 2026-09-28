@@ -174,6 +174,20 @@ export class SupabaseMock {
       this.recorded.push(record);
       return createQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
     },
+    // Realtime: an inert channel. Leaderboard subscribes to `members` changes
+    // in its all-time view once data has loaded; without this the page threw
+    // `supabase.channel is not a function` inside an effect, and the route
+    // smoke test failed whenever that effect ran before the test finished.
+    channel: (name: string) => {
+      this.recorded.push({ table: `channel:${name}`, calls: [{ method: 'channel', args: [name] }] });
+      const channel = {
+        on: () => channel,
+        subscribe: () => channel,
+        unsubscribe: async () => 'ok' as const,
+      };
+      return channel;
+    },
+    removeChannel: async () => 'ok' as const,
   };
 
   /** Clear all queued results and recorded queries. Call in `beforeEach`. */

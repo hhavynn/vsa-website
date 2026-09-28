@@ -137,9 +137,10 @@ describe('public routes render without crashing (#294)', () => {
     // have actually mounted before anything is asserted.
     //
     // See the note at the bottom for the full catches/misses list.
-    // The lazy route chunk can take over findBy's 1s default to resolve when
-    // the whole suite runs in parallel; /leaderboard, the heaviest page, timed
-    // out here intermittently. 5s matches the settle wait below.
+    // Allow the lazy route chunk more than findBy's 1s default under
+    // full-suite parallel load; 5s matches the settle wait below. (The
+    // intermittent /leaderboard failure once blamed on this timeout was really
+    // a render error: the Supabase mock had no realtime `channel()`.)
     const main = await screen.findByRole('main', {}, { timeout: 5000 });
     expect(main).toBeInTheDocument();
 
