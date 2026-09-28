@@ -174,7 +174,16 @@ export function combineLocalDateTime(
   if (hours > 23 || minutes > 59) return null;
 
   const pad = (value: number) => String(value).padStart(2, '0');
-  return losAngelesDateTimeToIso(date.trim(), `${pad(hours)}:${pad(minutes)}`);
+  const wallClock = { date: date.trim(), time: `${pad(hours)}:${pad(minutes)}` };
+  const iso = losAngelesDateTimeToIso(wallClock.date, wallClock.time);
+
+  // A time inside the spring-forward gap (e.g. 2:30 AM on the March DST day)
+  // doesn't exist in San Diego and converts to a different wall-clock time,
+  // which could open a window an hour early. Reject anything that doesn't
+  // round-trip.
+  const roundTrip = splitLocalDateTime(iso);
+  if (roundTrip.date !== wallClock.date || roundTrip.time !== wallClock.time) return null;
+  return iso;
 }
 
 /** Split an ISO timestamp into San Diego 'YYYY-MM-DD' and 'HH:mm' parts for inputs. */
