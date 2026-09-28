@@ -37,6 +37,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import * as http from 'http';
+import { createHash } from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 
@@ -397,10 +398,10 @@ async function migrateCategory(
       stats.rowsWithSupabaseUrl++;
 
       const filename = `${slug}${field.suffix}.webp`;
-      const outputRelative = `${config.outputDir}/${filename}`;
-      const outputAbsolute = path.resolve(process.cwd(), outputRelative);
+      let outputRelative = `${config.outputDir}/${filename}`;
+      let outputAbsolute = path.resolve(process.cwd(), outputRelative);
       // /images/cabinet/name.webp (strips the leading "public")
-      const publicPath = '/' + outputRelative.replace(/^public\//, '');
+      let publicPath = '/' + outputRelative.replace(/^public\//, '');
 
       // ── DRY RUN ──────────────────────────────────────────────────────────
       if (dryRun) {
@@ -413,12 +414,12 @@ async function migrateCategory(
           publicPath,
           status: 'migrated',
           reason: alreadyExists
-            ? 'File exists: would re-derive, rewrite only if the image changed, then update DB'
+            ? 'File exists: would re-derive; relink if identical, otherwise save under a content-addressed name'
             : 'Would download + compress → update DB',
         });
         log(
           `  [DRY] ${rowId.slice(0, 8)} ${field.name}: ${rawUrl.slice(-50)} → ${publicPath}` +
-            (alreadyExists ? ' (file exists: relink DB, rewrite if changed)' : ''),
+            (alreadyExists ? ' (file exists: relink if identical, else new hashed name)' : ''),
         );
         continue;
       }
@@ -481,6 +482,18 @@ async function migrateCategory(
 
       // Write file — do this before the DB update so we never update DB
       // without a corresponding local file.
+      if (!OVERWRITE && fs.existsSync(outputAbsolute) && !fileMatches(outputAbsolute, webpBuffer)) {
+        // A different picture already lives at this name: another row with the
+        // same name and date, or an earlier upload for this row that may still
+        // be deployed and linked. Never overwrite it; give this image a
+        // content-addressed name instead.
+        const hash = createHash('sha256').update(webpBuffer).digest('hex').slice(0, 8);
+        outputRelative = `${config.outputDir}/${slug}_${hash}${field.suffix}.webp`;
+        outputAbsolute = path.resolve(process.cwd(), outputRelative);
+        publicPath = '/' + outputRelative.replace(/^public\//, '');
+        log(`  NAME TAKEN by a different image; using ${outputRelative}`);
+      }
+
       if (!OVERWRITE && fileMatches(outputAbsolute, webpBuffer)) {
         stats.skipped++;
         log(`  UNCHANGED ${outputAbsolute} (file matches; relinking DB only)`);
@@ -493,12 +506,28 @@ async function migrateCategory(
 
       // Update DB
       try {
-        const { error: updateError } = await supabase
+        // Only relink if the row still holds the URL this run processed. An
+        // admin may have uploaded a newer image meanwhile; overwriting it with
+        // this (older) image's path would silently lose the new upload.
+        const { data: updatedRows, error: updateError } = await supabase
           .from(config.table)
           .update({ [field.name]: publicPath })
-          .eq('id', rowId);
+          .eq('id', rowId)
+          .eq(field.name, rawUrl)
+          .select('id');
 
-        if (updateError) {
+        if (!updateError && (updatedRows ?? []).length === 0) {
+          rows.push({
+            rowId,
+            fieldName: field.name,
+            originalUrl: rawUrl,
+            localPath: outputAbsolute,
+            publicPath,
+            status: 'skipped',
+            reason: 'Row changed since it was read; left for the next run',
+          });
+          log(`  SKIP ${rowId.slice(0, 8)} ${field.name}: row changed since it was read (newer upload?)`);
+        } else if (updateError) {
           stats.errors++;
           rows.push({
             rowId,
