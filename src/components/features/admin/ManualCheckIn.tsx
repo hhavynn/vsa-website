@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEventAttendance } from '../../../hooks/useEventAttendance';
 import { supabase } from '../../../lib/supabase';
+import { toUserMessage } from '../../../data/errors';
 
 interface ManualCheckInProps {
   eventId: string;
@@ -55,7 +56,7 @@ export function ManualCheckIn({ eventId, onSuccess }: ManualCheckInProps) {
       }
     } catch (err) {
       console.error('Error checking in user:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check in user.');
+      setError(toUserMessage(err, 'Failed to check in user.'));
     } finally {
       setIsLoading(false);
     }

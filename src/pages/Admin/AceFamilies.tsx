@@ -18,6 +18,7 @@ import { AceFamily, AceFamilyMember } from '../../types';
 import { ImportPlan, buildImportPlan, validateJson } from '../../lib/aceFamilyImport';
 import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../lib/imageUpload';
 import { supabase } from '../../lib/supabase';
+import { toUserMessage } from '../../data/errors';
 
 const inputCls =
   'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
@@ -490,7 +491,7 @@ export default function AdminAceFamilies() {
       await refetch();
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Failed to save family';
+      const message = toUserMessage(err, 'Failed to save family');
       toast.error(message);
     } finally {
       setSavingFamily(false);
@@ -562,7 +563,7 @@ export default function AdminAceFamilies() {
       await refetchMembers();
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Failed to save member';
+      const message = toUserMessage(err, 'Failed to save member');
       toast.error(message);
     } finally {
       setSavingMemberId(null);
@@ -623,7 +624,7 @@ export default function AdminAceFamilies() {
       await refetch();
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Import failed.';
+      const message = toUserMessage(err, 'Import failed.');
       toast.error(message);
     } finally {
       setImporting(false);

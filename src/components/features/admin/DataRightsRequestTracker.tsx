@@ -28,6 +28,7 @@ import { DataRightsRequestStatus, DataRightsRequestType } from '../../../types/d
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Input, Textarea } from '../../ui/Input';
+import { toUserMessage } from '../../../data/errors';
 
 const selectClassName =
   'w-full rounded border border-border-strong bg-surface px-3 py-[9px] text-sm text-text-primary outline-none transition-colors focus:border-brand-600 focus:ring-1 focus:ring-brand-600 dark:focus:border-brand-400 dark:focus:ring-brand-400';
@@ -215,7 +216,8 @@ export function DataRightsRequestTracker() {
         toast.success(editingId ? 'Request updated' : 'Request created');
       },
       onError: (error: unknown) => {
-        const message = error instanceof Error ? error.message : 'Unable to save request';
+        console.error(error);
+        const message = toUserMessage(error, 'Unable to save request');
         setSaveError(message);
         toast.error('Unable to save request');
       },

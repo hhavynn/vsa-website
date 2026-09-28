@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AiFeedback, AiFeedbackFilters, aiFeedbackRepository } from '../../data/repos/aiFeedback';
 import { format } from 'date-fns';
+import { toUserMessage } from '../../data/errors';
 
 export default function AdminAiFeedback() {
   const [feedback, setFeedback] = useState<AiFeedback[]>([]);
@@ -26,7 +27,8 @@ export default function AdminAiFeedback() {
         setFeedback(data);
       } catch (err) {
         if (!mounted) return;
-        setErrorText(err instanceof Error ? err.message : 'Failed to load AI feedback.');
+        console.error(err);
+        setErrorText(toUserMessage(err, 'Failed to load AI feedback.'));
       } finally {
         if (mounted) setLoading(false);
       }
