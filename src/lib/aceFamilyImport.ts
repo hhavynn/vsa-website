@@ -3,7 +3,8 @@
 //
 // Handles:
 //  - implicit members (names referenced only in `littles` arrays)
-//  - duplicate names disambiguated by `id_hint`
+//  - duplicate names disambiguated by `id_hint`; a member whose big shares a
+//    name with someone else points at the right one with `big_id_hint`
 //  - role_label derivation: anyone with at least one child → "Big", else "Little"
 //
 // The resulting ImportPlan has stable UUIDs so the repo can do a two-pass
@@ -13,6 +14,7 @@ export interface SweatpantsMember {
   name: string;
   id_hint?: string;
   big?: string | null;
+  big_id_hint?: string | null;
   littles?: string[];
   siblings?: string[];
   generation?: string | null;
@@ -150,7 +152,17 @@ export function buildImportPlan(json: SweatpantsJson): ImportPlan {
       self.parentKey = null;
       return;
     }
-    const parentCandidates = explicitsByName.get(m.big) ?? [];
+    const allCandidates = explicitsByName.get(m.big) ?? [];
+    const parentCandidates = m.big_id_hint
+      ? allCandidates.filter((c) => c.id_hint === m.big_id_hint)
+      : allCandidates;
+    if (m.big_id_hint && parentCandidates.length === 0) {
+      warnings.push(
+        `"${m.name}" lists big "${m.big}" with id_hint "${m.big_id_hint}", but no entry has that id_hint. Treating as root.`,
+      );
+      self.parentKey = null;
+      return;
+    }
     if (parentCandidates.length === 0) {
       warnings.push(
         `"${m.name}" lists big "${m.big}" but no explicit entry exists for that name. Treating as root.`,

@@ -116,8 +116,9 @@ function usePannableTree(resetKey: string) {
       return { x: 0, y: PAN_RESET_Y };
     }
 
-    const centeredX = (viewport.clientWidth - canvas.offsetWidth * scale) / 2;
-    return boundOffset({ x: centeredX, y: PAN_RESET_Y }, scale);
+    // A tree that fits is centered by boundOffset; a wider one starts at its
+    // left edge so the first root is on screen rather than connector lines.
+    return boundOffset({ x: PAN_BOUND_PADDING, y: PAN_RESET_Y }, scale);
   }, [boundOffset]);
 
   const resetView = useCallback(() => {
