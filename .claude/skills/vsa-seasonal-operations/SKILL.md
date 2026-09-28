@@ -1,6 +1,6 @@
 ---
 name: vsa-seasonal-operations
-description: Load when a VSA-website task touches anything calendar-driven — summer-break empty states or seasonalState.ts, House signups/House Reveal content, application windows (ace_application, house_fall/winter/spring, intern, cabinet, VCN interest forms, wnc_team_form), VCN or WNC pages, VSA Wrapped, new-academic-year launch content, academic_terms rows, or yearly turnover ("new school year" setup). Also load BEFORE changing house pages, application links/gating, or VCN surfaces at any time of year, to check the FREEZE WINDOWS policy (owner-confirmed rule, 2026-07-05). Provides the seasonal state machine, the academic-year content cycle, the freeze-window policy and pre-change check, and the yearly turnover runbook.
+description: Load when a VSA-website task touches anything calendar-driven — summer-break empty states or seasonalState.ts, House signups/House Reveal content, application windows (ace_application, house_fall/winter/spring, intern, cabinet, VCN interest forms, wnc_team_form), VCN or WNC pages, VSA Wrapped, new-academic-year launch content, academic_terms rows, or yearly turnover ("new school year" setup). Also load BEFORE changing House data/reveal content, application links/gating, or VCN surfaces at any time of year, to check the FREEZE WINDOWS policy (owner-confirmed rule, 2026-07-05; House UI exempted 2026-09-27). Provides the seasonal state machine, the academic-year content cycle, the freeze-window policy and pre-change check, and the yearly turnover runbook.
 ---
 
 # VSA Seasonal Operations — the academic-year clock
@@ -84,14 +84,16 @@ Frontend path: `src/data/repos/applicationLinks.ts` (repo) → `src/lib/applicat
 ## 3. FREEZE WINDOWS policy (the rule, stated as policy)
 
 > **Source: owner interview, 2026-07-05.** This calendar-driven discipline rule existed only in the owner's head until this skill was written. It is now policy. It complements — never overrides — AGENTS.md and `vsa-change-control`.
+>
+> **Amended by the owner, 2026-09-27: House UI is not frozen.** Presentational changes to House pages — layout, styling, heroes, shared components, responsive and dark-mode polish — are routine at any time of year, including while a House Reveal is pending, as long as they do not change House data, reveal gating, or *what* the page shows. The House Reveal freeze covers House **data and reveal content** only.
 
-**The rule:** around **House Reveals**, **application-window opens**, and **VCN**, the affected surfaces are frozen. Do not change them without explicit owner approval — *even for "safe" refactors, copy tweaks, styling passes, or dependency-driven churn*. A broken button or wrong placeholder during a reveal or an application open is a public, time-critical failure for 600+ members that cannot wait for a next deploy cycle.
+**The rule:** around **House Reveals**, **application-window opens**, and **VCN**, the affected surfaces are frozen. Do not change them without explicit owner approval — *even for "safe" refactors, copy tweaks, styling passes, or dependency-driven churn* (House is the exception: only its data and reveal content freeze, not its UI — see the 2026-09-27 amendment above). A broken button or wrong placeholder during a reveal or an application open is a public, time-critical failure for 600+ members that cannot wait for a next deploy cycle.
 
 Frozen surfaces per event:
 
 | Calendar event | Frozen surfaces |
 |---|---|
-| House Reveal | House pages (`src/pages/House.tsx`, `HouseDetail.tsx`), House assets/profiles, reveal placeholder copy, House standings display, `src/constants/houses.ts` |
+| House Reveal | House **data and reveal content**: House assets/profiles (rows and images), `src/constants/houses.ts`, reveal placeholder copy and the announced-vs-not-announced gating logic in `src/pages/House.tsx` / `HouseDetail.tsx`, House standings data. **Not frozen:** House page UI — layout, styling, heroes, shared components (routine; owner amendment 2026-09-27) |
 | Application window opening (any of the 9 keys) | `application_links` rows and the `public_application_links` view, `ApplicationCTA.tsx`, `src/lib/applicationLinks.ts`, `src/data/repos/applicationLinks.ts`, the program page hosting that CTA (e.g. `src/pages/Ace.tsx`, `Internship.tsx`, `WildNCulture.tsx`) |
 | VCN season | VCN program page/content, VCN archives admin + `published_vcn_archives`, `vcn_*_interest` application rows |
 
@@ -104,7 +106,7 @@ Frozen surfaces per event:
    order by sort_order;
    ```
    `status = 'open'`, or `not_open` with `open_at` within ~2 weeks → the corresponding surfaces are frozen.
-2. **Is a House reveal pending?** If the current year's Houses are still placeholders (as of 2026-07-06, 2026–2027 Houses are placeholders — AGENTS.md), a reveal is by definition pending. Never invent House names, themes, or assignments; never "pre-fill" reveal content. The placeholder state in `src/pages/House.tsx` *is* the correct production state until leadership announces.
+2. **Is a House reveal pending?** If the current year's Houses are still placeholders (as of 2026-07-06, 2026–2027 Houses are placeholders — AGENTS.md), a reveal is by definition pending. Never invent House names, themes, or assignments; never "pre-fill" reveal content. The placeholder state in `src/pages/House.tsx` *is* the correct production state until leadership announces. A pending reveal freezes House data and reveal content — it does **not** freeze House page UI work, provided the UI change leaves the placeholder state and its copy intact.
 3. **Is VCN season active?** Check whether `vcn_stage_ninja_interest` / `vcn_props_team_interest` are open (query above) and whether current-VCN content is live (admin `/admin/vcn`). If yes → VCN surfaces frozen.
 4. If any check fires and your change touches a frozen surface: **stop and get explicit owner approval** (see `vsa-change-control` for the approval flow). Record the approval in the PR body.
 
@@ -162,7 +164,7 @@ Sources (verified 2026-07-06, branch `codex/reactbits-ui`):
 - `supabase/migrations/20260604000000_create_application_links.sql` (keys, window semantics, view masking); `20260512000000_add_academic_terms_and_cabinet_years.sql`; `20260512000004_seed_historical_cabinet_archive.sql`; `20260512000006_create_vcn_archives.sql`; `20260525000000_add_house_membership_history.sql`; `20260531000000_seed_legacy_house_assets.sql`; `20260601010000_restore_mario_house_assets.sql`.
 - `docs/leaderboard-system.md` (terms→leaderboard dependency).
 - Git: `1ec81d83` (ACE Reveal copy), `fc51c96c`/`a3d7ea60` (VSA Wrapped, PR #178), `cd2c8775`/#29 and `13c99b78`/#122 (cabinet archive), `2ce699b1` (years/terms admin), `cc1c5e3d` (`codex/launch-content-2026-2027-audit`).
-- **Freeze-windows policy: owner interview, 2026-07-05** (previously unwritten; this file is its first written home).
+- **Freeze-windows policy: owner interview, 2026-07-05** (previously unwritten; this file is its first written home). **Amended 2026-09-27 by the owner:** House UI changes are not frozen; the House Reveal freeze covers House data and reveal content only.
 
 Re-verification one-liners:
 ```bash

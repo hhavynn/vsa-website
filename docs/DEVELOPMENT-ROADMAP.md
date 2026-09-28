@@ -253,7 +253,7 @@ Branch prefixes stay per-agent (`claude/`, `codex/`, `antigravity/`) per `AGENTS
 Each issue carries the constraints relevant to its area. The recurring ones:
 
 - **Protected domains** — attendance import, points calculation, House membership, leaderboard, RLS. Gated by `vsa-change-control`.
-- **Freeze windows** — House pages, application links/gating, and VCN surfaces have an owner-confirmed freeze policy (2026-07-05). Check `vsa-seasonal-operations` before touching them at *any* time of year.
+- **Freeze windows** — House data/reveal content, application links/gating, and VCN surfaces have an owner-confirmed freeze policy (2026-07-05; House UI exempted 2026-09-27). Check `vsa-seasonal-operations` before touching them at *any* time of year.
 - **Never** — delete Supabase Storage originals · weaken an RLS policy to make a query work · expose check-in codes · hardcode a real application link · expose a closed or future application URL · commit a secret · `npm run eject` · auto-apply migrations to production.
 - **Dual points systems** — the public leaderboard and the authenticated check-in flow read and write *different tables* and are not reconciled. Never present them as unified; never fix a leaderboard number by writing to the check-in tables. See `docs/leaderboard-system.md`.
 - **Owning skill / subagent** — named per issue, so the right context loads without anyone having to know the skill router.

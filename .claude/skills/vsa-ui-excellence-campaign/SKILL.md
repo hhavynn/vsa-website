@@ -134,7 +134,7 @@ npm run analyze                       # compare vs baseline
 
 **If the bundle gate is exceeded → branch to a bundle-diet step**: run `npm run analyze`, identify the growth (usually an accidentally-imported module or un-lazy component), fix via lazy loading / import pruning, re-measure. Only if diet fails, ask the owner whether the feature justifies the bytes — never silently ship the regression.
 
-**Every phase:** check vsa-seasonal-operations freeze windows BEFORE starting (House pages, application surfaces, and VCN pages freeze around reveals/opens); route the PR through vsa-change-control (branch naming, PR title regex, classification); one phase = one PR.
+**Every phase:** check vsa-seasonal-operations freeze windows BEFORE starting (House data/reveal content, application surfaces, and VCN pages freeze around reveals/opens; House UI does not); route the PR through vsa-change-control (branch naming, PR title regex, classification); one phase = one PR.
 
 **Rollback note (all phases):** these are presentation-only changes — rollback is `git revert <merge-sha>` of the phase PR. No migrations, no data. If a phase accidentally touched data logic, it violated the fence below and must be reverted immediately.
 
@@ -147,7 +147,7 @@ Each phase: **objective → verify with the universal gate → surface-specific 
 | 2 | Home identity pass | Extend scrapbook identity (solution A) from WrappedRecapCard/ThisWeekInVSA to remaining home sections; unify motion timings | Hero motion (`e0feb783`) untouched or improved; 375px snap rail (`368fbf63`) still swipes; degraded-mode home renders |
 | 3 | Events surface | Spotlight cards (`51855845`) coherence pass + list/detail motion language; empty + skeleton states on-token | Drafts still excluded from public list; check-in codes never rendered; bottom sheets (`feb4b263`) intact |
 | 4 | Leaderboard | Visual distinction pass (podium/house treatment) WITHOUT touching ranking data logic | Counters (`2403cff9`) still animate; numbers identical before/after (screenshot + DOM text diff); zero repo-layer diffs |
-| 5 | House pages | Scrapbook/house-color identity on `/house`, archive, detail | FREEZE CHECK mandatory (vsa-seasonal-operations); house-year mapping untouched; never invent 2026–27 Houses |
+| 5 | House pages | Scrapbook/house-color identity on `/house`, archive, detail | House UI is not frozen (owner, 2026-09-27) but reveal content/gating must stay intact; house-year mapping untouched; never invent 2026–27 Houses |
 | 6 | Gallery | Polish on top of `bce6720e`/`80037b70` (lightbox motion, masonry rhythm) | Image loading stays lazy; no Supabase Storage URL changes (egress — see vsa-failure-archaeology) |
 | 7 | Cabinet | Profile-card system pass on top of `cc708c8f`/`ada86e21` | No fake members; current vs archive never mixed |
 | 8 | Points lookup (`/points`) | Make Find My Points feel first-class (motion, states) | Presentation only — zero changes to points math or queries (protected domain) |
@@ -199,7 +199,7 @@ Default play: A + B together per surface phase; C sparingly (phases with owner p
 | Hardcoded colors (`#14b8a6`, `text-teal-500`, …) | Must use semantic tokens (vsa-design-system-reference). Hardcoded colors are the #1 source of dark-mode bugs (vsa-debugging-playbook). |
 | Polishing admin surfaces before public ones | Owner priority is member-facing beauty; admin has ~10 users. Admin waits until phase 12+. |
 | Touching data logic while restyling (points math, leaderboard queries, attendance, House membership, repo layer) | Protected domains (vsa-change-control). A restyle PR with a `src/data/` diff is auto-reject. Presentation and data changes never share a PR. |
-| Shipping UI to frozen surfaces (House pages near reveal, application pages near opens, VCN near show) | Freeze windows, owner-confirmed 2026-07-05 (vsa-seasonal-operations owns the calendar and pre-change check). |
+| Shipping UI to frozen surfaces (application pages near opens, VCN near show; House UI is exempt, House reveal content is not) | Freeze windows, owner-confirmed 2026-07-05 (vsa-seasonal-operations owns the calendar and pre-change check). |
 | Judging by screenshots alone / "looks good to me" | The campaign's core rule is measurement. Screenshots are evidence of appearance, not of a11y, CLS, bundle, or reduced-motion behavior. Numbers or it didn't happen. |
 | Redoing merged work because it "could be better" | Phase 0 list. Extend with evidence of a specific deficiency, never rewrite. |
 

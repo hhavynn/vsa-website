@@ -65,7 +65,7 @@ If you need to *change* a documented fact, change it in its owning skill and let
 
 ## The two non-negotiables baked into every skill
 
-1. **Nothing routes around `AGENTS.md` or change-control.** `AGENTS.md` (repo root) is the manifest and overrides everything here. Protected domains (attendance import, points calculation, House membership, leaderboard, RLS) require an explicit owner request; migrations are applied to production **manually**; freeze windows halt changes to House/application/VCN surfaces. A skill that seems to let you skip a gate is wrong — trust `AGENTS.md`.
+1. **Nothing routes around `AGENTS.md` or change-control.** `AGENTS.md` (repo root) is the manifest and overrides everything here. Protected domains (attendance import, points calculation, House membership, leaderboard, RLS) require an explicit owner request; migrations are applied to production **manually**; freeze windows halt changes to House data/reveal content, application, and VCN surfaces (House UI is exempt). A skill that seems to let you skip a gate is wrong — trust `AGENTS.md`.
 2. **Ground truth over memory.** Every command, path, and citation was verified against the repo at authoring time. Facts that drift are **date-stamped**, and every skill ends with a **`Provenance and maintenance`** section listing one-line re-verification commands.
 
 ---

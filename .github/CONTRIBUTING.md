@@ -49,9 +49,9 @@ This is a summary, not the full rule set. The authoritative source — full tier
 
 ## Freeze windows
 
-Around **House reveals**, **application-window openings**, and **VCN (Vietnamese Culture Night)**, the affected public surfaces (House pages, application CTAs/links, VCN pages) are frozen — don't change them, even for "safe" refactors or copy tweaks, without explicit owner approval. A broken House page during reveal night or a dead application link at open time is a real-world incident for members, not just a bug.
+Around **House reveals**, **application-window openings**, and **VCN (Vietnamese Culture Night)**, the affected public surfaces (House data and reveal content, application CTAs/links, VCN pages) are frozen — don't change them, even for "safe" refactors or copy tweaks, without explicit owner approval. House page **UI** (layout, styling, heroes) is not frozen; only House data and reveal content are. A broken House page during reveal night or a dead application link at open time is a real-world incident for members, not just a bug.
 
-Before starting any change to House pages, application links, or VCN surfaces, check whether a freeze window is active. The calendar, exact affected surfaces, and the pre-change check live in the `vsa-seasonal-operations` skill.
+Before starting any change to House data/reveal content, application links, or VCN surfaces, check whether a freeze window is active. The calendar, exact affected surfaces, and the pre-change check live in the `vsa-seasonal-operations` skill.
 
 ## Never do this
 
