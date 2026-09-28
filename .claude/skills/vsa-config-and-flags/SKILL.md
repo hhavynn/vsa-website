@@ -198,5 +198,5 @@ cat vercel.json                                                           # §5 
 ls supabase/migrations | grep -i "setting\|application_link\|publish\|knowledge\|ai_assistant"  # §6 DB config
 grep -n "application_key in" -A 12 supabase/migrations/20260604000000_create_application_links.sql  # §6 nine keys
 node -e "console.log(require('./package.json').jest, require('./package.json').browserslist)"       # §7 build config
-grep -rn "PLAUSIBLE\|OPENAI" src scripts public .env.example 2>/dev/null  # §1 dead-config check (expect no hits)
+grep -rn "PLAUSIBLE\|REACT_APP_OPENAI" src scripts public .env.example 2>/dev/null  # §1 dead client config (expect no hits; .env.example documents the server-side OPENAI_API_KEY on purpose)
 ```
