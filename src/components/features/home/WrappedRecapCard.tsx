@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { CURRENT_WRAPPED_YEAR_LABEL as EDITION } from "../../../data/wrappedEdition";
 
 type Tone = "teal" | "coral" | "gold";
 
@@ -252,10 +253,10 @@ export function WrappedRecapCard() {
           <div>
             <span className="scrapbook-sticker scrapbook-sticker-coral">🎁 Year in Review</span>
             <h1 className="mt-5 font-serif text-[42px] font-black leading-[0.98] tracking-[-0.02em] text-text-primary sm:text-[58px]">
-              VSA Wrapped 2025–2026
+              VSA Wrapped {EDITION}
             </h1>
             <p className="mt-5 max-w-2xl font-sans text-[18px] font-bold leading-[1.7] text-text-primary">
-              A quick look back at 2025–2026 — the year, the chaos, and everyone who kept showing up.
+              A quick look back at {EDITION} — the year, the chaos, and everyone who kept showing up.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <WrappedNavLink to="/events">Events</WrappedNavLink>
@@ -299,7 +300,7 @@ export function WrappedRecapCard() {
                 Four houses, one leaderboard, and a race that stayed worth checking all year long.
               </p>
               <p className="mt-4 font-sans text-[15px] font-bold leading-[1.7] text-text-primary">
-                Bowser House finished first in 2025–2026.
+                Bowser House finished first in {EDITION}.
               </p>
             </div>
 
@@ -360,7 +361,7 @@ export function WrappedRecapCard() {
             </div>
             <div className="scrapbook-note p-6" style={{ transform: "rotate(-0.7deg)" }}>
               <p className="font-sans text-[15.5px] leading-[1.85] text-text-secondary">
-                We closed out 2025–2026 with{" "}
+                We closed out {EDITION} with{" "}
                 <strong className="font-bold text-text-primary">Afterglow</strong> and a whole lot of people to
                 celebrate.
               </p>
@@ -377,7 +378,7 @@ export function WrappedRecapCard() {
         {/* Chapter Five — One last thing */}
         <section className="relative mt-[72px] border-t border-dashed border-[var(--border2)] pt-11">
           <GhostNumber value="05" />
-          <ChapterHeader tone="gold" badge="Chapter Five · One Last Thing" heading="2025–2026 gave us" />
+          <ChapterHeader tone="gold" badge="Chapter Five · One Last Thing" heading={`${EDITION} gave us`} />
           <div className="mt-6 flex flex-wrap gap-3">
             {LAST_THINGS.map((item) => (
               <span

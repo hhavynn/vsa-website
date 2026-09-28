@@ -3,9 +3,10 @@
 // Wrapped is per-year editorial content, so the nav label follows the edition
 // that is actually published, not today's date: in September the newest
 // Wrapped is still last year's, and a date-derived label would point freshmen
-// at a recap that doesn't exist yet. Update this when the next edition's recap
-// replaces WrappedRecapCard; the nav and footer labels follow it. (The card's
-// own copy is edition-specific and stays with that edition.)
+// at a recap that doesn't exist yet. The recap card (WrappedRecapCard), the
+// WRAPPED_2026 config and the nav/footer labels all read this one value, so the
+// label always matches the edition that renders. When the next recap ships,
+// replace the card's copy and update this value in the same change.
 export const CURRENT_WRAPPED_YEAR_LABEL = '2025–2026';
 
 /** "2025–2026" → "Wrapped '25–'26" */
