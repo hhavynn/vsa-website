@@ -184,6 +184,57 @@ async function runTests() {
     } else {
       reportPass('anon cannot read data_rights_requests (returned empty list due to RLS)');
     }
+
+    // Column/table grants closed by #384 (#379, #380, #382). These are grant
+    // revokes, so a regression shows up as the select succeeding, not as rows.
+    const deniedReads = [
+      ['events', 'check_in_form_url', '#379'],
+      ['member_event_attendance', 'id', '#380'],
+      ['uvsa_schools', 'verification_notes', '#382'],
+      ['uvsa_schools', 'confidence_level', '#382'],
+      ['external_events', 'source_notes', '#382'],
+      ['external_events', 'confidence_level', '#382'],
+    ];
+    for (const [table, column, issue] of deniedReads) {
+      const { error } = await anon.from(table).select(column).limit(1);
+      if (error?.code === '42501') {
+        reportPass(`anon cannot select ${table}.${column} (${issue})`);
+      } else {
+        reportFail(`anon select ${table}.${column} was not denied (${issue}): ${JSON.stringify(error)}`);
+      }
+    }
+
+    // Applications invariant (#273): the base table is admin-only, and the
+    // public view carries a URL only for an open window. Only counts are
+    // reported so a leaked URL never lands in a CI log.
+    const { data: appBase, error: appBaseError } = await anon.from('application_links').select('id').limit(1);
+    if (appBaseError || (appBase && appBase.length === 0)) {
+      reportPass('anon cannot read application_links base table (#273)');
+    } else {
+      reportFail('anon read rows from application_links base table (#273)');
+    }
+
+    const { data: appView, error: appViewError } = await anon
+      .from('public_application_links')
+      .select('status, target_url');
+    if (appViewError) {
+      reportFail(`anon cannot read public_application_links: ${appViewError.message}`);
+    } else {
+      const leaked = (appView ?? []).filter((row) => row.status !== 'open' && row.target_url).length;
+      if (leaked === 0) {
+        reportPass('public_application_links exposes no URL for a non-open window (#273)');
+      } else {
+        reportFail(`public_application_links exposes ${leaked} URL(s) for non-open windows (#273)`);
+      }
+    }
+
+    // Check-in stays server-authoritative and signed-in only (#381 / #385).
+    const { error: checkInError } = await anon.rpc('check_in_to_event', { p_code: 'RLS-VERIFY-NOT-A-CODE' });
+    if (checkInError?.code === '42501') {
+      reportPass('anon cannot call check_in_to_event (#381)');
+    } else {
+      reportFail(`anon call to check_in_to_event was not denied (#381): ${JSON.stringify(checkInError)}`);
+    }
   } catch (err) {
     reportFail(`Unexpected error during anon checks: ${err.message}`);
   }

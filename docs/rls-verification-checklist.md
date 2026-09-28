@@ -98,6 +98,14 @@ These checks cover:
 - **PASS:** The security rule behaves as expected (e.g. access is blocked for users, or granted for admins).
 - **FAIL:** A privilege mismatch was detected. For example, if an ordinary user successfully writes to `event_attendance` without using the RPC, RLS policies have been weakened or misconfigured. **Stop immediately and check database migrations.**
 
+### In CI
+
+`.github/workflows/rls-verify.yml` runs this script on every PR to `main`, on every push to `main`, and daily on a schedule, against production (the only Supabase project). The daily run matters most: past RLS regressions (#422, #423) came from policies created in the dashboard, which no PR would trigger.
+
+- It never sets `RLS_ALLOW_MUTATION_TESTS`, so only the read-only and non-destructive probes run.
+- The signed-in sections are skipped until the `RLS_TEST_*` repository secrets are configured.
+- A failing run names the table, column or RPC and the issue it guards. Treat it as a security incident: check `pg_policies` and grants in production before assuming the test is wrong.
+
 ---
 
 ## 8. Manual Supabase Dashboard Verification
