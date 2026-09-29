@@ -20,7 +20,8 @@ const PALETTE: Record<FamAccent, PaletteEntry> = {
 interface FamCoverProps {
   pattern: FamPattern;
   accent: FamAccent;
-  height?: number;
+  /** px, or any CSS length (e.g. '100%' to fill a sized parent). */
+  height?: number | string;
   imageUrl?: string | null;
   alt?: string;
 }
