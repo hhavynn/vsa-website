@@ -17,6 +17,8 @@ import { CabinetRoleExplorer } from '../components/features/cabinet/CabinetRoleE
 import { useCabinetRoles } from '../hooks/useCabinetRoles';
 import { CabinetRoleModal } from '../components/features/cabinet/CabinetRoleModal';
 import { matchCabinetRole } from '../utils/matchCabinetRole';
+import { useMemberAvatars } from '../hooks/useMemberAvatars';
+import { resolveMemberPhoto } from '../lib/memberPhotos';
 
 type CabinetMember = CabinetMemberRaw;
 
@@ -174,19 +176,26 @@ function cabCardStyle(idx: number, patterns: WallPattern[], total: number, isFul
 
 function Avatar({
   image,
+  memberId,
   name,
   size = 48,
   priority = false,
 }: {
   image?: string | null;
+  memberId?: string | null;
   name: string;
   size?: number;
   priority?: boolean;
 }) {
-  const [hasError, setHasError] = useState(false);
-  const imageUrl = resolveImageUrl(image);
+  const [failedUrls, setFailedUrls] = useState<string[]>([]);
+  const memberAvatars = useMemberAvatars();
+  // Approved shared avatar first, then the Cabinet photo, then initials.
+  const imageUrl = [
+    resolveMemberPhoto(memberAvatars, memberId),
+    resolveImageUrl(image),
+  ].find((url): url is string => !!url && !failedUrls.includes(url)) ?? null;
 
-  if (!imageUrl || hasError) {
+  if (!imageUrl) {
     const initials = name
       .split(' ')
       .map((word) => word[0])
@@ -237,7 +246,7 @@ function Avatar({
       style={{ width: size, height: size }}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
-      onError={() => setHasError(true)}
+      onError={() => setFailedUrls((urls) => [...urls, imageUrl])}
     />
   );
 }
@@ -356,7 +365,7 @@ function ExecutiveRolePanel({
                 borderTop: '1px dashed var(--color-border)',
               }}
             >
-              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={62} />
+              <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={62} />
               <div className="min-w-0 flex-1">
                 <p
                   className="font-serif text-[21px] font-normal leading-tight tracking-tight"
@@ -428,7 +437,7 @@ function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; m
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
               <div className="relative shrink-0">
-                <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
+                <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
                 {isPresident && (
                   <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
                     <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
@@ -515,7 +524,7 @@ function DeptSpreadCard({ role, members, onRoleClick }: { role: string; members:
             style={{ borderColor: 'var(--color-border2)' }}
           >
             <div className="flex items-start gap-4">
-              <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={60} />
+              <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={60} />
               <div className="min-w-0 flex-1">
                 <p className="font-serif text-[16px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
                   {member.name}
@@ -569,7 +578,7 @@ function CompactMemberCard({ member, index, onRoleClick }: { member: CabinetMemb
     >
       <span className="scrapbook-pin" aria-hidden />
       <div className="flex items-start gap-3">
-        <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={44} />
+        <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={44} />
         <div className="min-w-0">
           <p className="font-sans text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>
             {member.name}
@@ -604,7 +613,7 @@ function RookieTile({ member }: { member: CabinetMember }) {
       style={{ background: 'var(--color-surface)' }}
     >
       <div className="mx-auto mb-2 w-fit">
-        <Avatar image={getCabinetPhotoUrl(member)} name={member.name} size={56} />
+        <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={56} />
       </div>
       <p className="truncate font-serif text-[13px] font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
         {member.name}
