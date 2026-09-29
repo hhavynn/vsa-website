@@ -422,6 +422,8 @@
   border-top-left-radius: 20px; border-top-right-radius: 20px;
   display: flex; flex-direction: column;
   overflow: hidden;
+  /* clip, unlike hidden, can't be scrolled by focusing an off-screen tree node */
+  overflow: clip;
   box-shadow: var(--shadow-sheet);
   animation: ace-rise 0.28s cubic-bezier(.2,.7,.1,1);
   border-top: 1px solid var(--border);
@@ -484,7 +486,7 @@
 .ace-app .ace-legend-swatch-ring-coral { background: var(--surface); border: 2px solid var(--accent); }
 .ace-app .ace-legend-swatch-ring-gold  { background: var(--surface); border: 2px solid var(--gold); }
 .ace-app .ace-sheet-treewrap {
-  flex: 1; overflow: hidden;
+  flex: 1; min-height: 0; overflow: hidden; overflow: clip;
   position: relative;
   background: var(--bg);
 }
@@ -512,6 +514,8 @@
 .ace-app .ace-tree-panviewport g {
   cursor: inherit !important;
 }
+.ace-app .ace-tree-node:focus { outline: none; }
+.ace-app .ace-tree-node:focus-visible { outline: 2px solid var(--brand); outline-offset: 6px; }
 .ace-app .ace-tree-canvas {
   transform-origin: 0 0;
   will-change: transform;
@@ -577,9 +581,10 @@
   border-top: 1px solid var(--border);
   background: var(--surface);
   max-height: 0; overflow: hidden;
+  flex-shrink: 0;
   transition: max-height 0.3s ease;
 }
-.ace-app .ace-sheet-rail.is-open { max-height: 360px; }
+.ace-app .ace-sheet-rail.is-open { max-height: 360px; max-height: min(440px, 45dvh); overflow-y: auto; }
 .ace-app .ace-sheet-hint {
   padding: 14px 18px; font-size: 12.5px; color: var(--text-2);
   background: var(--bg-2);
@@ -587,13 +592,16 @@
   font-family: "JetBrains Mono", monospace; letter-spacing: 0.02em;
 }
 .ace-app .ace-rail-body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 14px; }
-.ace-app .ace-rail-card { display: flex; gap: 14px; align-items: center; }
+.ace-app .ace-rail-card { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .ace-app .ace-rail-avatar {
   width: 52px; height: 52px; border-radius: 16px;
   display: flex; align-items: center; justify-content: center;
   font-family: "DM Serif Display", serif; font-style: italic; font-size: 26px;
   border: 2px solid; flex-shrink: 0; color: #fff;
+  overflow: hidden;
 }
+.ace-app .ace-rail-photo { width: 100%; height: 100%; object-fit: cover; }
+.ace-app .ace-rail-photo-request { margin-left: auto; max-width: 240px; }
 .ace-app .ace-rail-avatar-teal  { background: var(--brand-strong);  border-color: var(--brand-strong); }
 .ace-app .ace-rail-avatar-coral { background: var(--accent); border-color: var(--accent-strong); color: var(--text-on-accent); }
 .ace-app .ace-rail-avatar-gold  { background: var(--gold);   border-color: var(--gold-strong); color: var(--text-on-accent); }

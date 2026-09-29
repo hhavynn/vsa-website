@@ -72,6 +72,31 @@ describe("ACE fam roster", () => {
     ]);
   });
 
+  it("shows a linked tree member's shared avatar over their ACE photo", () => {
+    const avatars = new Map([["member-colin", "https://example.test/approved/colin.webp"]]);
+    const heads = resolveFamHeads(
+      "sunshine",
+      [
+        member({
+          name: "Colin Tran",
+          member_id: "member-colin",
+          photo_url: "https://example.test/colin.webp",
+        }),
+        member({
+          name: "Angelina Nguyen",
+          member_id: null,
+          photo_url: "https://example.test/angelina.webp",
+        }),
+      ],
+      avatars,
+    );
+
+    expect(heads.map((h) => h.photoUrl)).toEqual([
+      "https://example.test/approved/colin.webp",
+      "https://example.test/angelina.webp",
+    ]);
+  });
+
   it("gives Sweatpants a single head", () => {
     expect(resolveFamHeads("sweatpants", []).map((h) => h.name)).toEqual([
       "Jenny Diep",

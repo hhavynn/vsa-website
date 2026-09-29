@@ -1,6 +1,7 @@
 import { AceFamily, AceFamilyMember } from '../types';
 import { FamAccent, FamPattern } from '../components/features/ace/FamCover';
 import { TreeNode } from '../components/features/ace/FamilyTree';
+import { MemberAvatarMap, NO_MEMBER_AVATARS, resolveMemberPhoto } from './memberPhotos';
 
 const PATTERNS: FamPattern[] = ['sunburst', 'wave', 'dots', 'arches', 'lantern', 'leaves'];
 const ACCENTS: FamAccent[] = ['teal', 'coral', 'gold'];
@@ -119,8 +120,15 @@ function classifyRole(rawRole: string | null): string {
   return rawRole;
 }
 
-/** Convert published members into tree-node shape expected by FamilyTree. */
-export function membersToTreeNodes(members: AceFamilyMember[]): TreeNode[] {
+/**
+ * Convert published members into tree-node shape expected by FamilyTree.
+ * Linked members show their shared approved avatar; others keep photo_url,
+ * then the initial.
+ */
+export function membersToTreeNodes(
+  members: AceFamilyMember[],
+  avatars: MemberAvatarMap = NO_MEMBER_AVATARS,
+): TreeNode[] {
   return members.map((m) => ({
     id: m.id,
     initial: firstInitial(m.name),
@@ -128,5 +136,6 @@ export function membersToTreeNodes(members: AceFamilyMember[]): TreeNode[] {
     role: classifyRole(m.role_label),
     cohort: null,
     parent: m.parent_member_id ?? null,
+    photoUrl: resolveMemberPhoto(avatars, m.member_id, m.photo_url),
   }));
 }

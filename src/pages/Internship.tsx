@@ -5,6 +5,8 @@ import { EditorialHero, EditorialHeroScript } from '../components/common/Editori
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { CabinetIntern, useCurrentCabinetInterns } from '../hooks/useCabinetInterns';
+import { useMemberAvatars } from '../hooks/useMemberAvatars';
+import { resolveMemberPhoto } from '../lib/memberPhotos';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { PROGRAM_STATUS_LABELS } from '../lib/programContent';
 import { getSupabaseImageUrl } from '../lib/supabaseImages';
@@ -70,7 +72,10 @@ function resolveInternImageUrl(image?: string | null) {
 
 function InternCard({ intern }: { intern: CabinetIntern }) {
   const imageSize = 360;
-  const imageUrl = resolveInternImageUrl(intern.thumbnail_url || intern.image_url);
+  const memberAvatars = useMemberAvatars();
+  const imageUrl = resolveInternImageUrl(
+    resolveMemberPhoto(memberAvatars, intern.member_id, intern.thumbnail_url || intern.image_url),
+  );
 
   return (
     <article className="program-poster-card min-w-0">

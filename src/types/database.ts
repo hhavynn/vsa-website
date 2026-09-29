@@ -120,6 +120,7 @@ export type Database = {
           family_id: string;
           id: string;
           is_published: boolean;
+          member_id: string | null;
           name: string;
           parent_member_id: string | null;
           photo_url: string | null;
@@ -132,6 +133,7 @@ export type Database = {
           family_id: string;
           id?: string;
           is_published?: boolean;
+          member_id?: string | null;
           name: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
@@ -144,6 +146,7 @@ export type Database = {
           family_id?: string;
           id?: string;
           is_published?: boolean;
+          member_id?: string | null;
           name?: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
@@ -177,6 +180,13 @@ export type Database = {
             columns: ["parent_member_id"];
             isOneToOne: false;
             referencedRelation: "published_ace_family_members";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ace_family_members_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "members";
             referencedColumns: ["id"];
           },
         ];
@@ -391,6 +401,7 @@ export type Database = {
           id: string;
           image_url: string | null;
           major: string | null;
+          member_id: string | null;
           minor: string | null;
           name: string;
           pronouns: string | null;
@@ -410,6 +421,7 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           major?: string | null;
+          member_id?: string | null;
           minor?: string | null;
           name: string;
           pronouns?: string | null;
@@ -429,6 +441,7 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           major?: string | null;
+          member_id?: string | null;
           minor?: string | null;
           name?: string;
           pronouns?: string | null;
@@ -443,6 +456,13 @@ export type Database = {
             columns: ["cabinet_year_id"];
             isOneToOne: false;
             referencedRelation: "cabinet_years";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cabinet_members_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "members";
             referencedColumns: ["id"];
           },
         ];
@@ -3052,6 +3072,7 @@ export type Database = {
           display_order: number | null;
           family_id: string | null;
           id: string | null;
+          member_id: string | null;
           name: string | null;
           parent_member_id: string | null;
           photo_url: string | null;

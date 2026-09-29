@@ -50,6 +50,18 @@ Append-only audit trail (`submitted | approved | rejected | removed`, actor, opt
 
 The only public read surface: `member_id` + `avatar_url` for **approved** requests, preferring `matched_member_id` and falling back to the `members.user_id` linkage, latest approval per member. It exposes no auth UUIDs, emails, notes, or pending/rejected rows. Granted to `anon` and `authenticated`.
 
+### Cross-page member links (`20260929071851_link_ace_cabinet_members_to_members.sql`)
+
+One approved photo shows everywhere a person appears publicly. `public_member_avatars` (keyed by `members.id`) is the single source of truth; other surfaces point at it:
+
+- `ace_family_members.member_id` and `cabinet_members.member_id` are nullable links to `members.id` (`on delete set null`). `published_ace_family_members` exposes `member_id`.
+- For a linked person, the approved avatar wins over ACE `photo_url` and Cabinet `image_url`/`thumbnail_url`. Unlinked and historical people keep their local photo, then initials (`resolveMemberPhoto` in `src/lib/memberPhotos.ts`).
+- Every surface reads avatars through one cached React Query hook, `useMemberAvatars` (a single bulk `public_member_avatars` query, never per person): Leaderboard (all years), Find My Points, House member rows, ACE tree nodes, ACE fam-head cards, Cabinet, and Internship intern cards. Admin approve/remove invalidates it.
+- On an ACE tree, selecting a linked node opens the same `PhotoRequestSection` flow as the Leaderboard, pre-matched to that `members.id`. Unlinked nodes say an admin must link the name first.
+- The backfill was conservative and covers 2025–26 onward only. It links a name only when it matches exactly one `members` row with 2025–26+ attendance. ACE names must also be unique across all trees, outside graveyard fams, and either sit in the fam's latest three generations or have a current-member Big/Little. Cabinet is limited to 2025–26+ years. Ambiguous people (for example, three different "Andy Tran" members) stay unlinked. Link them by hand with an `update ... set member_id = ...` once identity is confirmed.
+- Renaming an ACE tree member or Cabinet member in the admin editors clears its `member_id` (case and whitespace edits don't), so a renamed entry never keeps the previous person's photo. The editors don't set links; linking is a manual `update`.
+- Merging duplicate `members` rows deletes the duplicate, which nulls any ACE/Cabinet link that pointed at it; re-link to the surviving row.
+
 ## Storage & egress design
 
 - **Pending uploads** go to the new **private** `member-photo-requests` bucket (5 MB limit, jpeg/png/webp only), under `pending/<uuid>.<ext>`. Clients compress image client-side first (`avatar` preset, ≤512px WebP). Only admins can read (signed URLs, 5-minute expiry) or delete these objects.

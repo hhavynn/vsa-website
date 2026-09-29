@@ -9,6 +9,7 @@ import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
 import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
+import { isRenamed } from '../../lib/memberPhotos';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
 
 interface CabinetMember {
@@ -393,8 +394,10 @@ export default function AdminCabinet() {
         thumbnailUrl = null;
       }
 
+      const previousName = members.find((member) => member.id === selectedMember.id)?.name;
       const { error } = await supabase.from('cabinet_members').update({
         name: selectedMember.name,
+        ...(isRenamed(previousName, selectedMember.name) ? { member_id: null } : {}),
         role: selectedMember.role,
         category: selectedMember.category,
         display_order: selectedMember.display_order,

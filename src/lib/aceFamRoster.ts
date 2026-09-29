@@ -1,4 +1,5 @@
 import { AceFamilyMember } from "../types";
+import { MemberAvatarMap, NO_MEMBER_AVATARS, resolveMemberPhoto } from "./memberPhotos";
 
 // The current ACE fam lineup. Each slot shows on the ACE page even before an
 // admin creates the fam in Supabase (it renders as a "coming soon" placeholder).
@@ -92,19 +93,24 @@ export interface FamHead {
 const normalizeName = (name: string) =>
   name.trim().replace(/\s+/g, " ").toLowerCase();
 
+const memberPhoto = (member: AceFamilyMember | undefined, avatars: MemberAvatarMap) =>
+  member ? resolveMemberPhoto(avatars, member.member_id, member.photo_url) : null;
+
 /**
  * Fam heads for a fam: members an admin labelled as heads win; otherwise the
- * roster's named heads, borrowing a photo from a same-named tree member.
+ * roster's named heads, borrowing a photo from a same-named tree member. A
+ * tree member linked to members.id shows their shared approved avatar.
  */
 export function resolveFamHeads(
   slug: string,
   members: AceFamilyMember[],
+  avatars: MemberAvatarMap = NO_MEMBER_AVATARS,
 ): FamHead[] {
   const labelled = members.filter((m) => isFamHead(m.role_label));
   if (labelled.length > 0) {
     return labelled.map((m) => ({
       name: m.name,
-      photoUrl: m.photo_url ?? null,
+      photoUrl: memberPhoto(m, avatars),
       roleLabel: m.role_label,
     }));
   }
@@ -112,7 +118,7 @@ export function resolveFamHeads(
   const byName = new Map(members.map((m) => [normalizeName(m.name), m]));
   return (getFamSlot(slug)?.heads ?? []).map((name) => ({
     name,
-    photoUrl: byName.get(normalizeName(name))?.photo_url ?? null,
+    photoUrl: memberPhoto(byName.get(normalizeName(name)), avatars),
     roleLabel: "Fam Head",
   }));
 }

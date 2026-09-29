@@ -242,6 +242,8 @@ export interface AceFamilyMember {
   role_label: string | null;
   photo_url: string | null;
   parent_member_id: string | null;
+  /** Linked members.id; its approved avatar overrides photo_url. */
+  member_id: string | null;
   display_order: number;
   is_published: boolean;
   created_at: string;
