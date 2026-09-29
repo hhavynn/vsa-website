@@ -11,6 +11,7 @@ The recent security hardening transition removes client-authoritative write priv
 This verification tooling performs automated checks to prove that:
 - Anonymous users cannot retrieve sensitive member columns (`email`, `user_id`) or admin tables.
 - Authenticated ordinary users cannot modify points, check-ins, or access private data-rights request details.
+- Neither anonymous nor signed-in users can write through public views.
 - Authorized administrators retain administrative access.
 
 ---
@@ -73,6 +74,7 @@ By default, the script only performs read-only checks that cannot affect product
 - **Anon: event secrets check** — attempts to query the `event_check_in_secrets` table. Expects access denied or empty list.
 - **Anon: data rights RPC check** — attempts to call preview/export functions. Expects access denied.
 - **Anon: data rights requests check** — attempts to query requests history. Expects access denied or empty list.
+- **Anon and user: writes through public views (#472)** — attempts `UPDATE` and `DELETE` through every public view listed in the script. Expects `42501`. Supabase's default privileges grant `ALL` on new views to `anon` and `authenticated`, and a simple single-table view runs as its owner, so a leftover write grant bypasses the base table's RLS. A write that succeeds is reported as FAIL naming the view. Non-destructive: every write is filtered on the nil UUID, the same filter is read first and the probe is not run if it matches anything, and the base tables have only row-level triggers, so a zero-row write fires nothing. Aggregate and join views reject writes with `55000` before Postgres checks grants, so for them the script prints one SKIP line; any other error is a FAIL. The signed-in run needs the `RLS_TEST_USER_*` account. **When you add a view, add it to `simpleViews` or `nonUpdatableViews` in the script.**
 - **User: write probes** — attempts to insert into `event_attendance` and `user_points`, and to update `event_attendance`, `user_points`, `events`, `members` and `member_event_attendance`. Expects RLS block (`42501` on insert, 0 rows on update). The probes are non-destructive even if RLS is broken: inserts target an unknown event or the user's existing row, so a constraint rejects them after RLS lets them through (reported as FAIL), and updates write each row's current values back.
 - **User: event secrets check** — attempts to read secrets. Expects access denied or empty list.
 - **User: data rights check** — attempts to read data rights requests or call admin RPCs. Expects access denied.
@@ -90,6 +92,7 @@ If you set `RLS_ALLOW_MUTATION_TESTS=true`, the script will run active write che
 These checks cover:
 - **Admin: direct manual insert support** — verifies that admins can manually check in members directly via the dashboard by writing to `event_attendance`.
 - **Admin: no direct `user_points` writes** — verifies that even admins cannot write `user_points` from the client; it is server-authoritative (written only by `check_in_to_event` and the signup trigger). Non-destructive: the probe targets the admin's existing row.
+- **Anon and user: no inserts through simple public views (#472)** — inserts `{ id: null }` through each auto-updatable view. Expects `42501`. If the grant is live, `NOT NULL` on `id` rejects the row (reported as FAIL), but only after `BEFORE INSERT` triggers have run, and some of those write to other rows (`ensure_single_current_vcn_archive`). That is why this probe is gated.
 
 ---
 

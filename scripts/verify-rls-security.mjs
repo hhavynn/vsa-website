@@ -98,6 +98,105 @@ async function runTests() {
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
+  const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
+
+  // Writes through public views (#472). Supabase's default privileges grant
+  // ALL on every new view to anon and authenticated. A simple single-table
+  // view is auto-updatable and runs as its owner, so a leftover write grant
+  // lets clients write past the base table's RLS. With the grant revoked,
+  // Postgres rejects the write with 42501 before touching a row.
+  //
+  // Non-destructive: each write is filtered on a nil key, and the same filter
+  // is read first so a match aborts the probe. The base tables have only
+  // row-level triggers, so a zero-row write fires nothing. Add new views here.
+  const simpleViews = [
+    'public_application_links',
+    'published_ace_families',
+    'published_house_page_assets',
+    'published_intern_cohort_members',
+    'published_vcn_archives',
+    'my_member_photo_requests',
+  ];
+  // Not auto-updatable: Postgres rejects writes with 55000 ("cannot update
+  // view") before it checks grants, so the probe cannot see their grants and
+  // reports them as skipped. If one becomes a simple view, it is probed for real.
+  const nonUpdatableViews = [
+    ['member_yearly_points', 'member_id'],
+    ['house_member_yearly_points', 'member_id'],
+    ['house_member_all_time_points', 'member_id'],
+    ['house_yearly_points', 'house_profile_id'],
+    ['house_all_time_points', 'house_profile_id'],
+    ['house_recent_activity', 'event_id'],
+    ['published_ace_family_members', 'id'],
+    ['member_event_history', 'member_id'],
+    ['public_member_avatars', 'member_id'],
+  ];
+
+  async function expectViewWritesDenied(client, who) {
+    const notUpdatable = [];
+    const probeTargets = [
+      ...simpleViews.map((view) => [view, 'id', true]),
+      ...nonUpdatableViews.map(([view, key]) => [view, key, false]),
+    ];
+    for (const [view, key, isSimple] of probeTargets) {
+      const { data: matched, error: readError } = await client
+        .from(view)
+        .select(key)
+        .eq(key, dummyUuid)
+        .limit(1);
+      if (readError?.code === 'PGRST205' || readError?.code === '42P01') {
+        reportSkip(`${who} write probe on ${view} (view does not exist in this database)`);
+        continue;
+      }
+      if (matched && matched.length > 0) {
+        reportFail(`${who} write probe on ${view} not run: ${key} = ${dummyUuid} matches a row (#472)`);
+        continue;
+      }
+      // A denied read still probes the write: filtering a view needs SELECT
+      // on it, so that write is denied too.
+
+      const writes = [
+        ['UPDATE', client.from(view).update({ [key]: dummyUuid }).eq(key, dummyUuid).select(key)],
+        ['DELETE', client.from(view).delete().eq(key, dummyUuid).select(key)],
+      ];
+      // A successful insert would create a row. A null id violates NOT NULL,
+      // but only after BEFORE INSERT triggers run, so it stays gated.
+      if (allowMutations && isSimple) {
+        writes.push(['INSERT', client.from(view).insert({ id: null })]);
+      }
+
+      const failures = [];
+      const denied = [];
+      const rejectedAsNotUpdatable = [];
+      for (const [verb, request] of writes) {
+        const { error } = await request;
+        if (error?.code === '42501') {
+          denied.push(verb);
+        } else if (error?.code === '55000') {
+          rejectedAsNotUpdatable.push(verb);
+        } else if (!error) {
+          failures.push(`${verb} was allowed (matched no row; nothing changed)`);
+        } else if (verb === 'INSERT' && error.code === '23502') {
+          failures.push('INSERT passed the grant check; only NOT NULL on id stopped it');
+        } else {
+          failures.push(`${verb} failed for a non-authorization reason, so its grant was not verified: ${JSON.stringify(error)}`);
+        }
+      }
+
+      if (failures.length > 0) {
+        for (const failure of failures) {
+          reportFail(`${who} write through ${view}: ${failure} (#472)`);
+        }
+      } else if (denied.length > 0) {
+        reportPass(`${who} cannot ${denied.join('/')} through ${view} (42501, #472)`);
+      } else {
+        notUpdatable.push(`${view} (${rejectedAsNotUpdatable.join('/')})`);
+      }
+    }
+    if (notUpdatable.length > 0) {
+      reportSkip(`${who} write grants on views that are not auto-updatable (55000 is raised before any grant check: no write path, grants not visible): ${notUpdatable.join(', ')}`);
+    }
+  }
 
   // ============================================================
   // 1. ANONYMOUS / PUBLIC CLIENT CHECKS
@@ -235,6 +334,8 @@ async function runTests() {
     } else {
       reportFail(`anon call to check_in_to_event was not denied (#381): ${JSON.stringify(checkInError)}`);
     }
+
+    await expectViewWritesDenied(anon, 'anon');
   } catch (err) {
     reportFail(`Unexpected error during anon checks: ${err.message}`);
   }
@@ -348,6 +449,8 @@ async function runTests() {
         expectNoRowsUpdated(table, data, error);
       }
 
+      await expectViewWritesDenied(userClient, 'ordinary user');
+
       // Attempt to read event_check_in_secrets
       const { data: userSecData, error: userSecError } = await userClient
         .from('event_check_in_secrets')
@@ -448,7 +551,6 @@ async function runTests() {
       }
 
       // Admin write / mutation permissions (gated by RLS_ALLOW_MUTATION_TESTS=true)
-      const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
       if (!allowMutations) {
         reportSkip('admin write mutation checks (RLS_ALLOW_MUTATION_TESTS is not set to true)');
       } else {
