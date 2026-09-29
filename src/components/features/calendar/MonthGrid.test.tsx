@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { CalendarItem } from '../../../utils/calendar';
+import { CalendarThumb } from './CalendarThumb';
 import { MonthAgenda } from './MonthAgenda';
 import { MonthGrid } from './MonthGrid';
 
@@ -120,5 +121,16 @@ describe('MonthAgenda', () => {
     expect(screen.getByRole('heading', { name: 'Thu, Oct 8 · 1 thing' })).toBeInTheDocument();
     expect(screen.queryByText("La Jolla S'mores")).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show all' })).toBeInTheDocument();
+  });
+});
+
+describe('CalendarThumb', () => {
+  it('retries when a tile that lost one image shows a different event', () => {
+    const { rerender } = render(<CalendarThumb item={makeItem({ imageUrl: '/images/events/missing.webp' })} />);
+    fireEvent.error(screen.getByRole('presentation'));
+    expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
+
+    rerender(<CalendarThumb item={makeItem({ key: 'gbm', thumbnailUrl: '/images/events/gbm_thumb.webp' })} />);
+    expect(screen.getByRole('presentation')).toHaveAttribute('src', '/images/events/gbm_thumb.webp');
   });
 });

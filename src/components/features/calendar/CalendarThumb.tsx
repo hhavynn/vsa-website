@@ -14,9 +14,11 @@ interface Props {
  * caller's colored backdrop shows through instead of a broken-image icon.
  */
 export function CalendarThumb({ item, className }: Props) {
-  const [failed, setFailed] = useState(false);
+  // Keyed by URL: a tile reused for another event (e.g. after a filter
+  // change) must retry instead of inheriting the previous image's failure.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const src = item.thumbnailUrl || item.imageUrl;
-  if (!src || failed) return null;
+  if (!src || src === failedSrc) return null;
 
   return (
     <img
@@ -24,7 +26,7 @@ export function CalendarThumb({ item, className }: Props) {
       alt=""
       loading="lazy"
       decoding="async"
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
       className={cn('object-cover', className)}
     />
   );
