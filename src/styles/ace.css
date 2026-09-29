@@ -242,6 +242,13 @@
 }
 .ace-app .ace-filter.is-active .ace-filter-n { background: rgba(255,255,255,0.16); }
 
+/* FamCover's <img> (fams with an uploaded cover): fill and crop the slot. */
+.ace-app .ace-fam-cover-img {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+}
+
 /* ── Fam graveyard: ghost cards ──────────────────────────────── */
 .ace-app .ace-graveyard-section {
   border-top: 1px solid var(--border);
@@ -333,7 +340,6 @@
   opacity: 0.3;
 }
 .ace-app.is-dark .ace-ghost-cover-art { opacity: 0.16; }
-.ace-app .ace-ghost-cover-art .ace-fam-cover-img { border-radius: 0; }
 /* Mist that dissolves the faded cover into the sheet. */
 .ace-app .ace-ghost-cover::after {
   content: '';
