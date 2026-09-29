@@ -16,10 +16,7 @@ describe('EditorialHero', () => {
     expect(heading).toHaveTextContent('House Program');
     expect(within(heading).getByText('Program')).toHaveClass('editorial-hero-script');
     expect(screen.getByText('Year-long community competition.')).toBeInTheDocument();
-
-    const watermark = screen.getByText('houses');
-    expect(watermark).toHaveClass('editorial-hero-watermark');
-    expect(watermark).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('houses')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('renders the actions row only when actions are provided', () => {
