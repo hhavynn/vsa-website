@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Label } from '../../ui/Label';
 import { MemberPhotoRequestFormSchema } from '../../../schemas';
 import { photoRequestsRepository } from '../../../data/repos/photoRequests';
 import { toUserMessage } from '../../../data/errors';
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]), select:not([disabled])';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -34,6 +37,8 @@ export function PhotoRequestSection({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [middleName, setMiddleName] = useState('');
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     setForm(f => ({ ...f, name: f.name || defaultName, email: f.email || defaultEmail }));
@@ -50,6 +55,31 @@ export function PhotoRequestSection({
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [modalOpen, submitting]);
+
+  // The dialog opens over other pages' controls (the ACE tree, the leaderboard),
+  // so move focus into it and hand focus back to the trigger when it closes.
+  useEffect(() => {
+    if (!modalOpen) return;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus();
+    return () => trigger?.focus();
+  }, [modalOpen]);
+
+  function keepFocusInDialog(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === dialogRef.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   const canSubmit = Boolean(matchedMemberId);
 
@@ -129,12 +159,18 @@ export function PhotoRequestSection({
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !submitting && setModalOpen(false)}>
           <div
-            className="w-full max-w-md border rounded shadow-xl max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-md border rounded shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: 24 }}
             onClick={e => e.stopPropagation()}
+            onKeyDown={keepFocusInDialog}
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Request Profile Photo</h2>
+              <h2 id={titleId} className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Request Profile Photo</h2>
               <button onClick={() => setModalOpen(false)} aria-label="Close" style={{ color: 'var(--color-text3)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

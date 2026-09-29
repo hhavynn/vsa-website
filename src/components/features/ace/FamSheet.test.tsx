@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { FamSheet } from './FamSheet';
 import { AceFamily, AceFamilyMember } from '../../../types';
@@ -105,5 +105,28 @@ describe('FamSheet member photos', () => {
 
     expect(screen.queryByRole('heading', { name: 'Request Profile Photo' })).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('moves focus into the photo dialog, keeps Tab inside it, and returns focus on close', async () => {
+    renderSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lynna On, Little' }));
+    const trigger = await screen.findByRole('button', { name: 'Update photo' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Request Profile Photo' });
+    expect(dialog).toHaveFocus();
+
+    const close = within(dialog).getByRole('button', { name: 'Close' });
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(cancel).toHaveFocus();
+    fireEvent.keyDown(cancel, { key: 'Tab' });
+    expect(close).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Request Profile Photo' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
