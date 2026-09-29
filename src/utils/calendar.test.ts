@@ -8,6 +8,7 @@ import {
   getCalendarWindow,
   getMonthGrid,
   groupItemsByDate,
+  groupMonthAgenda,
   houseEventToCalendarItem,
   isPointsEligible,
   itemOccursOn,
@@ -319,6 +320,25 @@ describe('sorting and grouping', () => {
     expect(groups).toHaveLength(2);
     expect(groups[0].dateStr).toBe('2026-07-10');
     expect(groups[0].items).toHaveLength(2);
+  });
+
+  it('builds a month agenda, anchoring items that started last month to day 1', () => {
+    const groups = groupMonthAgenda(
+      [
+        makeItem({ key: 'spill', date: '2026-09-29', endDate: '2026-10-02' }),
+        makeItem({ key: 'in', date: '2026-10-05' }),
+        makeItem({ key: 'before', date: '2026-09-20' }),
+        makeItem({ key: 'after', date: '2026-11-01' }),
+      ],
+      2026,
+      9
+    );
+    expect(groups.map((g) => g.dateStr)).toEqual(['2026-10-01', '2026-10-05']);
+    expect(groups[0].items.map((i) => i.key)).toEqual(['spill']);
+    expect(groups[1].items.map((i) => i.key)).toEqual(['in']);
+    // The listed item keeps its real start so the detail sheet and Google
+    // Calendar link still say Sep 29.
+    expect(groups[0].items[0].date).toBe('2026-09-29');
   });
 
   it('labels today and tomorrow', () => {

@@ -6,6 +6,9 @@ import {
   getMonthGrid,
   itemOccursOn,
 } from '../../../utils/calendar';
+import { formatDateOnly } from '../../../lib/dateOnly';
+import { cn } from '../../../lib/utils';
+import { CalendarThumb } from './CalendarThumb';
 import { getItemColor } from './calendarTheme';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -16,16 +19,55 @@ interface Props {
   monthIndex: number;
   todayStr: string;
   items: CalendarItem[];
+  selectedDateStr: string | null;
   onSelectItem: (item: CalendarItem) => void;
   onSelectDay: (dateStr: string) => void;
+  onToggleDay: (dateStr: string) => void;
+}
+
+function describeDay(dateStr: string, dayItems: CalendarItem[]): string {
+  const label = formatDateOnly(dateStr, 'EEEE, MMMM d');
+  if (dayItems.length === 0) return `${label}, nothing scheduled`;
+  const count = `${dayItems.length} ${dayItems.length === 1 ? 'event' : 'events'}`;
+  return `${label}, ${count}: ${dayItems.map((item) => item.title).join(', ')}`;
+}
+
+function dayNumberClasses(isToday: boolean, isSelected: boolean, onTile: boolean): string {
+  if (isSelected) {
+    return cn('text-surface', isToday ? 'bg-brand-600 dark:bg-brand-400' : 'bg-text-primary');
+  }
+  return cn(
+    // Legible over a photo in both themes without hiding it.
+    onTile && 'bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)]',
+    isToday
+      ? 'text-brand-600 ring-[1.5px] ring-inset ring-brand-600 dark:text-brand-400 dark:ring-brand-400'
+      : onTile
+        ? 'text-text-primary'
+        : 'text-text-secondary'
+  );
+}
+
+/** The item a phone tile features: the first one with a flyer, else the first. */
+function pickFeatured(dayItems: CalendarItem[]): CalendarItem | undefined {
+  return dayItems.find((item) => item.thumbnailUrl || item.imageUrl) ?? dayItems[0];
 }
 
 /**
  * Month board view. Desktop cells show up to three event chips plus a
- * "+N more" overflow; on small screens chips collapse to colored dots and
- * tapping the day opens the day sheet.
+ * "+N more" overflow. On small screens each event day becomes a photo tile
+ * (event flyer, or the category color) with the event name underneath; the
+ * whole cell selects the day so the agenda below can narrow to it.
  */
-export function MonthGrid({ year, monthIndex, todayStr, items, onSelectItem, onSelectDay }: Props) {
+export function MonthGrid({
+  year,
+  monthIndex,
+  todayStr,
+  items,
+  selectedDateStr,
+  onSelectItem,
+  onSelectDay,
+  onToggleDay,
+}: Props) {
   const cells = useMemo(() => getMonthGrid(year, monthIndex, todayStr), [year, monthIndex, todayStr]);
 
   const itemsByDay = useMemo(() => {
@@ -55,33 +97,91 @@ export function MonthGrid({ year, monthIndex, todayStr, items, onSelectItem, onS
         {cells.map((cell: CalendarDayCell) => {
           const dayItems = itemsByDay.get(cell.dateStr) ?? [];
           const hasItems = dayItems.length > 0;
+          const isSelected = cell.dateStr === selectedDateStr;
+          const featured = pickFeatured(dayItems);
+          const isPast = cell.dateStr < todayStr;
           return (
             <div
               key={cell.dateStr}
-              className="min-h-[56px] border-t p-1 sm:min-h-[104px] sm:p-1.5"
-              style={{
-                borderColor: 'var(--color-border)',
-                opacity: cell.inMonth ? 1 : 0.42,
-                background: cell.isToday
-                  ? 'color-mix(in srgb, var(--color-brand) 7%, transparent)'
-                  : undefined,
-              }}
+              className={cn(
+                'border-t border-[var(--color-border)] px-px py-0.5 sm:min-h-[104px] sm:p-1.5',
+                cell.isToday && 'sm:bg-[color-mix(in_srgb,var(--color-brand)_7%,transparent)]',
+                !cell.inMonth && 'opacity-[0.42]'
+              )}
             >
+              {/* Mobile: the whole cell selects the day */}
+              <button
+                type="button"
+                onClick={() => onToggleDay(cell.dateStr)}
+                aria-pressed={isSelected}
+                aria-label={describeDay(cell.dateStr, dayItems)}
+                className={cn(
+                  'flex min-h-[52px] w-full flex-col items-center gap-1 rounded-md p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400 sm:hidden',
+                  isSelected && 'ring-[1.5px] ring-inset ring-text-primary'
+                )}
+              >
+                {featured ? (
+                  <>
+                    <span
+                      className={cn(
+                        'relative flex h-11 w-full justify-center overflow-hidden rounded pt-1',
+                        isPast && 'opacity-60'
+                      )}
+                      style={{ background: `color-mix(in srgb, ${getItemColor(featured)} 24%, var(--color-surface))` }}
+                    >
+                      <CalendarThumb item={featured} className="absolute inset-0 h-full w-full" />
+                      <span
+                        className={cn(
+                          'relative inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] font-bold',
+                          dayNumberClasses(cell.isToday, isSelected, true)
+                        )}
+                      >
+                        {cell.dayOfMonth}
+                      </span>
+                      {dayItems.length > 1 && (
+                        <span
+                          className="absolute bottom-0 right-0 rounded-tl bg-text-primary px-1 font-mono text-[8px] font-bold leading-[12px] text-surface"
+                          aria-hidden
+                        >
+                          +{dayItems.length - 1}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'line-clamp-2 w-full break-words text-center font-sans text-[9px] font-bold leading-[1.15]',
+                        isPast ? 'text-text-secondary' : 'text-text-primary'
+                      )}
+                      aria-hidden
+                    >
+                      {featured.title}
+                    </span>
+                  </>
+                ) : (
+                  <span className="pt-1">
+                    <span
+                      className={cn(
+                        'inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px]',
+                        cell.isToday || isSelected ? 'font-bold' : 'font-medium',
+                        dayNumberClasses(cell.isToday, isSelected, false)
+                      )}
+                    >
+                      {cell.dayOfMonth}
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              {/* Desktop: day number opens the day sheet, chips open items */}
               <button
                 type="button"
                 onClick={() => hasItems && onSelectDay(cell.dateStr)}
                 disabled={!hasItems}
-                aria-label={
-                  hasItems
-                    ? `${cell.dateStr}: ${dayItems.length} ${dayItems.length === 1 ? 'item' : 'items'}`
-                    : undefined
-                }
-                className="flex w-full items-center justify-between rounded-md px-1 disabled:cursor-default"
+                aria-label={hasItems ? describeDay(cell.dateStr, dayItems) : undefined}
+                className="hidden w-full items-center justify-between rounded-md px-1 disabled:cursor-default sm:flex"
               >
                 <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-bold ${
-                    cell.isToday ? 'text-white' : ''
-                  }`}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-bold"
                   style={{
                     background: cell.isToday ? 'var(--color-brand)' : 'transparent',
                     color: cell.isToday ? '#fff' : 'var(--color-text2)',
@@ -89,21 +189,8 @@ export function MonthGrid({ year, monthIndex, todayStr, items, onSelectItem, onS
                 >
                   {cell.dayOfMonth}
                 </span>
-                {/* Mobile: dots only */}
-                {hasItems && (
-                  <span className="flex gap-0.5 sm:hidden" aria-hidden>
-                    {dayItems.slice(0, 3).map((item) => (
-                      <span
-                        key={item.key}
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: getItemColor(item) }}
-                      />
-                    ))}
-                  </span>
-                )}
               </button>
 
-              {/* Desktop: chips */}
               <div className="mt-1 hidden space-y-1 sm:block">
                 {dayItems.slice(0, MAX_CHIPS).map((item) => (
                   <button

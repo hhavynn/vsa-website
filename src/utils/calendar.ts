@@ -356,6 +356,32 @@ export function groupItemsByDate(items: CalendarItem[]): CalendarDayGroup[] {
   return groups;
 }
 
+/**
+ * Agenda groups for one month. Items are grouped by start day; a multi-day
+ * item that began in an earlier month is listed on the month's first day.
+ * Items are passed through untouched so detail views keep their real dates.
+ */
+export function groupMonthAgenda(
+  items: CalendarItem[],
+  year: number,
+  monthIndex: number
+): CalendarDayGroup[] {
+  const monthStart = toLocalDateOnlyString(new Date(year, monthIndex, 1));
+  const monthEnd = toLocalDateOnlyString(new Date(year, monthIndex + 1, 0));
+  const groups: CalendarDayGroup[] = [];
+  for (const item of [...items].sort(compareCalendarItems)) {
+    if (itemLastDay(item) < monthStart || item.date > monthEnd) continue;
+    const dateStr = item.date < monthStart ? monthStart : item.date;
+    const current = groups[groups.length - 1];
+    if (current && current.dateStr === dateStr) {
+      current.items.push(item);
+    } else {
+      groups.push({ dateStr, items: [item] });
+    }
+  }
+  return groups;
+}
+
 /** "Today · Wed, Jul 2" / "Tomorrow · Thu, Jul 3" / "Fri, Jul 4" */
 export function formatDayGroupLabel(dateStr: string, todayStr: string): string {
   const parsed = parseDateOnly(dateStr);
