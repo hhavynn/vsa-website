@@ -42,7 +42,7 @@
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
     "analyze:css": "npm run build && npx source-map-explorer 'build/static/css/*.css'",
     "analyze:all": "npm run build && npx source-map-explorer 'build/static/**/*.{js,css}'",
-    "lint": "eslint src/**/*.{ts,tsx}",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "format": "prettier --write src/**/*.{ts,tsx}",
     "audit:image-exif": "node scripts/audit-image-exif.mjs",
     "migrate:images:dry": "tsx scripts/migrate-supabase-images-to-public.ts",
