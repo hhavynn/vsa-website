@@ -2,7 +2,7 @@ import { useQuery } from 'react-query';
 import { supabase } from '../lib/supabase';
 
 const CABINET_MEMBER_FIELDS =
-  'id, name, role, category, display_order, image_url, thumbnail_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, created_at';
+  'id, name, role, category, display_order, image_url, thumbnail_url, year, college, major, minor, pronouns, favorite_snack, fun_fact, cabinet_year_id, member_id, created_at';
 
 export interface CabinetMemberRaw {
   id: string;
@@ -20,6 +20,8 @@ export interface CabinetMemberRaw {
   favorite_snack: string | null;
   fun_fact: string | null;
   cabinet_year_id: string | null;
+  /** Linked members.id; its approved avatar overrides image_url/thumbnail_url. */
+  member_id: string | null;
 }
 
 export function useCabinetMemberYearIds() {

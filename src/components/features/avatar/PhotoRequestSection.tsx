@@ -39,6 +39,18 @@ export function PhotoRequestSection({
     setForm(f => ({ ...f, name: f.name || defaultName, email: f.email || defaultEmail }));
   }, [defaultName, defaultEmail]);
 
+  // Escape closes only this modal, not the sheet or bottom sheet behind it.
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      if (!submitting) setModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [modalOpen, submitting]);
+
   const canSubmit = Boolean(matchedMemberId);
 
   async function handleSubmit() {
@@ -54,7 +66,7 @@ export function PhotoRequestSection({
       return;
     }
     if (!matchedMemberId) {
-      setFormError('Choose a member from the leaderboard before requesting a photo.');
+      setFormError('Choose a member before requesting a photo.');
       return;
     }
     const parsed = MemberPhotoRequestFormSchema.safeParse({
@@ -190,7 +202,7 @@ export function PhotoRequestSection({
                 </p>
                 <ul className="font-sans text-[11px] leading-relaxed list-disc pl-4" style={{ color: 'var(--color-text3)' }}>
                   <li>Your photo is reviewed by a VSA admin before it is published.</li>
-                  <li>If approved, it may appear publicly on the VSA website (e.g., the leaderboard).</li>
+                  <li>If approved, it may appear publicly anywhere you appear on the VSA website (e.g., the leaderboard, ACE family trees, and Cabinet).</li>
                   <li>You can request removal at any time.</li>
                   <li>Do not upload a photo of someone else without their permission.</li>
                 </ul>

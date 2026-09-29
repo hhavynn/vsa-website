@@ -8,6 +8,7 @@ export interface TreeNode {
   role: string;
   cohort?: string | null;
   parent?: string | null;
+  photoUrl?: string | null;
 }
 
 interface AccentPalette {
@@ -134,13 +135,24 @@ export function FamilyTree({
 
   const gridDot = dark ? 'rgba(255,255,255,0.06)' : 'rgba(20,32,40,0.08)';
   const patternId = `tree-grid-${accent}-${dark ? 'd' : 'l'}`;
+  const photoClipId = `tree-photo-clip-${compact ? 'c' : 'f'}`;
 
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', maxWidth: 'none' }} role="img" aria-label="Family tree">
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      style={{ display: 'block', maxWidth: 'none' }}
+      role={onSelect ? 'group' : 'img'}
+      aria-label="Family tree"
+    >
       <defs>
         <pattern id={patternId} width="24" height="24" patternUnits="userSpaceOnUse">
           <circle cx="1" cy="1" r="0.7" fill={gridDot} />
         </pattern>
+        <clipPath id={photoClipId}>
+          <circle r={nodeR} />
+        </clipPath>
       </defs>
       <rect width={w} height={h} fill={`url(#${patternId})`} opacity="0.7" />
 
@@ -164,9 +176,19 @@ export function FamilyTree({
         return (
           <g
             key={n.id}
+            className="ace-tree-node"
             transform={`translate(${p.x}, ${p.y})`}
             style={{ cursor: onSelect ? 'pointer' : 'default' }}
             onClick={() => onSelect && onSelect(n.id)}
+            role={onSelect ? 'button' : undefined}
+            tabIndex={onSelect ? 0 : undefined}
+            aria-label={onSelect ? `${n.label}, ${n.role || 'Member'}` : undefined}
+            aria-pressed={onSelect ? isFocus : undefined}
+            onKeyDown={onSelect ? (e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              onSelect(n.id);
+            } : undefined}
           >
             {isFocus && <circle r={nodeR + 8} fill={A.ring} />}
             <circle
@@ -186,6 +208,21 @@ export function FamilyTree({
             >
               {n.initial}
             </text>
+            {n.photoUrl && (
+              <>
+                {/* Drawn over the initial, so a failed image still shows it. */}
+                <image
+                  href={n.photoUrl}
+                  x={-nodeR}
+                  y={-nodeR}
+                  width={nodeR * 2}
+                  height={nodeR * 2}
+                  preserveAspectRatio="xMidYMid slice"
+                  clipPath={`url(#${photoClipId})`}
+                />
+                <circle r={nodeR - 1} fill="none" stroke={isLittle ? A.fill : A.dark} strokeWidth={2} />
+              </>
+            )}
             <text
               x={0} y={nodeR + 18}
               textAnchor="middle"

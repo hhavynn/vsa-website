@@ -17,6 +17,7 @@ import {
 import { AceFamily, AceFamilyMember } from '../../types';
 import { ImportPlan, buildImportPlan, validateJson } from '../../lib/aceFamilyImport';
 import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../lib/imageUpload';
+import { isRenamed } from '../../lib/memberPhotos';
 import { supabase } from '../../lib/supabase';
 import { toUserMessage } from '../../data/errors';
 
@@ -526,6 +527,7 @@ export default function AdminAceFamilies() {
         role_label: null,
         photo_url: null,
         parent_member_id: null,
+        member_id: null,
         display_order: members.length,
         is_published: true,
       });
@@ -545,11 +547,15 @@ export default function AdminAceFamilies() {
   ) => {
     try {
       setSavingMemberId(id);
-      let finalPatch = patch;
+      const previousName = members.find((member) => member.id === id)?.name;
+      let finalPatch: Partial<AceFamilyMemberFormData> =
+        patch.name !== undefined && isRenamed(previousName, patch.name)
+          ? { ...patch, member_id: null }
+          : patch;
       if (file) {
         const { file: prepared, reduction, wasCompressed } = await prepareImageForUpload(file, 'aceMember');
         const url = await aceFamiliesRepository.uploadImage(prepared, 'member');
-        finalPatch = { ...patch, photo_url: url };
+        finalPatch = { ...finalPatch, photo_url: url };
         if (wasCompressed && reduction > 10) {
           toast.success(`Photo optimized (reduced by ${reduction}%)`, { icon: '⚡' });
         }

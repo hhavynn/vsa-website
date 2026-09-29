@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { HouseMemberRankEntry } from '../../../types';
+import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
+import { resolveMemberPhoto } from '../../../lib/memberPhotos';
 
 const HOUSE_EMOJI: Record<HouseName, string> = {
   Bowser: '🐢',
@@ -13,7 +15,21 @@ const HOUSE_EMOJI: Record<HouseName, string> = {
 
 const DEFAULT_VISIBLE = 5;
 
-function InitialsAvatar({ name, color }: { name: string; color: string }) {
+function MemberAvatar({ name, color, avatarUrl }: { name: string; color: string; avatarUrl: string | null }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (avatarUrl && avatarUrl !== failedUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="h-7 w-7 shrink-0 rounded-full object-cover"
+        onError={() => setFailedUrl(avatarUrl)}
+      />
+    );
+  }
+
   const parts = name.trim().split(/\s+/);
   const initials =
     parts.length >= 2
@@ -37,6 +53,7 @@ interface Props {
 
 export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLeaderboardLink = false }: Props) {
   const [byHouse, setByHouse] = useState<Map<string, HouseMemberRankEntry[]>>(new Map());
+  const memberAvatars = useMemberAvatars();
   const [loading, setLoading] = useState(true);
   const [expandedHouses, setExpandedHouses] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState<Set<string>>(new Set());
@@ -214,7 +231,11 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                             </div>
 
                             {/* Avatar */}
-                            <InitialsAvatar name={name} color={color} />
+                            <MemberAvatar
+                              name={name}
+                              color={color}
+                              avatarUrl={resolveMemberPhoto(memberAvatars, member.member_id)}
+                            />
 
                             {/* Name + meta */}
                             <div className="min-w-0 flex-1">

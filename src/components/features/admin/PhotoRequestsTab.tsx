@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { useQueryClient } from 'react-query';
 import {
   photoRequestsRepository,
   MemberPhotoRequest,
@@ -9,6 +10,7 @@ import {
 } from '../../../data/repos/photoRequests';
 import { Label } from '../../ui/Label';
 import { toUserMessage } from '../../../data/errors';
+import { MEMBER_AVATARS_QUERY_KEY } from '../../../hooks/useMemberAvatars';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -30,6 +32,7 @@ export default function PhotoRequestsTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('pending');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,6 +47,13 @@ export default function PhotoRequestsTab() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Approvals and removals change public avatars on every page that shares
+  // the member-avatars query.
+  const handleChanged = useCallback(() => {
+    load();
+    queryClient.invalidateQueries(MEMBER_AVATARS_QUERY_KEY);
+  }, [load, queryClient]);
 
   const visible = filter === 'pending' ? requests.filter(r => r.status === 'pending') : requests;
   const pendingCount = requests.filter(r => r.status === 'pending').length;
@@ -84,7 +94,7 @@ export default function PhotoRequestsTab() {
               request={request}
               busy={busyId === request.id}
               setBusy={(b) => setBusyId(b ? request.id : null)}
-              onChanged={load}
+              onChanged={handleChanged}
             />
           ))}
         </div>

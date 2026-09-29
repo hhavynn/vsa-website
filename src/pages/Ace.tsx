@@ -19,6 +19,7 @@ import {
 import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
 import { ACTIVE_FAM_SLOTS, getFamIconUrl, resolveFamHeads } from '../lib/aceFamRoster';
+import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import '../styles/ace.css';
@@ -405,8 +406,9 @@ function FamsTabSection({ activeFams, selectedId, onSelect, onOpenSheet, dark: _
   const selected = activeFams.find((f) => f.family.id === selectedId) ?? activeFams[0];
   const { family, accent, viet, members, isPlaceholder } = selected;
   const displayName = getDisplayFamName(family.name);
+  const memberAvatars = useMemberAvatars();
 
-  const famHeads = resolveFamHeads(family.slug, members);
+  const famHeads = resolveFamHeads(family.slug, members, memberAvatars);
   const iconUrl = getFamIconUrl(family.slug);
   const hasTree = members.length > 0;
 

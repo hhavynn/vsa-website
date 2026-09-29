@@ -14,7 +14,8 @@ import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { photoRequestsRepository } from '../data/repos/photoRequests';
+import { useMemberAvatars } from '../hooks/useMemberAvatars';
+import type { MemberAvatarMap } from '../lib/memberPhotos';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
@@ -525,15 +526,9 @@ export function Leaderboard() {
     setSelectedYear(initialSelectedYear);
   }, [hasUserSelectedYear, initialSelectedYear, selectedYear]);
 
-  // Approved member avatars, fetched once as a single public-safe view query
-  // (member_id → thumbnail URL). Fail-soft: initials remain the fallback.
-  const [memberAvatars, setMemberAvatars] = useState<Map<string, string>>(new Map());
-  useEffect(() => {
-    photoRequestsRepository
-      .getPublicMemberAvatars()
-      .then(setMemberAvatars)
-      .catch(() => setMemberAvatars(new Map()));
-  }, []);
+  // Approved member avatars (member_id → thumbnail URL) from the shared cached
+  // query. Fail-soft: initials remain the fallback.
+  const memberAvatars = useMemberAvatars();
 
   const fetchLeaderboard = useCallback(async (year: SelectedYear) => {
     try {
@@ -1086,7 +1081,7 @@ function PodiumIndividual({
 }: {
   top3: LeaderboardEntry[];
   activeTab: 'points' | 'events';
-  memberAvatars: Map<string, string>;
+  memberAvatars: MemberAvatarMap;
   onSelectMember: (member: LeaderboardEntry) => void;
 }) {
   const shouldReduceMotion = useReducedMotion();

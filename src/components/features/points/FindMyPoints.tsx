@@ -12,7 +12,8 @@ import { MyVSACard } from "./MyVSACard";
 import { isSupabaseUnavailable } from "../../../utils/isSupabaseUnavailable";
 import { FALLBACK_POINTS } from "../../../config/publicFallbackContent";
 import { Avatar } from "../avatar/Avatar";
-import { photoRequestsRepository } from "../../../data/repos/photoRequests";
+import { useMemberAvatars } from "../../../hooks/useMemberAvatars";
+import type { MemberAvatarMap } from "../../../lib/memberPhotos";
 
 const SearchIcon = ({ className }: { className?: string }) => (
   <svg
@@ -154,14 +155,7 @@ export function FindMyPoints({
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
   const [pickedMemberId, setPickedMemberId] = useState<string | null>(null);
-  const [memberAvatars, setMemberAvatars] = useState<Map<string, string>>(new Map());
-
-  useEffect(() => {
-    photoRequestsRepository
-      .getPublicMemberAvatars()
-      .then(setMemberAvatars)
-      .catch(() => setMemberAvatars(new Map()));
-  }, []);
+  const memberAvatars = useMemberAvatars();
 
   const academicYears = useMemo<AcademicYearOption[]>(() => {
     const years = new Map<number, AcademicYearOption>();
@@ -500,7 +494,7 @@ function MultipleMatches({
   totalCount: number;
   yearLabel: string;
   onPick: (memberId: string) => void;
-  memberAvatars: Map<string, string>;
+  memberAvatars: MemberAvatarMap;
 }) {
   return (
     <div>

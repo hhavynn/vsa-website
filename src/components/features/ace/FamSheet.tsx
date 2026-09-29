@@ -1,7 +1,9 @@
 import {
+  type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type UIEvent as ReactUIEvent,
   type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
@@ -15,6 +17,9 @@ import { getDisplayFamName, isDeadFam, membersToTreeNodes } from '../../../lib/a
 import { getFamIconUrl } from '../../../lib/aceFamRoster';
 import { FamilyTree, TreeNode } from './FamilyTree';
 import { FamAccent } from './FamCover';
+import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
+import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
+import { resolveMemberPhoto } from '../../../lib/memberPhotos';
 
 interface FamSheetProps {
   family: AceFamily;
@@ -52,6 +57,20 @@ function distance(a: PanOffset, b: PanOffset): number {
 
 function midpoint(a: PanOffset, b: PanOffset): PanOffset {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function isKeyboardFocus(element: Element): boolean {
+  try {
+    return element.matches(':focus-visible');
+  } catch {
+    return true;
+  }
+}
+
+function capturePointer(e: ReactPointerEvent<HTMLDivElement>) {
+  if (!e.currentTarget.hasPointerCapture(e.pointerId)) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
 }
 
 function usePannableTree(resetKey: string) {
@@ -260,7 +279,10 @@ function usePannableTree(resetKey: string) {
     activePointersRef.current.set(e.pointerId, point);
     movedDuringDragRef.current = false;
     setIsDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // A press on a tree node defers capture until the pointer actually moves:
+    // capturing here would retarget the tap's click to the viewport, so the
+    // node could never be selected.
+    if (!target?.closest('.ace-tree-node')) capturePointer(e);
 
     if (activePointersRef.current.size >= 2) {
       startPinch();
@@ -271,6 +293,14 @@ function usePannableTree(resetKey: string) {
 
   const handlePointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (!activePointersRef.current.has(e.pointerId)) return;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      // The button was released outside the viewport before capture began.
+      activePointersRef.current.delete(e.pointerId);
+      pointerIdRef.current = null;
+      pinchStartRef.current = null;
+      setIsDragging(false);
+      return;
+    }
 
     const point = viewportPoint(e.clientX, e.clientY);
     activePointersRef.current.set(e.pointerId, point);
@@ -288,6 +318,7 @@ function usePannableTree(resetKey: string) {
 
       movedDuringDragRef.current = true;
       e.preventDefault();
+      capturePointer(e);
 
       setZoom(nextZoom);
       zoomRef.current = nextZoom;
@@ -307,6 +338,7 @@ function usePannableTree(resetKey: string) {
     if (Math.abs(dx) + Math.abs(dy) > 4) {
       movedDuringDragRef.current = true;
       e.preventDefault();
+      capturePointer(e);
     }
 
     const nextOffset = boundOffset({
@@ -356,6 +388,49 @@ function usePannableTree(resetKey: string) {
     e.stopPropagation();
     movedDuringDragRef.current = false;
   }, []);
+
+  // Panning is transform-based, so a browser scroll (e.g. tabbing to an
+  // off-screen node) would desync the view; undo it and pan to the node.
+  const handleScroll = useCallback((e: ReactUIEvent<HTMLDivElement>) => {
+    e.currentTarget.scrollTop = 0;
+    e.currentTarget.scrollLeft = 0;
+  }, []);
+
+  const handleFocus = useCallback((e: ReactFocusEvent<HTMLDivElement>) => {
+    const viewport = viewportRef.current;
+    const canvas = canvasRef.current;
+    const node = e.target instanceof Element ? e.target.closest('.ace-tree-node') : null;
+    if (!viewport || !canvas || !node || !canvas.offsetWidth) return;
+    viewport.scrollTop = 0;
+    viewport.scrollLeft = 0;
+    // Keyboard focus only: panning on a mouse/touch press would slide the node
+    // out from under the pointer before its click lands.
+    if (!isKeyboardFocus(node)) return;
+
+    // Canvas-space position from two rects taken at the same instant, so a
+    // pan/zoom transition in flight cancels out; then project it with the
+    // target offset and zoom.
+    const canvasBox = canvas.getBoundingClientRect();
+    const renderedScale = canvasBox.width / canvas.offsetWidth;
+    const box = node.getBoundingClientRect();
+    const centerX = (box.left + box.width / 2 - canvasBox.left) / renderedScale;
+    const centerY = (box.top + box.height / 2 - canvasBox.top) / renderedScale;
+    const halfW = (box.width / renderedScale / 2) * zoomRef.current;
+    const halfH = (box.height / renderedScale / 2) * zoomRef.current;
+    const x = offsetRef.current.x + centerX * zoomRef.current;
+    const y = offsetRef.current.y + centerY * zoomRef.current;
+    const inView =
+      x - halfW >= PAN_BOUND_PADDING && x + halfW <= viewport.clientWidth - PAN_BOUND_PADDING &&
+      y - halfH >= PAN_BOUND_PADDING && y + halfH <= viewport.clientHeight - PAN_BOUND_PADDING;
+    if (inView) return;
+
+    const nextOffset = boundOffset({
+      x: viewport.clientWidth / 2 - centerX * zoomRef.current,
+      y: viewport.clientHeight / 2 - centerY * zoomRef.current,
+    }, zoomRef.current);
+    offsetRef.current = nextOffset;
+    setOffset(nextOffset);
+  }, [boundOffset]);
 
   const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
     const step = e.shiftKey ? 80 : 40;
@@ -408,6 +483,8 @@ function usePannableTree(resetKey: string) {
       onClickCapture: handleClickCapture,
       onKeyDown: handleKeyDown,
       onWheel: handleWheel,
+      onFocus: handleFocus,
+      onScroll: handleScroll,
     },
   };
 }
@@ -418,7 +495,11 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
   const deadFam = isDeadFam(family.name);
   const iconUrl = getFamIconUrl(family.slug);
 
-  const treeNodes = useMemo<TreeNode[]>(() => membersToTreeNodes(members), [members]);
+  const memberAvatars = useMemberAvatars();
+  const treeNodes = useMemo<TreeNode[]>(
+    () => membersToTreeNodes(members, memberAvatars),
+    [members, memberAvatars],
+  );
   const pan = usePannableTree(`${family.id}:${treeNodes.length}`);
 
   useEffect(() => {
@@ -446,6 +527,10 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
   const selectedLittles = selectedMember
     ? members.filter((m) => m.parent_member_id === selectedMember.id)
     : [];
+  const selectedPhotoUrl = selectedMember
+    ? resolveMemberPhoto(memberAvatars, selectedMember.member_id, selectedMember.photo_url)
+    : null;
+  const selectedHasSharedAvatar = !!selectedMember?.member_id && memberAvatars.has(selectedMember.member_id);
 
   const genCount = useMemo(() => {
     if (treeNodes.length === 0) return 0;
@@ -575,12 +660,30 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
             <div className="ace-rail-body">
               <div className="ace-rail-card">
                 <div className={`ace-rail-avatar ace-rail-avatar-${accent}${isLittle(selectedMember) ? ' is-little' : ''}`}>
-                  {firstInitial(selectedMember.name)}
+                  {selectedPhotoUrl ? (
+                    <img className="ace-rail-photo" src={selectedPhotoUrl} alt={selectedMember.name} decoding="async" />
+                  ) : (
+                    firstInitial(selectedMember.name)
+                  )}
                 </div>
                 <div className="ace-rail-info">
                   <div className="ace-rail-name">{selectedMember.name}</div>
                   {selectedMember.role_label && (
                     <div className="ace-rail-role">{selectedMember.role_label}</div>
+                  )}
+                </div>
+                <div className="ace-rail-photo-request">
+                  {selectedMember.member_id ? (
+                    <PhotoRequestSection
+                      key={selectedMember.id}
+                      matchedMemberId={selectedMember.member_id}
+                      selectedMemberName={selectedMember.name}
+                      buttonLabel={selectedHasSharedAvatar ? 'Update photo' : 'Request photo'}
+                    />
+                  ) : (
+                    <p className="ace-rail-empty">
+                      Photo requests open once a VSA admin links this name to a member record.
+                    </p>
                   )}
                 </div>
               </div>
