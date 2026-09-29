@@ -1,8 +1,8 @@
 -- Revoke the write privileges anon and authenticated still hold on public
 -- views, leaving SELECT exactly where it is today.
 --
--- Not yet applied to production. Migrations here are applied manually; apply
--- only with owner approval.
+-- Applied to production 2026-09-29 (schema_migrations version 20260929074005;
+-- the filename matches) with owner approval.
 --
 -- ---------------------------------------------------------------------------
 -- WHY
