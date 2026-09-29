@@ -4,7 +4,9 @@ name: RLS verification
 # (it is the only project; there is no staging). Closes #225.
 #
 # Why production is acceptable here:
-#   - The anonymous section is read-only.
+#   - The anonymous section is read-only, except the view write probes
+#     (#472): they are filtered on a nil key that is read first, so they
+#     never match a row.
 #   - The signed-in sections (enabled only when RLS_TEST_* secrets exist) use
 #     non-destructive probes since #428: inserts collide with a constraint that
 #     is checked after RLS, and updates write a row's current values back.

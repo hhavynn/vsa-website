@@ -1,6 +1,6 @@
 # Supabase Migration Authoring Checklist
 
-Last updated: 2026-08-24
+Last updated: 2026-09-29
 
 Use this checklist before writing or reviewing any migration in this directory. It does not authorize a protected database change or apply anything to Supabase. Migrations remain forward-only, require owner review, and are applied manually after staging verification.
 
@@ -32,6 +32,7 @@ Use this checklist before writing or reviewing any migration in this directory. 
 - [ ] Exclude auth UUIDs, emails, secrets, import metadata, and admin/reviewer fields from public projections.
 - [ ] For caller-scoped views, filter with `auth.uid()` and use `security_barrier = true`.
 - [ ] Reapply the revoke-then-grant sequence whenever a view is dropped and recreated.
+- [ ] Add the view to `simpleViews` or `nonUpdatableViews` in `scripts/verify-rls-security.mjs`, so CI probes writes through it.
 
 ### New or replaced functions and RPCs
 
