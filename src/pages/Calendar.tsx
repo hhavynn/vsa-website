@@ -11,6 +11,7 @@ import {
   CalendarDetailModal,
   CalendarOverlayState,
 } from '../components/features/calendar/CalendarDetailModal';
+import { MonthAgenda } from '../components/features/calendar/MonthAgenda';
 import { MonthGrid } from '../components/features/calendar/MonthGrid';
 import { ThisWeekStrip } from '../components/features/calendar/ThisWeekStrip';
 import { eventsRepository } from '../data/repos/events';
@@ -127,6 +128,7 @@ export function Calendar() {
     const [year, month] = todayStr.split('-').map(Number);
     return { year, monthIndex: month - 1 };
   });
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<CalendarOverlayState | null>(null);
 
   // Only offer filters that have real data behind them in the loaded window.
@@ -179,11 +181,17 @@ export function Calendar() {
   const cursorMonthStr = `${monthCursor.year}-${String(monthCursor.monthIndex + 1).padStart(2, '0')}`;
   const canGoPrev = cursorMonthStr > dataWindow.start.slice(0, 7);
   const canGoNext = cursorMonthStr < dataWindow.end.slice(0, 7);
-  const shiftMonth = (delta: number) =>
+  const shiftMonth = (delta: number) => {
+    setSelectedDay(null);
     setMonthCursor(({ year, monthIndex }) => {
       const next = new Date(year, monthIndex + delta, 1);
       return { year: next.getFullYear(), monthIndex: next.getMonth() };
     });
+  };
+  const toggleDay = useCallback(
+    (dateStr: string) => setSelectedDay((current) => (current === dateStr ? null : dateStr)),
+    []
+  );
 
   const openItem = useCallback((item: CalendarItem) => setOverlay({ mode: 'item', item }), []);
   const openDay = useCallback(
@@ -351,12 +359,23 @@ export function Calendar() {
                   monthIndex={monthCursor.monthIndex}
                   todayStr={todayStr}
                   items={filteredItems}
+                  selectedDateStr={selectedDay}
                   onSelectItem={openItem}
                   onSelectDay={openDay}
+                  onToggleDay={toggleDay}
                 />
-                <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                <p className="mt-3 hidden text-center font-mono text-[10px] uppercase tracking-[0.08em] sm:block" style={{ color: 'var(--color-text3)' }}>
                   Tap a day or event for details
                 </p>
+                <MonthAgenda
+                  year={monthCursor.year}
+                  monthIndex={monthCursor.monthIndex}
+                  todayStr={todayStr}
+                  items={filteredItems}
+                  selectedDateStr={selectedDay}
+                  onClearDay={() => setSelectedDay(null)}
+                  onSelectItem={openItem}
+                />
               </motion.div>
             ) : listGroups.length === 0 ? (
               showSummerEmpty ? (

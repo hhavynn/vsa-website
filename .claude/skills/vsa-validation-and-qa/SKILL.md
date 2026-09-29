@@ -122,6 +122,7 @@ Derive the current file set with `find src -name "*.test.ts*" | sort`; never tru
 | `src/utils/leaderboardRanking.test.ts` | Leaderboard tie-breaking: points first, then events attended; equal on both is a tie. | **Leaderboard-adjacent** (ordering only, not aggregation). |
 | `src/data/wrappedEdition.test.ts` | The Wrapped nav/footer label comes from the published edition's year label, not a literal (#263). | Seasonal content. |
 | `src/utils/generateSlug.test.ts`, `src/utils/hashScroll.test.ts`, `src/utils/matchCabinetRole.test.ts` | Slug generation; hash-link scrolling to late-rendered targets; cabinet role-title normalization. | Utility behaviour. |
+| `src/components/features/calendar/MonthGrid.test.tsx` | Phone calendar tiles show the first event flyer on a day with that event's name and a +N badge for extra events; an event without an image (or whose image fails to load) still shows its name; any day, empty or not, is selectable; the month agenda lists the month's events and narrows to the selected day. | Mobile calendar readability: which event is on which day. |
 
 **Still unprotected — where you have NO automated safety net:**
 
