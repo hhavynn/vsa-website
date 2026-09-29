@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo } from 'react';
+import { useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   CalendarDayGroup,
@@ -10,6 +10,7 @@ import {
 } from '../../../utils/calendar';
 import { formatDateOnly } from '../../../lib/dateOnly';
 import { formatEventTime } from '../../../lib/eventTime';
+import { cn } from '../../../lib/utils';
 import { CalendarThumb } from './CalendarThumb';
 import { getItemColor } from './calendarTheme';
 
@@ -22,9 +23,6 @@ interface Props {
   onClearDay: () => void;
   onSelectItem: (item: CalendarItem) => void;
 }
-
-// Park the paper's tape on the right so it doesn't stack under the board's.
-const AGENDA_TAPE = { '--tape-x': '82%', '--tape-r': '3deg' } as CSSProperties;
 
 function countLabel(count: number): string {
   return `${count} ${count === 1 ? 'thing' : 'things'}`;
@@ -70,8 +68,7 @@ export function MonthAgenda({
         <h2
           id="month-agenda-heading"
           aria-live="polite"
-          className="font-mono text-[11px] font-bold uppercase tracking-[0.08em]"
-          style={{ color: 'var(--color-text)' }}
+          className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-text-primary"
         >
           {heading}
         </h2>
@@ -94,35 +91,40 @@ export function MonthAgenda({
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       >
         {groups.length === 0 ? (
-          <p
-            className="scrapbook-empty py-6 font-sans text-[13px]"
-            style={{ color: 'var(--color-text2)' }}
-          >
+          <p className="scrapbook-empty py-6 font-sans text-[13px] text-text-secondary">
             {selectedDateStr
               ? 'Nothing scheduled this day.'
               : `Nothing on the calendar in ${monthName} yet.`}
           </p>
         ) : (
-          <ol className="scrapbook-paper" style={AGENDA_TAPE}>
+          // Tape parked on the right so it doesn't stack under the board's.
+          <ol className="scrapbook-paper [--tape-r:3deg] [--tape-x:82%]">
             {groups.map((group, index) => {
               const isToday = group.dateStr === todayStr;
               const isPast = group.dateStr < todayStr && group.items.every((item) => (item.endDate ?? item.date) < todayStr);
               return (
                 <li
                   key={group.dateStr}
-                  className={`flex gap-3 px-3 py-3 ${index > 0 ? 'border-t' : ''}`}
-                  style={{ borderColor: 'var(--color-border)', opacity: isPast ? 0.6 : 1 }}
+                  className={cn(
+                    'flex gap-3 border-[var(--color-border)] px-3 py-3',
+                    index > 0 && 'border-t',
+                    isPast && 'opacity-60'
+                  )}
                 >
                   <div className="flex w-10 shrink-0 flex-col items-center pt-0.5" aria-hidden>
                     <span
-                      className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]"
-                      style={{ color: isToday ? 'var(--color-brand)' : 'var(--color-text3)' }}
+                      className={cn(
+                        'font-mono text-[10px] font-bold uppercase tracking-[0.08em]',
+                        isToday ? 'text-brand-600 dark:text-brand-400' : 'text-text-muted'
+                      )}
                     >
                       {isToday ? 'Today' : formatDateOnly(group.dateStr, 'EEE')}
                     </span>
                     <span
-                      className="font-sans text-[22px] font-black leading-none"
-                      style={{ color: isToday ? 'var(--color-brand)' : 'var(--color-text)' }}
+                      className={cn(
+                        'font-sans text-[22px] font-black leading-none',
+                        isToday ? 'text-brand-600 dark:text-brand-400' : 'text-text-primary'
+                      )}
                     >
                       {formatDateOnly(group.dateStr, 'd')}
                     </span>
@@ -134,20 +136,14 @@ export function MonthAgenda({
                         <button
                           type="button"
                           onClick={() => onSelectItem(item)}
-                          className="flex w-full items-center gap-2.5 rounded-r-md border-l-[3px] py-1 pl-2.5 pr-1 text-left transition-colors hover:bg-[var(--surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400"
+                          className="flex w-full items-center gap-2.5 rounded-r-md border-l-[3px] py-1 pl-2.5 pr-1 text-left transition-colors hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400"
                           style={{ borderColor: getItemColor(item) }}
                         >
                           <span className="min-w-0 flex-1">
-                            <span
-                              className="line-clamp-2 font-sans text-[14px] font-bold leading-snug"
-                              style={{ color: 'var(--color-text)' }}
-                            >
+                            <span className="line-clamp-2 font-sans text-[14px] font-bold leading-snug text-text-primary">
                               {item.title}
                             </span>
-                            <span
-                              className="mt-0.5 block truncate font-mono text-[10px] uppercase tracking-wide"
-                              style={{ color: 'var(--color-text2)' }}
-                            >
+                            <span className="mt-0.5 block truncate font-mono text-[10px] uppercase tracking-wide text-text-secondary">
                               {itemMeta(item)}
                             </span>
                           </span>

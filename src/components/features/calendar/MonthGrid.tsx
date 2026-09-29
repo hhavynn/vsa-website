@@ -7,13 +7,12 @@ import {
   itemOccursOn,
 } from '../../../utils/calendar';
 import { formatDateOnly } from '../../../lib/dateOnly';
+import { cn } from '../../../lib/utils';
 import { CalendarThumb } from './CalendarThumb';
 import { getItemColor } from './calendarTheme';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_CHIPS = 3;
-// Legible over a photo in both themes without hiding it.
-const NUMBER_BACKDROP = 'color-mix(in srgb, var(--color-surface) 88%, transparent)';
 
 interface Props {
   year: number;
@@ -33,18 +32,19 @@ function describeDay(dateStr: string, dayItems: CalendarItem[]): string {
   return `${label}, ${count}: ${dayItems.map((item) => item.title).join(', ')}`;
 }
 
-function dayNumberStyle(isToday: boolean, isSelected: boolean, onTile: boolean) {
+function dayNumberClasses(isToday: boolean, isSelected: boolean, onTile: boolean): string {
   if (isSelected) {
-    return {
-      background: isToday ? 'var(--color-brand)' : 'var(--color-text)',
-      color: 'var(--color-surface)',
-    };
+    return cn('text-surface', isToday ? 'bg-brand-600 dark:bg-brand-400' : 'bg-text-primary');
   }
-  const background = onTile ? NUMBER_BACKDROP : undefined;
-  if (isToday) {
-    return { background, color: 'var(--color-brand)', boxShadow: 'inset 0 0 0 1.5px var(--color-brand)' };
-  }
-  return { background, color: onTile ? 'var(--color-text)' : 'var(--color-text2)' };
+  return cn(
+    // Legible over a photo in both themes without hiding it.
+    onTile && 'bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)]',
+    isToday
+      ? 'text-brand-600 ring-[1.5px] ring-inset ring-brand-600 dark:text-brand-400 dark:ring-brand-400'
+      : onTile
+        ? 'text-text-primary'
+        : 'text-text-secondary'
+  );
 }
 
 /** The item a phone tile features: the first one with a flyer, else the first. */
@@ -103,13 +103,11 @@ export function MonthGrid({
           return (
             <div
               key={cell.dateStr}
-              className={`border-t px-px py-0.5 sm:min-h-[104px] sm:p-1.5 ${
-                cell.isToday ? 'sm:bg-[color-mix(in_srgb,var(--color-brand)_7%,transparent)]' : ''
-              }`}
-              style={{
-                borderColor: 'var(--color-border)',
-                opacity: cell.inMonth ? 1 : 0.42,
-              }}
+              className={cn(
+                'border-t border-[var(--color-border)] px-px py-0.5 sm:min-h-[104px] sm:p-1.5',
+                cell.isToday && 'sm:bg-[color-mix(in_srgb,var(--color-brand)_7%,transparent)]',
+                !cell.inMonth && 'opacity-[0.42]'
+              )}
             >
               {/* Mobile: the whole cell selects the day */}
               <button
@@ -117,29 +115,32 @@ export function MonthGrid({
                 onClick={() => onToggleDay(cell.dateStr)}
                 aria-pressed={isSelected}
                 aria-label={describeDay(cell.dateStr, dayItems)}
-                className="flex min-h-[52px] w-full flex-col items-center gap-1 rounded-md p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400 sm:hidden"
-                style={{ boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--color-text)' : undefined }}
+                className={cn(
+                  'flex min-h-[52px] w-full flex-col items-center gap-1 rounded-md p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400 sm:hidden',
+                  isSelected && 'ring-[1.5px] ring-inset ring-text-primary'
+                )}
               >
                 {featured ? (
                   <>
                     <span
-                      className="relative flex h-11 w-full justify-center overflow-hidden rounded pt-1"
-                      style={{
-                        background: `color-mix(in srgb, ${getItemColor(featured)} 24%, var(--color-surface))`,
-                        opacity: isPast ? 0.55 : 1,
-                      }}
+                      className={cn(
+                        'relative flex h-11 w-full justify-center overflow-hidden rounded pt-1',
+                        isPast && 'opacity-60'
+                      )}
+                      style={{ background: `color-mix(in srgb, ${getItemColor(featured)} 24%, var(--color-surface))` }}
                     >
                       <CalendarThumb item={featured} className="absolute inset-0 h-full w-full" />
                       <span
-                        className="relative inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] font-bold"
-                        style={dayNumberStyle(cell.isToday, isSelected, true)}
+                        className={cn(
+                          'relative inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] font-bold',
+                          dayNumberClasses(cell.isToday, isSelected, true)
+                        )}
                       >
                         {cell.dayOfMonth}
                       </span>
                       {dayItems.length > 1 && (
                         <span
-                          className="absolute bottom-0 right-0 rounded-tl px-1 font-mono text-[8px] font-bold leading-[12px]"
-                          style={{ background: 'var(--color-text)', color: 'var(--color-surface)' }}
+                          className="absolute bottom-0 right-0 rounded-tl bg-text-primary px-1 font-mono text-[8px] font-bold leading-[12px] text-surface"
                           aria-hidden
                         >
                           +{dayItems.length - 1}
@@ -147,8 +148,10 @@ export function MonthGrid({
                       )}
                     </span>
                     <span
-                      className="line-clamp-2 w-full break-words text-center font-sans text-[9px] font-bold leading-[1.15]"
-                      style={{ color: isPast ? 'var(--color-text2)' : 'var(--color-text)' }}
+                      className={cn(
+                        'line-clamp-2 w-full break-words text-center font-sans text-[9px] font-bold leading-[1.15]',
+                        isPast ? 'text-text-secondary' : 'text-text-primary'
+                      )}
                       aria-hidden
                     >
                       {featured.title}
@@ -157,10 +160,11 @@ export function MonthGrid({
                 ) : (
                   <span className="pt-1">
                     <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px] ${
-                        cell.isToday || isSelected ? 'font-bold' : 'font-medium'
-                      }`}
-                      style={dayNumberStyle(cell.isToday, isSelected, false)}
+                      className={cn(
+                        'inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[12px]',
+                        cell.isToday || isSelected ? 'font-bold' : 'font-medium',
+                        dayNumberClasses(cell.isToday, isSelected, false)
+                      )}
                     >
                       {cell.dayOfMonth}
                     </span>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CalendarItem } from '../../../utils/calendar';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { cn } from '../../../lib/utils';
 
 interface Props {
   item: CalendarItem;
@@ -12,7 +13,7 @@ interface Props {
  * nothing when the item has no image or the image fails to load, so the
  * caller's colored backdrop shows through instead of a broken-image icon.
  */
-export function CalendarThumb({ item, className = '' }: Props) {
+export function CalendarThumb({ item, className }: Props) {
   const [failed, setFailed] = useState(false);
   const src = item.thumbnailUrl || item.imageUrl;
   if (!src || failed) return null;
@@ -24,7 +25,7 @@ export function CalendarThumb({ item, className = '' }: Props) {
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={`object-cover ${className}`}
+      className={cn('object-cover', className)}
     />
   );
 }

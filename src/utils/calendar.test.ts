@@ -336,6 +336,9 @@ describe('sorting and grouping', () => {
     expect(groups.map((g) => g.dateStr)).toEqual(['2026-10-01', '2026-10-05']);
     expect(groups[0].items.map((i) => i.key)).toEqual(['spill']);
     expect(groups[1].items.map((i) => i.key)).toEqual(['in']);
+    // The listed item keeps its real start so the detail sheet and Google
+    // Calendar link still say Sep 29.
+    expect(groups[0].items[0].date).toBe('2026-09-29');
   });
 
   it('labels today and tomorrow', () => {
