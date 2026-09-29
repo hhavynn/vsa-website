@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
 import { formatDateOnly } from '../lib/dateOnly';
@@ -97,31 +98,30 @@ export function VCNCurrent() {
       <>
         <PageTitle title="VCN — This Year's Show" />
         <div className="program-app min-h-[60vh]">
-          <section className="program-hero">
-            <div className="program-hero-grain" />
-            <div className="program-hero-inner">
-              <span className="program-hero-kicker">Current Production</span>
-              <h1 className="program-title">
-                VCN <span className="program-title-script">{currentVcn.year || 'Coming Soon'}</span>
-              </h1>
-              <p className="program-hero-meta">
+          <EditorialHero
+            eyebrow="Current Production"
+            title={<>VCN <EditorialHeroScript>{currentVcn.year || 'Coming Soon'}</EditorialHeroScript></>}
+            meta={
+              <>
                 Current VCN details will be updated when available. Follow{' '}
                 <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
                   @vsaatucsd
                 </a>{' '}
                 on Instagram for the latest announcements.
-              </p>
-              <div className="program-hero-actions">
+              </>
+            }
+            watermark="soon"
+            actions={
+              <>
                 <Link to="/vcn" className="vsa-btn-primary font-sans text-sm font-medium">
                   About VCN
                 </Link>
                 <Link to="/vcn/archive" className="vsa-btn-ghost font-sans text-sm">
                   Past Productions
                 </Link>
-              </div>
-            </div>
-            <div className="program-watermark">soon</div>
-          </section>
+              </>
+            }
+          />
         </div>
       </>
     );
@@ -132,44 +132,41 @@ export function VCNCurrent() {
       <PageTitle title={`VCN ${currentVcn.year}${currentVcn.title ? ` — ${currentVcn.title}` : ''}`} />
 
       <div className="program-app">
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">Current Production</span>
-            <h1 className="program-title">
-              {currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
-            </h1>
-            <p className="program-hero-meta">
+        <EditorialHero
+          eyebrow="Current Production"
+          title={currentVcn.title || `Vietnamese Culture Night ${currentVcn.year}`}
+          meta={
+            <>
               UCSD VSA · VCN {currentVcn.year}
               {currentVcn.date && (
                 <span className="block pt-2 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                   {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}
                 </span>
               )}
-            </p>
-            {showTicketStatus && (
-              <div className="program-hero-actions">
-                {canShowTicketButton && (
-                  <a
-                    href={currentVcn.ticketLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="vsa-btn-primary font-sans text-sm font-medium"
-                  >
-                    Get Tickets →
-                  </a>
-                )}
-                {ticketStatusLabel && (
-                  <span className="scrapbook-sticker scrapbook-sticker-teal">{ticketStatusLabel}</span>
-                )}
-                {currentVcn.ticketNote && (
-                  <span className="scrapbook-sticker">{currentVcn.ticketNote}</span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="program-watermark">{currentVcn.year}</div>
-        </section>
+            </>
+          }
+          watermark={currentVcn.year}
+          actions={showTicketStatus ? (
+            <>
+              {canShowTicketButton && (
+                <a
+                  href={currentVcn.ticketLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="vsa-btn-primary font-sans text-sm font-medium"
+                >
+                  Get Tickets →
+                </a>
+              )}
+              {ticketStatusLabel && (
+                <span className="scrapbook-sticker scrapbook-sticker-teal">{ticketStatusLabel}</span>
+              )}
+              {currentVcn.ticketNote && (
+                <span className="scrapbook-sticker">{currentVcn.ticketNote}</span>
+              )}
+            </>
+          ) : undefined}
+        />
 
         {currentVcn.synopsis && (
           <section className="program-section">

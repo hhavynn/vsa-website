@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useProgramContent } from '../hooks/useProgramContent';
 import {
@@ -77,61 +78,54 @@ export function WildNCulture() {
       <PageTitle title="Wild N' Culture" />
 
       <div className="program-app">
-        <section className="program-hero">
-          <div className="program-hero-grain" />
-          <div className="program-hero-inner">
-            <span className="program-hero-kicker">Event Flyer</span>
-            <h1 className="program-title">
-              Wild N' <span className="program-title-script">Culture</span>
-            </h1>
-            <p className="program-hero-meta">
-              Annual intercollegiate comedy competition · VSA at UCSD
-            </p>
-            {(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) && (
-              <div className="program-hero-actions">
-                {dynamicEventVisible && eventStatusLabel && (
-                  <span className="scrapbook-sticker scrapbook-sticker-coral">
-                    {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
-                  </span>
-                )}
-                {dynamicEventVisible && eventMeta.length > 0 && (
-                  <span className="scrapbook-sticker scrapbook-sticker-gold">
-                    {eventMeta.join(' · ')}
-                  </span>
-                )}
-                {dynamicEventVisible && hasPrimaryProgramLink(eventContent) && (
-                  <a
-                    href={eventContent.primary_link_url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="vsa-btn-primary font-sans text-sm font-medium"
-                  >
-                    {eventContent.primary_link_label || 'Get Tickets'} →
-                  </a>
-                )}
-                {dynamicEventVisible && eventContent.body && (
-                  <span className="scrapbook-sticker">{eventContent.body}</span>
-                )}
-                {!eventContent && WNC_CONFIG.date && (
-                  <span className="scrapbook-sticker scrapbook-sticker-gold">
-                    {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
-                  </span>
-                )}
-                {!eventContent && WNC_CONFIG.ticketsAvailable && WNC_CONFIG.ticketLink && (
-                  <a
-                    href={WNC_CONFIG.ticketLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="vsa-btn-primary font-sans text-sm font-medium"
-                  >
-                    Get Tickets →
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="program-watermark">wnc</div>
-        </section>
+        <EditorialHero
+          eyebrow="Event Flyer"
+          title={<>Wild N' <EditorialHeroScript>Culture</EditorialHeroScript></>}
+          meta="Annual intercollegiate comedy competition · VSA at UCSD"
+          watermark="wnc"
+          actions={(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) ? (
+            <>
+              {dynamicEventVisible && eventStatusLabel && (
+                <span className="scrapbook-sticker scrapbook-sticker-coral">
+                  {eventStatusLabel}{eventContent.title ? ` · ${eventContent.title}` : ''}
+                </span>
+              )}
+              {dynamicEventVisible && eventMeta.length > 0 && (
+                <span className="scrapbook-sticker scrapbook-sticker-gold">
+                  {eventMeta.join(' · ')}
+                </span>
+              )}
+              {dynamicEventVisible && hasPrimaryProgramLink(eventContent) && (
+                <a
+                  href={eventContent.primary_link_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="vsa-btn-primary font-sans text-sm font-medium"
+                >
+                  {eventContent.primary_link_label || 'Get Tickets'} →
+                </a>
+              )}
+              {dynamicEventVisible && eventContent.body && (
+                <span className="scrapbook-sticker">{eventContent.body}</span>
+              )}
+              {!eventContent && WNC_CONFIG.date && (
+                <span className="scrapbook-sticker scrapbook-sticker-gold">
+                  {WNC_CONFIG.date}{WNC_CONFIG.venue ? ` · ${WNC_CONFIG.venue}` : ''}
+                </span>
+              )}
+              {!eventContent && WNC_CONFIG.ticketsAvailable && WNC_CONFIG.ticketLink && (
+                <a
+                  href={WNC_CONFIG.ticketLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="vsa-btn-primary font-sans text-sm font-medium"
+                >
+                  Get Tickets →
+                </a>
+              )}
+            </>
+          ) : undefined}
+        />
 
         <section className="program-section">
           <div className="program-section-inner program-section-narrow">

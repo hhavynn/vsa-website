@@ -20,6 +20,7 @@ import { FamAccent, FamCover } from '../components/features/ace/FamCover';
 import { FamSheet } from '../components/features/ace/FamSheet';
 import { ACTIVE_FAM_SLOTS, getFamIconUrl, resolveFamHeads } from '../lib/aceFamRoster';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
+import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import '../styles/ace.css';
 
 const ROLES = [
@@ -165,19 +166,12 @@ export function Ace() {
 
       <div className={`ace-app ${dark ? 'is-dark' : ''}`}>
         {/* Hero */}
-        <section className="ace-hero">
-          <div className="ace-hero-grain" aria-hidden="true" />
-          <div className="ace-hero-inner">
-            <div className="ace-eyebrow">ACE · Anh Chị Em</div>
-            <h1 className="ace-hero-title">
-              Anh<span className="ace-hero-script"> Chị </span>Em
-            </h1>
-            <p className="ace-hero-meta">
-              VSA's Big/Little family program{heroCycleLine ? ` · ${heroCycleLine}` : ''}
-            </p>
-          </div>
-          <div className="ace-hero-watermark" aria-hidden="true">gia<br/>đình</div>
-        </section>
+        <EditorialHero
+          eyebrow="ACE · Anh Chị Em"
+          title={<>Anh<EditorialHeroScript> Chị </EditorialHeroScript>Em</>}
+          meta={`VSA's Big/Little family program${heroCycleLine ? ` · ${heroCycleLine}` : ''}`}
+          watermark={<>gia<br />đình</>}
+        />
 
         {/* What is ACE */}
         <section className="ace-section">

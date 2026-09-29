@@ -118,7 +118,7 @@ All verified against `AGENTS.md`, `.github/CONTRIBUTING.md`, `.github/pull_reque
 
 ## 6. Freeze windows
 
-Calendar-driven freeze windows exist (owner-confirmed 2026-07-05; previously unwritten). Around **House reveals**, **application opens**, and **VCN** (Vietnamese Culture Night), the affected public surfaces must not change — a broken House page during reveal night or a dead application link at open time is a real-world incident, not just a bug. Before starting any change to House pages, application CTAs/links, or VCN pages, check whether a freeze window is active. The calendar, affected surfaces, and exception process live in `vsa-seasonal-operations`.
+Calendar-driven freeze windows exist (owner-confirmed 2026-07-05; previously unwritten). Around **House reveals**, **application opens**, and **VCN** (Vietnamese Culture Night), the affected public surfaces must not change — a broken House page during reveal night or a dead application link at open time is a real-world incident, not just a bug. **House UI is exempt** (owner, 2026-09-27): layout/styling/hero work on House pages is routine; only House data and reveal content (assets, `src/constants/houses.ts`, reveal placeholder copy and gating, standings data) freeze around a reveal. Before starting any change to House data/reveal content, application CTAs/links, or VCN pages, check whether a freeze window is active. The calendar, affected surfaces, and exception process live in `vsa-seasonal-operations`.
 
 ---
 
@@ -128,7 +128,8 @@ Calendar-driven freeze windows exist (owner-confirmed 2026-07-05; previously unw
 1. CLASSIFY   — Which tier (Section 1)? If "forbidden": stop unless the owner
                 explicitly requested this exact change. If it touches
                 supabase/, auth, routes, App.tsx, config, or deps: gated.
-2. FREEZE?    — Does the change touch House / applications / VCN surfaces?
+2. FREEZE?    — Does the change touch House data/reveal content, applications,
+                or VCN surfaces? (House UI alone is not frozen.)
                 Check vsa-seasonal-operations for an active freeze window.
 3. PLAYBOOK   — Pick the .claude/agents/<domain>.md playbook (Section 1 table)
                 and obey its mode. Audit-first domains: report findings and
