@@ -132,7 +132,8 @@ async function runTests() {
     ['public_member_avatars', 'member_id'],
   ];
 
-  async function expectViewWritesDenied(client, who) {
+  // withoutSelect: views this role is meant to be unable to read.
+  async function expectViewWritesDenied(client, who, { withoutSelect = [] } = {}) {
     const notUpdatable = [];
     const probeTargets = [
       ...simpleViews.map((view) => [view, 'id', true]),
@@ -152,18 +153,31 @@ async function runTests() {
         reportFail(`${who} write probe on ${view} not run: ${key} = ${dummyUuid} matches a row (#472)`);
         continue;
       }
-      // A denied read still probes the write: filtering a view needs SELECT
-      // on it, so that write is denied too.
+      // Filtering or returning a column needs SELECT on it, so for a role that
+      // cannot read the view a filtered UPDATE/DELETE is denied with 42501
+      // whether or not the write grant exists. That 42501 proves nothing.
+      const readDenied = readError?.code === '42501';
+      if (readDenied && !withoutSelect.includes(view)) {
+        reportFail(`${who} cannot read ${view} (42501), so its write grants could not be probed (#472)`);
+        continue;
+      }
 
-      const writes = [
-        ['UPDATE', client.from(view).update({ [key]: dummyUuid }).eq(key, dummyUuid).select(key)],
-        ['DELETE', client.from(view).delete().eq(key, dummyUuid).select(key)],
-      ];
+      const writes = [];
+      if (readDenied) {
+        reportSkip(`${who} UPDATE/DELETE probe on ${view} (no SELECT by design, so a filtered write is denied either way; the signed-in run probes this view)`);
+      } else {
+        writes.push(
+          ['UPDATE', client.from(view).update({ [key]: dummyUuid }).eq(key, dummyUuid).select(key)],
+          ['DELETE', client.from(view).delete().eq(key, dummyUuid).select(key)],
+        );
+      }
       // A successful insert would create a row. A null id violates NOT NULL,
-      // but only after BEFORE INSERT triggers run, so it stays gated.
+      // but only after BEFORE INSERT triggers run, so it stays gated. It has
+      // no filter or RETURNING, so it needs no SELECT.
       if (allowMutations && isSimple) {
         writes.push(['INSERT', client.from(view).insert({ id: null })]);
       }
+      if (writes.length === 0) continue;
 
       const failures = [];
       const denied = [];
@@ -335,7 +349,8 @@ async function runTests() {
       reportFail(`anon call to check_in_to_event was not denied (#381): ${JSON.stringify(checkInError)}`);
     }
 
-    await expectViewWritesDenied(anon, 'anon');
+    // my_member_photo_requests is readable by signed-in members only.
+    await expectViewWritesDenied(anon, 'anon', { withoutSelect: ['my_member_photo_requests'] });
   } catch (err) {
     reportFail(`Unexpected error during anon checks: ${err.message}`);
   }
