@@ -242,84 +242,187 @@
 }
 .ace-app .ace-filter.is-active .ace-filter-n { background: rgba(255,255,255,0.16); }
 
-/* ── Fam grid ────────────────────────────────────────────────── */
-.ace-app .ace-fam-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-.ace-app .ace-fam-card {
-  text-align: left; padding: 0; border: 1px solid var(--border);
-  border-radius: 8px; overflow: visible;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  width: 100%;
-  position: relative;
-}
-.ace-app .ace-fam-card::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -10px;
-  z-index: 2;
-  width: 76px;
-  height: 20px;
-  border-radius: 3px;
-  background: repeating-linear-gradient(45deg, rgba(59,189,181,0.24) 0 8px, rgba(255,255,255,0.16) 8px 12px);
-  transform: translateX(-50%) rotate(-2deg);
-  pointer-events: none;
-}
-.ace-app .ace-fam-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-cardh);
-}
-.ace-app .ace-fam-card:active { transform: translateY(0); }
+/* FamCover's <img> (fams with an uploaded cover): fill and crop the slot. */
 .ace-app .ace-fam-cover-img {
-  display: block; width: 100%; height: 132px; object-fit: cover;
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
+  display: block;
+  width: 100%;
+  object-fit: cover;
 }
-.ace-app .ace-fam-body { padding: 14px 16px 16px; }
-.ace-app .ace-fam-row {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
-}
-.ace-app .ace-fam-name {
-  font-family: "DM Serif Display", serif; font-size: 22px; line-height: 1.05;
-  letter-spacing: -0.02em; color: var(--text);
-  display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
-}
-.ace-app .ace-fam-viet { font-style: italic; font-size: 16px; }
-.ace-app .ace-fam-viet-teal  { color: var(--brand-text); }
-.ace-app .ace-fam-viet-coral { color: var(--accent-strong); }
-.ace-app .ace-fam-viet-gold  { color: var(--gold-strong); }
-.ace-app .ace-fam-meta {
-  margin-top: 10px;
-  font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 0.04em;
-  color: var(--text-2); display: flex; flex-wrap: wrap; gap: 6px; text-transform: uppercase;
-}
-.ace-app .ace-fam-meta-sep { color: var(--text-3); }
-.ace-app .ace-fam-cta {
-  margin-top: 14px; padding-top: 12px;
-  border-top: 1px dashed var(--border-strong);
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: var(--brand-text);
-}
-.ace-app .ace-fam-card:hover .ace-fam-cta { color: var(--brand-text); }
-.ace-app.is-dark .ace-fam-card:hover .ace-fam-cta { color: #6cd8d1; }
+
+/* ── Fam graveyard: ghost cards ──────────────────────────────── */
 .ace-app .ace-graveyard-section {
   border-top: 1px solid var(--border);
   padding-top: 28px;
 }
 .ace-app .ace-graveyard-copy {
-  margin: -4px 0 16px;
+  margin: -4px 0 20px;
   color: var(--text-2);
   font-size: 13px;
 }
-.ace-app .ace-fam-card-graveyard {
-  background: color-mix(in srgb, var(--surface) 86%, var(--bg-2));
+.ace-app .ace-ghost-grid {
+  --ghost-bg:        #fcfaf6;
+  --ghost-edge:      rgba(122,104,82,0.7);
+  --ghost-lift:      rgba(20,32,40,0.08);
+  --ghost-body:      #ffffff;
+  --ghost-body-edge: rgba(20,32,40,0.3);
+  --ghost-face:      #142028;
+  --ghost-glow:      rgba(20,32,40,0.18);
+  --ghost-hem:       10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+  row-gap: calc(var(--ghost-hem) + 18px);
+  padding-bottom: var(--ghost-hem);
 }
-.ace-app .ace-fam-card-graveyard .ace-fam-cover-img {
-  filter: saturate(0.72) contrast(0.96);
+.ace-app.is-dark .ace-ghost-grid {
+  --ghost-bg:        #0f1c24;
+  --ghost-edge:      rgba(228,216,200,0.34);
+  --ghost-lift:      rgba(59,189,181,0.12);
+  --ghost-body:      #eae0d2;
+  --ghost-body-edge: rgba(228,216,200,0.5);
+  --ghost-face:      #0a1218;
+  --ghost-glow:      rgba(228,216,200,0.32);
 }
-.ace-app .ace-graveyard-pill,
+.ace-app .ace-ghost-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 18px 18px 0 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  transition: transform .35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* The sheet: no border — the drop-shadow traces its whole silhouette, hem included. */
+.ace-app .ace-ghost-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--ghost-bg);
+  filter: drop-shadow(0 0 1px var(--ghost-edge)) drop-shadow(0 10px 18px var(--ghost-lift));
+}
+/* Scalloped hem hanging off the bottom edge. */
+.ace-app .ace-ghost-sheet::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  height: var(--ghost-hem);
+  background-image: radial-gradient(50% 100% at 50% 0, var(--ghost-bg) 96%, transparent 100%);
+  background-size: 20px var(--ghost-hem);
+  background-repeat: round no-repeat;
+  pointer-events: none;
+}
+.ace-app .ace-ghost-card:active { transform: translateY(-1px); }
+.ace-app .ace-ghost-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+@media (hover: hover) {
+  .ace-app .ace-ghost-card:hover { transform: translateY(-4px); }
+  .ace-app .ace-ghost-card:hover .ace-ghost-glyph { opacity: 1; }
+}
+.ace-app .ace-ghost-cover {
+  position: relative;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+.ace-app .ace-ghost-cover-art {
+  position: absolute;
+  inset: 0;
+  filter: grayscale(1) contrast(0.85);
+  opacity: 0.3;
+}
+.ace-app.is-dark .ace-ghost-cover-art { opacity: 0.16; }
+/* Mist that dissolves the faded cover into the sheet. */
+.ace-app .ace-ghost-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 25%, var(--ghost-bg) 100%);
+  pointer-events: none;
+}
+.ace-app .ace-ghost-tag {
+  position: absolute;
+  z-index: 1;
+  top: 9px; left: 10px;
+  padding: 3px 6px 2px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ghost-bg) 80%, transparent);
+  color: var(--text-2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+.ace-app .ace-ghost-glyph {
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 45px;
+  opacity: 0.92;
+  filter: drop-shadow(0 6px 10px var(--ghost-glow));
+  animation: ace-ghost-float 4.6s ease-in-out infinite alternate;
+  transition: opacity .25s ease;
+  will-change: transform;
+}
+.ace-app .ace-ghost-card:nth-child(3n+2) .ace-ghost-glyph { animation-duration: 5.2s; animation-delay: -1.6s; }
+.ace-app .ace-ghost-card:nth-child(3n) .ace-ghost-glyph { animation-duration: 4.1s; animation-delay: -3s; }
+.ace-app .ace-ghost-glyph-body { fill: var(--ghost-body); stroke: var(--ghost-body-edge); stroke-width: 1.5; }
+.ace-app .ace-ghost-glyph-face { fill: var(--ghost-face); }
+@keyframes ace-ghost-float {
+  from { transform: translateY(3px) rotate(-3deg); }
+  to   { transform: translateY(-4px) rotate(3deg); }
+}
+.ace-app .ace-ghost-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 2px 12px 4px;
+}
+.ace-app .ace-ghost-name {
+  font-family: "DM Serif Display", serif;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--text) 80%, var(--ghost-bg));
+  overflow-wrap: anywhere;
+}
+.ace-app .ace-ghost-meta {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin: 6px 0 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ace-app .ace-ghost-cta {
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px dashed var(--border-strong);
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-text);
+}
+@container ace (max-width: 330px) {
+  .ace-app .ace-ghost-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ace-app .ace-ghost-glyph { animation: none; }
+  .ace-app .ace-ghost-card { transition: none; }
+}
+
 .ace-app .ace-sheet-badge {
   display: inline-flex;
   align-items: center;
@@ -333,12 +436,6 @@
   letter-spacing: 0.06em;
   line-height: 1;
   text-transform: uppercase;
-}
-.ace-app .ace-graveyard-pill {
-  flex-shrink: 0;
-  padding: 5px 8px;
-}
-.ace-app .ace-sheet-badge {
   margin-left: 10px;
   padding: 5px 8px 4px;
   vertical-align: middle;
@@ -690,17 +787,90 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Summary line above the card: total count + position */
+.ace-app .ace-famtabs-wrap { scroll-margin-top: 84px; }
+.ace-app .ace-famtabs-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 12px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ace-app .ace-famtabs-count strong { color: var(--text); font-weight: 700; }
+.ace-app .ace-famtabs-position {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
 /* Tab bar */
+.ace-app .ace-famtabs-rail { position: relative; }
 .ace-app .ace-famtabs-bar {
+  position: relative;
   display: flex;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   gap: 0;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
   scrollbar-width: none;
 }
 .ace-app .ace-famtabs-bar::-webkit-scrollbar { display: none; }
+
+/* Edge fade + chevron shown only while tabs are hidden off that edge. */
+.ace-app .ace-famtabs-more {
+  position: absolute;
+  top: 0; bottom: 1px;
+  z-index: 2;
+  width: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.ace-app .ace-famtabs-more-end {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(90deg, transparent, var(--bg-2) 55%);
+}
+.ace-app .ace-famtabs-more-start {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(270deg, transparent, var(--bg-2) 55%);
+}
+.ace-app .ace-famtabs-rail.has-end .ace-famtabs-more-end,
+.ace-app .ace-famtabs-rail.has-start .ace-famtabs-more-start {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ace-app .ace-famtabs-more svg {
+  box-sizing: border-box;
+  width: 28px; height: 28px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(20,32,40,0.12);
+}
+.ace-app .ace-famtabs-rail.has-end:not(.has-start) .ace-famtabs-more-end svg {
+  animation: ace-more-nudge 1.4s ease-in-out 0.6s 3;
+}
+@keyframes ace-more-nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ace-app .ace-famtabs-rail.has-end:not(.has-start) .ace-famtabs-more-end svg { animation: none; }
+}
 
 .ace-app .ace-famtabs-tab {
   flex-shrink: 0;
@@ -720,6 +890,7 @@
 }
 .ace-app .ace-famtabs-tab:last-child { border-right: 0; }
 .ace-app .ace-famtabs-tab:hover { background: var(--surface); color: var(--text); }
+.ace-app .ace-famtabs-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
 .ace-app .ace-famtabs-tab.is-active {
   background: var(--surface);
   color: var(--text);
@@ -892,6 +1063,60 @@
   font-size: 12px; color: var(--text-3); line-height: 1.5; max-width: 32ch;
 }
 
+/* Previous / next pager at the foot of the fam panel */
+.ace-app .ace-famtabs-pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.ace-app .ace-famtabs-pager-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  transition: background .15s ease;
+}
+.ace-app .ace-famtabs-pager-btn.is-next {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+  border-left: 1px solid var(--border);
+}
+.ace-app .ace-famtabs-pager-btn:hover { background: var(--surface); }
+.ace-app .ace-famtabs-pager-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.ace-app .ace-famtabs-pager-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.ace-app .ace-famtabs-pager-dir svg { width: 12px; height: 12px; }
+.ace-app .ace-famtabs-pager-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "DM Serif Display", serif;
+  font-size: 18px;
+  line-height: 1.15;
+  color: var(--text);
+}
+.ace-app .ace-famtabs-pager-btn.is-next .ace-famtabs-pager-name { color: var(--brand-strong); }
+.ace-app.is-dark .ace-famtabs-pager-btn.is-next .ace-famtabs-pager-name { color: var(--brand-text); }
+
 @container ace (min-width: 760px) {
   .ace-app .ace-breadcrumb { padding: 18px 32px 0; }
   .ace-app .ace-section { padding: 56px 64px; }
@@ -904,7 +1129,15 @@
   .ace-app .ace-cta-row { flex-direction: row; align-items: center; justify-content: space-between; }
   .ace-app .ace-cta-body { flex: 1; }
 
-  .ace-app .ace-fam-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .ace-app .ace-ghost-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 20px; row-gap: calc(var(--ghost-hem) + 26px); }
+  .ace-app .ace-ghost-cover { height: 118px; }
+  .ace-app .ace-ghost-glyph { width: 50px; height: 59px; }
+  .ace-app .ace-ghost-body { padding: 4px 16px 6px; }
+  .ace-app .ace-ghost-name { font-size: 22px; }
+  .ace-app .ace-ghost-meta { font-size: 10.5px; }
+  .ace-app .ace-ghost-cta { font-size: 13px; }
+  .ace-app .ace-famtabs-pager-btn { padding: 14px 28px; }
+  .ace-app .ace-famtabs-pager-name { font-size: 20px; }
   .ace-app .ace-famtabs-panel { padding: 28px; }
   .ace-app .ace-famtabs-tab { padding: 13px 20px; font-size: 14px; }
   .ace-app .ace-famheads-grid { flex-wrap: nowrap; }
@@ -919,5 +1152,5 @@
 }
 
 @container ace (min-width: 1080px) {
-  .ace-app .ace-fam-grid { grid-template-columns: repeat(3, 1fr); }
+  .ace-app .ace-ghost-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
