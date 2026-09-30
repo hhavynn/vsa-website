@@ -3307,6 +3307,16 @@ export type Database = {
       };
     };
     Functions: {
+      admin_publish_member_photo: {
+        Args: {
+          p_approved_path: string;
+          p_member_id: string;
+          p_pending_path: string;
+          p_public_url: string;
+          p_request_id: string;
+        };
+        Returns: undefined;
+      };
       approve_member_photo_request: {
         Args: {
           p_approved_path: string;

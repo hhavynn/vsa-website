@@ -12,6 +12,9 @@ export type PublicMemberAvatar = Database['public']['Views']['public_member_avat
 export const PENDING_PHOTO_BUCKET = 'member-photo-requests';
 export const AVATARS_BUCKET = 'avatars';
 
+/** Mirrors the pending bucket's allowed_mime_types. */
+const ADMIN_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const REQUEST_SELECT =
   'id, user_id, matched_member_id, submitted_name, submitted_email, note_to_admins, consent_confirmed, storage_path_pending, storage_path_approved, approved_avatar_url, status, admin_notes, reviewed_by, reviewed_at, created_at, updated_at' as const;
 
@@ -177,6 +180,97 @@ export class PhotoRequestsRepository {
         throw rpcError;
       }
     }, 'Failed to approve photo request');
+  }
+
+  /**
+   * Admin flow from Admin -> Members: publish a photo for a member without a
+   * member-submitted request. Stores the original in the private pending
+   * bucket and a 256px thumbnail in the public avatars bucket, then the
+   * admin-guarded RPC records it as an approved request, so it shows up in
+   * Photo requests with an audit trail and can be removed there. The caller
+   * must have confirmed the member agreed to the photo being public.
+   */
+  async adminPublishMemberPhoto(memberId: string, file: File): Promise<void> {
+    return withErrorHandling(async () => {
+      if (!ADMIN_UPLOAD_TYPES.includes(file.type)) {
+        throw new ValidationError('Choose a JPEG, PNG, or WebP image.', 'file');
+      }
+
+      const requestId = crypto.randomUUID();
+      const { file: original } = await prepareImageForUpload(file, 'avatar');
+      const pendingPath = `pending/${crypto.randomUUID()}.${getUploadExtension(original)}`;
+
+      const { error: pendingError } = await supabase.storage
+        .from(PENDING_PHOTO_BUCKET)
+        .upload(pendingPath, original, { contentType: original.type });
+      if (pendingError) throw pendingError;
+
+      const { file: thumbnail } = await prepareImageForUpload(original, 'avatarThumbnail');
+      const approvedPath = `approved/${requestId}.${getUploadExtension(thumbnail)}`;
+
+      const { error: approvedError } = await supabase.storage
+        .from(AVATARS_BUCKET)
+        .upload(approvedPath, thumbnail, {
+          cacheControl: '31536000',
+          contentType: thumbnail.type,
+          upsert: true,
+        });
+      if (approvedError) {
+        await this.discardUnrecordedUploads([[PENDING_PHOTO_BUCKET, pendingPath]]);
+        throw approvedError;
+      }
+
+      const { data: urlData } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(approvedPath);
+
+      const { error: rpcError } = await supabase.rpc('admin_publish_member_photo', {
+        p_request_id: requestId,
+        p_member_id: memberId,
+        p_pending_path: pendingPath,
+        p_approved_path: approvedPath,
+        p_public_url: urlData.publicUrl,
+      });
+      if (rpcError) {
+        // A call that committed but lost its response still reports an
+        // error. Deleting then would leave the approved row pointing at a
+        // missing image, so clean up only once the row is confirmed absent.
+        const { data: recorded, error: lookupError } = await supabase
+          .from('member_photo_requests')
+          .select('id')
+          .eq('id', requestId)
+          .maybeSingle();
+        if (lookupError) {
+          throw new ValidationError(
+            'Could not confirm whether the photo was published. Check Photo requests before trying again.',
+          );
+        }
+        if (recorded) return;
+
+        await this.discardUnrecordedUploads([
+          [AVATARS_BUCKET, approvedPath],
+          [PENDING_PHOTO_BUCKET, pendingPath],
+        ]);
+        throw rpcError;
+      }
+    }, 'Failed to publish member photo');
+  }
+
+  /**
+   * Deletes uploads that no request row references. Nothing in the admin UI
+   * can find such an object, so a failed delete is reported rather than
+   * swallowed.
+   */
+  private async discardUnrecordedUploads(objects: Array<[bucket: string, path: string]>): Promise<void> {
+    const leftovers: string[] = [];
+    for (const [bucket, path] of objects) {
+      const { data, error } = await supabase.storage.from(bucket).remove([path]);
+      // A delete that storage RLS filters out returns no error and no objects.
+      if (error || !data?.length) leftovers.push(`${bucket}/${path}`);
+    }
+    if (leftovers.length > 0) {
+      throw new ValidationError(
+        `The photo was not published, and its uploaded files could not be deleted: ${leftovers.join(', ')}. Ask a maintainer to remove them from Supabase Storage.`,
+      );
+    }
   }
 
   /**

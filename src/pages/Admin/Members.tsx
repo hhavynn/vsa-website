@@ -3,7 +3,11 @@
 // still holds last season's value and is an input to the Admin -> Houses
 // backfill; it is deliberately left untouched.
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useQueryClient } from 'react-query';
+import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
+import { cn } from '../../lib/utils';
 import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
@@ -12,6 +16,9 @@ import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/hou
 import { normalizeEmail } from '../../lib/memberMatching';
 import { formatAcademicYear, getAcademicYearStart } from '../../lib/academicTerms';
 import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
+import { photoRequestsRepository } from '../../data/repos/photoRequests';
+import { toUserMessage } from '../../data/errors';
+import { MEMBER_AVATARS_QUERY_KEY, useMemberAvatars } from '../../hooks/useMemberAvatars';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,7 +117,31 @@ export default function AdminMembers() {
   // Edit modal
   const [editing, setEditing] = useState<Member | null>(null);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '', house: '' });
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<'fields' | 'photo' | null>(null);
+
+  // Photo for the member being edited. Publishing happens on save.
+  const avatars = useMemberAvatars();
+  const queryClient = useQueryClient();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [photoConsent, setPhotoConsent] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDropAccepted: files => { setPhotoFile(files[0]); setPhotoError(null); },
+    onDropRejected: () => setPhotoError('Choose a JPEG, PNG, or WebP image up to 5 MB.'),
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
+    disabled: saving !== null,
+  });
+
+  useEffect(() => {
+    if (!photoFile) { setPhotoPreviewUrl(null); return; }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
 
   // History modal
   const [historyMember, setHistoryMember] = useState<Member | null>(null);
@@ -215,11 +246,33 @@ export default function AdminMembers() {
       email: m.email ?? '',
       house: m.house ?? '',
     });
+    clearPhoto();
+  }
+
+  function closeEdit() {
+    setEditing(null);
+    clearPhoto();
+  }
+
+  // The dialog stays open until a save finishes; closing it mid-publish would
+  // let a second editor open, which the first save would then close.
+  function requestCloseEdit() {
+    if (saving === null) closeEdit();
+  }
+
+  function clearPhoto() {
+    setPhotoFile(null);
+    setPhotoConsent(false);
+    setPhotoError(null);
   }
 
   async function handleSaveEdit() {
     if (!editing) return;
-    setSaving(true);
+    if (photoFile && !photoConsent) {
+      setPhotoError('Confirm the member agreed to this photo being public.');
+      return;
+    }
+    setSaving('fields');
     const { error } = await supabase
       .from('members')
       .update({
@@ -232,10 +285,27 @@ export default function AdminMembers() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', editing.id);
-    setSaving(false);
-    if (error) { toast.error('Failed to save changes.'); return; }
-    toast.success('Member updated.');
-    setEditing(null);
+    if (error) { setSaving(null); toast.error('Failed to save changes.'); return; }
+
+    if (photoFile) {
+      setSaving('photo');
+      try {
+        await photoRequestsRepository.adminPublishMemberPhoto(editing.id, photoFile);
+      } catch (err) {
+        console.error(err);
+        setSaving(null);
+        // Keep the dialog open with the photo still selected so it can be retried.
+        setPhotoError(toUserMessage(err, 'The photo could not be published. Try again.'));
+        toast.error('Details saved, but the photo was not published.');
+        load();
+        return;
+      }
+      queryClient.invalidateQueries(MEMBER_AVATARS_QUERY_KEY);
+    }
+
+    setSaving(null);
+    toast.success(photoFile ? 'Member updated and photo published.' : 'Member updated.');
+    closeEdit();
     load();
   }
 
@@ -492,9 +562,7 @@ export default function AdminMembers() {
                         {/* NAME */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-surface2)] text-[12px] font-semibold text-[var(--color-text2)]" style={{ borderColor: 'var(--color-border)' }}>
-                              {initials(m.first_name, m.last_name)}
-                            </div>
+                            <MemberPhoto src={avatars.get(m.id)} first={m.first_name} last={m.last_name} className="h-8 w-8 text-[12px]" />
                             <div>
                               <p className="text-[13px] font-medium text-[var(--color-text)]">{m.first_name} {m.last_name}</p>
                               {m.email && <p className="text-[11px] text-[var(--color-text3)]">{m.email}</p>}
@@ -553,12 +621,68 @@ export default function AdminMembers() {
 
       {/* ── Edit Modal ── */}
       {editing && (
-        <Modal onClose={() => setEditing(null)} wide>
+        <Modal onClose={requestCloseEdit} wide>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50">Edit Member</h2>
-            <button onClick={() => setEditing(null)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
+            <button onClick={requestCloseEdit} disabled={saving !== null} aria-label="Close" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none disabled:opacity-40">×</button>
           </div>
           <div className="space-y-4">
+            <Field label="Photo">
+              <div className="flex items-center gap-4">
+                <MemberPhoto
+                  src={photoPreviewUrl ?? avatars.get(editing.id)}
+                  first={editing.first_name}
+                  last={editing.last_name}
+                  alt={photoPreviewUrl ? 'Selected photo preview' : `Current photo of ${editing.first_name} ${editing.last_name}`}
+                  className="h-16 w-16 text-[18px]"
+                />
+                <div className="min-w-0 flex-1">
+                  <div
+                    {...getRootProps({
+                      role: 'button',
+                      className: cn(
+                        'cursor-pointer rounded border border-dashed px-3 py-2.5 text-[12px] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand)]',
+                        isDragActive ? 'border-[var(--brand)] bg-[var(--color-surface2)]' : 'border-[var(--color-border)] hover:border-[var(--brand)]',
+                        saving !== null && 'cursor-default opacity-60',
+                      ),
+                    })}
+                  >
+                    <input {...getInputProps({ 'aria-label': 'Photo file' })} />
+                    <span className="font-semibold text-[var(--color-text)]">
+                      {isDragActive ? 'Drop the photo here' : photoFile ? 'Choose a different photo' : avatars.get(editing.id) ? 'Choose a new photo' : 'Choose a photo'}
+                    </span>
+                    <span className="text-[var(--color-text3)]"> or drop one here</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-[var(--color-text3)]">
+                    JPEG, PNG, or WebP up to 5 MB. Published when you save, on the leaderboard and anywhere else this member is linked.
+                  </p>
+                  {photoFile ? (
+                    <button type="button" onClick={clearPhoto} disabled={saving !== null} className="mt-1 text-[11px] font-semibold text-[var(--color-text2)] underline disabled:opacity-40">
+                      Don't change the photo
+                    </button>
+                  ) : avatars.get(editing.id) ? (
+                    <Link to="/admin/photo-requests" className="mt-1 inline-block text-[11px] font-semibold text-brand-600 underline dark:text-brand-400">
+                      Remove or review photos in Photo requests
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+              {photoFile && (
+                <label className="mt-3 flex items-start gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2.5 text-[12px] text-[var(--color-text)]">
+                  <input
+                    type="checkbox"
+                    checked={photoConsent}
+                    disabled={saving !== null}
+                    onChange={e => { setPhotoConsent(e.target.checked); setPhotoError(null); }}
+                    className="mt-0.5"
+                  />
+                  <span>{editing.first_name || 'This member'} agreed to this photo being shown publicly on the VSA website.</span>
+                </label>
+              )}
+              {photoError && (
+                <p role="alert" className="mt-2 text-[12px] text-red-700 dark:text-red-400">{photoError}</p>
+              )}
+            </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="First name">
                 <input value={editForm.first_name} onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))} className={inputCls} />
@@ -613,11 +737,11 @@ export default function AdminMembers() {
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <button onClick={handleSaveEdit} disabled={saving}
+            <button onClick={handleSaveEdit} disabled={saving !== null}
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
-              {saving ? 'Saving…' : 'Save changes'}
+              {saving === 'photo' ? 'Publishing photo…' : saving ? 'Saving…' : photoFile ? 'Save & publish photo' : 'Save changes'}
             </button>
-            <BtnCancel onClick={() => setEditing(null)} />
+            <BtnCancel onClick={requestCloseEdit} disabled={saving !== null} />
           </div>
         </Modal>
       )}
@@ -770,7 +894,7 @@ const inputCls = `mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py
 
 function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+    <div data-testid="modal-backdrop" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div
         className={`scrapbook-paper rounded-lg shadow-xl p-6 sm:p-8 w-full my-8 sm:my-0 ${wide ? 'max-w-lg' : 'max-w-sm'}`}
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
@@ -782,10 +906,31 @@ function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose
   );
 }
 
-function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?: string }) {
+/** Only local previews (blob:) and storage URLs (http/https) may reach <img src>. */
+function isSafeImageSrc(src: string): boolean {
+  try {
+    return ['blob:', 'https:', 'http:'].includes(new URL(src).protocol);
+  } catch {
+    return false;
+  }
+}
+
+function MemberPhoto({ src, first, last, alt = '', className }: {
+  src: string | null | undefined; first: string; last: string; alt?: string; className: string;
+}) {
+  const shape = cn('shrink-0 rounded-full border border-[var(--color-border)]', className);
+  if (src && isSafeImageSrc(src)) return <img src={src} alt={alt} className={cn(shape, 'object-cover')} />;
   return (
-    <button onClick={onClick}
-      className="flex-1 border bg-transparent hover:bg-[var(--color-surface2)] font-medium py-2.5 rounded-md text-[13px] transition-colors"
+    <div className={cn(shape, 'flex items-center justify-center bg-[var(--color-surface2)] font-semibold text-[var(--color-text2)]')}>
+      {initials(first, last)}
+    </div>
+  );
+}
+
+function BtnCancel({ onClick, label = 'Cancel', disabled }: { onClick: () => void; label?: string; disabled?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className="flex-1 border bg-transparent hover:bg-[var(--color-surface2)] disabled:opacity-40 font-medium py-2.5 rounded-md text-[13px] transition-colors"
       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
       {label}
     </button>

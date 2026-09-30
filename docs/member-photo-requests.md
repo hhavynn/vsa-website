@@ -76,6 +76,7 @@ Since any public visitor can upload files to the `pending/` directory of the `me
    - **Max 3 pending requests per matched member**: Prevents spamming requests for a single individual.
    - **Max 5 pending requests per normalized requester email**: Prevents a single email address from flooding the admin inbox with requests.
    - Triggers throw a generic database error message on violation to avoid leaking email/member details.
+   - Only `pending` inserts are counted and limited (`20260930053224`). Admin uploads insert already-approved rows, so a backlog of public requests for a member cannot block them.
 3. **Honeypot Field**: The public form contains a visually hidden honeypot text field (`middle_name`) styled off-screen. Real users cannot see or focus/tab into it, but spam bots will fill it. If filled, the client UI silently drops the submission (exhibiting success behavior on-screen but performing no uploads or database writes).
 4. **Stale Uploads Cleanup**: A utility script is available at `scripts/cleanup-stale-photo-requests.mjs` to automatically clean up orphaned pending uploads (stale objects older than 7 days that do not have an active pending database row).
    - Run in Dry-Run mode: `node scripts/cleanup-stale-photo-requests.mjs`
@@ -95,6 +96,34 @@ Admin-gated route (existing `AdminRoute` + `useAdmin` pattern). Admins can:
 - expand the per-request audit trail.
 
 Approval never touches attendance, points, House membership, check-in, or import logic.
+
+## Admin upload from Admin → Members (`20260930053224_admin_publish_member_photo.sql`)
+
+Admins can also add a photo for a member directly: **Admin → Members → Edit → Photo**. The edit dialog shows the member's current approved photo, takes a JPEG/PNG/WebP up to 5 MB, and requires the admin to confirm the member agreed to the photo being public. Saving the dialog saves the member's details first, then publishes the photo. The dialog cannot be closed until that finishes. If publishing fails, the details stay saved and the dialog stays open with the photo selected so it can be retried.
+
+Under the hood `photoRequestsRepository.adminPublishMemberPhoto` uploads the 512px original to `member-photo-requests/pending/` and the 256px thumbnail to `avatars/approved/<request id>`. It then calls `admin_publish_member_photo`, an admin-guarded SECURITY DEFINER RPC that inserts an **already-approved** `member_photo_requests` row. If the RPC reports an error, the client first looks up the request row by id. A committed call whose response was lost still reports an error, and deleting its objects then would leave the approved row pointing at a missing image.
+
+- **Row found:** the publish succeeded; nothing is deleted.
+- **Row absent:** both uploaded objects are deleted. If a delete fails, the admin sees the leftover storage paths and is asked to get a maintainer to remove them, because nothing in the admin UI can find an object with no row.
+- **Lookup fails:** nothing is deleted, and the admin is asked to check Photo requests before retrying.
+
+The row is shaped so every existing tool keeps working:
+
+| Column | Value for an admin upload |
+|---|---|
+| `user_id` | `NULL`. No member account submitted it, so no `user_profiles.avatar_url` is set. |
+| `matched_member_id` | The member being edited |
+| `submitted_name` | The member's name at upload time |
+| `submitted_email` | The uploading admin's email, as the contact of record |
+| `note_to_admins` | `Uploaded by an admin from Admin -> Members.` |
+| `consent_confirmed` | `true`, attested by the admin's checkbox |
+| `status`, `reviewed_by`, `reviewed_at` | `approved`, the admin, now |
+
+The audit trail gets `submitted` from the existing insert trigger and `approved` with the note `Admin upload`, both attributed to the admin. The photo then appears in `/admin/photo-requests` under **All**, where **Remove from public display** works as for any approved request.
+
+The newest approved photo per member wins in `public_member_avatars`. Removing it falls back to that member's previous approved photo, if one exists.
+
+The client RLS insert path could not be reused. Its policy binds an authenticated row to `user_id = auth.uid()`, so an admin-made request would have been attributed to the admin, and approving it would have set the **admin's** profile avatar.
 
 ## Privacy & removal
 
