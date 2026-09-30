@@ -216,7 +216,7 @@ export class PhotoRequestsRepository {
           upsert: true,
         });
       if (approvedError) {
-        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
+        await this.discardUnrecordedUploads([[PENDING_PHOTO_BUCKET, pendingPath]]);
         throw approvedError;
       }
 
@@ -230,13 +230,47 @@ export class PhotoRequestsRepository {
         p_public_url: urlData.publicUrl,
       });
       if (rpcError) {
-        // Nothing references these objects yet; don't leave an unrecorded
-        // photo in the public bucket.
-        await supabase.storage.from(AVATARS_BUCKET).remove([approvedPath]);
-        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
+        // A call that committed but lost its response still reports an
+        // error. Deleting then would leave the approved row pointing at a
+        // missing image, so clean up only once the row is confirmed absent.
+        const { data: recorded, error: lookupError } = await supabase
+          .from('member_photo_requests')
+          .select('id')
+          .eq('id', requestId)
+          .maybeSingle();
+        if (lookupError) {
+          throw new ValidationError(
+            'Could not confirm whether the photo was published. Check Photo requests before trying again.',
+          );
+        }
+        if (recorded) return;
+
+        await this.discardUnrecordedUploads([
+          [AVATARS_BUCKET, approvedPath],
+          [PENDING_PHOTO_BUCKET, pendingPath],
+        ]);
         throw rpcError;
       }
     }, 'Failed to publish member photo');
+  }
+
+  /**
+   * Deletes uploads that no request row references. Nothing in the admin UI
+   * can find such an object, so a failed delete is reported rather than
+   * swallowed.
+   */
+  private async discardUnrecordedUploads(objects: Array<[bucket: string, path: string]>): Promise<void> {
+    const leftovers: string[] = [];
+    for (const [bucket, path] of objects) {
+      const { data, error } = await supabase.storage.from(bucket).remove([path]);
+      // A delete that storage RLS filters out returns no error and no objects.
+      if (error || !data?.length) leftovers.push(`${bucket}/${path}`);
+    }
+    if (leftovers.length > 0) {
+      throw new ValidationError(
+        `The photo was not published, and its uploaded files could not be deleted: ${leftovers.join(', ')}. Ask a maintainer to remove them from Supabase Storage.`,
+      );
+    }
   }
 
   /**

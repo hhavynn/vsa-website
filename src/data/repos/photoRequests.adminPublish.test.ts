@@ -2,7 +2,9 @@
  * Admin -> Members photo publishing. Pins the order that keeps the public
  * avatars bucket clean: both objects are uploaded before the RPC records the
  * approved request, and a failed RPC deletes them again, so no photo is ever
- * public without an audited member_photo_requests row.
+ * public without an audited member_photo_requests row. Cleanup only runs once
+ * the row is confirmed absent (a lost response must not orphan a committed
+ * row's image), and a failed cleanup is reported instead of swallowed.
  */
 
 import { photoRequestsRepository, AVATARS_BUCKET, PENDING_PHOTO_BUCKET } from './photoRequests';
@@ -11,6 +13,7 @@ import { ValidationError } from '../errors';
 const mockUpload = jest.fn();
 const mockRemove = jest.fn();
 const mockRpc = jest.fn();
+const mockLookup = jest.fn();
 
 jest.mock('../../lib/supabase', () => ({
   supabase: {
@@ -24,6 +27,13 @@ jest.mock('../../lib/supabase', () => ({
       }),
     },
     rpc: (fn: string, args: unknown) => mockRpc(fn, args),
+    from: (table: string) => ({
+      select: () => ({
+        eq: (column: string, value: unknown) => ({
+          maybeSingle: () => mockLookup(table, column, value),
+        }),
+      }),
+    }),
   },
 }));
 
@@ -35,6 +45,7 @@ jest.mock('../../lib/imageUpload', () => ({
 
 const MEMBER_ID = '00000000-0000-4000-8000-000000000001';
 const photo = () => new File(['fake-bytes'], 'me.webp', { type: 'image/webp' });
+const rpcFailure = { message: 'Member not found', code: 'P0001' };
 
 // jsdom has no Web Crypto; browsers do.
 let uuidCounter = 0;
@@ -45,8 +56,17 @@ Object.defineProperty(globalThis, 'crypto', {
 
 beforeEach(() => {
   mockUpload.mockReset().mockResolvedValue({ error: null });
-  mockRemove.mockReset().mockResolvedValue({ error: null });
+  mockRemove.mockReset().mockImplementation(async (_bucket: string, paths: string[]) => ({
+    data: paths.map(name => ({ name })),
+    error: null,
+  }));
   mockRpc.mockReset().mockResolvedValue({ error: null });
+  mockLookup.mockReset().mockResolvedValue({ data: null, error: null });
+});
+
+const uploadedPaths = () => ({
+  pendingPath: mockUpload.mock.calls[0][1] as string,
+  approvedPath: mockUpload.mock.calls[1][1] as string,
 });
 
 it('uploads the original and thumbnail, then records the approved request', async () => {
@@ -74,15 +94,49 @@ it('uploads the original and thumbnail, then records the approved request', asyn
   expect(mockRemove).not.toHaveBeenCalled();
 });
 
-it('deletes both uploaded objects when the RPC fails', async () => {
-  mockRpc.mockResolvedValue({ error: { message: 'Permission denied: admin access required', code: 'P0001' } });
+it('deletes both uploaded objects when the RPC fails and no row was recorded', async () => {
+  mockRpc.mockResolvedValue({ error: rpcFailure });
 
   await expect(photoRequestsRepository.adminPublishMemberPhoto(MEMBER_ID, photo())).rejects.toThrow();
 
-  const pendingPath = mockUpload.mock.calls[0][1];
-  const approvedPath = mockUpload.mock.calls[1][1];
+  const { pendingPath, approvedPath } = uploadedPaths();
+  const requestId = mockRpc.mock.calls[0][1].p_request_id;
+  expect(mockLookup).toHaveBeenCalledWith('member_photo_requests', 'id', requestId);
   expect(mockRemove).toHaveBeenCalledWith(AVATARS_BUCKET, [approvedPath]);
   expect(mockRemove).toHaveBeenCalledWith(PENDING_PHOTO_BUCKET, [pendingPath]);
+});
+
+it('keeps the uploads and succeeds when the RPC committed but its response was lost', async () => {
+  mockRpc.mockResolvedValue({ error: { message: 'Failed to fetch' } });
+  mockLookup.mockImplementation(async (_table: string, _column: string, id: string) => ({ data: { id }, error: null }));
+
+  await expect(photoRequestsRepository.adminPublishMemberPhoto(MEMBER_ID, photo())).resolves.toBeUndefined();
+  expect(mockRemove).not.toHaveBeenCalled();
+});
+
+it('keeps the uploads and asks the admin to check when the outcome cannot be confirmed', async () => {
+  mockRpc.mockResolvedValue({ error: { message: 'Failed to fetch' } });
+  mockLookup.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
+
+  await expect(photoRequestsRepository.adminPublishMemberPhoto(MEMBER_ID, photo())).rejects.toThrow(
+    new ValidationError('Could not confirm whether the photo was published. Check Photo requests before trying again.'),
+  );
+  expect(mockRemove).not.toHaveBeenCalled();
+});
+
+it('reports uploads that could not be deleted instead of hiding them', async () => {
+  mockRpc.mockResolvedValue({ error: rpcFailure });
+  // Storage RLS filters the public thumbnail's delete out: no error, no objects.
+  mockRemove.mockImplementation(async (bucket: string, paths: string[]) => (
+    bucket === AVATARS_BUCKET ? { data: [], error: null } : { data: paths.map(name => ({ name })), error: null }
+  ));
+
+  const result = photoRequestsRepository.adminPublishMemberPhoto(MEMBER_ID, photo());
+
+  await expect(result).rejects.toBeInstanceOf(ValidationError);
+  const { approvedPath, pendingPath } = uploadedPaths();
+  await expect(result).rejects.toThrow(`${AVATARS_BUCKET}/${approvedPath}`);
+  await expect(result).rejects.not.toThrow(`${PENDING_PHOTO_BUCKET}/${pendingPath}`);
 });
 
 it('deletes the pending original when the public thumbnail upload fails', async () => {

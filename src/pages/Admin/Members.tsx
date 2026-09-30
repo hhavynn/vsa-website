@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
+import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 import toast, { Toaster } from 'react-hot-toast';
@@ -125,7 +126,15 @@ export default function AdminMembers() {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoConsent, setPhotoConsent] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [photoInputKey, setPhotoInputKey] = useState(0);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDropAccepted: files => { setPhotoFile(files[0]); setPhotoError(null); },
+    onDropRejected: () => setPhotoError('Choose a JPEG, PNG, or WebP image up to 5 MB.'),
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
+    disabled: saving !== null,
+  });
 
   useEffect(() => {
     if (!photoFile) { setPhotoPreviewUrl(null); return; }
@@ -245,11 +254,16 @@ export default function AdminMembers() {
     clearPhoto();
   }
 
+  // The dialog stays open until a save finishes; closing it mid-publish would
+  // let a second editor open, which the first save would then close.
+  function requestCloseEdit() {
+    if (saving === null) closeEdit();
+  }
+
   function clearPhoto() {
     setPhotoFile(null);
     setPhotoConsent(false);
     setPhotoError(null);
-    setPhotoInputKey(k => k + 1);
   }
 
   async function handleSaveEdit() {
@@ -607,10 +621,10 @@ export default function AdminMembers() {
 
       {/* ── Edit Modal ── */}
       {editing && (
-        <Modal onClose={closeEdit} wide>
+        <Modal onClose={requestCloseEdit} wide>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50">Edit Member</h2>
-            <button onClick={closeEdit} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
+            <button onClick={requestCloseEdit} disabled={saving !== null} aria-label="Close" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none disabled:opacity-40">×</button>
           </div>
           <div className="space-y-4">
             <Field label="Photo">
@@ -623,19 +637,27 @@ export default function AdminMembers() {
                   className="h-16 w-16 text-[18px]"
                 />
                 <div className="min-w-0 flex-1">
-                  <input
-                    key={photoInputKey}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    aria-label={avatars.get(editing.id) ? 'Choose a new photo' : 'Choose a photo'}
-                    onChange={e => { setPhotoFile(e.target.files?.[0] ?? null); setPhotoError(null); }}
-                    className="block w-full text-[12px] text-[var(--color-text2)] file:mr-3 file:cursor-pointer file:rounded file:border file:border-solid file:border-[var(--color-border)] file:bg-[var(--color-surface2)] file:px-3 file:py-1.5 file:text-[12px] file:font-semibold file:text-[var(--color-text)] hover:file:border-[var(--brand)]"
-                  />
+                  <div
+                    {...getRootProps({
+                      role: 'button',
+                      className: cn(
+                        'cursor-pointer rounded border border-dashed px-3 py-2.5 text-[12px] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand)]',
+                        isDragActive ? 'border-[var(--brand)] bg-[var(--color-surface2)]' : 'border-[var(--color-border)] hover:border-[var(--brand)]',
+                        saving !== null && 'cursor-default opacity-60',
+                      ),
+                    })}
+                  >
+                    <input {...getInputProps({ 'aria-label': 'Photo file' })} />
+                    <span className="font-semibold text-[var(--color-text)]">
+                      {isDragActive ? 'Drop the photo here' : photoFile ? 'Choose a different photo' : avatars.get(editing.id) ? 'Choose a new photo' : 'Choose a photo'}
+                    </span>
+                    <span className="text-[var(--color-text3)]"> or drop one here</span>
+                  </div>
                   <p className="mt-1 text-[11px] text-[var(--color-text3)]">
                     JPEG, PNG, or WebP up to 5 MB. Published when you save, on the leaderboard and anywhere else this member is linked.
                   </p>
                   {photoFile ? (
-                    <button type="button" onClick={clearPhoto} className="mt-1 text-[11px] font-semibold text-[var(--color-text2)] underline">
+                    <button type="button" onClick={clearPhoto} disabled={saving !== null} className="mt-1 text-[11px] font-semibold text-[var(--color-text2)] underline disabled:opacity-40">
                       Don't change the photo
                     </button>
                   ) : avatars.get(editing.id) ? (
@@ -650,6 +672,7 @@ export default function AdminMembers() {
                   <input
                     type="checkbox"
                     checked={photoConsent}
+                    disabled={saving !== null}
                     onChange={e => { setPhotoConsent(e.target.checked); setPhotoError(null); }}
                     className="mt-0.5"
                   />
@@ -718,7 +741,7 @@ export default function AdminMembers() {
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
               {saving === 'photo' ? 'Publishing photo…' : saving ? 'Saving…' : photoFile ? 'Save & publish photo' : 'Save changes'}
             </button>
-            <BtnCancel onClick={closeEdit} />
+            <BtnCancel onClick={requestCloseEdit} disabled={saving !== null} />
           </div>
         </Modal>
       )}
@@ -871,7 +894,7 @@ const inputCls = `mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py
 
 function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+    <div data-testid="modal-backdrop" className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div
         className={`scrapbook-paper rounded-lg shadow-xl p-6 sm:p-8 w-full my-8 sm:my-0 ${wide ? 'max-w-lg' : 'max-w-sm'}`}
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
@@ -883,11 +906,20 @@ function Modal({ children, onClose, wide }: { children: React.ReactNode; onClose
   );
 }
 
+/** Only local previews (blob:) and storage URLs (http/https) may reach <img src>. */
+function isSafeImageSrc(src: string): boolean {
+  try {
+    return ['blob:', 'https:', 'http:'].includes(new URL(src).protocol);
+  } catch {
+    return false;
+  }
+}
+
 function MemberPhoto({ src, first, last, alt = '', className }: {
   src: string | null | undefined; first: string; last: string; alt?: string; className: string;
 }) {
   const shape = cn('shrink-0 rounded-full border border-[var(--color-border)]', className);
-  if (src) return <img src={src} alt={alt} className={cn(shape, 'object-cover')} />;
+  if (src && isSafeImageSrc(src)) return <img src={src} alt={alt} className={cn(shape, 'object-cover')} />;
   return (
     <div className={cn(shape, 'flex items-center justify-center bg-[var(--color-surface2)] font-semibold text-[var(--color-text2)]')}>
       {initials(first, last)}
@@ -895,10 +927,10 @@ function MemberPhoto({ src, first, last, alt = '', className }: {
   );
 }
 
-function BtnCancel({ onClick, label = 'Cancel' }: { onClick: () => void; label?: string }) {
+function BtnCancel({ onClick, label = 'Cancel', disabled }: { onClick: () => void; label?: string; disabled?: boolean }) {
   return (
-    <button onClick={onClick}
-      className="flex-1 border bg-transparent hover:bg-[var(--color-surface2)] font-medium py-2.5 rounded-md text-[13px] transition-colors"
+    <button onClick={onClick} disabled={disabled}
+      className="flex-1 border bg-transparent hover:bg-[var(--color-surface2)] disabled:opacity-40 font-medium py-2.5 rounded-md text-[13px] transition-colors"
       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
       {label}
     </button>

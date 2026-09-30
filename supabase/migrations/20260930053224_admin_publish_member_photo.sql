@@ -1,5 +1,8 @@
 -- Let admins publish a photo for a member directly from Admin -> Members.
 --
+-- Applied to production 2026-09-29 (schema_migrations version 20260930053224;
+-- the filename matches) with owner approval.
+--
 -- Until now every avatar started as a member-submitted request and went
 -- through review in Admin -> Photo requests. Admins also need to add a photo
 -- for someone who handed it to them in person. The existing client insert
@@ -31,11 +34,62 @@
 --
 -- The client uploads both objects before calling this function, the original
 -- to the private member-photo-requests bucket under pending/ and the 256px
--- thumbnail to the public avatars bucket under approved/. It deletes both
--- again if the call fails.
+-- thumbnail to the public avatars bucket under approved/. If the call fails,
+-- the client checks for the request row by id before deleting them, so a
+-- committed call whose response was lost never loses its image.
+--
+-- It also narrows guard_member_photo_request_rate_limit to pending inserts.
+-- The trigger counted pending rows for every insert, so anyone could block
+-- admin uploads for a member by filing three pending public requests for
+-- that member. Clients can only insert pending rows (RLS), so the pending-
+-- only limit still covers every public submission.
 --
 -- No attendance, points, House, check-in, import, or RLS policy changes.
--- Forward-only; apply manually, and before the frontend that calls it.
+-- Forward-only; apply before the frontend that calls it.
+
+-- CREATE OR REPLACE keeps the function's owner and its EXECUTE grants
+-- (revoked from PUBLIC/anon in 20260820000003 and from authenticated in
+-- 20260928005621). Body identical to 20260701000000 apart from the early
+-- return.
+create or replace function public.guard_member_photo_request_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_pending_count_for_member integer;
+  v_pending_count_for_email integer;
+begin
+  -- Only public submissions (always pending) are rate limited; admin-made
+  -- approved rows must not be blockable by a backlog of pending requests.
+  if new.status is distinct from 'pending' then
+    return new;
+  end if;
+
+  -- 1. Check matched_member_id pending limit
+  select count(*) into v_pending_count_for_member
+  from public.member_photo_requests
+  where matched_member_id = new.matched_member_id
+    and status = 'pending';
+
+  if v_pending_count_for_member >= 3 then
+    raise exception 'Too many pending photo requests. Please try again later or contact VSA.';
+  end if;
+
+  -- 2. Check submitted_email pending limit
+  select count(*) into v_pending_count_for_email
+  from public.member_photo_requests
+  where lower(trim(submitted_email)) = lower(trim(new.submitted_email))
+    and status = 'pending';
+
+  if v_pending_count_for_email >= 5 then
+    raise exception 'Too many pending photo requests. Please try again later or contact VSA.';
+  end if;
+
+  return new;
+end;
+$$;
 
 create or replace function public.admin_publish_member_photo(
   p_request_id uuid,

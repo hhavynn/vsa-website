@@ -55,25 +55,47 @@ async function openEditDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AdminMembers />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-  return screen.getByLabelText('Choose a new photo');
 }
 
 const photo = () => new File(['bytes'], 'lan.png', { type: 'image/png' });
 
+/** Picks a file through the dialog's dropzone; react-dropzone reads it asynchronously. */
+async function choosePhoto(file: File) {
+  fireEvent.change(screen.getByLabelText('Photo file'), { target: { files: [file] } });
+  await screen.findByAltText('Selected photo preview');
+}
+
+async function choosePhotoAndConsent(file = photo()) {
+  await choosePhoto(file);
+  fireEvent.click(screen.getByLabelText(/agreed to this photo being shown publicly/));
+  return file;
+}
+
 it('shows the member’s current approved photo in the dialog', async () => {
   await openEditDialog();
   expect(await screen.findByAltText('Current photo of Lan Tran')).toHaveAttribute('src', AVATAR_URL);
+  expect(screen.getByRole('button', { name: /choose a new photo/i })).toBeInTheDocument();
+});
+
+it('rejects file types the photo buckets do not accept', async () => {
+  await openEditDialog();
+  fireEvent.change(screen.getByLabelText('Photo file'), {
+    target: { files: [new File(['gif'], 'lan.gif', { type: 'image/gif' })] },
+  });
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('JPEG, PNG, or WebP');
+  expect(screen.queryByAltText('Selected photo preview')).not.toBeInTheDocument();
 });
 
 it('does not save or publish until the admin confirms consent', async () => {
-  const input = await openEditDialog();
-  fireEvent.change(input, { target: { files: [photo()] } });
+  await openEditDialog();
+  await choosePhoto(photo());
   fireEvent.click(screen.getByRole('button', { name: 'Save & publish photo' }));
 
   expect(screen.getByRole('alert')).toHaveTextContent('Confirm the member agreed');
@@ -86,10 +108,8 @@ it('saves the member, then publishes the photo, and closes', async () => {
   mockPublish.mockImplementation(async () => {
     savedBeforePublish = supabaseMock.usedMethod('members', 'update');
   });
-  const input = await openEditDialog();
-  const file = photo();
-  fireEvent.change(input, { target: { files: [file] } });
-  fireEvent.click(screen.getByLabelText(/agreed to this photo being shown publicly/));
+  await openEditDialog();
+  const file = await choosePhotoAndConsent();
   fireEvent.click(screen.getByRole('button', { name: 'Save & publish photo' }));
 
   await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('member-lan', file));
@@ -97,15 +117,32 @@ it('saves the member, then publishes the photo, and closes', async () => {
   await waitFor(() => expect(screen.queryByText('Edit Member')).not.toBeInTheDocument());
 });
 
+it('cannot be closed while the photo is publishing', async () => {
+  let finishPublish: () => void = () => undefined;
+  mockPublish.mockImplementation(() => new Promise<void>(resolve => { finishPublish = resolve; }));
+  await openEditDialog();
+  await choosePhotoAndConsent();
+  fireEvent.click(screen.getByRole('button', { name: 'Save & publish photo' }));
+  await screen.findByRole('button', { name: 'Publishing photo…' });
+
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+  fireEvent.click(screen.getByTestId('modal-backdrop'));
+  expect(screen.getByText('Edit Member')).toBeInTheDocument();
+
+  finishPublish();
+  await waitFor(() => expect(screen.queryByText('Edit Member')).not.toBeInTheDocument());
+});
+
 it('keeps the dialog open with the photo selected when publishing fails', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
   mockPublish.mockRejectedValue(new ValidationError('Image is too large. Max upload size is 5 MB.', 'file'));
-  const input = await openEditDialog();
-  fireEvent.change(input, { target: { files: [photo()] } });
-  fireEvent.click(screen.getByLabelText(/agreed to this photo being shown publicly/));
+  await openEditDialog();
+  await choosePhotoAndConsent();
   fireEvent.click(screen.getByRole('button', { name: 'Save & publish photo' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Image is too large');
   expect(screen.getByText('Edit Member')).toBeInTheDocument();
+  expect(screen.getByAltText('Selected photo preview')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save & publish photo' })).toBeEnabled();
 });
