@@ -12,6 +12,9 @@ export type PublicMemberAvatar = Database['public']['Views']['public_member_avat
 export const PENDING_PHOTO_BUCKET = 'member-photo-requests';
 export const AVATARS_BUCKET = 'avatars';
 
+/** Mirrors the pending bucket's allowed_mime_types. */
+const ADMIN_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const REQUEST_SELECT =
   'id, user_id, matched_member_id, submitted_name, submitted_email, note_to_admins, consent_confirmed, storage_path_pending, storage_path_approved, approved_avatar_url, status, admin_notes, reviewed_by, reviewed_at, created_at, updated_at' as const;
 
@@ -177,6 +180,63 @@ export class PhotoRequestsRepository {
         throw rpcError;
       }
     }, 'Failed to approve photo request');
+  }
+
+  /**
+   * Admin flow from Admin -> Members: publish a photo for a member without a
+   * member-submitted request. Stores the original in the private pending
+   * bucket and a 256px thumbnail in the public avatars bucket, then the
+   * admin-guarded RPC records it as an approved request, so it shows up in
+   * Photo requests with an audit trail and can be removed there. The caller
+   * must have confirmed the member agreed to the photo being public.
+   */
+  async adminPublishMemberPhoto(memberId: string, file: File): Promise<void> {
+    return withErrorHandling(async () => {
+      if (!ADMIN_UPLOAD_TYPES.includes(file.type)) {
+        throw new ValidationError('Choose a JPEG, PNG, or WebP image.', 'file');
+      }
+
+      const requestId = crypto.randomUUID();
+      const { file: original } = await prepareImageForUpload(file, 'avatar');
+      const pendingPath = `pending/${crypto.randomUUID()}.${getUploadExtension(original)}`;
+
+      const { error: pendingError } = await supabase.storage
+        .from(PENDING_PHOTO_BUCKET)
+        .upload(pendingPath, original, { contentType: original.type });
+      if (pendingError) throw pendingError;
+
+      const { file: thumbnail } = await prepareImageForUpload(original, 'avatarThumbnail');
+      const approvedPath = `approved/${requestId}.${getUploadExtension(thumbnail)}`;
+
+      const { error: approvedError } = await supabase.storage
+        .from(AVATARS_BUCKET)
+        .upload(approvedPath, thumbnail, {
+          cacheControl: '31536000',
+          contentType: thumbnail.type,
+          upsert: true,
+        });
+      if (approvedError) {
+        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
+        throw approvedError;
+      }
+
+      const { data: urlData } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(approvedPath);
+
+      const { error: rpcError } = await supabase.rpc('admin_publish_member_photo', {
+        p_request_id: requestId,
+        p_member_id: memberId,
+        p_pending_path: pendingPath,
+        p_approved_path: approvedPath,
+        p_public_url: urlData.publicUrl,
+      });
+      if (rpcError) {
+        // Nothing references these objects yet; don't leave an unrecorded
+        // photo in the public bucket.
+        await supabase.storage.from(AVATARS_BUCKET).remove([approvedPath]);
+        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
+        throw rpcError;
+      }
+    }, 'Failed to publish member photo');
   }
 
   /**

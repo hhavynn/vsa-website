@@ -96,6 +96,30 @@ Admin-gated route (existing `AdminRoute` + `useAdmin` pattern). Admins can:
 
 Approval never touches attendance, points, House membership, check-in, or import logic.
 
+## Admin upload from Admin → Members (`20260930020401_admin_publish_member_photo.sql`)
+
+Admins can also add a photo for a member directly: **Admin → Members → Edit → Photo**. The edit dialog shows the member's current approved photo, takes a JPEG/PNG/WebP up to 5 MB, and requires the admin to confirm the member agreed to the photo being public. Saving the dialog saves the member's details first, then publishes the photo. If publishing fails, the details stay saved and the dialog stays open with the photo selected so it can be retried.
+
+Under the hood `photoRequestsRepository.adminPublishMemberPhoto` uploads the 512px original to `member-photo-requests/pending/` and the 256px thumbnail to `avatars/approved/<request id>`. It then calls `admin_publish_member_photo`, an admin-guarded SECURITY DEFINER RPC that inserts an **already-approved** `member_photo_requests` row. If the RPC fails, the client deletes both objects it just uploaded.
+
+The row is shaped so every existing tool keeps working:
+
+| Column | Value for an admin upload |
+|---|---|
+| `user_id` | `NULL`. No member account submitted it, so no `user_profiles.avatar_url` is set. |
+| `matched_member_id` | The member being edited |
+| `submitted_name` | The member's name at upload time |
+| `submitted_email` | The uploading admin's email, as the contact of record |
+| `note_to_admins` | `Uploaded by an admin from Admin -> Members.` |
+| `consent_confirmed` | `true`, attested by the admin's checkbox |
+| `status`, `reviewed_by`, `reviewed_at` | `approved`, the admin, now |
+
+The audit trail gets `submitted` from the existing insert trigger and `approved` with the note `Admin upload`, both attributed to the admin. The photo then appears in `/admin/photo-requests` under **All**, where **Remove from public display** works as for any approved request.
+
+The newest approved photo per member wins in `public_member_avatars`. Removing it falls back to that member's previous approved photo, if one exists.
+
+The client RLS insert path could not be reused. Its policy binds an authenticated row to `user_id = auth.uid()`, so an admin-made request would have been attributed to the admin, and approving it would have set the **admin's** profile avatar.
+
 ## Privacy & removal
 
 - `remove_member_photo_request` marks the request `removed`, records an audit event, and clears `user_profiles.avatar_url` **only if it still points at this request's image**. The admin UI then deletes this request's published thumbnail and pending original — never other buckets or other requests' objects.
