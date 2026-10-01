@@ -11,7 +11,7 @@ This is the canonical explanation (#310). `AGENTS.md`, the agentic workflow doc 
 |---|---|---|
 | **Stores points in** | `member_event_attendance` (one row per member per event, `points_earned`), totals cached on `members` | `event_attendance` (one row per user per event) and `user_points` (one total per auth user) |
 | **Keyed by** | `members.id`: a roster person, whether or not they have an account | `auth.users.id`: a signed-in account |
-| **Written by** | Admin attendance import (`src/pages/Admin/Import.tsx`, the only UI path that writes attendance), `smart_merge_members`; triggers `sync_attendance_points_on_event_update` (on `events`) and `sync_member_points` (on `member_event_attendance`, recalculates `members` totals via `recalculate_member_points`). Admin Members edits member profiles and Admin Points only reads | The `check_in_to_event` RPC for members (server-authoritative since #145); **admin manual check-in** (`ManualCheckIn` on `/admin/events` → `useEventAttendance.manuallyCheckIn`, a direct `event_attendance` insert that RLS allows for admins only, restored in #422); and `handle_new_user_points`, which creates the `user_points` row at sign-up. Non-admin client writes are blocked by RLS (#422) |
+| **Written by** | Admin attendance import (`src/pages/Admin/Import.tsx`) and Admin Members attendance editor (`src/data/repos/adminMembers.ts`), `smart_merge_members`; triggers `sync_attendance_points_on_event_update` (on `events`) and `sync_member_points` (on `member_event_attendance`, recalculates `members` totals via `recalculate_member_points`). Admin Members creates/edits member profiles and attendance; Admin Points only reads | The `check_in_to_event` RPC for members (server-authoritative since #145); **admin manual check-in** (`ManualCheckIn` on `/admin/events` → `useEventAttendance.manuallyCheckIn`, a direct `event_attendance` insert that RLS allows for admins only, restored in #422); and `handle_new_user_points`, which creates the `user_points` row at sign-up. Non-admin client writes are blocked by RLS (#422) |
 | **Read by** | `/leaderboard`, `/points` (Find My Points), House standings, member profiles and event history, via `member_yearly_points`, `house_member_yearly_points`, `house_*_points` and `member_event_history` (`src/data/repos/leaderboard.ts`) | The signed-in header points badge and dashboard (`src/data/repos/points.ts`, `usePoints`, `PointsContext`, `MemberDashboard`) |
 | **Authoritative for** | **Every public number**: leaderboard, House standings, Find My Points, Wrapped | Only a signed-in account's own check-in history. Member accounts are currently parked (#233) |
 
@@ -55,13 +55,18 @@ Yearly points are calculated by summing `points_earned` in `member_event_attenda
 ### Attendance Import
 
 When importing attendance via CSV:
+- Choose a local `.csv` file or a CSV/Google Sheets URL; both use the same parsing, column mapping, matching, preview, review, and import flow. Local file audit entries use `manual` with no source URL.
 - The event dropdown now shows the academic term for each event.
 - A warning is displayed if the selected event has no term assigned.
 - Points are automatically attributed to the correct year based on the event's term.
 
 ### Member Management
 
-The Member History modal in the admin panel now includes:
+Admins can create a member with first/last name and optional email, year, and college using **Add Member**. House assignment remains on Admin Houses.
+
+Use **History** or **Edit → Manage attendance** to view and edit attendance. Additions read current event points and ignore existing member/event pairs; removal requires confirmation. Database triggers own recalculation; the UI reloads member totals, history, and yearly totals after each mutation. Events need an academic term before attendance can be added.
+
+The Member History modal includes:
 - A yearly breakdown of points earned.
 - The specific academic term for each attended event.
 
@@ -69,3 +74,7 @@ The Member History modal in the admin panel now includes:
 
 - **System Consolidation (OPEN)**: see "two points systems" at the top of this document. Consolidating the check-in system (`event_attendance`, `user_points`) into the `members` system depends on verified `user_id` coverage for all members, and needs its own design and owner sign-off.
 - **Auto-Term Assignment**: New events should automatically be assigned to the current active term to ensure data consistency.
+
+### Live verification limitation
+
+The existing `sync_member_points` / `recalculate_member_points` bodies and attendance trigger registration are not present in tracked migrations. Before merging attendance-removal changes, verify in a non-production admin session that both INSERT and DELETE refresh cached member totals and yearly/House standings. Frontend/repository mock tests cannot certify those live trigger effects; never repair a failure by manually writing cached totals.
