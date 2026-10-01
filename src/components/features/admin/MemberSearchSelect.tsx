@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 
 /**
  * TEMPORARY, deliberately small. A client-side name filter over a member list
- * the caller already holds, used by the House draft and Intern cohort editors.
+ * the caller already holds. Now used only by the House assignment draft editor
+ * (the Intern cohort editor uses the shared `MemberLinkPicker`).
  *
- * It is NOT a member-lookup architecture. When the shared `MemberLinkPicker` /
- * `memberLookupRepository` from the ACE member-link work lands, replace the
- * usages of this component with that picker and delete this file. The option
- * shape matches `MemberOption` there (id, first_name, last_name, college, year)
- * so the swap is mechanical.
+ * It is NOT a member-lookup architecture. When the House draft editor moves to
+ * the shared `MemberLinkPicker` / `memberLookupRepository`, replace the
+ * usages of this component and delete this file. The option shape matches
+ * `MemberOption` there (id, first_name, last_name, college, year) so the swap is
+ * mechanical.
  */
 export interface MemberChoice {
   id: string;

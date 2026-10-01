@@ -25,11 +25,13 @@ This checklist documents the public/admin content relationships for the VSA at U
 | `/wild-n-culture` | Public | program content and static page framing | `/admin/content` | Program status/link rows are editable. |
 | `/points` | Public/auth | member points lookup and check-in code flow | `/admin/events`, `/admin/import`, `/admin/points` | Draft event codes should not be usable for public check-in. |
 | `/feedback` | Public | `feedback` inserts | `/admin/feedback` | Do not expose admin notes publicly. |
-| `/admin` | Admin | dashboard counts and diagnostics | n/a | Should explain "what can I edit?" by topic. |
+| `/admin` | Admin | Operations section (read-only status + preflight across ACE/Houses/Cabinet/Interns/Events), dashboard counts and diagnostics | n/a | Should explain "what can I edit?" by topic. Operations is diagnostic only. |
 | `/admin/events` | Admin | `events`, storage `event_images`, `event_recaps`, `academic_terms` | n/a | Admin reads all events, including drafts. |
 | `/admin/houses` | Admin | `house_memberships`, `house_page_assets`, `house_events`, `house_assignment_batches`/`drafts` (private drafts), storage `house_images` | n/a | Keep assignment imports separate from profiles/images/events. Drafts never write `house_memberships` until Reveal. |
 | `/admin/interns` | Admin | `intern_cohort_cycles`/`drafts` (private), `cabinet_members` (publish target) | `/intern-program`, `/cabinet` | Publish writes `cabinet_members` category `Interns`; drafts are never public. See `docs/house-intern-operations.md`. |
 | `/admin/cabinet` | Admin | `cabinet_members`, `cabinet_years`, storage `cabinet_images` | n/a | Selected cabinet year must be obvious. |
+| `/admin/cabinet/rollover` | Admin | `cabinet_roster_cycles`/`drafts` (private), `cabinet_members` (publish target), `cabinet_years` | `/cabinet` | Draft rosters are never public; publish writes `cabinet_members` for the roster's year and never activates it (activation is a separate action). See `docs/yearly-operations.md`. |
+| `/admin/year-setup` | Admin | `academic_terms`, `cabinet_years`, `ace_assignment_cycles`, `intern_cohort_cycles`, `cabinet_roster_cycles`, `house_assignment_batches`, `application_links` | n/a | Previews first, creates only what is missing, never activates a term/year, never copies House assignments or invents application URLs. See `docs/yearly-operations.md`. |
 | `/admin/gallery` | Admin | `gallery_events`, storage `gallery_images`, linked `events` | n/a | Google Photos URL is required for public albums. |
 | `/admin/content` | Admin | `homepage_content`, program content | n/a | Affects homepage plus program pages. |
 | `/admin/settings` | Admin | `site_settings`, storage `site_assets` | n/a | Affects global logo/branding. |

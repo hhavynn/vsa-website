@@ -30,6 +30,12 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 
 Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 
-## Temporary pieces to replace at merge
+## Member lookup
 
-`src/components/features/admin/MemberSearchSelect.tsx` and `InternCohortRepository.listMemberDirectory()` are narrow stand-ins for the shared `MemberLinkPicker` / `memberLookupRepository` from the ACE member-link work. Swap and delete them when that lands.
+The Intern cohort page links members with the shared `MemberLinkPicker` and `memberLookupRepository` (the same control Cabinet, ACE and photo requests use). Matching is exact on a normalized name only: a pasted name auto-links only on one unambiguous, unclaimed match, an exact match is offered as a suggestion an admin clicks, ambiguous names list every candidate, and near-misses are never guessed (search is one click away). The old Intern-only directory (`InternCohortRepository.listMemberDirectory`) was removed.
+
+`src/components/features/admin/MemberSearchSelect.tsx` is still used by the House assignment draft editor (`HouseDraftEditor`). That editor is a protected House-membership surface, so its swap to the shared picker is deliberately a separate change.
+
+## Follow-up migration
+
+`20261001222905_revoke_phase2_guard_function_execute.sql` revokes client `EXECUTE` on the six guard trigger functions above (they had been callable by `anon` and `authenticated`; applied to production 2026-10-01).

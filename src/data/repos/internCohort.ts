@@ -8,7 +8,6 @@ import {
   InternCohortCycle,
   InternCohortDraft,
   InternCohortDraftInsert,
-  InternMemberOption,
   MentorOption,
   INTERN_CATEGORY,
   buildInternPreflight,
@@ -18,7 +17,6 @@ import {
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
 
 const INSERT_CHUNK = 200;
-const DIRECTORY_PAGE_SIZE = 1000;
 
 export type InternDraftPatch = Partial<Pick<
   InternCohortDraft,
@@ -295,28 +293,6 @@ export class InternCohortRepository {
       if (error) throw error;
       return data ?? [];
     }, 'Failed to load mentors');
-  }
-
-  /**
-   * TEMPORARY, isolated: every member's public identity, for name matching and
-   * manual linking. Replace with memberLookupRepository.listMemberDirectory()
-   * from the shared member-link work when it lands, and delete this method.
-   * Reads only the public_members projection (no email).
-   */
-  async listMemberDirectory(): Promise<InternMemberOption[]> {
-    return withErrorHandling(async () => {
-      const members: InternMemberOption[] = [];
-      for (let from = 0; ; from += DIRECTORY_PAGE_SIZE) {
-        const { data, error } = await supabase
-          .from('public_members')
-          .select('id, first_name, last_name, college, year')
-          .order('id', { ascending: true })
-          .range(from, from + DIRECTORY_PAGE_SIZE - 1);
-        if (error) throw error;
-        members.push(...(data ?? []));
-        if (!data || data.length < DIRECTORY_PAGE_SIZE) return members;
-      }
-    }, 'Failed to load member directory');
   }
 }
 

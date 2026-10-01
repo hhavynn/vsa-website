@@ -116,6 +116,8 @@ What is *not* frozen: unrelated surfaces during a freeze (e.g. gallery work duri
 
 ## 4. Yearly turnover runbook
 
+> **Tooling:** most of this runbook now has an admin workflow, so a President does not need SQL. **New Year Setup** (`/admin/year-setup`) previews and creates the year's terms, inactive Cabinet year, ACE cycle, Intern cohort, and (once profiles exist) an empty House batch, plus a separate application reset; **Cabinet Rollover** (`/admin/cabinet/rollover`) copies last year's positions (never people) and publishes the new roster without activating it. Houses stay unrevealed and application URLs are never invented. See `docs/yearly-operations.md`. The numbered steps below remain the policy; the wizard is how to carry them out.
+
 Reconstructed from git/migration evidence of the 2025→2026 turnover. Run at end of spring / over summer, before fall launch. Every step below still goes through normal branch-and-PR flow (`vsa-change-control`); migrations are applied manually per `vsa-run-and-operate`.
 
 1. **Archive last year's cabinet.** The cabinet archive machinery exists: seed migration `supabase/migrations/20260512000004_seed_historical_cabinet_archive.sql`, archive import commit `cd2c8775` (PR #29), archive URL state PR #122 (`13c99b78`), admin year/term management `2ce699b1` → `src/pages/Admin/YearsTerms.tsx` and `src/pages/Admin/Cabinet.tsx`. Never mix current cabinet with archive members (AGENTS.md).

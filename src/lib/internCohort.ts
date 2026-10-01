@@ -2,7 +2,8 @@
 // member matching, ordering, preflight, and the mapping onto cabinet_members.
 // Nothing here touches the database.
 import type { Database } from '../types/database';
-import { cleanNameForImport, nameSimilarity, normalizeNameForMatch } from './memberMatching';
+import { MemberNameIndex, findExactMemberMatch } from './memberLinkMatching';
+import { cleanNameForImport, normalizeNameForMatch } from './memberMatching';
 
 export type InternCohortCycle = Database['public']['Tables']['intern_cohort_cycles']['Row'];
 export type InternCohortDraft = Database['public']['Tables']['intern_cohort_drafts']['Row'];
@@ -13,14 +14,6 @@ export type CabinetMemberInsert = Database['public']['Tables']['cabinet_members'
 export const INTERN_DEFAULT_ROLE = 'Intern';
 export const INTERN_CATEGORY = 'Interns';
 
-export interface InternMemberOption {
-  id: string;
-  first_name: string;
-  last_name: string;
-  college: string | null;
-  year: string | null;
-}
-
 export interface MentorOption {
   id: string;
   name: string;
@@ -30,10 +23,6 @@ export interface MentorOption {
 export interface ParsedInternName {
   name: string;
   roleOrTrack: string | null;
-}
-
-export function memberFullName(member: Pick<InternMemberOption, 'first_name' | 'last_name'>) {
-  return `${member.first_name} ${member.last_name}`.trim();
 }
 
 /**
@@ -53,53 +42,30 @@ export function parseInternNames(raw: string): ParsedInternName[] {
     .filter((entry) => entry.name.length > 0);
 }
 
-export interface MemberMatchSuggestion {
-  member: InternMemberOption;
-  score: number;
-}
-
 export interface InternMatchResult {
-  /** Set only for one exact, unclaimed name match. */
+  /** Set only for one exact, unclaimed name match. Near-misses are never guessed. */
   memberId: string | null;
-  /** Near-misses for an admin to review; never linked automatically. */
-  suggestions: MemberMatchSuggestion[];
 }
-
-const SUGGESTION_THRESHOLD = 70;
 
 export function matchInternToMember(
   name: string,
-  directory: InternMemberOption[],
+  nameIndex: MemberNameIndex,
   claimedMemberIds: ReadonlySet<string> = new Set(),
 ): InternMatchResult {
-  const wanted = normalizeNameForMatch(cleanNameForImport(name));
-  if (!wanted) return { memberId: null, suggestions: [] };
-
-  const exact = directory.filter((member) => normalizeNameForMatch(memberFullName(member)) === wanted);
-  if (exact.length === 1 && !claimedMemberIds.has(exact[0].id)) {
-    return { memberId: exact[0].id, suggestions: [] };
-  }
-
-  const suggestions = (exact.length > 0
-    ? exact.map((member) => ({ member, score: 100 }))
-    : directory
-        .map((member) => ({ member, score: nameSimilarity(name, memberFullName(member)) }))
-        .filter((entry) => entry.score >= SUGGESTION_THRESHOLD))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-  return { memberId: null, suggestions };
+  const match = findExactMemberMatch(cleanNameForImport(name), nameIndex);
+  return { memberId: match.kind === 'unique' && !claimedMemberIds.has(match.member.id) ? match.member.id : null };
 }
 
 /** Rows to insert for a pasted list, linking each exact unambiguous name. */
 export function buildInternDraftRows(
   parsed: ParsedInternName[],
-  directory: InternMemberOption[],
+  nameIndex: MemberNameIndex,
   startingOrder: number,
   alreadyLinkedMemberIds: Iterable<string> = [],
 ): Array<Omit<InternCohortDraftInsert, 'cycle_id'>> {
   const claimed = new Set(alreadyLinkedMemberIds);
   return parsed.map((entry, index) => {
-    const match = matchInternToMember(entry.name, directory, claimed);
+    const match = matchInternToMember(entry.name, nameIndex, claimed);
     if (match.memberId) claimed.add(match.memberId);
     return {
       name: entry.name,

@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { cabinetYearsRepository } from '../../data/repos/cabinetYears';
@@ -129,6 +130,12 @@ function Header() {
       <p className="mt-0.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
         Keep event archives and cabinet archives organized without changing code.
       </p>
+      <Link
+        to="/admin/year-setup"
+        className="mt-2 inline-block rounded border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-brand-600 hover:bg-surface2 dark:text-brand-400"
+      >
+        Starting a new school year? Use New Year Setup →
+      </Link>
     </div>
   );
 }

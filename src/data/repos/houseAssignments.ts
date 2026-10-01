@@ -129,6 +129,28 @@ export class HouseAssignmentsRepository {
     }, 'Failed to save House assignment draft');
   }
 
+  /**
+   * A draft batch with no rows, for New Year Setup. It assigns and reveals
+   * nothing: rows arrive later through the normal paste/import flow.
+   */
+  async createEmptyBatch(input: Omit<CreateHouseBatchInput, 'rows'>): Promise<HouseAssignmentBatch> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('house_assignment_batches')
+        .insert({
+          academic_year_start: input.academicYearStart,
+          academic_year_end: input.academicYearStart + 1,
+          effective_start_date: input.effectiveStartDate,
+          source_label: input.sourceLabel,
+          created_by: input.userId,
+        })
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data;
+    }, 'Failed to create the House assignment batch');
+  }
+
   /** Only a draft batch can change; the database enforces this too. */
   private async assertDraft(batchId: string): Promise<HouseAssignmentBatch> {
     const batch = await this.getBatch(batchId);
