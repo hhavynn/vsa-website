@@ -16,6 +16,7 @@ import {
 import { ProgramContentManager } from '../../components/features/admin/ProgramContentManager';
 import { PreviewAsPublicButton, PublicPreviewDialog } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { PresidentsMessageSection } from '../../components/features/home/PresidentsMessage';
+import { safePreviewImageUrl } from '../../components/features/admin/preview/previewImageUrl';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -183,13 +184,14 @@ export default function AdminContent() {
   const previewPhoto = photoPreview || form.photoThumbnailUrl || form.photoUrl;
   // What the homepage would read back after saving (same trimming/defaults
   // as handleSubmit), with a not-yet-uploaded photo shown from memory.
-  const draftPhotoUrl = photoPreview || form.photoUrl.trim();
+  // The photo URL is typed by the admin, so only safe schemes reach <img src>.
+  const draftPhotoUrl = safePreviewImageUrl(photoPreview || form.photoUrl);
   const draftContent: PresidentsContent = {
     names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
     role: form.role.trim() || DEFAULT_PRESIDENTS_CONTENT.role,
     message: form.message.trim() || DEFAULT_PRESIDENTS_CONTENT.message,
     photoUrl: draftPhotoUrl,
-    photoThumbnailUrl: photoPreview || (draftPhotoUrl ? form.photoThumbnailUrl.trim() : ''),
+    photoThumbnailUrl: draftPhotoUrl ? safePreviewImageUrl(photoPreview || form.photoThumbnailUrl) : '',
   };
   const previewParagraphs = splitPresidentsMessage(form.message);
 
