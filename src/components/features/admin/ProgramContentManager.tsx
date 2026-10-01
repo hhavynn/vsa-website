@@ -8,6 +8,8 @@ import {
   ProgramPageKey,
   ProgramSectionKey,
 } from '../../../types';
+import { PreviewAsPublicButton } from './preview/PublicPreviewDialog';
+import { ProgramContentPreviewDialog, type ProgramCalloutSurface } from './preview/ProgramContentPreviewDialog';
 
 type Target = {
   page_key: ProgramPageKey;
@@ -16,6 +18,8 @@ type Target = {
   description: string;
   defaultTitle: string;
   display_order: number;
+  /** Set when the public page renders this row with ProgramContentCallout. */
+  publicCallout?: ProgramCalloutSurface;
 };
 
 type FormState = {
@@ -52,6 +56,7 @@ const TARGETS: Target[] = [
     description: 'Application status, form link, and deadline for /intern-program.',
     defaultTitle: 'Current Intern Cycle',
     display_order: 20,
+    publicCallout: { path: '/intern-program', defaultTitle: 'Intern Program applications', defaultLinkLabel: 'Apply Now' },
   },
   {
     page_key: 'house',
@@ -60,6 +65,7 @@ const TARGETS: Target[] = [
     description: 'Application or reveal status for /house-system. House names stay in code for this phase.',
     defaultTitle: 'Current House Cycle',
     display_order: 30,
+    publicCallout: { path: '/house-system', defaultTitle: 'House Program updates', defaultLinkLabel: 'Apply Now' },
   },
   {
     page_key: 'wnc',
@@ -89,6 +95,40 @@ function toInputDateTime(value: string | null | undefined) {
 
 function fromInputDateTime(value: string) {
   return value ? new Date(value).toISOString() : null;
+}
+
+// The row the public page would read back after saving this form.
+function contentFromForm(form: FormState, target: Target, saved: ProgramContent | undefined): ProgramContent {
+  const now = new Date().toISOString();
+  return {
+    id: saved?.id ?? 'draft-preview',
+    page_key: target.page_key,
+    section_key: target.section_key,
+    title: nullable(form.title),
+    body: nullable(form.body),
+    status: form.status,
+    primary_link_label: nullable(form.primary_link_label),
+    primary_link_url: nullable(form.primary_link_url),
+    secondary_link_label: nullable(form.secondary_link_label),
+    secondary_link_url: nullable(form.secondary_link_url),
+    open_at: fromInputDateTime(form.open_at),
+    close_at: fromInputDateTime(form.close_at),
+    deadline_at: fromInputDateTime(form.deadline_at),
+    event_date: fromInputDateTime(form.event_date),
+    venue: nullable(form.venue),
+    is_published: form.is_published,
+    display_order: target.display_order,
+    source_doc_url: null,
+    internal_notes: null,
+    created_at: saved?.created_at ?? now,
+    updated_at: now,
+  };
+}
+
+function previewDisabledReason(form: FormState, target: Target) {
+  if (!target.publicCallout) return "This page lays out its status block itself; preview isn't available for it yet.";
+  if (form.status === 'hidden') return 'Status is Hidden, so nothing renders on the public page.';
+  return null;
 }
 
 function emptyForm(target: Target): FormState {
@@ -152,6 +192,7 @@ export function ProgramContentManager() {
   );
   const [form, setForm] = useState<FormState>(() => emptyForm(selectedTarget));
   const [saving, setSaving] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     setForm(formFromContent(selectedContent, selectedTarget));
@@ -330,9 +371,24 @@ export function ProgramContentManager() {
               </div>
             </div>
 
-            <button type="submit" disabled={saving || loading} className="rounded px-5 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)' }}>
-              {saving ? 'Saving...' : 'Save Program Content'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" disabled={saving || loading} className="rounded px-5 py-2 text-sm font-medium disabled:opacity-50" style={{ background: 'var(--color-text)', color: 'var(--color-bg)' }}>
+                {saving ? 'Saving...' : 'Save Program Content'}
+              </button>
+              <PreviewAsPublicButton
+                onClick={() => setPreviewOpen(true)}
+                disabledReason={previewDisabledReason(form, selectedTarget)}
+                className="py-2"
+              />
+            </div>
+            {previewOpen && selectedTarget.publicCallout && (
+              <ProgramContentPreviewDialog
+                content={contentFromForm(form, selectedTarget, selectedContent)}
+                label={selectedTarget.label}
+                surface={selectedTarget.publicCallout}
+                onClose={() => setPreviewOpen(false)}
+              />
+            )}
           </form>
         </div>
       )}

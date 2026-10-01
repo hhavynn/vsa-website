@@ -14,6 +14,8 @@ import {
   splitPresidentsMessage,
 } from '../../data/presidentsContent';
 import { ProgramContentManager } from '../../components/features/admin/ProgramContentManager';
+import { PreviewAsPublicButton, PublicPreviewDialog } from '../../components/features/admin/preview/PublicPreviewDialog';
+import { PresidentsMessageSection } from '../../components/features/home/PresidentsMessage';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -27,6 +29,7 @@ export default function AdminContent() {
   const [photoPreview, setPhotoPreview] = useState('');
   const [originalPhotoUrl, setOriginalPhotoUrl] = useState('');
   const [originalPhotoThumbnailUrl, setOriginalPhotoThumbnailUrl] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -178,6 +181,16 @@ export default function AdminContent() {
   }
 
   const previewPhoto = photoPreview || form.photoThumbnailUrl || form.photoUrl;
+  // What the homepage would read back after saving (same trimming/defaults
+  // as handleSubmit), with a not-yet-uploaded photo shown from memory.
+  const draftPhotoUrl = photoPreview || form.photoUrl.trim();
+  const draftContent: PresidentsContent = {
+    names: form.names.trim() || DEFAULT_PRESIDENTS_CONTENT.names,
+    role: form.role.trim() || DEFAULT_PRESIDENTS_CONTENT.role,
+    message: form.message.trim() || DEFAULT_PRESIDENTS_CONTENT.message,
+    photoUrl: draftPhotoUrl,
+    photoThumbnailUrl: photoPreview || (draftPhotoUrl ? form.photoThumbnailUrl.trim() : ''),
+  };
   const previewParagraphs = splitPresidentsMessage(form.message);
 
   const fieldStyle = { borderColor: 'var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' };
@@ -271,8 +284,23 @@ export default function AdminContent() {
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
               Reset to Default
             </button>
+            <PreviewAsPublicButton
+              onClick={() => setPreviewOpen(true)}
+              disabledReason={loading ? 'Loading saved content…' : null}
+              className="px-5 py-2"
+            />
           </div>
         </form>
+        {previewOpen && (
+          <PublicPreviewDialog
+            title="Presidents message"
+            surface="/ (homepage)"
+            notice="Unsaved changes — the homepage keeps the last saved message until you save."
+            onClose={() => setPreviewOpen(false)}
+          >
+            <PresidentsMessageSection content={draftContent} />
+          </PublicPreviewDialog>
+        )}
 
         <aside className="border rounded overflow-hidden h-fit" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>

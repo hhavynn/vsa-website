@@ -13,6 +13,9 @@ import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
+import { EventPreviewDialog } from '../../components/features/admin/preview/EventPreviewDialog';
+import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
+import { buildEventPreview } from '../../components/features/admin/preview/eventPreview';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
@@ -129,6 +132,7 @@ export default function AdminEvents() {
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
   const [editCheckInCode, setEditCheckInCode] = useState('');
+  const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
 
   // Event days and times are San Diego wall-clock values; never read them in
   // the admin's device timezone.
@@ -202,6 +206,26 @@ export default function AdminEvents() {
     if (hasStart && hasEnd && !isEndAfterStart(startTime!, endTime!)) return 'End time must be after start time.';
     return null;
   };
+
+  // Preview the exact values a save would write, including unsaved edits and
+  // a not-yet-uploaded image. Nothing is persisted.
+  const createPreview = buildEventPreview({
+    draft: newEvent,
+    dateOnly: newEvent.date ?? '',
+    startTime: newEvent.start_time ?? '',
+    imageUrl: imagePreview,
+    thumbnailUrl: imagePreview,
+  });
+  const editPreview = selectedEvent
+    ? buildEventPreview({
+        draft: selectedEvent,
+        dateOnly: formatDateForInput(selectedEvent.date, selectedEvent.start_time),
+        startTime: selectedEvent.start_time || formatStartTimeForInput(selectedEvent.date),
+        imageUrl: editImagePreview ?? (selectedEvent.image_url || null),
+        thumbnailUrl: editImagePreview ?? selectedEvent.thumbnail_url ?? null,
+      })
+    : null;
+  const activePreview = previewTarget === 'create' ? createPreview : previewTarget === 'edit' ? editPreview : null;
 
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -591,7 +615,12 @@ export default function AdminEvents() {
                   </div>
                   {imageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setImageFile(null); setImagePreview(null); }}>Remove image</button>}
                 </div>
-                <div className="pt-2">
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <PreviewAsPublicButton
+                    onClick={() => setPreviewTarget('create')}
+                    disabledReason={createPreview.error}
+                    className="py-3 sm:shrink-0"
+                  />
                   <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
                     {uploading ? 'Creating...' : 'Create Event'}
                   </button>
@@ -760,6 +789,11 @@ export default function AdminEvents() {
                   <button type="button" onClick={() => { setSelectedEvent(null); setEditCheckInCode(''); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                     Cancel
                   </button>
+                  <PreviewAsPublicButton
+                    onClick={() => setPreviewTarget('edit')}
+                    disabledReason={editPreview?.error}
+                    className="sm:mr-auto"
+                  />
                 </div>
               </form>
               <EventRecapEditor event={selectedEvent} />
@@ -768,6 +802,15 @@ export default function AdminEvents() {
               </div>
             </div>
           </div>
+        )}
+
+        {activePreview?.event && (
+          <EventPreviewDialog
+            event={activePreview.event}
+            terms={terms}
+            isSaved={previewTarget === 'edit'}
+            onClose={() => setPreviewTarget(null)}
+          />
         )}
 
         {/* Delete Confirmation */}
