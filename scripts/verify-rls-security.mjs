@@ -256,13 +256,13 @@ async function runTests() {
     }
 
     // Only count checks; values from private member tables never enter logs.
-    const { error: quotaReadError } = await anon
+    const { error: quotaReadError, status: quotaReadStatus } = await anon
       .from('member_photo_upload_reservations')
       .select('request_id', { head: true }).limit(1);
-    if (quotaReadError?.code === '42501') {
+    if ([401, 403].includes(quotaReadStatus) || quotaReadError?.code === '42501') {
       reportPass('anon cannot read photo upload reservations');
     } else {
-      reportFail(`anon photo reservation SELECT was not denied: ${quotaReadError?.code ?? 'allowed'}`);
+      reportFail(`anon photo reservation SELECT was not denied: HTTP ${quotaReadStatus}, code=${quotaReadError?.code ?? 'none'}`);
     }
 
     // Query event_check_in_secrets
@@ -381,12 +381,12 @@ async function runTests() {
         ['members', 'id, user_id'],
         ['member_event_attendance', 'id, imported_at'],
       ]) {
-        const { count, error } = await userClient.from(table)
+        const { count, error, status } = await userClient.from(table)
           .select(columns, { count: 'exact', head: true });
-        if (error?.code === '42501' || (!error && count === 0)) {
+        if ([401, 403].includes(status) || error?.code === '42501' || (!error && count === 0)) {
           reportPass(`ordinary user cannot read raw ${table}`);
         } else {
-          reportFail(`ordinary user raw ${table} read was not denied (code=${error?.code ?? 'none'}, count=${count})`);
+          reportFail(`ordinary user raw ${table} read was not denied (HTTP ${status}, code=${error?.code ?? 'none'}, count=${count})`);
         }
       }
       const { error: publicMemberError } = await userClient.from('public_members')
