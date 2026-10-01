@@ -12,6 +12,10 @@ import toast, { Toaster } from 'react-hot-toast';
 import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
+import { Button } from '../../components/ui/Button';
+import { AddMemberModal } from '../../components/features/admin/AddMemberModal';
+import { MemberAttendanceModal } from '../../components/features/admin/MemberAttendanceModal';
+import { MEMBER_COLLEGES } from '../../constants/memberOptions';
 import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
 import { normalizeEmail } from '../../lib/memberMatching';
 import { formatAcademicYear, getAcademicYearStart } from '../../lib/academicTerms';
@@ -39,33 +43,6 @@ interface Member {
   needs_review?: boolean;
 }
 
-interface AttendanceRecord {
-  event_id: string;
-  event_name: string;
-  event_date: string;
-  points_earned: number;
-  term_label: string | null;
-}
-
-interface YearlyTotal {
-  academic_year_start: number;
-  academic_year_end: number;
-  total_points: number;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const COLLEGE_OPTIONS = [
-  { value: 'revelle', label: 'Revelle' },
-  { value: 'muir', label: 'Muir' },
-  { value: 'marshall', label: 'Marshall' },
-  { value: 'warren', label: 'Warren' },
-  { value: 'erc', label: 'ERC (Eleanor Roosevelt)' },
-  { value: 'sixth', label: 'Sixth' },
-  { value: 'seventh', label: 'Seventh' },
-  { value: 'eighth', label: 'Eighth' },
-];
-
 function toCollegeKey(s: string): string {
   const t = s.toLowerCase();
   if (/revelle/.test(t)) return 'revelle';
@@ -77,6 +54,17 @@ function toCollegeKey(s: string): string {
   if (/seventh|7th/.test(t)) return 'seventh';
   if (/eighth|8th/.test(t)) return 'eighth';
   return s;
+}
+
+function getMemberEditForm(m: Member) {
+  return {
+    first_name: m.first_name,
+    last_name: m.last_name,
+    college: m.college ? toCollegeKey(m.college) : '',
+    year: m.year ?? '',
+    email: m.email ?? '',
+    house: m.house ?? '',
+  };
 }
 
 // ─── Year badge colours ───────────────────────────────────────────────────────
@@ -116,6 +104,7 @@ export default function AdminMembers() {
 
   // Edit modal
   const [editing, setEditing] = useState<Member | null>(null);
+  const [addingMember, setAddingMember] = useState(false);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', college: '', year: '', email: '', house: '' });
   const [saving, setSaving] = useState<'fields' | 'photo' | null>(null);
 
@@ -145,10 +134,6 @@ export default function AdminMembers() {
 
   // History modal
   const [historyMember, setHistoryMember] = useState<Member | null>(null);
-  const [historyRecords, setHistoryRecords] = useState<AttendanceRecord[]>([]);
-  const [historyYearly, setHistoryYearly] = useState<YearlyTotal[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
   // Merge modal
   const [mergingSource, setMergingSource] = useState<Member | null>(null);
   const [mergeTarget, setMergeTarget] = useState<Member | null>(null);
@@ -238,14 +223,7 @@ export default function AdminMembers() {
   // ── Edit ─────────────────────────────────────────────────────────────────────
   function openEdit(m: Member) {
     setEditing(m);
-    setEditForm({
-      first_name: m.first_name,
-      last_name: m.last_name,
-      college: m.college ? toCollegeKey(m.college) : '',
-      year: m.year ?? '',
-      email: m.email ?? '',
-      house: m.house ?? '',
-    });
+    setEditForm(getMemberEditForm(m));
     clearPhoto();
   }
 
@@ -318,57 +296,8 @@ export default function AdminMembers() {
   }
 
   // ── History ───────────────────────────────────────────────────────────────────
-  async function openHistory(m: Member) {
-    setHistoryMember(m);
-    setHistoryRecords([]);
-    setHistoryYearly([]);
-    setHistoryLoading(true);
-    
-    try {
-      // 1. Fetch attendance with term labels
-      const { data: attendanceData, error: attError } = await supabase
-        .from('member_event_attendance')
-        .select(`
-          event_id, 
-          points_earned, 
-          events(
-            name, 
-            date, 
-            academic_term_id,
-            academic_terms(label)
-          )
-        `)
-        .eq('member_id', m.id);
-      
-      if (attError) throw attError;
-
-      const records = ((attendanceData ?? []) as any[])
-        .map(row => ({
-          event_id: row.event_id as string,
-          event_name: (row.events?.name ?? '(unknown)') as string,
-          event_date: (row.events?.date ?? '') as string,
-          points_earned: row.points_earned as number,
-          term_label: (row.events?.academic_terms?.label ?? null) as string | null,
-        }))
-        .sort((a, b) => b.event_date.localeCompare(a.event_date));
-      setHistoryRecords(records);
-
-      // 2. Fetch yearly point totals
-      const { data: yearlyData, error: yearlyError } = await supabase
-        .from('member_yearly_points')
-        .select('academic_year_start, academic_year_end, total_points')
-        .eq('member_id', m.id)
-        .order('academic_year_start', { ascending: false });
-      
-      if (yearlyError) throw yearlyError;
-      setHistoryYearly((yearlyData ?? []) as YearlyTotal[]);
-
-    } catch (err: any) {
-      toast.error('Failed to load history.');
-      console.error(err);
-    } finally {
-      setHistoryLoading(false);
-    }
+  function openHistory(member: Member) {
+    setHistoryMember(member);
   }
 
   // ── Merge ─────────────────────────────────────────────────────────────────────
@@ -413,6 +342,8 @@ export default function AdminMembers() {
     ? (members.reduce((s, m) => s + m.events_attended, 0) / members.length).toFixed(1)
     : '—';
 
+  const editHasChanges = !!editing && (!!photoFile || JSON.stringify(editForm) !== JSON.stringify(getMemberEditForm(editing)));
+
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
@@ -424,23 +355,26 @@ export default function AdminMembers() {
           <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Members</h1>
           <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{members.length} total members</p>
         </div>
-        <button
-          onClick={() => {
-            const rows = [
-              ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-              ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
-            ];
-            const csv = rows.map(r => r.join(',')).join('\n');
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-            a.download = 'vsa-members.csv';
-            a.click();
-          }}
-          className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-          style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
-        >
-          Export CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setAddingMember(true)}>Add Member</Button>
+          <button
+            onClick={() => {
+              const rows = [
+                ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
+                ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
+              ];
+              const csv = rows.map(r => r.join(',')).join('\n');
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              a.download = 'vsa-members.csv';
+              a.click();
+            }}
+            className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+            style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8">
@@ -711,7 +645,7 @@ export default function AdminMembers() {
               <Field label="College">
                 <select value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))} className={inputCls}>
                   <option value="">— select —</option>
-                  {COLLEGE_OPTIONS.map(({ value, label }) => (
+                  {MEMBER_COLLEGES.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
@@ -736,6 +670,9 @@ export default function AdminMembers() {
               </div>
             </div>
           </div>
+          <Button variant="outline" className="mt-4" fullWidth disabled={saving !== null || editHasChanges}
+            onClick={() => { closeEdit(); openHistory(editing); }}>Manage attendance</Button>
+          {editHasChanges && <p className="mt-2 text-sm text-text-secondary">Save changes or cancel this edit before managing attendance.</p>}
           <div className="flex gap-3 mt-6">
             <button onClick={handleSaveEdit} disabled={saving !== null}
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
@@ -746,78 +683,17 @@ export default function AdminMembers() {
         </Modal>
       )}
 
-      {/* ── History Modal ── */}
+      {addingMember && (
+        <AddMemberModal onClose={() => setAddingMember(false)} onCreated={async member => {
+          setSearch(`${member.first_name} ${member.last_name}`);
+          setShowReviewOnly(false);
+          setHouseFilter('all');
+          await load();
+        }} />
+      )}
       {historyMember && (
-        <Modal onClose={() => setHistoryMember(null)} wide>
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-[16px] font-bold text-zinc-900 dark:text-zinc-50">
-                {historyMember.first_name} {historyMember.last_name}
-              </h2>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                {historyMember.points} pts (All-Time) · {historyMember.events_attended} event{historyMember.events_attended !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <button onClick={() => setHistoryMember(null)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xl leading-none">×</button>
-          </div>
-          
-          {historyLoading ? (
-            <div className="py-8 text-center text-zinc-400 text-[13px]">Loading…</div>
-          ) : (
-            <div className="space-y-6">
-              {/* Yearly Breakdown */}
-              {historyYearly.length > 0 && (
-                <div>
-                  <h3 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">Yearly Breakdown</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {historyYearly.map(y => (
-                      <div key={y.academic_year_start} className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-[#27272a] rounded px-3 py-2 flex justify-between items-center">
-                        <span className="text-[12px] text-zinc-600 dark:text-zinc-400 font-medium">{y.academic_year_start}-{y.academic_year_end}</span>
-                        <span className="text-[13px] font-bold text-indigo-600 dark:text-indigo-400">{y.total_points} pts</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Event Records */}
-              <div>
-                <h3 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">Event Records</h3>
-                {historyRecords.length === 0 ? (
-                  <div className="py-4 text-center text-zinc-400 text-[13px] border border-dashed rounded">No attendance records found.</div>
-                ) : (
-                  <div className="overflow-y-auto max-h-64 rounded-md border border-zinc-200 dark:border-[#27272a] divide-y divide-zinc-100 dark:divide-[#27272a]">
-                    {historyRecords.map(rec => (
-                      <div key={rec.event_id} className="flex items-center justify-between px-4 py-3">
-                        <div>
-                          <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">{rec.event_name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] text-zinc-400">
-                              {rec.event_date
-                                ? new Date(rec.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : '—'}
-                            </span>
-                            {rec.term_label && (
-                              <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
-                                {rec.term_label}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">+{rec.points_earned} pts</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          <button onClick={() => setHistoryMember(null)}
-            className="mt-5 w-full border border-zinc-200 dark:border-[#27272a] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium py-2.5 rounded-md text-[13px] transition-colors">
-            Close
-          </button>
-        </Modal>
+        <MemberAttendanceModal key={historyMember.id} memberId={historyMember.id}
+          onClose={() => setHistoryMember(null)} onChanged={load} />
       )}
 
       {/* ── Merge Modal ── */}

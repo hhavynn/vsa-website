@@ -146,3 +146,11 @@ it('keeps the dialog open with the photo selected when publishing fails', async 
   expect(screen.getByAltText('Selected photo preview')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Save & publish photo' })).toBeEnabled();
 });
+
+it('does not discard an unsaved photo to open attendance management', async () => {
+  await openEditDialog();
+  expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeEnabled();
+  await choosePhoto(photo());
+  expect(screen.getByRole('button', { name: 'Manage attendance' })).toBeDisabled();
+  expect(screen.getByText(/Save changes or cancel this edit/)).toBeInTheDocument();
+});
