@@ -26,7 +26,7 @@ export class LeaderboardRepository {
   async getAllTimeLeaderboard(): Promise<any[]> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
-        .from('members')
+        .from('public_members')
         .select('id, first_name, last_name, college, year, points, events_attended')
         .order('points', { ascending: false });
 

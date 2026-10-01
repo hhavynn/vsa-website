@@ -28,7 +28,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
 
       if (selectedYear === 'all') {
         const { data, error } = await supabase
-          .from('members')
+          .from('public_members')
           .select('id, first_name, last_name, college, year, house, points, events_attended')
           .order('points', { ascending: false });
         if (error) throw error;
@@ -57,7 +57,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
       const enrichment = new Map<string, { house: string | null; allTime: number }>();
       if (yearly.length > 0) {
         const { data: enrichRows, error: enrichError } = await supabase
-          .from('members')
+          .from('public_members')
           .select('id, house, points');
         if (enrichError) throw enrichError;
         for (const row of enrichRows ?? []) {

@@ -55,7 +55,7 @@ async function openEditDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MemoryRouter>
         <AdminMembers />
       </MemoryRouter>
     </QueryClientProvider>,

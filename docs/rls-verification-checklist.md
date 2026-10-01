@@ -68,18 +68,21 @@ When running against production, safety is the highest priority:
 
 ## 5. Non-Mutating (Read-Only) Verification Checks
 
-By default, the script only performs read-only checks that cannot affect production data:
+By default, the script performs read checks and guarded zero-row view probes; base-table mutations require explicit opt-in:
 - **Anon: sensitive columns check** — attempts to select `user_id` and `email` on `members`. Expects access denied.
-- **Anon: safe columns check** — attempts to query public information needed for leaderboards. Expects success.
+- **Anon: safe columns check** — queries `public_members`, the safe allowlist projection needed for leaderboards. Expects success.
+- **Anon: upload reservation check** — count-only SELECT on `member_photo_upload_reservations` must return permission denied.
+- **User: raw-member privacy checks** — head/count-only reads of `members` and `member_event_attendance` must be denied or return zero rows; the same account must retain SELECT on `public_members`. No private values are printed. Requires existing ordinary test credentials; never create a live account to run this.
+- **Admin: raw-member checks** — head-only reads of both base tables must succeed, preserving import/review permissions.
 - **Anon: event secrets check** — attempts to query the `event_check_in_secrets` table. Expects access denied or empty list.
 - **Anon: data rights RPC check** — attempts to call preview/export functions. Expects access denied.
 - **Anon: data rights requests check** — attempts to query requests history. Expects access denied or empty list.
-- **Anon and user: writes through public views (#472)** — attempts `UPDATE` and `DELETE` through every public view listed in the script. Expects `42501`. Supabase's default privileges grant `ALL` on new views to `anon` and `authenticated`, and a simple single-table view runs as its owner, so a leftover write grant bypasses the base table's RLS. A write that succeeds is reported as FAIL naming the view. Non-destructive: every write is filtered on the nil UUID, the same filter is read first and the probe is not run if it matches anything, and the base tables have only row-level triggers, so a zero-row write fires nothing. Aggregate and join views reject writes with `55000` before Postgres checks grants, so for them the script prints one SKIP line; any other error is a FAIL. Filtering a write needs `SELECT` on the view, so a role that cannot read it gets `42501` whether or not the write grant exists: a denied read on a view the role should read is a FAIL, and anon on `my_member_photo_requests` (signed-in only by design) is a SKIP that the signed-in run covers. The signed-in run needs the `RLS_TEST_USER_*` account. **When you add a view, add it to `simpleViews` or `nonUpdatableViews` in the script.**
-- **User: write probes** — attempts to insert into `event_attendance` and `user_points`, and to update `event_attendance`, `user_points`, `events`, `members` and `member_event_attendance`. Expects RLS block (`42501` on insert, 0 rows on update). The probes are non-destructive even if RLS is broken: inserts target an unknown event or the user's existing row, so a constraint rejects them after RLS lets them through (reported as FAIL), and updates write each row's current values back.
+- **Anon and user: zero-row writes through public views (#472)** — attempts `UPDATE` and `DELETE` through every public view listed in the script. Expects `42501`. Supabase's default privileges grant `ALL` on new views to `anon` and `authenticated`, and a simple single-table view runs as its owner, so a leftover write grant bypasses the base table's RLS. A write that succeeds is reported as FAIL naming the view. Non-destructive: every write is filtered on the nil UUID, the same filter is read first and the probe is not run if it matches anything, and the base tables have only row-level triggers, so a zero-row write fires nothing. Aggregate and join views reject writes with `55000` before Postgres checks grants, so for them the script prints one SKIP line; any other error is a FAIL. Filtering a write needs `SELECT` on the view, so a role that cannot read it gets `42501` whether or not the write grant exists: a denied read on a view the role should read is a FAIL, and anon on `my_member_photo_requests` (signed-in only by design) is a SKIP that the signed-in run covers. The signed-in run needs the `RLS_TEST_USER_*` account. **When you add a view, add it to `simpleViews` or `nonUpdatableViews` in the script.**
+- **User: write probes, gated by `RLS_ALLOW_MUTATION_TESTS=true`** — attempts to insert into `event_attendance` and `user_points`, and to update `event_attendance`, `user_points`, `events`, `members` and `member_event_attendance`. Expects RLS block (`42501` on insert, 0 rows on update). The probes are non-destructive even if RLS is broken: inserts target an unknown event or the user's existing row, so a constraint rejects them after RLS lets them through (reported as FAIL), and updates write each row's current values back.
 - **User: event secrets check** — attempts to read secrets. Expects access denied or empty list.
 - **User: data rights check** — attempts to read data rights requests or call admin RPCs. Expects access denied.
 - **Admin: read check** — attempts to read event secrets and data rights requests. Expects success.
-- **Admin: RPC access check** — attempts to call dependency and export handlers. Expects auth validation success.
+- **Admin: RPC access check** — calls dependency/export handlers with a nil request UUID in read-only mode, so no real export/audit row is created. A real `RLS_TEST_DATA_RIGHTS_REQUEST_ID` is used only with mutation opt-in. Expects authorization access, even when the nil request is not found.
 
 ---
 
@@ -90,6 +93,7 @@ If you set `RLS_ALLOW_MUTATION_TESTS=true`, the script will run active write che
 > These checks insert and then delete a real `event_attendance` row. They clean up after themselves, but they are not recommended for production.
 
 These checks cover:
+- **Anon/user: public view UPDATE/DELETE and ordinary-user insert/update probes** — disabled by default along with INSERT probes. Use a disposable local/staging environment with explicit authorization.
 - **Admin: direct manual insert support** — verifies that admins can manually check in members directly via the dashboard by writing to `event_attendance`.
 - **Admin: no direct `user_points` writes** — verifies that even admins cannot write `user_points` from the client; it is server-authoritative (written only by `check_in_to_event` and the signup trigger). Non-destructive: the probe targets the admin's existing row.
 - **Anon and user: no inserts through simple public views (#472)** — inserts `{ id: null }` through each auto-updatable view. Expects `42501`. If the grant is live, `NOT NULL` on `id` rejects the row (reported as FAIL), but only after `BEFORE INSERT` triggers have run, and some of those write to other rows (`ensure_single_current_vcn_archive`). That is why this probe is gated.
@@ -106,7 +110,8 @@ These checks cover:
 `.github/workflows/rls-verify.yml` runs this script on PRs to `main`, on every push to `main`, and daily on a schedule, against production (the only Supabase project). The daily run matters most: past RLS regressions (#422, #423) came from policies created in the dashboard, which no PR would trigger.
 
 - **Not every PR is checked.** It skips PRs from forks and from Dependabot, because neither receives repository secrets. For those, the check runs on the push to `main` after merge, and on the next daily run. A dependency or fork PR merged without a green `verify` has *not* had production RLS checked before merge.
-- It never sets `RLS_ALLOW_MUTATION_TESTS`, so only the read-only and non-destructive probes run.
+- It never sets `RLS_ALLOW_MUTATION_TESTS`, so all write probes are skipped.
+- Daily CI retains the zero-row view ACL probes. Base-table write-policy checks require explicit mutation opt-in against a disposable database; the scheduled job does not cover that policy drift.
 - The signed-in sections are skipped until the `RLS_TEST_*` repository secrets are configured.
 - A failing run names the table, column or RPC and the issue it guards. Treat it as a security incident: check `pg_policies` and grants in production before assuming the test is wrong.
 

@@ -64,7 +64,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
                 className="rounded-full px-1.5 py-px font-mono text-[8px] font-bold uppercase tracking-widest"
                 style={
                   isActive
-                    ? { background: 'var(--brand)', color: 'white' }
+                    ? { background: 'var(--brand)', color: 'var(--color-on-brand)' }
                     : { background: 'var(--color-surface2)', color: 'var(--color-text3)', border: '1px solid var(--color-border)' }
                 }
               >

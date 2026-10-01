@@ -3,6 +3,10 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// Jest 27's jsdom omits the Web encoding APIs required by React Router 7.
+Object.assign(globalThis, { TextEncoder, TextDecoder });
 
 // Mock environment variables for testing
 process.env.REACT_APP_SUPABASE_URL = 'https://test.supabase.co';

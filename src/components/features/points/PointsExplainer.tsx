@@ -78,7 +78,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                 <h4 className="font-serif text-[18px] font-bold leading-tight" style={{ color: 'var(--text)' }}>
                   Earn by Participating
                 </h4>
-                <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
+                <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
                   Attend GBMs, socials, fundraisers, and community events to earn points. Just make sure to check in with a cabinet member or use our check-in system!
                 </p>
               </div>
@@ -93,7 +93,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                 <h4 className="font-serif text-[18px] font-bold leading-tight" style={{ color: 'var(--text)' }}>
                   House Competition
                 </h4>
-                <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
+                <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
                   If you are actively in a House when you attend a qualifying event, you also earn points for your House. For House rankings, each qualifying check-in counts as exactly 1 point toward your House total, regardless of the event's individual point value.
                 </p>
               </div>
@@ -108,7 +108,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                 <h4 className="font-serif text-[18px] font-bold leading-tight" style={{ color: 'var(--text)' }}>
                   Academic Terms
                 </h4>
-                <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
+                <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
                   Yearly leaderboards are based on events assigned to the academic year. House standings have extra rules: points only count while you are an active House member, and they are not added retroactively. For 2025-2026, House points start after the House Reveal on Nov 8, 2025.
                 </p>
               </div>
@@ -123,7 +123,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                 <h4 className="font-serif text-[18px] font-bold leading-tight" style={{ color: 'var(--text)' }}>
                   Syncing & Verification
                 </h4>
-                <p className="mt-2 font-sans text-sm leading-relaxed opacity-80" style={{ color: 'var(--text2)' }}>
+                <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
                   Points are manually verified and synced by our cabinet team. It may take 24-48 hours after an event for your points to reflect on the public leaderboard.
                   Cabinet and interns do not earn points for required duties like staffing, setup, cleanup, or assigned shifts. They can still earn points when they attend as regular members.
                 </p>
@@ -144,7 +144,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                 <h4 className="font-serif text-[17px] font-bold" style={{ color: 'var(--text)' }}>
                   Points look wrong?
                 </h4>
-                <p className="mt-1 font-sans text-sm opacity-80" style={{ color: 'var(--text2)' }}>
+                <p className="mt-1 font-sans text-sm" style={{ color: 'var(--text2)' }}>
                   If you believe your points haven't been recorded correctly, please let us know so we can fix it!
                 </p>
               </div>

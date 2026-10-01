@@ -116,6 +116,7 @@ async function runTests() {
     'published_intern_cohort_members',
     'published_vcn_archives',
     'my_member_photo_requests',
+    'public_members',
   ];
   // Not auto-updatable: Postgres rejects writes with 55000 ("cannot update
   // view") before it checks grants, so the probe cannot see their grants and
@@ -234,7 +235,7 @@ async function runTests() {
     } else if (memSensData && memSensData.length > 0) {
       const row = memSensData[0];
       if ('user_id' in row || 'email' in row) {
-        reportFail(`anon could select members with sensitive fields present (user_id: ${row.user_id}, email: ${row.email})`);
+        reportFail('anon could select members with sensitive fields present (values omitted)');
       } else {
         reportPass('anon cannot select members.user_id or members.email (columns omitted or filtered)');
       }
@@ -244,7 +245,7 @@ async function runTests() {
 
     // Query members table - attempt to select safe public fields
     const { data: memSafeData, error: memSafeError } = await anon
-      .from('members')
+      .from('public_members')
       .select('id, first_name, last_name, college, year, house, points, events_attended')
       .limit(1);
 
@@ -252,6 +253,16 @@ async function runTests() {
       reportFail(`anon cannot select safe public columns from members: ${memSafeError.message}`);
     } else {
       reportPass('anon can read safe public member fields needed for leaderboard/House pages');
+    }
+
+    // Only count checks; values from private member tables never enter logs.
+    const { error: quotaReadError, status: quotaReadStatus } = await anon
+      .from('member_photo_upload_reservations')
+      .select('request_id', { head: true }).limit(1);
+    if ([401, 403].includes(quotaReadStatus) || quotaReadError?.code === '42501') {
+      reportPass('anon cannot read photo upload reservations');
+    } else {
+      reportFail(`anon photo reservation SELECT was not denied: HTTP ${quotaReadStatus}, code=${quotaReadError?.code ?? 'none'}`);
     }
 
     // Query event_check_in_secrets
@@ -366,6 +377,26 @@ async function runTests() {
     } else {
       const authUser = (await userClient.auth.getUser()).data.user;
 
+      for (const [table, columns] of [
+        ['members', 'id, user_id'],
+        ['member_event_attendance', 'id, imported_at'],
+      ]) {
+        const { count, error, status } = await userClient.from(table)
+          .select(columns, { count: 'exact', head: true });
+        if ([401, 403].includes(status) || error?.code === '42501' || (!error && count === 0)) {
+          reportPass(`ordinary user cannot read raw ${table}`);
+        } else {
+          reportFail(`ordinary user raw ${table} read was not denied (HTTP ${status}, code=${error?.code ?? 'none'}, count=${count})`);
+        }
+      }
+      const { error: publicMemberError } = await userClient.from('public_members')
+        .select('id, first_name, last_name, college, year, house, points, events_attended', { head: true });
+      if (publicMemberError) reportFail(`ordinary user cannot read public member projection: ${publicMemberError.code}`);
+      else reportPass('ordinary user can read public member projection');
+
+      if (!allowMutations) {
+        reportSkip('ordinary user write probes (RLS_ALLOW_MUTATION_TESTS is not true)');
+      } else {
       // Write probes are non-destructive: if RLS wrongly allows a write, the
       // probe still changes nothing. Inserts collide with a constraint that is
       // checked after RLS (unknown event -> 23503, existing row -> 23505), and
@@ -466,6 +497,8 @@ async function runTests() {
 
       await expectViewWritesDenied(userClient, 'ordinary user');
 
+      }
+
       // Attempt to read event_check_in_secrets
       const { data: userSecData, error: userSecError } = await userClient
         .from('event_check_in_secrets')
@@ -522,6 +555,12 @@ async function runTests() {
     if (!adminClient) {
       reportSkip('admin checks (email/password not provided in env)');
     } else {
+      for (const table of ['members', 'member_event_attendance']) {
+        const { error } = await adminClient.from(table).select('*', { head: true });
+        if (error) reportFail(`admin cannot read raw ${table}: ${error.code}`);
+        else reportPass(`admin retains raw ${table} read privileges`);
+      }
+
       // Query event_check_in_secrets
       const { data: adminSecData, error: adminSecError } = await adminClient
         .from('event_check_in_secrets')
@@ -546,8 +585,12 @@ async function runTests() {
         reportPass('admin can read data_rights_requests');
       }
 
+      // Exports append an audit event for a real request. The default read-only
+      // probe uses only the nil request; real exports require mutation opt-in.
       // Check access to get_data_rights_dependency_preview RPC
-      const testReqId = process.env.RLS_TEST_DATA_RIGHTS_REQUEST_ID || dummyUuid;
+      const testReqId = allowMutations
+        ? process.env.RLS_TEST_DATA_RIGHTS_REQUEST_ID || dummyUuid
+        : dummyUuid;
       const { data: aRpc1Data, error: aRpc1Error } = await adminClient.rpc('get_data_rights_dependency_preview', { p_request_id: testReqId });
       
       if (aRpc1Error && aRpc1Error.code === '42501') {
