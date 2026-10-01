@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { Database } from '../../types/database';
-import { withErrorHandling, ValidationError } from '../errors';
+import { withErrorHandling, ValidationError, NetworkError } from '../errors';
 import { prepareImageForUpload, getUploadExtension } from '../../lib/imageUpload';
 import { MemberOption, toMemberOption } from '../../lib/memberLinkMatching';
 
@@ -31,6 +31,53 @@ export interface SubmitPhotoRequestInput {
 /** Member search/lookup lives in memberLookupRepository. */
 export type MemberMatchOption = Pick<MemberOption, 'id' | 'displayName'>;
 
+const PHOTO_SERVICE_UNAVAILABLE =
+  'The photo upload service is unavailable right now. Please try again in a few minutes.';
+
+/**
+ * `functions.invoke` collapses every non-2xx reply into a generic "Edge Function
+ * returned a non-2xx status code" error and leaves the broker's own explanation
+ * in the response body. Read it back so the form can say why the request was
+ * refused. The broker only sends messages written for visitors.
+ */
+async function explainBrokerError(error: unknown): Promise<Error> {
+  const e = (error ?? {}) as { name?: string; message?: string; context?: unknown };
+  if (e.name === 'FunctionsHttpError' && e.context instanceof Response) {
+    try {
+      const body = await e.context.clone().json();
+      if (typeof body?.error === 'string' && body.error.length > 0 && body.error.length <= 300) {
+        return new ValidationError(body.error);
+      }
+    } catch {
+      // Gateway/HTML error pages have no JSON body; fall through.
+    }
+    return new ValidationError(PHOTO_SERVICE_UNAVAILABLE);
+  }
+  if (e.name === 'FunctionsFetchError') {
+    return new NetworkError(e.message);
+  }
+  if (e.name === 'FunctionsRelayError') {
+    return new ValidationError(PHOTO_SERVICE_UNAVAILABLE);
+  }
+  return error instanceof Error ? error : new Error(e.message ?? 'Unknown error');
+}
+
+/** Storage errors name buckets and policies, so translate them instead of echoing them. */
+function explainStorageUploadError(error: { message?: string }): Error {
+  const message = error.message ?? '';
+  if (/fetch|network/i.test(message)) return new NetworkError(message);
+  if (/exceed|too large|payload|size/i.test(message)) {
+    return new ValidationError('Your photo is too large. Choose a photo under 5 MB.');
+  }
+  if (/mime|content.?type|not supported/i.test(message)) {
+    return new ValidationError('Your photo could not be uploaded because of its file type. Use a JPEG, PNG, or WebP image.');
+  }
+  if (/already exists|duplicate|expired|jwt|token/i.test(message)) {
+    return new ValidationError('Your photo could not be uploaded because the upload link expired or was already used. Close this form and submit again.');
+  }
+  return new ValidationError('Your photo could not be uploaded. Your request was not completed, so please try again.');
+}
+
 export class PhotoRequestsRepository {
   /** Public submissions reserve server quota before a one-object signed upload. */
   async submitPhotoRequest(input: SubmitPhotoRequestInput): Promise<void> {
@@ -41,6 +88,9 @@ export class PhotoRequestsRepository {
       const matchedMemberId = input.matchedMemberId.trim();
       if (!matchedMemberId) {
         throw new ValidationError('Choose a member before submitting a photo request.');
+      }
+      if (!ADMIN_UPLOAD_TYPES.includes(input.file.type)) {
+        throw new ValidationError('Choose a JPEG, PNG, or WebP photo.', 'file');
       }
       const { file } = await prepareImageForUpload(input.file, 'avatar');
       const { data, error } = await supabase.functions.invoke<{
@@ -57,14 +107,14 @@ export class PhotoRequestsRepository {
           size: file.size,
         },
       });
-      if (error) throw error;
+      if (error) throw await explainBrokerError(error);
       if (!data?.path || !data.token || !/^pending\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(data.path)) {
         throw new ValidationError('Photo upload is unavailable. Please try again later.');
       }
       const { error: uploadError } = await supabase.storage
         .from(PENDING_PHOTO_BUCKET)
         .uploadToSignedUrl(data.path, data.token, file, { contentType: file.type });
-      if (uploadError) throw uploadError;
+      if (uploadError) throw explainStorageUploadError(uploadError);
     }, 'Failed to submit photo request');
   }
 

@@ -57,6 +57,12 @@ For rollback, keep restrictive policies and grants: restore service availability
 
 Local verification: `deno test supabase/functions/member-photo-upload/handler.test.ts`; targeted Jest photo submission/admin publishing tests; disposable Postgres role/RLS/quota/concurrency tests. The read-only default of `scripts/verify-rls-security.mjs` checks public projection access, raw-table counts for ordinary accounts, and admin grants. Write probes require `RLS_ALLOW_MUTATION_TESTS=true` and belong in an owner-approved local/staging environment. A staging end-to-end check must prove direct anonymous Storage INSERT is rejected, signed upload succeeds once, replay cannot overwrite, bucket oversize/MIME rejects, pending preview is admin-only, and public avatars stay approval-only. No live upload or account creation is needed for the local checks.
 
+### Why a submission is refused, and what the visitor sees
+
+`supabase.functions.invoke` reports every non-2xx reply as a generic "Edge Function returned a non-2xx status code" error and leaves the broker's explanation in the response body. `photoRequestsRepository` reads that body (`explainBrokerError`) and throws it as a `ValidationError`, so the form shows the broker's own sentence. The broker sends a distinct, visitor-safe message per cause: bad member, missing name, non-`@ucsd.edu` email, missing consent, unsupported type, over 5 MB, over the per-member/per-email pending limit, and the per-IP/global/lifetime budget (both limit kinds arrive as `P0001` and pass the database's own text through). Network failures and failed signed uploads are translated too. A new message is never needed for the client to behave: unknown bodies fall back to "photo upload service is unavailable".
+
+`PhotoRequestSection` mirrors the broker's rules before calling it (name, `@ucsd.edu` email, JPEG/PNG/WebP, 5 MB, consent), so most mistakes are caught beside the field. Keep the two in sync: if the broker's accepted email domain or size limit changes, change `MemberPhotoRequestFormSchema` and `checkPhoto` together with it. The new broker messages take effect only after `supabase functions deploy member-photo-upload --no-verify-jwt`.
+
 ### `member_photo_request_events`
 
 Append-only audit trail (`submitted | approved | rejected | removed`, actor, optional note, timestamp). Admin-only SELECT; rows are written by a trigger on submission and by the review RPCs. Metadata only — never image payloads.

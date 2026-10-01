@@ -1,7 +1,8 @@
 // Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
 // system. See the two-systems table at the top of docs/leaderboard-system.md.
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { useQuery } from 'react-query';
@@ -13,6 +14,7 @@ import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
+import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -287,25 +289,63 @@ function UpcomingActivity() {
   );
 }
 
-function ShareButton({ entry, yearLabel }: { entry: FindMyPointsEntry; yearLabel: string }) {
-  const [state, setState] = useState<'idle' | 'copied' | 'done'>('idle');
+function ShareButton({ data, shareText }: { data: SnapshotData; shareText: string }) {
+  const [state, setState] = useState<'idle' | 'working' | 'shared' | 'saved'>('idle');
+  const [failed, setFailed] = useState(false);
+  const prepared = useRef<{ key: string; blob: Promise<Blob> } | null>(null);
+  const key = JSON.stringify(data);
 
-  const shareText = `I'm ranked #${entry.rank} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! 🎉`;
-  const shareUrl = `${window.location.origin}/leaderboard`;
+  const prepare = () => {
+    if (prepared.current?.key !== key) {
+      prepared.current = { key, blob: renderSnapshotImage(data) };
+    }
+    return prepared.current.blob;
+  };
+
+  // Draw the image ahead of the tap. Browsers only allow the share sheet to
+  // open shortly after a tap, so rendering after the tap can make iOS refuse it.
+  useEffect(() => {
+    prepare().catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  const copyFallback = async (reason: string) => {
+    const text = `${shareText}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.error(`${reason} We copied your rank and a link instead, so you can paste it anywhere.`);
+    } catch {
+      toast.error(`${reason} Take a screenshot of your card to share it.`);
+    }
+  };
 
   const handleShare = async () => {
-    if (navigator.share) {
+    if (state === 'working') return;
+    setState('working');
+    setFailed(false);
+    try {
+      let blob: Blob;
       try {
-        await navigator.share({ title: 'My VSA Snapshot', text: shareText, url: shareUrl });
-        setState('done');
-        setTimeout(() => setState('idle'), 2000);
+        blob = await prepare();
       } catch {
-        // user cancelled or error — silent
+        prepared.current = null;
+        blob = await prepare();
       }
-    } else if (navigator.clipboard) {
-      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-      setState('copied');
-      setTimeout(() => setState('idle'), 2000);
+      const outcome = await shareSnapshotImage({ blob, text: shareText, title: 'My VSA Snapshot' });
+      if (outcome === 'cancelled') {
+        setState('idle');
+        return;
+      }
+      if (outcome === 'downloaded') {
+        toast.success('Snapshot image saved. Attach it to a post or message to share it.');
+      }
+      setState(outcome === 'shared' ? 'shared' : 'saved');
+      setTimeout(() => setState('idle'), 2500);
+    } catch (error) {
+      console.error('Share snapshot failed:', error);
+      setState('idle');
+      setFailed(true);
+      await copyFallback("We couldn't create your snapshot image.");
     }
   };
 
@@ -313,13 +353,19 @@ function ShareButton({ entry, yearLabel }: { entry: FindMyPointsEntry; yearLabel
     <button
       type="button"
       onClick={handleShare}
-      className="flex items-center gap-1.5 rounded-full border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all hover:border-[var(--brand)] hover:text-[var(--brand)]"
-      style={{ color: 'var(--color-text2)' }}
+      disabled={state === 'working'}
+      aria-live="polite"
+      className="flex items-center gap-1.5 rounded-full border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-60"
+      style={{ color: failed ? 'var(--color-danger, #dc2626)' : 'var(--color-text2)' }}
     >
-      {state === 'copied' ? (
-        <>✓ Copied!</>
-      ) : state === 'done' ? (
+      {state === 'working' ? (
+        <>Making image…</>
+      ) : state === 'shared' ? (
         <>✓ Shared!</>
+      ) : state === 'saved' ? (
+        <>✓ Image saved!</>
+      ) : failed ? (
+        <>Try again</>
       ) : (
         <>📤 Share snapshot</>
       )}
@@ -362,6 +408,26 @@ export function MyVSACard({
   const badges = useMemo(() => getBadges(entry, attended, allEntries), [entry, attended, allEntries]);
 
   const cardAccentColor = houseColor ?? 'var(--brand)';
+
+  const snapshotData = useMemo<SnapshotData>(
+    () => ({
+      name: entry.full_name || 'VSA Member',
+      subline,
+      periodLabel: isAllTime ? 'All-time points' : `${yearLabel} points`,
+      rankLabel: isAllTime ? 'All-time rank' : 'Yearly rank',
+      rank: entry.rank,
+      points: entry.total_points,
+      checkIns: entry.events_attended,
+      allTimePoints: entry.all_time_points,
+      houseLabel,
+      houseColor,
+      top10Gap,
+      badges,
+      avatarUrl,
+    }),
+    [entry, subline, isAllTime, yearLabel, houseLabel, houseColor, top10Gap, badges, avatarUrl],
+  );
+  const shareText = `I'm ranked #${entry.rank.toLocaleString()} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! Find yours: ${window.location.origin}/points`;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
@@ -461,7 +527,7 @@ export function MyVSACard({
       {/* ── Footer ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface2)]/50 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <ShareButton entry={entry} yearLabel={yearLabel} />
+          <ShareButton data={snapshotData} shareText={shareText} />
           <PhotoRequestSection
             matchedMemberId={entry.member_id}
             selectedMemberName={entry.full_name}

@@ -69,3 +69,28 @@ Deno.test("bounded body rejects oversized metadata without side effects", async 
   assert((await handler(request({ ...valid, extra: "x".repeat(9000) }))).status === 400, "oversize body accepted");
   assert(reserved === 0, "oversize body consumed quota");
 });
+Deno.test("each invalid field gets its own message", async () => {
+  const handler = createPhotoUploadHandler({ hashKey: "secret",
+    reserve: async () => ({ path: "pending/x.webp" }), sign: async () => "token" });
+  const cases: Array<[Record<string, unknown>, RegExp]> = [
+    [{ submittedEmail: "member@gmail.com" }, /@ucsd\.edu/],
+    [{ consentConfirmed: false }, /consent/i],
+    [{ contentType: "image/heic" }, /JPEG, PNG, or WebP/],
+    [{ size: 5242881 }, /5 MB/],
+    [{ submittedName: "  " }, /name/i],
+    [{ matchedMemberId: "nope" }, /member/i],
+  ];
+  for (const [changes, pattern] of cases) {
+    const response = await handler(request({ ...valid, ...changes }));
+    const { error } = await response.json();
+    assert(response.status === 400 && pattern.test(error), `unhelpful message for ${Object.keys(changes)}: ${error}`);
+  }
+});
+Deno.test("a limit denial passes its visitor-facing reason through", async () => {
+  const handler = createPhotoUploadHandler({ hashKey: "secret",
+    reserve: async () => ({ error: "limit", message: "Too many pending photo requests. Please try again later or contact VSA." }),
+    sign: async () => "token" });
+  const response = await handler(request());
+  const { error } = await response.json();
+  assert(response.status === 429 && /Too many pending/.test(error), "limit reason was replaced");
+});

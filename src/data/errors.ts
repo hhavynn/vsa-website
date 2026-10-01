@@ -137,7 +137,7 @@ export async function withErrorHandling<T>(
   try {
     return await operation();
   } catch (error) {
-    if (error instanceof DatabaseError || error instanceof ValidationError) {
+    if (error instanceof DatabaseError || error instanceof ValidationError || error instanceof NetworkError) {
       throw error;
     }
 

@@ -14,6 +14,41 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--color-border)', borderRadius: 4, outline: 'none',
 };
 
+const DANGER = 'var(--color-danger, #dc2626)';
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="mt-1 font-sans text-[11px] leading-snug" style={{ color: DANGER }}>
+      {message}
+    </p>
+  );
+}
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+type FieldName = 'name' | 'email' | 'file' | 'consent';
+type FieldErrors = Partial<Record<FieldName, string>>;
+
+const SCHEMA_FIELD: Record<string, FieldName> = {
+  submitted_name: 'name',
+  submitted_email: 'email',
+  consent_confirmed: 'consent',
+};
+
+/** Same limits the upload broker and the private bucket enforce. */
+function checkPhoto(file: File | null): string | undefined {
+  if (!file) return 'Choose a photo to upload.';
+  if (!PHOTO_TYPES.includes(file.type)) {
+    return `"${file.name}" isn't a supported photo type. Use a JPEG, PNG, or WebP image (iPhone HEIC photos need to be saved as JPEG first).`;
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    return `That photo is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Choose one under 5 MB.`;
+  }
+  return undefined;
+}
+
 interface PhotoRequestSectionProps {
   matchedMemberId?: string | null;
   selectedMemberName?: string;
@@ -35,10 +70,18 @@ export function PhotoRequestSection({
   const [file, setFile] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [middleName, setMiddleName] = useState('');
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
+  const ids = {
+    name: `${titleId}-name`,
+    email: `${titleId}-email`,
+    file: `${titleId}-file`,
+    consent: `${titleId}-consent`,
+  };
 
   useEffect(() => {
     setForm(f => ({ ...f, name: f.name || defaultName, email: f.email || defaultEmail }));
@@ -64,6 +107,16 @@ export function PhotoRequestSection({
     dialogRef.current?.focus();
     return () => trigger?.focus();
   }, [modalOpen]);
+
+  // The dialog scrolls on small screens, so an error set after tapping Submit
+  // can land off-screen and the button would look like it did nothing.
+  useEffect(() => {
+    if (formError) errorRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [formError]);
+
+  function focusField(field: FieldName) {
+    document.getElementById(ids[field])?.focus();
+  }
 
   function keepFocusInDialog(e: ReactKeyboardEvent<HTMLDivElement>) {
     if (e.key !== 'Tab' || !dialogRef.current) return;
@@ -105,14 +158,28 @@ export function PhotoRequestSection({
       note_to_admins: form.note,
       consent_confirmed: consent,
     });
+    const errors: FieldErrors = {};
     if (!parsed.success) {
-      setFormError(parsed.error.errors[0]?.message ?? 'Please check the form.');
+      for (const issue of parsed.error.errors) {
+        const field = SCHEMA_FIELD[String(issue.path[0])];
+        if (field && !errors[field]) errors[field] = issue.message;
+      }
+    }
+    const fileError = checkPhoto(file);
+    if (fileError) errors.file = fileError;
+
+    const invalid = (['name', 'email', 'file', 'consent'] as FieldName[]).filter(f => errors[f]);
+    if (!parsed.success || invalid.length > 0 || !file) {
+      setFieldErrors(errors);
+      setFormError(
+        invalid.length > 0
+          ? `Your request hasn't been submitted yet. Fix ${invalid.length === 1 ? 'the highlighted field' : `the ${invalid.length} highlighted fields`} and try again.`
+          : (!parsed.success ? parsed.error.errors[0]?.message : null) ?? 'Please check the form.',
+      );
+      if (invalid[0]) focusField(invalid[0]);
       return;
     }
-    if (!file) {
-      setFormError('Please choose a photo to upload.');
-      return;
-    }
+    setFieldErrors({});
 
     setSubmitting(true);
     try {
@@ -132,7 +199,7 @@ export function PhotoRequestSection({
       setForm(f => ({ ...f, note: '' }));
     } catch (error) {
       console.error('Error submitting photo request:', error);
-      setFormError(toUserMessage(error, 'Failed to submit photo request. Please try again.'));
+      setFormError(`Your request wasn't submitted. ${toUserMessage(error, 'Something went wrong on our end. Please try again, or contact VSA if it keeps happening.')}`);
     } finally {
       setSubmitting(false);
     }
@@ -142,7 +209,7 @@ export function PhotoRequestSection({
     <>
       <div className="flex flex-col gap-2">
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => { setFormError(null); setFieldErrors({}); setModalOpen(true); }}
           disabled={!canSubmit || submitted}
           className="font-sans text-xs border rounded px-2.5 py-1.5 transition-colors duration-150 disabled:opacity-50"
           style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: !canSubmit || submitted ? 'default' : 'pointer' }}
@@ -190,8 +257,19 @@ export function PhotoRequestSection({
                 </div>
               )}
               <div>
-                <Label className="mb-1.5">Your name</Label>
-                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} />
+                <Label id={`${ids.name}-label`} className="mb-1.5">Your name</Label>
+                <input
+                  id={ids.name}
+                  type="text"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setFieldErrors(fe => ({ ...fe, name: undefined })); }}
+                  aria-labelledby={`${ids.name}-label`}
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? `${ids.name}-error` : undefined}
+                  style={fieldErrors.name ? { ...inputStyle, borderColor: DANGER } : inputStyle}
+                />
+                <FieldError id={`${ids.name}-error`} message={fieldErrors.name} />
               </div>
               <div className="absolute opacity-0 -z-10 w-0 h-0 pointer-events-none" aria-hidden="true">
                 <label htmlFor="middle_name">Middle Name</label>
@@ -205,21 +283,42 @@ export function PhotoRequestSection({
                 />
               </div>
               <div>
-                <Label className="mb-1.5">UCSD Email</Label>
-                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} />
+                <Label id={`${ids.email}-label`} className="mb-1.5">UCSD Email</Label>
+                <input
+                  id={ids.email}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@ucsd.edu"
+                  value={form.email}
+                  onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setFieldErrors(fe => ({ ...fe, email: undefined })); }}
+                  aria-labelledby={`${ids.email}-label`}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? `${ids.email}-error` : undefined}
+                  style={fieldErrors.email ? { ...inputStyle, borderColor: DANGER } : inputStyle}
+                />
+                <FieldError id={`${ids.email}-error`} message={fieldErrors.email} />
               </div>
               <div>
-                <Label className="mb-1.5">Photo</Label>
+                <Label id={`${ids.file}-label`} className="mb-1.5">Photo</Label>
                 <input
+                  id={ids.file}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={e => setFile(e.target.files?.[0] ?? null)}
+                  onChange={e => {
+                    const chosen = e.target.files?.[0] ?? null;
+                    setFile(chosen);
+                    setFieldErrors(fe => ({ ...fe, file: chosen ? checkPhoto(chosen) : undefined }));
+                  }}
+                  aria-labelledby={`${ids.file}-label`}
+                  aria-invalid={Boolean(fieldErrors.file)}
+                  aria-describedby={fieldErrors.file ? `${ids.file}-error` : undefined}
                   className="font-sans text-xs"
                   style={{ color: 'var(--color-text2)' }}
                 />
                 <p className="font-sans text-[11px] mt-1" style={{ color: 'var(--color-text3)' }}>
                   JPEG, PNG, or WebP up to 5 MB. It will be resized before display.
                 </p>
+                <FieldError id={`${ids.file}-error`} message={fieldErrors.file} />
               </div>
               <div>
                 <Label className="mb-1.5">Note to admins (optional)</Label>
@@ -244,17 +343,28 @@ export function PhotoRequestSection({
                 </ul>
                 <label className="mt-3 flex items-start gap-2 font-sans text-xs" style={{ color: 'var(--color-text)', cursor: 'pointer' }}>
                   <input
+                    id={ids.consent}
                     type="checkbox"
                     checked={consent}
-                    onChange={e => setConsent(e.target.checked)}
+                    onChange={e => { setConsent(e.target.checked); setFieldErrors(fe => ({ ...fe, consent: undefined })); }}
+                    aria-invalid={Boolean(fieldErrors.consent)}
+                    aria-describedby={fieldErrors.consent ? `${ids.consent}-error` : undefined}
                     style={{ marginTop: 2 }}
                   />
                   <span>I understand and consent to my photo being reviewed and, if approved, displayed publicly on the VSA website.</span>
                 </label>
+                <FieldError id={`${ids.consent}-error`} message={fieldErrors.consent} />
               </div>
 
               {formError && (
-                <p className="font-sans text-xs" role="alert" style={{ color: 'var(--color-danger, #dc2626)' }}>{formError}</p>
+                <div
+                  ref={errorRef}
+                  role="alert"
+                  className="rounded border p-3 font-sans text-xs leading-relaxed"
+                  style={{ color: DANGER, borderColor: DANGER, background: 'color-mix(in srgb, var(--color-danger, #dc2626) 8%, transparent)' }}
+                >
+                  {formError}
+                </div>
               )}
             </div>
 
