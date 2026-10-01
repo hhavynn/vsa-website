@@ -83,9 +83,12 @@ sql(admin[start:end])
 for migration in ["20261001000100_restrict_raw_member_reads.sql", "20261001000200_authorize_member_photo_uploads.sql"]:
     sql((root / migration).read_text())
 
+columns = sql("select string_agg(column_name, ',' order by column_name) from information_schema.columns where table_schema='public' and table_name='public_members'")
+assert columns == "college,events_attended,first_name,house,id,last_name,points,year", columns
+print("PASS public member view has exactly safe columns, excluding email and Auth UUID")
+
 for role in ["anon", "authenticated"]:
     assert sql("select count(*) from public.public_members", role) == "1100"
-    denied("select email from public.public_members", role)
     denied("update public.public_members set points=100", role)
     denied("delete from public.public_members", role)
     if role == "anon":

@@ -46,6 +46,12 @@ is assumed.
 - Jest: 53 suites, 449 tests pass, including new sheet and signed-upload regressions.
 - Deno: 8 AI handler tests and 6 photo broker tests pass; both Edge entrypoints typecheck.
 - Dev-server HTTP/security/shutdown integration test passes.
+- Actual local PostgreSQL 18 policy/ACL/concurrency tests pass for all three
+  migrations. Photo tests cover the exact safe projection, anonymous/ordinary
+  denial, admin access, service-only admission, same-IP/member/email concurrency,
+  rotating-IP global caps, and the lifetime budget. AI tests cover concurrent
+  session/IP/global limits, legacy logs, idempotent completion, abandoned
+  reservations, expiry, and unsupported-isolation rejection.
 - npm audit and npm audit --omit=dev: zero vulnerabilities.
 - Production artifact: 19 public routes × light/dark at 390 × 844; no page errors,
   horizontal overflow, or WCAG A/AA axe violations in the rendered states.
@@ -58,22 +64,38 @@ remain accepted by the repository validation policy.
 
 ## Rollout gate and order
 
-This PR is draft until database verification and owner review are complete.
-Docker's daemon was unavailable and no disposable PostgreSQL database was present,
-so actual SQL policy/concurrency execution is **unverified**. Portable guarded
-tests are included in `scripts/test-photo-upload-security.py` and
-`supabase/functions/vsa-ai-assistant/quota_postgres_test.py`; each requires an
-explicit disposable local database and never loads project environment files.
-No migration, Edge deployment, or production upload was performed.
+The owner authorized the reviewed rollout on October 1, 2026 (UTC). Docker remains
+unavailable; the portable tests ran successfully against dedicated fixture
+databases on the existing local PostgreSQL installation. The tests require an
+explicit disposable local database and never load project environment files.
+Production uses PostgreSQL 17.6; the fixture execution used PostgreSQL 18.
 
-1. Verify all three October migrations and the portable SQL tests in an approved
-   disposable/staging environment, then run the RLS runbook with ordinary/admin
-   test credentials and explicitly opted-in mutation tests there.
-2. Have a maintainer experienced with this repository's migrations review the
-   access changes and budgets. Apply the migrations manually only after approval.
-3. Deploy `member-photo-upload` (public endpoint with JWT gateway verification
-   disabled) and the updated `vsa-ai-assistant` after their migrations exist.
-4. Deploy the frontend/HSTS configuration; verify safe public lookup, admin raw
+Live read-only preflight confirmed enabled RLS, caller-bound admin authorization,
+the existing pending-request triggers/defaults, and a private photo bucket allowing
+JPEG/PNG/WebP with a 5 MiB ceiling. The new objects were absent before rollout.
+Only migration `20261001000300_atomic_ai_quota` has been applied and recorded
+atomically in production migration history. The updated `vsa-ai-assistant`
+(version 22, existing JWT verification preserved) and new `member-photo-upload`
+(version 1, public gateway) are deployed. Invalid-input HTTP smoke checks returned
+400 without creating reservations or calling the provider.
+Live read-only simulations using existing ordinary/admin profiles confirmed
+caller-bound helper behavior and the AI RPCs' internal service-role guards, even
+when invoked by the database owner. Profile identifiers were not exported.
+
+The two restrictive migrations and frontend/HSTS deployment remain pending
+Vercel authentication. Applying those restrictions before the compatible frontend
+is ready would disrupt public lookup and photo submissions. The photo broker
+fails closed for valid requests until its admission RPC exists. No production
+photo submission, test account creation, member-row mutation, or deletion was
+performed. Dedicated ordinary/admin credentials are unavailable, so real
+authenticated client verification remains an explicit gate.
+
+1. Prepare a production-environment frontend deployment without moving domains.
+2. Apply only the remaining two reviewed migrations manually, recording each
+   transaction in migration history; do not push unrelated pending migrations.
+3. Verify safe projection and browser/service grants, then promote the compatible
+   frontend promptly. Both required Edge Functions are already deployed.
+4. Verify the frontend/HSTS configuration, safe public lookup, admin raw
    access, a real signed upload, direct upload rejection, and concurrent AI quota
    rejection using dedicated approved test data.
 
