@@ -129,6 +129,7 @@ it('blocks link changes during an unsaved rename and clears the link on save', a
   expect(screen.getByText(/Renaming a node clears its member link/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Unlink' })).toBeDisabled();
 
+  // eslint-disable-next-line testing-library/no-node-access -- scoping to the correct row when multiple Save buttons exist
   const row = nameInput.closest('div.rounded.border') as HTMLElement;
   fireEvent.click(within(row).getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(linkUpdates()).toHaveLength(1));
