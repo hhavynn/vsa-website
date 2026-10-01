@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
 
 export interface TreeNode {
@@ -51,7 +52,9 @@ export function layoutTree(nodes: TreeNode[]): LayoutResult {
     if (n.parent && children[n.parent]) children[n.parent].push(n.id);
   });
 
-  const roots = nodes.filter((n) => !n.parent).map((n) => n.id);
+  // A Big who isn't in the tree (e.g. unpublished) leaves their Little as a
+  // root; otherwise that Little would never be placed.
+  const roots = nodes.filter((n) => !n.parent || !byId[n.parent]).map((n) => n.id);
 
   const widths: Record<string, number> = {};
   function computeWidth(id: string): number {
@@ -85,6 +88,84 @@ export function layoutTree(nodes: TreeNode[]): LayoutResult {
   return { positions, totalWidth: Math.max(cursor, 1), depthMax };
 }
 
+/**
+ * Ancestry of `targetId`, family root first and `targetId` last. Each member
+ * has a single Big (`parent`), so this is one chain; it stops at a Big who
+ * isn't in the tree or at a cycle. Empty when `targetId` isn't a node.
+ */
+export function lineagePath(
+  nodes: Pick<TreeNode, 'id' | 'parent'>[],
+  targetId: string | null | undefined,
+): string[] {
+  if (!targetId) return [];
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const path: string[] = [];
+  const seen = new Set<string>();
+  let current = byId.get(targetId);
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    path.push(current.id);
+    current = current.parent ? byId.get(current.parent) : undefined;
+  }
+  return path.reverse();
+}
+
+const LINEAGE_ROOT_LEAD_MS = 260;
+const LINEAGE_STEP_MAX_MS = 480;
+const LINEAGE_TRAVEL_BUDGET_MS = 2400;
+const LINEAGE_TRAVEL_SHARE = 0.78;
+
+export interface LineageTimeline {
+  /** When node `i` of the path lights up. */
+  nodeDelay: (i: number) => number;
+  /** When the light leaves node `i` toward node `i + 1`. */
+  edgeDelay: (i: number) => number;
+  edgeDuration: number;
+}
+
+/**
+ * Light leaves the root after a short lead, then crosses one generation per
+ * step. Deep lineages share a fixed budget so the trace never drags.
+ */
+export function lineageTimeline(pathLength: number, reduceMotion = false): LineageTimeline {
+  const generations = Math.max(pathLength - 1, 0);
+  if (reduceMotion || generations === 0) {
+    return { nodeDelay: () => 0, edgeDelay: () => 0, edgeDuration: 0 };
+  }
+  const step = Math.min(LINEAGE_STEP_MAX_MS, LINEAGE_TRAVEL_BUDGET_MS / generations);
+  const travel = Math.round(step * LINEAGE_TRAVEL_SHARE);
+  const edgeDelay = (i: number) => Math.round(LINEAGE_ROOT_LEAD_MS + i * step);
+  return {
+    nodeDelay: (i) => (i === 0 ? 0 : edgeDelay(i - 1) + travel),
+    edgeDelay,
+    edgeDuration: travel,
+  };
+}
+
+type Point = { x: number; y: number };
+
+function cubicLength(p0: Point, p1: Point, p2: Point, p3: Point): number {
+  const at = (t: number, a: number, b: number, c: number, d: number) => {
+    const u = 1 - t;
+    return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+  };
+  let length = 0;
+  let prev = p0;
+  for (let i = 1; i <= 24; i++) {
+    const t = i / 24;
+    const next = { x: at(t, p0.x, p1.x, p2.x, p3.x), y: at(t, p0.y, p1.y, p2.y, p3.y) };
+    length += Math.hypot(next.x - prev.x, next.y - prev.y);
+    prev = next;
+  }
+  return length;
+}
+
+const SPARK_LENGTH = 22;
+
+function lineageStyle(vars: Record<string, string>): React.CSSProperties {
+  return vars as React.CSSProperties;
+}
+
 interface FamilyTreeProps {
   nodes: TreeNode[];
   accent?: FamAccent;
@@ -103,6 +184,7 @@ export function FamilyTree({
   dark = false,
 }: FamilyTreeProps) {
   const layout = useMemo(() => layoutTree(nodes), [nodes]);
+  const reduceMotion = !!useReducedMotion();
 
   const unitX = compact ? 96 : 132;
   const unitY = compact ? 118 : 148;
@@ -120,7 +202,7 @@ export function FamilyTree({
     return { x: p.x * unitX + padX, y: p.y * unitY + padY };
   };
 
-  const edges: Array<{ id: string; d: string }> = [];
+  const edges: Array<{ id: string; d: string; length: number }> = [];
   nodes.forEach((n) => {
     if (!n.parent) return;
     if (!layout.positions[n.parent]) return;
@@ -130,8 +212,23 @@ export function FamilyTree({
     edges.push({
       id: `${n.parent}-${n.id}`,
       d: `M ${a.x} ${a.y + nodeR} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y - nodeR}`,
+      length: cubicLength(
+        { x: a.x, y: a.y + nodeR },
+        { x: a.x, y: my },
+        { x: b.x, y: my },
+        { x: b.x, y: b.y - nodeR },
+      ),
     });
   });
+  const edgeById = new Map(edges.map((e) => [e.id, e]));
+
+  const lineage = focusId ? lineagePath(nodes, focusId) : [];
+  const lineageIds = new Set(lineage);
+  const lineageEdges = lineage.slice(1).map((id, i) => edgeById.get(`${lineage[i]}-${id}`));
+  const lineageEdgeIds = new Set(lineageEdges.map((e) => e?.id));
+  const timeline = lineageTimeline(lineage.length, reduceMotion);
+  const lastIndex = lineage.length - 1;
+  const sparkCore = dark ? '#fff4dc' : '#fffaf0';
 
   const gridDot = dark ? 'rgba(255,255,255,0.06)' : 'rgba(20,32,40,0.08)';
   const patternId = `tree-grid-${accent}-${dark ? 'd' : 'l'}`;
@@ -142,6 +239,7 @@ export function FamilyTree({
       width={w}
       height={h}
       viewBox={`0 0 ${w} ${h}`}
+      className={`ace-family-tree${lineage.length > 0 ? ' has-lineage' : ''}`}
       style={{ display: 'block', maxWidth: 'none' }}
       role={onSelect ? 'group' : 'img'}
       aria-label="Family tree"
@@ -159,6 +257,7 @@ export function FamilyTree({
       {edges.map((e) => (
         <path
           key={e.id}
+          className={`ace-tree-edge${lineageEdgeIds.has(e.id) ? ' is-lineage' : ''}`}
           d={e.d}
           fill="none"
           stroke={A.edge}
@@ -168,6 +267,102 @@ export function FamilyTree({
         />
       ))}
 
+      {lineage.length > 0 && (
+        // Keyed by the selection so picking someone else replays the trace.
+        <g
+          key={`lineage-${focusId}`}
+          className={`ace-lineage${reduceMotion ? ' is-static' : ''}`}
+          data-testid="ace-lineage"
+          data-motion={reduceMotion ? 'reduced' : 'full'}
+          aria-hidden="true"
+          pointerEvents="none"
+        >
+          {lineageEdges.map((e, i) => e && (
+            <g
+              key={e.id}
+              data-lineage-edge={e.id}
+              style={lineageStyle({
+                '--lineage-len': `${e.length.toFixed(1)}px`,
+                '--lineage-spark': `${SPARK_LENGTH}px`,
+                '--lineage-delay': `${timeline.edgeDelay(i)}ms`,
+                '--lineage-dur': `${timeline.edgeDuration}ms`,
+              })}
+            >
+              <path
+                className="ace-lineage-glow"
+                d={e.d}
+                fill="none"
+                stroke={A.fill}
+                strokeWidth={8}
+                strokeLinecap="round"
+                strokeDasharray={e.length}
+              />
+              <path
+                className="ace-lineage-line"
+                d={e.d}
+                fill="none"
+                stroke={A.fill}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeDasharray={e.length}
+              />
+              {!reduceMotion && (
+                <>
+                  <path
+                    className="ace-lineage-spark ace-lineage-spark-glow"
+                    d={e.d}
+                    fill="none"
+                    stroke={A.fill}
+                    strokeWidth={10}
+                    strokeLinecap="round"
+                    strokeDasharray={`${SPARK_LENGTH} ${e.length + SPARK_LENGTH}`}
+                  />
+                  <path
+                    className="ace-lineage-spark"
+                    d={e.d}
+                    fill="none"
+                    stroke={sparkCore}
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeDasharray={`${SPARK_LENGTH} ${e.length + SPARK_LENGTH}`}
+                  />
+                </>
+              )}
+            </g>
+          ))}
+          {lineage.map((id, i) => {
+            const p = xy(id);
+            const isTarget = i === lastIndex;
+            return (
+              <g key={id} transform={`translate(${p.x}, ${p.y})`}>
+                {isTarget && !reduceMotion && (
+                  // Waiting socket: shows the tap landed while the light travels.
+                  <circle
+                    className="ace-lineage-socket"
+                    r={nodeR + 8}
+                    fill="none"
+                    stroke={A.fill}
+                    strokeWidth={1.5}
+                    strokeDasharray="3 5"
+                    style={lineageStyle({ '--lineage-delay': `${timeline.nodeDelay(i)}ms` })}
+                  />
+                )}
+                <circle
+                  className={`ace-lineage-halo${isTarget ? ' is-target' : ''}`}
+                  data-lineage-node={id}
+                  r={nodeR + (isTarget ? 8 : 6)}
+                  fill={A.ring}
+                  stroke={A.fill}
+                  strokeWidth={isTarget ? 2 : 1.5}
+                  strokeOpacity={isTarget ? 0.9 : 0.55}
+                  style={lineageStyle({ '--lineage-delay': `${timeline.nodeDelay(i)}ms` })}
+                />
+              </g>
+            );
+          })}
+        </g>
+      )}
+
       {nodes.map((n) => {
         const p = xy(n.id);
         const isFocus = focusId === n.id;
@@ -176,7 +371,8 @@ export function FamilyTree({
         return (
           <g
             key={n.id}
-            className="ace-tree-node"
+            className={`ace-tree-node${lineageIds.has(n.id) ? ' is-lineage' : ''}`}
+            data-node-id={n.id}
             transform={`translate(${p.x}, ${p.y})`}
             style={{ cursor: onSelect ? 'pointer' : 'default' }}
             onClick={() => onSelect && onSelect(n.id)}
@@ -190,7 +386,7 @@ export function FamilyTree({
               onSelect(n.id);
             } : undefined}
           >
-            {isFocus && <circle r={nodeR + 8} fill={A.ring} />}
+            {isFocus && !lineageIds.has(n.id) && <circle r={nodeR + 8} fill={A.ring} />}
             <circle
               r={nodeR}
               fill={isLittle ? A.node2bg : A.fill}
@@ -246,6 +442,27 @@ export function FamilyTree({
           </g>
         );
       })}
+
+      {lineage.length > 0 && !reduceMotion && (
+        // Arrival ripples sit above the nodes; the selected member pulses twice.
+        <g key={`lineage-fx-${focusId}`} className="ace-lineage-fx" aria-hidden="true" pointerEvents="none">
+          {lineage.map((id, i) => {
+            const p = xy(id);
+            return (
+              <g key={id} transform={`translate(${p.x}, ${p.y})`}>
+                <circle
+                  className={`ace-lineage-ripple${i === lastIndex ? ' is-target' : ''}`}
+                  r={nodeR + 2}
+                  fill="none"
+                  stroke={A.fill}
+                  strokeWidth={2}
+                  style={lineageStyle({ '--lineage-delay': `${timeline.nodeDelay(i)}ms` })}
+                />
+              </g>
+            );
+          })}
+        </g>
+      )}
     </svg>
   );
 }
