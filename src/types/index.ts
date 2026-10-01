@@ -250,6 +250,34 @@ export interface AceFamilyMember {
   updated_at: string;
 }
 
+export type AceAssignmentStatus = 'draft' | 'locked' | 'published' | 'archived';
+
+export interface AceAssignmentCycle {
+  id: string;
+  academic_year_start: number;
+  academic_year_end: number;
+  status: AceAssignmentStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AceAssignmentDraft {
+  id: string;
+  cycle_id: string;
+  little_name: string;
+  /** Canonical members.id for the Little, when known. */
+  little_member_id: string | null;
+  /** The Big's existing ace_family_members.id; the Big's family is the Little's family. */
+  big_ace_member_id: string | null;
+  /** The live ace_family_members node created at publish. */
+  published_ace_member_id: string | null;
+  notes: string | null;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HousePageAsset {
   id: string;
   academic_year_start: number;

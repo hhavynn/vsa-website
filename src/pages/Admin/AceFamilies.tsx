@@ -25,6 +25,7 @@ import { supabase } from '../../lib/supabase';
 import { toUserMessage } from '../../data/errors';
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
+import { AceAssignmentsWorkspace } from '../../components/features/admin/AceAssignmentsWorkspace';
 import {
   AceLinkReviewItem,
   AceMemberLinkChange,
@@ -468,6 +469,7 @@ function TreePreview({
 export default function AdminAceFamilies() {
   const queryClient = useQueryClient();
   const { families, loading, error, refetch } = useAdminAceFamilies();
+  const [view, setView] = useState<'families' | 'assignments'>('families');
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const selectedFamily = useMemo(
     () => families.find((f) => f.id === selectedFamilyId) ?? null,
@@ -874,6 +876,27 @@ export default function AdminAceFamilies() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <div role="tablist" aria-label="ACE admin sections" className="flex rounded border" style={{ borderColor: 'var(--color-border)' }}>
+            {(['families', 'assignments'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={view === tab}
+                onClick={() => setView(tab)}
+                className="px-4 py-2 text-[13px] font-semibold transition-colors"
+                style={{
+                  background: view === tab ? 'var(--color-surface2)' : 'transparent',
+                  color: view === tab ? 'var(--color-text)' : 'var(--color-text2)',
+                  border: 'none',
+                }}
+              >
+                {tab === 'families' ? 'Families' : 'Assignments'}
+              </button>
+            ))}
+          </div>
+          {view === 'families' && (
+          <>
           <button
             type="button"
             onClick={() => {
@@ -892,10 +915,12 @@ export default function AdminAceFamilies() {
           >
             + New Fam
           </button>
+          </>
+          )}
         </div>
       </div>
 
-      {importOpen && (
+      {view === 'families' && importOpen && (
         <div
           className="border-b"
           style={{ padding: '20px 28px', borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
@@ -1014,6 +1039,9 @@ export default function AdminAceFamilies() {
         </div>
       )}
 
+      {view === 'assignments' ? (
+        <AceAssignmentsWorkspace />
+      ) : (
       <div className="grid gap-6 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" style={{ padding: '20px 28px' }}>
         {/* Family list */}
         <div className="rounded-md border h-fit" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -1421,6 +1449,7 @@ export default function AdminAceFamilies() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
