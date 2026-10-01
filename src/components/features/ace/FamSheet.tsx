@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -12,10 +13,11 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { AceFamily, AceFamilyMember } from '../../../types';
 import { getDisplayFamName, isDeadFam, membersToTreeNodes } from '../../../lib/aceFamilyAdapter';
 import { getFamIconUrl } from '../../../lib/aceFamRoster';
-import { FamilyTree, TreeNode } from './FamilyTree';
+import { FamilyTree, TreeNode, lineagePath, lineageTimeline } from './FamilyTree';
 import { FamAccent } from './FamCover';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
@@ -46,6 +48,9 @@ const MAX_ZOOM = 8;
 const ZOOM_BUTTON_FACTOR = 1.2;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 const DEFAULT_ZOOM = 1;
+// Matches the .ace-sheet-rail max-height transition, so framing a lineage
+// measures the viewport after the rail has opened.
+const RAIL_OPEN_MS = 320;
 
 function clampZoom(next: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(next.toFixed(3))));
@@ -432,6 +437,75 @@ function usePannableTree(resetKey: string) {
     setOffset(nextOffset);
   }, [boundOffset]);
 
+  // Pans just enough to bring the given tree nodes into view. When they can't
+  // all fit, the last one (the selected member) wins, with as many of the
+  // nodes above it as the viewport allows.
+  const revealNodes = useCallback((ids: string[]) => {
+    const viewport = viewportRef.current;
+    const canvas = canvasRef.current;
+    if (!viewport || !canvas || !canvas.offsetWidth || ids.length === 0) return;
+    // Never yank the canvas out from under a pan or pinch in progress.
+    if (activePointersRef.current.size > 0) return;
+
+    const wanted = new Set(ids);
+    const elements = Array.from(canvas.querySelectorAll<SVGGElement>('[data-node-id]'))
+      .filter((el) => wanted.has(el.dataset.nodeId ?? ''));
+    if (elements.length === 0) return;
+
+    const canvasBox = canvas.getBoundingClientRect();
+    const renderedScale = canvasBox.width / canvas.offsetWidth;
+    const boxes = elements.map((el) => {
+      const box = el.getBoundingClientRect();
+      return {
+        left: (box.left - canvasBox.left) / renderedScale,
+        right: (box.right - canvasBox.left) / renderedScale,
+        top: (box.top - canvasBox.top) / renderedScale,
+        bottom: (box.bottom - canvasBox.top) / renderedScale,
+        id: el.dataset.nodeId,
+      };
+    });
+    const target = boxes.find((b) => b.id === ids[ids.length - 1]) ?? boxes[boxes.length - 1];
+    const scale = zoomRef.current;
+    const current = offsetRef.current;
+
+    const fitAxis = (
+      offset: number,
+      min: number,
+      max: number,
+      size: number,
+      fallback: () => number,
+    ): number => {
+      const lo = offset + min * scale;
+      const hi = offset + max * scale;
+      if (hi - lo > size - PAN_BOUND_PADDING * 2) return fallback();
+      if (lo < PAN_BOUND_PADDING) return offset + (PAN_BOUND_PADDING - lo);
+      if (hi > size - PAN_BOUND_PADDING) return offset - (hi - (size - PAN_BOUND_PADDING));
+      return offset;
+    };
+
+    const width = viewport.clientWidth;
+    const height = viewport.clientHeight;
+    const nextX = fitAxis(
+      current.x,
+      Math.min(...boxes.map((b) => b.left)),
+      Math.max(...boxes.map((b) => b.right)),
+      width,
+      () => width / 2 - ((target.left + target.right) / 2) * scale,
+    );
+    const nextY = fitAxis(
+      current.y,
+      Math.min(...boxes.map((b) => b.top)),
+      Math.max(...boxes.map((b) => b.bottom)),
+      height,
+      () => height - PAN_BOUND_PADDING - target.bottom * scale,
+    );
+    if (nextX === current.x && nextY === current.y) return;
+
+    const nextOffset = boundOffset({ x: nextX, y: nextY }, scale);
+    offsetRef.current = nextOffset;
+    setOffset(nextOffset);
+  }, [boundOffset]);
+
   const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
     const step = e.shiftKey ? 80 : 40;
     const moves: Record<string, PanOffset> = {
@@ -475,6 +549,7 @@ function usePannableTree(resetKey: string) {
     controls,
     isDragging,
     resetView,
+    revealNodes,
     viewportHandlers: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
@@ -501,10 +576,45 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
     [members, memberAvatars],
   );
   const pan = usePannableTree(`${family.id}:${treeNodes.length}`);
+  const reduceMotion = !!useReducedMotion();
+  const lineage = useMemo(() => lineagePath(treeNodes, selectedNode), [treeNodes, selectedNode]);
+  const timeline = lineageTimeline(lineage.length, reduceMotion);
 
   useEffect(() => {
     setSelectedNode(null);
   }, [family.id]);
+
+  // Frame the whole lineage once the rail has opened (or right away when it
+  // already is), so a tap deep in the tree still shows the light's journey.
+  const railWasOpenRef = useRef(false);
+  const { revealNodes } = pan;
+  useEffect(() => {
+    const railWasOpen = railWasOpenRef.current;
+    railWasOpenRef.current = lineage.length > 0;
+    if (lineage.length === 0) return;
+    const timer = window.setTimeout(() => revealNodes(lineage), railWasOpen ? 0 : RAIL_OPEN_MS);
+    return () => window.clearTimeout(timer);
+  }, [lineage, revealNodes]);
+
+  // Stable so it runs only when the trail mounts (it's keyed per selection),
+  // not on every pan re-render.
+  const scrollTrailToEnd = useCallback((list: HTMLOListElement | null) => {
+    if (list) list.scrollLeft = list.scrollWidth;
+  }, []);
+
+  const toggleNode = useCallback((id: string) => {
+    setSelectedNode((current) => (current === id ? null : id));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    const cleared = selectedNode;
+    setSelectedNode(null);
+    if (!cleared) return;
+    // The Clear button unmounts with the rail; hand focus back to the node.
+    const node = Array.from(pan.canvasRef.current?.querySelectorAll<SVGGElement>('[data-node-id]') ?? [])
+      .find((el) => el.dataset.nodeId === cleared);
+    node?.focus();
+  }, [pan.canvasRef, selectedNode]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -647,7 +757,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
                 nodes={treeNodes}
                 accent={accent}
                 focusId={selectedNode}
-                onSelect={(id) => setSelectedNode(id)}
+                onSelect={toggleNode}
                 compact={false}
                 dark={dark}
               />
@@ -658,6 +768,52 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
         <div className={`ace-sheet-rail ${selectedMember ? 'is-open' : ''}`}>
           {selectedMember ? (
             <div className="ace-rail-body">
+              <div className="ace-rail-lineage-row">
+                {lineage.length > 1 ? (
+                  <nav className="ace-rail-lineage" aria-label={`Lineage of ${selectedMember.name}`}>
+                    <div className="ace-rail-rel-h">Lineage</div>
+                    {/* Keyed by the selection so the steps replay with the light. */}
+                    <ol
+                      className="ace-rail-lineage-list"
+                      key={selectedMember.id}
+                      ref={scrollTrailToEnd}
+                    >
+                      {lineage.map((id, i) => {
+                        const step = memberById.get(id);
+                        if (!step) return null;
+                        const isCurrent = i === lineage.length - 1;
+                        return (
+                          // Ancestors appear as the light reaches them; the
+                          // selected member is named at once (the trail opens
+                          // scrolled to them).
+                          <li
+                            key={id}
+                            className="ace-rail-lineage-step"
+                            style={{ '--lineage-delay': `${isCurrent ? 0 : timeline.nodeDelay(i)}ms` } as CSSProperties}
+                          >
+                            {isCurrent ? (
+                              <span className="ace-rail-lineage-current" aria-current="true">{step.name}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="ace-rail-lineage-name"
+                                onClick={() => setSelectedNode(id)}
+                              >
+                                {step.name}
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </nav>
+                ) : (
+                  <div className="ace-rail-lineage" />
+                )}
+                <button type="button" className="ace-rail-clear" onClick={clearSelection}>
+                  Clear
+                </button>
+              </div>
               <div className="ace-rail-card">
                 <div className={`ace-rail-avatar ace-rail-avatar-${accent}${isLittle(selectedMember) ? ' is-little' : ''}`}>
                   {selectedPhotoUrl ? (
@@ -723,7 +879,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
             </div>
           ) : (
             <div className="ace-sheet-hint">
-              Tap a member to see their Big and Littles.
+              Tap a member to trace their lineage, Big, and Littles.
             </div>
           )}
         </div>

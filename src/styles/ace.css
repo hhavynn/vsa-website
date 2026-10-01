@@ -613,6 +613,94 @@
 }
 .ace-app .ace-tree-node:focus { outline: none; }
 .ace-app .ace-tree-node:focus-visible { outline: 2px solid var(--brand); outline-offset: 6px; }
+
+/* ── Lineage spotlight ────────────────────────────────────────────
+   Selecting a member traces root → … → them: unrelated branches dim, then
+   light travels down each connector and each ancestor glows as it is
+   reached. Final states are the base styles, so `animation: none`
+   (reduced motion) leaves the lineage lit without the journey. */
+.ace-app .ace-family-tree .ace-tree-node,
+.ace-app .ace-family-tree .ace-tree-edge {
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ace-app .ace-family-tree.has-lineage .ace-tree-node:not(.is-lineage) { opacity: 0.42; }
+.ace-app .ace-family-tree.has-lineage .ace-tree-edge:not(.is-lineage) { opacity: 0.22; }
+.ace-app .ace-family-tree.has-lineage .ace-tree-node:focus-visible { opacity: 1; }
+@media (hover: hover) {
+  .ace-app .ace-family-tree.has-lineage .ace-tree-node:not(.is-lineage):hover { opacity: 0.8; }
+}
+.ace-app .ace-lineage-line,
+.ace-app .ace-lineage-glow {
+  stroke-dashoffset: 0;
+  animation: ace-lineage-draw var(--lineage-dur, 0ms) cubic-bezier(0.45, 0, 0.25, 1) var(--lineage-delay, 0ms) both;
+}
+.ace-app .ace-lineage-glow { opacity: 0.16; }
+.ace-app .ace-lineage-spark {
+  opacity: 0;
+  animation: ace-lineage-spark var(--lineage-dur, 0ms) cubic-bezier(0.45, 0, 0.25, 1) var(--lineage-delay, 0ms) both;
+}
+.ace-app .ace-lineage-spark-glow { animation-name: ace-lineage-spark-glow; }
+.ace-app .ace-lineage-halo,
+.ace-app .ace-lineage-ripple,
+.ace-app .ace-lineage-socket {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ace-app .ace-lineage-halo {
+  animation: ace-lineage-node-on 0.42s cubic-bezier(0.22, 1, 0.36, 1) var(--lineage-delay, 0ms) both;
+}
+.ace-app .ace-lineage-ripple {
+  opacity: 0;
+  animation: ace-lineage-ripple 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--lineage-delay, 0ms) both;
+}
+.ace-app .ace-lineage-ripple.is-target {
+  animation-duration: 0.9s;
+  animation-iteration-count: 2;
+}
+.ace-app .ace-lineage-socket {
+  opacity: 0.6;
+  animation:
+    ace-lineage-fade-in 0.2s ease-out both,
+    ace-lineage-spin 7s linear infinite,
+    ace-lineage-fade-out 0.25s ease-out var(--lineage-delay, 0ms) forwards;
+}
+@keyframes ace-lineage-draw {
+  from { stroke-dashoffset: var(--lineage-len); }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes ace-lineage-spark {
+  0%   { stroke-dashoffset: var(--lineage-spark); opacity: 0; }
+  12%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { stroke-dashoffset: calc(var(--lineage-len) * -1); opacity: 0; }
+}
+@keyframes ace-lineage-spark-glow {
+  0%   { stroke-dashoffset: var(--lineage-spark); opacity: 0; }
+  12%  { opacity: 0.35; }
+  85%  { opacity: 0.35; }
+  100% { stroke-dashoffset: calc(var(--lineage-len) * -1); opacity: 0; }
+}
+@keyframes ace-lineage-node-on {
+  0%   { opacity: 0; transform: scale(0.55); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ace-lineage-ripple {
+  0%   { opacity: 0.85; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+@keyframes ace-lineage-fade-in  { from { opacity: 0; } }
+@keyframes ace-lineage-fade-out { to { opacity: 0; } }
+@keyframes ace-lineage-spin     { to { transform: rotate(360deg); } }
+.ace-app .ace-lineage.is-static * { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ace-app .ace-family-tree .ace-tree-node,
+  .ace-app .ace-family-tree .ace-tree-edge { transition: none; }
+  .ace-app .ace-lineage * { animation: none; }
+  .ace-app .ace-lineage-fx,
+  .ace-app .ace-lineage-spark,
+  .ace-app .ace-lineage-socket { display: none; }
+}
 .ace-app .ace-tree-canvas {
   transform-origin: 0 0;
   will-change: transform;
@@ -739,6 +827,63 @@
 .ace-app .ace-rail-chip-dot-gold.is-little  { color: var(--gold-strong); }
 .ace-app .ace-rail-empty {
   font-size: 12.5px; color: var(--text-3); font-style: italic;
+}
+.ace-app .ace-rail-lineage-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.ace-app .ace-rail-lineage { min-width: 0; flex: 1; }
+.ace-app .ace-rail-lineage-list {
+  list-style: none; margin: 2px 0 0; padding: 2px 0;
+  display: flex; align-items: center;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* One swipeable row, opened at the selected member; the fade hints at the
+     ancestors scrolled off to the left. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px);
+  mask-image: linear-gradient(to right, transparent 0, #000 18px);
+  padding-left: 14px;
+}
+.ace-app .ace-rail-lineage-list::-webkit-scrollbar { display: none; }
+.ace-app .ace-rail-lineage-step {
+  display: inline-flex; align-items: center; flex-shrink: 0; white-space: nowrap;
+  animation: ace-lineage-fade-in 0.3s ease-out var(--lineage-delay, 0ms) both;
+}
+.ace-app .ace-rail-lineage-step + .ace-rail-lineage-step::before {
+  content: "→";
+  margin: 0 6px;
+  color: var(--text-3);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+.ace-app .ace-rail-lineage-name {
+  border: 0; padding: 4px 2px; background: none;
+  font-family: "DM Sans", sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--text-2);
+  text-decoration: underline dotted var(--border-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ace-app .ace-rail-lineage-name:hover { color: var(--text); }
+.ace-app .ace-rail-lineage-name:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+.ace-app .ace-rail-lineage-current {
+  font-family: "DM Serif Display", Georgia, serif; font-style: italic;
+  font-size: 15px; color: var(--text);
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--brand-soft);
+}
+.ace-app .ace-rail-clear {
+  flex-shrink: 0;
+  min-height: 36px; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-2); color: var(--text-2);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ace-app .ace-rail-clear:hover { border-color: var(--border-strong); color: var(--text); }
+.ace-app .ace-rail-clear:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .ace-app .ace-rail-lineage-step { animation: none; }
 }
 
 @media (max-width: 520px) {
