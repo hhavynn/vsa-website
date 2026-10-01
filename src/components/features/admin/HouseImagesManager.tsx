@@ -10,6 +10,7 @@ import { formatAcademicYear, getAcademicTermMeta } from '../../../lib/academicTe
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../../lib/imageUpload';
 import { supabase } from '../../../lib/supabase';
 import { HousePageAsset } from '../../../types';
+import { sanitizeImageSrc } from '../../../utils/sanitizeUrl';
 
 type HouseAssetDraft = {
   house_key: string;
@@ -452,7 +453,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
                     style={{ borderColor: 'var(--color-border)', background: `linear-gradient(135deg, ${color}22, var(--color-surface2))` }}
                   >
                     {previewUrl ? (
-                      <img src={previewUrl} alt={draft.image_alt} className="h-full w-full object-cover" />
+                      <img src={sanitizeImageSrc(previewUrl)} alt={draft.image_alt} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
                         <span className="font-serif text-3xl italic" style={{ color: 'var(--color-border)' }}>VSA</span>
@@ -563,7 +564,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
                           style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
                         >
                           {parentPreviewUrl ? (
-                            <img src={parentPreviewUrl} alt={`${draft.display_name} House Parent announcement`} className="max-h-full max-w-full object-contain" />
+                            <img src={sanitizeImageSrc(parentPreviewUrl)} alt={`${draft.display_name} House Parent announcement`} className="max-h-full max-w-full object-contain" />
                           ) : (
                             <span className="px-3 text-center font-serif text-lg italic" style={{ color: 'var(--color-border)' }}>Parents</span>
                           )}

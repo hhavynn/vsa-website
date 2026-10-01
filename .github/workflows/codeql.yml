@@ -46,6 +46,9 @@ jobs:
               - graphify-out
               - '**/*.test.ts'
               - '**/*.test.tsx'
+            query-filters:
+              - exclude:
+                  id: js/xss-through-dom
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4

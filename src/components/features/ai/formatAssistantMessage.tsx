@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { sanitizeHref } from '../../../utils/sanitizeUrl';
 
 // Ask VSA answers come back from Gemini as lightweight markdown. This renders
 // the subset the model actually emits — paragraphs, bullet/numbered lists,
@@ -101,31 +102,6 @@ function isInternalUrl(url: string) {
   return url.startsWith("/") && !url.startsWith("//");
 }
 
-function sanitizeUrl(url: string): string | null {
-  let encoded: string;
-  try {
-    // Escape spaces, quotes, angle brackets and backslashes (so "/\host" can't
-    // act like "//host"), then restore percent-escapes that were already valid.
-    encoded = encodeURI(url.trim()).replace(/%25([0-9A-Fa-f]{2})/g, "%$1");
-  } catch {
-    return null;
-  }
-
-  if (isInternalUrl(encoded)) {
-    return encoded;
-  }
-
-  try {
-    const parsed = new URL(encoded);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.toString();
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
 
 // Drop markers the model left unbalanced (e.g. a truncated "**Note:") so raw
 // asterisks never show up in the bubble.
@@ -149,8 +125,9 @@ export function renderInline(text: string, keyPrefix = "i"): ReactNode[] {
 
     if (label !== undefined) {
       const children = renderInline(label, `${key}-l`);
-      const safeUrl = sanitizeUrl(url);
-      if (!safeUrl) {
+      const encoded = encodeURI(url.trim()).replace(/%25([0-9A-Fa-f]{2})/g, '%$1');
+      const safeUrl = sanitizeHref(encoded);
+      if (safeUrl === '#') {
         nodes.push(...children);
       } else if (isInternalUrl(safeUrl)) {
         nodes.push(
