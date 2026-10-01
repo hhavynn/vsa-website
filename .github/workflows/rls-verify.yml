@@ -8,10 +8,10 @@ name: RLS verification
 #     (#472): they are filtered on a nil key that is read first, so they
 #     never match a row.
 #   - The signed-in sections (enabled only when RLS_TEST_* secrets exist) use
-#     non-destructive probes since #428: inserts collide with a constraint that
-#     is checked after RLS, and updates write a row's current values back.
+#     reads and the same zero-row view probes. Base-table INSERT/UPDATE probes
+#     require explicit mutation opt-in; even no-op updates can fire triggers.
 #   - RLS_ALLOW_MUTATION_TESTS is deliberately never set here, so the admin
-#     manual-check-in insert/delete probe never runs in CI.
+#     manual-check-in insert/delete and base-table write probes never run in CI.
 #
 # Why a schedule as well as PRs: RLS regressions here have come from database
 # changes made outside PRs (#422, #423 found dashboard-created policies), which

@@ -27,14 +27,14 @@
     "react-hot-toast": "^2.6.1",
     "react-icons": "^5.7.0",
     "react-query": "^3.39.3",
-    "react-router-dom": "^6.30.6",
+    "react-router-dom": "^7.18.4",
     "tailwind-merge": "^3.7.0",
     "typescript": "^4.9.5",
     "web-vitals": "^6.2.2",
     "zod": "^3.25.76"
   },
   "scripts": {
-    "start": "node ./node_modules/react-scripts/bin/react-scripts.js start",
+    "start": "node scripts/start-dev.cjs",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
@@ -60,7 +60,10 @@
   "jest": {
     "transformIgnorePatterns": [
       "node_modules/(?!(zod|@hookform/resolvers)/)"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+    }
   },
   "browserslist": {
     "production": [
@@ -83,5 +86,21 @@
     "source-map-explorer": "^2.5.3",
     "tailwindcss": "^3.3.5",
     "tsx": "^4.23.15"
+  },
+  "overrides": {
+    "@svgr/webpack": "6.5.1",
+    "resolve-url-loader": "5.0.0",
+    "serialize-javascript": "7.1.2",
+    "webpack-dev-middleware": "7.4.5",
+    "http-proxy-agent": {
+      "@tootallnate/once": "2.0.1"
+    },
+    "jsonpath": {
+      "underscore": "1.13.8"
+    },
+    "sockjs": {
+      "uuid": "11.1.1"
+    },
+    "webpack-dev-server": "5.2.6"
   }
 }

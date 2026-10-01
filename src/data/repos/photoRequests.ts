@@ -33,44 +33,39 @@ export interface MemberMatchOption {
 }
 
 export class PhotoRequestsRepository {
-  /**
-   * Public flow: compress the photo client-side, upload it to the PRIVATE
-   * pending bucket under a non-readable public-submission folder, then create
-   * the request row. RLS only allows pending, consented, matched-member rows.
-   */
+  /** Public submissions reserve server quota before a one-object signed upload. */
   async submitPhotoRequest(input: SubmitPhotoRequestInput): Promise<void> {
     return withErrorHandling(async () => {
       if (!input.consentConfirmed) {
         throw new ValidationError('Consent is required to submit a photo request.');
       }
-
       const matchedMemberId = input.matchedMemberId.trim();
       if (!matchedMemberId) {
         throw new ValidationError('Choose a member before submitting a photo request.');
       }
-
       const { file } = await prepareImageForUpload(input.file, 'avatar');
-      const ext = getUploadExtension(file);
-      const pendingPath = `pending/${crypto.randomUUID()}.${ext}`;
-
+      const { data, error } = await supabase.functions.invoke<{
+        path?: string;
+        token?: string;
+      }>('member-photo-upload', {
+        body: {
+          matchedMemberId,
+          submittedName: input.submittedName.trim(),
+          submittedEmail: input.submittedEmail.trim(),
+          noteToAdmins: input.noteToAdmins?.trim() || null,
+          consentConfirmed: true,
+          contentType: file.type,
+          size: file.size,
+        },
+      });
+      if (error) throw error;
+      if (!data?.path || !data.token || !/^pending\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(data.path)) {
+        throw new ValidationError('Photo upload is unavailable. Please try again later.');
+      }
       const { error: uploadError } = await supabase.storage
         .from(PENDING_PHOTO_BUCKET)
-        .upload(pendingPath, file, { contentType: file.type });
+        .uploadToSignedUrl(data.path, data.token, file, { contentType: file.type });
       if (uploadError) throw uploadError;
-
-      const { error: insertError } = await supabase.from('member_photo_requests').insert({
-        user_id: null,
-        matched_member_id: matchedMemberId,
-        submitted_name: input.submittedName.trim(),
-        submitted_email: input.submittedEmail.trim(),
-        note_to_admins: input.noteToAdmins?.trim() || null,
-        consent_confirmed: true,
-        storage_path_pending: pendingPath,
-      });
-      if (insertError) {
-        await supabase.storage.from(PENDING_PHOTO_BUCKET).remove([pendingPath]);
-        throw insertError;
-      }
     }, 'Failed to submit photo request');
   }
 
@@ -326,13 +321,13 @@ export class PhotoRequestsRepository {
       const term = query.trim().replace(/[,()%.]/g, '');
       if (term.length < 2) return [];
       const { data, error } = await supabase
-        .from('members')
+        .from('public_members')
         .select('id, first_name, last_name, college, year')
         .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
         .order('last_name', { ascending: true })
         .limit(10);
       if (error) throw error;
-      return (data ?? []).map((m: any) => ({
+      return (data ?? []).map((m) => ({
         id: m.id,
         displayName: [`${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(), m.college, m.year]
           .filter(Boolean)
@@ -346,7 +341,7 @@ export class PhotoRequestsRepository {
     if (!memberId) return null;
     return withErrorHandling(async () => {
       const { data, error } = await supabase
-        .from('members')
+        .from('public_members')
         .select('id, first_name, last_name, college, year')
         .eq('id', memberId)
         .maybeSingle();
@@ -370,7 +365,7 @@ export class PhotoRequestsRepository {
         .eq('user_id', userId)
         .limit(1);
       if (error) throw error;
-      const m: any = data?.[0];
+      const m = data?.[0];
       if (!m) return null;
       return {
         id: m.id,

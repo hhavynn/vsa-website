@@ -510,7 +510,7 @@ export function Events() {
         const uniqueMemberIds = Array.from(new Set(rows.map((r) => r.member_id)));
 
         const { data: memberRows } = await supabase
-          .from('members')
+          .from('public_members')
           .select('id, house')
           .in('id', uniqueMemberIds);
 
@@ -904,7 +904,12 @@ export function Events() {
               </div>
             ) : (
               <RevealOnScrollWrapper>
-                <div className="flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto pb-4 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:overflow-visible md:pb-0 xl:grid-cols-3">
+                <div
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Past events"
+                  className="flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto pb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 [-webkit-overflow-scrolling:touch] md:grid md:snap-none md:grid-cols-2 md:overflow-visible md:pb-0 xl:grid-cols-3"
+                >
                   {archivedEvents.map((event: Event, index: number) => (
                     <PastEventMemoryCard
                       key={event.id}

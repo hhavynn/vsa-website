@@ -90,6 +90,21 @@ const RequestSchema = z.object({
   currentPage: z.string().trim().max(120).optional(),
 });
 
+function createAssistantClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    },
+  );
+}
+
+type AssistantClient = ReturnType<typeof createAssistantClient>;
+
 type AssistantStatus = "answered" | "fallback" | "rate_limited" | "error";
 
 interface KnowledgeSnippet {
@@ -245,10 +260,11 @@ function sourceChips(snippets: KnowledgeSnippet[], hasEventContext: boolean): So
 }
 
 async function logUsage(
-  supabaseClient: ReturnType<typeof createClient>,
+  supabaseClient: AssistantClient,
   payload: {
     sessionIdHash: string;
     ipHash: string | null;
+    reservationId?: string | null;
     matchedKnowledgeIds?: string[];
     status: AssistantStatus;
     messageLength: number;
@@ -256,7 +272,19 @@ async function logUsage(
     currentPage?: string;
   },
 ) {
-  await supabaseClient.from("ai_chat_usage_logs").insert({
+  if (payload.reservationId) {
+    const { error } = await supabaseClient.rpc("complete_ai_quota", {
+      p_reservation_id: payload.reservationId,
+      p_status: payload.status,
+      p_message_length: payload.messageLength,
+      p_matched_knowledge_ids: payload.matchedKnowledgeIds ?? [],
+      p_blocked_reason: payload.blockedReason ?? null,
+      p_current_page: payload.currentPage ?? null,
+    });
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabaseClient.from("ai_chat_usage_logs").insert({
     session_id_hash: payload.sessionIdHash,
     ip_hash: payload.ipHash,
     message_count: 1,
@@ -268,45 +296,49 @@ async function logUsage(
       current_page: payload.currentPage ?? null,
     },
   });
-}
-
-async function countUsage(
-  supabaseClient: ReturnType<typeof createClient>,
-  column: "session_id_hash" | "ip_hash",
-  value: string,
-  since: Date,
-) {
-  const { count, error } = await supabaseClient
-    .from("ai_chat_usage_logs")
-    .select("id", { count: "exact", head: true })
-    .eq(column, value)
-    .gte("created_at", since.toISOString());
-
   if (error) throw error;
-  return count ?? 0;
 }
 
-async function getRateLimitReason(
-  supabaseClient: ReturnType<typeof createClient>,
+async function reserveQuota(
+  supabaseClient: AssistantClient,
   sessionIdHash: string,
   ipHash: string | null,
-) {
-  const now = Date.now();
-  const sessionDay = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 24 * 60 * 60 * 1000));
-  if (sessionDay >= 5) return "session_daily_limit";
-
-  const sessionBurst = await countUsage(supabaseClient, "session_id_hash", sessionIdHash, new Date(now - 5 * 60 * 1000));
-  if (sessionBurst >= 2) return "session_5_minute_limit";
-
-  if (ipHash) {
-    const ipDay = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 24 * 60 * 60 * 1000));
-    if (ipDay >= 50) return "ip_daily_limit";
-
-    const ipHour = await countUsage(supabaseClient, "ip_hash", ipHash, new Date(now - 60 * 60 * 1000));
-    if (ipHour >= 10) return "ip_hourly_limit";
+): Promise<{ reservationId: string | null; blockedReason: string | null }> {
+  const { data, error } = await supabaseClient.rpc("reserve_ai_quota", {
+    p_session_id_hash: sessionIdHash,
+    p_ip_hash: ipHash,
+  });
+  if (error) throw error;
+  const result: unknown = data;
+  if (
+    !result || typeof result !== "object" ||
+    !("reservation_id" in result) || !("blocked_reason" in result)
+  ) {
+    throw new Error("Invalid quota admission response");
   }
-
-  return null;
+  const reservationId = result.reservation_id;
+  const blockedReason = result.blocked_reason;
+  const reasons = [
+    "session_daily_limit",
+    "session_5_minute_limit",
+    "ip_daily_limit",
+    "ip_hourly_limit",
+    "global_daily_limit",
+    "global_hourly_limit",
+  ];
+  if (
+    typeof reservationId === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reservationId) && blockedReason === null
+  ) {
+    return { reservationId, blockedReason: null };
+  }
+  if (
+    reservationId === null && typeof blockedReason === "string" &&
+    reasons.includes(blockedReason)
+  ) {
+    return { reservationId: null, blockedReason };
+  }
+  throw new Error("Invalid quota admission response");
 }
 
 // VSA vocabulary/slang expansion: when the query uses a nickname or acronym,
@@ -356,7 +388,7 @@ function expandQuerySynonyms(query: string): string {
   return `${query} or ${Array.from(additions).join(" or ")}`;
 }
 
-async function matchKnowledge(supabaseClient: ReturnType<typeof createClient>, queryText: string) {
+async function matchKnowledge(supabaseClient: AssistantClient, queryText: string) {
   const { data, error } = await supabaseClient.rpc("match_ai_knowledge_base", {
     query_text: queryText,
     match_limit: 8,
@@ -386,7 +418,7 @@ function anyWordQuery(query: string): string {
 // appended, which made "/events" etc. a required term that no row contains,
 // so the same question answered on one page and failed on another.
 async function retrieveKnowledge(
-  supabaseClient: ReturnType<typeof createClient>,
+  supabaseClient: AssistantClient,
   message: string,
 ) {
   const expandedQuery = expandQuerySynonyms(message);
@@ -397,7 +429,7 @@ async function retrieveKnowledge(
   return loose ? matchKnowledge(supabaseClient, loose) : [];
 }
 
-async function getUpcomingEventsContext(supabaseClient: ReturnType<typeof createClient>) {
+async function getUpcomingEventsContext(supabaseClient: AssistantClient) {
   const { data, error } = await supabaseClient
     .from("events")
     .select("name, date, location, event_type, points, description")
@@ -450,6 +482,7 @@ async function callGemini({
 
   const response = await fetch(endpoint, {
     method: "POST",
+    signal: AbortSignal.timeout(30_000),
     headers: {
       "x-goog-api-key": apiKey,
       "Content-Type": "application/json",
@@ -494,20 +527,12 @@ serve(async (req) => {
     return jsonResponse(req, { error: "Method not allowed", status: "error" }, 405);
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    },
-  );
+  const supabaseClient = createAssistantClient();
 
   let parsed: z.infer<typeof RequestSchema> | null = null;
   let sessionIdHash = "";
   let ipHash: string | null = null;
+  let reservationId: string | null = null;
 
   try {
     const body = await req.json();
@@ -525,6 +550,7 @@ serve(async (req) => {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "fallback",
         messageLength: parsed.message.length,
         blockedReason: "disabled",
@@ -533,11 +559,14 @@ serve(async (req) => {
       return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
     }
 
-    const rateLimitReason = await getRateLimitReason(supabaseClient, sessionIdHash, ipHash);
+    const admission = await reserveQuota(supabaseClient, sessionIdHash, ipHash);
+    reservationId = admission.reservationId;
+    const rateLimitReason = admission.blockedReason;
     if (rateLimitReason) {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "rate_limited",
         messageLength: parsed.message.length,
         blockedReason: rateLimitReason,
@@ -554,6 +583,7 @@ serve(async (req) => {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "fallback",
         messageLength: parsed.message.length,
         blockedReason: isSafetyRedirect(parsed.message) ? "safety_redirect" : "private_info_request",
@@ -571,6 +601,7 @@ serve(async (req) => {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "fallback",
         messageLength: parsed.message.length,
         blockedReason: "no_relevant_context",
@@ -584,6 +615,7 @@ serve(async (req) => {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "error",
         messageLength: parsed.message.length,
         matchedKnowledgeIds: snippets.map((snippet) => snippet.id),
@@ -614,6 +646,7 @@ serve(async (req) => {
     await logUsage(supabaseClient, {
       sessionIdHash,
       ipHash,
+      reservationId,
       status: "answered",
       messageLength: parsed.message.length,
       matchedKnowledgeIds: snippets.map((snippet) => snippet.id),
@@ -632,6 +665,7 @@ serve(async (req) => {
       await logUsage(supabaseClient, {
         sessionIdHash,
         ipHash,
+        reservationId,
         status: "error",
         messageLength: parsed.message.length,
         blockedReason: "unexpected_error",

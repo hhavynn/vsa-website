@@ -23,6 +23,12 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_chat_quota_reservations: {
+        Row: { id: string; session_id_hash: string; ip_hash: string | null; created_at: string };
+        Insert: { id?: string; session_id_hash: string; ip_hash?: string | null; created_at?: string };
+        Update: { id?: string; session_id_hash?: string; ip_hash?: string | null; created_at?: string };
+        Relationships: [];
+      };
       academic_terms: {
         Row: {
           academic_year_end: number;
@@ -2120,6 +2126,12 @@ export type Database = {
           },
         ];
       };
+      member_photo_upload_reservations: {
+        Row: { request_id: string; ip_hash: string; created_at: string };
+        Insert: { request_id: string; ip_hash: string; created_at?: string };
+        Update: { request_id?: string; ip_hash?: string; created_at?: string };
+        Relationships: [];
+      };
       member_photo_requests: {
         Row: {
           admin_notes: string | null;
@@ -2786,6 +2798,19 @@ export type Database = {
       };
     };
     Views: {
+      public_members: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          college: string | null;
+          year: string | null;
+          house: string | null;
+          points: number;
+          events_attended: number;
+        };
+        Relationships: [];
+      };
       house_all_time_points: {
         Row: {
           academic_year_end: number | null;
@@ -3307,6 +3332,26 @@ export type Database = {
       };
     };
     Functions: {
+      reserve_ai_quota: {
+        Args: { p_session_id_hash: string; p_ip_hash: string | null };
+        Returns: Json;
+      };
+      complete_ai_quota: {
+        Args: { p_reservation_id: string; p_status: string; p_message_length: number; p_matched_knowledge_ids: string[]; p_blocked_reason: string | null; p_current_page: string | null };
+        Returns: undefined;
+      };
+      reserve_member_photo_upload: {
+        Args: {
+          p_ip_hash: string;
+          p_member_id: string;
+          p_name: string;
+          p_email: string;
+          p_note: string | null;
+          p_content_type: string;
+          p_size: number;
+        };
+        Returns: { request_id: string; pending_path: string }[];
+      };
       admin_publish_member_photo: {
         Args: {
           p_approved_path: string;

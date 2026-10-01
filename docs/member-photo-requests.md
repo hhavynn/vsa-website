@@ -32,15 +32,30 @@ One row per submission. Key columns:
 - `reviewed_by`.
 - `reviewed_at`.
 
-RLS:
-- **INSERT**: `anon` and `authenticated` roles can insert under strict checks:
-  - `status = 'pending'`
-  - `consent_confirmed = true`
-  - `matched_member_id` is set
-  - All review, approved, and rejected fields are null
-  - If logged in, `user_id` matches `auth.uid()`; if logged out, `user_id` is null.
+RLS (after `20261001000200_authorize_member_photo_uploads.sql`):
+- **INSERT**: Browser roles have no direct INSERT grant. The service-only `reserve_member_photo_upload` RPC creates the pending, consented row atomically with the quota reservation.
 - **SELECT**: Admins only (`public.is_admin_user`).
-- **UPDATE/DELETE**: No client policies. Every transition runs through admin-guarded `SECURITY DEFINER` RPCs: `approve_member_photo_request`, `reject_member_photo_request`, `remove_member_photo_request`.
+- **UPDATE/DELETE**: No client policies. Every transition runs through admin-guarded review RPCs.
+
+### Upload broker and capacity budget (October 2026 hardening)
+
+Public visitors invoke `member-photo-upload` with metadata only. The broker validates a member UUID, UCSD email, consent, JPEG/PNG/WebP MIME, a positive size up to 5 MiB, and bounded names/notes/body. It derives a SHA-256 HMAC identity using the server-only service-role key and a domain-separated IP input. Raw IPs are never persisted or logged. `cf-connecting-ip` is best effort; absent/invalid headers share one identity. Header provenance is not an authorization boundary: the global and lifetime budgets remain effective if an attacker varies an IP header.
+
+`reserve_member_photo_upload(text, uuid, text, text, text, text, integer)` is service-role-only, SECURITY DEFINER with an empty search path and an internal service-role guard. A transaction advisory lock serializes the pending/member and pending/email trigger checks with all public reservations. Admission ceilings are 5 per IP identity / rolling 24 hours, 100 global / rolling 24 hours, and 1000 lifetime reservations. Existing pending limits remain 3 per member and 5 per submitted email. The request and reservation commit before signing. Signing/upload failures consume budget and can leave an empty pending request; an admin preview then fails and the request can be rejected through the existing workflow.
+
+The Edge Function returns a signed upload capability for exactly one server-generated `pending/<request UUID>.<extension>` path with `upsert:false`. The frontend calls `uploadToSignedUrl`; it never uploads anonymously through `.upload()` or inserts a request row. Tokens expire after two hours and cannot overwrite an existing object. The private bucket's 5 MiB/MIME constraints remain the server payload ceiling. The client-reported size is validated but the token does not bind the actual payload size, so capacity accounting reserves the full 5 MiB per token. Signed upload mechanics: [Supabase createSignedUploadUrl](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl), [uploadToSignedUrl](https://supabase.com/docs/reference/javascript/storage-from-uploadtosignedurl).
+
+The lifetime ceiling deliberately bounds newly authorized public originals to approximately 5 GiB, including abandoned uploads and retained/superseded originals. Reviewed requests do not release this budget. This does not bound pre-existing objects or admin uploads. Once 1000 reservations are reached, an owner must review actual bucket capacity and retention needs before increasing the limit through another reviewed migration. Do not automatically delete objects or reset counters. Auth key rotation changes per-IP identities; global/lifetime accounting is unaffected.
+
+Direct browser INSERT into the private bucket is now admin-only, preserving Admin → Members publishing. Public pending objects remain unreadable, avatar publication remains admin-only, and service-role keys never leave the Edge Function.
+
+### Deployment order and verification
+
+Apply `20261001000100_restrict_raw_member_reads.sql` and `20261001000200_authorize_member_photo_uploads.sql` manually, then deploy `member-photo-upload` with `supabase functions deploy member-photo-upload --no-verify-jwt`, then deploy the frontend. The endpoint intentionally accepts anonymous metadata and owns validation/quota enforcement. It uses only standard Supabase `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; no new provider or secret is needed. This change is not active until those manual deployments occur. During the interval between migration and broker/frontend deployment, public submissions fail closed.
+
+For rollback, keep restrictive policies and grants: restore service availability by fixing/redeploying the broker. Do not restore anonymous Storage INSERT.
+
+Local verification: `deno test supabase/functions/member-photo-upload/handler.test.ts`; targeted Jest photo submission/admin publishing tests; disposable Postgres role/RLS/quota/concurrency tests. The read-only default of `scripts/verify-rls-security.mjs` checks public projection access, raw-table counts for ordinary accounts, and admin grants. Write probes require `RLS_ALLOW_MUTATION_TESTS=true` and belong in an owner-approved local/staging environment. A staging end-to-end check must prove direct anonymous Storage INSERT is rejected, signed upload succeeds once, replay cannot overwrite, bucket oversize/MIME rejects, pending preview is admin-only, and public avatars stay approval-only. No live upload or account creation is needed for the local checks.
 
 ### `member_photo_request_events`
 
@@ -69,20 +84,11 @@ One approved photo shows everywhere a person appears publicly. `public_member_av
 - **Public pages make one bulk query** (`public_member_avatars`) instead of the previous per-row `user_profiles` lookups, and thumbnails are CDN-cacheable at a stable path.
 - The legacy self-serve write policies on the `avatars` bucket were dropped; only admins can write there now. Public SELECT on `avatars` is unchanged so existing and approved images keep serving from the CDN.
 
-### Storage Abuse & Cleanup Considerations
-Since any public visitor can upload files to the `pending/` directory of the `member-photo-requests` bucket to submit a photo request:
-1. **Private Bucket**: The `member-photo-requests` bucket is completely private. Anonymous users have no read, update, or delete access to it. They can only perform `INSERT`.
-2. **Database Rate Limits**: Enforced via a `BEFORE INSERT` trigger on the database (`guard_member_photo_request_rate_limit`):
-   - **Max 3 pending requests per matched member**: Prevents spamming requests for a single individual.
-   - **Max 5 pending requests per normalized requester email**: Prevents a single email address from flooding the admin inbox with requests.
-   - Triggers throw a generic database error message on violation to avoid leaking email/member details.
-   - Only `pending` inserts are counted and limited (`20260930053224`). Admin uploads insert already-approved rows, so a backlog of public requests for a member cannot block them.
-3. **Honeypot Field**: The public form contains a visually hidden honeypot text field (`middle_name`) styled off-screen. Real users cannot see or focus/tab into it, but spam bots will fill it. If filled, the client UI silently drops the submission (exhibiting success behavior on-screen but performing no uploads or database writes).
-4. **Stale Uploads Cleanup**: A utility script is available at `scripts/cleanup-stale-photo-requests.mjs` to automatically clean up orphaned pending uploads (stale objects older than 7 days that do not have an active pending database row).
-   - Run in Dry-Run mode: `node scripts/cleanup-stale-photo-requests.mjs`
-   - Run actual cleanup: `CONFIRM_DELETE=true node scripts/cleanup-stale-photo-requests.mjs`
-   - *Future option:* Set up a scheduled cron pipeline to run this script periodically.
-5. **Egress & Cloudflare Note**: If spam persists, a future mitigation is adding a Cloudflare page rule to rate limit `/storage/v1/object/member-photo-requests/` API path. Since Supabase storage is routed directly to the database API endpoint, Cloudflare is deferred until actual abuse is observed.
+### Storage abuse and retained originals
+
+Public uploads require a broker-issued one-object capability and an atomic quota reservation, as described above. Private-bucket RLS rejects direct anonymous or ordinary-account INSERT, SELECT, UPDATE, and DELETE. The frontend honeypot is an additional UI deterrent; the server quota is the security boundary.
+
+The existing `scripts/cleanup-stale-photo-requests.mjs` can inventory older orphaned objects in dry-run mode. Object deletion remains an owner-approved manual operation. Do not schedule automatic cleanup or release quota based on review status: a reviewed request can still reference a retained original, and deletion does not invalidate outstanding signed capabilities until expiry.
 
 ## Admin workflow (`/admin/photo-requests`)
 
@@ -140,12 +146,10 @@ Public visitors open `/leaderboard`, search/click their member row, and open the
 - Optional note to admins
 - Required consent checkbox stating that the photo is moderated, will be displayed publicly on approval, can be removed, and that upload of others' photos is prohibited.
 
-Upon submission, the photo is uploaded to `pending/`, and the request row is inserted with the target `matched_member_id` pre-filled.
+Upon submission, the broker atomically records the pending request and quota reservation with `matched_member_id` pre-filled, then the browser uploads through its one-object signed capability.
 
 ## Applying to production
 
-Nothing in this PR mutates production. To roll out:
-1. Apply `supabase/migrations/20260701000000_add_member_photo_requests.sql` manually.
-2. Verify with an anonymous session: submitting works, pending request rows and storage files are not readable.
-3. Verify with an admin account: preview, approve, reject, remove.
-4. Confirm approved thumbnail appears publicly on `/leaderboard` for the matched member.
+Follow the exact migration → broker → frontend sequence in **Deployment order and verification** above. New environments must first apply the baseline migration chain. Existing deployments need the two October hardening migrations and `member-photo-upload` before serving the updated submission client. The earlier July migration alone leaves the anonymous upload bypass open.
+
+Review all acceptance checks in an owner-approved staging environment. Pending originals stay private and only approved thumbnails become public. Never revert to anonymous Storage INSERT to work around a deployment mismatch.

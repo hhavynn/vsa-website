@@ -164,6 +164,7 @@ export function VsaAiAssistant() {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const assistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const launcherRef = useRef<HTMLButtonElement | null>(null);
   const minimizedButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -190,9 +191,11 @@ export function VsaAiAssistant() {
   useEffect(() => {
     if (!isOpen) return;
 
-    const focusFrame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (!assistantRef.current?.closest('[inert]')) inputRef.current?.focus();
+    });
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !event.defaultPrevented && !assistantRef.current?.closest('[inert]')) {
         event.preventDefault();
         setIsOpen(false);
         window.requestAnimationFrame(() => launcherRef.current?.focus());
@@ -366,7 +369,7 @@ export function VsaAiAssistant() {
   }
 
   return (
-      <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-50 sm:bottom-5 sm:left-5">
+      <div ref={assistantRef} className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-50 sm:bottom-5 sm:left-5">
       <AnimatePresence>
         {isOpen && (
           <motion.section
@@ -377,11 +380,11 @@ export function VsaAiAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed inset-x-3 bottom-[86px] flex max-h-[75dvh] flex-col overflow-hidden rounded-[1.35rem] border bg-[var(--color-surface)] shadow-[0_22px_70px_rgba(15,23,42,0.28)] sm:inset-x-auto sm:left-5 sm:w-[380px] sm:max-h-[560px]"
+            className="fixed inset-x-3 bottom-[86px] flex max-h-[min(75dvh,560px,calc(100dvh_-_102px))] flex-col overflow-y-auto rounded-[1.35rem] border bg-[var(--color-surface)] shadow-[0_22px_70px_rgba(15,23,42,0.28)] sm:inset-x-auto sm:left-5 sm:w-[380px]"
             style={{ borderColor: 'var(--color-border)' }}
           >
           <div
-            className="relative overflow-hidden border-b px-4 py-3.5"
+            className="relative shrink-0 overflow-hidden border-b px-4 py-3.5"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -645,7 +648,7 @@ export function VsaAiAssistant() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="border-t p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+          <form onSubmit={handleSubmit} className="shrink-0 border-t p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
             <div className="flex items-end gap-2">
               <label className="sr-only" htmlFor="vsa-ai-message">
                 Ask VSA a question

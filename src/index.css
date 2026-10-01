@@ -810,7 +810,8 @@
     color: var(--color-text);
   }
 
-  .program-app a {
+  /* Shared button colors and link utilities must override this page reset. */
+  :where(.program-app a) {
     color: inherit;
     text-decoration: none;
   }

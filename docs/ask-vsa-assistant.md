@@ -68,3 +68,44 @@ Gemini outputs route suggestions in standard markdown format: `[Link Label](/pat
 
 When live database data is unreachable, or when the AI does not find relevant public context, the assistant responds with:
 > "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates."
+
+
+## 5. Atomic admission and deployment
+
+Before retrieval or Gemini work, `reserve_ai_quota` reserves capacity in one
+PostgreSQL transaction with locks ordered global → IP → session. Both RPCs and
+`ai_chat_quota_reservations` are service-role-only; client roles have no access.
+Session and IP identifiers retain the existing SHA-256 hashing.
+
+The rolling limits are 2 admitted attempts per session per 5 minutes, 5 per
+session per 24 hours, 10 per IP per hour, and 50 per IP per 24 hours. Existing
+usage logs remain included. Shared admission limits of 200 per hour and 2,000
+per 24 hours cap work even when sessions are rotated or no IP is available.
+Denied requests return the existing 429 response and do no retrieval/provider
+work. A quota backend failure returns the friendly unavailable response.
+
+Completion writes a usage log with the reservation's UUID and admission time.
+Counts include the log or the outstanding reservation once, never both.
+Reservations consume quota even after a crash, timeout, or provider failure;
+they stop counting as each rolling window expires. Gemini has a 30-second
+request deadline. No request text is added to the admission ledger. The shared
+limits count admissions including fallbacks, not rejected-request log rows.
+
+Apply `20261001000300_atomic_ai_quota.sql` manually **before** deploying
+`vsa-ai-assistant`. Deploying the function first fails closed while its RPCs are
+absent. The old function must be replaced promptly after the migration because
+it does not reserve capacity. No new secrets or provider dependencies are needed.
+
+Focused handler tests (fake HTTP backend; these do not prove SQL concurrency):
+
+```bash
+deno test --no-lock --allow-env --allow-net --import-map supabase/functions/vsa-ai-assistant/test-import-map.json supabase/functions/vsa-ai-assistant/quota.test.ts
+```
+
+Run the local PostgreSQL regression script only against a disposable database:
+
+```bash
+AI_QUOTA_TEST_DATABASE_URL=postgresql://... python3 supabase/functions/vsa-ai-assistant/quota_postgres_test.py
+```
+
+It never loads project environment files or defaults to a production connection.
