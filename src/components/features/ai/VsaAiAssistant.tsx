@@ -44,10 +44,13 @@ const MAX_INPUT_LENGTH = 500;
 const SESSION_STORAGE_KEY = 'vsa-ai-assistant-session';
 
 function createMessageId() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
+  if (typeof crypto !== 'undefined') {
+    if ('randomUUID' in crypto) return crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    (crypto as Crypto).getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${Date.now()}-${String(Math.random()).slice(2)}`;
 }
 
 function getSessionId() {
