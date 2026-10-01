@@ -87,7 +87,7 @@ All routes rendered as children of `<Layout />` that are **not** inside an `<Adm
 
 Everything nested inside the `<Route element={<AdminRoute />}>` wrapper. `AdminRoute` checks `useAdmin()` and redirects to `/admin/login` if the result is false. The current admin routes are:
 
-`/admin`, `/admin/content-calendar`, `/admin/content`, `/admin/resources`, `/admin/events`, `/admin/gallery`, `/admin/vcn`, `/admin/feedback`, `/admin/import`, `/admin/members`, `/admin/photo-requests`, `/admin/houses`, `/admin/merge-suggestions`, `/admin/cabinet`, `/admin/years`, `/admin/points`, `/admin/analytics`, `/admin/settings`, `/admin/ace`, `/admin/uvsa-schools`, `/admin/external-events`, `/admin/ai-knowledge`, `/admin/ai-feedback`, `/admin/applications`, `/admin/launch-checklist`, `/admin/data-rights`.
+`/admin`, `/admin/content-calendar`, `/admin/content`, `/admin/resources`, `/admin/events`, `/admin/gallery`, `/admin/vcn`, `/admin/feedback`, `/admin/import`, `/admin/members`, `/admin/photo-requests`, `/admin/houses`, `/admin/merge-suggestions`, `/admin/cabinet`, `/admin/years`, `/admin/points`, `/admin/analytics`, `/admin/settings`, `/admin/ace`, `/admin/interns`, `/admin/uvsa-schools`, `/admin/external-events`, `/admin/ai-knowledge`, `/admin/ai-feedback`, `/admin/applications`, `/admin/launch-checklist`, `/admin/data-rights`.
 
 ---
 

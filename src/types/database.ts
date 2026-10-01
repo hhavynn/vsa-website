@@ -1404,6 +1404,99 @@ export type Database = {
         };
         Relationships: [];
       };
+      house_assignment_batches: {
+        Row: {
+          academic_year_end: number;
+          academic_year_start: number;
+          created_at: string;
+          created_by: string | null;
+          effective_start_date: string;
+          id: string;
+          locked_at: string | null;
+          published_at: string | null;
+          source_label: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year_end: number;
+          academic_year_start: number;
+          created_at?: string;
+          created_by?: string | null;
+          effective_start_date: string;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          source_label?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year_end?: number;
+          academic_year_start?: number;
+          created_at?: string;
+          created_by?: string | null;
+          effective_start_date?: string;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          source_label?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      house_assignment_drafts: {
+        Row: {
+          batch_id: string;
+          created_at: string;
+          house_profile_id: string | null;
+          id: string;
+          match_method: string | null;
+          match_score: number | null;
+          match_status: string;
+          member_id: string | null;
+          notes: string | null;
+          preferences: Json | null;
+          source_house: string | null;
+          source_name: string;
+          source_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          batch_id: string;
+          created_at?: string;
+          house_profile_id?: string | null;
+          id?: string;
+          match_method?: string | null;
+          match_score?: number | null;
+          match_status?: string;
+          member_id?: string | null;
+          notes?: string | null;
+          preferences?: Json | null;
+          source_house?: string | null;
+          source_name?: string;
+          source_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          batch_id?: string;
+          created_at?: string;
+          house_profile_id?: string | null;
+          id?: string;
+          match_method?: string | null;
+          match_score?: number | null;
+          match_status?: string;
+          member_id?: string | null;
+          notes?: string | null;
+          preferences?: Json | null;
+          source_house?: string | null;
+          source_name?: string;
+          source_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       house_event_houses: {
         Row: {
           created_at: string;
@@ -2059,6 +2152,90 @@ export type Database = {
             referencedColumns: ["event_id"];
           },
         ];
+      };
+      intern_cohort_cycles: {
+        Row: {
+          academic_year_end: number;
+          academic_year_start: number;
+          cabinet_year_id: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          locked_at: string | null;
+          published_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year_end: number;
+          academic_year_start: number;
+          cabinet_year_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year_end?: number;
+          academic_year_start?: number;
+          cabinet_year_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      intern_cohort_drafts: {
+        Row: {
+          caption: string | null;
+          created_at: string;
+          cycle_id: string;
+          display_order: number;
+          id: string;
+          internal_notes: string | null;
+          member_id: string | null;
+          mentor_cabinet_member_id: string | null;
+          name: string;
+          published_cabinet_member_id: string | null;
+          role_or_track: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          caption?: string | null;
+          created_at?: string;
+          cycle_id: string;
+          display_order?: number;
+          id?: string;
+          internal_notes?: string | null;
+          member_id?: string | null;
+          mentor_cabinet_member_id?: string | null;
+          name: string;
+          published_cabinet_member_id?: string | null;
+          role_or_track?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          caption?: string | null;
+          created_at?: string;
+          cycle_id?: string;
+          display_order?: number;
+          id?: string;
+          internal_notes?: string | null;
+          member_id?: string | null;
+          mentor_cabinet_member_id?: string | null;
+          name?: string;
+          published_cabinet_member_id?: string | null;
+          role_or_track?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       intern_cohort_members: {
         Row: {
