@@ -1,4 +1,4 @@
--- Verifies migration 20261002000100_ace_assignment_workspace.sql against a
+-- Verifies migration 20261001213356_ace_assignment_workspace.sql against a
 -- LOCAL or STAGING database. Never run it against production.
 --
 --   psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-ace-assignments.sql

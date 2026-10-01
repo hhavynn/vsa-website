@@ -60,11 +60,13 @@ the name).
 
 ## Database
 
-Migration `20261002000100_ace_assignment_workspace.sql` adds
+Migration `20261001213356_ace_assignment_workspace.sql` adds
 `ace_assignment_cycles` and `ace_assignment_drafts` (admin-only RLS via
 `is_admin_user`, no `anon` access), the lifecycle guard triggers, and the
 publish function. It is additive. Apply it **before** deploying the frontend; do
 not apply it to production from a PR.
+
+**Status:** applied to production on 2026-10-01 (recorded as version `20261001213356`); the filename matches the recorded version.
 
 Verify on a local or staging database (rolled back, prints `PASS:` per check):
 
