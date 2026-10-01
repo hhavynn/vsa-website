@@ -58,9 +58,9 @@ describe("BottomSheet keyboard accessibility", () => {
     const last = screen.getByRole("button", { name: "Last nested action" });
     expect(first).toHaveFocus();
     last.focus();
-    userEvent.tab();
+    await userEvent.tab();
     expect(first).toHaveFocus();
-    userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("{Escape}");
     await waitFor(() =>
       expect(
         screen.queryByRole("dialog", { name: "Nested sheet" }),
@@ -88,14 +88,14 @@ describe("BottomSheet keyboard accessibility", () => {
     const last = within(photoDialog).getByRole("button", { name: "Cancel" });
 
     last.focus();
-    userEvent.tab();
+    await userEvent.tab();
     expect(first).toHaveFocus();
-    userEvent.tab({ shift: true });
+    await userEvent.tab({ shift: true });
     expect(last).toHaveFocus();
 
     screen.getByRole("button", { name: "Close member details" }).focus();
     expect(first).toHaveFocus();
-    userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("{Escape}");
     expect(
       screen.queryByRole("dialog", { name: "Request Profile Photo" }),
     ).not.toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("BottomSheet keyboard accessibility", () => {
       screen.getByRole("dialog", { name: "Member details" }),
     ).toBeInTheDocument();
     expect(photoOpener).toHaveFocus();
-    userEvent.tab();
+    await userEvent.tab();
     expect(
       screen.getByRole("button", { name: "Close member details" }),
     ).toHaveFocus();
@@ -116,10 +116,10 @@ describe("BottomSheet keyboard accessibility", () => {
     const first = screen.getByRole("button", { name: "Close event" });
     const last = screen.getByRole("link", { name: "Add to calendar" });
     last.focus();
-    userEvent.tab();
+    await userEvent.tab();
     expect(first).toHaveFocus();
 
-    userEvent.tab({ shift: true });
+    await userEvent.tab({ shift: true });
     expect(last).toHaveFocus();
   });
 
@@ -132,7 +132,7 @@ describe("BottomSheet keyboard accessibility", () => {
       expect(screen.getByRole("button", { name: "Close event" })).toHaveFocus();
       expect(document.body.style.overflow).toBe("hidden");
 
-      userEvent.keyboard("{Escape}");
+      await userEvent.keyboard("{Escape}");
       await waitFor(() =>
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
       );
