@@ -1,4 +1,5 @@
 import { ProgramContent } from '../../../types';
+import { sanitizeHref } from '../../../utils/sanitizeUrl';
 import {
   getProgramMetaParts,
   hasPrimaryProgramLink,
@@ -54,7 +55,7 @@ export function ProgramContentCallout({
         <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto sm:shrink-0">
           {hasPrimaryProgramLink(content) && (
             <a
-              href={content.primary_link_url!}
+              href={sanitizeHref(content.primary_link_url!)}
               target="_blank"
               rel="noopener noreferrer"
               className="program-cta-link vsa-btn-primary w-full justify-center px-4 py-2 font-sans text-sm font-medium sm:w-auto"
@@ -64,7 +65,7 @@ export function ProgramContentCallout({
           )}
           {content.secondary_link_url && (
             <a
-              href={content.secondary_link_url}
+              href={sanitizeHref(content.secondary_link_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="program-cta-link vsa-btn-ghost w-full justify-center px-4 py-2 font-sans text-sm transition-colors duration-150 sm:w-auto"

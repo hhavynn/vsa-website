@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { DEFAULT_SITE_SETTINGS, SITE_SETTINGS_ID } from '../../data/siteSettings';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
+import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -148,7 +149,7 @@ export default function AdminSettings() {
               >
                 <input {...getInputProps()} />
                 {previewSrc ? (
-                  <img src={previewSrc} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} />
+                  <img src={sanitizeImageSrc(previewSrc)} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} />
                 ) : (
                   <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
                     Drag and drop or click to upload
@@ -205,7 +206,7 @@ export default function AdminSettings() {
                   style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
                 >
                   {previewSrc ? (
-                    <img src={previewSrc} alt={logoAlt} className="h-8 w-8 rounded-full object-cover" />
+                    <img src={sanitizeImageSrc(previewSrc)} alt={logoAlt} className="h-8 w-8 rounded-full object-cover" />
                   ) : (
                     <span
                       className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold font-sans tracking-wide"
@@ -229,7 +230,7 @@ export default function AdminSettings() {
                   style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
                 >
                   {previewSrc ? (
-                    <img src={previewSrc} alt={logoAlt} className="h-14 w-14 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} />
+                    <img src={sanitizeImageSrc(previewSrc)} alt={logoAlt} className="h-14 w-14 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} />
                   ) : (
                     <div
                       className="h-14 w-14 rounded-full flex items-center justify-center font-sans text-sm font-semibold"

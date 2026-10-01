@@ -34,6 +34,7 @@ import {
   summarizeLinks,
 } from '../../lib/aceMemberLinks';
 import type { MemberOption } from '../../lib/memberLinkMatching';
+import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
 
 const inputCls =
   'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
@@ -271,7 +272,7 @@ function MemberRow({
         >
           <input {...getInputProps()} />
           {preview ? (
-            <img src={preview} alt={name || 'Member'} className="h-full w-full object-cover" />
+            <img src={sanitizeImageSrc(preview)} alt={name || 'Member'} className="h-full w-full object-cover" />
           ) : (
             <span className="font-sans text-[10px]" style={{ color: 'var(--color-text3)' }}>
               Photo
@@ -1224,7 +1225,7 @@ export default function AdminAceFamilies() {
                   <input {...getInputProps()} />
                   {previewCover ? (
                     <img
-                      src={previewCover}
+                      src={sanitizeImageSrc(previewCover)}
                       alt="Family cover preview"
                       className="max-h-32 rounded object-cover"
                     />
