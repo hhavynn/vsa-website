@@ -1,6 +1,5 @@
 import {
   InternCohortDraft,
-  InternMemberOption,
   buildInternDraftRows,
   buildInternPreflight,
   cabinetMemberFromIntern,
@@ -9,13 +8,14 @@ import {
   parseInternNames,
   resequence,
 } from './internCohort';
+import { buildMemberNameIndex, toMemberOption } from './memberLinkMatching';
 
-const directory: InternMemberOption[] = [
-  { id: 'm-sarah', first_name: 'Sarah', last_name: 'Nguyen', college: 'Muir', year: 'Second Year' },
-  { id: 'm-kevin', first_name: 'Kevin', last_name: 'Tran', college: 'Warren', year: 'First Year' },
-  { id: 'm-kevin2', first_name: 'Kevin', last_name: 'Tran', college: 'Revelle', year: 'Third Year' },
-  { id: 'm-emily', first_name: 'Emily', last_name: 'Nguyen', college: 'Marshall', year: 'Third Year' },
-];
+const directory = buildMemberNameIndex([
+  toMemberOption({ id: 'm-sarah', first_name: 'Sarah', last_name: 'Nguyen', college: 'Muir', year: 'Second Year' }),
+  toMemberOption({ id: 'm-kevin', first_name: 'Kevin', last_name: 'Tran', college: 'Warren', year: 'First Year' }),
+  toMemberOption({ id: 'm-kevin2', first_name: 'Kevin', last_name: 'Tran', college: 'Revelle', year: 'Third Year' }),
+  toMemberOption({ id: 'm-emily', first_name: 'Emily', last_name: 'Nguyen', college: 'Marshall', year: 'Third Year' }),
+]);
 
 let n = 0;
 function draft(overrides: Partial<InternCohortDraft> = {}): InternCohortDraft {
@@ -59,20 +59,16 @@ describe('member matching', () => {
     expect(matchInternToMember('sarah nguyen', directory).memberId).toBe('m-sarah');
   });
 
-  it('never links an ambiguous name, but offers every candidate', () => {
-    const result = matchInternToMember('Kevin Tran', directory);
-    expect(result.memberId).toBeNull();
-    expect(result.suggestions.map((s) => s.member.id).sort()).toEqual(['m-kevin', 'm-kevin2']);
+  it('never links an ambiguous name', () => {
+    expect(matchInternToMember('Kevin Tran', directory).memberId).toBeNull();
   });
 
   it('does not link a member already claimed by another intern', () => {
     expect(matchInternToMember('Sarah Nguyen', directory, new Set(['m-sarah'])).memberId).toBeNull();
   });
 
-  it('suggests near-misses without linking them', () => {
-    const result = matchInternToMember('Sara Nguyn', directory);
-    expect(result.memberId).toBeNull();
-    expect(result.suggestions[0].member.id).toBe('m-sarah');
+  it('never guesses a near-miss', () => {
+    expect(matchInternToMember('Sara Nguyn', directory).memberId).toBeNull();
   });
 
   it('links each canonical member at most once when building rows from a paste', () => {

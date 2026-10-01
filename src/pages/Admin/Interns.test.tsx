@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import AdminInterns from './Interns';
 import { internCohortRepository } from '../../data/repos/internCohort';
+import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { InternCohortCycle, InternCohortDraft } from '../../lib/internCohort';
 
 jest.mock('react-hot-toast', () => {
@@ -23,7 +24,6 @@ jest.mock('../../data/repos/internCohort', () => ({
     getCycle: jest.fn(),
     getDrafts: jest.fn(),
     listMentorOptions: jest.fn(),
-    listMemberDirectory: jest.fn(),
     createCycle: jest.fn(),
     addDrafts: jest.fn(),
     updateDraft: jest.fn(),
@@ -36,7 +36,12 @@ jest.mock('../../data/repos/internCohort', () => ({
   },
 }));
 
+jest.mock('../../data/repos/memberLookup', () => ({
+  memberLookupRepository: { listMemberDirectory: jest.fn(), searchMembers: jest.fn() },
+}));
+
 const repo = internCohortRepository as jest.Mocked<typeof internCohortRepository>;
+const lookup = memberLookupRepository as jest.Mocked<typeof memberLookupRepository>;
 
 const cycle = (status: InternCohortCycle['status']): InternCohortCycle => ({
   id: 'c1', academic_year_start: 2026, academic_year_end: 2027, cabinet_year_id: 'cy-2026', status,
@@ -52,8 +57,9 @@ async function openCohort(status: InternCohortCycle['status'], drafts: InternCoh
   repo.listCycles.mockResolvedValue([cycle(status)]);
   repo.getDrafts.mockResolvedValue(drafts);
   repo.listMentorOptions.mockResolvedValue([{ id: 'cm-emily', name: 'Emily Nguyen', role: 'Events' }]);
-  repo.listMemberDirectory.mockResolvedValue([
-    { id: 'm-sarah', first_name: 'Sarah', last_name: 'Nguyen', college: 'Muir', year: 'Second Year' },
+  lookup.searchMembers.mockResolvedValue([]);
+  lookup.listMemberDirectory.mockResolvedValue([
+    { id: 'm-sarah', fullName: 'Sarah Nguyen', college: 'Muir', year: 'Second Year', displayName: 'Sarah Nguyen · Muir · Second Year' },
   ]);
   render(<MemoryRouter><AdminInterns /></MemoryRouter>);
   const open = await screen.findByRole('button', { name: 'Open' });
@@ -94,10 +100,21 @@ it('saves a mentor choice on the draft', async () => {
   expect(screen.getByLabelText('Mentor (optional)')).toBeEnabled();
 });
 
-it('offers a near-miss member to link but never links it by itself', async () => {
+it('offers an exact-name member to link but never links it by itself', async () => {
+  await openCohort('draft', [draft('Sarah Nguyen', {})]);
+
+  expect(await screen.findByText('Suggested match')).toBeInTheDocument();
+  expect(repo.updateDraft).not.toHaveBeenCalled();
+  repo.updateDraft.mockResolvedValue();
+  await userEvent.click(screen.getByRole('button', { name: /Link to Sarah Nguyen/ }));
+  expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'Sarah Nguyen', { member_id: 'm-sarah' });
+});
+
+it('does not guess a near-miss name', async () => {
   await openCohort('draft', [draft('Sara Nguyn', {})]);
 
-  expect(await screen.findByRole('button', { name: /Use Sarah Nguyen/ })).toBeInTheDocument();
+  expect(screen.queryByText('Suggested match')).not.toBeInTheDocument();
+  expect(screen.getByText(/Not linked/)).toBeInTheDocument();
   expect(repo.updateDraft).not.toHaveBeenCalled();
 });
 

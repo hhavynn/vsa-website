@@ -2,26 +2,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
-import { MemberSearchSelect, memberChoiceDetail } from '../../components/features/admin/MemberSearchSelect';
+import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import { internCohortRepository } from '../../data/repos/internCohort';
+import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAuth } from '../../hooks/useAuth';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import {
   InternCohortCycle,
   InternCohortDraft,
-  InternMemberOption,
   MentorOption,
   buildInternDraftRows,
   buildInternPreflight,
   formatCohortYears,
-  matchInternToMember,
-  memberFullName,
   moveId,
   parseInternNames,
   resequence,
   sortDrafts,
 } from '../../lib/internCohort';
 import { InternDraftPatch } from '../../data/repos/internCohort';
+import { MemberNameIndex, MemberOption, buildMemberNameIndex } from '../../lib/memberLinkMatching';
+import { suggestMemberLink } from '../../lib/memberLinkSuggestion';
 
 const fieldCls =
   'w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -44,16 +44,16 @@ interface InternRowProps {
   count: number;
   editable: boolean;
   busy: boolean;
-  members: InternMemberOption[];
-  memberById: Map<string, InternMemberOption>;
+  memberById: Map<string, MemberOption>;
+  nameIndex: MemberNameIndex;
+  claimedByOthers: ReadonlySet<string>;
   mentors: MentorOption[];
-  suggestions: InternMemberOption[];
   onSave: (draft: InternCohortDraft, patch: InternDraftPatch) => void;
   onMove: (draft: InternCohortDraft, direction: -1 | 1) => void;
   onRemove: (draft: InternCohortDraft) => void;
 }
 
-function InternRow({ draft, index, count, editable, busy, members, memberById, mentors, suggestions, onSave, onMove, onRemove }: InternRowProps) {
+function InternRow({ draft, index, count, editable, busy, memberById, nameIndex, claimedByOthers, mentors, onSave, onMove, onRemove }: InternRowProps) {
   const [name, setName] = useState(draft.name);
   const [track, setTrack] = useState(draft.role_or_track ?? '');
   const [caption, setCaption] = useState(draft.caption ?? '');
@@ -101,29 +101,15 @@ function InternRow({ draft, index, count, editable, busy, members, memberById, m
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div>
           <span className={labelCls} style={{ color: 'var(--color-text3)' }}>Member</span>
-          <MemberSearchSelect
-            members={members}
-            value={draft.member_id}
-            onChange={(memberId) => onSave(draft, { member_id: memberId })}
-            disabled={!editable || busy}
-            label={draft.name}
+          <MemberLinkPicker
+            linkedMemberId={draft.member_id}
+            linkedMember={member}
+            suggestion={suggestMemberLink(draft.name, draft.member_id, nameIndex, claimedByOthers)}
+            busy={busy}
+            disabledReason={editable ? null : 'Reopen the cohort to change links.'}
+            onLink={(option) => onSave(draft, { member_id: option.id })}
+            onUnlink={() => onSave(draft, { member_id: null })}
           />
-          {!draft.member_id && editable && suggestions.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {suggestions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onSave(draft, { member_id: option.id })}
-                  className="rounded border bg-transparent px-2 py-0.5 text-[11px] hover:bg-[var(--color-surface2)]"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
-                >
-                  Use {memberFullName(option)}{memberChoiceDetail(option) ? ` · ${memberChoiceDetail(option)}` : ''}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
         <div>
           <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`intern-mentor-${draft.id}`}>Mentor (optional)</label>
@@ -187,7 +173,7 @@ function InternRow({ draft, index, count, editable, busy, members, memberById, m
 
       <p className="mt-3 text-xs" style={{ color: 'var(--color-text2)' }}>
         {draft.member_id ? '✅' : '⚠'} {draft.name}
-        {' · '}Member: {member ? `${memberFullName(member)}${memberChoiceDetail(member) ? ` · ${memberChoiceDetail(member)}` : ''}` : 'not linked'}
+        {' · '}Member: {member ? member.displayName : 'not linked'}
         {' · '}Mentor: {mentor ? `${mentor.name} · ${mentor.role}` : 'none'}
         {' · '}Track: {draft.role_or_track || 'Intern'}
         {draft.published_cabinet_member_id ? ' · published' : ''}
@@ -205,7 +191,7 @@ export default function AdminInterns() {
   const [cycleId, setCycleId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<InternCohortDraft[]>([]);
   const [mentors, setMentors] = useState<MentorOption[]>([]);
-  const [directory, setDirectory] = useState<InternMemberOption[]>([]);
+  const [directory, setDirectory] = useState<MemberOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [newCabinetYearId, setNewCabinetYearId] = useState('');
   const [pasted, setPasted] = useState('');
@@ -219,14 +205,8 @@ export default function AdminInterns() {
   const preflight = useMemo(() => buildInternPreflight(ordered), [ordered]);
   const needReview = preflight.accepted - preflight.linked;
 
-  const suggestionsByDraft = useMemo(() => {
-    const claimed = new Set(ordered.map((draft) => draft.member_id).filter((id): id is string => !!id));
-    const map = new Map<string, InternMemberOption[]>();
-    ordered.filter((draft) => !draft.member_id).forEach((draft) => {
-      map.set(draft.id, matchInternToMember(draft.name, directory, claimed).suggestions.map((entry) => entry.member));
-    });
-    return map;
-  }, [ordered, directory]);
+  const nameIndex = useMemo(() => buildMemberNameIndex(directory), [directory]);
+  const linkedIds = useMemo(() => ordered.map((draft) => draft.member_id).filter((id): id is string => !!id), [ordered]);
 
   const loadCycles = useCallback(async () => {
     try {
@@ -241,7 +221,7 @@ export default function AdminInterns() {
 
   useEffect(() => { loadCycles(); }, [loadCycles]);
   useEffect(() => {
-    internCohortRepository.listMemberDirectory().then(setDirectory).catch((err) => {
+    memberLookupRepository.listMemberDirectory().then(setDirectory).catch((err) => {
       console.error(err);
       toast.error('Failed to load members for linking.');
     });
@@ -295,7 +275,7 @@ export default function AdminInterns() {
     }
     return run(async () => {
       const startingOrder = ordered.reduce((max, draft) => Math.max(max, draft.display_order), -1) + 1;
-      const rows = buildInternDraftRows(parsed, directory, startingOrder, ordered.map((d) => d.member_id).filter((id): id is string => !!id));
+      const rows = buildInternDraftRows(parsed, nameIndex, startingOrder, ordered.map((d) => d.member_id).filter((id): id is string => !!id));
       const created = await internCohortRepository.addDrafts(cycle.id, rows);
       setDrafts((current) => [...current, ...created]);
       setPasted('');
@@ -514,10 +494,10 @@ export default function AdminInterns() {
                     count={ordered.length}
                     editable={!!editable}
                     busy={busy}
-                    members={directory}
                     memberById={memberById}
+                    nameIndex={nameIndex}
+                    claimedByOthers={new Set(linkedIds.filter((id) => id !== draft.member_id))}
                     mentors={mentors}
-                    suggestions={suggestionsByDraft.get(draft.id) ?? []}
                     onSave={saveDraft}
                     onMove={moveDraft}
                     onRemove={removeDraft}

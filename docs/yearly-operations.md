@@ -56,13 +56,16 @@ Below the cards is the **Operations Preflight**: per program, what needs attenti
 
 **Diagnostic only.** The dashboard and preflight only read. Following a link repairs nothing. Each domain loads independently: a failed query shows "could not load", never a misleading zero. House numbers come from the assignment batch; ACE nodes are the current year's `ace_families`; Cabinet is the active Cabinet year's public rows; events count published events from one day back.
 
-## Migration (apply manually after staging verification)
+## Migrations
 
-`supabase/migrations/20261002010000_create_cabinet_roster_cycles.sql` adds `cabinet_roster_cycles` and `cabinet_roster_drafts`.
+1. `supabase/migrations/20261001222903_create_cabinet_roster_cycles.sql` adds `cabinet_roster_cycles` and `cabinet_roster_drafts`.
+2. `supabase/migrations/20261001222905_revoke_phase2_guard_function_execute.sql` revokes client `EXECUTE` on the six Phase 2 House assignment and Intern cohort guard trigger functions, which had been callable by `anon` and `authenticated` (SECURITY INVOKER, so nothing was exposed, but it broke the trigger-function convention set by `20260928005621`). It changes no table, policy, row, or function body.
 
-**Status: not applied to production.** Apply it before deploying the frontend (the rollover page and the dashboard's Cabinet card need the tables). It is additive: RLS enabled, `revoke all` from `anon, authenticated`, admin-only policies via `is_admin_user()`, one live roster per Cabinet year, lifecycle triggers (legal transitions; a locked roster is immutable except the publish step stamping `published_cabinet_member_id`; only drafts can be deleted), and trigger-function `EXECUTE` revoked from clients.
+**Status:** both applied to production on 2026-10-01 with owner approval (recorded as versions `20261001222903` and `20261001222905`; the filenames match). Post-apply check on production: RLS enabled on both new tables, 8 admin-only policies, no `anon` grants, 5 triggers, and all nine guard functions (House, Intern, Cabinet) report `EXECUTE` false for `anon` and `authenticated`.
 
-Verify on a local or staging database (rolled back, prints `PASS:` per check):
+The roster migration is additive: RLS enabled, `revoke all` from `anon, authenticated`, admin-only policies via `is_admin_user()`, one live roster per Cabinet year, lifecycle triggers (legal transitions; a locked roster is immutable except the publish step stamping `published_cabinet_member_id`; only drafts can be deleted), and trigger-function `EXECUTE` revoked from clients.
+
+Verify the roster migration on a local or staging database (rolled back, prints `PASS:` per check):
 
 ```bash
 psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-cabinet-roster.sql

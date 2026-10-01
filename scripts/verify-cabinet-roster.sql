@@ -1,4 +1,4 @@
--- Verifies migration 20261002010000_create_cabinet_roster_cycles.sql against a
+-- Verifies migration 20261001222903_create_cabinet_roster_cycles.sql against a
 -- LOCAL or STAGING database. Never run it against production.
 --
 --   psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-cabinet-roster.sql

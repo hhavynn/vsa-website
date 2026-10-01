@@ -4,10 +4,10 @@
 import type { Database } from '../types/database';
 import {
   MemberNameIndex,
-  MemberOption,
   findExactMemberMatch,
   normalizeMemberName,
 } from './memberLinkMatching';
+import { MemberLinkSuggestionData, suggestMemberLink } from './memberLinkSuggestion';
 import { PreflightLine, pluralize } from './operationalStatus';
 
 export type CabinetRosterCycle = Database['public']['Tables']['cabinet_roster_cycles']['Row'];
@@ -182,11 +182,7 @@ export function planRosterFill(
 
 // ─── Member link suggestions ─────────────────────────────────────────────────
 
-export interface RosterLinkSuggestion {
-  kind: 'recommended' | 'review';
-  members: MemberOption[];
-  note?: string;
-}
+export type RosterLinkSuggestion = MemberLinkSuggestionData;
 
 /** What an admin should be offered for an unlinked position. */
 export function rosterLinkSuggestion(
@@ -194,18 +190,7 @@ export function rosterLinkSuggestion(
   nameIndex: MemberNameIndex,
   claimedByOthers: ReadonlySet<string>,
 ): RosterLinkSuggestion | null {
-  if (draft.member_id || !draft.name?.trim()) return null;
-  const match = findExactMemberMatch(draft.name, nameIndex);
-  if (match.kind === 'none') return null;
-  if (match.kind === 'ambiguous') return { kind: 'review', members: match.members };
-  if (claimedByOthers.has(match.member.id)) {
-    return {
-      kind: 'review',
-      members: [match.member],
-      note: 'This member is already linked to another position.',
-    };
-  }
-  return { kind: 'recommended', members: [match.member] };
+  return suggestMemberLink(draft.name, draft.member_id, nameIndex, claimedByOthers);
 }
 
 // ─── Preflight ───────────────────────────────────────────────────────────────
