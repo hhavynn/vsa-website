@@ -1,4 +1,14 @@
 import { z } from 'zod';
+import { OFFICIAL_YEARS } from '../lib/yearNormalizer';
+
+export const AdminMemberSchema = z.object({
+  first_name: z.string().trim().min(1, 'First name is required').max(100),
+  last_name: z.string().trim().min(1, 'Last name is required').max(100),
+  email: z.string().trim().toLowerCase().email('Enter a valid email').or(z.literal('')),
+  college: z.string().trim().max(100),
+  year: z.string().refine(value => value === '' || OFFICIAL_YEARS.includes(value), 'Choose a valid year'),
+});
+export type AdminMemberInput = z.infer<typeof AdminMemberSchema>;
 
 // Event schemas
 export const EventSchema = z.object({

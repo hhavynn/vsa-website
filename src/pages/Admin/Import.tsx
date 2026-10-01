@@ -10,6 +10,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { PageTitle } from '../../components/common/PageTitle';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
@@ -215,6 +217,8 @@ export default function AdminImport() {
   const [terms, setTerms]   = useState<Record<string, AcademicTerm>>({});
   const [selectedEventId, setSelectedEventId] = useState('');
   const [csvUrl, setCsvUrl] = useState('');
+  const [csvSource, setCsvSource] = useState<'url' | 'file'>('url');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [fetchingCsv, setFetchingCsv] = useState(false);
   const [configError, setConfigError] = useState('');
 
@@ -289,7 +293,11 @@ export default function AdminImport() {
   async function handleFetchCsv() {
     setConfigError('');
     if (!selectedEventId) { setConfigError('Select an event.'); return; }
-    if (!csvUrl.trim())   { setConfigError('Paste a CSV URL.'); return; }
+    if (csvSource === 'url' && !csvUrl.trim()) { setConfigError('Paste a CSV URL.'); return; }
+    if (csvSource === 'file' && !csvFile) { setConfigError('Choose a .csv file.'); return; }
+    if (csvSource === 'file' && !csvFile?.name.toLowerCase().endsWith('.csv')) {
+      setConfigError('Choose a .csv file. Export spreadsheets as CSV first.'); return;
+    }
     const event = events.find(e => e.id === selectedEventId);
     if (!event?.academic_term_id) {
       setConfigError(MISSING_TERM_IMPORT_MESSAGE);
@@ -298,9 +306,21 @@ export default function AdminImport() {
 
     setFetchingCsv(true);
     try {
-      const res = await fetch(toCSVUrl(csvUrl));
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const parsed = parseCSV(await res.text());
+      let raw: string;
+      if (csvSource === 'file' && csvFile) {
+        raw = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ''));
+          reader.onerror = () => reject(new Error('Could not read the selected file. Try selecting it again.'));
+          reader.onabort = () => reject(new Error('File reading was cancelled.'));
+          reader.readAsText(csvFile);
+        });
+      } else {
+        const res = await fetch(toCSVUrl(csvUrl));
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        raw = await res.text();
+      }
+      const parsed = parseCSV(raw);
       if (!parsed.length) throw new Error('No data rows found in CSV.');
 
       const headers = Object.keys(parsed[0]);
@@ -321,7 +341,7 @@ export default function AdminImport() {
       await runMatching(parsed, dFirst, dLast, dFull, useFull, dCollege, dYear, dEmail, selectedEventId);
       setStep('preview');
     } catch (err: unknown) {
-      setConfigError(`Failed to fetch CSV: ${err instanceof Error ? err.message : String(err)}`);
+      setConfigError(`Failed to load CSV: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setFetchingCsv(false);
     }
@@ -594,8 +614,8 @@ export default function AdminImport() {
 
       await importJobsRepository.createJob({
         event_id: selectedEventId,
-        source_url: csvUrl.trim() || null,
-        source_type: getImportSourceType(csvUrl),
+        source_url: csvSource === 'file' ? null : csvUrl.trim() || null,
+        source_type: csvSource === 'file' ? 'manual' : getImportSourceType(csvUrl),
         total_rows: rows.length,
         matched_rows: rows.filter(row => getEffectiveStatus(row) === 'match').length,
         created_members: createdMembersCount,
@@ -659,7 +679,7 @@ export default function AdminImport() {
           <div className="mb-8">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Sheet Setup</h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--color-text2)' }}>
-              Paste a Google Sheets CSV link. Safe matched and new rows import after preview; unresolved review rows are skipped until resolved.
+              Upload a local CSV or paste a Google Sheets CSV link. Safe matched and new rows import after preview; unresolved review rows are skipped until resolved.
             </p>
           </div>
 
@@ -688,8 +708,8 @@ export default function AdminImport() {
           {step === 'configure' && (
             <div className="space-y-6 max-w-2xl">
               <div>
-                <label className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Event *</label>
-                <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}
+                <label htmlFor="import-event" className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Event *</label>
+                <select id="import-event" disabled={fetchingCsv} value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}
                   className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
                     text-[var(--color-text)] px-3 py-2.5 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500">
                   <option value="">— Select an event —</option>
@@ -712,29 +732,45 @@ export default function AdminImport() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-[var(--color-text3)] uppercase tracking-label mb-1.5">Google Sheets CSV URL *</label>
-                <input type="url" value={csvUrl} onChange={e => setCsvUrl(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/d/..."
-                  className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900
-                    text-[var(--color-text)] px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500" />
-                <p className="text-xs text-[var(--color-text3)] mt-1.5 leading-relaxed">
-                  <strong>File → Share → Publish to web</strong> → sheet → CSV → Publish. Or paste the edit URL — we convert it automatically.
-                </p>
-              </div>
+              <fieldset disabled={fetchingCsv} className="space-y-3 text-sm text-text-primary">
+                <legend className="mb-2 font-medium">CSV source</legend>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name="csv-source" checked={csvSource === 'url'} onChange={() => { setCsvSource('url'); setConfigError(''); }} />
+                    Google Sheets / CSV URL
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="radio" name="csv-source" checked={csvSource === 'file'} onChange={() => { setCsvSource('file'); setConfigError(''); }} />
+                    Local CSV file
+                  </label>
+                </div>
+                {csvSource === 'file' ? (
+                  <div key="file">
+                    <label htmlFor="attendance-csv" className="mb-1.5 block font-medium">CSV file</label>
+                    <Input id="attendance-csv" type="file" accept=".csv,text/csv" onChange={e => { setCsvFile(e.target.files?.[0] ?? null); setConfigError(''); }} />
+                    {csvFile && <p className="mt-2 break-all text-xs text-text-secondary">Selected: {csvFile.name}</p>}
+                    <p className="mt-2 text-xs text-text-secondary">Google Form exports use the same column mapping and review as URL imports.</p>
+                  </div>
+                ) : (
+                  <div key="url">
+                    <label htmlFor="attendance-csv-url" className="mb-1.5 block font-medium">Google Sheets CSV URL *</label>
+                    <Input id="attendance-csv-url" type="url" value={csvUrl} onChange={e => setCsvUrl(e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..." />
+                    <p className="mt-2 text-xs text-text-secondary">
+                      File → Share → Publish to web → CSV. Or paste the edit URL — we convert it automatically.
+                    </p>
+                  </div>
+                )}
+              </fieldset>
 
               {configError && (
-                <div className="rounded border border-red-900/40 bg-red-950/20 px-4 py-3 text-sm text-red-400">
+                <div role="alert" className="rounded border border-red-900/40 bg-red-950/20 px-4 py-3 text-sm text-red-400">
                   {configError}
                 </div>
               )}
 
-              <button onClick={handleFetchCsv} disabled={fetchingCsv || selectedEventMissingTerm}
-                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
-                {fetchingCsv
-                  ? <><Spinner />Fetching…</>
-                  : <><DownloadIcon />Fetch & Preview</>}
-              </button>
+              <Button onClick={handleFetchCsv} loading={fetchingCsv} disabled={selectedEventMissingTerm}>
+                {fetchingCsv ? 'Loading…' : csvSource === 'file' ? 'Load & Preview' : 'Fetch & Preview'}
+              </Button>
             </div>
           )}
 
@@ -1051,7 +1087,7 @@ export default function AdminImport() {
               <h2 className="text-base font-semibold text-[var(--color-text)] mb-2">Import complete!</h2>
               <p className="text-[var(--color-text3)] text-sm mb-8">Points and new members have been added to the leaderboard.</p>
               <button
-                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setSelectedEventId(''); setCachedParsed([]); }}
+                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setCsvFile(null); setSelectedEventId(''); setCachedParsed([]); }}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 Import another sheet
               </button>
@@ -1121,10 +1157,6 @@ function ActionBadge({ color, label }: { color: string; label: string }) {
 
 function Spinner() {
   return <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>;
-}
-
-function DownloadIcon() {
-  return <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 }
 
 function CheckIcon({ className = 'w-4 h-4' }: { className?: string }) {
