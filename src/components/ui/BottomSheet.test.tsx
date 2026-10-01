@@ -1,7 +1,18 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { BottomSheet } from "./BottomSheet";
+import { PhotoRequestSection } from "../features/avatar/PhotoRequestSection";
+
+jest.mock("../../data/repos/photoRequests", () => ({
+  photoRequestsRepository: { submitPhotoRequest: jest.fn() },
+}));
 
 function SheetHarness() {
   const [open, setOpen] = useState(false);
@@ -20,7 +31,84 @@ function SheetHarness() {
   );
 }
 
+function NestedSheetsHarness() {
+  const [nestedOpen, setNestedOpen] = useState(false);
+  return (
+    <BottomSheet ariaLabel="Outer sheet" onClose={() => undefined}>
+      <button onClick={() => setNestedOpen(true)}>Open nested sheet</button>
+      {nestedOpen && (
+        <BottomSheet
+          ariaLabel="Nested sheet"
+          onClose={() => setNestedOpen(false)}
+        >
+          <button>First nested action</button>
+          <button>Last nested action</button>
+        </BottomSheet>
+      )}
+    </BottomSheet>
+  );
+}
+
 describe("BottomSheet keyboard accessibility", () => {
+  it("suspends an inert sheet's trap while a separate nested portal is active", async () => {
+    render(<NestedSheetsHarness />);
+    const opener = screen.getByRole("button", { name: "Open nested sheet" });
+    await userEvent.click(opener);
+    const first = screen.getByRole("button", { name: "First nested action" });
+    const last = screen.getByRole("button", { name: "Last nested action" });
+    expect(first).toHaveFocus();
+    last.focus();
+    userEvent.tab();
+    expect(first).toHaveFocus();
+    userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Nested sheet" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Outer sheet" }),
+    ).toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  it("keeps Tab and attempted outer focus inside an open photo-request dialog", async () => {
+    render(
+      <BottomSheet ariaLabel="Member details" onClose={() => undefined}>
+        <button>Close member details</button>
+        <PhotoRequestSection matchedMemberId="member-id" />
+      </BottomSheet>,
+    );
+    const photoOpener = screen.getByRole("button", { name: "Request photo" });
+    await userEvent.click(photoOpener);
+    const photoDialog = screen.getByRole("dialog", {
+      name: "Request Profile Photo",
+    });
+    const first = within(photoDialog).getByRole("button", { name: "Close" });
+    const last = within(photoDialog).getByRole("button", { name: "Cancel" });
+
+    last.focus();
+    userEvent.tab();
+    expect(first).toHaveFocus();
+    userEvent.tab({ shift: true });
+    expect(last).toHaveFocus();
+
+    screen.getByRole("button", { name: "Close member details" }).focus();
+    expect(first).toHaveFocus();
+    userEvent.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "Request Profile Photo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Member details" }),
+    ).toBeInTheDocument();
+    expect(photoOpener).toHaveFocus();
+    userEvent.tab();
+    expect(
+      screen.getByRole("button", { name: "Close member details" }),
+    ).toHaveFocus();
+  });
+
   it("wraps Tab and Shift-Tab around enabled sheet controls", async () => {
     render(<SheetHarness />);
     await userEvent.click(screen.getByRole("button", { name: "Open event" }));

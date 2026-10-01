@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
@@ -13,6 +12,7 @@ import { usePagination } from '../hooks/usePagination';
 import { PaginationControls } from '../components/common/PaginationControls';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLeaderboardYears } from '../hooks/useLeaderboardYears';
+import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } from '../hooks/useIndividualLeaderboard';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import type { MemberAvatarMap } from '../lib/memberPhotos';
@@ -156,17 +156,6 @@ function getGapCaption(
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES & UTILS
 // ─────────────────────────────────────────────────────────────────────────────
-
-interface Member {
-  id: string;
-  first_name: string;
-  last_name: string;
-  college: string | null;
-  year: string | null;
-  points: number;
-  events_attended: number;
-  user_id?: string | null;
-}
 
 interface LeaderboardEntry extends Member {
   rank: number;
@@ -421,7 +410,6 @@ export function Leaderboard() {
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [houseStandings, setHouseStandings] = useState<HouseStanding[]>([]);
   const [houseActivity, setHouseActivity] = useState<HouseRecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [houseLoading, setHouseLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);
   const [isDegradedMode, setIsDegradedMode] = useState(false);
@@ -530,90 +518,25 @@ export function Leaderboard() {
   // query. Fail-soft: initials remain the fallback.
   const memberAvatars = useMemberAvatars();
 
-  const fetchLeaderboard = useCallback(async (year: SelectedYear) => {
-    try {
-      setLoading(true);
-      let members: Member[] = [];
-
-      if (year === 'all') {
-        const data = await leaderboardRepository.getAllTimeLeaderboard();
-        members = data as Member[];
-      } else {
-        const data = await leaderboardRepository.getYearlyLeaderboard(year);
-        members = data.map((m) => ({
-          id: m.member_id,
-          first_name: m.first_name,
-          last_name: m.last_name,
-          college: m.college,
-          year: m.graduation_year,
-          points: m.total_points,
-          events_attended: m.events_attended,
-          user_id: m.user_id,
-        }));
-      }
-
-      setByPoints(members.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
-      setByEvents(
-        [...members]
-          .sort((a, b) => b.events_attended - a.events_attended)
-          .map((member, index) => ({ ...member, rank: index + 1 }))
-      );
-    } catch (err) {
-      setError(err);
-      if (isSupabaseUnavailable(err)) setIsDegradedMode(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: members, isLoading: loading, error: leaderboardError } = useIndividualLeaderboard(selectedYear);
 
   useEffect(() => {
-    if (selectedYear === null) return;
-    let isCurrentRequest = true;
+    if (leaderboardError) {
+      setError(leaderboardError);
+      if (isSupabaseUnavailable(leaderboardError)) setIsDegradedMode(true);
+      return;
+    }
+    if (!members) return;
 
-    const loadLeaderboard = async () => {
-      try {
-        setLoading(true);
-        let members: Member[] = [];
-
-        if (selectedYear === 'all') {
-          const data = await leaderboardRepository.getAllTimeLeaderboard();
-          members = data as Member[];
-        } else {
-          const data = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
-          members = data.map((m) => ({
-            id: m.member_id,
-            first_name: m.first_name,
-            last_name: m.last_name,
-            college: m.college,
-            year: m.graduation_year,
-            points: m.total_points,
-            events_attended: m.events_attended,
-            user_id: m.user_id,
-          }));
-        }
-
-        if (!isCurrentRequest) return;
-
-        setByPoints(members.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
-        setByEvents(
-          [...members]
-            .sort((a, b) => b.events_attended - a.events_attended)
-            .map((member, index) => ({ ...member, rank: index + 1 }))
-        );
-        setError(null);
-      } catch (err) {
-        if (isCurrentRequest) {
-          setError(err);
-          if (isSupabaseUnavailable(err)) setIsDegradedMode(true);
-        }
-      } finally {
-        if (isCurrentRequest) setLoading(false);
-      }
-    };
-
-    loadLeaderboard();
-    return () => { isCurrentRequest = false; };
-  }, [selectedYear]);
+    const rankedMembers = [...members];
+    setByPoints(rankedMembers.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
+    setByEvents(
+      [...rankedMembers]
+        .sort((a, b) => b.events_attended - a.events_attended)
+        .map((member, index) => ({ ...member, rank: index + 1 }))
+    );
+    setError(null);
+  }, [members, leaderboardError]);
 
   useEffect(() => {
     if (selectedYear === null) return;
@@ -717,20 +640,6 @@ export function Leaderboard() {
     setHasUserSelectedYear(true);
     setSelectedYear(value === 'all' ? 'all' : Number(value));
   };
-
-  const refreshSelectedLeaderboard = useCallback(() => {
-    if (selectedYear !== null) fetchLeaderboard(selectedYear);
-  }, [fetchLeaderboard, selectedYear]);
-
-  useEffect(() => {
-    if (selectedYear === 'all') {
-      const sub = supabase
-        .channel('members_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, refreshSelectedLeaderboard)
-        .subscribe();
-      return () => { sub.unsubscribe(); };
-    }
-  }, [refreshSelectedLeaderboard, selectedYear]);
 
   const entries = activeTab === 'points' ? byPoints : byEvents;
   const searchTerm = searchQuery.trim().toLowerCase();

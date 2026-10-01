@@ -85,35 +85,56 @@ export function BottomSheet({
     const panel = panelRef.current;
     const focusableSelector =
       "a[href], button, input, select, textarea, [tabindex]";
-    const getFocusable = () =>
+    const isAvailable = (element: HTMLElement) =>
+      !element.closest('[hidden], [inert], [aria-hidden="true"]') &&
+      getComputedStyle(element).display !== "none" &&
+      getComputedStyle(element).visibility !== "hidden";
+    // Nested dialogs share this portal; a separate sheet makes it inert.
+    const getActivePanel = () => {
+      if (!panel || !isAvailable(panel)) return null;
+      return (
+        Array.from(
+          panel.querySelectorAll<HTMLElement>(
+            '[role="dialog"][aria-modal="true"]',
+          ),
+        )
+          .reverse()
+          .find(isAvailable) ?? panel
+      );
+    };
+    const getFocusable = (activePanel: HTMLElement) =>
       Array.from(
-        panel?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
+        activePanel.querySelectorAll<HTMLElement>(focusableSelector),
       ).filter(
         (element) =>
           element.tabIndex >= 0 &&
           !element.matches(":disabled") &&
-          !element.closest('[hidden], [inert], [aria-hidden="true"]') &&
-          getComputedStyle(element).display !== "none" &&
-          getComputedStyle(element).visibility !== "hidden",
+          isAvailable(element),
       );
-    const focusFirst = () => (getFocusable()[0] ?? panel)?.focus();
+    const focusFirst = () => {
+      const activePanel = getActivePanel();
+      if (activePanel) (getFocusable(activePanel)[0] ?? activePanel).focus();
+    };
     const onKeyDown = (e: KeyboardEvent) => {
+      const activePanel = getActivePanel();
+      if (!activePanel) return;
       if (e.key === "Escape") {
+        if (activePanel !== panel) return;
         e.preventDefault();
         e.stopPropagation();
         beginClose();
         return;
       }
-      if (e.key !== "Tab" || !panel) return;
-      const focusable = getFocusable();
+      if (e.key !== "Tab") return;
+      const focusable = getFocusable(activePanel);
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first) {
         e.preventDefault();
-        panel.focus();
+        activePanel.focus();
       } else if (
-        !panel.contains(document.activeElement) ||
-        document.activeElement === panel
+        !activePanel.contains(document.activeElement) ||
+        document.activeElement === activePanel
       ) {
         e.preventDefault();
         (e.shiftKey ? last : first).focus();
@@ -126,7 +147,12 @@ export function BottomSheet({
       }
     };
     const onFocusIn = (event: FocusEvent) => {
-      if (event.target instanceof Node && !panel?.contains(event.target))
+      const activePanel = getActivePanel();
+      if (
+        activePanel &&
+        event.target instanceof Node &&
+        !activePanel.contains(event.target)
+      )
         focusFirst();
     };
     document.addEventListener("keydown", onKeyDown, true);
