@@ -39,17 +39,17 @@ describe('MobileDrawer keyboard accessibility', () => {
     await waitFor(() => expect(firstLink).toHaveFocus());
 
     for (let index = 1; index < focusableCount; index += 1) {
-      userEvent.tab();
+      await userEvent.tab();
     }
     expect(lastButton).toHaveFocus();
 
-    userEvent.tab();
+    await userEvent.tab();
     expect(firstLink).toHaveFocus();
 
-    userEvent.tab({ shift: true });
+    await userEvent.tab({ shift: true });
     expect(lastButton).toHaveFocus();
 
-    userEvent.keyboard('{Escape}');
+    await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(opener).toHaveFocus());
   });
 });
