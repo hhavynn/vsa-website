@@ -6,9 +6,12 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
 import {
+  ACE_MEMBER_LINKS_QUERY_KEY,
+  useAceMemberLinks,
   useAdminAceFamilies,
   useAdminAceFamilyMembers,
 } from '../../hooks/useAceFamilies';
+import { useMemberDirectory } from '../../hooks/useMemberDirectory';
 import {
   AceFamilyFormData,
   AceFamilyMemberFormData,
@@ -20,6 +23,17 @@ import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../li
 import { isRenamed } from '../../lib/memberPhotos';
 import { supabase } from '../../lib/supabase';
 import { toUserMessage } from '../../data/errors';
+import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
+import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
+import {
+  AceLinkReviewItem,
+  AceMemberLinkChange,
+  AceMemberLinkRef,
+  applyRenameLinkGuard,
+  reviewUnlinkedNodes,
+  summarizeLinks,
+} from '../../lib/aceMemberLinks';
+import type { MemberOption } from '../../lib/memberLinkMatching';
 
 const inputCls =
   'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)] transition';
@@ -88,6 +102,60 @@ function nullable(value: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Member link status
+// ─────────────────────────────────────────────────────────────────────────────
+
+type LinkIndicator = 'linked' | 'possible' | 'none' | 'pending';
+
+function linkIndicatorFor(
+  member: AceFamilyMember,
+  review: AceLinkReviewItem | undefined,
+  matchingReady: boolean,
+): LinkIndicator {
+  if (member.member_id) return 'linked';
+  if (!matchingReady) return 'pending';
+  return review && review.status !== 'none' ? 'possible' : 'none';
+}
+
+const INDICATOR_LABELS: Record<LinkIndicator, string> = {
+  linked: 'Linked to VSA member',
+  possible: 'Not linked: possible member match',
+  none: 'Not linked: no member match',
+  pending: 'Not linked: checking member matches',
+};
+
+function LinkIndicatorBadge({ indicator }: { indicator: LinkIndicator }) {
+  const label = INDICATOR_LABELS[indicator];
+  return (
+    <span role="img" aria-label={label} title={label} className="shrink-0 font-sans text-[11px] leading-none text-[var(--color-text3)]">
+      {indicator === 'linked' ? '🔗' : indicator === 'possible' ? '⚠️' : '·'}
+    </span>
+  );
+}
+
+function describeLinkRef(link: AceMemberLinkRef) {
+  return link.familyName ? `${link.nodeName} (${link.familyName})` : link.nodeName;
+}
+
+function suggestionFor(review: AceLinkReviewItem | undefined): MemberLinkSuggestion | null {
+  if (!review) return null;
+  switch (review.status) {
+    case 'recommended':
+      return { kind: 'recommended', members: review.candidates };
+    case 'ambiguous':
+      return { kind: 'review', members: review.candidates };
+    case 'conflict':
+      return {
+        kind: 'review',
+        members: review.candidates,
+        note: `Already claimed by ${review.conflictsWith.join(', ')}.`,
+      };
+    default:
+      return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Member row
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -97,6 +165,10 @@ function MemberRow({
   parentOptions,
   onSave,
   onDelete,
+  onLinkChange,
+  linkedMember,
+  review,
+  matchingReady,
   saving,
 }: {
   member: AceFamilyMember;
@@ -104,6 +176,10 @@ function MemberRow({
   parentOptions: AceFamilyMember[];
   onSave: (id: string, patch: Partial<AceFamilyMemberFormData>, file: File | null) => Promise<void>;
   onDelete: (id: string) => void;
+  onLinkChange: (id: string, member: MemberOption | null) => void;
+  linkedMember: MemberOption | null;
+  review: AceLinkReviewItem | undefined;
+  matchingReady: boolean;
   saving: boolean;
 }) {
   const [name, setName] = useState(member.name);
@@ -156,6 +232,7 @@ function MemberRow({
   }, [member.id, membersById, parentOptions]);
 
   const preview = photoPreview || photoUrl;
+  const nameDirty = isRenamed(member.name, name);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -179,114 +256,135 @@ function MemberRow({
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-start rounded border p-3"
+      className="rounded border p-3"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
-      <div
-        {...getRootProps()}
-        className="flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded border border-dashed"
-        style={{
-          borderColor: isDragActive ? 'var(--color-text2)' : 'var(--color-border)',
-          background: isDragActive ? 'var(--color-surface2)' : 'transparent',
-        }}
-        title="Click or drop to upload member photo"
-      >
-        <input {...getInputProps()} />
-        {preview ? (
-          <img src={preview} alt={name || 'Member'} className="h-full w-full object-cover" />
-        ) : (
-          <span className="font-sans text-[10px]" style={{ color: 'var(--color-text3)' }}>
-            Photo
-          </span>
-        )}
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-[88px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 items-start">
+        <div
+          {...getRootProps()}
+          className="flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded border border-dashed"
+          style={{
+            borderColor: isDragActive ? 'var(--color-text2)' : 'var(--color-border)',
+            background: isDragActive ? 'var(--color-surface2)' : 'transparent',
+          }}
+          title="Click or drop to upload member photo"
+        >
+          <input {...getInputProps()} />
+          {preview ? (
+            <img src={preview} alt={name || 'Member'} className="h-full w-full object-cover" />
+          ) : (
+            <span className="font-sans text-[10px]" style={{ color: 'var(--color-text3)' }}>
+              Photo
+            </span>
+          )}
+        </div>
 
-      <div className="space-y-2">
+        <div className="space-y-2">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Name *</label>
+              <LinkIndicatorBadge indicator={linkIndicatorFor(member, review, matchingReady)} />
+            </div>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputCls}
+              style={fieldStyle()}
+            />
+          </div>
+          <div>
+            <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Photo URL</label>
+            <input
+              type="url"
+              value={photoUrl}
+              onChange={(e) => {
+                setPhotoUrl(e.target.value);
+                setPhotoFile(null);
+                setPhotoPreview('');
+              }}
+              className={inputCls}
+              style={fieldStyle()}
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
         <div>
-          <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Name *</label>
+          <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Role Label</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
             className={inputCls}
             style={fieldStyle()}
+            placeholder="Big, Little, Grandbig…"
           />
         </div>
+
         <div>
-          <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Photo URL</label>
-          <input
-            type="url"
-            value={photoUrl}
-            onChange={(e) => {
-              setPhotoUrl(e.target.value);
-              setPhotoFile(null);
-              setPhotoPreview('');
-            }}
+          <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Parent / Big</label>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
             className={inputCls}
             style={fieldStyle()}
-            placeholder="https://..."
-          />
+          >
+            <option value="">— None (root)</option>
+            {safeParents.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.role_label ? ` (${p.role_label})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col items-end gap-2 pt-5">
+          <label className="flex items-center gap-1.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+            <input
+              type="checkbox"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+            />
+            Published
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded border px-2.5 py-1 font-sans text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'transparent' }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(member.id)}
+              disabled={saving}
+              className="rounded border px-2.5 py-1 font-sans text-xs text-red-500 hover:text-red-400 disabled:opacity-50"
+              style={{ borderColor: 'var(--color-border)', background: 'transparent' }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </div>
-
-      <div>
-        <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Role Label</label>
-        <input
-          type="text"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className={inputCls}
-          style={fieldStyle()}
-          placeholder="Big, Little, Grandbig…"
-        />
-      </div>
-
-      <div>
-        <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Parent / Big</label>
-        <select
-          value={parentId}
-          onChange={(e) => setParentId(e.target.value)}
-          className={inputCls}
-          style={fieldStyle()}
-        >
-          <option value="">— None (root)</option>
-          {safeParents.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-              {p.role_label ? ` (${p.role_label})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col items-end gap-2 pt-5">
-        <label className="flex items-center gap-1.5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-          <input
-            type="checkbox"
-            checked={published}
-            onChange={(e) => setPublished(e.target.checked)}
+      <div className="mt-3 border-t pt-3 md:pl-[100px]" style={{ borderColor: 'var(--color-border)' }}>
+        <div className={labelCls}>VSA member link</div>
+        <div className="mt-1">
+          <MemberLinkPicker
+            linkedMemberId={member.member_id}
+            linkedMember={linkedMember}
+            suggestion={matchingReady ? suggestionFor(review) : null}
+            onLink={(option) => onLinkChange(member.id, option)}
+            onUnlink={() => onLinkChange(member.id, null)}
+            busy={saving}
+            disabledReason={
+              nameDirty ? 'Save or undo the name change first. Renaming a node clears its member link.' : null
+            }
           />
-          Published
-        </label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded border px-2.5 py-1 font-sans text-xs font-medium transition-colors disabled:opacity-50"
-            style={{ background: 'var(--color-text)', color: 'var(--color-bg)', borderColor: 'transparent' }}
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(member.id)}
-            disabled={saving}
-            className="rounded border px-2.5 py-1 font-sans text-xs text-red-500 hover:text-red-400 disabled:opacity-50"
-            style={{ borderColor: 'var(--color-border)', background: 'transparent' }}
-          >
-            Delete
-          </button>
         </div>
       </div>
     </div>
@@ -297,7 +395,13 @@ function MemberRow({
 // Tree preview
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TreePreview({ members }: { members: AceFamilyMember[] }) {
+function TreePreview({
+  members,
+  indicatorFor,
+}: {
+  members: AceFamilyMember[];
+  indicatorFor: (member: AceFamilyMember) => LinkIndicator;
+}) {
   const childrenByParent = useMemo(() => {
     const map = new Map<string | null, AceFamilyMember[]>();
     members.forEach((m) => {
@@ -322,6 +426,7 @@ function TreePreview({ members }: { members: AceFamilyMember[] }) {
             {depth === 0 ? '●' : '└'}
           </span>
           <span>{m.name}</span>
+          <LinkIndicatorBadge indicator={indicatorFor(m)} />
           {m.role_label && (
             <span className="font-sans text-[10px] italic" style={{ color: 'var(--color-text3)' }}>
               {m.role_label}
@@ -386,6 +491,19 @@ export default function AdminAceFamilies() {
   const [importPreview, setImportPreview] = useState<ImportPlan | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importedFamilyId, setImportedFamilyId] = useState<string | null>(null);
+
+  // ── Canonical member links ─────────────────────────────────
+  const {
+    byId: directoryById,
+    nameIndex,
+    loading: directoryLoading,
+    error: directoryError,
+  } = useMemberDirectory(!!selectedFamilyId);
+  const { links: allMemberLinks, ready: linksReady } = useAceMemberLinks(!!selectedFamilyId);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [bulkLinking, setBulkLinking] = useState(false);
+  const matchingReady = !!selectedFamilyId && !directoryLoading && !directoryError && linksReady;
 
   useEffect(() => {
     if (selectedFamily) {
@@ -404,6 +522,24 @@ export default function AdminAceFamilies() {
     members.forEach((m) => map.set(m.id, m));
     return map;
   }, [members]);
+
+  const reviewItems = useMemo(
+    () => (matchingReady ? reviewUnlinkedNodes(members, nameIndex, allMemberLinks) : []),
+    [matchingReady, members, nameIndex, allMemberLinks],
+  );
+  const reviewByNodeId = useMemo(
+    () => new Map(reviewItems.map((item) => [item.node.id, item])),
+    [reviewItems],
+  );
+  const linkSummary = summarizeLinks(members);
+  const unlinkedCount = linkSummary.total - linkSummary.linked;
+  const obviousMatchCount = reviewItems.filter((item) => item.status === 'recommended').length;
+  const indicatorFor = (member: AceFamilyMember) =>
+    linkIndicatorFor(member, reviewByNodeId.get(member.id), matchingReady);
+
+  useEffect(() => {
+    setReviewOpen(false);
+  }, [selectedFamilyId]);
 
   const onCoverDrop = useCallback((accepted: File[]) => {
     const file = accepted[0];
@@ -429,6 +565,54 @@ export default function AdminAceFamilies() {
   const invalidateLists = async () => {
     await queryClient.invalidateQueries(['ace-families']);
     await queryClient.invalidateQueries(['ace-family-members']);
+  };
+
+  const refreshMemberLinks = async () => {
+    await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
+    await invalidateLists();
+  };
+
+  const handleLinkChange = async (nodeId: string, option: MemberOption | null) => {
+    if (option) {
+      const elsewhere = allMemberLinks.filter((link) => link.memberId === option.id && link.nodeId !== nodeId);
+      if (
+        elsewhere.length > 0 &&
+        !window.confirm(
+          `${option.fullName} is already linked to ${elsewhere.map(describeLinkRef).join(', ')}. Link this node to the same person too?`,
+        )
+      ) {
+        return;
+      }
+    }
+    try {
+      setSavingMemberId(nodeId);
+      await aceFamiliesRepository.setMemberLink(nodeId, option?.id ?? null);
+      toast.success(option ? `Linked to ${option.fullName}` : 'Member link removed');
+      await refreshMemberLinks();
+    } catch (err) {
+      console.error(err);
+      toast.error(toUserMessage(err, 'Failed to update member link'));
+    } finally {
+      setSavingMemberId(null);
+    }
+  };
+
+  const handleBulkLink = async (links: AceMemberLinkChange[]) => {
+    if (links.length === 0) return;
+    try {
+      setBulkLinking(true);
+      const { linked, skipped } = await aceFamiliesRepository.linkUnlinkedMembers(links);
+      const skippedNote = skipped.length > 0 ? ` ${skipped.length} skipped because someone already linked them.` : '';
+      toast.success(`Linked ${linked.length} member${linked.length === 1 ? '' : 's'}.${skippedNote}`);
+      setImportedFamilyId(null);
+      await refreshMemberLinks();
+    } catch (err) {
+      console.error(err);
+      toast.error(toUserMessage(err, 'Failed to link members'));
+      await refreshMemberLinks();
+    } finally {
+      setBulkLinking(false);
+    }
   };
 
   const handleNewFamily = () => {
@@ -547,11 +731,9 @@ export default function AdminAceFamilies() {
   ) => {
     try {
       setSavingMemberId(id);
-      const previousName = members.find((member) => member.id === id)?.name;
-      let finalPatch: Partial<AceFamilyMemberFormData> =
-        patch.name !== undefined && isRenamed(previousName, patch.name)
-          ? { ...patch, member_id: null }
-          : patch;
+      const previous = members.find((member) => member.id === id);
+      let finalPatch = applyRenameLinkGuard(previous?.name, patch);
+      const clearedLink = !!previous?.member_id && finalPatch.member_id === null;
       if (file) {
         const { file: prepared, reduction, wasCompressed } = await prepareImageForUpload(file, 'aceMember');
         const url = await aceFamiliesRepository.uploadImage(prepared, 'member');
@@ -565,8 +747,9 @@ export default function AdminAceFamilies() {
         const currentMember = members.find((member) => member.id === id);
         await removeAceImage(currentMember?.photo_url);
       }
-      toast.success('Member saved');
+      toast.success(clearedLink ? 'Member saved. The rename cleared its member link.' : 'Member saved');
       await refetchMembers();
+      if (clearedLink) await queryClient.invalidateQueries(ACE_MEMBER_LINKS_QUERY_KEY);
     } catch (err) {
       console.error(err);
       const message = toUserMessage(err, 'Failed to save member');
@@ -625,6 +808,7 @@ export default function AdminAceFamilies() {
       setImportPreview(null);
       setImportError(null);
       setSelectedFamilyId(family.id);
+      setImportedFamilyId(family.id);
       await queryClient.invalidateQueries(['ace-families']);
       await queryClient.invalidateQueries(['ace-family-members']);
       await refetch();
@@ -1101,7 +1285,67 @@ export default function AdminAceFamilies() {
                     Assign each member a parent (their Big). Members with no parent are roots.
                   </p>
                 </div>
+                {members.length > 0 && (
+                  <div className="shrink-0 text-right font-sans text-xs">
+                    <div className="font-medium text-[var(--color-text)]">
+                      {linkSummary.linked} / {linkSummary.total} linked
+                    </div>
+                    {unlinkedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewOpen((open) => !open)}
+                        disabled={!matchingReady}
+                        aria-expanded={reviewOpen}
+                        className="mt-0.5 bg-transparent p-0 text-[11px] font-medium text-[var(--color-text2)] underline-offset-2 hover:underline disabled:opacity-50"
+                      >
+                        {matchingReady ? `Review ${unlinkedCount} unlinked` : 'Checking member matches…'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {directoryError ? (
+                <p className="mb-4 font-sans text-xs text-red-500">
+                  Could not load the member directory, so link suggestions are off. Member search still works.
+                </p>
+              ) : null}
+
+              {importedFamilyId === selectedFamily.id && matchingReady && !reviewOpen && unlinkedCount > 0 && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 font-sans text-xs text-[var(--color-text2)]">
+                  <span>
+                    Imported. {obviousMatchCount > 0
+                      ? `${obviousMatchCount} of ${unlinkedCount} new node${unlinkedCount === 1 ? '' : 's'} ${obviousMatchCount === 1 ? 'has' : 'have'} an obvious member match.`
+                      : 'No new nodes have an obvious member match.'}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setReviewOpen(true)}
+                      className="bg-transparent p-0 font-medium text-[var(--color-text)] underline-offset-2 hover:underline"
+                    >
+                      Review unlinked
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportedFamilyId(null)}
+                      className="bg-transparent p-0 text-[var(--color-text3)] hover:underline"
+                    >
+                      Dismiss
+                    </button>
+                  </span>
+                </div>
+              )}
+
+              {reviewOpen && matchingReady && (
+                <AceLinkReviewPanel
+                  items={reviewItems}
+                  onApply={handleBulkLink}
+                  onLinkOne={(nodeId, option) => handleLinkChange(nodeId, option)}
+                  onClose={() => setReviewOpen(false)}
+                  busy={bulkLinking || savingMemberId !== null}
+                />
+              )}
 
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <input
@@ -1142,7 +1386,11 @@ export default function AdminAceFamilies() {
                       parentOptions={members.filter((other) => other.id !== m.id)}
                       onSave={handleSaveMember}
                       onDelete={handleDeleteMember}
-                      saving={savingMemberId === m.id}
+                      onLinkChange={handleLinkChange}
+                      linkedMember={m.member_id ? directoryById.get(m.member_id) ?? null : null}
+                      review={reviewByNodeId.get(m.id)}
+                      matchingReady={matchingReady}
+                      saving={savingMemberId === m.id || bulkLinking}
                     />
                   ))}
                 </div>
@@ -1157,8 +1405,9 @@ export default function AdminAceFamilies() {
                 </h3>
                 <p className="mt-1 mb-3 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
                   Simple indented preview of the current Big/Little structure. Drafts shown grayed out.
+                  🔗 linked · ⚠️ possible member match · · no match
                 </p>
-                <TreePreview members={members} />
+                <TreePreview members={members} indicatorFor={indicatorFor} />
               </div>
             </div>
           ) : (

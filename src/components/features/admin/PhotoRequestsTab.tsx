@@ -8,6 +8,7 @@ import {
   MemberPhotoRequestEvent,
   MemberMatchOption,
 } from '../../../data/repos/photoRequests';
+import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { Label } from '../../ui/Label';
 import { toUserMessage } from '../../../data/errors';
 import { MEMBER_AVATARS_QUERY_KEY } from '../../../hooks/useMemberAvatars';
@@ -131,7 +132,7 @@ function RequestCard({
   useEffect(() => {
     if (!isPending || autoMatchChecked) return;
     const matchPromise = request.matched_member_id
-      ? photoRequestsRepository.findMemberById(request.matched_member_id)
+      ? memberLookupRepository.findMemberById(request.matched_member_id)
       : photoRequestsRepository.findMemberForUser(request.user_id);
     matchPromise
       .then(setAutoMatch)
@@ -155,7 +156,7 @@ function RequestCard({
       return;
     }
     try {
-      setSearchResults(await photoRequestsRepository.searchMembers(term));
+      setSearchResults(await memberLookupRepository.searchMembers(term));
     } catch {
       setSearchResults([]);
     }

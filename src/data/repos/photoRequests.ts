@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { Database } from '../../types/database';
 import { withErrorHandling, ValidationError } from '../errors';
 import { prepareImageForUpload, getUploadExtension } from '../../lib/imageUpload';
+import { MemberOption, toMemberOption } from '../../lib/memberLinkMatching';
 
 export type MemberPhotoRequest = Database['public']['Tables']['member_photo_requests']['Row'];
 export type MemberPhotoRequestEvent =
@@ -27,10 +28,8 @@ export interface SubmitPhotoRequestInput {
   consentConfirmed: boolean;
 }
 
-export interface MemberMatchOption {
-  id: string;
-  displayName: string;
-}
+/** Member search/lookup lives in memberLookupRepository. */
+export type MemberMatchOption = Pick<MemberOption, 'id' | 'displayName'>;
 
 export class PhotoRequestsRepository {
   /** Public submissions reserve server quota before a one-object signed upload. */
@@ -313,50 +312,8 @@ export class PhotoRequestsRepository {
     }, 'Failed to remove approved photo');
   }
 
-  /** Admin helper: search members by name to confirm/override the match. */
-  async searchMembers(query: string): Promise<MemberMatchOption[]> {
-    return withErrorHandling(async () => {
-      // Strip PostgREST filter metacharacters so the term cannot malform the
-      // .or() expression below.
-      const term = query.trim().replace(/[,()%.]/g, '');
-      if (term.length < 2) return [];
-      const { data, error } = await supabase
-        .from('public_members')
-        .select('id, first_name, last_name, college, year')
-        .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
-        .order('last_name', { ascending: true })
-        .limit(10);
-      if (error) throw error;
-      return (data ?? []).map((m) => ({
-        id: m.id,
-        displayName: [`${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(), m.college, m.year]
-          .filter(Boolean)
-          .join(' · '),
-      }));
-    }, 'Failed to search members');
-  }
-
   /** Admin helper: auto-match a request's auth user to a member row. */
-  async findMemberById(memberId: string | null | undefined): Promise<MemberMatchOption | null> {
-    if (!memberId) return null;
-    return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('public_members')
-        .select('id, first_name, last_name, college, year')
-        .eq('id', memberId)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      return {
-        id: data.id,
-        displayName: [`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim(), data.college, data.year]
-          .filter(Boolean)
-          .join(' · '),
-      };
-    }, 'Failed to look up matching member');
-  }
-
-  async findMemberForUser(userId: string | null | undefined): Promise<MemberMatchOption | null> {
+  async findMemberForUser(userId: string | null | undefined): Promise<MemberOption | null> {
     if (!userId) return null;
     return withErrorHandling(async () => {
       const { data, error } = await supabase
@@ -366,13 +323,7 @@ export class PhotoRequestsRepository {
         .limit(1);
       if (error) throw error;
       const m = data?.[0];
-      if (!m) return null;
-      return {
-        id: m.id,
-        displayName: [`${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(), m.college, m.year]
-          .filter(Boolean)
-          .join(' · '),
-      };
+      return m ? toMemberOption(m) : null;
     }, 'Failed to look up matching member');
   }
 }
