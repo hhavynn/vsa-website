@@ -1,6 +1,7 @@
 import { useQuery } from 'react-query';
 import { AceFamily, AceFamilyMember } from '../types';
 import { aceFamiliesRepository } from '../data/repos/aceFamilies';
+import { AceMemberLinkRef } from '../lib/aceMemberLinks';
 
 export function usePublishedAceFamilies(academicYearStart?: number | null) {
   const {
@@ -82,4 +83,17 @@ export function useAdminAceFamilyMembers(familyId: string | null) {
   });
 
   return { members, loading, error, refetch };
+}
+
+export const ACE_MEMBER_LINKS_QUERY_KEY = ['ace-member-links'] as const;
+
+export function useAceMemberLinks(enabled = true) {
+  const { data: links = [], isSuccess: ready } = useQuery<AceMemberLinkRef[]>({
+    queryKey: ACE_MEMBER_LINKS_QUERY_KEY,
+    queryFn: () => aceFamiliesRepository.getAllMemberLinks(),
+    enabled,
+    staleTime: 30 * 1000,
+  });
+
+  return { links, ready };
 }

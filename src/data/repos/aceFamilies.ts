@@ -3,6 +3,7 @@ import { AceFamily, AceFamilyMember } from '../../types';
 import { withErrorHandling } from '../errors';
 import { ImportPlan } from '../../lib/aceFamilyImport';
 import { getUploadExtension } from '../../lib/imageUpload';
+import { AceMemberLinkChange, AceMemberLinkRef } from '../../lib/aceMemberLinks';
 
 export type AceFamilyFormData = Omit<AceFamily, 'id' | 'created_at' | 'updated_at'>;
 export type AceFamilyMemberFormData = Omit<AceFamilyMember, 'id' | 'created_at' | 'updated_at'>;
@@ -147,6 +148,58 @@ export class AceFamiliesRepository {
       const { error } = await supabase.from('ace_family_members').delete().eq('id', id);
       if (error) throw error;
     }, 'Failed to delete ACE family member');
+  }
+
+  /** Sets or clears one node's canonical members.id link. */
+  async setMemberLink(nodeId: string, memberId: string | null): Promise<AceFamilyMember> {
+    return this.updateMember(nodeId, { member_id: memberId });
+  }
+
+  /**
+   * Bulk-links reviewed matches. Each update only applies while the node is
+   * still unlinked, so a link another admin set meanwhile is never replaced.
+   */
+  async linkUnlinkedMembers(
+    links: readonly AceMemberLinkChange[],
+  ): Promise<{ linked: string[]; skipped: string[] }> {
+    return withErrorHandling(async () => {
+      const linked: string[] = [];
+      const skipped: string[] = [];
+      for (const link of links) {
+        const { data, error } = await supabase
+          .from('ace_family_members')
+          .update({ member_id: link.memberId, updated_at: new Date().toISOString() })
+          .eq('id', link.nodeId)
+          .is('member_id', null)
+          .select('id');
+        if (error) throw error;
+        (data && data.length > 0 ? linked : skipped).push(link.nodeId);
+      }
+      return { linked, skipped };
+    }, 'Failed to link ACE members');
+  }
+
+  /** Every linked node across all fams, so one member is not linked twice. */
+  async getAllMemberLinks(): Promise<AceMemberLinkRef[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('ace_family_members')
+        .select('id, name, member_id, ace_families(name)')
+        .not('member_id', 'is', null);
+      if (error) throw error;
+      return (data ?? []).flatMap((row) => {
+        if (!row.member_id) return [];
+        const family = Array.isArray(row.ace_families) ? row.ace_families[0] : row.ace_families;
+        return [
+          {
+            nodeId: row.id,
+            memberId: row.member_id,
+            nodeName: row.name,
+            familyName: family?.name ?? null,
+          },
+        ];
+      });
+    }, 'Failed to fetch ACE member links');
   }
 
   /**
