@@ -12,6 +12,7 @@ const NAV_GROUPS = [
     { to: '/admin/applications', label: 'Applications' },
     { to: '/admin/houses', label: 'Houses' },
     { to: '/admin/ace', label: 'ACE Families' },
+    { to: '/admin/interns', label: 'Intern Cohort' },
     { to: '/admin/uvsa-schools', label: 'UVSA Schools' },
     { to: '/admin/external-events', label: 'External Events' },
   ]},

@@ -141,6 +141,13 @@ const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
         keywords: ['ace', 'families', 'family', 'members'],
       },
       {
+        to: '/admin/interns',
+        label: 'Intern Cohort',
+        desc: 'Prepare the accepted intern cohort privately: import names, link members, assign mentors, then publish to the Cabinet Interns group.',
+        affects: '/intern-program, /cabinet (Interns group), intern avatars',
+        keywords: ['interns', 'intern', 'cohort', 'mentor', 'internship', 'accepted'],
+      },
+      {
         to: '/admin/applications',
         label: 'Applications',
         desc: 'Manage application and interest-form links with open/close windows. Buttons appear publicly only while a window is open.',
