@@ -23,8 +23,10 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 
 ## Migrations (apply manually, in order, after staging verification)
 
-1. `20261002000300_create_house_assignment_batches.sql`
-2. `20261002000400_create_intern_cohort_cycles.sql`
+1. `20261001213414_create_house_assignment_batches.sql`
+2. `20261001213433_create_intern_cohort_cycles.sql`
+
+**Status:** both applied to production on 2026-10-01; filenames match the versions recorded in `supabase_migrations`.
 
 Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 
