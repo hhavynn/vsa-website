@@ -42,6 +42,53 @@ it('does not upload when broker rejects quota or is unavailable', async () => {
   await expect(photoRequestsRepository.submitPhotoRequest(input())).rejects.toThrow();
   expect(mockSignedUpload).not.toHaveBeenCalled();
 });
+function httpError(status: number, body: unknown) {
+  return {
+    name: 'FunctionsHttpError',
+    message: 'Edge Function returned a non-2xx status code',
+    context: new Response(typeof body === 'string' ? body : JSON.stringify(body), { status }),
+  };
+}
+it('shows the broker\'s own message when it rejects a request', async () => {
+  mockInvoke.mockResolvedValue({
+    data: null,
+    error: httpError(429, { error: 'Photo request limit reached. Please contact VSA or try again later.' }),
+  });
+  await expect(photoRequestsRepository.submitPhotoRequest(input())).rejects.toMatchObject({
+    name: 'ValidationError',
+    message: 'Photo request limit reached. Please contact VSA or try again later.',
+  });
+});
+it('explains an unavailable broker with no usable body', async () => {
+  mockInvoke.mockResolvedValue({ data: null, error: httpError(502, '<html>bad gateway</html>') });
+  await expect(photoRequestsRepository.submitPhotoRequest(input())).rejects.toMatchObject({
+    name: 'ValidationError',
+    message: expect.stringMatching(/photo upload service/i),
+  });
+});
+it('reports a failed network call to the broker as a connection problem', async () => {
+  mockInvoke.mockResolvedValue({
+    data: null,
+    error: { name: 'FunctionsFetchError', message: 'Failed to send a request to the Edge Function' },
+  });
+  await expect(photoRequestsRepository.submitPhotoRequest(input())).rejects.toMatchObject({
+    name: 'NetworkError',
+  });
+});
+it('tells the user when the photo itself could not be uploaded', async () => {
+  mockSignedUpload.mockResolvedValue({ error: { message: 'The resource already exists' } });
+  await expect(photoRequestsRepository.submitPhotoRequest(input())).rejects.toMatchObject({
+    name: 'ValidationError',
+    message: expect.stringMatching(/photo could not be uploaded/i),
+  });
+});
+it('rejects unsupported file types before calling the broker', async () => {
+  const heic = new File(['x'], 'me.heic', { type: 'image/heic' });
+  await expect(
+    photoRequestsRepository.submitPhotoRequest({ ...input(), file: heic }),
+  ).rejects.toMatchObject({ name: 'ValidationError', message: expect.stringMatching(/JPEG, PNG, or WebP/) });
+  expect(mockInvoke).not.toHaveBeenCalled();
+});
 it('rejects missing or malformed capabilities before touching storage', async () => {
   for (const data of [null, { path }, { token: 'token', path: '../outside.webp' }]) {
     mockInvoke.mockResolvedValue({ data, error: null });

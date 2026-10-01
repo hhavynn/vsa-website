@@ -17,7 +17,12 @@ serve(createPhotoUploadHandler({
       p_name: input.submittedName, p_email: input.submittedEmail,
       p_note: input.noteToAdmins, p_content_type: input.contentType, p_size: input.size,
     });
-    if (error) return { error: error.code === "22023" ? "invalid" : error.code === "P0001" ? "limit" : "unavailable" };
+    if (error) {
+      // P0001 is a RAISE EXCEPTION from our own functions (quota or pending-request
+      // limit), whose text is written for visitors. Anything else stays generic.
+      if (error.code === "P0001" && error.message) return { error: "limit", message: error.message };
+      return { error: error.code === "22023" ? "invalid" : "unavailable" };
+    }
     const path = data?.[0]?.pending_path;
     return typeof path === "string" ? { path } : { error: "unavailable" };
   },

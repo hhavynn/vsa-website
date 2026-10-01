@@ -39,3 +39,26 @@ describe('MemberPhotoRequestFormSchema', () => {
     ).toBe(false);
   });
 });
+
+describe('MemberPhotoRequestFormSchema email domain', () => {
+  const validForm = {
+    submitted_name: 'Synthetic Member',
+    submitted_email: 'synthetic@ucsd.edu',
+    note_to_admins: '',
+    consent_confirmed: true as const,
+  };
+
+  it('requires a @ucsd.edu address, matching the upload broker', () => {
+    const result = MemberPhotoRequestFormSchema.safeParse({ ...validForm, submitted_email: 'me@gmail.com' });
+    const issues = result.success ? [] : result.error.errors;
+    expect(result.success).toBe(false);
+    expect(issues[0]?.path).toEqual(['submitted_email']);
+    expect(issues[0]?.message).toMatch(/@ucsd\.edu/);
+  });
+
+  it('accepts mixed-case UCSD addresses', () => {
+    expect(
+      MemberPhotoRequestFormSchema.safeParse({ ...validForm, submitted_email: 'Me@UCSD.edu' }).success,
+    ).toBe(true);
+  });
+});

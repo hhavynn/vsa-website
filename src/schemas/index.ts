@@ -138,7 +138,10 @@ export const MemberPhotoRequestFormSchema = z.object({
     .string()
     .trim()
     .email('Enter a valid email address')
-    .max(200, 'Email must be 200 characters or fewer'),
+    .max(200, 'Email must be 200 characters or fewer')
+    // The upload broker only accepts UCSD addresses; catching it here turns a
+    // server-side rejection into a message beside the field.
+    .regex(/@ucsd\.edu$/i, 'Use your UCSD email (it must end in @ucsd.edu)'),
   note_to_admins: z.string().max(1000, 'Note must be 1,000 characters or fewer'),
   consent_confirmed: z.literal(true, {
     errorMap: () => ({ message: 'You must confirm consent to submit a photo' }),
