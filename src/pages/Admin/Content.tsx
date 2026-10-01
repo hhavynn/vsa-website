@@ -17,6 +17,7 @@ import { ProgramContentManager } from '../../components/features/admin/ProgramCo
 import { PreviewAsPublicButton, PublicPreviewDialog } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { PresidentsMessageSection } from '../../components/features/home/PresidentsMessage';
 import { safePreviewImageUrl } from '../../components/features/admin/preview/previewImageUrl';
+import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/20 font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -264,7 +265,7 @@ export default function AdminContent() {
             >
               <input {...getInputProps()} />
               {previewPhoto ? (
-                <img src={previewPhoto} alt="Presidents preview" className="max-h-52 rounded object-cover" />
+                <img src={sanitizeImageSrc(previewPhoto)} alt="Presidents preview" className="max-h-52 rounded object-cover" />
               ) : (
                 <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
               )}
@@ -311,7 +312,7 @@ export default function AdminContent() {
           <div className="p-5">
             <div className="mb-5 border rounded p-4 flex items-center justify-center" style={{ background: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
               {previewPhoto ? (
-                <img src={previewPhoto} alt={`${form.names} presidents preview`} className="w-full max-w-xs aspect-[4/5] object-cover rounded border" style={{ borderColor: 'var(--color-border)' }} />
+                <img src={sanitizeImageSrc(previewPhoto)} alt={`${form.names} presidents preview`} className="w-full max-w-xs aspect-[4/5] object-cover rounded border" style={{ borderColor: 'var(--color-border)' }} />
               ) : (
                 <div className="w-full max-w-xs aspect-[4/5] border border-dashed rounded flex items-center justify-center" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="text-center px-6">
