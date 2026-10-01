@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { FamSheet } from './FamSheet';
 import { AceFamily, AceFamilyMember } from '../../../types';
@@ -49,11 +49,11 @@ const members = [
   member({ id: 'node-lynna', name: 'Lynna On', parent_member_id: 'node-big', member_id: 'member-lynna' }),
 ];
 
-function renderSheet(onClose = () => {}) {
+function renderSheet(onClose = () => {}, sheetMembers = members) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <FamSheet family={family} members={members} accent="teal" viet={null} dark={false} onClose={onClose} />
+      <FamSheet family={family} members={sheetMembers} accent="teal" viet={null} dark={false} onClose={onClose} />
     </QueryClientProvider>,
   );
 }
@@ -128,5 +128,106 @@ describe('FamSheet member photos', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Request Profile Photo' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+});
+
+describe('FamSheet lineage spotlight', () => {
+  // Root → Big → Big → Me, plus a sibling branch that must stay unlit.
+  const lineageMembers = [
+    member({ id: 'node-root', name: 'Root Founder', role_label: 'OG Founder' }),
+    member({ id: 'node-big', name: 'Big One', role_label: 'Big', parent_member_id: 'node-root' }),
+    member({ id: 'node-big2', name: 'Big Two', role_label: 'Big', parent_member_id: 'node-big' }),
+    member({ id: 'node-me', name: 'Me Myself', role_label: 'Little', parent_member_id: 'node-big2' }),
+    member({ id: 'node-side', name: 'Side Branch', role_label: 'Big', parent_member_id: 'node-root' }),
+  ];
+
+  beforeEach(() => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('public_member_avatars', { data: [], error: null });
+  });
+
+  // Lets the shared-avatar query settle so its update lands inside act().
+  async function renderLineageSheet() {
+    const view = renderSheet(undefined, lineageMembers);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    return view;
+  }
+
+  function lineageNames() {
+    const nav = screen.getByRole('navigation', { name: /^Lineage of/ });
+    return within(nav).getAllByRole('listitem').map((li) => li.textContent);
+  }
+
+  it('lists the lineage from the root down to the selected member', async () => {
+    await renderLineageSheet();
+
+    const me = screen.getByRole('button', { name: 'Me Myself, Little' });
+    fireEvent.click(me);
+
+    expect(lineageNames()).toEqual(['Root Founder', 'Big One', 'Big Two', 'Me Myself']);
+    expect(screen.getByText('Me Myself', { selector: '[aria-current="true"]' })).toBeInTheDocument();
+    expect(me).toHaveClass('is-lineage');
+    expect(screen.getByRole('button', { name: 'Side Branch, Big' })).not.toHaveClass('is-lineage');
+  });
+
+  it('jumps to an ancestor from the lineage trail', async () => {
+    await renderLineageSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Me Myself, Little' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Big One' }));
+
+    expect(lineageNames()).toEqual(['Root Founder', 'Big One']);
+    expect(screen.getByRole('button', { name: 'Big One, Big' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('clears the spotlight when the selected member is tapped again', async () => {
+    await renderLineageSheet();
+
+    const me = screen.getByRole('button', { name: 'Me Myself, Little' });
+    fireEvent.click(me);
+    expect(screen.getByTestId('ace-lineage')).toBeInTheDocument();
+
+    fireEvent.click(me);
+
+    expect(screen.queryByTestId('ace-lineage')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /^Lineage of/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Tap a member to trace their lineage/)).toBeInTheDocument();
+    expect(me).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('clears from the Clear button and returns focus to the member', async () => {
+    await renderLineageSheet();
+
+    const big2 = screen.getByRole('button', { name: 'Big Two, Big' });
+    fireEvent.keyDown(big2, { key: 'Enter' });
+    expect(lineageNames()).toEqual(['Root Founder', 'Big One', 'Big Two']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(screen.queryByTestId('ace-lineage')).not.toBeInTheDocument();
+    expect(big2).toHaveFocus();
+  });
+
+  it('switches the spotlight when another member is selected', async () => {
+    await renderLineageSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Me Myself, Little' }));
+    const first = screen.getByTestId('ace-lineage');
+    fireEvent.click(screen.getByRole('button', { name: 'Side Branch, Big' }));
+
+    expect(screen.getByTestId('ace-lineage')).not.toBe(first);
+    expect(lineageNames()).toEqual(['Root Founder', 'Side Branch']);
+    expect(screen.getByRole('button', { name: 'Me Myself, Little' })).not.toHaveClass('is-lineage');
+  });
+
+  it('keeps the photo-request rail for the selected member', async () => {
+    await renderLineageSheet();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Root Founder, OG Founder' }));
+
+    expect(screen.queryByRole('navigation', { name: /^Lineage of/ })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('Photo requests open once a VSA admin links this name to a member record.'),
+    ).toBeInTheDocument();
   });
 });
