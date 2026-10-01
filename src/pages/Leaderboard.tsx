@@ -16,6 +16,7 @@ import { useIndividualLeaderboard, type IndividualLeaderboardMember as Member } 
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import type { MemberAvatarMap } from '../lib/memberPhotos';
+import { getAvatarInitials, getInitialsAvatarColors } from '../lib/initialsAvatar';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
@@ -23,6 +24,7 @@ import { formatDateOnly } from '../lib/dateOnly';
 import { HouseRecentActivity, MemberEventHistoryEntry, MemberHouseBadge } from '../types';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { comparePointsThenEvents, getLeaderboardGap, LeaderboardGap } from '../utils/leaderboardRanking';
+import { buildAcademicYearOptions, resolveDefaultLeaderboardYear, type AcademicYearOption } from '../utils/leaderboardYears';
 import { Link } from 'react-router-dom';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
@@ -181,20 +183,9 @@ interface HouseStanding {
 
 type SelectedYear = number | 'all';
 
-interface AcademicYearOption {
-  year: number;
-  label: string;
-  isActive: boolean;
-  hasData: boolean;
-}
-
 function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
-  const parts = name.trim().split(/\s+/);
-  const initials =
-    parts.length >= 2
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : (parts[0]?.[0] ?? '?').toUpperCase();
-  const hue = (name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) * 137) % 360;
+  const initials = getAvatarInitials(name);
+  const colors = getInitialsAvatarColors(name);
 
   return (
     <div
@@ -203,8 +194,8 @@ function InitialsAvatar({ name, size = 28 }: { name: string; size?: number }) {
         width: size,
         height: size,
         fontSize: size * 0.36,
-        background: `hsl(${hue},45%,88%)`,
-        color: `hsl(${hue},55%,38%)`,
+        background: colors.background,
+        color: colors.foreground,
       }}
     >
       {initials}
@@ -455,54 +446,15 @@ export function Leaderboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const academicYears = useMemo<AcademicYearOption[]>(() => {
-    const years = new Map<number, AcademicYearOption>();
+  const academicYears = useMemo<AcademicYearOption[]>(
+    () => buildAcademicYearOptions(terms, yearsWithData),
+    [terms, yearsWithData]
+  );
 
-    terms.forEach((term) => {
-      const existing = years.get(term.academic_year_start);
-      if (existing) {
-        existing.isActive = existing.isActive || term.is_active;
-        return;
-      }
-
-      years.set(term.academic_year_start, {
-        year: term.academic_year_start,
-        label: `${term.academic_year_start}-${term.academic_year_end}`,
-        isActive: term.is_active,
-        hasData: false,
-      });
-    });
-
-    yearsWithData.forEach((year) => {
-      const existing = years.get(year);
-      if (existing) {
-        existing.hasData = true;
-      } else {
-        years.set(year, {
-          year,
-          label: `${year}-${year + 1}`,
-          isActive: false,
-          hasData: true,
-        });
-      }
-    });
-
-    return Array.from(years.values()).sort((a, b) => b.year - a.year);
-  }, [terms, yearsWithData]);
-
-  const resolvedDefaultYear = useMemo<SelectedYear | null>(() => {
-    if (academicYears.length === 0) return null;
-
-    const activeYear = academicYears.find((year) => year.isActive);
-    if (activeYear?.hasData) return activeYear.year;
-
-    const mostRecentYearWithData = academicYears.find((year) => year.hasData);
-    if (mostRecentYearWithData) return mostRecentYearWithData.year;
-
-    if (activeYear) return activeYear.year;
-
-    return academicYears[0].year;
-  }, [academicYears]);
+  const resolvedDefaultYear = useMemo<SelectedYear | null>(
+    () => resolveDefaultLeaderboardYear(academicYears),
+    [academicYears]
+  );
 
   const defaultYearReady = !termsLoading && !yearsWithDataLoading;
   const initialSelectedYear = defaultYearReady ? resolvedDefaultYear ?? 'all' : null;
