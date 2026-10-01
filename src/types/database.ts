@@ -3704,6 +3704,10 @@ export type Database = {
         Args: { p_cycle_id: string };
         Returns: Json;
       };
+      publish_cabinet_roster_cycle: {
+        Args: { p_cycle_id: string };
+        Returns: Json;
+      };
       reserve_ai_quota: {
         Args: { p_session_id_hash: string; p_ip_hash: string | null };
         Returns: Json;

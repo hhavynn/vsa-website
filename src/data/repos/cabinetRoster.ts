@@ -1,8 +1,10 @@
 // Private Cabinet roster cycles (draft -> lock -> publish). Admin only.
-// Publishing writes cabinet_members for the cycle's cabinet year — the one
-// source the public Cabinet page reads — and records each resulting id on the
-// draft so a repeat publish updates in place instead of duplicating. It never
-// activates the cabinet year; activation is its own explicit action.
+// Publishing runs as ONE database transaction (publish_cabinet_roster_cycle):
+// it locks the cycle, writes cabinet_members for the cycle's cabinet year — the
+// one source the public Cabinet page reads — stamps each draft, and marks the
+// cycle published, so a failure never leaves a partial Cabinet public and two
+// admins cannot both publish. It never activates the cabinet year; activation
+// is its own explicit action.
 import { supabase } from '../../lib/supabase';
 import {
   CabinetRosterCycle,
@@ -12,9 +14,6 @@ import {
   RosterDraftPatch,
   buildRosterPreflight,
   buildStructureRows,
-  cabinetMemberFromDraft,
-  cabinetMemberUpdateFromDraft,
-  findExistingCabinetRow,
   sortRosterDrafts,
 } from '../../lib/cabinetRoster';
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
@@ -39,6 +38,14 @@ export interface PublishRosterResult {
   alreadyPublished: boolean;
   created: number;
   updated: number;
+}
+
+function parsePublishResult(data: unknown): PublishRosterResult {
+  const row = (data ?? {}) as Record<string, unknown>;
+  if (typeof row.created !== 'number' || typeof row.updated !== 'number') {
+    throw new ValidationError('Publish returned an unexpected response');
+  }
+  return { alreadyPublished: row.already_published === true, created: row.created, updated: row.updated };
 }
 
 export class CabinetRosterRepository {
@@ -256,81 +263,17 @@ export class CabinetRosterRepository {
   }
 
   /**
-   * Publishes a locked roster into cabinet_members for its cabinet year. Each
-   * position resolves to an existing row in this order: the row already
-   * recorded on the draft, an unclaimed row for the same member (or, if
-   * unlinked, the same name) in this cabinet year, otherwise a new row.
-   * Re-running updates in place and never duplicates; a published cycle is a
-   * no-op. Existing rows that are not in the roster are left untouched, and
-   * the cabinet year's is_active flag is never changed here.
+   * Publishes a locked roster through the single database function. The
+   * database re-checks every blocker, adopts an existing row for the same
+   * member (or same name, if unlinked) instead of duplicating it, never deletes
+   * or blanks anything, and rolls everything back on any error. Calling it again
+   * for a published roster returns `alreadyPublished` with nothing written.
    */
   async publishCycle(cycleId: string): Promise<PublishRosterResult> {
     return withErrorHandling(async () => {
-      const cycle = await this.getCycle(cycleId);
-      if (cycle.status === 'published') return { alreadyPublished: true, created: 0, updated: 0 };
-      if (cycle.status !== 'locked') {
-        throw new ValidationError(`Only a locked roster can be published (this one is ${cycle.status}).`, 'status', cycle.status);
-      }
-
-      const drafts = await this.getDrafts(cycleId);
-      const preflight = buildRosterPreflight(drafts);
-      if (!preflight.canLock) {
-        throw new ValidationError(`Cannot publish: ${preflight.blockers[0].message}`, 'preflight');
-      }
-
-      const { data: existingRows, error: existingError } = await supabase
-        .from('cabinet_members')
-        .select('id, name, member_id')
-        .eq('cabinet_year_id', cycle.cabinet_year_id)
-        .neq('category', ROSTER_EXCLUDED_CATEGORY);
-      if (existingError) throw existingError;
-      const existing = existingRows ?? [];
-      const claimed = new Set(drafts.map((draft) => draft.published_cabinet_member_id).filter((id): id is string => !!id));
-
-      let created = 0;
-      let updated = 0;
-      for (const draft of drafts) {
-        const payload = cabinetMemberFromDraft(draft, cycle.cabinet_year_id);
-        const match = findExistingCabinetRow(draft, existing, claimed);
-        let targetId: string | null = match?.id ?? null;
-        if (match) claimed.add(match.id);
-
-        if (targetId) {
-          const { data, error } = await supabase
-            .from('cabinet_members')
-            .update(cabinetMemberUpdateFromDraft(draft, cycle.cabinet_year_id))
-            .eq('id', targetId)
-            .select('id');
-          if (error) throw error;
-          if (data && data.length > 0) {
-            updated += 1;
-          } else {
-            targetId = null;
-          }
-        }
-
-        if (!targetId) {
-          const { data, error } = await supabase
-            .from('cabinet_members')
-            .insert(payload)
-            .select('id')
-            .single();
-          if (error) throw error;
-          targetId = data.id;
-          created += 1;
-        }
-
-        if (draft.published_cabinet_member_id !== targetId) {
-          const { error } = await supabase
-            .from('cabinet_roster_drafts')
-            .update({ published_cabinet_member_id: targetId })
-            .eq('id', draft.id);
-          if (error) throw error;
-        }
-      }
-
-      await this.setStatus(cycleId, 'locked', 'published');
-      return { alreadyPublished: false, created, updated };
+      const { data, error } = await supabase.rpc('publish_cabinet_roster_cycle', { p_cycle_id: cycleId });
+      if (error) throw error;
+      return parsePublishResult(data);
     }, 'Failed to publish the Cabinet roster');
   }
 }

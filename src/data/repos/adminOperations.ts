@@ -181,7 +181,7 @@ export class AdminOperationsRepository {
       supabase.from('events').select('name, date').eq('is_published', true).gte('date', since).order('date', { ascending: true }).limit(1),
       upcoming(),
       upcoming().or('location.is.null,location.eq.""'),
-      upcoming().or('location.is.null,location.eq."",check_in_form_url.eq."",image_url.is.null'),
+      upcoming().or('location.is.null,location.eq."",check_in_form_url.is.null,check_in_form_url.eq."",image_url.is.null'),
     ]);
     for (const result of [next, total, missingLocation, missingInfo]) {
       if (result.error) throw result.error;

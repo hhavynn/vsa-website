@@ -18,15 +18,14 @@ export function PreflightSummary({ title = 'Preflight', lines, emptyText = 'Noth
 
   return (
     <section
-      className="scrapbook-paper p-5"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface"
       aria-label={title}
     >
-      <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+      <h3 className="font-serif text-lg font-bold text-text-primary">
         {title}
       </h3>
       {lines.length === 0 && (
-        <p className="mt-3 text-xs" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-3 text-xs text-text-muted">
           {emptyText}
         </p>
       )}
@@ -49,7 +48,7 @@ export function PreflightSummary({ title = 'Preflight', lines, emptyText = 'Noth
       )}
       {attention.length > 0 && (
         <div className="mt-3">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">
             Needs attention
           </p>
           <ul className="mt-1 space-y-1">

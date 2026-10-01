@@ -5,7 +5,7 @@ const TONE: Record<PreflightSeverity, string> = {
   ok: 'text-green-700 dark:text-green-400',
   warning: 'text-amber-700 dark:text-amber-400',
   blocker: 'text-red-600 dark:text-red-400',
-  info: '',
+  info: 'text-text-muted',
 };
 
 export type { PreflightLine };
@@ -20,7 +20,6 @@ export function PreflightItem({ line }: { line: PreflightLine }) {
   return (
     <li
       className={`text-xs ${TONE[line.severity]}`}
-      style={line.severity === 'info' ? { color: 'var(--color-text3)' } : undefined}
       data-severity={line.severity}
     >
       {line.to ? (

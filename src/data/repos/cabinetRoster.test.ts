@@ -1,8 +1,10 @@
 /**
  * Cabinet rollover persistence. Structure copy must write positions only,
  * starting a draft must be idempotent, a locked roster must be immutable, and
- * publishing must be idempotent, photo-optional, and must never activate a
- * Cabinet year.
+ * publishing must go through the single transactional database function and
+ * never write public rows or activate a Cabinet year from the client. The
+ * function's own behavior (atomicity, idempotency, adoption, blockers) is
+ * covered by scripts/verify-cabinet-roster.sql.
  */
 import { cabinetRosterRepository } from './cabinetRoster';
 import { supabaseMock } from '../../test-utils/supabaseMock';
@@ -52,13 +54,6 @@ function draft(n: number, overrides: Partial<CabinetRosterDraft> = {}): CabinetR
 
 function callsFor(table: string, method: string) {
   return supabaseMock.queriesFor(table).flatMap((q) => q.calls).filter((c) => c.method === method);
-}
-
-/** getCycle, getDrafts, then the existing public rows, as publishCycle reads them. */
-function queuePublish(status: CabinetRosterCycle['status'], drafts: CabinetRosterDraft[], existing: unknown[] = []) {
-  supabaseMock.queueResult('cabinet_roster_cycles', { data: cycle(status), error: null });
-  supabaseMock.queueResult('cabinet_roster_drafts', { data: drafts, error: null });
-  supabaseMock.queueResult('cabinet_members', { data: existing, error: null });
 }
 
 beforeEach(() => supabaseMock.reset());
@@ -159,125 +154,56 @@ describe('a locked roster cannot silently mutate', () => {
 });
 
 describe('publishing', () => {
-  it('refuses to publish a roster that is not locked', async () => {
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: cycle('draft'), error: null });
-    await expect(cabinetRosterRepository.publishCycle('cycle-1')).rejects.toThrow(/locked/);
-    expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
-  });
+  const RPC = 'rpc:publish_cabinet_roster_cycle';
 
-  it('creates the public row, records its id on the draft, and publishes the cycle', async () => {
-    queuePublish('locked', [draft(0, { name: 'Havyn Nguyen', member_id: 'm-havyn', role: 'Co-President', category: 'Executive Board', display_order: 0, fun_fact: 'hi' })]);
-    supabaseMock.queueResult('cabinet_members', { data: { id: 'cm-new' }, error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
-    const result = await cabinetRosterRepository.publishCycle('cycle-1');
-
-    expect(result).toEqual({ alreadyPublished: false, created: 1, updated: 0 });
-    expect(callsFor('cabinet_members', 'insert')[0].args[0]).toMatchObject({
-      name: 'Havyn Nguyen',
-      role: 'Co-President',
-      category: 'Executive Board',
-      member_id: 'm-havyn',
-      cabinet_year_id: 'cy-2027',
-      fun_fact: 'hi',
+  it('publishes through the single database function and never writes public rows itself', async () => {
+    supabaseMock.setDefault(RPC, {
+      data: { cycle_id: 'cycle-1', status: 'published', created: 18, updated: 1, total: 19, already_published: false },
+      error: null,
     });
-    expect(callsFor('cabinet_roster_drafts', 'update')[0].args[0]).toEqual({ published_cabinet_member_id: 'cm-new' });
-    expect(callsFor('cabinet_roster_cycles', 'update')[0].args[0]).toEqual({ status: 'published' });
+
+    await expect(cabinetRosterRepository.publishCycle('cycle-1')).resolves.toEqual({ alreadyPublished: false, created: 18, updated: 1 });
+
+    expect(supabaseMock.queriesFor(RPC)[0].calls[0].args[0]).toEqual({ p_cycle_id: 'cycle-1' });
+    expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('cabinet_roster_drafts')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('cabinet_roster_cycles')).toHaveLength(0);
   });
 
-  it('never activates the cabinet year or touches the photo columns', async () => {
-    queuePublish('locked', [draft(0)]);
-    supabaseMock.queueResult('cabinet_members', { data: { id: 'cm-new' }, error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
+  it('never touches cabinet_years, so publishing cannot activate a year', async () => {
+    supabaseMock.setDefault(RPC, { data: { created: 1, updated: 0, already_published: false }, error: null });
     await cabinetRosterRepository.publishCycle('cycle-1');
-
     expect(supabaseMock.queriesFor('cabinet_years')).toHaveLength(0);
-    const payload = callsFor('cabinet_members', 'insert')[0].args[0] as Record<string, unknown>;
-    expect(payload).not.toHaveProperty('image_url');
-    expect(payload).not.toHaveProperty('thumbnail_url');
     expect(JSON.stringify(supabaseMock.queries())).not.toContain('is_active');
   });
 
-  it('publishes without any approved photo (a photo is never required)', async () => {
-    queuePublish('locked', [draft(0, { member_id: null })]);
-    supabaseMock.queueResult('cabinet_members', { data: { id: 'cm-new' }, error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-    await expect(cabinetRosterRepository.publishCycle('cycle-1')).resolves.toMatchObject({ created: 1 });
+  it('reports a repeat publish as already published with nothing created', async () => {
+    supabaseMock.setDefault(RPC, { data: { created: 0, updated: 0, total: 19, already_published: true }, error: null });
+    await expect(cabinetRosterRepository.publishCycle('cycle-1')).resolves.toEqual({ alreadyPublished: true, created: 0, updated: 0 });
   });
 
-  it('adopts an already-public row for the same member instead of duplicating it', async () => {
-    queuePublish('locked', [draft(0, { member_id: 'm-havyn', name: 'Havyn Nguyen' })], [
-      { id: 'cm-old', name: 'Havyn N.', member_id: 'm-havyn' },
-    ]);
-    supabaseMock.queueResult('cabinet_members', { data: [{ id: 'cm-old' }], error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
-    const result = await cabinetRosterRepository.publishCycle('cycle-1');
-
-    expect(result).toEqual({ alreadyPublished: false, created: 0, updated: 1 });
-    expect(callsFor('cabinet_members', 'insert')).toHaveLength(0);
-    expect(callsFor('cabinet_roster_drafts', 'update')[0].args[0]).toEqual({ published_cabinet_member_id: 'cm-old' });
+  it("surfaces the database's blocker message", async () => {
+    supabaseMock.setDefault(RPC, {
+      data: null,
+      error: { message: 'Publish blocked: 2 position(s) are still empty', code: 'P0001', details: '', hint: '' },
+    });
+    await expect(cabinetRosterRepository.publishCycle('cycle-1')).rejects.toThrow('Publish blocked: 2 position(s) are still empty');
   });
 
-  it('updates an adopted row without blanking fields the draft left empty', async () => {
-    queuePublish('locked', [draft(0, { member_id: 'm-havyn', name: 'Havyn Nguyen', college: null, fun_fact: null })], [
-      { id: 'cm-old', name: 'Havyn Nguyen', member_id: 'm-havyn' },
-    ]);
-    supabaseMock.queueResult('cabinet_members', { data: [{ id: 'cm-old' }], error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
-    await cabinetRosterRepository.publishCycle('cycle-1');
-
-    const patch = callsFor('cabinet_members', 'update')[0].args[0] as Record<string, unknown>;
-    expect(patch).toMatchObject({ name: 'Havyn Nguyen', member_id: 'm-havyn', cabinet_year_id: 'cy-2027' });
-    expect(patch).not.toHaveProperty('college');
-    expect(patch).not.toHaveProperty('fun_fact');
+  it('rejects an unexpected response shape', async () => {
+    supabaseMock.setDefault(RPC, { data: { hello: 'world' }, error: null });
+    await expect(cabinetRosterRepository.publishCycle('cycle-1')).rejects.toThrow(/unexpected response/);
   });
+});
 
-  it('retries after a partial publish by updating recorded rows in place, creating nothing', async () => {
-    queuePublish('locked', [draft(0, { published_cabinet_member_id: 'cm-1' }), draft(1, { published_cabinet_member_id: 'cm-2' })], [
-      { id: 'cm-1', name: 'Person 0', member_id: 'm0' },
-      { id: 'cm-2', name: 'Person 1', member_id: 'm1' },
-    ]);
-    supabaseMock.queueResult('cabinet_members', { data: [{ id: 'cm-1' }], error: null });
-    supabaseMock.queueResult('cabinet_members', { data: [{ id: 'cm-2' }], error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
-    const result = await cabinetRosterRepository.publishCycle('cycle-1');
-
-    expect(result).toEqual({ alreadyPublished: false, created: 0, updated: 2 });
-    expect(callsFor('cabinet_members', 'insert')).toHaveLength(0);
-    expect(supabaseMock.usedMethod('cabinet_roster_drafts', 'update')).toBe(false);
-  });
-
-  it('is a no-op for an already published roster', async () => {
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: cycle('published'), error: null });
-
-    expect(await cabinetRosterRepository.publishCycle('cycle-1')).toEqual({ alreadyPublished: true, created: 0, updated: 0 });
-    expect(supabaseMock.queriesFor('cabinet_members')).toHaveLength(0);
-    expect(supabaseMock.usedMethod('cabinet_roster_cycles', 'update')).toBe(false);
-  });
-
-  it('leaves existing public rows that are not in the roster untouched', async () => {
-    queuePublish('locked', [draft(0, { member_id: 'm0' })], [
-      { id: 'cm-other', name: 'Someone Else', member_id: 'm-other' },
-    ]);
-    supabaseMock.queueResult('cabinet_members', { data: { id: 'cm-new' }, error: null });
-    supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
-
-    await cabinetRosterRepository.publishCycle('cycle-1');
-
-    expect(callsFor('cabinet_members', 'delete')).toHaveLength(0);
-    expect(callsFor('cabinet_members', 'update')).toHaveLength(0);
-  });
-
-  it('does not make draft rosters public before publish', async () => {
+describe('locking never publishes', () => {
+  it('does not write public rows when a roster is locked', async () => {
     supabaseMock.queueResult('cabinet_roster_cycles', { data: cycle('draft'), error: null });
     supabaseMock.queueResult('cabinet_roster_drafts', { data: [draft(0)], error: null });
     supabaseMock.queueResult('cabinet_roster_cycles', { data: [{ id: 'cycle-1' }], error: null });
     await cabinetRosterRepository.lockCycle('cycle-1');
     expect(callsFor('cabinet_members', 'insert')).toHaveLength(0);
     expect(callsFor('cabinet_members', 'update')).toHaveLength(0);
+    expect(supabaseMock.usedMethod('rpc:publish_cabinet_roster_cycle', 'rpc')).toBe(false);
   });
 });

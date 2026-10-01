@@ -218,3 +218,60 @@ it('clears a member link when a position is renamed so a photo cannot follow the
 
   expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'a1', { name: 'Someone Else', member_id: null });
 });
+
+describe('switching rosters while a load is in flight', () => {
+  const cycleFor = (id: string, yearId: string): CabinetRosterCycle => ({ ...cycle('draft'), id, cabinet_year_id: yearId });
+
+  it('never shows a slow response for the roster you already left', async () => {
+    const yearsForTwo = [
+      { id: 'cy-2027', label: '2027-2028 Cabinet', slug: '2027-2028', start_year: 2027, end_year: 2028, is_active: false },
+      { id: 'cy-2026', label: '2026-2027 Cabinet', slug: '2026-2027', start_year: 2026, end_year: 2027, is_active: true },
+    ];
+    mockYears.splice(0, mockYears.length, ...yearsForTwo);
+
+    let resolveA: (rows: CabinetRosterDraft[]) => void = () => undefined;
+    repo.listCycles.mockResolvedValue([cycleFor('A', 'cy-2027'), cycleFor('B', 'cy-2026')]);
+    repo.getDrafts.mockImplementation((id: string) =>
+      id === 'A'
+        ? new Promise<CabinetRosterDraft[]>((resolve) => { resolveA = resolve; })
+        : Promise.resolve([draft('b1', { cycle_id: 'B', name: 'From Roster B' })]),
+    );
+    repo.countPublicRows.mockResolvedValue(0);
+    lookup.listMemberDirectory.mockResolvedValue([]);
+    photos.getPublicMemberAvatars.mockResolvedValue(new Map());
+    render(<MemoryRouter><AdminCabinetRollover /></MemoryRouter>);
+
+    const open = await screen.findAllByRole('button', { name: 'Open' });
+    await userEvent.click(open[0]); // roster A: its drafts are still loading
+    await screen.findByRole('heading', { name: /2027–28 Cabinet/, level: 2 });
+    await userEvent.click(screen.getByRole('button', { name: '← All rosters' }));
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Open' }))[1]); // roster B
+    await screen.findByDisplayValue('From Roster B');
+
+    await act(async () => {
+      resolveA([draft('a1', { cycle_id: 'A', name: 'Stale From Roster A' })]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.getByDisplayValue('From Roster B')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Stale From Roster A')).not.toBeInTheDocument();
+    mockYears.splice(0, mockYears.length,
+      { id: 'cy-2026', label: '2026-2027 Cabinet', slug: '2026-2027', start_year: 2026, end_year: 2027, is_active: true },
+      { id: 'cy-2027', label: '2027-2028 Cabinet', slug: '2027-2028', start_year: 2027, end_year: 2028, is_active: false });
+  });
+
+  it('will not leave a roster while a change is saving', async () => {
+    let finishSave: () => void = () => undefined;
+    repo.updateDraft.mockImplementation(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+    await openRoster('draft', [draft('a1', { name: 'Havyn Nguyen' })]);
+
+    await userEvent.click(screen.getByRole('button', { name: /Link to Havyn Nguyen/ }));
+    expect(screen.getByRole('button', { name: '← All rosters' })).toBeDisabled();
+
+    await act(async () => {
+      finishSave();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByRole('button', { name: '← All rosters' })).toBeEnabled();
+  });
+});

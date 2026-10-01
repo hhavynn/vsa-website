@@ -7,9 +7,6 @@ import {
   CabinetRosterDraft,
   buildRosterPreflight,
   buildStructureRows,
-  cabinetMemberFromDraft,
-  cabinetMemberUpdateFromDraft,
-  findExistingCabinetRow,
   guessCategory,
   normalizeRole,
   parseRosterPaste,
@@ -246,42 +243,5 @@ describe('Cabinet preflight', () => {
   it('renders passed, blocking, and attention lines for the shared UI', () => {
     const lines = rosterPreflightLines(buildRosterPreflight([draft(0), draft(1, { name: null, member_id: null })]));
     expect(lines.map((line) => line.severity)).toEqual(expect.arrayContaining(['ok', 'blocker']));
-  });
-});
-
-describe('publishing helpers', () => {
-  it('maps a draft to a public row without any photo field', () => {
-    const row = cabinetMemberFromDraft(draft(1, { name: '  Havyn Nguyen ', role: ' Co-President ', fun_fact: 'hi' }), 'cy-2027');
-    expect(row).toMatchObject({ name: 'Havyn Nguyen', role: 'Co-President', member_id: 'm1', cabinet_year_id: 'cy-2027', fun_fact: 'hi' });
-    expect(row).not.toHaveProperty('image_url');
-    expect(row).not.toHaveProperty('thumbnail_url');
-  });
-
-  it('never lets a blank draft field erase what an existing public row already has', () => {
-    const update = cabinetMemberUpdateFromDraft(draft(1, { member_id: null, fun_fact: null, college: 'Sixth College' }), 'cy-2027');
-    expect(update).toMatchObject({ name: 'Person 1', role: 'Role 1', college: 'Sixth College', cabinet_year_id: 'cy-2027' });
-    for (const field of ['member_id', 'year', 'major', 'pronouns', 'favorite_snack', 'fun_fact']) {
-      expect(update).not.toHaveProperty(field);
-    }
-    // A new row still records the nulls explicitly.
-    expect(cabinetMemberFromDraft(draft(1, { member_id: null }), 'cy-2027')).toHaveProperty('member_id', null);
-  });
-
-  it('adopts the recorded row, then an unclaimed same-member row, never a claimed one', () => {
-    const existing = [
-      { id: 'a', name: 'Havyn Nguyen', member_id: 'm1' },
-      { id: 'b', name: 'Other', member_id: 'm2' },
-    ];
-    expect(findExistingCabinetRow(draft(1, { published_cabinet_member_id: 'b' }), existing, new Set())?.id).toBe('b');
-    expect(findExistingCabinetRow(draft(1), existing, new Set())?.id).toBe('a');
-    expect(findExistingCabinetRow(draft(1), existing, new Set(['a']))).toBeNull();
-  });
-
-  it('matches an unlinked draft to an unlinked row by name only', () => {
-    const existing = [
-      { id: 'linked', name: 'Zed Unknown', member_id: 'someone' },
-      { id: 'byname', name: 'zed unknown', member_id: null },
-    ];
-    expect(findExistingCabinetRow(draft(1, { name: 'Zed Unknown', member_id: null }), existing, new Set())?.id).toBe('byname');
   });
 });

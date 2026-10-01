@@ -20,7 +20,7 @@ export interface OperationsDashboardProps {
 
 function Unavailable() {
   return (
-    <p className="text-xs" style={{ color: 'var(--color-text3)' }}>
+    <p className="text-xs text-text-muted">
       Could not load this section. Refresh to try again.
     </p>
   );
@@ -28,7 +28,7 @@ function Unavailable() {
 
 function Line({ children }: { children: ReactNode }) {
   return (
-    <p className="font-sans text-[13px]" style={{ color: 'var(--color-text2)' }}>
+    <p className="font-sans text-[13px] text-text-secondary">
       {children}
     </p>
   );
@@ -36,7 +36,7 @@ function Line({ children }: { children: ReactNode }) {
 
 function Strong({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-[13px] font-bold" style={{ color: 'var(--color-text)' }}>
+    <span className="font-mono text-[13px] font-bold text-text-primary">
       {children}
     </span>
   );
@@ -64,8 +64,8 @@ function OperationsCards({ summary }: { summary: OperationsSummary }) {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <OperationsCard title="Members" to={OPS_LINKS.members} linkLabel="Admin Members">
         {members ? (
-          <p className="font-serif text-[38px] leading-none" style={{ color: 'var(--color-text)' }}>
-            {members.total} <span className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>total</span>
+          <p className="font-serif text-[38px] leading-none text-text-primary">
+            {members.total} <span className="font-sans text-sm text-text-secondary">total</span>
           </p>
         ) : (
           <Unavailable />
@@ -197,28 +197,27 @@ export function OperationsDashboard({ loadInputs = () => adminOperationsReposito
     <section aria-label="Operations" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
             Operations
           </p>
-          <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h2 className="font-serif text-2xl font-bold text-text-primary">
             {summary ? `${summary.yearLabel} VSA Operations` : 'VSA Operations'}
           </h2>
         </div>
         <Link
           to={OPS_LINKS.yearSetup}
-          className="rounded border px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-400"
-          style={{ borderColor: 'var(--color-border)' }}
+          className="rounded border px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-400 border-[var(--color-border)]"
         >
           Start {formatYearSpan(nextYear)} →
         </Link>
       </div>
 
       {failed ? (
-        <p className="rounded border px-4 py-3 text-sm" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+        <p className="rounded border px-4 py-3 text-sm border-[var(--color-border)] text-text-secondary">
           Could not load operations status. The tools below still work.
         </p>
       ) : !summary ? (
-        <p className="py-6 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
+        <p className="py-6 text-center text-sm text-text-muted">
           Loading operations…
         </p>
       ) : (
@@ -226,22 +225,21 @@ export function OperationsDashboard({ loadInputs = () => adminOperationsReposito
           <OperationsCards summary={summary} />
 
           <section
-            className="scrapbook-paper p-5"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+            className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface"
             aria-label="Operations preflight"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+              <h3 className="font-serif text-lg font-bold text-text-primary">
                 {summary.yearLabel} Operations Preflight
               </h3>
-              <p className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
+              <p className="font-mono text-[11px] text-text-muted">
                 {issues === 0 ? 'All clear' : `${issues} to review`} · diagnostic only
               </p>
             </div>
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {preflight.map((group) => (
                 <div key={group.key}>
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">
                     {group.label}
                   </p>
                   <ul className="mt-1 space-y-1">

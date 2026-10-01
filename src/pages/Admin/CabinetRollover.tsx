@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
@@ -82,32 +82,32 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
   const filled = !!draft.name?.trim();
 
   return (
-    <li className="rounded border p-4" style={{ borderColor: 'var(--color-border)' }} data-testid="roster-row">
+    <li className="rounded border p-4 border-[var(--color-border)]" data-testid="roster-row">
       <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
         <div>
-          <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`roster-role-${draft.id}`}>Position</label>
-          <input id={`roster-role-${draft.id}`} className={smallFieldCls} style={{ borderColor: 'var(--color-border)' }} value={values.role} disabled={!editable || busy} onChange={setValue('role')} onBlur={() => commit('role')} />
+          <label className={`${labelCls} text-text-muted`} htmlFor={`roster-role-${draft.id}`}>Position</label>
+          <input id={`roster-role-${draft.id}`} className={`${smallFieldCls} border-[var(--color-border)]`} value={values.role} disabled={!editable || busy} onChange={setValue('role')} onBlur={() => commit('role')} />
         </div>
         <div>
-          <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`roster-name-${draft.id}`}>Name</label>
-          <input id={`roster-name-${draft.id}`} className={smallFieldCls} style={{ borderColor: 'var(--color-border)' }} value={values.name} placeholder="Not filled yet" disabled={!editable || busy} onChange={setValue('name')} onBlur={() => commit('name')} />
+          <label className={`${labelCls} text-text-muted`} htmlFor={`roster-name-${draft.id}`}>Name</label>
+          <input id={`roster-name-${draft.id}`} className={`${smallFieldCls} border-[var(--color-border)]`} value={values.name} placeholder="Not filled yet" disabled={!editable || busy} onChange={setValue('name')} onBlur={() => commit('name')} />
         </div>
         <div className="flex items-end gap-2">
           <div>
-            <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`roster-category-${draft.id}`}>Board</label>
-            <select id={`roster-category-${draft.id}`} className={smallFieldCls} style={{ borderColor: 'var(--color-border)' }} value={draft.category} disabled={!editable || busy} onChange={(event) => onSave(draft, { category: event.target.value })}>
+            <label className={`${labelCls} text-text-muted`} htmlFor={`roster-category-${draft.id}`}>Board</label>
+            <select id={`roster-category-${draft.id}`} className={`${smallFieldCls} border-[var(--color-border)]`} value={draft.category} disabled={!editable || busy} onChange={(event) => onSave(draft, { category: event.target.value })}>
               {CABINET_ROSTER_CATEGORIES.map((category) => (
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
           <div className="w-16">
-            <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`roster-order-${draft.id}`}>Order</label>
+            <label className={`${labelCls} text-text-muted`} htmlFor={`roster-order-${draft.id}`}>Order</label>
             <input
               id={`roster-order-${draft.id}`}
               type="number"
-              className={smallFieldCls}
-              style={{ borderColor: 'var(--color-border)' }}
+              className={`${smallFieldCls} border-[var(--color-border)]`}
+
               value={order}
               disabled={!editable || busy}
               onChange={(event) => setOrder(event.target.value)}
@@ -119,7 +119,7 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
             />
           </div>
           {editable && (
-            <button type="button" className="bg-transparent p-0 pb-2 text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--color-text2)' }} disabled={busy} onClick={() => onRemove(draft)} aria-label={`Remove ${draft.role}`}>
+            <button type="button" className="bg-transparent p-0 pb-2 text-[11px] font-semibold underline-offset-2 hover:underline text-text-secondary" disabled={busy} onClick={() => onRemove(draft)} aria-label={`Remove ${draft.role}`}>
               Remove
             </button>
           )}
@@ -127,7 +127,7 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
       </div>
 
       <div className="mt-3">
-        <span className={labelCls} style={{ color: 'var(--color-text3)' }}>Member link</span>
+        <span className={`${labelCls} text-text-muted`}>Member link</span>
         {filled ? (
           <MemberLinkPicker
             linkedMemberId={draft.member_id}
@@ -139,17 +139,17 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
             onUnlink={() => onSave(draft, { member_id: null })}
           />
         ) : (
-          <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Fill in a name to link a member.</p>
+          <p className="text-xs text-text-muted">Fill in a name to link a member.</p>
         )}
         {draft.member_id && (
-          <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>
+          <p className="mt-1 text-[11px] text-text-muted">
             {hasPhoto ? '📷 Approved photo available' : 'No approved photo yet (not required to publish).'}
           </p>
         )}
       </div>
 
       <details className="mt-3">
-        <summary className="cursor-pointer text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>Profile details (public once published)</summary>
+        <summary className="cursor-pointer text-xs font-semibold text-text-secondary">Profile details (public once published)</summary>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {([
             ['year', 'Year', YEAR_OPTIONS],
@@ -160,12 +160,12 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
             ['fun_fact', 'Fun fact', undefined],
           ] as const).map(([field, label, options]) => (
             <div key={field}>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`roster-${field}-${draft.id}`}>{label}</label>
+              <label className={`${labelCls} text-text-muted`} htmlFor={`roster-${field}-${draft.id}`}>{label}</label>
               <input
                 id={`roster-${field}-${draft.id}`}
                 list={options ? `roster-${field}-options` : undefined}
-                className={smallFieldCls}
-                style={{ borderColor: 'var(--color-border)' }}
+                className={`${smallFieldCls} border-[var(--color-border)]`}
+
                 value={values[field]}
                 disabled={!editable || busy}
                 onChange={setValue(field)}
@@ -249,22 +249,54 @@ export default function AdminCabinetRollover() {
     photoRequestsRepository.getPublicMemberAvatars().then(setAvatars).catch(() => setAvatars(new Map()));
   }, []);
 
+  // The roster the admin is looking at right now. Every async result is checked
+  // against it, so a slow response for a roster they already left can never be
+  // shown under (or written into) the one they opened next.
+  const activeCycleRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeCycleRef.current = cycleId;
+  }, [cycleId]);
+
+  function setDraftsFor(forCycleId: string, next: CabinetRosterDraft[] | ((current: CabinetRosterDraft[]) => CabinetRosterDraft[])) {
+    if (activeCycleRef.current === forCycleId) setDrafts(next);
+  }
+
   useEffect(() => {
     setPublishConfirmed(false);
     setActivateConfirmed(false);
     setPublicRowCount(null);
-    if (!cycle) {
-      setDrafts([]);
-      return;
-    }
-    cabinetRosterRepository.getDrafts(cycle.id).then(setDrafts).catch((err) => {
+    setDrafts([]);
+    if (!cycleId) return;
+    let cancelled = false;
+    cabinetRosterRepository.getDrafts(cycleId).then((loaded) => {
+      if (!cancelled) setDrafts(loaded);
+    }).catch((err) => {
       console.error(err);
-      toast.error('Failed to load Cabinet positions.');
+      if (!cancelled) toast.error('Failed to load Cabinet positions.');
     });
-    if (cycle.status === 'locked') {
-      cabinetRosterRepository.countPublicRows(cycle.cabinet_year_id).then(setPublicRowCount).catch(() => setPublicRowCount(null));
-    }
-  }, [cycle]);
+    return () => {
+      cancelled = true;
+    };
+  }, [cycleId]);
+
+  const cycleStatus = cycle?.status;
+  const cycleYearId = cycle?.cabinet_year_id;
+  useEffect(() => {
+    // A new status (locked, reopened, published) always needs a fresh confirmation.
+    setPublishConfirmed(false);
+    setActivateConfirmed(false);
+    if (cycleStatus !== 'locked' || !cycleYearId) return;
+    let cancelled = false;
+    cabinetRosterRepository.countPublicRows(cycleYearId).then((count) => {
+      if (!cancelled) setPublicRowCount(count);
+    }).catch(() => {
+      if (!cancelled) setPublicRowCount(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cycleStatus, cycleYearId]);
 
   async function run(action: () => Promise<void>, failure: string) {
     setBusy(true);
@@ -318,7 +350,7 @@ export default function AdminCabinetRollover() {
         await cabinetRosterRepository.updateDraft(cycle.id, update.draftId, update.patch);
       }
       if (plan.inserts.length > 0) await cabinetRosterRepository.addDrafts(cycle.id, plan.inserts);
-      setDrafts(await cabinetRosterRepository.getDrafts(cycle.id));
+      setDraftsFor(cycle.id, await cabinetRosterRepository.getDrafts(cycle.id));
       setPasted('');
       toast.success(`Placed ${entries.length} ${entries.length === 1 ? 'person' : 'people'} (${plan.linked} linked${plan.inserts.length ? `, ${plan.inserts.length} new position${plan.inserts.length === 1 ? '' : 's'}` : ''}).`);
     }, 'Failed to place the roster.');
@@ -328,7 +360,7 @@ export default function AdminCabinetRollover() {
     if (!cycle) return;
     return run(async () => {
       await cabinetRosterRepository.updateDraft(cycle.id, draft.id, patch);
-      setDrafts((current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
+      setDraftsFor(cycle.id, (current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
     }, 'Failed to save.');
   }
 
@@ -336,7 +368,7 @@ export default function AdminCabinetRollover() {
     if (!cycle) return;
     return run(async () => {
       await cabinetRosterRepository.removeDraft(cycle.id, draft.id);
-      setDrafts((current) => current.filter((item) => item.id !== draft.id));
+      setDraftsFor(cycle.id, (current) => current.filter((item) => item.id !== draft.id));
     }, 'Failed to remove.');
   }
 
@@ -346,7 +378,7 @@ export default function AdminCabinetRollover() {
       const role = newRole.trim();
       const order = ordered.reduce((max, draft) => Math.max(max, draft.display_order), -1) + 1;
       const created = await cabinetRosterRepository.addDrafts(cycle.id, [{ role, category: guessCategory(role), display_order: order }]);
-      setDrafts((current) => [...current, ...created]);
+      setDraftsFor(cycle.id, (current) => [...current, ...created]);
       setNewRole('');
     }, 'Failed to add the position.');
   }
@@ -355,7 +387,7 @@ export default function AdminCabinetRollover() {
     if (!cycle) return;
     const fresh = await cabinetRosterRepository.getCycle(cycle.id);
     setCycles((current) => current.map((item) => (item.id === fresh.id ? fresh : item)));
-    setDrafts(await cabinetRosterRepository.getDrafts(cycle.id));
+    setDraftsFor(cycle.id, await cabinetRosterRepository.getDrafts(cycle.id));
   }
 
   function lock() {
@@ -414,64 +446,64 @@ export default function AdminCabinetRollover() {
       <datalist id="roster-year-options">{YEAR_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
       <datalist id="roster-college-options">{COLLEGE_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
 
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Cabinet Rollover</h1>
-        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Cabinet Rollover</h1>
+        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
           Prepare next year&apos;s Cabinet privately: copy last year&apos;s positions (never its people), paste the new roster, link members, resolve warnings, lock, then publish. Publishing never makes a year the current Cabinet; activating is its own step.
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <Link to="/admin/cabinet" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Cabinet admin</Link>
-          <Link to="/admin/year-setup" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>New Year Setup</Link>
-          <Link to="/admin/interns" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Intern cohort</Link>
+          <Link to="/admin/cabinet" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Cabinet admin</Link>
+          <Link to="/admin/year-setup" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">New Year Setup</Link>
+          <Link to="/admin/interns" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Intern cohort</Link>
         </div>
       </div>
 
       {!cycle ? (
         <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:p-8">
-          <section className="scrapbook-paper p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Rosters</h2>
+          <section className="scrapbook-paper p-6 border-[var(--color-border)] bg-surface">
+            <h2 className="font-serif text-xl font-bold text-text-primary">Rosters</h2>
             {loadingCycles ? (
-              <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>Loading…</p>
+              <p className="mt-4 text-sm text-text-muted">Loading…</p>
             ) : cycles.length === 0 ? (
-              <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>No Cabinet drafts yet. Start one to begin.</p>
+              <p className="mt-4 text-sm text-text-muted">No Cabinet drafts yet. Start one to begin.</p>
             ) : (
-              <ul className="mt-4 divide-y" style={{ borderColor: 'var(--color-border)' }}>
+              <ul className="mt-4 divide-y border-[var(--color-border)]">
                 {cycles.map((item) => {
                   const year = cabinetYears.find((candidate) => candidate.id === item.cabinet_year_id);
                   return (
                     <li key={item.id} className="flex items-center justify-between gap-3 py-3">
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{formatRosterYears(year)} Cabinet</p>
+                        <p className="text-sm font-semibold text-text-primary">{formatRosterYears(year)} Cabinet</p>
                         <StatusBadge status={item.status} className="mt-1" />
                       </div>
-                      <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => setCycleId(item.id)}>Open</button>
+                      <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => setCycleId(item.id)}>Open</button>
                     </li>
                   );
                 })}
               </ul>
             )}
           </section>
-          <section className="scrapbook-paper p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Create Cabinet draft</h2>
-            <label htmlFor="new-roster-year" className={`${labelCls} mt-4`} style={{ color: 'var(--color-text3)' }}>Cabinet year</label>
-            <select id="new-roster-year" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={newYearId} onChange={(event) => setNewYearId(event.target.value)}>
+          <section className="scrapbook-paper p-6 border-[var(--color-border)] bg-surface">
+            <h2 className="font-serif text-xl font-bold text-text-primary">Create Cabinet draft</h2>
+            <label htmlFor="new-roster-year" className={`${labelCls} mt-4 text-text-muted`}>Cabinet year</label>
+            <select id="new-roster-year" className={`${fieldCls} border-[var(--color-border)]`} value={newYearId} onChange={(event) => setNewYearId(event.target.value)}>
               <option value="">Choose a cabinet year…</option>
               {availableYears.map((year) => (
                 <option key={year.id} value={year.id}>{year.label}{year.is_active ? ' (active)' : ''}</option>
               ))}
             </select>
-            <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>
+            <p className="mt-1 text-[11px] text-text-muted">
               Missing the year? <Link to="/admin/year-setup" className="font-semibold text-[var(--brand)] hover:underline">Start a new year</Link> creates it (inactive).
             </p>
-            <label htmlFor="roster-source-year" className={`${labelCls} mt-4`} style={{ color: 'var(--color-text3)' }}>Copy position structure from</label>
-            <select id="roster-source-year" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={sourceYearId} onChange={(event) => setSourceYearId(event.target.value)}>
+            <label htmlFor="roster-source-year" className={`${labelCls} mt-4 text-text-muted`}>Copy position structure from</label>
+            <select id="roster-source-year" className={`${fieldCls} border-[var(--color-border)]`} value={sourceYearId} onChange={(event) => setSourceYearId(event.target.value)}>
               <option value="auto">{autoSource ? `Previous year (${autoSource.label})` : 'Previous year (none found)'}</option>
               {cabinetYears.filter((year) => year.id !== newYearId).map((year) => (
                 <option key={year.id} value={year.id}>{year.label}</option>
               ))}
               <option value="none">Start empty</option>
             </select>
-            <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>Copies role, board, and order only. Names, member links, photos, and bios are never copied.</p>
+            <p className="mt-1 text-[11px] text-text-muted">Copies role, board, and order only. Names, member links, photos, and bios are never copied.</p>
             <button type="button" className="vsa-btn-primary mt-4 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !newYearId} onClick={createCycle}>
               {targetYear ? `Create ${formatRosterYears(targetYear)} Cabinet Draft` : 'Create Cabinet Draft'}
             </button>
@@ -481,39 +513,39 @@ export default function AdminCabinetRollover() {
         <div className="space-y-6 p-4 sm:p-6 lg:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <button type="button" onClick={() => setCycleId(null)} className="mb-2 bg-transparent p-0 text-xs font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--color-text2)' }}>← All rosters</button>
-              <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{yearLabel} Cabinet</h2>
-              <div className="mt-1 flex items-center gap-2 text-xs" style={{ color: 'var(--color-text3)' }}>
+              <button type="button" onClick={() => setCycleId(null)} disabled={busy} className="mb-2 bg-transparent p-0 text-xs font-semibold underline-offset-2 hover:underline disabled:opacity-50 text-text-secondary">← All rosters</button>
+              <h2 className="font-serif text-2xl font-bold text-text-primary">{yearLabel} Cabinet</h2>
+              <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
                 <StatusBadge status={cycle.status} />
                 <span>{cabinetYear?.is_active ? 'Active Cabinet year' : 'Not the active Cabinet year'}</span>
               </div>
-              <p className="mt-2 font-mono text-sm" style={{ color: 'var(--color-text)' }} data-testid="roster-counts">
+              <p className="mt-2 font-mono text-sm text-text-primary" data-testid="roster-counts">
                 {preflight.positions} positions · {preflight.linked} member links · {preflight.needReview} need review · {preflight.photosAvailable} photos available
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               {cycle.status === 'draft' && (
                 <>
-                  <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }} disabled={busy} onClick={discard}>Delete draft</button>
+                  <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-secondary`} disabled={busy} onClick={discard}>Delete draft</button>
                   <button type="button" className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !preflight.canLock} onClick={lock}>Lock roster</button>
                 </>
               )}
               {cycle.status === 'locked' && (
-                <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }} disabled={busy} onClick={reopen}>Reopen draft</button>
+                <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-secondary`} disabled={busy} onClick={reopen}>Reopen draft</button>
               )}
             </div>
           </div>
 
           {cycle.status === 'locked' && (
-            <div className="rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
-              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>Locked — still private.</p>
+            <div className="rounded border p-3 text-xs border-[var(--color-border)] bg-surface2 text-text-secondary">
+              <p className="font-semibold text-text-primary">Locked — still private.</p>
               <p className="mt-1">
                 Publishing adds or updates {preflight.positions} position{preflight.positions === 1 ? '' : 's'} for {yearLabel}, which then appears in the public Cabinet year picker. Positions already published are updated, not duplicated. It does not make {yearLabel} the current Cabinet.
                 {publicRowCount ? ` This year already has ${publicRowCount} public ${publicRowCount === 1 ? 'row' : 'rows'}; matching people are updated and any others are left untouched.` : ''}
               </p>
               <label className="mt-3 flex cursor-pointer select-none items-start gap-2">
                 <input type="checkbox" checked={publishConfirmed} onChange={(event) => setPublishConfirmed(event.target.checked)} className="mt-0.5 cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]" />
-                <span style={{ color: 'var(--color-text)' }}>I confirm: make this roster public.</span>
+                <span className="text-text-primary">I confirm: make this roster public.</span>
               </label>
               <button type="button" className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !publishConfirmed} onClick={publish}>
                 {busy ? 'Publishing…' : 'Publish roster'}
@@ -522,8 +554,8 @@ export default function AdminCabinetRollover() {
           )}
 
           {cycle.status === 'published' && (
-            <div className="rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
-              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>Published. Edit published people from Cabinet admin.</p>
+            <div className="rounded border p-3 text-xs border-[var(--color-border)] bg-surface2 text-text-secondary">
+              <p className="font-semibold text-text-primary">Published. Edit published people from Cabinet admin.</p>
               {cabinetYear?.is_active ? (
                 <p className="mt-1">{cabinetYear.label} is the active Cabinet year.</p>
               ) : (
@@ -531,7 +563,7 @@ export default function AdminCabinetRollover() {
                   <p className="mt-1">Activating makes {yearLabel} the current Cabinet on the public Cabinet page and deactivates the current one. This is separate from publishing.</p>
                   <label className="mt-3 flex cursor-pointer select-none items-start gap-2">
                     <input type="checkbox" checked={activateConfirmed} onChange={(event) => setActivateConfirmed(event.target.checked)} className="mt-0.5 cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]" />
-                    <span style={{ color: 'var(--color-text)' }}>I confirm: make {yearLabel} the active Cabinet.</span>
+                    <span className="text-text-primary">I confirm: make {yearLabel} the active Cabinet.</span>
                   </label>
                   <button type="button" className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !activateConfirmed} onClick={activate}>
                     Make {yearLabel} the active Cabinet
@@ -544,18 +576,18 @@ export default function AdminCabinetRollover() {
           <PreflightSummary title="Cabinet preflight" lines={rosterPreflightLines(preflight)} emptyText="Add positions to run the preflight." />
 
           {editable && (
-            <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Paste roster">
-              <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Paste the new roster</h3>
-              <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>One person per line as &quot;Name, Role&quot;. Each person fills the first empty position with that role (or adds a position). Exact, unambiguous names link to members automatically; everything else is left for you to review.</p>
+            <section className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface" aria-label="Paste roster">
+              <h3 className="font-serif text-lg font-bold text-text-primary">Paste the new roster</h3>
+              <p className="mt-1 text-xs text-text-muted">One person per line as &quot;Name, Role&quot;. Each person fills the first empty position with that role (or adds a position). Exact, unambiguous names link to members automatically; everything else is left for you to review.</p>
               <label htmlFor="roster-paste" className="sr-only">Pasted roster</label>
-              <textarea id="roster-paste" rows={6} className={`${fieldCls} mt-3 font-mono text-xs`} style={{ borderColor: 'var(--color-border)' }} value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'Havyn Nguyen, Co-President\nApril Pham, Co-President'} />
+              <textarea id="roster-paste" rows={6} className={`${fieldCls} mt-3 font-mono text-xs border-[var(--color-border)]`} value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'Havyn Nguyen, Co-President\nApril Pham, Co-President'} />
               <button type="button" className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !pasted.trim()} onClick={importRoster}>Place into roster</button>
             </section>
           )}
 
           <section aria-label="Positions">
             {ordered.length === 0 ? (
-              <p className="rounded border px-5 py-10 text-center text-sm" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>No positions yet. Add one below or paste a roster.</p>
+              <p className="rounded border px-5 py-10 text-center text-sm border-[var(--color-border)] text-text-muted">No positions yet. Add one below or paste a roster.</p>
             ) : (
               <ul className="space-y-3">
                 {ordered.map((draft) => {
@@ -580,10 +612,10 @@ export default function AdminCabinetRollover() {
             {editable && (
               <div className="mt-4 flex flex-wrap items-end gap-2">
                 <div className="min-w-[220px] flex-1">
-                  <label htmlFor="roster-new-role" className={labelCls} style={{ color: 'var(--color-text3)' }}>Add a position</label>
-                  <input id="roster-new-role" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={newRole} onChange={(event) => setNewRole(event.target.value)} placeholder="e.g. Historian" />
+                  <label htmlFor="roster-new-role" className={`${labelCls} text-text-muted`}>Add a position</label>
+                  <input id="roster-new-role" className={`${fieldCls} border-[var(--color-border)]`} value={newRole} onChange={(event) => setNewRole(event.target.value)} placeholder="e.g. Historian" />
                 </div>
-                <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} disabled={busy || !newRole.trim()} onClick={addPosition}>Add position</button>
+                <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} disabled={busy || !newRole.trim()} onClick={addPosition}>Add position</button>
               </div>
             )}
           </section>

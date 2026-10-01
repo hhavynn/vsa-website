@@ -13,7 +13,6 @@ import { PreflightLine, pluralize } from './operationalStatus';
 export type CabinetRosterCycle = Database['public']['Tables']['cabinet_roster_cycles']['Row'];
 export type CabinetRosterDraft = Database['public']['Tables']['cabinet_roster_drafts']['Row'];
 export type CabinetRosterDraftInsert = Database['public']['Tables']['cabinet_roster_drafts']['Insert'];
-export type CabinetMemberInsert = Database['public']['Tables']['cabinet_members']['Insert'];
 
 export const CABINET_ROSTER_CATEGORIES = ['Executive Board', 'General Board'] as const;
 export type CabinetRosterCategory = (typeof CABINET_ROSTER_CATEGORIES)[number];
@@ -333,75 +332,6 @@ export function buildRosterPreflight(
     passed,
     canLock: blockers.length === 0,
   };
-}
-
-// ─── Publish mapping ─────────────────────────────────────────────────────────
-
-/**
- * The public cabinet_members row for a draft position. Photos are deliberately
- * absent: an approved avatar flows through member_id, and an existing manual
- * image_url on an updated row is left untouched.
- */
-export function cabinetMemberFromDraft(draft: CabinetRosterDraft, cabinetYearId: string): CabinetMemberInsert {
-  return {
-    name: (draft.name ?? '').trim(),
-    role: draft.role.trim(),
-    category: draft.category,
-    display_order: draft.display_order,
-    member_id: draft.member_id,
-    year: draft.year,
-    college: draft.college,
-    major: draft.major,
-    pronouns: draft.pronouns,
-    favorite_snack: draft.favorite_snack,
-    fun_fact: draft.fun_fact,
-    cabinet_year_id: cabinetYearId,
-  };
-}
-
-const OPTIONAL_PUBLIC_FIELDS = ['member_id', 'year', 'college', 'major', 'pronouns', 'favorite_snack', 'fun_fact'] as const;
-
-/**
- * The same mapping for a row that already exists publicly. A blank draft field
- * never erases what the public row already has (an adopted row may carry a bio
- * or link an admin entered by hand), so null optional fields are left out.
- */
-export function cabinetMemberUpdateFromDraft(draft: CabinetRosterDraft, cabinetYearId: string): CabinetMemberInsert {
-  const payload = cabinetMemberFromDraft(draft, cabinetYearId);
-  for (const field of OPTIONAL_PUBLIC_FIELDS) {
-    if (payload[field] === null || payload[field] === undefined) delete payload[field];
-  }
-  return payload;
-}
-
-export interface ExistingCabinetRow {
-  id: string;
-  name: string;
-  member_id: string | null;
-}
-
-/**
- * Which existing public row a draft should update, so a repeat publish never
- * duplicates: the id already recorded on the draft, else an unclaimed row for
- * the same member (or, when unlinked, the same name).
- */
-export function findExistingCabinetRow(
-  draft: Pick<CabinetRosterDraft, 'published_cabinet_member_id' | 'member_id' | 'name'>,
-  existing: readonly ExistingCabinetRow[],
-  claimed: ReadonlySet<string>,
-): ExistingCabinetRow | null {
-  if (draft.published_cabinet_member_id) {
-    const recorded = existing.find((row) => row.id === draft.published_cabinet_member_id);
-    if (recorded) return recorded;
-  }
-  const wanted = normalizeMemberName(draft.name);
-  return (
-    existing.find(
-      (row) =>
-        !claimed.has(row.id) &&
-        (draft.member_id ? row.member_id === draft.member_id : !row.member_id && normalizeMemberName(row.name) === wanted),
-    ) ?? null
-  );
 }
 
 export function formatRosterYears(cabinetYear: { start_year: number; end_year: number } | null | undefined) {

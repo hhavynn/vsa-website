@@ -19,8 +19,7 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
   const known = toOperationalStatus(status);
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-sans text-[11px] font-semibold ${className}`}
-      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', background: 'var(--color-surface2)' }}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-sans text-[11px] font-semibold ${className} border-[var(--color-border)] text-text-primary bg-surface2`}
       title={known ? OPERATIONAL_STATUS_HINT[known] : 'Nothing has been started yet.'}
       data-status={known ?? 'none'}
     >

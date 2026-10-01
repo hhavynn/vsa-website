@@ -132,8 +132,7 @@ function Header() {
       </p>
       <Link
         to="/admin/year-setup"
-        className="mt-2 inline-block rounded border px-2.5 py-1 font-sans text-xs font-semibold text-brand-600 hover:bg-[var(--color-surface2)] dark:text-brand-400"
-        style={{ borderColor: 'var(--color-border)' }}
+        className="mt-2 inline-block rounded border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-brand-600 hover:bg-surface2 dark:text-brand-400"
       >
         Starting a new school year? Use New Year Setup →
       </Link>

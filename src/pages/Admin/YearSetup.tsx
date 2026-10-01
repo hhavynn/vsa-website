@@ -36,8 +36,7 @@ const ACTION_LABEL: Record<PlanAction, string> = {
 function ActionPill({ action }: { action: PlanAction }) {
   return (
     <span
-      className="inline-flex items-center rounded-full border px-2 py-0.5 font-sans text-[11px] font-semibold"
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+      className="inline-flex items-center rounded-full border px-2 py-0.5 font-sans text-[11px] font-semibold border-[var(--color-border)] bg-surface2 text-text-primary"
       data-action={action}
     >
       {ACTION_LABEL[action]}
@@ -47,22 +46,22 @@ function ActionPill({ action }: { action: PlanAction }) {
 
 function Step({ number, title, children, aside }: { number: number; title: string; children: ReactNode; aside?: ReactNode }) {
   return (
-    <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label={title}>
+    <section className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface" aria-label={title}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-          <span className="mr-2 font-mono text-xs" style={{ color: 'var(--color-text3)' }}>{number}</span>
+        <h3 className="font-serif text-lg font-bold text-text-primary">
+          <span className="mr-2 font-mono text-xs text-text-muted">{number}</span>
           {title}
         </h3>
         {aside}
       </div>
-      <div className="mt-3 space-y-3 text-sm" style={{ color: 'var(--color-text2)' }}>{children}</div>
+      <div className="mt-3 space-y-3 text-sm text-text-secondary">{children}</div>
     </section>
   );
 }
 
 function Check({ id, checked, onChange, disabled, children }: { id: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <label htmlFor={id} className="flex cursor-pointer select-none items-start gap-2 text-sm" style={{ color: 'var(--color-text)' }}>
+    <label htmlFor={id} className="flex cursor-pointer select-none items-start gap-2 text-sm text-text-primary">
       <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="mt-0.5 cursor-pointer rounded border-[var(--color-border)] bg-transparent text-[var(--brand)] focus:ring-[var(--brand)]" />
       <span>{children}</span>
     </label>
@@ -185,33 +184,33 @@ export default function AdminYearSetup() {
       <PageTitle title="New Year Setup" />
       <Toaster position="top-right" />
 
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Start {yearLabel}</h1>
-        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Start {yearLabel}</h1>
+        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
           Review what already exists for the new school year, then create only what is missing. Nothing is written until you press Create Setup. Terms and the Cabinet year are created inactive, past assignments are never copied, and no House is revealed.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div>
-            <label htmlFor="setup-year" className={labelCls} style={{ color: 'var(--color-text3)' }}>School year starting</label>
-            <select id="setup-year" className={`${fieldCls} w-auto`} style={{ borderColor: 'var(--color-border)' }} value={targetYear} onChange={(event) => setStartYear(Number(event.target.value))}>
+            <label htmlFor="setup-year" className={`${labelCls} text-text-muted`}>School year starting</label>
+            <select id="setup-year" className={`${fieldCls} w-auto border-[var(--color-border)]`} value={targetYear} onChange={(event) => setStartYear(Number(event.target.value))}>
               {[defaultStartYear - 1, defaultStartYear, defaultStartYear + 1].map((year) => (
                 <option key={year} value={year}>{formatYearSpan(year)}</option>
               ))}
             </select>
           </div>
-          <Link to="/admin/years" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Years &amp; Terms</Link>
-          <Link to="/admin/cabinet/rollover" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Cabinet Rollover</Link>
+          <Link to="/admin/years" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Years &amp; Terms</Link>
+          <Link to="/admin/cabinet/rollover" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Cabinet Rollover</Link>
         </div>
       </div>
 
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         {loadFailed && (
-          <p className="rounded border px-4 py-3 text-sm text-red-600 dark:text-red-400" style={{ borderColor: 'var(--color-border)' }}>
+          <p className="rounded border px-4 py-3 text-sm text-red-600 dark:text-red-400 border-[var(--color-border)]">
             Could not look up the new year, so nothing can be previewed. Refresh and try again.
           </p>
         )}
         {!ready || !plan || !options ? (
-          !loadFailed && <p className="py-10 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Looking up {yearLabel}…</p>
+          !loadFailed && <p className="py-10 text-center text-sm text-text-muted">Looking up {yearLabel}…</p>
         ) : (
           <>
             <Step number={1} title="Academic year">
@@ -231,23 +230,23 @@ export default function AdminYearSetup() {
                 {plan.terms.map((term, index) => {
                   const locked = term.action === 'exists';
                   return (
-                    <li key={term.input.code} className="rounded border p-3" style={{ borderColor: 'var(--color-border)' }}>
+                    <li key={term.input.code} className="rounded border p-3 border-[var(--color-border)]">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Check id={`term-${term.input.code}`} checked={term.input.include || locked} disabled={locked} onChange={(value) => patchTerm(index, { include: value })}>
                           <span className="font-semibold">{term.input.label}</span>
-                          <span className="ml-2 font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>{term.input.code}{term.input.quarter === 'summer' ? ' · optional' : ''}</span>
+                          <span className="ml-2 font-mono text-[11px] text-text-muted">{term.input.code}{term.input.quarter === 'summer' ? ' · optional' : ''}</span>
                         </Check>
                         <ActionPill action={term.action} />
                       </div>
                       {!locked && (
                         <div className="mt-2 grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`term-start-${term.input.code}`}>Starts</label>
-                            <input id={`term-start-${term.input.code}`} type="date" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={term.input.starts_on} onChange={(event) => patchTerm(index, { starts_on: event.target.value })} />
+                            <label className={`${labelCls} text-text-muted`} htmlFor={`term-start-${term.input.code}`}>Starts</label>
+                            <input id={`term-start-${term.input.code}`} type="date" className={`${fieldCls} border-[var(--color-border)]`} value={term.input.starts_on} onChange={(event) => patchTerm(index, { starts_on: event.target.value })} />
                           </div>
                           <div>
-                            <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`term-end-${term.input.code}`}>Ends</label>
-                            <input id={`term-end-${term.input.code}`} type="date" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={term.input.ends_on} onChange={(event) => patchTerm(index, { ends_on: event.target.value })} />
+                            <label className={`${labelCls} text-text-muted`} htmlFor={`term-end-${term.input.code}`}>Ends</label>
+                            <input id={`term-end-${term.input.code}`} type="date" className={`${fieldCls} border-[var(--color-border)]`} value={term.input.ends_on} onChange={(event) => patchTerm(index, { ends_on: event.target.value })} />
                           </div>
                         </div>
                       )}
@@ -275,12 +274,12 @@ export default function AdminYearSetup() {
                   </Check>
                   {options.createRosterDraft && (
                     <div>
-                      <label htmlFor="opt-roster-source" className={labelCls} style={{ color: 'var(--color-text3)' }}>Copy position structure from</label>
-                      <select id="opt-roster-source" className={fieldCls} style={{ borderColor: 'var(--color-border)' }} value={options.rosterSourceCabinetYearId ?? ''} onChange={(event) => patchOptions({ rosterSourceCabinetYearId: event.target.value || null })}>
+                      <label htmlFor="opt-roster-source" className={`${labelCls} text-text-muted`}>Copy position structure from</label>
+                      <select id="opt-roster-source" className={`${fieldCls} border-[var(--color-border)]`} value={options.rosterSourceCabinetYearId ?? ''} onChange={(event) => patchOptions({ rosterSourceCabinetYearId: event.target.value || null })}>
                         <option value="">Start empty</option>
                         {cabinetYears.map((year) => <option key={year.id} value={year.id}>{year.label}</option>)}
                       </select>
-                      <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>Role, board, and order only. No names, links, photos, or bios.</p>
+                      <p className="mt-1 text-[11px] text-text-muted">Role, board, and order only. No names, links, photos, or bios.</p>
                     </div>
                   )}
                 </>
@@ -315,8 +314,8 @@ export default function AdminYearSetup() {
                   </Check>
                   {options.createEmptyHouseBatch && (
                     <div>
-                      <label htmlFor="opt-house-date" className={labelCls} style={{ color: 'var(--color-text3)' }}>Effective start date</label>
-                      <input id="opt-house-date" type="date" className={`${fieldCls} w-auto`} style={{ borderColor: 'var(--color-border)' }} value={options.houseEffectiveStartDate} onChange={(event) => patchOptions({ houseEffectiveStartDate: event.target.value })} />
+                      <label htmlFor="opt-house-date" className={`${labelCls} text-text-muted`}>Effective start date</label>
+                      <input id="opt-house-date" type="date" className={`${fieldCls} w-auto border-[var(--color-border)]`} value={options.houseEffectiveStartDate} onChange={(event) => patchOptions({ houseEffectiveStartDate: event.target.value })} />
                     </div>
                   )}
                 </>
@@ -333,10 +332,10 @@ export default function AdminYearSetup() {
                   {resetPlan.rows.map((row) => {
                     const changes = row.willDisable || row.willReplaceTiming;
                     return (
-                      <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-2" style={{ borderColor: 'var(--color-border)' }}>
+                      <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-2 border-[var(--color-border)]">
                         <Check id={`app-${row.id}`} checked={!!selectedApps[row.id] && changes} disabled={!changes} onChange={(value) => setSelectedApps((current) => ({ ...current, [row.id]: value }))}>
                           <span className="font-semibold">{row.label}</span>
-                          <span className="ml-2 text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                          <span className="ml-2 text-[11px] text-text-muted">
                             {APPLICATION_STATUS_LABELS[row.status]}
                             {row.openNow ? ' · open now, leave alone unless you mean to close it' : ''}
                             {!changes ? ' · already disabled' : ''}
@@ -364,11 +363,11 @@ export default function AdminYearSetup() {
             <PreflightSummary title={`${yearLabel} Setup`} lines={summary} />
 
             {report && (
-              <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Setup report">
-                <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Setup report</h3>
+              <section className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface" aria-label="Setup report">
+                <h3 className="font-serif text-lg font-bold text-text-primary">Setup report</h3>
                 <ul className="mt-3 space-y-1 text-xs" data-testid="setup-report">
                   {report.steps.map((step) => (
-                    <li key={step.key} className={step.outcome === 'failed' ? 'text-red-600 dark:text-red-400' : ''} style={step.outcome === 'failed' ? undefined : { color: 'var(--color-text2)' }}>
+                    <li key={step.key} className={step.outcome === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-text-secondary'}>
                       {step.outcome === 'created' ? '＋' : step.outcome === 'existing' ? '✓' : step.outcome === 'failed' ? '✕' : '○'} {step.label}: {step.detail}
                     </li>
                   ))}
@@ -380,7 +379,7 @@ export default function AdminYearSetup() {
               <button type="button" className="vsa-btn-primary px-6 py-2.5 text-sm disabled:opacity-50" disabled={running || writeCount === 0} onClick={createSetup}>
                 {running ? 'Creating…' : 'Create Setup'}
               </button>
-              <p className="text-xs" style={{ color: 'var(--color-text3)' }}>
+              <p className="text-xs text-text-muted">
                 {writeCount === 0 ? 'Nothing left to create for this year.' : `${pluralize(writeCount, 'record')} will be created. Existing records are never duplicated.`}
               </p>
             </div>
