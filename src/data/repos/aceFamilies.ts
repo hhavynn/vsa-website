@@ -4,6 +4,7 @@ import { withErrorHandling } from '../errors';
 import { ImportPlan } from '../../lib/aceFamilyImport';
 import { getUploadExtension } from '../../lib/imageUpload';
 import { AceMemberLinkChange, AceMemberLinkRef } from '../../lib/aceMemberLinks';
+import { AceNodeRef } from '../../lib/aceAssignments';
 
 export type AceFamilyFormData = Omit<AceFamily, 'id' | 'created_at' | 'updated_at'>;
 export type AceFamilyMemberFormData = Omit<AceFamilyMember, 'id' | 'created_at' | 'updated_at'>;
@@ -200,6 +201,35 @@ export class AceFamiliesRepository {
         ];
       });
     }, 'Failed to fetch ACE member links');
+  }
+
+  /** Every ACE node across all fams (admin), for choosing a Big in the assignment workspace. */
+  async getAllNodeRefs(): Promise<AceNodeRef[]> {
+    return withErrorHandling(async () => {
+      const pageSize = 1000;
+      const nodes: AceNodeRef[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('ace_family_members')
+          .select('id, name, family_id, member_id, parent_member_id, role_label, ace_families(name)')
+          .order('id', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        for (const row of data ?? []) {
+          const family = Array.isArray(row.ace_families) ? row.ace_families[0] : row.ace_families;
+          nodes.push({
+            id: row.id,
+            name: row.name,
+            familyId: row.family_id,
+            familyName: family?.name ?? null,
+            memberId: row.member_id,
+            parentId: row.parent_member_id,
+            roleLabel: row.role_label,
+          });
+        }
+        if (!data || data.length < pageSize) return nodes;
+      }
+    }, 'Failed to fetch ACE tree nodes');
   }
 
   /**

@@ -48,3 +48,21 @@ it('suggests a unique exact match and refuses to choose between duplicates', asy
     kind: 'ambiguous',
   });
 });
+
+it('matches import emails against members without returning the address', async () => {
+  supabaseMock.setDefault('members', {
+    data: [{ ...row('m1', 'Amy', 'Tran'), email: 'Amy@UCSD.edu' }, { ...row('m2', 'Kevin', 'Le'), email: null }],
+    error: null,
+  });
+  const matches = await memberLookupRepository.matchMembersByEmail([' amy@ucsd.edu ', 'AMY@ucsd.edu', 'kevin@ucsd.edu']);
+  expect(Array.from(matches.keys())).toEqual(['amy@ucsd.edu']);
+  expect(matches.get('amy@ucsd.edu')).toEqual([expect.objectContaining({ id: 'm1' })]);
+  expect(JSON.stringify(Array.from(matches.values()))).not.toMatch(/@/);
+  const [query] = supabaseMock.queriesFor('members');
+  expect(query.calls).toContainEqual({ method: 'in', args: ['email', ['amy@ucsd.edu', 'kevin@ucsd.edu']] });
+});
+
+it('does not query members when there are no emails to match', async () => {
+  await expect(memberLookupRepository.matchMembersByEmail(['', '  '])).resolves.toEqual(new Map());
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});

@@ -74,6 +74,104 @@ export type Database = {
         };
         Relationships: [];
       };
+      ace_assignment_cycles: {
+        Row: {
+          academic_year_end: number;
+          academic_year_start: number;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year_end: number;
+          academic_year_start: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year_end?: number;
+          academic_year_start?: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      ace_assignment_drafts: {
+        Row: {
+          big_ace_member_id: string | null;
+          created_at: string;
+          cycle_id: string;
+          display_order: number;
+          id: string;
+          little_member_id: string | null;
+          little_name: string;
+          notes: string | null;
+          published_ace_member_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          big_ace_member_id?: string | null;
+          created_at?: string;
+          cycle_id: string;
+          display_order?: number;
+          id?: string;
+          little_member_id?: string | null;
+          little_name: string;
+          notes?: string | null;
+          published_ace_member_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          big_ace_member_id?: string | null;
+          created_at?: string;
+          cycle_id?: string;
+          display_order?: number;
+          id?: string;
+          little_member_id?: string | null;
+          little_name?: string;
+          notes?: string | null;
+          published_ace_member_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ace_assignment_drafts_cycle_id_fkey";
+            columns: ["cycle_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_assignment_cycles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ace_assignment_drafts_little_member_id_fkey";
+            columns: ["little_member_id"];
+            isOneToOne: false;
+            referencedRelation: "members";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ace_assignment_drafts_big_ace_member_id_fkey";
+            columns: ["big_ace_member_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_family_members";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ace_assignment_drafts_published_ace_member_id_fkey";
+            columns: ["published_ace_member_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_family_members";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ace_families: {
         Row: {
           academic_year_end: number | null;
@@ -3332,6 +3430,10 @@ export type Database = {
       };
     };
     Functions: {
+      publish_ace_assignment_cycle: {
+        Args: { p_cycle_id: string };
+        Returns: Json;
+      };
       reserve_ai_quota: {
         Args: { p_session_id_hash: string; p_ip_hash: string | null };
         Returns: Json;

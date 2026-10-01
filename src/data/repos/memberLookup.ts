@@ -83,6 +83,33 @@ export class MemberLookupRepository {
     }, 'Failed to load member directory');
   }
 
+  /**
+   * Admin-only. Looks members up by email so an import can pair applicants
+   * with their member record. Emails are matched, never returned or stored;
+   * the result is keyed by the lowercased email the caller supplied.
+   */
+  async matchMembersByEmail(emails: readonly string[]): Promise<Map<string, MemberOption[]>> {
+    const wanted = Array.from(new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean)));
+    const matches = new Map<string, MemberOption[]>();
+    if (wanted.length === 0) return matches;
+    return withErrorHandling(async () => {
+      for (let from = 0; from < wanted.length; from += 100) {
+        const chunk = wanted.slice(from, from + 100);
+        const { data, error } = await supabase
+          .from('members')
+          .select('id, first_name, last_name, college, year, email')
+          .in('email', chunk);
+        if (error) throw error;
+        for (const row of data ?? []) {
+          const key = row.email?.trim().toLowerCase();
+          if (!key) continue;
+          matches.set(key, [...(matches.get(key) ?? []), toMemberOption(row)]);
+        }
+      }
+      return matches;
+    }, 'Failed to match members by email');
+  }
+
   /** Exact normalized-name match; never guesses between same-name members. */
   async suggestExactMemberMatch(name: string): Promise<ExactMemberMatch> {
     const directory = await this.listMemberDirectory();
