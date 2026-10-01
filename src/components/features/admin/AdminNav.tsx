@@ -19,6 +19,7 @@ const NAV_GROUPS = [
   { group: 'Content & Media', items: [
     { to: '/admin/content', label: 'Homepage & Programs' },
     { to: '/admin/cabinet', label: 'Cabinet' },
+    { to: '/admin/cabinet/rollover', label: 'Cabinet Rollover' },
     { to: '/admin/gallery', label: 'Gallery' },
     { to: '/admin/vcn', label: 'VCN Archives' },
     { to: '/admin/ai-knowledge', label: 'Ask VSA Knowledge' },
@@ -32,6 +33,7 @@ const NAV_GROUPS = [
     { to: '/admin/points', label: 'Points Tools' },
     { to: '/admin/merge-suggestions', label: 'Merge Review' },
     { to: '/admin/years', label: 'Years & Terms' },
+    { to: '/admin/year-setup', label: 'New Year Setup' },
   ]},
   { group: 'System', items: [
     { to: '/admin/data-rights', label: 'Data Rights' },

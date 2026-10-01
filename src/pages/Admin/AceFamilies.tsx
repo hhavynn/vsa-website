@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from 'react-query';
+import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
@@ -469,7 +470,10 @@ function TreePreview({
 export default function AdminAceFamilies() {
   const queryClient = useQueryClient();
   const { families, loading, error, refetch } = useAdminAceFamilies();
-  const [view, setView] = useState<'families' | 'assignments'>('families');
+  const [searchParams] = useSearchParams();
+  const [view, setView] = useState<'families' | 'assignments'>(
+    searchParams.get('view') === 'assignments' ? 'assignments' : 'families',
+  );
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const selectedFamily = useMemo(
     () => families.find((f) => f.id === selectedFamilyId) ?? null,

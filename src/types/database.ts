@@ -613,6 +613,99 @@ export type Database = {
         };
         Relationships: [];
       };
+      cabinet_roster_cycles: {
+        Row: {
+          cabinet_year_id: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          locked_at: string | null;
+          published_at: string | null;
+          source_cabinet_year_id: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          cabinet_year_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          source_cabinet_year_id?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          cabinet_year_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          locked_at?: string | null;
+          published_at?: string | null;
+          source_cabinet_year_id?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      cabinet_roster_drafts: {
+        Row: {
+          category: string;
+          college: string | null;
+          created_at: string;
+          cycle_id: string;
+          display_order: number;
+          favorite_snack: string | null;
+          fun_fact: string | null;
+          id: string;
+          major: string | null;
+          member_id: string | null;
+          name: string | null;
+          pronouns: string | null;
+          published_cabinet_member_id: string | null;
+          role: string;
+          updated_at: string;
+          year: string | null;
+        };
+        Insert: {
+          category: string;
+          college?: string | null;
+          created_at?: string;
+          cycle_id: string;
+          display_order?: number;
+          favorite_snack?: string | null;
+          fun_fact?: string | null;
+          id?: string;
+          major?: string | null;
+          member_id?: string | null;
+          name?: string | null;
+          pronouns?: string | null;
+          published_cabinet_member_id?: string | null;
+          role: string;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Update: {
+          category?: string;
+          college?: string | null;
+          created_at?: string;
+          cycle_id?: string;
+          display_order?: number;
+          favorite_snack?: string | null;
+          fun_fact?: string | null;
+          id?: string;
+          major?: string | null;
+          member_id?: string | null;
+          name?: string | null;
+          pronouns?: string | null;
+          published_cabinet_member_id?: string | null;
+          role?: string;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Relationships: [];
+      };
       cabinet_years: {
         Row: {
           created_at: string;
