@@ -7,7 +7,6 @@ import { usePresidentsContent } from "../hooks/usePresidentsContent";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { eventsRepository, PublicEventPreview } from "../data/repos/events";
 import { EventInterestButtons } from "../components/features/events/EventInterestButtons";
-import { splitPresidentsMessage } from "../data/presidentsContent";
 import {
   getSupabaseImageSrcSet,
   getSupabaseImageUrl,
@@ -20,6 +19,7 @@ import {
 import { ThisWeekInVSA } from "../components/features/home/ThisWeekInVSA";
 import { OpenOpportunities } from "../components/features/home/OpenOpportunities";
 import { WrappedRecapCard } from "../components/features/home/WrappedRecapCard";
+import { PresidentsMessageSection } from "../components/features/home/PresidentsMessage";
 import { type ComponentType, useRef } from "react";
 import { type IconBaseProps } from "react-icons";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
@@ -217,25 +217,6 @@ export function Home() {
   const logoSrc =
     siteSettings.logoUrl ||
     `${process.env.PUBLIC_URL || ""}/images/vsa-logo.jpg`;
-  const presidentParagraphs = splitPresidentsMessage(presidentsContent.message);
-  const [presidentsHeading, ...presidentsBody] = presidentParagraphs;
-  const possibleSignature = presidentsBody[presidentsBody.length - 1];
-  const signatureLines =
-    possibleSignature
-      ?.split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean) ?? [];
-  const hasSignatureBlock =
-    signatureLines.length >= 2 &&
-    signatureLines[0].toLowerCase().startsWith("with love");
-  const presidentBodyParagraphs = hasSignatureBlock
-    ? presidentsBody.slice(0, -1)
-    : presidentsBody;
-  const signatureName = presidentsContent.names;
-  const signatureRole = presidentsContent.role;
-  const presidentsPhotoUrl =
-    presidentsContent.photoThumbnailUrl || presidentsContent.photoUrl;
-
   const featured = upcomingEvents[0];
   return (
     <>
@@ -620,108 +601,7 @@ export function Home() {
       </RevealOnScrollWrapper>
 
       <RevealOnScrollWrapper>
-        <section className="vsa-message-section scrapbook-board">
-          <div className="vsa-container">
-            <div className="grid gap-12 lg:grid-cols-[1fr_240px] lg:items-start">
-              <div className="scrapbook-paper p-6 sm:p-8 scrapbook-rotate-sm-left">
-                <span className="scrapbook-pin" aria-hidden />
-                <div className="vsa-section-label">Presidents</div>
-                <h2 className="vsa-section-title max-w-[720px]">
-                  {presidentsHeading}
-                </h2>
-                <div className="mt-8 grid gap-5 md:grid-cols-2">
-                  {presidentBodyParagraphs.map((paragraph, index) => (
-                    <p
-                      key={`${paragraph.slice(0, 24)}-${index}`}
-                      className="whitespace-pre-line font-sans text-sm leading-[1.9]"
-                      style={{ color: "var(--text2)" }}
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-                {hasSignatureBlock && (
-                  <div
-                    className="mt-7 border-t pt-5"
-                    style={{ borderColor: "var(--border)" }}
-                  >
-                    <div
-                      className="font-sans text-sm"
-                      style={{ color: "var(--text3)" }}
-                    >
-                      {signatureLines[0]}
-                    </div>
-                    <div
-                      className="mt-1 font-serif text-xl italic"
-                      style={{ color: "var(--color-accent-text)" }}
-                    >
-                      {signatureName}
-                    </div>
-                    <div
-                      className="mt-1 font-sans text-[11px] uppercase tracking-[0.08em]"
-                      style={{ color: "var(--text3)" }}
-                    >
-                      {signatureRole}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                {presidentsPhotoUrl ? (
-                  <div className="scrapbook-photo rotate-[1.5deg]">
-                    <img
-                      src={getSupabaseImageUrl(presidentsPhotoUrl, {
-                        width: 440,
-                        height: 586,
-                        resize: "cover",
-                        quality: 74,
-                      })}
-                      srcSet={getSupabaseImageSrcSet(
-                        presidentsPhotoUrl,
-                        [320, 440, 640],
-                        {
-                          resize: "cover",
-                          quality: 74,
-                        },
-                      )}
-                      sizes="(min-width: 1024px) 220px, 70vw"
-                      alt={presidentsContent.names}
-                      className="aspect-[3/4] w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                ) : (
-                  <div className="scrapbook-photo flex aspect-[3/4] items-center justify-center">
-                    <span
-                      className="font-serif text-[28px] italic"
-                      style={{ color: "var(--text3)" }}
-                    >
-                      A + H
-                    </span>
-                  </div>
-                )}
-                <div
-                  className="mt-3 border-t py-3"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <div
-                    className="font-sans text-sm font-semibold"
-                    style={{ color: "var(--text)" }}
-                  >
-                    {presidentsContent.names}
-                  </div>
-                  <div
-                    className="mt-1 font-sans text-[11px] uppercase tracking-[0.07em]"
-                    style={{ color: "var(--text3)" }}
-                  >
-                    {presidentsContent.role}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PresidentsMessageSection content={presidentsContent} />
       </RevealOnScrollWrapper>
 
       <RevealOnScrollWrapper>

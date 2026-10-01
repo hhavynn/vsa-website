@@ -11,6 +11,9 @@ import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { isRenamed } from '../../lib/memberPhotos';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
+import { CabinetPreviewDialog } from '../../components/features/admin/preview/CabinetPreviewDialog';
+import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
+import { buildCabinetPreviewMembers } from '../../components/features/admin/preview/cabinetPreview';
 
 interface CabinetMember {
   id: string;
@@ -28,6 +31,7 @@ interface CabinetMember {
   favorite_snack: string | null;
   fun_fact: string | null;
   cabinet_year_id: string | null;
+  member_id: string | null;
 }
 
 const CATEGORIES = ['Executive Board', 'General Board', 'Interns'];
@@ -173,6 +177,7 @@ export default function AdminCabinet() {
 
   const [uploading, setUploading] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<CabinetMember | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {
@@ -210,6 +215,24 @@ export default function AdminCabinet() {
   const roleSuggestions = Array.from(
     new Set([...filteredMembers.map((member) => member.role), ...ROLE_SUGGESTIONS])
   ).filter(Boolean).sort((a, b) => a.localeCompare(b));
+
+  // Preview the year's board as /cabinet would show it after saving, with
+  // unsaved form values and a not-yet-uploaded photo. Nothing is persisted.
+  const previewDraft = previewTarget === 'create' ? newMember : previewTarget === 'edit' ? selectedMember : null;
+  const previewYearId = previewDraft ? resolveCabinetYearId(previewDraft.cabinet_year_id) : null;
+  const previewYear = cabinetYears.find((year) => year.id === previewYearId) ?? null;
+  const previewImage = previewTarget === 'create'
+    ? { imageUrl: imagePreview, thumbnailUrl: imagePreview }
+    : { imageUrl: editImagePreview ?? (selectedMember?.image_url || null), thumbnailUrl: editImagePreview ?? selectedMember?.thumbnail_url ?? null };
+  const previewMembers = previewDraft
+    ? buildCabinetPreviewMembers({
+        members,
+        draft: previewDraft,
+        yearId: previewYearId,
+        includeLegacy: !!previewYearId && previewYearId === currentCabinetYear?.id,
+        ...previewImage,
+      })
+    : [];
 
   const fetchMembers = async () => {
     try {
@@ -591,7 +614,8 @@ export default function AdminCabinet() {
                   )}
                 </div>
               </div>
-              <div className="pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <PreviewAsPublicButton onClick={() => setPreviewTarget('create')} className="py-3 sm:shrink-0" />
                 <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
                   {uploading ? 'Adding...' : 'Add Member'}
                 </button>
@@ -760,10 +784,21 @@ export default function AdminCabinet() {
               <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
                 <button type="submit" disabled={uploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>
                 <button type="button" onClick={() => setSelectedMember(null)} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+                <PreviewAsPublicButton onClick={() => setPreviewTarget('edit')} className="sm:mr-auto" />
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {previewDraft && (
+        <CabinetPreviewDialog
+          members={previewMembers}
+          memberName={previewDraft.name ?? ''}
+          yearLabel={previewYear?.label ?? null}
+          isSaved={previewTarget === 'edit'}
+          onClose={() => setPreviewTarget(null)}
+        />
       )}
 
       {/* Delete Confirmation */}
