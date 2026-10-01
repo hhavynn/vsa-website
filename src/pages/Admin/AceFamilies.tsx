@@ -232,19 +232,7 @@ function MemberRow({
     return parentOptions.filter((m) => !forbidden.has(m.id));
   }, [member.id, membersById, parentOptions]);
 
-  const isSafeImageSrc = (value: string) => {
-    const v = value.trim();
-    if (!v) return false;
-    if (/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(v)) return true;
-    try {
-      const parsed = new URL(v);
-      return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-    } catch {
-      return false;
-    }
-  };
-
-  const preview = isSafeImageSrc(photoPreview) ? photoPreview : isSafeImageSrc(photoUrl) ? photoUrl : '';
+  const preview = photoPreview || photoUrl;
   const nameDirty = isRenamed(member.name, name);
 
   const handleSave = async () => {
@@ -312,8 +300,7 @@ function MemberRow({
               type="url"
               value={photoUrl}
               onChange={(e) => {
-                const next = e.target.value.trim();
-                setPhotoUrl(next === '' || isSafeImageSrc(next) ? next : '');
+                setPhotoUrl(e.target.value);
                 setPhotoFile(null);
                 setPhotoPreview('');
               }}
