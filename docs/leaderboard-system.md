@@ -59,6 +59,7 @@ When importing attendance via CSV:
 - The event dropdown now shows the academic term for each event.
 - A warning is displayed if the selected event has no term assigned.
 - Points are automatically attributed to the correct year based on the event's term.
+- A matched member's profile `year` advances (never rewinds) when the CSV reports a higher standing. This applies to safe matches and to review rows an admin force-matched; email and college are only filled on safe matches. Review rows left unconfirmed are skipped entirely.
 
 ### Member Management
 

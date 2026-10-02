@@ -20,6 +20,7 @@ import {
   AttendanceMatchReason,
   AttendanceMatchResult,
   getSafeAttendanceMemberEnrichment,
+  planAttendanceMemberEnrichments,
   matchAttendanceImportRows,
 } from '../../lib/memberMatching';
 
@@ -92,8 +93,12 @@ function canMarkAsNew(row: RowResult): boolean {
   return row.canMarkNew && (row.status === 'match' || row.status === 'review');
 }
 
+function isAdminConfirmed(row: RowResult): boolean {
+  return row.status === 'review' && row.manualOverride === 'force-match' && row.canForceMatch;
+}
+
 function buildMemberEnrichment(row: RowResult, members: Member[]): MemberEnrichment {
-  return getSafeAttendanceMemberEnrichment(row, members) as MemberEnrichment;
+  return getSafeAttendanceMemberEnrichment(row, members, { adminConfirmed: isAdminConfirmed(row) }) as MemberEnrichment;
 }
 
 function hasMemberEnrichment(row: RowResult, members: Member[]): boolean {
@@ -497,12 +502,11 @@ export default function AdminImport() {
 
       // 3. Fill missing profile fields on matched members, and advance year
       //    when the CSV reports a higher standing than the one on record.
-      const toEnrich = toUpdate
-        .map(r => ({
-          memberId: r.matchedMember!.id,
-          updates: buildMemberEnrichment(r, latestMembers),
-        }))
-        .filter(item => Object.keys(item.updates).length > 0);
+      //    One write per member, computed from the record refetched above.
+      const toEnrich = planAttendanceMemberEnrichments(
+        toUpdate.map(r => ({ ...r, adminConfirmed: isAdminConfirmed(r) })),
+        latestMembers,
+      );
       for (const { memberId, updates } of toEnrich) {
         await supabase
           .from('members')

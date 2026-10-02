@@ -582,17 +582,30 @@ export function resolveMemberYearAdvance(
   return csvRank > storedRank ? csvYear : null;
 }
 
+export interface AttendanceEnrichmentOptions {
+  /**
+   * An admin explicitly force-matched this `review` row to `matchedMember`.
+   * Their confirmation already credits the member's attendance, so it is
+   * enough to advance year. It deliberately unlocks nothing else: a review
+   * row's email/college can belong to a different person (email-name
+   * conflicts, ambiguous names), so those stay fill-only on safe matches.
+   */
+  adminConfirmed?: boolean;
+}
+
 export function getSafeAttendanceMemberEnrichment(
   row: AttendanceMatchResult,
   members: AttendanceImportMember[],
+  { adminConfirmed = false }: AttendanceEnrichmentOptions = {},
 ): Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> {
   const member = row.matchedMember;
-  if (!member || row.status !== 'match') return {};
+  const confirmedReviewRow = adminConfirmed && row.status === 'review';
+  if (!member || (row.status !== 'match' && !confirmedReviewRow)) return {};
 
   const updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> = {};
   const safeHighConfidenceMatch = row.method === 'email' || row.method === 'exact_name' || (row.method === 'fuzzy_name' && row.score >= FUZZY_AUTO_THRESHOLD);
 
-  if (!member.email && row.csvEmail) {
+  if (row.status === 'match' && !member.email && row.csvEmail) {
     const email = normalizeEmail(row.csvEmail);
     const emailUsedByAnotherMember = members.some((candidate) => (
       candidate.id !== member.id && normalizeEmail(candidate.email) === email
@@ -601,11 +614,53 @@ export function getSafeAttendanceMemberEnrichment(
     if (canAttachEmail) updates.email = email;
   }
 
-  if (safeHighConfidenceMatch) {
+  if (safeHighConfidenceMatch && row.status === 'match') {
     if (!member.college && row.csvCollege) updates.college = row.csvCollege;
+  }
+
+  if ((safeHighConfidenceMatch && row.status === 'match') || confirmedReviewRow) {
     const advancedYear = resolveMemberYearAdvance(member.year, row.csvYear, row.invalidYear);
     if (advancedYear) updates.year = advancedYear;
   }
 
   return updates;
+}
+
+export interface AttendanceMemberEnrichmentPlan {
+  memberId: string;
+  updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>>;
+}
+
+/**
+ * One consolidated update per member for an import's matched rows.
+ *
+ * Each row is evaluated against the member's latest record (refetched at import
+ * time) with earlier rows' updates already applied. The preview-time
+ * `row.matchedMember` can be stale, and several rows can resolve to the same
+ * member. Scoring each one independently and writing them in order would let a
+ * lower year overwrite a higher one, which is exactly the rewind that
+ * `resolveMemberYearAdvance` exists to prevent.
+ */
+export function planAttendanceMemberEnrichments(
+  rows: (AttendanceMatchResult & { adminConfirmed?: boolean })[],
+  latestMembers: AttendanceImportMember[],
+): AttendanceMemberEnrichmentPlan[] {
+  const current = new Map(latestMembers.map((m) => [m.id, m]));
+  const plans = new Map<string, AttendanceMemberEnrichmentPlan['updates']>();
+
+  for (const row of rows) {
+    if (!row.matchedMember) continue;
+    const id = row.matchedMember.id;
+    const latest = current.get(id) ?? row.matchedMember;
+    const updates = getSafeAttendanceMemberEnrichment(
+      { ...row, matchedMember: latest },
+      latestMembers,
+      { adminConfirmed: row.adminConfirmed },
+    );
+    if (Object.keys(updates).length === 0) continue;
+    current.set(id, { ...latest, ...updates });
+    plans.set(id, { ...plans.get(id), ...updates });
+  }
+
+  return Array.from(plans, ([memberId, updates]) => ({ memberId, updates }));
 }
