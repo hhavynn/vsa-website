@@ -66,6 +66,12 @@ Gemini outputs route suggestions in standard markdown format: `[Link Label](/pat
 
 ## 4. Fallback Mechanics
 
+The widget sends at most four prior turns, with each turn capped at the Edge
+Function's 500-character request limit. Full answers remain visible in the chat.
+Error and rate-limit responses are excluded from history. Retry replaces the
+failed question and response using the context that preceded that question.
+Failures appear once in the conversation and are announced by one live region.
+
 When live database data is unreachable, or when the AI does not find relevant public context, the assistant responds with:
 > "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates."
 

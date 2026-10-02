@@ -165,7 +165,6 @@ export function VsaAiAssistant() {
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorText, setErrorText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const assistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -212,14 +211,6 @@ export function VsaAiAssistant() {
     };
   }, [isOpen]);
 
-  const recentTurns = useMemo(
-    () =>
-      messages
-        .slice(-4)
-        .map((message) => ({ role: message.role, content: message.content })),
-    [messages],
-  );
-
   const assistantAnnouncement = useMemo(() => {
     if (loading) return 'Ask VSA is checking approved VSA information.';
     const latestMessage = messages[messages.length - 1];
@@ -228,11 +219,10 @@ export function VsaAiAssistant() {
 
   if (isAdminRoute) return null;
 
-  async function sendMessage(rawMessage: string) {
+  async function sendMessage(rawMessage: string, history: ChatMessage[] = messages) {
     const nextMessage = rawMessage.trim().slice(0, MAX_INPUT_LENGTH);
     if (!nextMessage || loading || !sessionId) return;
 
-    setErrorText(null);
     setInput('');
 
     const userMessage: ChatMessage = {
@@ -241,7 +231,15 @@ export function VsaAiAssistant() {
       content: nextMessage,
     };
 
-    setMessages((current) => [...current, userMessage].slice(-MAX_MESSAGES));
+    const recentTurns = history
+      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited')
+      .slice(-4)
+      .map((message) => ({
+        role: message.role,
+        content: message.content.slice(0, MAX_INPUT_LENGTH),
+      }));
+
+    setMessages([...history, userMessage].slice(-MAX_MESSAGES));
     setLoading(true);
 
     try {
@@ -269,7 +267,7 @@ export function VsaAiAssistant() {
       const data = (await response.json().catch(() => null)) as AssistantResponse | null;
 
       if (!response.ok && response.status !== 429) {
-        throw new Error(FALLBACK_ASK_VSA.message);
+        throw new Error(`Ask VSA request failed (HTTP ${response.status})`);
       }
 
       const assistantMessage: ChatMessage = {
@@ -287,14 +285,12 @@ export function VsaAiAssistant() {
       setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
     } catch (error) {
       console.error('Ask VSA request failed:', error);
-      const fallback = FALLBACK_ASK_VSA.message;
       const assistantMessage: ChatMessage = {
         id: createMessageId(),
         role: 'assistant',
         content: FALLBACK_ASK_VSA.message,
         status: 'error',
       };
-      setErrorText(fallback);
       setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
     } finally {
       setLoading(false);
@@ -302,12 +298,13 @@ export function VsaAiAssistant() {
   }
 
   async function handleRetry(messageIndex: number) {
-    const userMsg = messages.slice(0, messageIndex).reverse().find((m) => m.role === 'user');
-    if (!userMsg) return;
+    const userMessageIndex = messages
+      .slice(0, messageIndex)
+      .map((message) => message.role)
+      .lastIndexOf('user');
+    if (userMessageIndex < 0) return;
 
-    setErrorText(null);
-    setMessages((current) => current.slice(0, messageIndex));
-    await sendMessage(userMsg.content);
+    await sendMessage(messages[userMessageIndex].content, messages.slice(0, userMessageIndex));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -644,12 +641,6 @@ export function VsaAiAssistant() {
           <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {assistantAnnouncement}
           </div>
-
-          {errorText && (
-            <div role="alert" className="border-t px-4 py-2 font-sans text-xs text-rose-700 dark:text-rose-300" style={{ borderColor: 'var(--color-border)' }}>
-              {errorText}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="shrink-0 border-t p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
             <div className="flex items-end gap-2">
