@@ -108,10 +108,14 @@ export default function AdminExternalEvents() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (event: ExternalEvent) => {
+    if (event.source_event_id) {
+      toast.error('Linked external events must be deleted from Admin → Events.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(event.id);
       toast.success('Event deleted');
       refreshEvents();
     } catch (err) {
@@ -358,7 +362,23 @@ export default function AdminExternalEvents() {
               <Button variant="outline" size="sm" onClick={() => handleEdit(event)} className="flex gap-2">
                 <EditIcon size={16} /> Edit
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleDelete(event.id)} className="text-red-500 hover:text-red-600">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={Boolean(event.source_event_id)}
+                title={
+                  event.source_event_id
+                    ? 'Linked to a normal event. Delete the event in Admin → Events to remove both.'
+                    : 'Delete external event'
+                }
+                aria-label={
+                  event.source_event_id
+                    ? `Cannot delete linked event: ${event.title}`
+                    : `Delete ${event.title}`
+                }
+                onClick={() => handleDelete(event)}
+                className={event.source_event_id ? 'text-[var(--text3)]' : 'text-red-500 hover:text-red-600'}
+              >
                 <TrashIcon size={16} />
               </Button>
             </div>

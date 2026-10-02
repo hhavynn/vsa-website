@@ -153,8 +153,11 @@ export function deriveLinkedStatus({
   today: string;
   current?: ExternalEventStatus | null;
 }): ExternalEventStatus {
-  if (!isExternalType || !isPublished || !showOnNetwork) return 'draft';
+  if (!isExternalType) return 'draft';
+  // Preserve editorial decisions made on the listing (e.g. marking it canceled
+  // or archiving it as historical) across visibility changes or unpublishing.
   if (current === 'canceled' || current === 'historical') return current;
+  if (!isPublished || !showOnNetwork) return 'draft';
   return dateOnly && dateOnly < today ? 'past' : 'upcoming';
 }
 

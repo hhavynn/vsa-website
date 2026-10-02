@@ -11,12 +11,13 @@ import { makeEvent, makeSchool } from '../../test-utils/uvsaFixtures';
 
 const mockUci = makeSchool({ id: 'uci-id', slug: 'uci', short_name: 'UCI', vsa_name: 'VSA UCI' });
 const mockMutateAsync = jest.fn();
+const mockDeleteMutateAsync = jest.fn();
 const mockState: { events: ExternalEvent[] } = { events: [] };
 
 jest.mock('../../hooks/useExternalEvents', () => ({
   useAdminExternalEvents: () => ({ events: mockState.events, loading: false, refreshEvents: jest.fn() }),
   useUpsertExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockMutateAsync(...args), isLoading: false }),
-  useDeleteExternalEvent: () => ({ mutateAsync: jest.fn(), isLoading: false }),
+  useDeleteExternalEvent: () => ({ mutateAsync: (...args: unknown[]) => mockDeleteMutateAsync(...args), isLoading: false }),
 }));
 jest.mock('../../hooks/useUVSASchools', () => ({
   useAdminUVSASchools: () => ({ schools: [mockUci], loading: false, error: null }),
@@ -31,6 +32,7 @@ const renderPage = () =>
 
 beforeEach(() => {
   mockMutateAsync.mockReset().mockResolvedValue(undefined);
+  mockDeleteMutateAsync.mockReset().mockResolvedValue(undefined);
   mockState.events = [];
 });
 
@@ -108,4 +110,34 @@ it('hosts an unmirrored external by UVSA SoCal, clearing the school', async () =
 
   await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
   expect(mockMutateAsync.mock.calls[0][0]).toMatchObject({ host_type: 'uvsa_socal', uvsa_school_id: null });
+});
+
+it('disables deletion of linked mirror rows and directs deletion to Admin Events', async () => {
+  mockState.events = [
+    makeEvent({
+      id: 'linked',
+      title: 'Linked Event',
+      source_event_id: 'evt-1',
+      source_event: { id: 'evt-1', name: 'Linked Event' },
+    }),
+    makeEvent({ id: 'plain', title: 'Plain Event' }),
+  ];
+  renderPage();
+
+  const disabledDeleteBtn = screen.getByRole('button', { name: /Cannot delete linked event: Linked Event/i });
+  expect(disabledDeleteBtn).toBeDisabled();
+  expect(disabledDeleteBtn).toHaveAttribute(
+    'title',
+    'Linked to a normal event. Delete the event in Admin → Events to remove both.',
+  );
+
+  fireEvent.click(disabledDeleteBtn);
+  expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+
+  const enabledDeleteBtn = screen.getByRole('button', { name: /Delete Plain Event/i });
+  expect(enabledDeleteBtn).toBeEnabled();
+  window.confirm = jest.fn(() => true);
+  fireEvent.click(enabledDeleteBtn);
+  expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this event?');
+  expect(mockDeleteMutateAsync).toHaveBeenCalledWith('plain');
 });

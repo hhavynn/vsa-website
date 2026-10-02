@@ -42,7 +42,7 @@ jest.mock('../../hooks/useExternalEvents', () => ({
   useAdminExternalEvents: () => ({ events: [], loading: false, error: null, refreshEvents: jest.fn() }),
 }));
 jest.mock('../../hooks/useUVSASchools', () => ({
-  useUVSASchools: () => ({ schools: [], loading: false, error: null }),
+  useAdminUVSASchools: () => ({ schools: [], loading: false, error: null, refreshSchools: jest.fn() }),
 }));
 jest.mock('../../hooks/useEventRecap', () => ({ useEventRecapEventIds: () => ({ recapEventIds: new Set<string>() }) }));
 jest.mock('../../data/repos/events', () => ({

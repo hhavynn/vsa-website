@@ -120,6 +120,15 @@ describe('deriveLinkedStatus', () => {
     expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'past' })).toBe('upcoming');
     expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'draft' })).toBe('upcoming');
   });
+
+  it('preserves canceled and historical editorial status even when unpublished or hidden from network', () => {
+    expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'canceled', isPublished: false })).toBe('canceled');
+    expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'canceled', showOnNetwork: false })).toBe('canceled');
+    expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'historical', isPublished: false })).toBe('historical');
+    expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'historical', showOnNetwork: false })).toBe('historical');
+    // If the event is no longer an external type, however, it becomes draft.
+    expect(deriveLinkedStatus({ ...base, dateOnly: '2026-10-24', current: 'canceled', isExternalType: false })).toBe('draft');
+  });
 });
 
 describe('effectiveExternalStatus', () => {

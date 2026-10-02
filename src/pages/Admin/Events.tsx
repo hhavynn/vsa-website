@@ -6,7 +6,7 @@ import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
 import { useAdminExternalEvents } from '../../hooks/useExternalEvents';
-import { useUVSASchools } from '../../hooks/useUVSASchools';
+import { useAdminUVSASchools } from '../../hooks/useUVSASchools';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { eventsRepository } from '../../data/repos/events';
 import { externalEventsRepository } from '../../data/repos/externalEvents';
@@ -136,7 +136,7 @@ export default function AdminEvents() {
   const { terms, loading: termsLoading, error: termsError, refreshTerms } = useAcademicTerms();
   const queryClient = useQueryClient();
   const { events: externalListings, loading: externalListingsLoading } = useAdminExternalEvents();
-  const { schools, loading: schoolsLoading } = useUVSASchools();
+  const { schools, loading: schoolsLoading } = useAdminUVSASchools();
   // One listing per event: the unique source_event_id makes this map lossless.
   const listingByEventId = useMemo(
     () => new Map(externalListings.filter((listing) => listing.source_event_id).map((listing) => [listing.source_event_id as string, listing])),

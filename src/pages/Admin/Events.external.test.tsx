@@ -66,7 +66,7 @@ jest.mock('../../hooks/useExternalEvents', () => ({
   useAdminExternalEvents: () => ({ events: mockListings, loading: false, error: null, refreshEvents: jest.fn() }),
 }));
 jest.mock('../../hooks/useUVSASchools', () => ({
-  useUVSASchools: () => ({ schools: mockSchools.filter((school) => school.is_active), loading: false, error: null }),
+  useAdminUVSASchools: () => ({ schools: mockSchools, loading: false, error: null, refreshSchools: jest.fn() }),
 }));
 jest.mock('../../components/features/admin/EventRecapEditor', () => ({ EventRecapEditor: () => null }));
 jest.mock('../../components/features/admin/ManualCheckIn', () => ({ ManualCheckIn: () => null }));
@@ -336,5 +336,26 @@ describe('Manage Events', () => {
     await screen.findByDisplayValue('GBM 1');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('External Event Details')).not.toBeInTheDocument();
+  });
+
+  it('allows editing an event whose host is an inactive school without validation errors', async () => {
+    mockListings.push(
+      listingFor('evt-ext', { host_type: 'school', uvsa_school_id: 'old-id', uvsa_school: mockSchools[2] }),
+    );
+    const user = userEvent;
+    renderEvents();
+    await openManage(user);
+    await openEditor(user, 0);
+
+    const hostSelect = await screen.findByLabelText(/Host \/ Organizer/);
+    expect(hostSelect).toHaveValue('old-id');
+    expect(within(hostSelect).getByRole('option', { name: /OLD.*\(inactive\)/ })).toBeInTheDocument();
+
+    await submitForm();
+    await waitFor(() => expect(mockApplySyncPlan).toHaveBeenCalledTimes(1));
+    expect(mockApplySyncPlan.mock.calls[0][1]).toMatchObject({
+      action: 'upsert',
+      payload: { uvsa_school_id: 'old-id' },
+    });
   });
 });
