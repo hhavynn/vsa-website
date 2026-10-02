@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AdminNav } from './AdminNav';
+import { AdminQuickSearch, isQuickSearchShortcut } from './AdminQuickSearch';
 
 const AdminLayout: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
 
   // Close mobile nav on route change
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isQuickSearchShortcut(event)) return;
+      event.preventDefault();
+      setSearchOpen((open) => !open);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="flex flex-col md:flex-row" style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--color-bg)' }}>
@@ -30,7 +42,8 @@ const AdminLayout: React.FC = () => {
         </button>
       </div>
 
-      <AdminNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <AdminNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onSearch={() => setSearchOpen(true)} />
+      <AdminQuickSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
       
       <div className="flex flex-1 flex-col overflow-hidden relative">
         <Outlet />

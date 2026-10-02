@@ -10,6 +10,7 @@ import {
   countPreflightIssues,
   formatHouseBalance,
 } from '../../../lib/adminOperations';
+import { buildContinueItems } from '../../../lib/adminContinue';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { OperationsCard, PreflightItem, ProgressCount, StatusBadge } from './ops';
 
@@ -56,6 +57,32 @@ function formatEventDate(value: string) {
   return Number.isNaN(parsed.getTime())
     ? ''
     : new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' }).format(parsed);
+}
+
+function ContinueWorking({ summary }: { summary: OperationsSummary }) {
+  const items = buildContinueItems(summary);
+  return (
+    <section aria-label="Continue working" className="scrapbook-paper border-[var(--color-border)] bg-surface p-5">
+      <h3 className="font-serif text-lg font-bold text-text-primary">Continue working</h3>
+      {items.length === 0 ? (
+        <p className="mt-2 text-xs text-text-muted">Nothing is in progress. The year is caught up.</p>
+      ) : (
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((item) => (
+            <li key={item.id} className="flex items-start justify-between gap-3 rounded border border-[var(--color-border)] px-3 py-2.5" data-domain={item.domain}>
+              <div className="min-w-0">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">{item.title}</p>
+                <p className="mt-0.5 font-sans text-[13px] text-text-primary">{item.detail}</p>
+              </div>
+              <Link to={item.to} className="shrink-0 rounded border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-brand-700 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-300">
+                {item.cta} →
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function OperationsCards({ summary }: { summary: OperationsSummary }) {
@@ -222,6 +249,7 @@ export function OperationsDashboard({ loadInputs = () => adminOperationsReposito
         </p>
       ) : (
         <>
+          <ContinueWorking summary={summary} />
           <OperationsCards summary={summary} />
 
           <section
