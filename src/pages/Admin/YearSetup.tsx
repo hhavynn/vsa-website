@@ -3,7 +3,12 @@ import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
-import { PreflightSummary } from '../../components/features/admin/ops';
+import { NextStepBanner, PreflightSummary, YearContextBadge } from '../../components/features/admin/ops';
+import { logAdminActivity } from '../../data/repos/adminActivity';
+import { useOperatingYear } from '../../hooks/useOperatingYear';
+import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
+import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
+import { describeYearContext } from '../../lib/adminYearContext';
 import { yearSetupRepository } from '../../data/repos/yearSetup';
 import { useAuth } from '../../hooks/useAuth';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
@@ -88,6 +93,8 @@ export default function AdminYearSetup() {
   const [options, setOptions] = useState<YearSetupOptions | null>(null);
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<YearSetupReport | null>(null);
+  const [nextStep, setNextStep] = useState<NextStep | null>(null);
+  const operatingYear = useOperatingYear();
   const [selectedApps, setSelectedApps] = useState<Record<string, boolean>>({});
   const [resetConfirmed, setResetConfirmed] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -147,6 +154,16 @@ export default function AdminYearSetup() {
       await loadSnapshot(targetYear);
       await refreshCabinetYears();
       queryClient.invalidateQueries('cabinet-years');
+      if (result.report.created > 0) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.yearSetupCreated,
+          entityType: 'academic_year',
+          academicYearStart: targetYear,
+          summary: activitySummary.yearSetup(targetYear),
+          metadata: { created: result.report.created, existing: result.report.existing, failed: result.report.failed },
+        });
+      }
+      setNextStep(result.report.failed === 0 ? nextStepFor({ type: 'year_prepared', yearStart: targetYear }) : null);
       if (result.report.failed > 0) toast.error(`${pluralize(result.report.failed, 'step')} failed. Review the report below; safe to run again.`);
       else toast.success(result.report.created > 0 ? `Setup complete: ${result.report.created} created, ${result.report.existing} already existed.` : 'Everything already existed. Nothing was changed.');
     } catch (err) {
@@ -186,6 +203,7 @@ export default function AdminYearSetup() {
 
       <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Start {yearLabel}</h1>
+        <YearContextBadge context={describeYearContext(targetYear, operatingYear)} className="mt-2" />
         <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
           Review what already exists for the new school year, then create only what is missing. Nothing is written until you press Create Setup. Terms and the Cabinet year are created inactive, past assignments are never copied, and no House is revealed.
         </p>
@@ -361,6 +379,8 @@ export default function AdminYearSetup() {
             </Step>
 
             <PreflightSummary title={`${yearLabel} Setup`} lines={summary} />
+
+            <NextStepBanner step={nextStep} onDismiss={() => setNextStep(null)} />
 
             {report && (
               <section className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface" aria-label="Setup report">

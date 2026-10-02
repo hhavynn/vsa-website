@@ -5,6 +5,8 @@
 // real members. Do not modify import logic unless explicitly requested.
 // Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useState } from 'react';
+import { ImportReviewPanel } from '../../components/features/admin/ops';
+import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
@@ -804,6 +806,22 @@ export default function AdminImport() {
                   {fetchingCsv ? 'Re-matching…' : '↻ Re-run matching with these columns'}
                 </button>
               </div>
+
+              <ImportReviewPanel
+                rows={reviewAttendanceRows(rows.map(r => ({
+                  originalIndex: r.originalIndex,
+                  displayName: r.displayName,
+                  effectiveStatus: getEffectiveStatus(r),
+                  reason: r.reason,
+                  note: r.note,
+                  invalidYear: r.invalidYear,
+                  candidateCount: r.candidateMemberIds.length,
+                  csvYear: r.csvYear,
+                  csvRow: r.csvRow,
+                })))}
+                hasInput
+                filename="attendance-import-problem-rows"
+              />
 
               {/* Summary */}
               <div className="flex flex-wrap gap-3">

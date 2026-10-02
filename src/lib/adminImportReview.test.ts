@@ -7,6 +7,7 @@ import {
   problemRowsToCsv,
   problemRowsToText,
   reviewAceImportRows,
+  reviewAttendanceRows,
   reviewInternNames,
   reviewRosterEntries,
   stageStates,
@@ -155,5 +156,50 @@ describe('problem row export', () => {
 
   it('copies a readable text summary', () => {
     expect(problemRowsToText(rows).split('\n')[0]).toBe('Row 3: Andy Tran — Needs review. 3 canonical members share this name. Choose one manually.');
+  });
+});
+
+describe('reviewAttendanceRows', () => {
+  const row = (patch: Partial<Parameters<typeof reviewAttendanceRows>[0][number]>) => ({
+    originalIndex: 0,
+    displayName: 'Andy Tran',
+    effectiveStatus: 'match' as const,
+    reason: 'exact_name_match',
+    note: '',
+    invalidYear: false,
+    candidateCount: 0,
+    ...patch,
+  });
+
+  it('treats matches, new members, and already-imported rows as ready', () => {
+    const rows = reviewAttendanceRows([row({}), row({ effectiveStatus: 'new' }), row({ effectiveStatus: 'already' })]);
+    expect(rows.every((item) => item.category === 'ready')).toBe(true);
+  });
+
+  it('explains an ambiguous name concretely, with the sheet row number', () => {
+    const [item] = reviewAttendanceRows([row({ originalIndex: 12, effectiveStatus: 'review', reason: 'ambiguous_match', candidateCount: 3 })]);
+    expect(item).toMatchObject({ index: 14, category: 'needs_review', reason: '3 canonical members share this name. Choose one manually.' });
+  });
+
+  it('explains near matches, email conflicts, and duplicate rows', () => {
+    const rows = reviewAttendanceRows([
+      row({ effectiveStatus: 'review', reason: 'fuzzy_name_match' }),
+      row({ effectiveStatus: 'review', reason: 'email_name_conflict' }),
+      row({ effectiveStatus: 'duplicate', reason: 'duplicate_row' }),
+    ]);
+    expect(rows[0].reason).toMatch(/near name match/);
+    expect(rows[1].reason).toMatch(/different name/);
+    expect(rows[2].reason).toMatch(/Duplicate of an earlier row/);
+  });
+
+  it('flags an unrecognized year even on a matched row', () => {
+    const [item] = reviewAttendanceRows([row({ invalidYear: true, csvYear: 'Yr 9' })]);
+    expect(item.category).toBe('needs_review');
+    expect(item.reason).toContain('"Yr 9"');
+  });
+
+  it('falls back to the importer note, then to a generic prompt', () => {
+    expect(reviewAttendanceRows([row({ effectiveStatus: 'review', reason: 'something_new', note: 'Custom note.' })])[0].reason).toBe('Custom note.');
+    expect(reviewAttendanceRows([row({ effectiveStatus: 'review', reason: 'something_new', note: '' })])[0].reason).toBe('Needs a manual decision.');
   });
 });

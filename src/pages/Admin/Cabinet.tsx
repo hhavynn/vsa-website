@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useDropzone } from 'react-dropzone';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
@@ -10,6 +10,8 @@ import { CabinetYear } from '../../types';
 import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { isRenamed } from '../../lib/memberPhotos';
+import { isDirty } from '../../lib/adminDirty';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
 import { CabinetPreviewDialog } from '../../components/features/admin/preview/CabinetPreviewDialog';
 import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
@@ -178,6 +180,8 @@ export default function AdminCabinet() {
   const [uploading, setUploading] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<CabinetMember | null>(null);
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedMemberBaseline, setSelectedMemberBaseline] = useState<CabinetMember | null>(null);
 
   // Once cabinet years load, default to the active/most-recent year
   useEffect(() => {
@@ -193,6 +197,38 @@ export default function AdminCabinet() {
   }, [selectedAdminYearId]);
 
   const selectedAdminYear = cabinetYears.find(y => y.id === selectedAdminYearId) ?? null;
+
+  const createDirty = isDirty({ ...EMPTY_MEMBER, cabinet_year_id: selectedAdminYearId }, newMember) || !!imageFile;
+  const editDirty = !!selectedMember && (isDirty(selectedMemberBaseline, selectedMember) || !!editImageFile);
+  useUnsavedChangesGuard(createDirty || editDirty, uploading);
+
+  function openMemberEditor(m: CabinetMember) {
+    if (editDirty && !window.confirm('You have unsaved changes to another member. Discard them?')) return;
+    const opened = { ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) };
+    setSelectedMember(opened);
+    setSelectedMemberBaseline(opened);
+    setSelectedMemberOriginalImageUrl(m.image_url ?? null);
+    setSelectedMemberOriginalThumbnailUrl(m.thumbnail_url ?? null);
+  }
+
+  // Quick Search deep link: ?member=<id> opens that person's editor once.
+  const memberParam = searchParams.get('member');
+  useEffect(() => {
+    if (!memberParam || loading) return;
+    const target = members.find((item) => item.id === memberParam);
+    if (target) {
+      setActiveTab('manage');
+      if (target.cabinet_year_id) setSelectedAdminYearId(target.cabinet_year_id);
+      openMemberEditor(target);
+    }
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('member');
+      return next;
+    }, { replace: true });
+    // openMemberEditor only guards unsaved edits; it is intentionally not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberParam, loading, members]);
 
   // Members visible in the manage tab: only those belonging to the selected year.
   // Null-year members are shown alongside the current/active year (matching public page behaviour).
@@ -616,7 +652,7 @@ export default function AdminCabinet() {
               </div>
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <PreviewAsPublicButton onClick={() => setPreviewTarget('create')} className="py-3 sm:shrink-0" />
-                <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
+                <button type="submit" disabled={uploading || !createDirty} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
                   {uploading ? 'Adding...' : 'Add Member'}
                 </button>
               </div>
@@ -681,11 +717,7 @@ export default function AdminCabinet() {
                         </div>
                         <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
                           <button
-                            onClick={() => {
-                              setSelectedMember({ ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) });
-                              setSelectedMemberOriginalImageUrl(m.image_url ?? null);
-                              setSelectedMemberOriginalThumbnailUrl(m.thumbnail_url ?? null);
-                            }}
+                            onClick={() => openMemberEditor(m)}
                             className="flex-1 rounded border bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] sm:flex-none"
                             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                           >
@@ -782,9 +814,12 @@ export default function AdminCabinet() {
                 </div>
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
-                <button type="submit" disabled={uploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>
-                <button type="button" onClick={() => setSelectedMember(null)} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+                <button type="submit" disabled={uploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>
+                <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedMember(null); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
                 <PreviewAsPublicButton onClick={() => setPreviewTarget('edit')} className="sm:mr-auto" />
+                <p role="status" aria-live="polite" className="self-center font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
+                  {editDirty ? 'Unsaved changes' : ''}
+                </p>
               </div>
             </form>
           </div>

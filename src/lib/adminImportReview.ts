@@ -247,3 +247,50 @@ export function reviewInternNames(
     return { ...base, category: 'ready', reason: null };
   });
 }
+
+// ─── Attendance import ───────────────────────────────────────────────────────
+
+export interface AttendanceReviewInput {
+  /** 0-based position in the CSV (the sheet row is this + 2, after the header). */
+  originalIndex: number;
+  displayName: string;
+  /** Status after any manual Force Match / Mark New override. */
+  effectiveStatus: 'match' | 'new' | 'already' | 'review' | 'duplicate';
+  reason: string;
+  note: string;
+  invalidYear: boolean;
+  candidateCount: number;
+  csvYear?: string;
+  csvRow?: Record<string, string>;
+}
+
+const ATTENDANCE_REASON: Record<string, (row: AttendanceReviewInput) => string> = {
+  ambiguous_match: (row) =>
+    row.candidateCount > 1 ? ambiguousNameReason(row.candidateCount) : 'More than one member could be this person. Choose one manually.',
+  fuzzy_name_match: () => 'Only a near name match. Force Match to confirm it, or mark the row as new.',
+  duplicate_email_conflict: () => 'This email belongs to more than one member. Choose one manually.',
+  email_name_conflict: () => 'The email matches a member with a different name. Check before linking.',
+  duplicate_row: () => 'Duplicate of an earlier row in this file. It will be skipped.',
+  skipped_unresolved_review: () => 'Still unresolved, so it will be skipped.',
+};
+
+/**
+ * Attendance import: matches and new members are ready; a row that needs a human
+ * (ambiguous, near-match, conflicting email), a duplicate row, or an unrecognized
+ * year is listed with the concrete reason so the sheet never has to be re-read.
+ */
+export function reviewAttendanceRows(rows: readonly AttendanceReviewInput[]): ImportReviewRow[] {
+  return rows.map((row): ImportReviewRow => {
+    const base = { index: row.originalIndex + 2, label: row.displayName || '(blank)', raw: row.csvRow };
+    if (row.effectiveStatus === 'review') {
+      return { ...base, category: 'needs_review', reason: (ATTENDANCE_REASON[row.reason]?.(row) ?? row.note) || 'Needs a manual decision.' };
+    }
+    if (row.effectiveStatus === 'duplicate') {
+      return { ...base, category: 'needs_review', reason: ATTENDANCE_REASON.duplicate_row(row) };
+    }
+    if (row.invalidYear) {
+      return { ...base, category: 'needs_review', reason: `The year${row.csvYear ? ` "${row.csvYear}"` : ''} was not recognized, so it will not be saved. Review it manually.` };
+    }
+    return { ...base, category: 'ready', reason: null };
+  });
+}
