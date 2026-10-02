@@ -548,6 +548,7 @@ export default function AdminEvents() {
         // Invalidate cached point totals so Find My Points and leaderboard
         // show fresh data after the DB trigger has synced attendance rows.
         queryClient.invalidateQueries(['find-my-points']);
+        queryClient.invalidateQueries(['individual-leaderboard']);
         toast.success('Event saved — attendance points refreshed.');
       } else {
         toast.success('Event updated.');

@@ -104,7 +104,6 @@ export default function AdminAnalytics() {
       setLoading(true);
       setError(null);
       try {
-        console.log('Fetching analytics from analytics-proxy...');
         const { data: result, error: fetchError } = await supabase.functions.invoke('analytics-proxy', {
           body: { startDate: dateRange, endDate: 'today' }
         });

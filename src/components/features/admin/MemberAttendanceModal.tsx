@@ -46,6 +46,7 @@ export function MemberAttendanceModal({
           client.invalidateQueries(["leaderboard-years"]),
           client.invalidateQueries(["member-attendance", memberId]),
           client.invalidateQueries(["house-detail", "standings"]),
+          client.invalidateQueries(["individual-leaderboard"]),
           onChanged(),
         ]);
         toast.success(
