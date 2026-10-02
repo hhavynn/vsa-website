@@ -18,20 +18,24 @@ export function SaveBar({
   onSave,
   onDiscard,
   saveLabel = 'Save',
+  submit = false,
   className,
 }: {
   status: SaveStatus;
-  onSave: () => void;
+  /** Optional when the bar sits in a <form> and `submit` is set. */
+  onSave?: () => void;
   onDiscard?: () => void;
   saveLabel?: string;
+  /** Render Save as the form's submit button. */
+  submit?: boolean;
   className?: string;
 }) {
   const dirty = status === 'dirty' || status === 'error';
   return (
     <div className={cn('flex flex-wrap items-center gap-3', className)}>
       <button
-        type="button"
-        onClick={onSave}
+        type={submit ? 'submit' : 'button'}
+        onClick={submit ? undefined : onSave}
         disabled={!canSave(status)}
         className="rounded border-0 bg-brand-600 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-400 dark:text-[#050810]"
       >
