@@ -2,6 +2,7 @@ import {
   UVSA_SCHOOL_ASSETS_BUCKET,
   buildSchoolLogoPath,
   getFallbackPaletteClass,
+  getInstagramHandle,
   getSafeLogoUrl,
   getSchoolInitials,
   isAcceptedSchoolLogoType,
@@ -117,5 +118,30 @@ describe("logo type + fallback helpers", () => {
       a,
     );
     expect(a).toMatch(/^bg-/);
+  });
+});
+
+describe("getInstagramHandle", () => {
+  it.each([
+    ["https://www.instagram.com/vsaatucsd/", "@vsaatucsd"],
+    ["https://instagram.com/cpp.vsa", "@cpp.vsa"],
+    ["https://www.instagram.com/csun_seasa/?hl=en", "@csun_seasa"],
+    ["  https://www.instagram.com/lbvsa/  ", "@lbvsa"],
+  ])("extracts the handle from %s", (url, handle) => {
+    expect(getInstagramHandle(url)).toBe(handle);
+  });
+
+  it.each([
+    null,
+    undefined,
+    "",
+    "not a url",
+    "https://example.com/vsaatucsd/",
+    "https://notinstagram.com/vsaatucsd/",
+    "https://www.instagram.com/",
+    "https://www.instagram.com/p/abc123/",
+    "https://www.instagram.com/reel/abc123/",
+  ])("returns null for %s", (url) => {
+    expect(getInstagramHandle(url)).toBeNull();
   });
 });
