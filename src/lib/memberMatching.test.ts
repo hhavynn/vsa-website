@@ -5,6 +5,7 @@ import {
   getSafeAttendanceMemberEnrichment,
   matchAttendanceImportRows,
   parseCSV,
+  planAttendanceMemberEnrichments,
   resolveMemberYearAdvance,
 } from './memberMatching';
 
@@ -347,5 +348,31 @@ describe('year advance on admin-confirmed (force-matched) rows', () => {
   test('adminConfirmed is ignored for rows that are not review rows', () => {
     const dup = { ...reviewRow(), status: 'duplicate' as const };
     expect(getSafeAttendanceMemberEnrichment(dup, twins, { adminConfirmed: true })).toEqual({});
+  });
+});
+
+describe('planAttendanceMemberEnrichments', () => {
+  const stored = member({ id: 'm1', first_name: 'Ryan', last_name: 'Le', year: '1st Year' });
+  const other = member({ id: 'm2', first_name: 'Ryan', last_name: 'Le', year: '4th Year' });
+  const forced = (csvYear: string, rowId: string) => ({
+    ...matchOne(row({ rowId, displayName: 'Ryan Le', csvYear }), [stored, other]),
+    matchedMember: stored,
+    adminConfirmed: true,
+  });
+
+  test('several rows for one member keep the highest year, in any order', () => {
+    const plan = planAttendanceMemberEnrichments([forced('3rd Year', 'r1'), forced('2nd Year', 'r2')], [stored, other]);
+    expect(plan).toEqual([{ memberId: 'm1', updates: { year: '3rd Year' } }]);
+  });
+
+  test('advances are computed from the latest record, not the preview snapshot', () => {
+    const advancedSincePreview = { ...stored, year: '3rd Year' };
+    const plan = planAttendanceMemberEnrichments([forced('2nd Year', 'r1')], [advancedSincePreview, other]);
+    expect(plan).toEqual([]);
+  });
+
+  test('members with nothing to change are left out', () => {
+    const unconfirmed = { ...forced('2nd Year', 'r1'), adminConfirmed: false };
+    expect(planAttendanceMemberEnrichments([unconfirmed], [stored, other])).toEqual([]);
   });
 });

@@ -625,3 +625,42 @@ export function getSafeAttendanceMemberEnrichment(
 
   return updates;
 }
+
+export interface AttendanceMemberEnrichmentPlan {
+  memberId: string;
+  updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>>;
+}
+
+/**
+ * One consolidated update per member for an import's matched rows.
+ *
+ * Each row is evaluated against the member's latest record (refetched at import
+ * time) with earlier rows' updates already applied. The preview-time
+ * `row.matchedMember` can be stale, and several rows can resolve to the same
+ * member. Scoring each one independently and writing them in order would let a
+ * lower year overwrite a higher one, which is exactly the rewind that
+ * `resolveMemberYearAdvance` exists to prevent.
+ */
+export function planAttendanceMemberEnrichments(
+  rows: (AttendanceMatchResult & { adminConfirmed?: boolean })[],
+  latestMembers: AttendanceImportMember[],
+): AttendanceMemberEnrichmentPlan[] {
+  const current = new Map(latestMembers.map((m) => [m.id, m]));
+  const plans = new Map<string, AttendanceMemberEnrichmentPlan['updates']>();
+
+  for (const row of rows) {
+    if (!row.matchedMember) continue;
+    const id = row.matchedMember.id;
+    const latest = current.get(id) ?? row.matchedMember;
+    const updates = getSafeAttendanceMemberEnrichment(
+      { ...row, matchedMember: latest },
+      latestMembers,
+      { adminConfirmed: row.adminConfirmed },
+    );
+    if (Object.keys(updates).length === 0) continue;
+    current.set(id, { ...latest, ...updates });
+    plans.set(id, { ...plans.get(id), ...updates });
+  }
+
+  return Array.from(plans, ([memberId, updates]) => ({ memberId, updates }));
+}
