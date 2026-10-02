@@ -37,7 +37,8 @@ export interface SnapshotData {
   /** Label for the points figure, e.g. "2025–26 points". */
   periodLabel: string;
   rankLabel: string;
-  rank: number;
+  /** Preformatted rank, e.g. "#12" or "T6" for a shared rank. */
+  rank: string;
   points: number;
   checkIns: number;
   allTimePoints: number;
@@ -246,7 +247,7 @@ export function drawSnapshot(ctx: Ctx, data: SnapshotData, avatar: HTMLImageElem
   const gap = 24;
   const statW = (W - left * 2 - gap * 2) / 3;
   const statY = 760;
-  drawStat(ctx, left, statY, statW, data.rankLabel, `#${data.rank.toLocaleString('en-US')}`, accent);
+  drawStat(ctx, left, statY, statW, data.rankLabel, data.rank, accent);
   drawStat(ctx, left + statW + gap, statY, statW, 'Check-ins', data.checkIns.toLocaleString('en-US'), accent);
   drawStat(ctx, left + (statW + gap) * 2, statY, statW, 'All-time pts', data.allTimePoints.toLocaleString('en-US'), accent);
 

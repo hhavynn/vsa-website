@@ -109,8 +109,14 @@ it('updates all-time standings within 30 seconds without a raw members event', a
   const topRow = screen.getAllByRole('button', { name: /Open profile for/ })[0];
   expect(topRow).toHaveAccessibleName('Open profile for Beta Member');
   expect(within(topRow).getByText('20')).toBeInTheDocument();
+  // Equal event counts are a tie on the Events tab: both share T1, listed alphabetically.
   fireEvent.click(screen.getByRole('button', { name: 'EVENTS' }));
-  expect(screen.getAllByRole('button', { name: /Open profile for/ })[0]).toHaveAccessibleName('Open profile for Beta Member');
+  const eventRows = screen.getAllByRole('button', { name: /Open profile for/ });
+  expect(eventRows[0]).toHaveAccessibleName('Open profile for Alpha Member');
+  for (const row of eventRows) {
+    expect(within(row).getByText('T1')).toBeInTheDocument();
+    expect(within(row).getByText('2-way tie')).toBeInTheDocument();
+  }
 });
 
 it('pauses hidden-tab polling and refreshes when the page becomes visible', async () => {
@@ -193,4 +199,18 @@ it('recovers from an initial fetch error on the next all-time refresh', async ()
   await advanceTime(30_000);
   expect(screen.queryByText('Leaderboard temporarily unavailable')).not.toBeInTheDocument();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
+});
+
+it('gives podium members tied at T1 the same first-place styling', async () => {
+  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
+    member('Gamma', 5), member('Beta', 10), member('Alpha', 10),
+  ]);
+  renderLeaderboard();
+  await advanceTime();
+
+  const podiumBadges = (text: string) =>
+    screen.getAllByText(text).filter((element) => element.style.background !== '').map((element) => element.style.background);
+
+  expect(podiumBadges('T1')).toEqual(['rgb(212, 132, 26)', 'rgb(212, 132, 26)']);
+  expect(podiumBadges('3')).toEqual(['rgb(180, 83, 9)']);
 });

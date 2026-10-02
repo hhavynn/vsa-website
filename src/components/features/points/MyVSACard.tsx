@@ -15,6 +15,7 @@ import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
+import { formatRank, isWithinTop } from '../../../utils/leaderboardRanking';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ function getBadges(
     badges.push({ label: 'Regular', color: 'gold' });
   }
 
-  if (entry.rank <= 10) {
+  if (isWithinTop(entry, 10)) {
     badges.push({ label: 'Top 10', color: 'gold' });
   } else {
     const top10Entry = allEntries[9]; // 10th place
@@ -69,7 +70,11 @@ function getBadges(
 }
 
 function getTop10Gap(entry: FindMyPointsEntry, allEntries: FindMyPointsEntry[]): string | null {
-  if (entry.rank <= 10) return "You're in the Top 10!";
+  if (isWithinTop(entry, 10)) return "You're in the Top 10!";
+  if (entry.rank <= 10) {
+    const others = entry.tiedCount - 1;
+    return `Tied for #${entry.rank} with ${others.toLocaleString()} other${others === 1 ? '' : 's'}`;
+  }
   
   const top10Entry = allEntries[9]; // 10th place
   if (!top10Entry) return null;
@@ -415,7 +420,7 @@ export function MyVSACard({
       subline,
       periodLabel: isAllTime ? 'All-time points' : `${yearLabel} points`,
       rankLabel: isAllTime ? 'All-time rank' : 'Yearly rank',
-      rank: entry.rank,
+      rank: formatRank(entry),
       points: entry.total_points,
       checkIns: entry.events_attended,
       allTimePoints: entry.all_time_points,
@@ -427,7 +432,7 @@ export function MyVSACard({
     }),
     [entry, subline, isAllTime, yearLabel, houseLabel, houseColor, top10Gap, badges, avatarUrl],
   );
-  const shareText = `I'm ranked #${entry.rank.toLocaleString()} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! Find yours: ${window.location.origin}/points`;
+  const shareText = `I'm ranked ${formatRank(entry)} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! Find yours: ${window.location.origin}/points`;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
@@ -490,7 +495,7 @@ export function MyVSACard({
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 px-6 sm:grid-cols-4">
           <StatBox label="Total Points" value={<AnimatedCounter value={entry.total_points} />} accentColor={cardAccentColor} />
-          <StatBox label="Yearly Rank" value={<>#<AnimatedCounter value={entry.rank} /></>} />
+          <StatBox label="Yearly Rank" value={<>{entry.tiedCount > 1 ? 'T' : '#'}<AnimatedCounter value={entry.rank} /></>} />
           <StatBox label="Check-ins" value={<AnimatedCounter value={entry.events_attended} />} />
           <StatBox label="All-Time" value={<AnimatedCounter value={entry.all_time_points} />} />
         </div>
