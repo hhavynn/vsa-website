@@ -1,10 +1,19 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { HouseDraftEditor } from './HouseDraftEditor';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember } from '../../../lib/houseAssignmentImport';
 
+jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
+jest.mock('../../../data/repos/adminReview', () => ({
+  adminReviewRepository: { listReviewed: jest.fn().mockResolvedValue(new Set()), mark: jest.fn().mockResolvedValue(0), unmark: jest.fn() },
+}));
+jest.mock('../../../data/repos/adminOperations', () => ({
+  adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
+}));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('../../../data/repos/houseAssignments', () => ({
   houseAssignmentsRepository: {
@@ -47,17 +56,21 @@ function draft(id: string, overrides: Partial<HouseAssignmentDraft>): HouseAssig
 
 function renderEditor(drafts: HouseAssignmentDraft[], status: HouseAssignmentBatch['status'] = 'draft') {
   return render(
-    <HouseDraftEditor
-      batch={batch(status)}
-      initialDrafts={drafts}
-      profiles={profiles}
-      existingMemberships={new Map()}
-      members={members}
-      userId="admin"
-      onBack={jest.fn()}
-      onBatchChanged={jest.fn()}
-      onPublished={jest.fn()}
-    />,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter>
+        <HouseDraftEditor
+          batch={batch(status)}
+          initialDrafts={drafts}
+          profiles={profiles}
+          existingMemberships={new Map()}
+          members={members}
+          userId="admin"
+          onBack={jest.fn()}
+          onBatchChanged={jest.fn()}
+          onPublished={jest.fn()}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -83,8 +96,8 @@ it('shows live counts and a preflight summary', () => {
   expect(counts.getByTestId('house-count-Unassigned')).toHaveTextContent('Unassigned1');
 
   const preflight = within(screen.getByLabelText('Preflight'));
-  expect(preflight.getByText('✓ 3 applicants')).toBeInTheDocument();
-  expect(preflight.getByText('✓ 1 assigned')).toBeInTheDocument();
+  expect(preflight.getByText('3 applicants')).toBeInTheDocument();
+  expect(preflight.getByText('1 assigned')).toBeInTheDocument();
   expect(preflight.getByText(/1 ambiguous member match/)).toBeInTheDocument();
 });
 
@@ -133,4 +146,91 @@ it('makes a locked batch read-only with a reopen action', () => {
   expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reopen draft' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Reveal House assignments' })).toBeDisabled();
+});
+
+describe('filters, bulk actions, and history', () => {
+  const { logAdminActivity } = jest.requireMock('../../../data/repos/adminActivity');
+  const rows = () => [
+    draft('Kevin Tran', { member_id: 'm-kevin', house_profile_id: 'p-toad', match_status: 'match', source_order: 0 }),
+    draft('Sara Nguyen', { member_id: 'm-sara', house_profile_id: 'p-boo', match_status: 'review', source_order: 1 }),
+    draft('Nobody', { source_order: 2 }),
+  ];
+
+  it('shows chips with counts and filters rows, keeping the choice in the URL-driven state', async () => {
+    renderEditor(rows());
+    const unassigned = screen.getByRole('button', { name: /^Unassigned\s*1$/ });
+    expect(screen.getByRole('button', { name: /Ambiguous member\s*1/ })).toBeInTheDocument();
+    await userEvent.click(unassigned);
+    expect(screen.getAllByTestId('house-draft-row')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /^Unassigned\s*1$/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('logs a single House change with an undo spec for the previous House', async () => {
+    renderEditor([draft('Kevin Tran', { member_id: 'm-kevin', house_profile_id: 'p-toad', match_status: 'match' })]);
+    await userEvent.selectOptions(screen.getByLabelText('House for Kevin Tran'), 'p-boo');
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalled());
+    const entry = logAdminActivity.mock.calls[0][0];
+    expect(entry.action).toBe('house.assignment_changed');
+    expect(entry.summary).toBe("Changed Kevin Tran's House: Toad → Boo");
+    expect(entry.metadata.undo).toEqual({ kind: 'house_draft_house', target: { batchId: 'b1', draftId: 'Kevin Tran' }, before: 'p-toad', after: 'p-boo' });
+    await settle();
+  });
+
+  it('bulk-assigns only rows that are not already in that House', async () => {
+    renderEditor(rows());
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Kevin Tran' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Nobody' }));
+    await userEvent.selectOptions(screen.getByLabelText('House for selected rows'), 'p-toad');
+    await userEvent.click(screen.getByRole('button', { name: 'Assign' }));
+    await waitFor(() => expect(repo.updateDraft).toHaveBeenCalledTimes(1));
+    expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'Nobody', { house_profile_id: 'p-toad' });
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'house.bulk_changed', summary: 'Assigned 1 row to Toad' })));
+    await settle();
+  });
+
+  it('requires confirmation, showing the count, before clearing assignments in bulk', async () => {
+    renderEditor(rows());
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Kevin Tran' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sara Nguyen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear assignment' }));
+    expect(screen.getByText('Clear the House for 2 rows?')).toBeInTheDocument();
+    expect(repo.updateDraft).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm (2)' }));
+    await waitFor(() => expect(repo.updateDraft).toHaveBeenCalledTimes(2));
+    expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'Kevin Tran', { house_profile_id: null });
+    await settle();
+  });
+
+  it('Escape cancels the bulk confirmation without changing anything', async () => {
+    renderEditor(rows());
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Kevin Tran' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear assignment' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText(/Clear the House for/)).not.toBeInTheDocument();
+    expect(repo.updateDraft).not.toHaveBeenCalled();
+  });
+
+  it('offers no assign or clear actions on a locked batch', async () => {
+    renderEditor(rows(), 'locked');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Kevin Tran' }));
+    expect(screen.queryByRole('button', { name: 'Clear assignment' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark reviewed' })).toBeInTheDocument();
+  });
+
+  it('shows the year context and workflow progress', () => {
+    renderEditor(rows());
+    expect(screen.getByText('2026–27')).toBeInTheDocument();
+    expect(screen.getByText('Current year')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '2026–27 Houses progress' })).toBeInTheDocument();
+  });
+
+  it('previews the reveal without writing anything', async () => {
+    renderEditor(rows());
+    await userEvent.click(screen.getByRole('button', { name: 'Preview reveal' }));
+    expect(screen.getByRole('dialog', { name: /House reveal/ })).toBeInTheDocument();
+    expect(screen.getByText(/ADMIN PREVIEW — NOT PUBLIC/)).toBeInTheDocument();
+    expect(repo.updateDraft).not.toHaveBeenCalled();
+    expect(repo.publishBatch).not.toHaveBeenCalled();
+    expect(repo.lockBatch).not.toHaveBeenCalled();
+  });
 });

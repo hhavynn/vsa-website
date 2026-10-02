@@ -3,10 +3,20 @@
 // Admin -> Houses behavior; the result is saved as a private draft batch and
 // never writes to house_memberships. Review, lock, and reveal live in
 // HouseDraftEditor.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
+import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { useAuth } from '../../../hooks/useAuth';
+import { useOperatingYear } from '../../../hooks/useOperatingYear';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
+import { ACTIVITY_ACTIONS } from '../../../lib/adminActivity';
+import { findSameMemberTwice, findSameNameTwice } from '../../../lib/adminConflicts';
+import { reviewHouseRows, summarizeImport } from '../../../lib/adminImportReview';
+import { NextStep, nextStepFor } from '../../../lib/adminNextSteps';
+import { describeYearContext } from '../../../lib/adminYearContext';
+import { formatYearSpan } from '../../../lib/operationalStatus';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import {
   HouseAssignmentBatch,
@@ -23,6 +33,7 @@ import {
 } from '../../../lib/houseAssignmentImport';
 import { HousePageAsset } from '../../../types';
 import { HouseDraftEditor } from './HouseDraftEditor';
+import { EmptyState, ImportReviewPanel, PossibleDuplicates, YearContextBadge } from './ops';
 
 interface YearOption {
   start: number;
@@ -104,6 +115,12 @@ export function HouseDraftWorkflow({
   const [sourceLabel, setSourceLabel] = useState('');
   const [rows, setRows] = useState<ParsedHouseRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editorNextStep, setEditorNextStep] = useState<NextStep | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightRowId, setHighlightRowId] = useState<string | null>(null);
+  const operatingYear = useOperatingYear();
+  // A pasted sheet that has not been saved as a draft yet is unsaved work.
+  useUnsavedChangesGuard(rawInput.trim().length > 0 && !editor, saving);
 
   const emailMap = useMemo(() => buildEmailMap(members), [members]);
   const houseProfilesByName = useMemo(() => profileMapByName(houseProfiles), [houseProfiles]);
@@ -125,7 +142,12 @@ export function HouseDraftWorkflow({
   }, [selectedYear]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
-  useEffect(() => { setEditor(null); setRows([]); }, [selectedYear]);
+  // Switching year closes the editor, unless it is already showing a batch from that year
+  // (a Quick Search link switches the year and opens the batch together).
+  useEffect(() => {
+    setEditor((current) => (current && current.batch.academic_year_start === selectedYear ? current : null));
+    setRows([]);
+  }, [selectedYear]);
 
   const summary = useMemo(() => rows.reduce(
     (acc, row) => {
@@ -135,6 +157,16 @@ export function HouseDraftWorkflow({
     },
     { match: 0, review: 0, unmatched: 0, invalid: 0, noHouse: 0 },
   ), [rows]);
+
+  const reviewRows = useMemo(() => reviewHouseRows(rows), [rows]);
+  const importDuplicates = useMemo(() => {
+    const usable = rows.filter((row) => row.matchedMember && (row.status === 'match' || row.status === 'review'));
+    const identities = usable.map((row) => ({ id: row.rowId, label: row.name, memberId: row.matchedMember?.id ?? null }));
+    const sameMember = findSameMemberTwice(identities, 'same_member_twice', 'row');
+    const flagged = new Set(sameMember.flatMap((group) => group.items.map((item) => item.id)));
+    const sameName = findSameNameTwice(rows.filter((row) => !flagged.has(row.rowId)).map((row) => ({ id: row.rowId, label: row.name })), 'near_identical_rows', 'row');
+    return [...sameMember, ...sameName];
+  }, [rows]);
 
   const currentStep = editor
     ? (editor.batch.status === 'draft' ? 3 : editor.batch.status === 'locked' ? 6 : 7)
@@ -184,6 +216,38 @@ export function HouseDraftWorkflow({
     }
   }
 
+  // Quick Search deep link: ?batch=<id>&row=<id> opens that batch and highlights the row.
+  const batchParam = searchParams.get('batch');
+  const rowParam = searchParams.get('row');
+  const appliedBatch = useRef<string | null>(null);
+  useEffect(() => {
+    if (!batchParam || loadingMembers || !selectedYear || appliedBatch.current === batchParam) return;
+    appliedBatch.current = batchParam;
+    setOpening(true);
+    houseAssignmentsRepository
+      .loadSnapshot(batchParam, new Map(members.map((m) => [m.id, `${m.first_name} ${m.last_name}`.trim()])))
+      .then((snapshot) => {
+        if (snapshot.batch.academic_year_start !== selectedYear) onYearChange(snapshot.batch.academic_year_start);
+        setHighlightRowId(rowParam);
+        setEditor(snapshot);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error('Could not open that House draft.');
+      })
+      .finally(() => {
+        setOpening(false);
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.delete('batch');
+          next.delete('row');
+          return next;
+        }, { replace: true });
+      });
+    // The loader reads members only to label rows; it must not re-run when they change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchParam, rowParam, loadingMembers, selectedYear]);
+
   async function handleSaveDraft() {
     if (!selectedYear || !effectiveStartDate || rows.length === 0) return;
     setSaving(true);
@@ -196,6 +260,15 @@ export function HouseDraftWorkflow({
         rows: rows.map((row, index) => draftInsertFromParsed(row, index)),
       });
       toast.success(`Saved draft with ${rows.length} rows. Nothing is public.`);
+      const problems = summarizeImport(reviewRows).problems;
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.houseImportAdded,
+        entityType: 'house_assignment_batch',
+        entityId: batch.id,
+        academicYearStart: selectedYear,
+        summary: `Saved a House assignment draft for ${formatYearSpan(selectedYear)} (${rows.length} rows)`,
+      });
+      setEditorNextStep(nextStepFor({ type: 'house_imported', count: rows.length, issues: problems }));
       setRows([]);
       setRawInput('');
       await loadBatches();
@@ -220,9 +293,11 @@ export function HouseDraftWorkflow({
           existingMemberships={editor.existingMemberships}
           members={members}
           userId={userId}
-          onBack={() => setEditor(null)}
+          onBack={() => { setEditor(null); setEditorNextStep(null); }}
           onBatchChanged={loadBatches}
           onPublished={onMembershipsPublished}
+          initialNextStep={editorNextStep}
+          highlightRowId={highlightRowId}
         />
       </>
     );
@@ -231,6 +306,11 @@ export function HouseDraftWorkflow({
   return (
     <>
       <Stepper current={currentStep} />
+      {selectedYear && (
+        <div className="px-4 pt-4 sm:px-6 lg:px-8">
+          <YearContextBadge context={describeYearContext(selectedYear, operatingYear)} />
+        </div>
+      )}
       <div className="grid gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <div className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
           <div className="mb-6">
@@ -364,7 +444,13 @@ export function HouseDraftWorkflow({
             {loadingBatches ? (
               <p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading drafts…</p>
             ) : batches.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>No saved drafts for this year yet.</p>
+              <div className="p-5">
+                <EmptyState
+                  title={`No House assignment draft yet${selectedYear ? ` for ${formatYearSpan(selectedYear)}` : ''}.`}
+                  description="Paste or load the sorting sheet, preview the matches, then save it as a private draft."
+                  action={{ label: 'Import Assignments', onClick: () => document.getElementById('draft-paste')?.focus() }}
+                />
+              </div>
             ) : (
               <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                 {batches.map((batch) => (
@@ -392,6 +478,8 @@ export function HouseDraftWorkflow({
             )}
           </div>
 
+          {rows.length > 0 && <ImportReviewPanel rows={reviewRows} hasInput filename="house-import-problem-rows" />}
+          <PossibleDuplicates duplicates={importDuplicates} />
           {rows.length > 0 && (
             <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6" style={{ borderColor: 'var(--color-border)' }}>

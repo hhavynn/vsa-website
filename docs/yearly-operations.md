@@ -81,3 +81,4 @@ psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-cabinet-roster.sql
 | Cabinet rollover | `src/lib/cabinetRoster.ts`, `src/data/repos/cabinetRoster.ts`, `src/pages/Admin/CabinetRollover.tsx` |
 | New Year Setup | `src/lib/yearSetup.ts`, `src/data/repos/yearSetup.ts`, `src/pages/Admin/YearSetup.tsx`, `HouseAssignmentsRepository.createEmptyBatch` |
 | Operations dashboard / preflight | `src/lib/adminOperations.ts`, `src/data/repos/adminOperations.ts`, `src/components/features/admin/OperationsDashboard.tsx` |
+| Admin quality-of-life (search, filters, bulk, history, undo) | See [`admin-operations-qol.md`](admin-operations-qol.md) |

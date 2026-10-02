@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { toUserMessage } from '../../../data/errors';
@@ -8,9 +8,18 @@ import {
   parseAssignmentImport,
   resolveImportRows,
 } from '../../../lib/aceAssignments';
+import { reviewAceImportRows } from '../../../lib/adminImportReview';
+import type { MemberNameIndex } from '../../../lib/memberLinkMatching';
+import { normalizeMemberName } from '../../../lib/memberLinkMatching';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
+import { ImportReviewPanel } from './ops';
 
 interface AceAssignmentImportPanelProps {
   nodes: readonly AceNodeRef[];
+  /** Exact-name member lookup, so the review can say who matches before anything is written. */
+  nameIndex: MemberNameIndex;
+  /** Little names already in the draft, to catch a second paste of the same list. */
+  existingNames?: readonly string[];
   onImport: (resolution: ImportResolution) => Promise<void>;
   onClose: () => void;
 }
@@ -18,10 +27,42 @@ interface AceAssignmentImportPanelProps {
 const PLACEHOLDER = 'name\tbig\nJohn Nguyen\tApril Pham\nAmy Tran\tEmily Nguyen';
 
 /** Pasted CSV/TSV of upcoming Littles. Creates draft rows only; nothing is published. */
-export function AceAssignmentImportPanel({ nodes, onImport, onClose }: AceAssignmentImportPanelProps) {
+export function AceAssignmentImportPanel({ nodes, nameIndex, existingNames = [], onImport, onClose }: AceAssignmentImportPanelProps) {
   const [text, setText] = useState('');
   const [importing, setImporting] = useState(false);
   const parsed = useMemo(() => parseAssignmentImport(text), [text]);
+  // Pasted text that has not been added yet is unsaved work.
+  useUnsavedChangesGuard(text.trim().length > 0, importing);
+
+  // Emails only ever match existing members (never stored); look them up as the
+  // admin pastes so the review can call those rows ready.
+  const [emailMatched, setEmailMatched] = useState<ReadonlySet<string>>(new Set());
+  const emails = useMemo(() => parsed.rows.flatMap((row) => (row.email ? [row.email] : [])), [parsed.rows]);
+  useEffect(() => {
+    if (emails.length === 0) {
+      setEmailMatched(new Set());
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      memberLookupRepository
+        .matchMembersByEmail(emails)
+        .then((matches) => {
+          if (!cancelled) setEmailMatched(new Set(Array.from(matches).filter(([, members]) => members.length === 1).map(([email]) => email)));
+        })
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [emails]);
+
+  const existing = useMemo(() => new Set(existingNames.map((name) => normalizeMemberName(name))), [existingNames]);
+  const reviewRows = useMemo(
+    () => reviewAceImportRows(parsed.rows, { nameIndex, nodes, emailMatched, existingLittleNames: existing, skippedBlank: parsed.skipped }),
+    [parsed.rows, parsed.skipped, nameIndex, nodes, emailMatched, existing],
+  );
 
   const run = async () => {
     setImporting(true);
@@ -86,6 +127,8 @@ export function AceAssignmentImportPanel({ nodes, onImport, onClose }: AceAssign
           ))}
         </div>
       )}
+
+      <ImportReviewPanel rows={reviewRows} hasInput={text.trim().length > 0} filename="ace-import-problem-rows" />
 
       <div className="mt-3 flex justify-end">
         <button

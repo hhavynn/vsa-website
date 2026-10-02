@@ -23,6 +23,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_activity_log: {
+        Row: {
+          id: string;
+          actor_user_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          academic_year_start: number | null;
+          summary: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_user_id?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          academic_year_start?: number | null;
+          summary: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        // Append-only: no UPDATE policy exists, so the client never updates a row.
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      admin_review_marks: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          academic_year_start: number | null;
+          reviewed_by: string | null;
+          reviewed_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          academic_year_start?: number | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       ai_chat_quota_reservations: {
         Row: { id: string; session_id_hash: string; ip_hash: string | null; created_at: string };
         Insert: { id?: string; session_id_hash: string; ip_hash?: string | null; created_at?: string };

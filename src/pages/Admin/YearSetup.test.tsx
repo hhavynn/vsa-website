@@ -10,6 +10,10 @@ jest.mock('react-hot-toast', () => {
   return { __esModule: true, default: toast, Toaster: () => null };
 });
 jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
+jest.mock('../../data/repos/adminOperations', () => ({
+  adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
+}));
 jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin-1' } }) }));
 jest.mock('../../hooks/useCabinetYears', () => ({
   useCabinetYears: () => ({
@@ -110,6 +114,12 @@ it('creates setup through the repository with the chosen terms and reports what 
   expect(options.terms.map((term) => [term.code, term.include])).toEqual([['FA27', true], ['WI28', true], ['SP28', true], ['SU28', true]]);
   expect(options.rosterSourceCabinetYearId).toBe('cy-2026');
   expect(within(screen.getByTestId('setup-report')).getByText(/Fall 2027: Created inactive\./)).toBeInTheDocument();
+
+  // Contextual next step instead of a dead-end toast, plus an activity-log entry.
+  expect(screen.getByText('2027–28 prepared')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Open Operations Dashboard/ })).toHaveAttribute('href', '/admin');
+  const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
+  expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'year.setup_created', summary: 'Prepared the 2027–28 academic year' }));
 });
 
 it('disables Create Setup once everything already exists', async () => {

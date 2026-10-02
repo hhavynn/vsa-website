@@ -111,6 +111,7 @@ const AdminAceFamilies = lazy(() => import("../pages/Admin/AceFamilies"));
 const AdminInterns = lazy(() => import("../pages/Admin/Interns"));
 const AdminCabinetRollover = lazy(() => import("../pages/Admin/CabinetRollover"));
 const AdminYearSetup = lazy(() => import("../pages/Admin/YearSetup"));
+const AdminRecentChanges = lazy(() => import("../pages/Admin/RecentChanges"));
 const AdminUVSASchools = lazy(() => import("../pages/Admin/UVSASchools"));
 const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
 const AdminAiKnowledge = lazy(() => import("../pages/Admin/AiKnowledge"));
@@ -256,6 +257,7 @@ export default function AppRoutes() {
                   <Route path="/admin/cabinet/rollover" element={<AdminCabinetRollover />} />
                   <Route path="/admin/years" element={<AdminYearsTerms />} />
                   <Route path="/admin/year-setup" element={<AdminYearSetup />} />
+                  <Route path="/admin/recent-changes" element={<AdminRecentChanges />} />
                   <Route path="/admin/points" element={<AdminPoints />} />
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   <Route path="/admin/settings" element={<AdminSettings />} />

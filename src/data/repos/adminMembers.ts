@@ -140,6 +140,24 @@ export class AdminMembersRepository {
     }, "Failed to add attendance");
   }
 
+  /** Clears the "possible duplicate" review flag on the given members. Returns how many changed. */
+  async clearReviewFlags(memberIds: readonly string[]): Promise<number> {
+    if (memberIds.length === 0) return 0;
+    return withErrorHandling(async () => {
+      let cleared = 0;
+      for (let i = 0; i < memberIds.length; i += 100) {
+        const { data, error } = await supabase
+          .from("members")
+          .update({ needs_review: false })
+          .in("id", memberIds.slice(i, i + 100))
+          .select("id");
+        if (error) throw error;
+        cleared += data?.length ?? 0;
+      }
+      return cleared;
+    }, "Failed to clear review flags");
+  }
+
   async removeAttendance(memberId: string, eventId: string): Promise<void> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase

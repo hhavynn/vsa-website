@@ -5,6 +5,7 @@ import { isRenamed } from '../../../lib/memberPhotos';
 import type { MemberOption } from '../../../lib/memberLinkMatching';
 import { AceBigPicker } from './AceBigPicker';
 import { MemberLinkPicker, MemberLinkSuggestion } from './MemberLinkPicker';
+import { RowCheckbox } from './ops';
 
 interface AceAssignmentRowProps {
   draft: AceAssignmentDraft;
@@ -15,6 +16,9 @@ interface AceAssignmentRowProps {
   issues: readonly AssignmentIssue[];
   loadFor: (bigId: string) => BigLoad;
   busy: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  reviewed?: boolean;
   onPatch: (
     id: string,
     patch: Partial<Pick<AceAssignmentDraft, 'little_name' | 'little_member_id' | 'big_ace_member_id' | 'notes'>>,
@@ -45,6 +49,9 @@ export function AceAssignmentRow({
   issues,
   loadFor,
   busy,
+  selected = false,
+  onToggleSelect,
+  reviewed = false,
   onPatch,
   onRemove,
 }: AceAssignmentRowProps) {
@@ -68,7 +75,10 @@ export function AceAssignmentRow({
   };
 
   return (
-    <li className="grid gap-3 border-b border-[var(--color-border)] px-4 py-3 last:border-b-0 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start">
+    <li className="grid gap-3 border-b border-[var(--color-border)] px-4 py-3 last:border-b-0 md:grid-cols-[auto_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-start" data-reviewed={reviewed}>
+      <div className="pt-1.5">
+        {onToggleSelect && <RowCheckbox checked={selected} onChange={() => onToggleSelect(draft.id)} label={`Select ${draft.little_name}`} />}
+      </div>
       <div className="min-w-0">
         <label className="sr-only" htmlFor={`little-${draft.id}`}>
           Little name
@@ -95,6 +105,9 @@ export function AceAssignmentRow({
           placeholder={editable ? 'Notes (admin only)' : ''}
           className={`${fieldCls} mt-0.5 text-xs text-[var(--color-text2)]`}
         />
+        {reviewed && (
+          <p className="mt-1 px-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-green-700 dark:text-green-400">✓ Reviewed</p>
+        )}
         {issues.length > 0 && (
           <ul className="mt-1 flex flex-wrap gap-1 px-1.5">
             {issues.map((issue) => (

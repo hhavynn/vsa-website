@@ -9,6 +9,10 @@ import { MemoryRouter } from 'react-router-dom';
 import AdminAceFamilies from './AceFamilies';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
+jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
+jest.mock('../../data/repos/adminOperations', () => ({
+  adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
+}));
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
     return require('../../test-utils/supabaseMock').supabaseMock.client;
@@ -150,4 +154,47 @@ it('bulk-links only the exact unique matches from Review Unlinked', async () => 
   expect(update.payload).toEqual(expect.objectContaining({ member_id: 'm-tommy' }));
   expect(update.calls).toContainEqual({ method: 'eq', args: ['id', 'n-tommy'] });
   expect(update.calls).toContainEqual({ method: 'is', args: ['member_id', null] });
+});
+
+describe('filters, history, and unsaved changes', () => {
+  const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
+
+  it('offers link filters with counts and narrows the people list', async () => {
+    await openMoon();
+    expect(screen.getByRole('button', { name: /^Unlinked\s*3$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Possible match\s*2/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /No match\s*1/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /No match\s*1/ }));
+    expect(screen.queryByDisplayValue('Havyn Nguyen')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Old Alumni Name')).toBeInTheDocument();
+  });
+
+  it('logs a link change with an undo spec holding the previous member', async () => {
+    await openMoon();
+    fireEvent.click(screen.getByRole('button', { name: 'Link to Tommy Tran · Sixth · Third Year' }));
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalled());
+    const entry = logAdminActivity.mock.calls[0][0];
+    expect(entry.action).toBe('ace.link_changed');
+    expect(entry.summary).toBe('Linked ACE node "Tommy Tran" → member Tommy Tran');
+    expect(entry.metadata.undo).toEqual({ kind: 'ace_node_link', target: { nodeId: 'n-tommy' }, before: null, after: 'm-tommy' });
+  });
+
+  it('keeps Save disabled until the fam form changes, then shows Unsaved changes', async () => {
+    await openMoon();
+    const save = screen.getByRole('button', { name: 'Save Changes' });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByDisplayValue('Moon'), { target: { value: 'Moon Fam' } });
+    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeEnabled();
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+  });
+
+  it('warns before leaving a fam with unsaved changes', async () => {
+    await openMoon();
+    fireEvent.change(screen.getByDisplayValue('Moon'), { target: { value: 'Moon Fam' } });
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: '+ New Fam' }));
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByDisplayValue('Moon Fam')).toBeInTheDocument();
+    confirm.mockRestore();
+  });
 });

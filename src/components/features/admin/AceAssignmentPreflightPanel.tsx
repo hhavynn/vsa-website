@@ -1,54 +1,27 @@
 import type { AssignmentPreflight } from '../../../lib/aceAssignments';
+import { aceIssues, buildReadiness } from '../../../lib/adminPreflight';
+import { ReadinessPanel } from './ops';
 
 interface AceAssignmentPreflightPanelProps {
   preflight: AssignmentPreflight;
-  /** The step this preflight guards, e.g. "Lock" or "Publish". */
+  /** The step this preflight guards, e.g. "Preflight before locking". */
   heading?: string;
+  readyLabel?: string;
+  /** Selecting an issue's fix applies that quick filter to the rows below. */
+  onFilter?: (key: string) => void;
 }
 
 /**
- * The checklist shown before Lock and again before Publish. Blockers stop
- * Publish; warnings (mostly member-link gaps) do not.
+ * The checklist shown before Lock and again before Publish, in the shared
+ * preflight presentation: a Ready / Not Ready verdict, then each issue with
+ * severity, why it matters, how many Littles, and a direct fix. Blockers stop
+ * Publish; warnings (mostly member-link gaps) never do.
  */
-export function AceAssignmentPreflightPanel({ preflight, heading = 'Preflight' }: AceAssignmentPreflightPanelProps) {
-  const { issues } = preflight;
-  return (
-    <section
-      aria-label={heading}
-      className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-4 font-sans text-xs"
-    >
-      <h3 className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">{heading}</h3>
-      <ul className="mt-2 space-y-1 text-[var(--color-text)]">
-        <li>
-          <span aria-hidden>✓ </span>
-          {preflight.littleCount} {preflight.littleCount === 1 ? 'Little' : 'Littles'}
-        </li>
-        <li>
-          <span aria-hidden>✓ </span>
-          {preflight.linkedCount} canonical member {preflight.linkedCount === 1 ? 'link' : 'links'}
-        </li>
-      </ul>
-
-      {issues.length === 0 ? (
-        <p className="mt-3 text-[var(--color-text2)]">Nothing needs attention.</p>
-      ) : (
-        <>
-          <p className="mt-3 font-semibold text-[var(--color-text)]">Needs attention</p>
-          <ul className="mt-1 space-y-1">
-            {issues.map((issue) => (
-              <li key={issue.code} className="text-[var(--color-text)]">
-                <span aria-hidden>⚠️ </span>
-                {issue.message}
-                {issue.severity === 'blocker' && (
-                  <span className="ml-2 rounded border border-[var(--color-border)] px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text2)]">
-                    Blocks publish
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
-  );
+export function AceAssignmentPreflightPanel({ preflight, heading = 'Preflight', readyLabel, onFilter }: AceAssignmentPreflightPanelProps) {
+  const readiness = buildReadiness(aceIssues(preflight), { ready: readyLabel });
+  const passed = [
+    `${preflight.littleCount} ${preflight.littleCount === 1 ? 'Little' : 'Littles'}`,
+    `${preflight.linkedCount} canonical member ${preflight.linkedCount === 1 ? 'link' : 'links'}`,
+  ];
+  return <ReadinessPanel readiness={readiness} title={heading} onFilter={onFilter} passed={passed} />;
 }

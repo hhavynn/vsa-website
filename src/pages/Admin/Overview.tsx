@@ -7,6 +7,7 @@ import { getApplicationStatus } from '../../lib/applicationLinks';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { OperationsDashboard } from '../../components/features/admin/OperationsDashboard';
+import { RecentActivityCard } from '../../components/features/admin/RecentActivityCard';
 
 interface OverviewStats {
   members: number;
@@ -709,6 +710,9 @@ export default function AdminOverview() {
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-8 lg:mb-10">
           <OperationsDashboard />
+        </div>
+        <div className="mb-8 lg:mb-10">
+          <RecentActivityCard />
         </div>
         {loading ? (
           <div className="py-16 text-center text-sm" style={{ color: 'var(--color-text3)' }}>

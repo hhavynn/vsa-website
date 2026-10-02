@@ -26,6 +26,17 @@ import { supabase } from '../../lib/supabase';
 import { toUserMessage } from '../../data/errors';
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
+import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
+import { logAdminActivity } from '../../data/repos/adminActivity';
+import { useOperatingYear } from '../../hooks/useOperatingYear';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
+import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../lib/adminActivity';
+import { isDirty, saveStatus } from '../../lib/adminDirty';
+import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
+import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
+import { ACE_NODE_FILTERS, ACE_NODE_FILTER_KEYS, AceNodeFacts } from '../../lib/adminQueues';
+import { describeYearContext } from '../../lib/adminYearContext';
 import { AceAssignmentsWorkspace } from '../../components/features/admin/AceAssignmentsWorkspace';
 import {
   AceLinkReviewItem,
@@ -480,6 +491,11 @@ export default function AdminAceFamilies() {
     [families, selectedFamilyId],
   );
 
+  const operatingYear = useOperatingYear();
+  const [nodeFilter, setNodeFilter] = useUrlFilter(ACE_NODE_FILTER_KEYS);
+  const [nextStep, setNextStep] = useState<NextStep | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [familyDraft, setFamilyDraft] = useState<FamilyDraft>(EMPTY_FAMILY_DRAFT);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>('');
@@ -512,6 +528,28 @@ export default function AdminAceFamilies() {
   const [bulkLinking, setBulkLinking] = useState(false);
   const matchingReady = !!selectedFamilyId && !directoryLoading && !directoryError && linksReady;
 
+  const familyBaseline = useMemo(() => (selectedFamily ? draftFromFamily(selectedFamily) : EMPTY_FAMILY_DRAFT), [selectedFamily]);
+  const familyDirty = isDirty(familyBaseline, familyDraft) || !!coverFile;
+  const familyStatus = saveStatus({ dirty: familyDirty, saving: savingFamily, failed: saveFailed, justSaved });
+  const confirmDiscard = useUnsavedChangesGuard(familyDirty, savingFamily);
+  useEffect(() => {
+    // Any further edit clears the "Saved" and error marks.
+    if (familyDirty) setJustSaved(false);
+  }, [familyDirty]);
+
+  // Quick Search deep link: ?family=<id>&node=<id> opens that fam and scrolls to the node.
+  const familyParam = searchParams.get('family');
+  const nodeParam = searchParams.get('node');
+  const [appliedFamilyParam, setAppliedFamilyParam] = useState<string | null>(null);
+  useEffect(() => {
+    if (!familyParam || appliedFamilyParam === familyParam) return;
+    if (families.some((family) => family.id === familyParam)) {
+      setAppliedFamilyParam(familyParam);
+      setView('families');
+      setSelectedFamilyId(familyParam);
+    }
+  }, [familyParam, appliedFamilyParam, families]);
+
   useEffect(() => {
     if (selectedFamily) {
       setFamilyDraft(draftFromFamily(selectedFamily));
@@ -541,6 +579,17 @@ export default function AdminAceFamilies() {
   const linkSummary = summarizeLinks(members);
   const unlinkedCount = linkSummary.total - linkSummary.linked;
   const obviousMatchCount = reviewItems.filter((item) => item.status === 'recommended').length;
+  const nodeFacts = useMemo<AceNodeFacts[]>(
+    () => members.map((node) => ({ node, review: reviewByNodeId.get(node.id) })),
+    [members, reviewByNodeId],
+  );
+  const nodeCounts = useMemo(() => countByFilter(nodeFacts, ACE_NODE_FILTERS), [nodeFacts]);
+  const visibleNodes = useMemo(() => applyQuickFilter(nodeFacts, ACE_NODE_FILTERS, nodeFilter), [nodeFacts, nodeFilter]);
+  useEffect(() => {
+    if (nodeParam && members.some((node) => node.id === nodeParam)) {
+      document.getElementById(`ace-node-${nodeParam}`)?.scrollIntoView?.({ block: 'center' });
+    }
+  }, [nodeParam, members]);
   const indicatorFor = (member: AceFamilyMember) =>
     linkIndicatorFor(member, reviewByNodeId.get(member.id), matchingReady);
 
@@ -593,7 +642,22 @@ export default function AdminAceFamilies() {
     }
     try {
       setSavingMemberId(nodeId);
+      const node = membersById.get(nodeId);
+      const previousMemberId = node?.member_id ?? null;
       await aceFamiliesRepository.setMemberLink(nodeId, option?.id ?? null);
+      if (node && previousMemberId !== (option?.id ?? null)) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.aceLinkChanged,
+          entityType: 'ace_family_member',
+          entityId: nodeId,
+          academicYearStart: selectedFamily?.academic_year_start ?? null,
+          summary: option
+            ? activitySummary.aceLinked(node.name, option.fullName)
+            : activitySummary.aceUnlinked(node.name, previousMemberId ? directoryById.get(previousMemberId)?.fullName ?? null : null),
+          metadata: buildUndoMetadata({ kind: 'ace_node_link', target: { nodeId }, before: previousMemberId, after: option?.id ?? null }),
+        });
+        if (option && unlinkedCount - 1 === 0) setNextStep(nextStepFor({ type: 'ace_all_linked' }));
+      }
       toast.success(option ? `Linked to ${option.fullName}` : 'Member link removed');
       await refreshMemberLinks();
     } catch (err) {
@@ -609,6 +673,16 @@ export default function AdminAceFamilies() {
     try {
       setBulkLinking(true);
       const { linked, skipped } = await aceFamiliesRepository.linkUnlinkedMembers(links);
+      if (linked.length > 0) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.aceBulkLinked,
+          entityType: 'ace_family',
+          entityId: selectedFamilyId,
+          academicYearStart: selectedFamily?.academic_year_start ?? null,
+          summary: activitySummary.aceBulkLinked(linked.length),
+        });
+        if (unlinkedCount - linked.length === 0) setNextStep(nextStepFor({ type: 'ace_all_linked' }));
+      }
       const skippedNote = skipped.length > 0 ? ` ${skipped.length} skipped because someone already linked them.` : '';
       toast.success(`Linked ${linked.length} member${linked.length === 1 ? '' : 's'}.${skippedNote}`);
       setImportedFamilyId(null);
@@ -623,6 +697,7 @@ export default function AdminAceFamilies() {
   };
 
   const handleNewFamily = () => {
+    if (!confirmDiscard()) return;
     setSelectedFamilyId(null);
     setFamilyDraft(EMPTY_FAMILY_DRAFT);
     setAutoSlug(true);
@@ -681,10 +756,13 @@ export default function AdminAceFamilies() {
       setCoverPreview('');
       await invalidateLists();
       await refetch();
+      setSaveFailed(false);
+      setJustSaved(true);
     } catch (err) {
       console.error(err);
       const message = toUserMessage(err, 'Failed to save family');
       toast.error(message);
+      setSaveFailed(true);
     } finally {
       setSavingFamily(false);
     }
@@ -1067,7 +1145,7 @@ export default function AdminAceFamilies() {
                 <li key={f.id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedFamilyId(f.id)}
+                    onClick={() => confirmDiscard() && setSelectedFamilyId(f.id)}
                     className="block w-full px-4 py-3 text-left transition-opacity hover:opacity-80"
                     style={{
                       background: selectedFamilyId === f.id ? 'var(--color-surface2)' : 'transparent',
@@ -1281,15 +1359,22 @@ export default function AdminAceFamilies() {
               Published (visible on public ACE page once it's redesigned)
             </label>
 
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                type="submit"
-                disabled={savingFamily}
-                className="rounded px-5 py-2 font-sans text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none' }}
-              >
-                {savingFamily ? 'Saving...' : selectedFamily ? 'Save Changes' : 'Create Fam'}
-              </button>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <SaveBar
+                submit
+                status={selectedFamily || familyDirty ? familyStatus : 'clean'}
+                saveLabel={selectedFamily ? 'Save Changes' : 'Create Fam'}
+                onDiscard={
+                  familyDirty
+                    ? () => {
+                        setFamilyDraft(familyBaseline);
+                        setCoverFile(null);
+                        setCoverPreview('');
+                        setSaveFailed(false);
+                      }
+                    : undefined
+                }
+              />
               {selectedFamily && (
                 <button
                   type="button"
@@ -1337,6 +1422,12 @@ export default function AdminAceFamilies() {
                   </div>
                 )}
               </div>
+
+              {selectedFamily.academic_year_start != null && (
+                <YearContextBadge context={describeYearContext(selectedFamily.academic_year_start, operatingYear)} className="mb-4" />
+              )}
+
+              <NextStepBanner step={nextStep} onDismiss={() => setNextStep(null)} />
 
               {directoryError ? (
                 <p className="mb-4 font-sans text-xs text-red-500">
@@ -1405,26 +1496,38 @@ export default function AdminAceFamilies() {
                 </button>
               </div>
 
+              {members.length > 0 && matchingReady && (
+                <div className="mb-3">
+                  <FilterChips filters={ACE_NODE_FILTERS} counts={nodeCounts} active={nodeFilter} onChange={setNodeFilter} label="Filter people" />
+                </div>
+              )}
+
               {members.length === 0 ? (
+                <EmptyState title="No people in this fam yet." description="Add a name above, or import the whole tree from JSON." />
+              ) : visibleNodes.length === 0 ? (
                 <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                  No members yet. Add a few above.
+                  No people match this filter.{' '}
+                  <button type="button" onClick={() => setNodeFilter('all')} className="bg-transparent p-0 font-semibold underline-offset-2 hover:underline">
+                    Show all {members.length}
+                  </button>
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {members.map((m) => (
-                    <MemberRow
-                      key={m.id}
-                      member={m}
-                      membersById={membersById}
-                      parentOptions={members.filter((other) => other.id !== m.id)}
-                      onSave={handleSaveMember}
-                      onDelete={handleDeleteMember}
-                      onLinkChange={handleLinkChange}
-                      linkedMember={m.member_id ? directoryById.get(m.member_id) ?? null : null}
-                      review={reviewByNodeId.get(m.id)}
-                      matchingReady={matchingReady}
-                      saving={savingMemberId === m.id || bulkLinking}
-                    />
+                  {visibleNodes.map(({ node: m }) => (
+                    <div key={m.id} id={`ace-node-${m.id}`} className={m.id === nodeParam ? 'rounded ring-2 ring-brand-600 dark:ring-brand-400' : undefined}>
+                      <MemberRow
+                        member={m}
+                        membersById={membersById}
+                        parentOptions={members.filter((other) => other.id !== m.id)}
+                        onSave={handleSaveMember}
+                        onDelete={handleDeleteMember}
+                        onLinkChange={handleLinkChange}
+                        linkedMember={m.member_id ? directoryById.get(m.member_id) ?? null : null}
+                        review={reviewByNodeId.get(m.id)}
+                        matchingReady={matchingReady}
+                        saving={savingMemberId === m.id || bulkLinking}
+                      />
+                    </div>
                   ))}
                 </div>
               )}

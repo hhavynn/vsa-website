@@ -1,50 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useEffect } from 'react';
+import { ADMIN_NAV_GROUPS } from '../../../lib/adminNavigation';
+import { QuickSearchButton } from './AdminQuickSearch';
 
-const NAV_GROUPS = [
-  { group: null, items: [
-    { to: '/admin', label: 'Dashboard' },
-    { to: '/admin/content-calendar', label: 'Content Calendar' }
-  ] },
-  { group: 'Member Experience', items: [
-    { to: '/admin/events', label: 'Events' },
-    { to: '/admin/applications', label: 'Applications' },
-    { to: '/admin/houses', label: 'Houses' },
-    { to: '/admin/ace', label: 'ACE Families' },
-    { to: '/admin/interns', label: 'Intern Cohort' },
-    { to: '/admin/uvsa-schools', label: 'UVSA Schools' },
-    { to: '/admin/external-events', label: 'External Events' },
-  ]},
-  { group: 'Content & Media', items: [
-    { to: '/admin/content', label: 'Homepage & Programs' },
-    { to: '/admin/cabinet', label: 'Cabinet' },
-    { to: '/admin/cabinet/rollover', label: 'Cabinet Rollover' },
-    { to: '/admin/gallery', label: 'Gallery' },
-    { to: '/admin/vcn', label: 'VCN Archives' },
-    { to: '/admin/ai-knowledge', label: 'Ask VSA Knowledge' },
-    { to: '/admin/resources', label: 'Resources Index' },
-    { to: '/admin/settings', label: 'Site Settings' },
-  ]},
-  { group: 'Points & Attendance', items: [
-    { to: '/admin/import', label: 'Attendance Imports' },
-    { to: '/admin/members', label: 'Members' },
-    { to: '/admin/photo-requests', label: 'Photo Requests' },
-    { to: '/admin/points', label: 'Points Tools' },
-    { to: '/admin/merge-suggestions', label: 'Merge Review' },
-    { to: '/admin/years', label: 'Years & Terms' },
-    { to: '/admin/year-setup', label: 'New Year Setup' },
-  ]},
-  { group: 'System', items: [
-    { to: '/admin/data-rights', label: 'Data Rights' },
-    { to: '/admin/launch-checklist', label: 'Launch Checklist' },
-    { to: '/admin/analytics', label: 'Analytics' },
-    { to: '/admin/feedback', label: 'Feedback' },
-    { to: '/admin/ai-feedback', label: 'Ask VSA Feedback' },
-  ]},
-];
+const NAV_GROUPS = ADMIN_NAV_GROUPS;
 
-export function AdminNav({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
+export function AdminNav({ isOpen, onClose, onSearch }: { isOpen?: boolean; onClose?: () => void; onSearch?: () => void }) {
   const { pathname } = useLocation();
   const { user } = useAuth();
 
@@ -107,6 +69,17 @@ export function AdminNav({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =
             </button>
           )}
         </div>
+
+        {onSearch && (
+          <div className="px-3 pt-3">
+            <QuickSearchButton
+              onOpen={() => {
+                onClose?.();
+                onSearch();
+              }}
+            />
+          </div>
+        )}
 
         {/* Nav groups */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">

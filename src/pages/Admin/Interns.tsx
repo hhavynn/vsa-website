@@ -1,11 +1,45 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import { internCohortRepository } from '../../data/repos/internCohort';
 import { memberLookupRepository } from '../../data/repos/memberLookup';
+import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useAuth } from '../../hooks/useAuth';
+import { useOperatingYear } from '../../hooks/useOperatingYear';
+import { useReviewMarks } from '../../hooks/useReviewMarks';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useUrlFilter, useUrlParam } from '../../hooks/useUrlFilter';
+import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../lib/adminActivity';
+import { planInternMentor, planInternTrack, planMarkReviewed, pruneSelection, selectedRows, toggleSelected } from '../../lib/adminBulk';
+import { internDuplicates, duplicateRowIds } from '../../lib/adminConflicts';
+import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
+import { reviewInternNames } from '../../lib/adminImportReview';
+import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
+import { buildReadiness, internIssues } from '../../lib/adminPreflight';
+import { internProgress } from '../../lib/adminProgress';
+import { INTERN_FILTERS, INTERN_FILTER_KEYS, InternRowFacts } from '../../lib/adminQueues';
+import { describeYearContext } from '../../lib/adminYearContext';
+import { internDraftsToPreviewMembers } from '../../lib/adminPreviewMappers';
+import { InternCohortPreviewDialog } from '../../components/features/admin/preview/CohortPreviewDialogs';
+import {
+  BulkActionBar,
+  BulkConfirm,
+  EmptyState,
+  FilterChips,
+  ImportReviewPanel,
+  NextStepBanner,
+  PossibleDuplicates,
+  ReadinessPanel,
+  RowCheckbox,
+  WorkflowProgress,
+  YearContextBadge,
+  bulkBtnCls,
+} from '../../components/features/admin/ops';
+import { normalizeMemberName } from '../../lib/memberLinkMatching';
+import { formatYearSpan } from '../../lib/operationalStatus';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import {
   InternCohortCycle,
@@ -48,12 +82,16 @@ interface InternRowProps {
   nameIndex: MemberNameIndex;
   claimedByOthers: ReadonlySet<string>;
   mentors: MentorOption[];
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  reviewed: boolean;
+  highlighted: boolean;
   onSave: (draft: InternCohortDraft, patch: InternDraftPatch) => void;
   onMove: (draft: InternCohortDraft, direction: -1 | 1) => void;
   onRemove: (draft: InternCohortDraft) => void;
 }
 
-function InternRow({ draft, index, count, editable, busy, memberById, nameIndex, claimedByOthers, mentors, onSave, onMove, onRemove }: InternRowProps) {
+function InternRow({ draft, index, count, editable, busy, memberById, nameIndex, claimedByOthers, mentors, selected, onToggleSelect, reviewed, highlighted, onSave, onMove, onRemove }: InternRowProps) {
   const [name, setName] = useState(draft.name);
   const [track, setTrack] = useState(draft.role_or_track ?? '');
   const [caption, setCaption] = useState(draft.caption ?? '');
@@ -72,8 +110,11 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
   }
 
   return (
-    <li className="rounded border p-4" style={{ borderColor: 'var(--color-border)' }} data-testid="intern-row">
+    <li id={`intern-row-${draft.id}`} className={`rounded border p-4 ${highlighted ? 'ring-2 ring-brand-600 dark:ring-brand-400' : ''}`} style={{ borderColor: 'var(--color-border)' }} data-testid="intern-row" data-reviewed={reviewed}>
       <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="pt-6">
+          <RowCheckbox checked={selected} onChange={() => onToggleSelect(draft.id)} label={`Select ${draft.name}`} />
+        </div>
         <div className="min-w-[200px] flex-1">
           <label className={labelCls} style={{ color: 'var(--color-text3)' }} htmlFor={`intern-name-${draft.id}`}>Name</label>
           <input
@@ -177,6 +218,7 @@ function InternRow({ draft, index, count, editable, busy, memberById, nameIndex,
         {' · '}Mentor: {mentor ? `${mentor.name} · ${mentor.role}` : 'none'}
         {' · '}Track: {draft.role_or_track || 'Intern'}
         {draft.published_cabinet_member_id ? ' · published' : ''}
+        {reviewed ? ' · ✓ reviewed' : ''}
       </p>
     </li>
   );
@@ -196,6 +238,19 @@ export default function AdminInterns() {
   const [newCabinetYearId, setNewCabinetYearId] = useState('');
   const [pasted, setPasted] = useState('');
   const [publishConfirmed, setPublishConfirmed] = useState(false);
+  const operatingYear = useOperatingYear();
+  const [filter, setFilter] = useUrlFilter(INTERN_FILTER_KEYS);
+  const [cycleParam] = useUrlParam('cycle');
+  const [rowParam] = useUrlParam('row');
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [bulkMentorId, setBulkMentorId] = useState('');
+  const [bulkTrack, setBulkTrack] = useState('');
+  const [pendingRemoveMentor, setPendingRemoveMentor] = useState(false);
+  const [nextStep, setNextStep] = useState<NextStep | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Pasted names that have not been added to the cohort yet are unsaved work.
+  useUnsavedChangesGuard(pasted.trim().length > 0, busy);
 
   const cycle = useMemo(() => cycles.find((item) => item.id === cycleId) ?? null, [cycles, cycleId]);
   const cabinetYear = useMemo(() => cabinetYears.find((year) => year.id === cycle?.cabinet_year_id) ?? null, [cabinetYears, cycle]);
@@ -204,6 +259,17 @@ export default function AdminInterns() {
   const memberById = useMemo(() => new Map(directory.map((member) => [member.id, member])), [directory]);
   const preflight = useMemo(() => buildInternPreflight(ordered), [ordered]);
   const needReview = preflight.accepted - preflight.linked;
+  const duplicates = useMemo(() => internDuplicates(ordered.map((draft) => ({ id: draft.id, label: draft.name, memberId: draft.member_id }))), [ordered]);
+  const duplicateIds = useMemo(() => duplicateRowIds(duplicates.filter((item) => item.exact)), [duplicates]);
+  const draftIds = useMemo(() => ordered.map((draft) => draft.id), [ordered]);
+  const { reviewed, markReviewed } = useReviewMarks('intern_cohort_draft', cycle?.id ?? null, draftIds, cycle?.academic_year_start ?? null);
+  const facts = useMemo<InternRowFacts[]>(
+    () => ordered.map((draft) => ({ draft, duplicate: duplicateIds.has(draft.id), reviewed: reviewed.has(draft.id) })),
+    [ordered, duplicateIds, reviewed],
+  );
+  const filterCounts = useMemo(() => countByFilter(facts, INTERN_FILTERS), [facts]);
+  const visibleFacts = useMemo(() => applyQuickFilter(facts, INTERN_FILTERS, filter), [facts, filter]);
+  const mentorNameOf = useCallback((id: string | null) => (id ? mentors.find((option) => option.id === id)?.name ?? null : null), [mentors]);
 
   const nameIndex = useMemo(() => buildMemberNameIndex(directory), [directory]);
   const linkedIds = useMemo(() => ordered.map((draft) => draft.member_id).filter((id): id is string => !!id), [ordered]);
@@ -241,6 +307,30 @@ export default function AdminInterns() {
     internCohortRepository.listMentorOptions(cycle.cabinet_year_id).then(setMentors).catch(() => setMentors([]));
   }, [cycle]);
 
+  // Quick Search deep link: ?cycle=<id>&row=<draft id> opens that cohort and scrolls to the intern.
+  const appliedCycleParam = useRef<string | null>(null);
+  useEffect(() => {
+    if (!cycleParam || appliedCycleParam.current === cycleParam) return;
+    if (cycles.some((item) => item.id === cycleParam)) {
+      appliedCycleParam.current = cycleParam;
+      setCycleId(cycleParam);
+    }
+  }, [cycleParam, cycles]);
+  useEffect(() => {
+    if (rowParam && drafts.some((draft) => draft.id === rowParam)) {
+      document.getElementById(`intern-row-${rowParam}`)?.scrollIntoView?.({ block: 'center' });
+    }
+  }, [rowParam, drafts]);
+
+  useEffect(
+    () =>
+      setSelected((current) => {
+        const next = pruneSelection(current, draftIds);
+        return next.size === current.size ? current : next;
+      }),
+    [draftIds],
+  );
+
   async function run(action: () => Promise<void>, failure: string) {
     setBusy(true);
     try {
@@ -253,8 +343,8 @@ export default function AdminInterns() {
     }
   }
 
-  function createCycle() {
-    const year = cabinetYears.find((item) => item.id === newCabinetYearId);
+  function createCycle(yearId: string = newCabinetYearId) {
+    const year = cabinetYears.find((item) => item.id === yearId);
     if (!year) {
       toast.error('Choose a cabinet year.');
       return;
@@ -263,6 +353,13 @@ export default function AdminInterns() {
       const created = await internCohortRepository.createCycle({ academicYearStart: year.start_year, cabinetYearId: year.id, userId });
       await loadCycles();
       setCycleId(created.id);
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.internCycleStarted,
+        entityType: 'intern_cohort_cycle',
+        entityId: created.id,
+        academicYearStart: year.start_year,
+        summary: `Started the ${formatYearSpan(year.start_year)} intern cohort`,
+      });
     }, 'Failed to start the cohort.');
   }
 
@@ -280,6 +377,14 @@ export default function AdminInterns() {
       setDrafts((current) => [...current, ...created]);
       setPasted('');
       toast.success(`Added ${created.length} intern${created.length === 1 ? '' : 's'} (${created.filter((d) => d.member_id).length} linked).`);
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.internAdded,
+        entityType: 'intern_cohort_cycle',
+        entityId: cycle.id,
+        academicYearStart: cycle.academic_year_start,
+        summary: activitySummary.internAdded(created.length, cycle.academic_year_start),
+      });
+      setNextStep({ id: 'intern_added', message: `${created.length} ${created.length === 1 ? 'intern' : 'interns'} added`, actions: created.some((d) => !d.member_id) ? [{ label: `Review ${created.filter((d) => !d.member_id).length} Unlinked`, filter: 'unlinked' }] : [{ label: 'Review Missing Mentor', filter: 'missing_mentor' }] });
     }, 'Failed to add interns.');
   }
 
@@ -288,6 +393,29 @@ export default function AdminInterns() {
     return run(async () => {
       await internCohortRepository.updateDraft(cycle.id, draft.id, patch);
       setDrafts((current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
+      if ('mentor_cabinet_member_id' in patch && (patch.mentor_cabinet_member_id ?? null) !== (draft.mentor_cabinet_member_id ?? null)) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.internMentorChanged,
+          entityType: 'intern_cohort_draft',
+          entityId: draft.id,
+          academicYearStart: cycle.academic_year_start,
+          summary: activitySummary.internMentor(draft.name, mentorNameOf(draft.mentor_cabinet_member_id), mentorNameOf(patch.mentor_cabinet_member_id ?? null)),
+          metadata: buildUndoMetadata({
+            kind: 'intern_mentor',
+            target: { cycleId: cycle.id, draftId: draft.id },
+            before: draft.mentor_cabinet_member_id ?? null,
+            after: patch.mentor_cabinet_member_id ?? null,
+          }),
+        });
+      } else if ('member_id' in patch && (patch.member_id ?? null) !== (draft.member_id ?? null)) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.memberLinkChanged,
+          entityType: 'intern_cohort_draft',
+          entityId: draft.id,
+          academicYearStart: cycle.academic_year_start,
+          summary: activitySummary.memberLink(draft.name, patch.member_id ? memberById.get(patch.member_id)?.fullName ?? 'a member' : null),
+        });
+      }
     }, 'Failed to save.');
   }
 
@@ -308,6 +436,13 @@ export default function AdminInterns() {
     return run(async () => {
       await internCohortRepository.removeDraft(cycle.id, draft.id);
       setDrafts((current) => current.filter((item) => item.id !== draft.id));
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.internRemoved,
+        entityType: 'intern_cohort_draft',
+        entityId: null,
+        academicYearStart: cycle.academic_year_start,
+        summary: activitySummary.internRemoved(draft.name),
+      });
     }, 'Failed to remove.');
   }
 
@@ -323,6 +458,14 @@ export default function AdminInterns() {
     return run(async () => {
       await internCohortRepository.lockCycle(cycle.id);
       await refreshCycle();
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.internCohortLocked,
+        entityType: 'intern_cohort_cycle',
+        entityId: cycle.id,
+        academicYearStart: cycle.academic_year_start,
+        summary: activitySummary.cycleLocked('Intern', cycle.academic_year_start),
+      });
+      setNextStep(nextStepFor({ type: 'intern_locked' }));
       toast.success('Locked. The cohort is still private.');
     }, 'Failed to lock.');
   }
@@ -340,6 +483,15 @@ export default function AdminInterns() {
     return run(async () => {
       const result = await internCohortRepository.publishCycle(cycle.id);
       await refreshCycle();
+      if (!result.alreadyPublished) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.internCohortPublished,
+          entityType: 'intern_cohort_cycle',
+          entityId: cycle.id,
+          academicYearStart: cycle.academic_year_start,
+          summary: activitySummary.published('Intern cohort', cycle.academic_year_start, result.created + result.updated),
+        });
+      }
       toast.success(result.alreadyPublished ? 'Already published.' : `Published: ${result.created} added, ${result.updated} updated.`);
     }, 'Failed to publish. Nothing was lost; fix the issue and publish again.');
   }
@@ -351,6 +503,74 @@ export default function AdminInterns() {
       setCycleId(null);
       await loadCycles();
     }, 'Failed to delete.');
+  }
+
+  // ─── Bulk actions ──────────────────────────────────────────────────────────
+  const selectedDrafts = useMemo(() => selectedRows(ordered, selected, (draft) => draft.id), [ordered, selected]);
+  const mentorPlan = useMemo(() => planInternMentor(selectedDrafts, bulkMentorId || null, !!editable), [selectedDrafts, bulkMentorId, editable]);
+  const removeMentorPlan = useMemo(() => planInternMentor(selectedDrafts, null, !!editable), [selectedDrafts, editable]);
+  const trackPlan = useMemo(() => planInternTrack(selectedDrafts, bulkTrack, !!editable), [selectedDrafts, bulkTrack, editable]);
+  const reviewPlan = useMemo(() => planMarkReviewed(selectedDrafts, reviewed, 'intern'), [selectedDrafts, reviewed]);
+
+  async function applyBulk(targets: InternCohortDraft[], patch: InternDraftPatch, summary: string, success: string) {
+    if (!cycle) return;
+    await run(async () => {
+      let done = 0;
+      try {
+        for (const draft of targets) {
+          await internCohortRepository.updateDraft(cycle.id, draft.id, patch);
+          // Show each saved row as it lands, so a later failure never leaves stale values on screen.
+          setDrafts((current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
+          done += 1;
+        }
+      } catch (failure) {
+        if (done > 0) toast.error(`Updated ${done} of ${targets.length} interns before it failed. The rest were not changed.`);
+        throw failure;
+      }
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.internBulkChanged,
+        entityType: 'intern_cohort_cycle',
+        entityId: cycle.id,
+        academicYearStart: cycle.academic_year_start,
+        summary,
+      });
+      toast.success(success);
+      setSelected(new Set());
+      setPendingRemoveMentor(false);
+    }, 'Failed to update the selected interns.');
+  }
+
+  function bulkSetMentor() {
+    if (!bulkMentorId) {
+      toast.error('Choose a mentor first.');
+      return;
+    }
+    if (mentorPlan.eligible.length === 0) {
+      toast.error(mentorPlan.skipped[0]?.reason ?? 'Nothing to change.');
+      return;
+    }
+    return applyBulk(mentorPlan.eligible, { mentor_cabinet_member_id: bulkMentorId }, activitySummary.bulk(`Set mentor ${mentorNameOf(bulkMentorId) ?? ''} for`, mentorPlan.eligible.length, 'intern'), `Set the mentor for ${mentorPlan.eligible.length} ${mentorPlan.eligible.length === 1 ? 'intern' : 'interns'}.`);
+  }
+  function bulkRemoveMentor() {
+    return applyBulk(removeMentorPlan.eligible, { mentor_cabinet_member_id: null }, activitySummary.bulk('Removed the mentor from', removeMentorPlan.eligible.length, 'intern'), `Removed the mentor from ${removeMentorPlan.eligible.length} ${removeMentorPlan.eligible.length === 1 ? 'intern' : 'interns'}.`);
+  }
+  function bulkSetTrack() {
+    if (trackPlan.eligible.length === 0) {
+      toast.error(trackPlan.skipped[0]?.reason ?? 'Nothing to change.');
+      return;
+    }
+    return applyBulk(trackPlan.eligible, { role_or_track: bulkTrack.trim() }, activitySummary.bulk(`Set track "${bulkTrack.trim()}" for`, trackPlan.eligible.length, 'intern'), `Set the track for ${trackPlan.eligible.length} ${trackPlan.eligible.length === 1 ? 'intern' : 'interns'}.`);
+  }
+  function bulkMarkReviewed() {
+    return run(async () => {
+      if (reviewPlan.eligible.length === 0) {
+        toast('All selected interns are already reviewed.');
+        return;
+      }
+      await markReviewed(reviewPlan.eligible.map((draft) => draft.id));
+      toast.success(`Marked ${reviewPlan.eligible.length} reviewed.`);
+      setSelected(new Set());
+    }, 'Failed to mark interns reviewed.');
   }
 
   const usedCabinetYearIds = new Set(cycles.map((item) => item.cabinet_year_id));
@@ -379,7 +599,17 @@ export default function AdminInterns() {
             {loadingCycles ? (
               <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>Loading…</p>
             ) : cycles.length === 0 ? (
-              <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>No cohorts yet. Start one to begin.</p>
+              <div className="mt-4">
+                <EmptyState
+                  title="No Intern cohort has been started."
+                  description="Start the cohort for the next cabinet year, then paste the accepted names."
+                  action={
+                    availableYears[0]
+                      ? { label: `Start ${formatYearSpan(availableYears[0].start_year)} Cohort`, onClick: () => createCycle(availableYears[0].id), disabled: busy }
+                      : undefined
+                  }
+                />
+              </div>
             ) : (
               <ul className="mt-4 divide-y" style={{ borderColor: 'var(--color-border)' }}>
                 {cycles.map((item) => (
@@ -403,7 +633,7 @@ export default function AdminInterns() {
                 <option key={year.id} value={year.id}>{year.label}</option>
               ))}
             </select>
-            <button type="button" className="vsa-btn-primary mt-4 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !newCabinetYearId} onClick={createCycle}>Start cohort</button>
+            <button type="button" className="vsa-btn-primary mt-4 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !newCabinetYearId} onClick={() => createCycle()}>Start cohort</button>
           </section>
         </div>
       ) : (
@@ -412,6 +642,7 @@ export default function AdminInterns() {
             <div>
               <button type="button" onClick={() => setCycleId(null)} className="mb-2 bg-transparent p-0 text-xs font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--color-text2)' }}>← All cohorts</button>
               <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{formatCohortYears(cycle)} Intern Cohort</h2>
+              <YearContextBadge context={describeYearContext(cycle.academic_year_start, operatingYear)} className="mt-1" />
               <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>{STATUS_LABEL[cycle.status]} · cabinet year {cabinetYear?.label ?? '…'}</p>
               <p className="mt-2 font-mono text-sm" style={{ color: 'var(--color-text)' }}>
                 {preflight.accepted} accepted · {preflight.linked} linked · {needReview} need review
@@ -429,6 +660,26 @@ export default function AdminInterns() {
               )}
             </div>
           </div>
+
+          <NextStepBanner step={nextStep} onFilter={setFilter} onPreview={() => setPreviewOpen(true)} onDismiss={() => setNextStep(null)} />
+
+          <WorkflowProgress
+            title={`${formatYearSpan(cycle.academic_year_start)} Interns`}
+            steps={internProgress({
+              status: cycle.status,
+              accepted: preflight.accepted,
+              linked: preflight.linked,
+              mentored: ordered.filter((draft) => !!draft.mentor_cabinet_member_id).length,
+            })}
+          />
+
+          {cycle.status !== 'published' && cycle.status !== 'archived' && ordered.length > 0 && (
+            <div>
+              <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => setPreviewOpen(true)}>
+                Preview cohort
+              </button>
+            </div>
+          )}
 
           {cycle.status === 'locked' && (
             <div className="rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
@@ -449,27 +700,12 @@ export default function AdminInterns() {
             </div>
           )}
 
-          <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Preflight">
-            <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Preflight</h3>
-            <ul className="mt-3 space-y-1 text-sm" style={{ color: 'var(--color-text)' }}>
-              <li>✓ {preflight.accepted} accepted</li>
-              <li>✓ {preflight.linked} linked</li>
-            </ul>
-            {preflight.blockers.length > 0 && (
-              <ul className="mt-3 space-y-1 text-xs text-red-600 dark:text-red-400">
-                {preflight.blockers.map((issue) => <li key={issue.code}>✕ {issue.message}</li>)}
-              </ul>
-            )}
-            {(preflight.warnings.length > 0 || preflight.notes.length > 0) && (
-              <div className="mt-3">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Needs attention</p>
-                <ul className="mt-1 space-y-1 text-xs">
-                  {preflight.warnings.map((issue) => <li key={issue.code} className="text-amber-700 dark:text-amber-400">⚠ {issue.message}</li>)}
-                  {preflight.notes.map((issue) => <li key={issue.code} style={{ color: 'var(--color-text3)' }}>○ {issue.message}</li>)}
-                </ul>
-              </div>
-            )}
-          </section>
+          <ReadinessPanel
+            readiness={buildReadiness(internIssues(preflight), { ready: cycle.status === 'locked' ? 'Ready to Publish' : 'Ready to Lock' })}
+            onFilter={setFilter}
+            passed={[`${preflight.accepted} accepted`, `${preflight.linked} linked`]}
+          />
+          <PossibleDuplicates duplicates={duplicates} onCompare={() => setFilter('needs_review')} />
 
           {editable && (
             <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Import names">
@@ -477,35 +713,94 @@ export default function AdminInterns() {
               <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>One per line: &quot;Name&quot; or &quot;Name, Track&quot;. Exact, unambiguous names link to members automatically; everything else is left for you to review.</p>
               <label htmlFor="intern-paste" className="sr-only">Pasted intern names</label>
               <textarea id="intern-paste" rows={5} className={`${fieldCls} mt-3 font-mono text-xs`} style={{ borderColor: 'var(--color-border)' }} value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'Sarah Nguyen, Events / Operations\nKevin Tran'} />
+              <ImportReviewPanel
+                rows={reviewInternNames(parseInternNames(pasted), { nameIndex, existingNames: new Set(ordered.map((draft) => normalizeMemberName(draft.name))) })}
+                hasInput={pasted.trim().length > 0}
+                filename="intern-import-problem-rows"
+              />
               <button type="button" className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !pasted.trim()} onClick={importNames}>Add to cohort</button>
             </section>
           )}
 
           <section aria-label="Interns">
+            {ordered.length > 0 && (
+              <div className="mb-3">
+                <FilterChips filters={INTERN_FILTERS} counts={filterCounts} active={filter} onChange={setFilter} label="Filter interns" />
+              </div>
+            )}
+            <div className={cn('mb-3 overflow-hidden rounded border', selected.size > 0 ? 'border-[var(--color-border)]' : 'border-transparent')}>
+              <BulkActionBar count={selected.size} noun="intern" onClear={() => { setSelected(new Set()); setPendingRemoveMentor(false); }}>
+                {editable && (
+                  <>
+                    <label htmlFor="bulk-mentor" className="sr-only">Mentor for selected interns</label>
+                    <select id="bulk-mentor" className={`${smallFieldCls} w-auto`} style={{ borderColor: 'var(--color-border)' }} value={bulkMentorId} onChange={(event) => setBulkMentorId(event.target.value)}>
+                      <option value="">Set mentor →</option>
+                      {mentors.map((option) => (
+                        <option key={option.id} value={option.id}>{option.name} · {option.role}</option>
+                      ))}
+                    </select>
+                    <button type="button" className={bulkBtnCls} disabled={busy || !bulkMentorId} onClick={bulkSetMentor}>Set mentor</button>
+                    <button type="button" className={bulkBtnCls} disabled={busy} onClick={() => setPendingRemoveMentor(true)}>Remove mentor</button>
+                    <label htmlFor="bulk-track" className="sr-only">Track for selected interns</label>
+                    <input id="bulk-track" className={`${smallFieldCls} w-40`} style={{ borderColor: 'var(--color-border)' }} placeholder="Track…" value={bulkTrack} onChange={(event) => setBulkTrack(event.target.value)} />
+                    <button type="button" className={bulkBtnCls} disabled={busy || !bulkTrack.trim()} onClick={bulkSetTrack}>Set track</button>
+                  </>
+                )}
+                <button type="button" className={bulkBtnCls} disabled={busy} onClick={bulkMarkReviewed}>Mark reviewed</button>
+              </BulkActionBar>
+              {pendingRemoveMentor && selected.size > 0 && (
+                <BulkConfirm plan={removeMentorPlan} busy={busy} onConfirm={bulkRemoveMentor} onCancel={() => setPendingRemoveMentor(false)} skippedLabel={(draft) => draft.name} />
+              )}
+            </div>
             {ordered.length === 0 ? (
-              <p className="rounded border px-5 py-10 text-center text-sm" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>No interns yet.</p>
+              <EmptyState
+                title={`No interns in the ${formatYearSpan(cycle.academic_year_start)} cohort yet.`}
+                description={editable ? 'Paste the accepted names above to add them.' : undefined}
+              />
+            ) : visibleFacts.length === 0 ? (
+              <p className="rounded border px-5 py-10 text-center text-sm" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
+                No interns match this filter.{' '}
+                <button type="button" onClick={() => setFilter('all')} className="bg-transparent p-0 font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--brand)' }}>
+                  Show all {ordered.length}
+                </button>
+              </p>
             ) : (
               <ul className="space-y-3">
-                {ordered.map((draft, index) => (
-                  <InternRow
-                    key={draft.id}
-                    draft={draft}
-                    index={index}
-                    count={ordered.length}
-                    editable={!!editable}
-                    busy={busy}
-                    memberById={memberById}
-                    nameIndex={nameIndex}
-                    claimedByOthers={new Set(linkedIds.filter((id) => id !== draft.member_id))}
-                    mentors={mentors}
-                    onSave={saveDraft}
-                    onMove={moveDraft}
-                    onRemove={removeDraft}
-                  />
-                ))}
+                {visibleFacts.map(({ draft, reviewed: isReviewed }) => {
+                  const index = ordered.findIndex((item) => item.id === draft.id);
+                  return (
+                    <InternRow
+                      key={draft.id}
+                      draft={draft}
+                      index={index}
+                      count={ordered.length}
+                      editable={!!editable}
+                      busy={busy}
+                      memberById={memberById}
+                      nameIndex={nameIndex}
+                      claimedByOthers={new Set(linkedIds.filter((id) => id !== draft.member_id))}
+                      mentors={mentors}
+                      selected={selected.has(draft.id)}
+                      onToggleSelect={(id) => setSelected((current) => toggleSelected(current, id))}
+                      reviewed={isReviewed}
+                      highlighted={rowParam === draft.id}
+                      onSave={saveDraft}
+                      onMove={moveDraft}
+                      onRemove={removeDraft}
+                    />
+                  );
+                })}
               </ul>
             )}
           </section>
+
+          {previewOpen && cycle && (
+            <InternCohortPreviewDialog
+              members={internDraftsToPreviewMembers(ordered, cycle.cabinet_year_id)}
+              yearLabel={formatYearSpan(cycle.academic_year_start)}
+              onClose={() => setPreviewOpen(false)}
+            />
+          )}
         </div>
       )}
     </>
