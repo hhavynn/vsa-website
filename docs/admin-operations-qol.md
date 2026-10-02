@@ -39,6 +39,12 @@ Migration `supabase/migrations/20261002040000_admin_activity_log_and_review_mark
 
 **Status: not applied to production. It needs owner approval and a manual apply** (see `supabase/migrations/MIGRATION_CHECKLIST.md`). The frontend degrades safely without it: activity writes are best-effort and never block an edit, Recent Changes says it may not be available yet, and "mark reviewed" reports that it could not be saved. Apply it for history, undo, and reviewed marks to work.
 
+Verify on a local or staging database (rolled back; prints `PASS:` per check, 27 checks including append-only, actor-spoofing, size limits, and review-mark uniqueness). Never run it against production:
+
+```bash
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-admin-activity-log.sql
+```
+
 Post-apply check: RLS enabled on both tables; `admin_activity_log` has exactly two policies (select, insert), `admin_review_marks` three (select, insert, delete); no grants to `anon`.
 
 ## Code map

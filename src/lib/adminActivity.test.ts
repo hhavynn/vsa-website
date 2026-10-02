@@ -99,9 +99,18 @@ describe('sanitizeMetadata', () => {
   it('stays under the database size limit while keeping the undo spec', () => {
     const undo = { kind: 'house_draft_house', target: { batchId: 'b', draftId: 'd' }, before: 'x', after: 'y' };
     const cleaned = sanitizeMetadata({ undo, filler: Array.from({ length: 50 }, () => 'z'.repeat(190)) });
-    expect(JSON.stringify(cleaned).length).toBeLessThanOrEqual(3500);
+    expect(JSON.stringify(cleaned).length).toBeLessThanOrEqual(2800);
     expect(cleaned.undo).toEqual(undo);
     expect(cleaned.truncated).toBe(true);
+  });
+});
+
+describe('sanitizeMetadata byte budget', () => {
+  it('counts bytes, not characters, so multi-byte names cannot overflow the database cap', () => {
+    const accented = 'Nguyễn Thị Hương '.repeat(10);
+    const cleaned = sanitizeMetadata({ rows: Array.from({ length: 30 }, () => accented) });
+    const bytes = new TextEncoder().encode(JSON.stringify(cleaned)).length;
+    expect(bytes).toBeLessThanOrEqual(2800);
   });
 });
 

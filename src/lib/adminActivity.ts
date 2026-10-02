@@ -119,7 +119,23 @@ const SENSITIVE_KEY = /e-?mail|phone|password|token|secret|address|birth|ssn|api
 const MAX_STRING = 200;
 const MAX_ARRAY = 50;
 const MAX_DEPTH = 3;
-const MAX_METADATA_CHARS = 3500;
+// The database caps octet_length(metadata::text) at 4000, and jsonb's text form is
+// wider than compact JSON (spaces after ':' and ','), so stay well under it in bytes.
+const MAX_METADATA_BYTES = 2800;
+
+function utf8Length(value: string): number {
+  let bytes = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      bytes += 4;
+      i += 1;
+    } else bytes += 3;
+  }
+  return bytes;
+}
 
 function cleanValue(value: unknown, depth: number): unknown {
   if (depth >= MAX_DEPTH) return undefined;
@@ -147,7 +163,7 @@ function cleanObject(input: Record<string, unknown>, depth: number): ActivityMet
  */
 export function sanitizeMetadata(metadata: ActivityMetadata | undefined): ActivityMetadata {
   const cleaned = cleanObject(metadata ?? {}, 0);
-  if (JSON.stringify(cleaned).length <= MAX_METADATA_CHARS) return cleaned;
+  if (utf8Length(JSON.stringify(cleaned)) <= MAX_METADATA_BYTES) return cleaned;
   // Keep the undo spec (small, essential) and a flag; drop the rest.
   const trimmed: ActivityMetadata = {};
   if (cleaned.undo) trimmed.undo = cleaned.undo;

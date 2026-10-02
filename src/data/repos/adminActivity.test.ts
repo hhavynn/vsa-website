@@ -1,4 +1,5 @@
 import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../lib/adminActivity';
+import { AdminActivityRepository } from './adminActivity';
 
 const insert = jest.fn();
 const select = jest.fn();
@@ -30,8 +31,6 @@ jest.mock('../../lib/supabase', () => ({
     },
   },
 }));
-
-import { AdminActivityRepository } from './adminActivity';
 
 const repo = new AdminActivityRepository();
 const UUID = '3b5f6c1e-9d3a-4b5e-8f10-1a2b3c4d5e6f';

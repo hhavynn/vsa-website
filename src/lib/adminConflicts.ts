@@ -146,7 +146,7 @@ export function findCabinetDuplicates(rows: readonly CabinetSlotRow[]): Possible
     return who ? `${normalizeMemberName(row.role)}|${who}` : null;
   });
   const flagged = new Set<string>();
-  for (const [key, group] of sameRoleSamePerson) {
+  for (const [key, group] of Array.from(sameRoleSamePerson)) {
     if (group.length < 2) continue;
     group.forEach((row) => flagged.add(row.id));
     results.push({
@@ -161,7 +161,7 @@ export function findCabinetDuplicates(rows: readonly CabinetSlotRow[]): Possible
   }
 
   const byPerson = groupBy(filled, identity);
-  for (const [who, group] of byPerson) {
+  for (const [who, group] of Array.from(byPerson)) {
     const roles = new Set(group.map((row) => normalizeMemberName(row.role)));
     if (group.length < 2 || roles.size < 2 || group.every((row) => flagged.has(row.id))) continue;
     results.push({

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
+import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import {
@@ -25,8 +26,8 @@ import { useReviewMarks } from '../../hooks/useReviewMarks';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useUrlFilter } from '../../hooks/useUrlFilter';
 import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
-import { planCabinetCategory, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../lib/adminBulk';
-import { duplicateRowIds, findCabinetDuplicates } from '../../lib/adminConflicts';
+import { planCabinetCategory, planMarkReviewed, pruneSelection, selectedRows, toggleSelected } from '../../lib/adminBulk';
+import { findCabinetDuplicates } from '../../lib/adminConflicts';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { reviewRosterEntries } from '../../lib/adminImportReview';
 import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
@@ -56,7 +57,6 @@ import {
   parseRosterPaste,
   planRosterFill,
   rosterLinkSuggestion,
-  rosterPreflightLines,
   sortRosterDrafts,
 } from '../../lib/cabinetRoster';
 import { MemberOption, buildMemberNameIndex } from '../../lib/memberLinkMatching';
@@ -816,7 +816,7 @@ export default function AdminCabinetRollover() {
                 <FilterChips filters={ROSTER_FILTERS} counts={filterCounts} active={filter} onChange={setFilter} label="Filter positions" />
               </div>
             )}
-            <div className="mb-3 overflow-hidden rounded border" style={{ borderColor: selected.size > 0 ? 'var(--color-border)' : 'transparent' }}>
+            <div className={cn('mb-3 overflow-hidden rounded border', selected.size > 0 ? 'border-[var(--color-border)]' : 'border-transparent')}>
               <BulkActionBar count={selected.size} noun="position" onClear={() => setSelected(new Set())}>
                 {editable && (
                   <>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import { internCohortRepository } from '../../data/repos/internCohort';
@@ -12,7 +13,7 @@ import { useReviewMarks } from '../../hooks/useReviewMarks';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useUrlFilter, useUrlParam } from '../../hooks/useUrlFilter';
 import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../lib/adminActivity';
-import { planInternMentor, planInternTrack, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../lib/adminBulk';
+import { planInternMentor, planInternTrack, planMarkReviewed, pruneSelection, selectedRows, toggleSelected } from '../../lib/adminBulk';
 import { internDuplicates, duplicateRowIds } from '../../lib/adminConflicts';
 import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import { reviewInternNames } from '../../lib/adminImportReview';
@@ -720,7 +721,7 @@ export default function AdminInterns() {
                 <FilterChips filters={INTERN_FILTERS} counts={filterCounts} active={filter} onChange={setFilter} label="Filter interns" />
               </div>
             )}
-            <div className="mb-3 overflow-hidden rounded border" style={{ borderColor: selected.size > 0 ? 'var(--color-border)' : 'transparent' }}>
+            <div className={cn('mb-3 overflow-hidden rounded border', selected.size > 0 ? 'border-[var(--color-border)]' : 'border-transparent')}>
               <BulkActionBar count={selected.size} noun="intern" onClear={() => { setSelected(new Set()); setPendingRemoveMentor(false); }}>
                 {editable && (
                   <>
