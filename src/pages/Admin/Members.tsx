@@ -3,7 +3,7 @@
 // still holds last season's value and is an input to the Admin -> Houses
 // backfill; it is deliberately left untouched.
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../../lib/supabase';
@@ -23,6 +23,14 @@ import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 import { photoRequestsRepository } from '../../data/repos/photoRequests';
 import { toUserMessage } from '../../data/errors';
 import { MEMBER_AVATARS_QUERY_KEY, useMemberAvatars } from '../../hooks/useMemberAvatars';
+import { BulkActionBar, FilterChips, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops';
+import { logAdminActivity } from '../../data/repos/adminActivity';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
+import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
+import { planMemberClearReview, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../lib/adminBulk';
+import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
+import { MEMBER_FILTERS, MEMBER_FILTER_KEYS, MemberRowFacts } from '../../lib/adminQueues';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,7 +96,11 @@ export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showReviewOnly, setShowReviewOnly] = useState(false);
+  const [filter, setFilter] = useUrlFilter(MEMBER_FILTER_KEYS);
+  const showReviewOnly = filter === 'needs_review';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [houseFilter, setHouseFilter] = useState<'all' | 'unassigned' | string>('all');
   const [houseLookupFailed, setHouseLookupFailed] = useState(false);
 
@@ -181,8 +193,29 @@ export default function AdminMembers() {
   useEffect(() => { load(); }, []);
 
   // ── Filtered + sorted ────────────────────────────────────────────────────────
-  const filtered = members
-    .filter(m => showReviewOnly ? m.needs_review : true)
+  const memberFacts: Array<MemberRowFacts & { member: Member }> = useMemo(
+    () => members.map(m => ({
+      id: m.id,
+      needs_review: m.needs_review ?? false,
+      // An unknown House lookup must not make everyone look unassigned.
+      current_house: houseLookupFailed ? 'unknown' : m.current_house,
+      hasPhoto: avatars.has(m.id),
+      events_attended: m.events_attended,
+      member: m,
+    })),
+    [members, houseLookupFailed, avatars],
+  );
+  const memberFilters = useMemo(
+    () => MEMBER_FILTERS.filter(f => !(houseLookupFailed && f.key === 'no_house')),
+    [houseLookupFailed],
+  );
+  const filterCounts = useMemo(() => countByFilter(memberFacts, memberFilters), [memberFacts, memberFilters]);
+  const chipMembers = useMemo(
+    () => applyQuickFilter(memberFacts, memberFilters, filter).map(f => f.member),
+    [memberFacts, memberFilters, filter],
+  );
+
+  const filtered = chipMembers
     .filter(m => {
       if (houseFilter === 'all') return true;
       if (houseFilter === 'unassigned') return !m.current_house;
@@ -213,7 +246,7 @@ export default function AdminMembers() {
     });
 
   // ── Pagination ───────────────────────────────────────────────────────────────
-  const resetKey = `${search}|${showReviewOnly}|${houseFilter}|${sortKey}|${sortAsc}`;
+  const resetKey = `${search}|${filter}|${houseFilter}|${sortKey}|${sortAsc}`;
   const {
     page, totalPages, rowsPerPage, setRowsPerPage, setCurrentPage,
     pageStart, pageStartLabel, pageEndLabel,
@@ -235,7 +268,9 @@ export default function AdminMembers() {
   // The dialog stays open until a save finishes; closing it mid-publish would
   // let a second editor open, which the first save would then close.
   function requestCloseEdit() {
-    if (saving === null) closeEdit();
+    if (saving !== null) return;
+    if (editHasChanges && !window.confirm('You have unsaved changes. Discard them?')) return;
+    closeEdit();
   }
 
   function clearPhoto() {
@@ -295,6 +330,63 @@ export default function AdminMembers() {
     load();
   }
 
+  // ── Bulk: Review OK on several flagged members ─────────────────────────────
+  useEffect(
+    () =>
+      setSelected(current => {
+        const next = pruneSelection(current, members.map(m => m.id));
+        return next.size === current.size ? current : next;
+      }),
+    [members],
+  );
+  const selectedMembers = useMemo(() => selectedRows(members, selected, m => m.id), [members, selected]);
+  const clearReviewPlan = useMemo(
+    () => planMemberClearReview(selectedMembers.map(m => ({ id: m.id, needs_review: m.needs_review ?? false }))),
+    [selectedMembers],
+  );
+
+  async function handleBulkReviewOk() {
+    const ids = clearReviewPlan.eligible.map(row => row.id);
+    if (ids.length === 0) {
+      toast('None of the selected members are flagged for review.');
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      for (let i = 0; i < ids.length; i += 100) {
+        const { error } = await supabase.from('members').update({ needs_review: false }).in('id', ids.slice(i, i + 100));
+        if (error) throw error;
+      }
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.memberBulkChanged,
+        entityType: 'member',
+        summary: activitySummary.bulk('Cleared the review flag on', ids.length, 'member'),
+      });
+      toast.success(`Cleared the review flag on ${ids.length} member${ids.length === 1 ? '' : 's'}.`);
+      setSelected(new Set());
+      await load();
+    } catch {
+      toast.error('Failed to clear review flags.');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  // Quick Search deep link: ?member=<id> opens that member's editor once.
+  const memberParam = searchParams.get('member');
+  useEffect(() => {
+    if (!memberParam || loading) return;
+    const target = members.find(m => m.id === memberParam);
+    if (target) openEdit(target);
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      next.delete('member');
+      return next;
+    }, { replace: true });
+    // openEdit only sets local state; it is intentionally not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberParam, loading, members]);
+
   // ── History ───────────────────────────────────────────────────────────────────
   function openHistory(member: Member) {
     setHistoryMember(member);
@@ -343,6 +435,7 @@ export default function AdminMembers() {
     : '—';
 
   const editHasChanges = !!editing && (!!photoFile || JSON.stringify(editForm) !== JSON.stringify(getMemberEditForm(editing)));
+  useUnsavedChangesGuard(editHasChanges, saving !== null);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -425,7 +518,7 @@ export default function AdminMembers() {
               ⚠ {needsReviewCount} member{needsReviewCount !== 1 ? 's' : ''} flagged as possible duplicate{needsReviewCount !== 1 ? 's' : ''}
             </p>
             <button
-              onClick={() => setShowReviewOnly(!showReviewOnly)}
+              onClick={() => setFilter(showReviewOnly ? 'all' : 'needs_review')}
               className="text-[12px] font-medium text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-3 py-1 rounded hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors shrink-0"
             >
               {showReviewOnly ? 'Show all' : 'Review now'}
@@ -465,19 +558,49 @@ export default function AdminMembers() {
           </div>
         </div>
 
+        {!loading && members.length > 0 && (
+          <div className="mb-4">
+            <FilterChips filters={memberFilters} counts={filterCounts} active={filter} onChange={setFilter} label="Filter members" />
+          </div>
+        )}
+
         {/* TABLE */}
         {loading ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">
-            {search ? 'No members match your search.' : 'No members yet. Import a sign-in sheet to get started.'}
+            {search || filter !== 'all' || houseFilter !== 'all' ? (
+              <>
+                No members match these filters.{' '}
+                <button type="button" className="font-semibold text-[var(--brand)] underline-offset-2 hover:underline" onClick={() => { setSearch(''); setFilter('all'); setHouseFilter('all'); }}>
+                  Clear filters
+                </button>
+              </>
+            ) : (
+              <>
+                No members yet.{' '}
+                <Link to="/admin/import" className="font-semibold text-[var(--brand)] underline-offset-2 hover:underline">Import a sign-in sheet</Link> to get started.
+              </>
+            )}
           </div>
         ) : (
           <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div className="overflow-x-auto">
+            <BulkActionBar count={selected.size} noun="member" onClear={() => setSelected(new Set())}>
+              <button type="button" className={bulkBtnCls} disabled={bulkBusy} onClick={handleBulkReviewOk}>
+                Review OK{clearReviewPlan.eligible.length > 0 ? ` (${clearReviewPlan.eligible.length})` : ''}
+              </button>
+            </BulkActionBar>
+            <div className="max-h-[75vh] overflow-auto">
               <table className="w-full min-w-[800px] text-sm">
-                <thead>
+                <thead className="sticky top-0 z-[2]">
                   <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+                    <th className="w-10 px-4 py-2.5 text-left">
+                      <RowCheckbox
+                        checked={paginatedFiltered.length > 0 && paginatedFiltered.every(m => selected.has(m.id))}
+                        onChange={() => setSelected(setSelection(paginatedFiltered.map(m => m.id), !paginatedFiltered.every(m => selected.has(m.id))))}
+                        label="Select all members on this page"
+                      />
+                    </th>
                     <th className="w-10 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">#</th>
                     <SortTh label="Name" sk="name" active={sortKey} asc={sortAsc} onSort={handleSort} />
                     <th className="w-28 px-4 py-2.5 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]">Year</th>
@@ -492,6 +615,9 @@ export default function AdminMembers() {
                   {paginatedFiltered.map((m, i) => {
                     return (
                       <tr key={m.id} className="transition-colors hover:bg-[var(--color-surface2)]">
+                        <td className="px-4 py-3">
+                          <RowCheckbox checked={selected.has(m.id)} onChange={() => setSelected(current => toggleSelected(current, m.id))} label={`Select ${m.first_name} ${m.last_name}`} />
+                        </td>
                         <td className="font-mono text-xs px-4 py-3 text-[var(--color-text3)]">{pageStart + i + 1}</td>
                         {/* NAME */}
                         <td className="px-4 py-3">
@@ -674,19 +800,22 @@ export default function AdminMembers() {
             onClick={() => { closeEdit(); openHistory(editing); }}>Manage attendance</Button>
           {editHasChanges && <p className="mt-2 text-sm text-text-secondary">Save changes or cancel this edit before managing attendance.</p>}
           <div className="flex gap-3 mt-6">
-            <button onClick={handleSaveEdit} disabled={saving !== null}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
+            <button onClick={handleSaveEdit} disabled={saving !== null || !editHasChanges}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-md text-[13px] transition-colors">
               {saving === 'photo' ? 'Publishing photo…' : saving ? 'Saving…' : photoFile ? 'Save & publish photo' : 'Save changes'}
             </button>
             <BtnCancel onClick={requestCloseEdit} disabled={saving !== null} />
           </div>
+          <p role="status" aria-live="polite" className="mt-2 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
+            {editHasChanges ? 'Unsaved changes' : ''}
+          </p>
         </Modal>
       )}
 
       {addingMember && (
         <AddMemberModal onClose={() => setAddingMember(false)} onCreated={async member => {
           setSearch(`${member.first_name} ${member.last_name}`);
-          setShowReviewOnly(false);
+          setFilter('all');
           setHouseFilter('all');
           await load();
         }} />
