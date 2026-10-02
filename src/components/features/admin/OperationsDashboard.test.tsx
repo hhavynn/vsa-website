@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { OperationsDashboard } from './OperationsDashboard';
 import { OperationsInputs } from '../../../lib/adminOperations';
@@ -14,10 +15,13 @@ const inputs: OperationsInputs = {
 };
 
 function renderDashboard(load: () => Promise<OperationsInputs>) {
+  const queryClient = new QueryClient();
   return render(
-    <MemoryRouter>
-      <OperationsDashboard loadInputs={load} />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <OperationsDashboard loadInputs={load} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

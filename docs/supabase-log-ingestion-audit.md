@@ -118,6 +118,27 @@ Selecting all columns transfers more data per response. Prefer explicit column l
 
 ---
 
+## Request safety layer (client-side containment)
+
+On 2026-10-01 a frontend loop sent ~493,000 API-gateway requests in ~5 hours (~149,000 in the worst hour, ~41 requests/second sustained). The fixes above remove known causes; the layer below makes sure an *unknown* loop cannot do that again from a single browser tab. Code: `src/lib/supabase.ts`, `src/lib/supabaseRequestGuard.ts`, `src/lib/supabaseRequestTelemetry.ts`.
+
+- **No automatic PostgREST retries.** The client is created with `db: { retry: false }`. supabase-js (>= 2.102) otherwise retries idempotent GET/HEAD requests on transient failures, silently multiplying traffic during an outage. We prefer one failed request and normal UI error handling. Auth token refresh is separate and unaffected. (Note: react-query's own default of 3 retries is *not* changed here.)
+- **Per-tab circuit breaker** around the client's `fetch`, covering **only `/rest/v1/*`** (Auth, Storage and Edge Functions are never counted or blocked). All thresholds live in `REQUEST_GUARD_CONFIG`:
+
+  | Rule | Limit | Trips when |
+  |---|---|---|
+  | Burst (any method) | 200 requests / 60s | the 201st request in a 60s window |
+  | Repeated identical read | 10 / 10s per exact GET/HEAD URL | the 11th identical read in 10s |
+  | Cooldown | 30s, doubling on a trip within 2 min of recovering, capped at 5 min | |
+
+  While tripped, Data API calls fail locally with a Supabase-style `429` (`over_request_rate_limit`) so existing error handling and degraded mode apply; nothing is sent and nothing is retried. One `console.warn` per trip (path only: never headers, tokens or query strings). It recovers by itself. The burst limit is above ~100 because the attendance import issues one profile update per matched member in a loop; the 2026-10-01 rate would still trip it within seconds, and a looping tab is capped at a few thousand requests/hour once the cooldown escalates.
+- **Dev-only telemetry.** In `npm start`, run `__vsaSupabaseRequests()` in the browser console for the session request total and the top tables/functions. In-memory only; nothing is sent or stored; a no-op in production builds.
+- **Admin Overview** no longer scans on its own: it reads each table once (~16 requests instead of ~43, 39 of them HEAD probes), is cached for a minute, never refetches on focus/reconnect/timer, and has a manual **Refresh counts** button.
+
+If a legitimate workflow ever hits the breaker, fix the workflow (batch it) rather than raising the limits.
+
+---
+
 ## Important: Log Drains do not reduce ingestion
 
 Setting up a Log Drain (e.g., to Datadog or Logflare) does **not** reduce your Log Ingestion usage. Supabase counts ingestion at the point logs are generated, before any drain forwarding. A drain is an additional destination, not a replacement.

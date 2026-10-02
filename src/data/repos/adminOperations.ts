@@ -13,6 +13,7 @@ import {
   InternOperationsInput,
   OperationsInputs,
   rolloverSummary,
+  summarizeUpcomingEvents,
 } from '../../lib/adminOperations';
 import { formatRosterYears } from '../../lib/cabinetRoster';
 import { academicTermsRepository } from './academicTerms';
@@ -175,24 +176,16 @@ export class AdminOperationsRepository {
 
   private async loadEvents(): Promise<EventsOperationsInput> {
     // Same one-day grace as Admin Overview so an event today still counts as upcoming.
+    // One read of the (few) upcoming published events answers all four numbers.
     const since = new Date(Date.now() - DAY_MS).toISOString();
-    const upcoming = () => supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', true).gte('date', since);
-    const [next, total, missingLocation, missingInfo] = await Promise.all([
-      supabase.from('events').select('name, date').eq('is_published', true).gte('date', since).order('date', { ascending: true }).limit(1),
-      upcoming(),
-      upcoming().or('location.is.null,location.eq.""'),
-      upcoming().or('location.is.null,location.eq."",check_in_form_url.is.null,check_in_form_url.eq."",image_url.is.null'),
-    ]);
-    for (const result of [next, total, missingLocation, missingInfo]) {
-      if (result.error) throw result.error;
-    }
-    const first = next.data?.[0];
-    return {
-      next: first ? { title: first.name, date: first.date } : null,
-      upcoming: total.count ?? 0,
-      upcomingMissingLocation: missingLocation.count ?? 0,
-      upcomingMissingInfo: missingInfo.count ?? 0,
-    };
+    const { data, error } = await supabase
+      .from('events')
+      .select('name, date, location, check_in_form_url, image_url')
+      .eq('is_published', true)
+      .gte('date', since)
+      .order('date', { ascending: true });
+    if (error) throw error;
+    return summarizeUpcomingEvents(data ?? []);
   }
 }
 

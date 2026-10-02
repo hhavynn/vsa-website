@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useMemo } from 'react';
+import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { adminOperationsRepository } from '../../../data/repos/adminOperations';
 import {
@@ -11,6 +12,7 @@ import {
   formatHouseBalance,
 } from '../../../lib/adminOperations';
 import { buildContinueItems } from '../../../lib/adminContinue';
+import { ADMIN_HEALTH_QUERY_KEYS, HEALTH_QUERY_OPTIONS } from '../../../lib/adminHealthQuery';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { OperationsCard, PreflightItem, ProgressCount, StatusBadge } from './ops';
 
@@ -195,25 +197,14 @@ function OperationsCards({ summary }: { summary: OperationsSummary }) {
  * needs attention, with every number linking to the tool that fixes it. Read-only.
  */
 export function OperationsDashboard({ loadInputs = () => adminOperationsRepository.loadInputs() }: OperationsDashboardProps) {
-  const [inputs, setInputs] = useState<OperationsInputs | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadInputs()
-      .then((next) => {
-        if (!cancelled) setInputs(next);
-      })
-      .catch((error) => {
-        console.error(error);
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // The loader is a stable module-level default; a test passes its own once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Cached and never auto-refetched (see lib/adminHealthQuery.ts); the Overview's
+  // Refresh button invalidates it. A failed load shows the unavailable state.
+  const query = useQuery(ADMIN_HEALTH_QUERY_KEYS.operations, loadInputs, {
+    ...HEALTH_QUERY_OPTIONS,
+    onError: (error) => console.error(error),
+  });
+  const inputs = query.data ?? null;
+  const failed = query.isError;
 
   const summary = useMemo(() => (inputs ? buildOperationsSummary(inputs) : null), [inputs]);
   const preflight = useMemo(() => (summary ? buildOperationsPreflight(summary) : []), [summary]);

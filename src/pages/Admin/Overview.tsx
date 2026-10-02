@@ -1,60 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { FadeContent } from '../../components/ui/FadeContent';
-import { supabase } from '../../lib/supabase';
-import { getApplicationStatus } from '../../lib/applicationLinks';
-import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
-import { academicTermsRepository } from '../../data/repos/academicTerms';
+import { formatAcademicYear } from '../../lib/academicTerms';
+import { adminOverviewRepository } from '../../data/repos/adminOverview';
+import { DEFAULT_OVERVIEW_STATS } from '../../lib/adminOverviewStats';
+import { ADMIN_HEALTH_QUERY_KEYS, HEALTH_QUERY_OPTIONS } from '../../lib/adminHealthQuery';
 import { OperationsDashboard } from '../../components/features/admin/OperationsDashboard';
 import { RecentActivityCard } from '../../components/features/admin/RecentActivityCard';
-
-interface OverviewStats {
-  members: number;
-  events: number;
-  upcomingEvents: number;
-  cabinetMembers: number;
-  galleryAlbums: number;
-  academicTerms: number;
-  cabinetYears: number;
-  feedback: number;
-  pendingFeedback: number;
-  mergeCandidates: number;
-  eventsMissingTerms: number;
-  upcomingEventsMissingInfo: number;
-  galleryAlbumsMissingCover: number;
-  // New Health Checks
-  eventsPublished: number;
-  eventsDraft: number;
-  eventsUpcomingPublished: number;
-  eventsMissingImage: number;
-  eventsMissingLocation: number;
-  housesCurrentCount: number;
-  housesCurrentYearStart: number | null;
-  activeTermUnavailable: boolean;
-  housesMissingImage: number;
-  housesMissingParents: number;
-  galleryCount: number;
-  galleryMissingCover: number;
-  galleryMissingPhotosUrl: number;
-  cabinetActiveYear: { id: string; label: string } | null;
-  cabinetMembersActiveYear: number;
-  cabinetMissingImage: number;
-  cabinetMissingRole: number;
-  vcnCurrentPublishedExists: boolean;
-  vcnArchiveCount: number;
-  vcnMissingMedia: number;
-  programContentMissing: number;
-  aiTableExists: boolean;
-  aiSnippetsActive: number;
-  aiSnippetsInactive: number;
-  aiLastVerifiedAt: string | null;
-  storageUrlsCount: number;
-  applicationsTotal: number;
-  applicationsOpen: number;
-  applicationsUpcoming: number;
-  applicationsClosed: number;
-}
 
 interface AdminToolCard {
   to: string;
@@ -69,52 +23,6 @@ interface AdminToolGroup {
   intro: string;
   tools: AdminToolCard[];
 }
-
-const DEFAULT_STATS: OverviewStats = {
-  members: 0,
-  events: 0,
-  upcomingEvents: 0,
-  cabinetMembers: 0,
-  galleryAlbums: 0,
-  academicTerms: 0,
-  cabinetYears: 0,
-  feedback: 0,
-  pendingFeedback: 0,
-  mergeCandidates: 0,
-  eventsMissingTerms: 0,
-  upcomingEventsMissingInfo: 0,
-  galleryAlbumsMissingCover: 0,
-  eventsPublished: 0,
-  eventsDraft: 0,
-  eventsUpcomingPublished: 0,
-  eventsMissingImage: 0,
-  eventsMissingLocation: 0,
-  housesCurrentCount: 0,
-  housesCurrentYearStart: null,
-  activeTermUnavailable: false,
-  housesMissingImage: 0,
-  housesMissingParents: 0,
-  galleryCount: 0,
-  galleryMissingCover: 0,
-  galleryMissingPhotosUrl: 0,
-  cabinetActiveYear: null,
-  cabinetMembersActiveYear: 0,
-  cabinetMissingImage: 0,
-  cabinetMissingRole: 0,
-  vcnCurrentPublishedExists: false,
-  vcnArchiveCount: 0,
-  vcnMissingMedia: 0,
-  programContentMissing: 0,
-  aiTableExists: false,
-  aiSnippetsActive: 0,
-  aiSnippetsInactive: 0,
-  aiLastVerifiedAt: null,
-  storageUrlsCount: 0,
-  applicationsTotal: 0,
-  applicationsOpen: 0,
-  applicationsUpcoming: 0,
-  applicationsClosed: 0,
-};
 
 const ADMIN_TOOL_GROUPS: AdminToolGroup[] = [
   {
@@ -448,222 +356,20 @@ function HealthItem({ label, value, status, to }: { label: string; value: React.
 }
 
 export default function AdminOverview() {
-  const [stats, setStats] = useState<OverviewStats>(DEFAULT_STATS);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    async function loadOverview() {
-      setLoading(true);
-      const nowIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Cached for a minute and never refetched on focus/reconnect or on a timer:
+  // revisiting the page reuses the numbers, and "Refresh" is the way to re-scan.
+  const overview = useQuery(ADMIN_HEALTH_QUERY_KEYS.overview, () => adminOverviewRepository.load(), HEALTH_QUERY_OPTIONS);
+  const stats = overview.data?.stats ?? DEFAULT_OVERVIEW_STATS;
+  const unavailable = overview.data?.unavailable ?? [];
+  const loading = overview.isLoading;
+  const refreshing = overview.isFetching;
 
-      const [
-        membersResult,
-        eventsResult,
-        upcomingResult,
-        cabinetResult,
-        galleryResult,
-        academicTermsResult,
-        cabinetYearsResult,
-        feedbackResult,
-        pendingFeedbackResult,
-        mergeResult,
-        missingTermsResult,
-        upcomingMissingInfoResult,
-        missingGalleryCoverResult,
-      ] = await Promise.all([
-        supabase.from('members').select('*', { count: 'exact', head: true }),
-        supabase.from('events').select('*', { count: 'exact', head: true }),
-        supabase.from('events').select('*', { count: 'exact', head: true }).gte('date', nowIso),
-        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }),
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }),
-        supabase.from('academic_terms').select('*', { count: 'exact', head: true }),
-        supabase.from('cabinet_years').select('*', { count: 'exact', head: true }),
-        supabase.from('feedback').select('*', { count: 'exact', head: true }),
-        supabase.from('feedback').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
-        supabase.from('merge_exclusions').select('*', { count: 'exact', head: true }),
-        supabase.from('events').select('*', { count: 'exact', head: true }).is('academic_term_id', null),
-        supabase.from('events').select('*', { count: 'exact', head: true }).gte('date', nowIso).or('location.eq."",check_in_form_url.eq."",image_url.is.null'),
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
-      ]);
-
-      // Content Health Queries
-      const [
-        eventsPublishedRes,
-        eventsDraftRes,
-        eventsUpcomingPublishedRes,
-        eventsMissingImageRes,
-        eventsMissingLocationRes,
-      ] = await Promise.all([
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', true),
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', false),
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('is_published', true).gte('date', nowIso),
-        supabase.from('events').select('*', { count: 'exact', head: true }).is('image_url', null),
-        supabase.from('events').select('*', { count: 'exact', head: true }).or('location.is.null,location.eq.""'),
-      ]);
-
-      // A failed lookup must not silently fall back to the browser-derived year:
-      // the House count would look plausible but could be for the wrong year.
-      let activeTermUnavailable = false;
-      const activeTerm = await academicTermsRepository.getActiveTerm().catch((error: unknown) => {
-        console.error(error);
-        activeTermUnavailable = true;
-        return null;
-      });
-      const housesCurrentYearStart = activeTermUnavailable
-        ? null
-        : activeTerm?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null;
-
-      const [
-        housesCurrentRes,
-        housesMissingImageRes,
-        housesMissingParentsRes,
-      ] = await Promise.all([
-        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).eq('academic_year_start', housesCurrentYearStart ?? -1),
-        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).is('image_url', null),
-        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).or('house_parent_heading.is.null,house_parent_image_url.is.null'),
-      ]);
-
-      const [
-        galleryCountRes,
-        galleryMissingCoverRes,
-        galleryMissingPhotosRes,
-      ] = await Promise.all([
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }),
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).or('google_photos_url.is.null,google_photos_url.eq.""'),
-      ]);
-
-      const cabinetActiveYearRes = await supabase.from('cabinet_years').select('id, label').eq('is_active', true).maybeSingle();
-      const activeCabinetYearId = cabinetActiveYearRes.data?.id;
-      const activeCabinetYearLabel = cabinetActiveYearRes.data?.label;
-
-      const [
-        cabinetMembersRes,
-        cabinetMissingImageRes,
-        cabinetMissingRoleRes,
-      ] = await Promise.all([
-        activeCabinetYearId ? supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).eq('cabinet_year_id', activeCabinetYearId) : { data: null, error: null, count: 0 },
-        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).is('image_url', null),
-        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).or('role.is.null,role.eq.""'),
-      ]);
-
-      const [
-        vcnPublishedRes,
-        vcnArchiveRes,
-        vcnMissingMediaRes,
-      ] = await Promise.all([
-        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }).eq('is_current', true).eq('is_published', true),
-        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }),
-        supabase.from('vcn_archives').select('*', { count: 'exact', head: true }).is('cover_image_url', null),
-      ]);
-
-      const programContentRes = await supabase.from('program_content').select('*', { count: 'exact', head: true }).or('is_published.eq.false,status.eq.hidden');
-
-      const [
-        aiActiveRes,
-        aiInactiveRes,
-        aiLastVerifiedRes,
-      ] = await Promise.allSettled([
-        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_public', true).eq('is_active', true),
-        supabase.from('ai_knowledge_base' as any).select('*', { count: 'exact', head: true }).eq('is_public', true).eq('is_active', false),
-        supabase.from('ai_knowledge_base' as any).select('last_verified_at').eq('is_public', true).order('last_verified_at', { ascending: false }).limit(1),
-      ]);
-      
-      let aiTableExists = true;
-      let aiSnippetsActive = 0;
-      let aiSnippetsInactive = 0;
-      let aiLastVerifiedAt = null;
-
-      if (aiActiveRes.status === 'rejected' || (aiActiveRes.status === 'fulfilled' && (aiActiveRes.value as any).error)) {
-        aiTableExists = false;
-      } else {
-        aiSnippetsActive = (aiActiveRes as any).value?.count ?? 0;
-        aiSnippetsInactive = (aiInactiveRes as any).value?.count ?? 0;
-        aiLastVerifiedAt = (aiLastVerifiedRes as any).value?.data?.[0]?.last_verified_at ?? null;
-      }
-
-      const storageRes = await Promise.all([
-        supabase.from('events').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
-        supabase.from('house_events').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
-        supabase.from('house_page_assets').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
-        supabase.from('gallery_events').select('*', { count: 'exact', head: true }).ilike('cover_image_url', '%supabase.co/storage%'),
-        supabase.from('cabinet_members').select('*', { count: 'exact', head: true }).ilike('image_url', '%supabase.co/storage%'),
-        supabase.from('site_settings').select('*', { count: 'exact', head: true }).ilike('logo_url', '%supabase.co/storage%'),
-      ]);
-
-      const storageCount = storageRes.reduce((acc, curr) => acc + (curr.count || 0), 0);
-
-      // Application windows (admin RLS allows direct select). Resilient if the
-      // table does not exist yet (pre-migration).
-      let applicationsTotal = 0;
-      let applicationsOpen = 0;
-      let applicationsUpcoming = 0;
-      let applicationsClosed = 0;
-      const applicationsRes = await supabase
-        .from('application_links')
-        .select('open_at, due_at, is_enabled');
-      if (!applicationsRes.error && applicationsRes.data) {
-        const nowDate = new Date();
-        applicationsTotal = applicationsRes.data.length;
-        applicationsRes.data.forEach((row) => {
-          const status = getApplicationStatus(row.open_at, row.due_at, row.is_enabled, nowDate);
-          if (status === 'open') applicationsOpen += 1;
-          else if (status === 'not_open') applicationsUpcoming += 1;
-          else if (status === 'closed') applicationsClosed += 1;
-        });
-      }
-
-      setStats({
-        members: membersResult.count ?? 0,
-        events: eventsResult.count ?? 0,
-        upcomingEvents: upcomingResult.count ?? 0,
-        cabinetMembers: cabinetResult.count ?? 0,
-        galleryAlbums: galleryResult.count ?? 0,
-        academicTerms: academicTermsResult.count ?? 0,
-        cabinetYears: cabinetYearsResult.count ?? 0,
-        feedback: feedbackResult.count ?? 0,
-        pendingFeedback: pendingFeedbackResult.count ?? 0,
-        mergeCandidates: mergeResult.count ?? 0,
-        eventsMissingTerms: missingTermsResult.count ?? 0,
-        upcomingEventsMissingInfo: upcomingMissingInfoResult.count ?? 0,
-        galleryAlbumsMissingCover: missingGalleryCoverResult.count ?? 0,
-        eventsPublished: eventsPublishedRes.count ?? 0,
-        eventsDraft: eventsDraftRes.count ?? 0,
-        eventsUpcomingPublished: eventsUpcomingPublishedRes.count ?? 0,
-        eventsMissingImage: eventsMissingImageRes.count ?? 0,
-        eventsMissingLocation: eventsMissingLocationRes.count ?? 0,
-        housesCurrentCount: housesCurrentRes.count ?? 0,
-        housesCurrentYearStart,
-        activeTermUnavailable,
-        housesMissingImage: housesMissingImageRes.count ?? 0,
-        housesMissingParents: housesMissingParentsRes.count ?? 0,
-        galleryCount: galleryCountRes.count ?? 0,
-        galleryMissingCover: galleryMissingCoverRes.count ?? 0,
-        galleryMissingPhotosUrl: galleryMissingPhotosRes.count ?? 0,
-        cabinetActiveYear: activeCabinetYearId ? { id: activeCabinetYearId, label: activeCabinetYearLabel! } : null,
-        cabinetMembersActiveYear: cabinetMembersRes.count ?? 0,
-        cabinetMissingImage: cabinetMissingImageRes.count ?? 0,
-        cabinetMissingRole: cabinetMissingRoleRes.count ?? 0,
-        vcnCurrentPublishedExists: (vcnPublishedRes.count ?? 0) > 0,
-        vcnArchiveCount: vcnArchiveRes.count ?? 0,
-        vcnMissingMedia: vcnMissingMediaRes.count ?? 0,
-        programContentMissing: programContentRes.count ?? 0,
-        aiTableExists,
-        aiSnippetsActive,
-        aiSnippetsInactive,
-        aiLastVerifiedAt,
-        storageUrlsCount: storageCount,
-        applicationsTotal,
-        applicationsOpen,
-        applicationsUpcoming,
-        applicationsClosed,
-      });
-      setLoading(false);
-    }
-
-    loadOverview();
-  }, []);
+  function refreshHealth() {
+    return queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+  }
 
   const filteredGroups = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -694,16 +400,33 @@ export default function AdminOverview() {
       <PageTitle title="Admin Dashboard" />
 
       <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="max-w-5xl">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
-            Admin dashboard
-          </p>
-          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
-            What are you trying to edit?
-          </h1>
-          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-            Jump into the existing VSA admin tools by topic, or search for the thing you need to update.
-          </p>
+        <div className="flex max-w-5xl flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-text3)' }}>
+              Admin dashboard
+            </p>
+            <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+              What are you trying to edit?
+            </h1>
+            <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              Jump into the existing VSA admin tools by topic, or search for the thing you need to update.
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-1 sm:items-end">
+            <button
+              type="button"
+              onClick={refreshHealth}
+              disabled={refreshing}
+              className="rounded border border-[var(--color-border)] px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-60 dark:text-brand-400"
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh counts'}
+            </button>
+            {overview.dataUpdatedAt > 0 && (
+              <p className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                Counts loaded {new Date(overview.dataUpdatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -714,6 +437,11 @@ export default function AdminOverview() {
         <div className="mb-8 lg:mb-10">
           <RecentActivityCard />
         </div>
+        {unavailable.length > 0 && (
+          <div role="status" className="mb-6 rounded border border-amber-300 bg-amber-50 px-4 py-3 font-sans text-[13px] text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+            Some counts could not be loaded ({unavailable.join(', ')}), so numbers below may be incomplete. Use Refresh counts to try again.
+          </div>
+        )}
         {loading ? (
           <div className="py-16 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
             Loading overview...
