@@ -9,6 +9,7 @@ import {
   type SelectedYear,
 } from "../../../hooks/useFindMyPoints";
 import { MyVSACard } from "./MyVSACard";
+import { formatRank } from "../../../utils/leaderboardRanking";
 import { isSupabaseUnavailable } from "../../../utils/isSupabaseUnavailable";
 import { FALLBACK_POINTS } from "../../../config/publicFallbackContent";
 import { Avatar } from "../avatar/Avatar";
@@ -553,7 +554,7 @@ function MultipleMatches({
                   className="font-mono text-base font-black"
                   style={{ color: "var(--text)" }}
                 >
-                  #{entry.rank}
+                  {formatRank(entry)}
                 </div>
               </div>
             </button>

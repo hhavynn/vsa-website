@@ -5,6 +5,12 @@ import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { HouseMemberRankEntry } from '../../../types';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { resolveMemberPhoto } from '../../../lib/memberPhotos';
+import {
+  assignTiedRanks,
+  compareMemberNames,
+  comparePointsThenEvents,
+  isWithinTop,
+} from '../../../utils/leaderboardRanking';
 
 const HOUSE_EMOJI: Record<HouseName, string> = {
   Bowser: '🐢',
@@ -96,7 +102,19 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
   };
 
   const houseGroups = Array.from(byHouse.entries())
-    .map(([key, members]) => ({ key, members, profile: members[0] }))
+    .map(([key, members]) => ({
+      key,
+      members: assignTiedRanks(
+        members,
+        (a, b) =>
+          comparePointsThenEvents(
+            { points: a.total_points, events_attended: a.events_attended },
+            { points: b.total_points, events_attended: b.events_attended }
+          ),
+        (a, b) => compareMemberNames(a, b) || a.member_id.localeCompare(b.member_id)
+      ),
+      profile: members[0],
+    }))
     .sort((a, b) => {
       const aOrder = a.profile?.academic_year_start ?? 0;
       const bOrder = b.profile?.academic_year_start ?? 0;
@@ -204,8 +222,10 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                   ) : (
                     <div>
                       {visible.map((member, idx) => {
-                        const rank = idx + 1;
-                        const isTop = rank === 1 && member.total_points > 0;
+                        const { rank, tiedCount } = member;
+                        const isPodium = isWithinTop(member, 3);
+                        // A tie for 1st still earns the trophy, but not a tie so big it spills past the top 3.
+                        const isTop = rank === 1 && isPodium && member.total_points > 0;
                         const name = `${member.first_name} ${member.last_name}`.trim();
                         const meta = [member.graduation_year, member.college].filter(Boolean).join(' · ');
 
@@ -222,12 +242,12 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                             <div
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-black"
                               style={{
-                                background: rank <= 3 ? color : 'var(--color-surface2)',
-                                color: rank <= 3 ? 'white' : 'var(--color-text3)',
-                                border: rank > 3 ? '1.5px solid var(--color-border)' : undefined,
+                                background: isPodium ? color : 'var(--color-surface2)',
+                                color: isPodium ? 'white' : 'var(--color-text3)',
+                                border: isPodium ? undefined : '1.5px solid var(--color-border)',
                               }}
                             >
-                              {rank}
+                              {tiedCount > 1 ? `T${rank}` : rank}
                             </div>
 
                             {/* Avatar */}

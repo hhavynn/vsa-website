@@ -1,10 +1,16 @@
 import { useQuery } from 'react-query';
 import { supabase } from '../lib/supabase';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import {
+  assignTiedRanks,
+  compareMemberNames,
+  comparePointsThenEvents,
+  RankPlacement,
+} from '../utils/leaderboardRanking';
 
 export type SelectedYear = number | 'all';
 
-export interface FindMyPointsEntry {
+interface UnrankedEntry {
   member_id: string;
   first_name: string;
   last_name: string;
@@ -15,7 +21,22 @@ export interface FindMyPointsEntry {
   total_points: number;
   events_attended: number;
   all_time_points: number;
-  rank: number;
+}
+
+export type FindMyPointsEntry = UnrankedEntry & RankPlacement;
+
+// Same ordering and tie rules as /leaderboard, so a member sees the same rank
+// on both pages.
+function rankEntries(entries: UnrankedEntry[]): FindMyPointsEntry[] {
+  return assignTiedRanks(
+    entries,
+    (a, b) =>
+      comparePointsThenEvents(
+        { points: a.total_points, events_attended: a.events_attended },
+        { points: b.total_points, events_attended: b.events_attended }
+      ),
+    (a, b) => compareMemberNames(a, b) || a.member_id.localeCompare(b.member_id)
+  );
 }
 
 export function useFindMyPoints(selectedYear: SelectedYear | null) {
@@ -33,7 +54,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           .order('points', { ascending: false });
         if (error) throw error;
 
-        return (data ?? []).map((m: any, idx: number) => ({
+        return rankEntries((data ?? []).map((m: any) => ({
           member_id: m.id,
           first_name: m.first_name ?? '',
           last_name: m.last_name ?? '',
@@ -44,8 +65,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           total_points: m.points ?? 0,
           events_attended: m.events_attended ?? 0,
           all_time_points: m.points ?? 0,
-          rank: idx + 1,
-        }));
+        })));
       }
 
       const yearly = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
@@ -68,7 +88,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
         }
       }
 
-      return yearly.map((m, idx) => {
+      return rankEntries(yearly.map((m) => {
         const extra = enrichment.get(m.member_id);
         return {
           member_id: m.member_id,
@@ -81,9 +101,8 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           total_points: m.total_points,
           events_attended: m.events_attended,
           all_time_points: extra?.allTime ?? m.total_points,
-          rank: idx + 1,
         };
-      });
+      }));
     },
   });
 }

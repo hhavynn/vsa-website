@@ -109,8 +109,14 @@ it('updates all-time standings within 30 seconds without a raw members event', a
   const topRow = screen.getAllByRole('button', { name: /Open profile for/ })[0];
   expect(topRow).toHaveAccessibleName('Open profile for Beta Member');
   expect(within(topRow).getByText('20')).toBeInTheDocument();
+  // Equal event counts are a tie on the Events tab: both share T1, listed alphabetically.
   fireEvent.click(screen.getByRole('button', { name: 'EVENTS' }));
-  expect(screen.getAllByRole('button', { name: /Open profile for/ })[0]).toHaveAccessibleName('Open profile for Beta Member');
+  const eventRows = screen.getAllByRole('button', { name: /Open profile for/ });
+  expect(eventRows[0]).toHaveAccessibleName('Open profile for Alpha Member');
+  for (const row of eventRows) {
+    expect(within(row).getByText('T1')).toBeInTheDocument();
+    expect(within(row).getByText('2-way tie')).toBeInTheDocument();
+  }
 });
 
 it('pauses hidden-tab polling and refreshes when the page becomes visible', async () => {

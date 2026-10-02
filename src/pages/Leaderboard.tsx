@@ -23,7 +23,16 @@ import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { formatDateOnly } from '../lib/dateOnly';
 import { HouseRecentActivity, MemberEventHistoryEntry, MemberHouseBadge } from '../types';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
-import { comparePointsThenEvents, getLeaderboardGap, LeaderboardGap } from '../utils/leaderboardRanking';
+import {
+  assignTiedRanks,
+  compareMemberNames,
+  comparePointsThenEvents,
+  formatRank,
+  getLeaderboardGap,
+  isWithinTop,
+  LeaderboardGap,
+  RankPlacement,
+} from '../utils/leaderboardRanking';
 import { buildAcademicYearOptions, resolveDefaultLeaderboardYear, type AcademicYearOption } from '../utils/leaderboardYears';
 import { Link } from 'react-router-dom';
 
@@ -111,8 +120,9 @@ function TapeAccent({ position = 'top-left', color = 'primary' }: { position?: '
 // Small "distance to the rank above" caption, purely derived from the
 // already-fetched, already-ranked entries array — reads entry.rank and the
 // neighboring entry's already-computed points/events_attended, no new
-// queries or sorting. Renders nothing for rank 1 or when there's no entry
-// directly above (e.g. a filtered search result with a gap in ranks).
+// queries or sorting. Tied members get the size of their tie instead. An
+// untied member sits at index rank - 1, so the entry above is the last
+// member of the group ahead of it.
 function RankGapNote({
   entries,
   entry,
@@ -122,23 +132,24 @@ function RankGapNote({
   entry: LeaderboardEntry;
   metric: 'points' | 'events';
 }) {
+  if (entry.tiedCount > 1) {
+    return (
+      <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--brand)' }}>
+        {entry.tiedCount.toLocaleString()}-way tie
+      </div>
+    );
+  }
+
   if (entry.rank <= 1) return null;
   const above = entries[entry.rank - 2];
   if (!above) return null;
 
   const gap = getLeaderboardGap(above, entry, metric);
-
-  if (gap.metric === 'tie') {
-    return (
-      <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--brand)' }}>
-        tied w/ #{entry.rank - 1}
-      </div>
-    );
-  }
+  if (gap.metric === 'tie') return null;
 
   return (
     <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--text3)' }}>
-      {getGapCaption(gap, `to #${entry.rank - 1}`)}
+      {getGapCaption(gap, `to ${formatRank(above)}`)}
     </div>
   );
 }
@@ -159,8 +170,10 @@ function getGapCaption(
 // TYPES & UTILS
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface LeaderboardEntry extends Member {
-  rank: number;
+type LeaderboardEntry = Member & RankPlacement;
+
+function compareMembersForDisplay(a: Member, b: Member) {
+  return compareMemberNames(a, b) || a.id.localeCompare(b.id);
 }
 
 interface HouseStanding {
@@ -286,7 +299,7 @@ function PublicMemberProfileModal({
               <h2 className="truncate font-serif text-2xl font-bold text-[var(--text)]">{displayName}</h2>
               <p className="mt-1 font-sans text-xs text-[var(--text2)]">{meta}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {member.rank <= 3 && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
+                {isWithinTop(member, 3) && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
                 <StickerBadge color="primary" size="sm">{primaryLabel.toUpperCase()}</StickerBadge>
                 {houseBadge && (
                   <span
@@ -480,12 +493,9 @@ export function Leaderboard() {
     }
     if (!members) return;
 
-    const rankedMembers = [...members];
-    setByPoints(rankedMembers.sort(comparePointsThenEvents).map((member, index) => ({ ...member, rank: index + 1 })));
+    setByPoints(assignTiedRanks(members, comparePointsThenEvents, compareMembersForDisplay));
     setByEvents(
-      [...rankedMembers]
-        .sort((a, b) => b.events_attended - a.events_attended)
-        .map((member, index) => ({ ...member, rank: index + 1 }))
+      assignTiedRanks(members, (a, b) => b.events_attended - a.events_attended, compareMembersForDisplay)
     );
     setError(null);
   }, [members, leaderboardError]);
@@ -616,6 +626,9 @@ export function Leaderboard() {
   } = usePagination(filteredEntries, { defaultRowsPerPage: 25, resetKey });
 
   const top3 = filteredEntries.slice(0, 3);
+  // Skip the podium when a tie spills past 3rd place: there's no fair way to
+  // pick which tied members get the last podium spots.
+  const showPodium = top3.length >= 3 && top3.every((entry) => isWithinTop(entry, 3));
   const waitingForInitialYear = selectedYear === null && !defaultYearReady;
 
   if ((waitingForInitialYear || loading) && selectedYear === null) return <LeaderboardSkeleton />;
@@ -748,7 +761,7 @@ export function Leaderboard() {
       <div className="vsa-container py-8">
         {activeView === 'individual' ? (
           <>
-          {top3.length >= 3 && (
+          {showPodium && (
             <PodiumIndividual
               top3={top3}
               activeTab={activeTab}
@@ -807,9 +820,9 @@ export function Leaderboard() {
                       {/* Rank */}
                       <div className="flex w-12 shrink-0 items-center justify-center sm:w-16">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 font-mono font-black transition-colors ${
-                          entry.rank <= 3 ? 'border-[var(--brand)] text-[var(--text)]' : 'border-[var(--border)] text-[var(--text3)] group-hover:border-[var(--brand)]/30'
+                          isWithinTop(entry, 3) ? 'border-[var(--brand)] text-[var(--text)]' : 'border-[var(--border)] text-[var(--text3)] group-hover:border-[var(--brand)]/30'
                         }`}>
-                          #{entry.rank}
+                          {formatRank(entry)}
                         </div>
                       </div>
 
@@ -955,17 +968,17 @@ function PodiumIndividual({
     {
       entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const,
       riser: 64, revealDelay: 0.15,
-      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'to pass #1', eventTiebreakDirection: 'fewer' as const,
+      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: `to pass ${formatRank(first)}`, eventTiebreakDirection: 'fewer' as const,
     },
     {
       entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
       riser: 96, revealDelay: 0.3,
-      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: 'ahead of #2', eventTiebreakDirection: 'more' as const,
+      gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: second ? `ahead of ${formatRank(second)}` : '', eventTiebreakDirection: 'more' as const,
     },
     {
       entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const,
       riser: 40, revealDelay: 0,
-      gap: second && third ? getLeaderboardGap(second, third, activeTab) : null, gapLabel: 'to pass #2', eventTiebreakDirection: 'fewer' as const,
+      gap: second && third ? getLeaderboardGap(second, third, activeTab) : null, gapLabel: second ? `to pass ${formatRank(second)}` : '', eventTiebreakDirection: 'fewer' as const,
     },
   ];
 
@@ -981,6 +994,7 @@ function PodiumIndividual({
         {cards.map((card) => {
           if (!card.entry) return null;
           const isFirst = card.rank === 1;
+          const rankLabel = card.entry.tiedCount > 1 ? `T${card.entry.rank}` : card.entry.rank;
           const value = activeTab === 'points' ? card.entry.points : card.entry.events_attended;
           const Icon = card.icon;
 
@@ -1025,7 +1039,7 @@ function PodiumIndividual({
                     className="flex h-12 w-12 items-center justify-center rounded-full font-mono text-2xl font-black text-white shadow-lg border-2 border-white/50"
                     style={{ background: card.color }}
                   >
-                    {card.rank}
+                    {rankLabel}
                   </div>
                 </div>
 
@@ -1088,7 +1102,7 @@ function PodiumIndividual({
                 style={{ height: card.riser, borderColor: card.color, background: `${card.color}12` }}
               >
                 <span className="font-mono text-5xl font-black opacity-15" style={{ color: card.color }}>
-                  {card.rank}
+                  {rankLabel}
                 </span>
               </div>
             </motion.div>

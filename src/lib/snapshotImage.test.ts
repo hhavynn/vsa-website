@@ -5,7 +5,7 @@ const data: SnapshotData = {
   subline: '2027 • Revelle',
   periodLabel: '2025–26 points',
   rankLabel: 'Yearly rank',
-  rank: 12,
+  rank: '#12',
   points: 1234,
   checkIns: 7,
   allTimePoints: 2345,
