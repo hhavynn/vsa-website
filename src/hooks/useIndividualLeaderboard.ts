@@ -35,8 +35,11 @@ export function useIndividualLeaderboard(year: number | 'all' | null) {
     },
     {
       enabled: year !== null,
+      // Cached leaderboard data is considered fresh for 5 minutes.
+      // It refreshes on a later query trigger/remount/invalidation rather than continuous polling.
       staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
+      refetchOnReconnect: false,
       retry: false,
     },
   );

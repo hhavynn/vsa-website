@@ -94,7 +94,8 @@ it('does not refetch all-time standings within the stale window', async () => {
   await advanceTime();
   const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
   fetch.mockClear();
-  // Advance well past the old 30s polling interval but within the 5 min staleTime
+  // Cached leaderboard data is considered fresh for 5 minutes.
+  // It refreshes on a later query trigger/remount/invalidation rather than continuous polling.
   await advanceTime(120_000);
   expect(fetch).not.toHaveBeenCalled();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
@@ -106,6 +107,17 @@ it('does not refetch all-time standings on window focus', async () => {
   const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
   fetch.mockClear();
   act(() => { window.dispatchEvent(new Event('focus')); });
+  await advanceTime();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(screen.getByText('Alpha Member')).toBeInTheDocument();
+});
+
+it('does not refetch all-time standings on network reconnect', async () => {
+  renderLeaderboard();
+  await advanceTime();
+  const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
+  fetch.mockClear();
+  act(() => { window.dispatchEvent(new Event('online')); });
   await advanceTime();
   expect(fetch).not.toHaveBeenCalled();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
@@ -150,14 +162,14 @@ it('shows error state on initial fetch failure', async () => {
   expect(screen.getByText('Leaderboard temporarily unavailable')).toBeInTheDocument();
 });
 
-it('recovers when cache is invalidated after a fetch error', async () => {
+it('refreshes query when explicitly invalidated', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
   jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockRejectedValueOnce(new Error('Unavailable'));
   renderLeaderboard();
   await advanceTime();
   expect(screen.getByText('Leaderboard temporarily unavailable')).toBeInTheDocument();
 
-  // Simulate cache invalidation (e.g. after admin import)
+  // Verify explicit invalidation triggers a fresh query execution
   jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
     member('Alpha', 10), member('Beta', 5),
   ]);
