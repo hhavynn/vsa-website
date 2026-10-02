@@ -231,6 +231,38 @@ describe("UpcomingExternals", () => {
     expect(screen.queryByText("Nothing yet")).not.toBeInTheDocument();
   });
 
+  it("shows an error panel instead of the empty or summer state when errored", () => {
+    render(
+      <UpcomingExternals
+        {...base}
+        events={[]}
+        error
+        summerEmpty={{
+          badge: "Summer break",
+          title: "Back in fall",
+          body: "See you then",
+        }}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Upcoming externals couldn't load right now.",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Upcoming Externals" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /instagram/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("instagram.com"),
+    );
+    expect(screen.queryByText("Nothing yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("Back in fall")).not.toBeInTheDocument();
+  });
+
+  it("does not show the error panel while still loading", () => {
+    render(<UpcomingExternals {...base} events={[]} loading error />);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("renders skeletons while loading", () => {
     const { container } = render(
       <UpcomingExternals {...base} events={[]} loading />,
@@ -311,6 +343,22 @@ describe("ExternalArchive", () => {
   it("renders nothing when there is no archive", () => {
     const { container } = render(<ExternalArchive {...props} events={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows a notice, not nothing, when the archive failed to load", () => {
+    render(<ExternalArchive {...props} events={[]} error />);
+    expect(
+      screen.getByRole("heading", { name: props.heading }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /couldn't load right now/i,
+    );
+  });
+
+  it("keeps the partial archive visible alongside the notice", () => {
+    render(<ExternalArchive {...props} events={events} error />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByText("Fall Show")).toBeInTheDocument();
   });
 
   it("shows a skeleton while loading", () => {

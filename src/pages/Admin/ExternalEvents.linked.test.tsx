@@ -4,6 +4,7 @@
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import toast from 'react-hot-toast';
 import { MemoryRouter } from 'react-router-dom';
 import AdminExternalEvents from './ExternalEvents';
 import { ExternalEvent } from '../../types';
@@ -140,4 +141,101 @@ it('disables deletion of linked mirror rows and directs deletion to Admin Events
   fireEvent.click(enabledDeleteBtn);
   expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this event?');
   expect(mockDeleteMutateAsync).toHaveBeenCalledWith('plain');
+});
+
+describe('Flyer Image URL on save', () => {
+  const FLYER_PLACEHOLDER = 'https://… (optional)';
+  const clickEdit = async () => fireEvent.click(await screen.findByRole('button', { name: /Edit/ }));
+  const save = () => fireEvent.click(screen.getByRole('button', { name: /Save Event/ }));
+  const toastError = jest.spyOn(toast, 'error');
+
+  beforeEach(() => toastError.mockClear());
+
+  it('omits image_url when the flyer is blank on a row without the column', async () => {
+    mockState.events = [makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id' })];
+    expect('image_url' in mockState.events[0]).toBe(false);
+    renderPage();
+    await clickEdit();
+    save();
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync.mock.calls[0][0]).not.toHaveProperty('image_url');
+  });
+
+  it('omits image_url for a new row with a blank flyer', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Add Event/ }));
+    await userEvent.type(screen.getByPlaceholderText('e.g. Mount Jamprov'), 'New Night');
+    await userEvent.selectOptions(screen.getByDisplayValue('Select a host'), 'uvsa_socal');
+    save();
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync.mock.calls[0][0]).not.toHaveProperty('image_url');
+  });
+
+  it('includes image_url when a flyer is entered, even if the row lacks the column', async () => {
+    mockState.events = [makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id' })];
+    renderPage();
+    await clickEdit();
+    await userEvent.type(screen.getByPlaceholderText(FLYER_PLACEHOLDER), 'https://cdn.example/flyer.webp');
+    save();
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync.mock.calls[0][0].image_url).toBe('https://cdn.example/flyer.webp');
+  });
+
+  it('sends null when clearing the flyer on a row that already carries image_url', async () => {
+    mockState.events = [
+      makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id', image_url: 'https://cdn.example/old.webp' }),
+    ];
+    renderPage();
+    await clickEdit();
+    await userEvent.clear(screen.getByPlaceholderText(FLYER_PLACEHOLDER));
+    save();
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync.mock.calls[0][0]).toHaveProperty('image_url', null);
+  });
+
+  it('sends null for an untouched blank flyer when the row already has an image_url key', async () => {
+    mockState.events = [makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id', image_url: null })];
+    renderPage();
+    await clickEdit();
+    save();
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(mockMutateAsync.mock.calls[0][0]).toHaveProperty('image_url', null);
+  });
+
+  it.each(['/images/events/x.webp', 'http://cdn.example/x.webp', 'javascript:alert(1)'])(
+    'rejects a non-https flyer (%s) on save',
+    async bad => {
+      mockState.events = [makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id' })];
+      renderPage();
+      await clickEdit();
+      await userEvent.type(screen.getByPlaceholderText(FLYER_PLACEHOLDER), bad);
+      save();
+
+      await waitFor(() => expect(toastError).toHaveBeenCalledWith('Flyer Image URL must be an https link.'));
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses consistent flyer copy for linked and standalone rows', async () => {
+    mockState.events = [
+      makeEvent({ id: 'linked', title: 'Synced', source_event_id: 'evt-1', source_event: { id: 'evt-1', name: 'Synced' }, uvsa_school: mockUci, uvsa_school_id: 'uci-id' }),
+    ];
+    const { unmount } = renderPage();
+    await clickEdit();
+    expect(screen.getByPlaceholderText(FLYER_PLACEHOLDER)).toBeDisabled();
+    expect(screen.getByText('Flyer comes from the linked event; upload or change it in Admin → Events.')).toBeInTheDocument();
+    unmount();
+
+    mockState.events = [makeEvent({ id: 'plain', title: 'Plain', uvsa_school: mockUci, uvsa_school_id: 'uci-id' })];
+    renderPage();
+    await clickEdit();
+    expect(screen.getByPlaceholderText(FLYER_PLACEHOLDER)).toBeEnabled();
+    expect(screen.getByText(/Optional\. Paste an https:\/\/ link to the flyer image/)).toBeInTheDocument();
+    expect(screen.queryByText(/instead of uploading or embedding flyer media/)).not.toBeInTheDocument();
+  });
 });

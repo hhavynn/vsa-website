@@ -6,6 +6,10 @@ import { formatEventTime, formatEventTimeRange } from "./eventTime";
  * A flyer URL is safe to render when it is https or a root-relative static
  * asset (events migrated to /images/... keep that shape). Anything else, such
  * as `javascript:`, `data:` or a protocol-relative `//host`, is dropped.
+ *
+ * Root-relative paths are accepted on purpose: a linked event's static
+ * /images/events/... thumbnail flows through this on the public renderer. The
+ * admin flyer field is stricter; it uses `isHttpsFlyerUrl` instead.
  */
 export function getSafeFlyerUrl(url?: string | null): string | null {
   const trimmed = url?.trim();
@@ -15,6 +19,17 @@ export function getSafeFlyerUrl(url?: string | null): string | null {
     return new URL(trimmed).protocol === "https:" ? trimmed : null;
   } catch {
     return null;
+  }
+}
+
+/** True only for a parseable https: URL (the admin Flyer Image URL rule). */
+export function isHttpsFlyerUrl(url?: string | null): boolean {
+  const trimmed = url?.trim();
+  if (!trimmed) return false;
+  try {
+    return new URL(trimmed).protocol === "https:";
+  } catch {
+    return false;
   }
 }
 

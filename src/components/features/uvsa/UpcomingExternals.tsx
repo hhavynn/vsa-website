@@ -1,4 +1,5 @@
 import { ExternalEvent } from "../../../types";
+import { FALLBACK_LINKS } from "../../../config/publicFallbackContent";
 import { Skeleton } from "../../ui/Skeleton";
 import { CalendarIcon } from "./icons";
 import { ExternalEventCard } from "./ExternalEventCard";
@@ -15,6 +16,7 @@ export function UpcomingExternals({
   events,
   featured,
   loading,
+  error = false,
   summerEmpty,
   emptyTitle,
   emptyMessage,
@@ -24,6 +26,8 @@ export function UpcomingExternals({
   /** Set only when a featured event is genuinely upcoming. */
   featured?: ExternalEvent;
   loading: boolean;
+  /** The listing query failed; show an error instead of any empty state. */
+  error?: boolean;
   /** When set, replaces the generic empty state (summer break). */
   summerEmpty?: SummerEmptyCopy;
   emptyTitle: string;
@@ -61,6 +65,27 @@ export function UpcomingExternals({
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[28rem] rounded-lg" />
           ))}
+        </div>
+      ) : error ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-[var(--color-border)] bg-surface p-6 sm:p-8"
+        >
+          <p className="font-serif text-xl text-text-primary">
+            Upcoming externals couldn&apos;t load right now.
+          </p>
+          <p className="mt-2 font-sans text-sm text-text-secondary">
+            Try again in a bit, or check{" "}
+            <a
+              href={FALLBACK_LINKS.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand-600 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-brand-400 dark:focus-visible:ring-brand-400"
+            >
+              our Instagram
+            </a>{" "}
+            for the latest.
+          </p>
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-surface p-8 text-center sm:p-10">

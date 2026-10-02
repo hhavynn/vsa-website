@@ -76,9 +76,15 @@ export default function UVSANetwork() {
   const { upcoming: upcomingEvents, lapsed: lapsedEvents } =
     splitLapsedUpcoming(upcomingRows, getLosAngelesDateOnly());
   const featuredEvent = pickFeaturedUpcomingEvent(upcomingEvents);
-  const summerEmpty = shouldUseSummerEmptyState(upcomingEvents.length > 0)
-    ? getSummerBreakMessage("externals")
-    : undefined;
+  // Any error that reaches here is not an outage (that returned above), e.g. a
+  // schema mismatch. Show it as a failure, never as a legitimate empty state.
+  // Rows react-query still holds from an earlier fetch stay visible.
+  const upcomingFailed = Boolean(upcomingError) && upcomingRows.length === 0;
+  const archiveFailed = Boolean(pastError || historicalError);
+  const summerEmpty =
+    !upcomingFailed && shouldUseSummerEmptyState(upcomingEvents.length > 0)
+      ? getSummerBreakMessage("externals")
+      : undefined;
 
   return (
     <>
@@ -97,6 +103,7 @@ export default function UVSANetwork() {
             events={upcomingEvents}
             featured={featuredEvent}
             loading={upcomingLoading}
+            error={upcomingFailed}
             summerEmpty={summerEmpty}
             emptyTitle={settings.empty_state_title}
             emptyMessage={settings.empty_state_message}
@@ -117,6 +124,7 @@ export default function UVSANetwork() {
             description={settings.showcase_description}
             events={[...pastEvents, ...lapsedEvents, ...historicalEvents]}
             loading={pastLoading || historicalLoading}
+            error={archiveFailed}
           />
         </RevealOnScrollWrapper>
 

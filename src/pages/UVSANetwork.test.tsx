@@ -16,12 +16,34 @@ const mockState: {
   past: ExternalEvent[];
   historical: ExternalEvent[];
   loading: boolean;
-} = { schools: [], upcoming: [], past: [], historical: [], loading: false };
+  errors: { upcoming?: unknown; past?: unknown; historical?: unknown };
+  forceSummer: boolean;
+} = {
+  schools: [],
+  upcoming: [],
+  past: [],
+  historical: [],
+  loading: false,
+  errors: {},
+  forceSummer: false,
+};
+
+// A non-outage failure, e.g. the image_url migration has not been applied yet.
+const SCHEMA_ERROR = {
+  code: "42703",
+  message: "column external_events.image_url does not exist",
+};
 
 // Pin "today" so fixture dates never drift from upcoming to past as time passes.
 jest.mock("../utils/losAngelesDate", () => ({
   ...jest.requireActual("../utils/losAngelesDate"),
   getLosAngelesDateOnly: () => "2026-10-01",
+}));
+// Lets a test exercise the summer-break branch regardless of the real date.
+jest.mock("../utils/seasonalState", () => ({
+  ...jest.requireActual("../utils/seasonalState"),
+  shouldUseSummerEmptyState: (hasActiveItems: boolean) =>
+    mockState.forceSummer && !hasActiveItems,
 }));
 jest.mock("../hooks/useUVSASchools", () => ({
   useUVSASchools: () => ({
@@ -47,7 +69,7 @@ jest.mock("../hooks/useExternalEvents", () => ({
           ? mockState.past
           : mockState.historical,
     loading: mockState.loading,
-    error: null,
+    error: (mockState.errors as Record<string, unknown>)[status] ?? null,
   }),
 }));
 
@@ -86,6 +108,8 @@ beforeEach(() => {
   ];
   mockState.historical = [];
   mockState.loading = false;
+  mockState.errors = {};
+  mockState.forceSummer = false;
 });
 
 describe("UVSANetwork page", () => {
@@ -281,5 +305,98 @@ describe("UVSANetwork page", () => {
     expect(
       screen.queryByText(DEFAULT_UVSA_NETWORK_PAGE_SETTINGS.empty_state_title),
     ).not.toBeInTheDocument();
+  });
+
+  describe("when an external events query fails", () => {
+    it("shows an error panel, not the empty or summer state, when upcoming fails", () => {
+      mockState.upcoming = [];
+      mockState.forceSummer = true;
+      mockState.errors = { upcoming: SCHEMA_ERROR };
+      renderPage();
+
+      const upcoming = document.querySelector("#upcoming") as HTMLElement;
+      expect(
+        within(upcoming).getByRole("heading", {
+          name: DEFAULT_UVSA_NETWORK_PAGE_SETTINGS.upcoming_heading,
+        }),
+      ).toBeInTheDocument();
+      expect(within(upcoming).getByRole("alert")).toHaveTextContent(
+        /couldn't load right now/i,
+      );
+      expect(
+        within(upcoming).getByRole("link", { name: /instagram/i }),
+      ).toHaveAttribute("href", expect.stringContaining("instagram.com"));
+      expect(
+        screen.queryByText(
+          DEFAULT_UVSA_NETWORK_PAGE_SETTINGS.empty_state_title,
+        ),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Summer break/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Externals will return next school term/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps showing upcoming events react-query already holds when a refetch fails", () => {
+      mockState.errors = { upcoming: SCHEMA_ERROR };
+      renderPage();
+
+      const upcoming = document.querySelector("#upcoming") as HTMLElement;
+      expect(
+        within(upcoming).getByRole("heading", { name: "Upcoming Pageant" }),
+      ).toBeInTheDocument();
+      expect(within(upcoming).queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("keeps the hero and schools and shows no whole-page degraded banner", () => {
+      mockState.upcoming = [];
+      mockState.errors = { upcoming: SCHEMA_ERROR };
+      renderPage();
+
+      expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+      expect(document.querySelector("#schools")).toBeInTheDocument();
+      expect(
+        screen.queryByText("External info temporarily unavailable"),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each(["past", "historical"] as const)(
+      "shows an archive notice instead of a silent archive when %s fails",
+      (status) => {
+        mockState.past = [];
+        mockState.historical = [];
+        mockState.errors = { [status]: SCHEMA_ERROR };
+        renderPage();
+
+        const archive = document.querySelector("#archive") as HTMLElement;
+        expect(archive).toBeInTheDocument();
+        expect(within(archive).getByRole("status")).toHaveTextContent(
+          /couldn't load right now/i,
+        );
+        // Upcoming is unaffected.
+        const upcoming = document.querySelector("#upcoming") as HTMLElement;
+        expect(within(upcoming).queryByRole("alert")).not.toBeInTheDocument();
+        expect(
+          within(upcoming).getByText("Upcoming Pageant"),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it("keeps the genuinely empty archive hidden when nothing failed", () => {
+      mockState.past = [];
+      mockState.historical = [];
+      renderPage();
+      expect(document.querySelector("#archive")).not.toBeInTheDocument();
+    });
+
+    it("still shows the existing whole-page degraded state for an outage error", () => {
+      mockState.errors = { upcoming: { status: 503, message: "unavailable" } };
+      renderPage();
+
+      expect(
+        screen.getByText("External info temporarily unavailable"),
+      ).toBeInTheDocument();
+      expect(document.querySelector("#upcoming")).not.toBeInTheDocument();
+    });
   });
 });

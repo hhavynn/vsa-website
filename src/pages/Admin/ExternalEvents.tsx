@@ -17,7 +17,7 @@ import {
   FaMapMarkerAlt 
 } from 'react-icons/fa';
 import { formatDateOnly } from '../../lib/dateOnly';
-import { getSafeFlyerUrl } from '../../lib/externalEventDisplay';
+import { isHttpsFlyerUrl } from '../../lib/externalEventDisplay';
 import {
   buildHostOptions,
   hostColumns,
@@ -97,14 +97,24 @@ export default function AdminExternalEvents() {
       }
 
       const flyer = (formData.image_url ?? '').trim();
-      if (flyer && !getSafeFlyerUrl(flyer)) {
+      if (flyer && !isHttpsFlyerUrl(flyer)) {
         toast.error('Flyer Image URL must be an https link.');
         return;
       }
 
       // Ensure the joined relations are not sent back to Supabase
       const { uvsa_school, source_event, ...payload } = formData as any;
-      payload.image_url = flyer || null;
+      // image_url needs the 20261002070000 migration. Only send it when there
+      // is a value, or when the edited row proves the column exists (admin
+      // reads use select '*', so the key is present only then) so clearing works.
+      const original = editingId ? events.find(e => e.id === editingId) : undefined;
+      if (flyer) {
+        payload.image_url = flyer;
+      } else if (original && 'image_url' in original) {
+        payload.image_url = null;
+      } else {
+        delete payload.image_url;
+      }
 
       await upsertMutation.mutateAsync(payload);
       toast.success(editingId ? 'Event updated' : 'Event added');
@@ -144,7 +154,7 @@ export default function AdminExternalEvents() {
           </h1>
           <p className="font-sans text-sm text-[var(--color-text3)]">{events.length} events managed</p>
           <p className="max-w-2xl font-sans text-xs leading-5 text-[var(--color-text3)]">
-            Use an Instagram post or Linktree URL instead of uploading flyer images. This keeps the site lightweight. Ride forms are coordinated outside the website for now.
+            Linked events use the flyer from Admin → Events; standalone externals can use an https flyer image link. Ride forms are coordinated outside the website for now.
           </p>
         </div>
         <Button onClick={handleAdd} className="flex gap-2">
@@ -269,10 +279,10 @@ export default function AdminExternalEvents() {
                   className={inputCls}
                   value={formData.instagram_url || ''}
                   onChange={e => setFormData({ ...formData, instagram_url: e.target.value })}
-                  placeholder="Outbound post link, not an embedded flyer"
+                  placeholder="Link to the host's Instagram post"
                 />
                 <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
-                  Link to the host's post instead of uploading or embedding flyer media.
+                  Link to the host's Instagram post. The flyer image is set separately.
                 </p>
               </div>
               <div>
@@ -286,8 +296,8 @@ export default function AdminExternalEvents() {
                 />
                 <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
                   {isLinked
-                    ? "Linked events show the flyer from their Admin → Events entry; upload it there."
-                    : "Shown on the Upcoming Externals card. Use an https link to the flyer image; this is separate from the school's logo."}
+                    ? "Flyer comes from the linked event; upload or change it in Admin → Events."
+                    : "Optional. Paste an https:// link to the flyer image. Shown on the Upcoming Externals card; separate from the school's logo."}
                 </p>
               </div>
               <div>
@@ -332,7 +342,7 @@ export default function AdminExternalEvents() {
                 />
               </div>
               <div className="rounded border bg-[var(--color-surface2)] p-3 font-sans text-xs leading-5 text-[var(--color-text3)]" style={{ borderColor: 'var(--border)' }}>
-                Flyers should not be uploaded to Supabase for now. Add outbound Instagram, Linktree, or host event URLs above. Ride forms are not managed on the website.
+                Flyer images are not uploaded here; paste an https link in Flyer Image URL. Add outbound Instagram, Linktree, or host event URLs above. Ride forms are not managed on the website.
               </div>
             </div>
           </div>

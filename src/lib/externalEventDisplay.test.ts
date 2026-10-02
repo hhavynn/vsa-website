@@ -4,6 +4,7 @@ import {
   getExternalDateTile,
   getExternalFlyerCandidates,
   getSafeFlyerUrl,
+  isHttpsFlyerUrl,
 } from "./externalEventDisplay";
 
 const source = (overrides = {}) => ({
@@ -35,6 +36,30 @@ describe("getSafeFlyerUrl", () => {
       "not a url",
     ]) {
       expect(getSafeFlyerUrl(bad)).toBeNull();
+    }
+  });
+});
+
+describe("isHttpsFlyerUrl", () => {
+  it("accepts only a parseable https URL", () => {
+    expect(isHttpsFlyerUrl("https://cdn.example/flyer.webp")).toBe(true);
+    expect(isHttpsFlyerUrl("  https://cdn.example/flyer.webp  ")).toBe(true);
+  });
+
+  it("rejects site-relative, protocol-relative, insecure, script and junk values", () => {
+    for (const bad of [
+      "/images/x.webp",
+      "//host/x",
+      "http://example.com/x.png",
+      "javascript:alert(1)",
+      "data:image/png;base64,AAAA",
+      "not a url",
+      "",
+      "   ",
+      null,
+      undefined,
+    ]) {
+      expect(isHttpsFlyerUrl(bad)).toBe(false);
     }
   });
 });

@@ -13,11 +13,14 @@ export function ExternalArchive({
   description,
   events,
   loading,
+  error = false,
 }: {
   heading: string;
   description: string;
   events: ExternalEvent[];
   loading: boolean;
+  /** A past/historical query failed; the list may be missing events. */
+  error?: boolean;
 }) {
   const groups = useMemo(() => groupArchiveByAcademicYear(events), [events]);
   // The most recent year starts open; older years stay collapsed to keep the page short.
@@ -32,7 +35,7 @@ export function ExternalArchive({
     setOpenKeys(next);
   };
 
-  if (!loading && events.length === 0) return null;
+  if (!loading && !error && events.length === 0) return null;
 
   return (
     <section
@@ -62,6 +65,15 @@ export function ExternalArchive({
         </div>
       ) : (
         <div className="space-y-3">
+          {error && (
+            <p
+              role="status"
+              className="rounded-lg border border-[var(--color-border)] bg-surface px-4 py-3 font-sans text-sm text-text-secondary"
+            >
+              Some past externals couldn&apos;t load right now, so this list may
+              be incomplete.
+            </p>
+          )}
           {groups.map((group) => {
             const isOpen = open.has(group.key);
             const panelId = `archive-${group.key}`;
