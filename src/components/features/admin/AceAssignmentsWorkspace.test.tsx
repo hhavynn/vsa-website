@@ -9,6 +9,10 @@ import AdminAceFamilies from '../../../pages/Admin/AceFamilies';
 import { AceAssignmentsWorkspace } from './AceAssignmentsWorkspace';
 import { supabaseMock } from '../../../test-utils/supabaseMock';
 
+jest.mock('../../../data/repos/adminActivity', () => ({
+  logAdminActivity: jest.fn(),
+  adminActivityRepository: { record: jest.fn(), list: jest.fn().mockResolvedValue([]) },
+}));
 jest.mock('../../../lib/supabase', () => ({
   get supabase() {
     return require('../../../test-utils/supabaseMock').supabaseMock.client;
@@ -75,7 +79,9 @@ function renderWorkspace() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <AceAssignmentsWorkspace />
+      <MemoryRouter>
+        <AceAssignmentsWorkspace />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -99,7 +105,8 @@ describe('draft cycle', () => {
     renderWorkspace();
     expect(await screen.findByText('ACE 2026–27 Assignment')).toBeInTheDocument();
     expect(await screen.findByText('1 unassigned Little')).toBeInTheDocument();
-    expect(screen.getByText('Blocks publish')).toBeInTheDocument();
+    expect(screen.getAllByText('BLOCKER').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Not Ready/)).toBeInTheDocument();
     expect(screen.getByText('1 ambiguous member match')).toBeInTheDocument();
     expect(screen.getByText('Private. Edit freely; nothing here is public.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Publish/ })).not.toBeInTheDocument();
@@ -144,6 +151,63 @@ describe('draft cycle', () => {
     await waitFor(() => expect(callsOf('ace_assignment_drafts', 'update')).toHaveLength(1));
     expect(callsOf('ace_assignment_drafts', 'update')[0].args[0]).toMatchObject({ little_member_id: 'm-amy' });
     expect(supabaseMock.filtersFor('ace_assignment_drafts')).toContainEqual(['id', 'd2']);
+  });
+});
+
+describe('filters, bulk actions and activity', () => {
+  const { logAdminActivity } = jest.requireMock('../../../data/repos/adminActivity');
+
+  beforeEach(() => {
+    logAdminActivity.mockClear();
+    seed('draft', [
+      draft('d1', 'John Nguyen', { big_ace_member_id: 'big-april' }),
+      draft('d2', 'Amy Tran'),
+      draft('d3', 'Andy Tran'),
+    ]);
+  });
+
+  it('shows filter chips with counts and filters the rows', async () => {
+    renderWorkspace();
+    const unassigned = await screen.findByRole('button', { name: /Unassigned Little\s*2/ });
+    expect(screen.getByRole('button', { name: /Possible match\s*2/ })).toBeInTheDocument();
+    fireEvent.click(unassigned);
+    await waitFor(() => expect(screen.getAllByLabelText('Little name')).toHaveLength(2));
+    expect(unassigned).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('bulk link skips the ambiguous Andy Tran and links only the exact match', async () => {
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Amy Tran' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Andy Tran' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Link selected exact matches' }));
+    await waitFor(() => expect(callsOf('ace_assignment_drafts', 'update')).toHaveLength(1));
+    expect(callsOf('ace_assignment_drafts', 'update')[0].args[0]).toMatchObject({ little_member_id: 'm-amy' });
+    expect(supabaseMock.filtersFor('ace_assignment_drafts')).not.toContainEqual(['id', 'd3']);
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'ace.bulk_linked' })));
+  });
+
+  it('records clearing a Big with an undo spec that restores it', async () => {
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear Big for John Nguyen' }));
+    await waitFor(() => expect(callsOf('ace_assignment_drafts', 'update')).toHaveLength(1));
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalled());
+    const entry = logAdminActivity.mock.calls.find(([draft]: [{ action: string }]) => draft.action === 'ace.assignment_changed')[0];
+    expect(entry.summary).toBe("Changed John Nguyen's Big: April Pham → Unassigned");
+    expect(entry.metadata.undo).toEqual({ kind: 'ace_draft_big', target: { draftId: 'd1' }, before: 'big-april', after: null });
+  });
+
+  it('records locking in the activity log', async () => {
+    renderWorkspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    await waitFor(() => expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'ace.cycle_locked' })));
+  });
+
+  it('shows the year, the progress header, and an obvious next step after locking', async () => {
+    renderWorkspace();
+    expect(await screen.findByText('2026–27')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '2026–27 ACE progress' })).toHaveTextContent('Assignments 1 / 3');
+    fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
+    expect(await screen.findByText('Assignments locked')).toBeInTheDocument();
   });
 });
 

@@ -52,10 +52,13 @@ export function ReadinessPanel({
   readiness,
   title = 'Preflight',
   onFilter,
+  passed = [],
 }: {
   readiness: Readiness;
   title?: string;
   onFilter?: (key: string) => void;
+  /** Short "✓" facts that are already in good shape, e.g. "47 Littles". */
+  passed?: readonly string[];
 }) {
   return (
     <section aria-label={title} className="scrapbook-paper border-[var(--color-border)] bg-surface p-5">
@@ -69,6 +72,16 @@ export function ReadinessPanel({
         </p>
       </div>
       <p className="font-mono text-[11px] text-text-muted">{readiness.subline}</p>
+      {passed.length > 0 && (
+        <ul className="mt-2 space-y-0.5 font-sans text-xs text-text-secondary">
+          {passed.map((line) => (
+            <li key={line}>
+              <span aria-hidden className="text-green-700 dark:text-green-400">✓ </span>
+              {line}
+            </li>
+          ))}
+        </ul>
+      )}
       {readiness.issues.length === 0 ? (
         <p className="mt-3 font-sans text-xs text-text-muted">Nothing needs attention.</p>
       ) : (

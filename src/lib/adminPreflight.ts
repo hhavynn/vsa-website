@@ -39,7 +39,7 @@ export interface Readiness {
   blockers: number;
   warnings: number;
   infos: number;
-  headline: 'Ready to Publish' | 'Not Ready';
+  headline: string;
   /** "0 blockers · 3 warnings" */
   subline: string;
   issues: UnifiedIssue[];
@@ -58,7 +58,7 @@ export function buildReadiness(issues: readonly UnifiedIssue[], labels: { ready?
     blockers,
     warnings,
     infos,
-    headline: (ready ? labels.ready ?? 'Ready to Publish' : labels.notReady ?? 'Not Ready') as Readiness['headline'],
+    headline: ready ? labels.ready ?? 'Ready to Publish' : labels.notReady ?? 'Not Ready',
     subline: `${pluralize(blockers, 'blocker')} · ${pluralize(warnings, 'warning')}`,
     issues: sorted,
   };
