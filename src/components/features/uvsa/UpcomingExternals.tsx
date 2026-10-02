@@ -59,7 +59,7 @@ export function UpcomingExternals({
           aria-hidden
         >
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-60 rounded-lg" />
+            <Skeleton key={i} className="h-[28rem] rounded-lg" />
           ))}
         </div>
       ) : events.length === 0 ? (

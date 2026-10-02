@@ -92,14 +92,6 @@ export default function UVSANetwork() {
 
       <div className="vsa-container space-y-16 py-12 sm:space-y-20">
         <RevealOnScrollWrapper>
-          <SchoolDirectory
-            heading={settings.schools_heading}
-            schools={schools}
-            loading={schoolsLoading}
-          />
-        </RevealOnScrollWrapper>
-
-        <RevealOnScrollWrapper>
           <UpcomingExternals
             heading={settings.upcoming_heading}
             events={upcomingEvents}
@@ -112,7 +104,11 @@ export default function UVSANetwork() {
         </RevealOnScrollWrapper>
 
         <RevealOnScrollWrapper>
-          <FirstExternalGuide />
+          <SchoolDirectory
+            heading={settings.schools_heading}
+            schools={schools}
+            loading={schoolsLoading}
+          />
         </RevealOnScrollWrapper>
 
         <RevealOnScrollWrapper>
@@ -122,6 +118,10 @@ export default function UVSANetwork() {
             events={[...pastEvents, ...lapsedEvents, ...historicalEvents]}
             loading={pastLoading || historicalLoading}
           />
+        </RevealOnScrollWrapper>
+
+        <RevealOnScrollWrapper>
+          <FirstExternalGuide />
         </RevealOnScrollWrapper>
 
         <RevealOnScrollWrapper>

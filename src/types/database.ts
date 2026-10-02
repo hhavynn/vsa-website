@@ -1329,6 +1329,7 @@ export type Database = {
           host_info_url: string | null;
           host_type: string;
           id: string;
+          image_url: string | null;
           instagram_url: string | null;
           is_featured: boolean;
           location: string | null;
@@ -1356,6 +1357,7 @@ export type Database = {
           host_info_url?: string | null;
           host_type?: string;
           id?: string;
+          image_url?: string | null;
           instagram_url?: string | null;
           is_featured?: boolean;
           location?: string | null;
@@ -1383,6 +1385,7 @@ export type Database = {
           host_info_url?: string | null;
           host_type?: string;
           id?: string;
+          image_url?: string | null;
           instagram_url?: string | null;
           is_featured?: boolean;
           location?: string | null;

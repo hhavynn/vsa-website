@@ -44,19 +44,19 @@ export function NetworkHero({
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <LinkButton
-              href="#schools"
+              href="#upcoming"
               external={false}
               variant="primary"
               className="min-h-[44px] px-5 text-sm"
             >
-              Meet the Schools
+              Upcoming Externals
             </LinkButton>
             <LinkButton
-              href="#upcoming"
+              href="#schools"
               external={false}
               className="min-h-[44px] px-5 text-sm"
             >
-              Upcoming Externals
+              Meet the Schools
             </LinkButton>
           </div>
         </div>

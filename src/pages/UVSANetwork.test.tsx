@@ -89,14 +89,14 @@ beforeEach(() => {
 });
 
 describe("UVSANetwork page", () => {
-  it("orders sections: hero → schools → upcoming → first external → archive → info footer", () => {
+  it("orders sections: hero → upcoming → schools → archive → first external → info footer", () => {
     const { container } = renderPage();
     const ids = [
       "h1",
-      "#schools",
       "#upcoming",
-      "#first-external",
+      "#schools",
       "#archive",
+      "#first-external",
       "#about-externals-heading",
     ];
     const positions = ids.map(
@@ -127,6 +127,53 @@ describe("UVSANetwork page", () => {
       screen.getByRole("link", { name: "Upcoming Externals" }),
     ).toHaveAttribute("href", "#upcoming");
     expect(screen.getByText(/2 schools/i)).toBeInTheDocument();
+  });
+
+  it("keeps archived events out of Upcoming Externals, even a featured one", () => {
+    mockState.historical = [
+      makeEvent({
+        id: "h1",
+        title: "Historical Classic",
+        status: "historical",
+        is_featured: true,
+        date: "2025-02-01",
+      }),
+    ];
+    renderPage();
+    const upcoming = document.querySelector("#upcoming") as HTMLElement;
+    expect(
+      within(upcoming).getByRole("heading", { name: "Upcoming Pageant" }),
+    ).toBeInTheDocument();
+    expect(
+      within(upcoming).queryByText("Archived Showcase"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(upcoming).queryByText("Historical Classic"),
+    ).not.toBeInTheDocument();
+    expect(upcoming.querySelectorAll("article")).toHaveLength(1);
+  });
+
+  it("shows a linked external's source-event flyer and time on its upcoming card", () => {
+    mockState.upcoming = [
+      makeEvent({
+        id: "linked-flyer",
+        source_event_id: "evt-9",
+        title: "Tet Festival",
+        source_event: {
+          id: "evt-9",
+          name: "Tet Festival",
+          start_time: "18:00:00",
+          thumbnail_url: "https://cdn.example/tet-thumb.webp",
+          image_url: "https://cdn.example/tet-full.webp",
+        },
+      }),
+    ];
+    renderPage();
+    const upcoming = document.querySelector("#upcoming") as HTMLElement;
+    expect(
+      within(upcoming).getByRole("img", { name: "Tet Festival flyer" }),
+    ).toHaveAttribute("src", "https://cdn.example/tet-thumb.webp");
+    expect(within(upcoming).getByText(/· 6 PM/)).toBeInTheDocument();
   });
 
   it("does not promote an archived featured event as a spotlight", () => {

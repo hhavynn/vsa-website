@@ -17,6 +17,7 @@ import {
   FaMapMarkerAlt 
 } from 'react-icons/fa';
 import { formatDateOnly } from '../../lib/dateOnly';
+import { getSafeFlyerUrl } from '../../lib/externalEventDisplay';
 import {
   buildHostOptions,
   hostColumns,
@@ -95,8 +96,15 @@ export default function AdminExternalEvents() {
         return;
       }
 
+      const flyer = (formData.image_url ?? '').trim();
+      if (flyer && !getSafeFlyerUrl(flyer)) {
+        toast.error('Flyer Image URL must be an https link.');
+        return;
+      }
+
       // Ensure the joined relations are not sent back to Supabase
       const { uvsa_school, source_event, ...payload } = formData as any;
+      payload.image_url = flyer || null;
 
       await upsertMutation.mutateAsync(payload);
       toast.success(editingId ? 'Event updated' : 'Event added');
@@ -265,6 +273,21 @@ export default function AdminExternalEvents() {
                 />
                 <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
                   Link to the host's post instead of uploading or embedding flyer media.
+                </p>
+              </div>
+              <div>
+                <label className={labelCls}>Flyer Image URL</label>
+                <input
+                  className={inputCls}
+                  value={formData.image_url || ''}
+                  onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                  placeholder="https://… (optional)"
+                  disabled={isLinked}
+                />
+                <p className="mt-1 font-sans text-xs text-[var(--color-text3)]">
+                  {isLinked
+                    ? "Linked events show the flyer from their Admin → Events entry; upload it there."
+                    : "Shown on the Upcoming Externals card. Use an https link to the flyer image; this is separate from the school's logo."}
                 </p>
               </div>
               <div>

@@ -54,3 +54,34 @@ describe("link_external_events_to_events migration", () => {
     expect(sql).not.toMatch(/\b(update|delete from|insert into)\b/i);
   });
 });
+
+const imageFile = readdirSync(dir).find((name) =>
+  name.endsWith("_add_external_event_image.sql"),
+);
+const imageSql = imageFile
+  ? readFileSync(join(dir, imageFile), "utf8").replace(/--.*$/gm, "")
+  : "";
+
+describe("add_external_event_image migration", () => {
+  it("adds one nullable flyer column and grants anon exactly that column", () => {
+    expect(imageFile).toBeDefined();
+    expect(imageSql).toMatch(
+      /alter table public\.external_events\s+add column image_url text;/i,
+    );
+    const grants = imageSql.match(
+      /grant select \(([^)]*)\) on public\.external_events to anon;/i,
+    );
+    expect((grants?.[1] ?? "").split(",").map((c) => c.trim())).toEqual([
+      "image_url",
+    ]);
+  });
+
+  it("changes no policy and mutates no existing rows", () => {
+    expect(imageSql).not.toMatch(/create policy|drop policy|alter policy/i);
+    expect(imageSql).not.toMatch(/\b(update|delete from|insert into)\b/i);
+  });
+
+  it("sorts after the linking migration it builds on", () => {
+    expect(imageFile && file && imageFile > file).toBe(true);
+  });
+});

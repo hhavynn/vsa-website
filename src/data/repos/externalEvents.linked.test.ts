@@ -86,6 +86,11 @@ describe('getListingsBySourceEventIds', () => {
     const select = supabaseMock.queriesFor('external_events')[0].calls.find((c) => c.method === 'select');
     expect(String(select?.args[0])).toContain('host_type');
     expect(String(select?.args[0])).toContain('source_event_id');
+    // The flyer: the listing's own image plus the linked event's public image/time columns.
+    expect(String(select?.args[0])).toContain('ride_info, image_url, status');
+    expect(String(select?.args[0])).toContain(
+      'source_event:events(id, name, start_time, end_time, thumbnail_url, image_url)',
+    );
     expect(String(select?.args[0])).not.toContain('source_notes');
     expect(String(select?.args[0])).not.toContain('show_on_network');
   });

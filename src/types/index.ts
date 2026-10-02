@@ -498,6 +498,15 @@ export type ExternalEventStatus = 'draft' | 'upcoming' | 'past' | 'historical' |
 /** `uvsa_socal` hosts have no `uvsa_schools` row; see 20261002060000. */
 export type ExternalHostType = 'school' | 'uvsa_socal';
 
+export interface ExternalSourceEvent {
+  id: string;
+  name: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  thumbnail_url?: string | null;
+  image_url?: string | null;
+}
+
 export interface ExternalEvent {
   id: string;
   host_type: ExternalHostType;
@@ -516,6 +525,11 @@ export interface ExternalEvent {
   instagram_url: string | null;
   host_info_url: string | null;
   ride_info: string | null;
+  /**
+   * Flyer for a listing with no `source_event_id`. A linked listing shows its
+   * source event's image instead. Never the school's `logo_url`.
+   */
+  image_url?: string | null;
   status: ExternalEventStatus;
   photo_album_url: string | null;
   recap: string | null;
@@ -534,6 +548,10 @@ export interface ExternalEvent {
   updated_at: string;
   // Join data
   uvsa_school?: UVSASchool;
-  /** Admin reads only: the linked event's name, for the "Linked Event" link. */
-  source_event?: { id: string; name: string } | null;
+  /**
+   * The linked event: its name (admin "Linked Event" link) and, on public
+   * reads, the flyer and start/end time the card borrows. Null/absent when
+   * unlinked or when the event is not published.
+   */
+  source_event?: ExternalSourceEvent | null;
 }
