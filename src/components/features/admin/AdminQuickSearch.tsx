@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAdminSearch } from '../../../hooks/useAdminSearch';
+import { confirmLeaveIfUnsaved } from '../../../hooks/useUnsavedChangesGuard';
 import { AdminSearchResult, collidingTitles } from '../../../lib/adminSearch';
 import { cn } from '../../../lib/utils';
 
@@ -25,6 +26,8 @@ function Palette({ onClose }: { onClose: () => void }) {
   const choose = useCallback(
     (result: AdminSearchResult | undefined) => {
       if (!result) return;
+      // Quick Search navigates programmatically, which link-click guards never see.
+      if (result.to !== `${window.location.pathname}${window.location.search}` && !confirmLeaveIfUnsaved()) return;
       onClose();
       navigate(result.to);
     },

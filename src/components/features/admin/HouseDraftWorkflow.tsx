@@ -3,7 +3,8 @@
 // Admin -> Houses behavior; the result is saved as a private draft batch and
 // never writes to house_memberships. Review, lock, and reveal live in
 // HouseDraftEditor.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
@@ -115,6 +116,8 @@ export function HouseDraftWorkflow({
   const [rows, setRows] = useState<ParsedHouseRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [editorNextStep, setEditorNextStep] = useState<NextStep | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightRowId, setHighlightRowId] = useState<string | null>(null);
   const operatingYear = useOperatingYear();
   // A pasted sheet that has not been saved as a draft yet is unsaved work.
   useUnsavedChangesGuard(rawInput.trim().length > 0 && !editor, saving);
@@ -139,7 +142,12 @@ export function HouseDraftWorkflow({
   }, [selectedYear]);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
-  useEffect(() => { setEditor(null); setRows([]); }, [selectedYear]);
+  // Switching year closes the editor, unless it is already showing a batch from that year
+  // (a Quick Search link switches the year and opens the batch together).
+  useEffect(() => {
+    setEditor((current) => (current && current.batch.academic_year_start === selectedYear ? current : null));
+    setRows([]);
+  }, [selectedYear]);
 
   const summary = useMemo(() => rows.reduce(
     (acc, row) => {
@@ -208,6 +216,38 @@ export function HouseDraftWorkflow({
     }
   }
 
+  // Quick Search deep link: ?batch=<id>&row=<id> opens that batch and highlights the row.
+  const batchParam = searchParams.get('batch');
+  const rowParam = searchParams.get('row');
+  const appliedBatch = useRef<string | null>(null);
+  useEffect(() => {
+    if (!batchParam || loadingMembers || !selectedYear || appliedBatch.current === batchParam) return;
+    appliedBatch.current = batchParam;
+    setOpening(true);
+    houseAssignmentsRepository
+      .loadSnapshot(batchParam, new Map(members.map((m) => [m.id, `${m.first_name} ${m.last_name}`.trim()])))
+      .then((snapshot) => {
+        if (snapshot.batch.academic_year_start !== selectedYear) onYearChange(snapshot.batch.academic_year_start);
+        setHighlightRowId(rowParam);
+        setEditor(snapshot);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error('Could not open that House draft.');
+      })
+      .finally(() => {
+        setOpening(false);
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.delete('batch');
+          next.delete('row');
+          return next;
+        }, { replace: true });
+      });
+    // The loader reads members only to label rows; it must not re-run when they change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchParam, rowParam, loadingMembers, selectedYear]);
+
   async function handleSaveDraft() {
     if (!selectedYear || !effectiveStartDate || rows.length === 0) return;
     setSaving(true);
@@ -257,6 +297,7 @@ export function HouseDraftWorkflow({
           onBatchChanged={loadBatches}
           onPublished={onMembershipsPublished}
           initialNextStep={editorNextStep}
+          highlightRowId={highlightRowId}
         />
       </>
     );

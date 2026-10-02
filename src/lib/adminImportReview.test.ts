@@ -196,6 +196,9 @@ describe('reviewAttendanceRows', () => {
     const [item] = reviewAttendanceRows([row({ invalidYear: true, csvYear: 'Yr 9' })]);
     expect(item.category).toBe('needs_review');
     expect(item.reason).toContain('"Yr 9"');
+    // The importer stores the year as typed, so the review must not claim it is dropped.
+    expect(item.reason).toContain('imported as typed');
+    expect(item.reason).not.toMatch(/will not be saved/);
   });
 
   it('falls back to the importer note, then to a generic prompt', () => {

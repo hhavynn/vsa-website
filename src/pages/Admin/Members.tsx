@@ -19,6 +19,7 @@ import { MEMBER_COLLEGES } from '../../constants/memberOptions';
 import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
 import { normalizeEmail } from '../../lib/memberMatching';
 import { formatAcademicYear, getAcademicYearStart } from '../../lib/academicTerms';
+import { adminMembersRepository } from '../../data/repos/adminMembers';
 import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 import { photoRequestsRepository } from '../../data/repos/photoRequests';
 import { toUserMessage } from '../../data/errors';
@@ -353,10 +354,7 @@ export default function AdminMembers() {
     }
     setBulkBusy(true);
     try {
-      for (let i = 0; i < ids.length; i += 100) {
-        const { error } = await supabase.from('members').update({ needs_review: false }).in('id', ids.slice(i, i + 100));
-        if (error) throw error;
-      }
+      await adminMembersRepository.clearReviewFlags(ids);
       logAdminActivity({
         action: ACTIVITY_ACTIONS.memberBulkChanged,
         entityType: 'member',
@@ -365,8 +363,8 @@ export default function AdminMembers() {
       toast.success(`Cleared the review flag on ${ids.length} member${ids.length === 1 ? '' : 's'}.`);
       setSelected(new Set());
       await load();
-    } catch {
-      toast.error('Failed to clear review flags.');
+    } catch (err) {
+      toast.error(toUserMessage(err, 'Failed to clear review flags.'));
     } finally {
       setBulkBusy(false);
     }

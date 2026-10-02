@@ -515,11 +515,18 @@ export default function AdminInterns() {
   async function applyBulk(targets: InternCohortDraft[], patch: InternDraftPatch, summary: string, success: string) {
     if (!cycle) return;
     await run(async () => {
-      for (const draft of targets) {
-        await internCohortRepository.updateDraft(cycle.id, draft.id, patch);
+      let done = 0;
+      try {
+        for (const draft of targets) {
+          await internCohortRepository.updateDraft(cycle.id, draft.id, patch);
+          // Show each saved row as it lands, so a later failure never leaves stale values on screen.
+          setDrafts((current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
+          done += 1;
+        }
+      } catch (failure) {
+        if (done > 0) toast.error(`Updated ${done} of ${targets.length} interns before it failed. The rest were not changed.`);
+        throw failure;
       }
-      const ids = new Set(targets.map((draft) => draft.id));
-      setDrafts((current) => current.map((item) => (ids.has(item.id) ? { ...item, ...patch } : item)));
       logAdminActivity({
         action: ACTIVITY_ACTIONS.internBulkChanged,
         entityType: 'intern_cohort_cycle',

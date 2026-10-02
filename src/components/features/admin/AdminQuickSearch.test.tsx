@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { AdminQuickSearch, isQuickSearchShortcut } from './AdminQuickSearch';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 import { adminSearchRepository } from '../../../data/repos/adminSearch';
 import { memberRecord, aceRecord, eventRecord, pageRecords } from '../../../lib/adminSearch';
 
@@ -111,5 +112,50 @@ describe('AdminQuickSearch', () => {
     render(<Harness startOpen />);
     await userEvent.type(screen.getByRole('combobox', { name: 'Search admin' }), 'houses');
     expect(await screen.findByRole('option', { name: /Houses/ })).toBeInTheDocument();
+  });
+});
+
+describe('unsaved changes', () => {
+  function Dirty({ dirty }: { dirty: boolean }) {
+    useUnsavedChangesGuard(dirty);
+    return null;
+  }
+
+  function DirtyHarness() {
+    return (
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/admin']}>
+          <Dirty dirty />
+          <AdminQuickSearch open onClose={() => undefined} />
+          <Routes>
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  }
+
+  it('asks before navigating away from a form with unsaved changes, and stays put on Cancel', async () => {
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<DirtyHarness />);
+    const input = screen.getByRole('combobox', { name: 'Search admin' });
+    await userEvent.type(input, 'havyn');
+    await screen.findAllByRole('option');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByTestId('where')).toHaveTextContent('/admin');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it('navigates once the admin agrees to discard', async () => {
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<DirtyHarness />);
+    const input = screen.getByRole('combobox', { name: 'Search admin' });
+    await userEvent.type(input, 'havyn');
+    await screen.findAllByRole('option');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/admin/members?member=m-1'));
+    confirm.mockRestore();
   });
 });

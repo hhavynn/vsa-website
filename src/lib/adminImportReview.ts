@@ -289,7 +289,8 @@ export function reviewAttendanceRows(rows: readonly AttendanceReviewInput[]): Im
       return { ...base, category: 'needs_review', reason: ATTENDANCE_REASON.duplicate_row(row) };
     }
     if (row.invalidYear) {
-      return { ...base, category: 'needs_review', reason: `The year${row.csvYear ? ` "${row.csvYear}"` : ''} was not recognized, so it will not be saved. Review it manually.` };
+      // The importer still stores the year as typed, so say so rather than imply it is dropped.
+      return { ...base, category: 'needs_review', reason: `The year${row.csvYear ? ` "${row.csvYear}"` : ''} is not a recognized year. It is imported as typed, so fix it in the sheet or edit the member afterwards.` };
     }
     return { ...base, category: 'ready', reason: null };
   });

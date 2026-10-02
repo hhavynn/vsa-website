@@ -17,11 +17,7 @@ import {
   readUndoSpec,
   undoEntryDraft,
 } from '../../lib/adminActivity';
-import { aceAssignmentsRepository } from './aceAssignments';
-import { aceFamiliesRepository } from './aceFamilies';
 import { adminActivityRepository } from './adminActivity';
-import { houseAssignmentsRepository } from './houseAssignments';
-import { internCohortRepository } from './internCohort';
 
 export interface UndoState {
   found: boolean;
@@ -42,6 +38,75 @@ async function readSingle<T>(request: PromiseLike<{ data: T | null; error: { mes
   const { data, error } = await request;
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * The write half of undo, as a database-level compare-and-set: the UPDATE only
+ * matches while the column still holds the value the change recorded, and undo
+ * fails unless exactly one row changed. Another admin editing between the
+ * check and this write therefore makes undo fail instead of overwriting them.
+ * Draft-status rules (a locked House batch, ACE cycle, or intern cohort rejects
+ * draft edits) are enforced by the guard triggers on those tables.
+ */
+export async function applyUndo(spec: UndoSpec, restore: string | null): Promise<void> {
+  const match = <Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: null) => Q }>(query: Q, column: string): Q =>
+    spec.after === null ? query.is(column, null) : query.eq(column, spec.after);
+
+  let updated: number;
+  switch (spec.kind) {
+    case 'house_draft_house': {
+      const { data, error } = await match(
+        supabase
+          .from('house_assignment_drafts')
+          .update({ house_profile_id: restore })
+          .eq('id', spec.target.draftId)
+          .eq('batch_id', spec.target.batchId),
+        'house_profile_id',
+      ).select('id');
+      if (error) throw new Error(error.message);
+      updated = data?.length ?? 0;
+      break;
+    }
+    case 'ace_draft_big': {
+      const { data, error } = await match(
+        supabase.from('ace_assignment_drafts').update({ big_ace_member_id: restore }).eq('id', spec.target.draftId),
+        'big_ace_member_id',
+      ).select('id');
+      if (error) throw new Error(error.message);
+      updated = data?.length ?? 0;
+      break;
+    }
+    case 'ace_node_link': {
+      const { data, error } = await match(
+        supabase.from('ace_family_members').update({ member_id: restore }).eq('id', spec.target.nodeId),
+        'member_id',
+      ).select('id');
+      if (error) throw new Error(error.message);
+      updated = data?.length ?? 0;
+      break;
+    }
+    case 'intern_mentor': {
+      const { data, error } = await match(
+        supabase
+          .from('intern_cohort_drafts')
+          .update({ mentor_cabinet_member_id: restore })
+          .eq('id', spec.target.draftId)
+          .eq('cycle_id', spec.target.cycleId),
+        'mentor_cabinet_member_id',
+      ).select('id');
+      if (error) throw new Error(error.message);
+      updated = data?.length ?? 0;
+      break;
+    }
+  }
+  if (updated !== 1) throw new UndoConflictError();
+}
+
+export class UndoConflictError extends Error {
+  constructor() {
+    super('It was changed again while undoing, so nothing was changed.');
+    this.name = 'UndoConflictError';
+  }
 }
 
 const defaultDeps: UndoDeps = {
@@ -78,22 +143,7 @@ const defaultDeps: UndoDeps = {
     }
   },
 
-  async apply(spec, restore) {
-    switch (spec.kind) {
-      case 'house_draft_house':
-        await houseAssignmentsRepository.updateDraft(spec.target.batchId, spec.target.draftId, { house_profile_id: restore });
-        return;
-      case 'ace_draft_big':
-        await aceAssignmentsRepository.updateDraft(spec.target.draftId, { big_ace_member_id: restore });
-        return;
-      case 'ace_node_link':
-        await aceFamiliesRepository.setMemberLink(spec.target.nodeId, restore);
-        return;
-      case 'intern_mentor':
-        await internCohortRepository.updateDraft(spec.target.cycleId, spec.target.draftId, { mentor_cabinet_member_id: restore });
-        return;
-    }
-  },
+  apply: applyUndo,
 };
 
 /**
@@ -123,6 +173,7 @@ export async function undoActivity(
   try {
     await deps.apply(spec, plan.restore);
   } catch (error) {
+    if (error instanceof UndoConflictError) return { ok: false, reason: error.message };
     console.error(error);
     return { ok: false, reason: 'The undo failed. Nothing was changed.' };
   }

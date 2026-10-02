@@ -61,6 +61,8 @@ export interface HouseDraftEditorProps {
   onPublished: () => void;
   /** Shown on open, e.g. right after a draft was saved. */
   initialNextStep?: NextStep | null;
+  /** A draft row to scroll to and highlight on open (Quick Search link). */
+  highlightRowId?: string | null;
 }
 
 const selectCls =
@@ -94,6 +96,7 @@ export function HouseDraftEditor({
   onBatchChanged,
   onPublished,
   initialNextStep = null,
+  highlightRowId = null,
 }: HouseDraftEditorProps) {
   const [batch, setBatch] = useState(initialBatch);
   const [drafts, setDrafts] = useState(initialDrafts);
@@ -191,6 +194,10 @@ export function HouseDraftEditor({
     const sameMember = findSameMemberTwice(identities.filter((item) => !flagged.has(item.id)), 'same_member_twice', 'row');
     return [...twoHouses, ...sameMember];
   }, [drafts, memberNames, profileById]);
+
+  useEffect(() => {
+    if (highlightRowId) document.getElementById(`house-row-${highlightRowId}`)?.scrollIntoView?.({ block: 'center' });
+  }, [highlightRowId]);
 
   useEffect(
     () =>
@@ -306,9 +313,16 @@ export function HouseDraftEditor({
       return;
     }
     return run(async () => {
-      for (const row of target) {
-        await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: bulkHouseId });
-        patchLocal(row.id, { house_profile_id: bulkHouseId });
+      let done = 0;
+      try {
+        for (const row of target) {
+          await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: bulkHouseId });
+          patchLocal(row.id, { house_profile_id: bulkHouseId });
+          done += 1;
+        }
+      } catch (failure) {
+        if (done > 0) toast.error(`Assigned ${done} of ${target.length} rows before it failed. The rest were not changed.`);
+        throw failure;
       }
       logAdminActivity({
         action: ACTIVITY_ACTIONS.houseBulkChanged,
@@ -325,9 +339,16 @@ export function HouseDraftEditor({
   function bulkClear() {
     const target = clearPlan.eligible;
     return run(async () => {
-      for (const row of target) {
-        await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: null });
-        patchLocal(row.id, { house_profile_id: null });
+      let done = 0;
+      try {
+        for (const row of target) {
+          await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: null });
+          patchLocal(row.id, { house_profile_id: null });
+          done += 1;
+        }
+      } catch (failure) {
+        if (done > 0) toast.error(`Cleared ${done} of ${target.length} rows before it failed. The rest were not changed.`);
+        throw failure;
       }
       logAdminActivity({
         action: ACTIVITY_ACTIONS.houseBulkChanged,
@@ -694,7 +715,7 @@ export function HouseDraftEditor({
                   const brokenHouse = (!!row.house_profile_id && !profile?.is_active) || (!row.house_profile_id && !!row.source_house);
                   const prefs = readPreferences(row.preferences);
                   return (
-                    <tr key={row.id} data-testid="house-draft-row" data-reviewed={reviewed.has(row.id)}>
+                    <tr key={row.id} id={`house-row-${row.id}`} data-testid="house-draft-row" data-reviewed={reviewed.has(row.id)} data-highlighted={row.id === highlightRowId} className={row.id === highlightRowId ? 'bg-brand-600/10 dark:bg-brand-400/10' : undefined}>
                       <td className="px-4 py-3 align-top">
                         <RowCheckbox checked={selected.has(row.id)} onChange={() => setSelected((current) => toggleSelected(current, row.id))} label={`Select ${row.source_name}`} />
                       </td>

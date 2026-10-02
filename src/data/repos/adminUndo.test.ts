@@ -88,3 +88,14 @@ describe('undoActivity', () => {
     expect(deps.apply).not.toHaveBeenCalled();
   });
 });
+
+describe('undoActivity when the write loses the race', () => {
+  it('reports the conflict and records nothing', async () => {
+    const { UndoConflictError } = jest.requireActual('./adminUndo');
+    const deps = makeDeps({ found: true, value: 'toad', editable: true });
+    deps.apply.mockRejectedValue(new UndoConflictError());
+    const result = await undoActivity(entry(), { deps });
+    expect(result).toEqual({ ok: false, reason: 'It was changed again while undoing, so nothing was changed.' });
+    expect(deps.record).not.toHaveBeenCalled();
+  });
+});

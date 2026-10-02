@@ -224,3 +224,21 @@ describe('filters, bulk actions, and history', () => {
     expect(repo.lockCycle).not.toHaveBeenCalled();
   });
 });
+
+it('shows rows that were saved before a bulk update failed, and says how far it got', async () => {
+  const toast = jest.requireMock('react-hot-toast').default;
+  await openCohort('draft', [
+    draft('Sarah Nguyen', { member_id: 'm-sarah', display_order: 0 }),
+    draft('Zed Unknown', { display_order: 1 }),
+    draft('Quinn Park', { display_order: 2 }),
+  ]);
+  repo.updateDraft.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('network'));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Select Sarah Nguyen' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Select Zed Unknown' }));
+  await userEvent.selectOptions(screen.getByLabelText('Mentor for selected interns'), 'cm-emily');
+  await userEvent.click(screen.getByRole('button', { name: 'Set mentor' }));
+  await settle();
+  expect(toast.error).toHaveBeenCalledWith('Updated 1 of 2 interns before it failed. The rest were not changed.');
+  // The first intern's saved mentor is reflected on screen.
+  expect(screen.getByText(/Sarah Nguyen · Member: .* · Mentor: Emily Nguyen/)).toBeInTheDocument();
+});

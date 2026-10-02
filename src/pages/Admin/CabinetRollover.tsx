@@ -605,11 +605,18 @@ export default function AdminCabinetRollover() {
       return;
     }
     return run(async () => {
-      for (const draft of categoryPlan.eligible) {
-        await cabinetRosterRepository.updateDraft(cycle.id, draft.id, { category: bulkCategory });
+      let done = 0;
+      try {
+        for (const draft of categoryPlan.eligible) {
+          await cabinetRosterRepository.updateDraft(cycle.id, draft.id, { category: bulkCategory });
+          // Show each saved position as it lands, so a later failure never leaves stale values on screen.
+          setDraftsFor(cycle.id, (current) => current.map((item) => (item.id === draft.id ? { ...item, category: bulkCategory } : item)));
+          done += 1;
+        }
+      } catch (failure) {
+        if (done > 0) toast.error(`Moved ${done} of ${categoryPlan.eligible.length} positions before it failed. The rest were not changed.`);
+        throw failure;
       }
-      const ids = new Set(categoryPlan.eligible.map((draft) => draft.id));
-      setDraftsFor(cycle.id, (current) => current.map((item) => (ids.has(item.id) ? { ...item, category: bulkCategory } : item)));
       logAdminActivity({
         action: ACTIVITY_ACTIONS.cabinetBulkChanged,
         entityType: 'cabinet_roster_cycle',
