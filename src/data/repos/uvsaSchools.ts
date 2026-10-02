@@ -1,7 +1,13 @@
 import { supabase } from '../../lib/supabase';
-import { withErrorHandling, NotFoundError } from '../errors';
+import { withErrorHandling, NotFoundError, ValidationError } from '../errors';
 import { UVSASchool } from '../../types';
 import { Database } from '../../types/database';
+import { getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
+import {
+  UVSA_SCHOOL_ASSETS_BUCKET,
+  buildSchoolLogoPath,
+  isAcceptedSchoolLogoType,
+} from '../../lib/uvsaSchoolLogos';
 
 type UVSASchoolInsert = Database['public']['Tables']['uvsa_schools']['Insert'];
 
@@ -98,6 +104,33 @@ export class UVSASchoolsRepository {
       if (error) throw error;
       return data;
     }, 'Failed to save school');
+  }
+
+  /**
+   * Compress a logo / Instagram PFP and upload it to the public
+   * `uvsa_school_assets` bucket under `<slug>/`. Returns the public URL; the
+   * caller saves it into `uvsa_schools.logo_url`.
+   *
+   * Replaced or removed logos are intentionally not deleted from Storage
+   * (AGENTS.md: never delete Storage files) — they are small and unreferenced.
+   */
+  async uploadSchoolLogo(slug: string, file: File): Promise<string> {
+    return withErrorHandling(async () => {
+      if (!isAcceptedSchoolLogoType(file)) {
+        throw new ValidationError('Logo must be a PNG, JPG, or WebP image.', 'file');
+      }
+
+      const { file: prepared } = await prepareImageForUpload(file, 'logo');
+      const path = buildSchoolLogoPath(slug, crypto.randomUUID(), getUploadExtension(prepared));
+
+      const { error } = await supabase.storage.from(UVSA_SCHOOL_ASSETS_BUCKET).upload(path, prepared, {
+        cacheControl: '31536000',
+        contentType: prepared.type,
+      });
+      if (error) throw error;
+
+      return supabase.storage.from(UVSA_SCHOOL_ASSETS_BUCKET).getPublicUrl(path).data.publicUrl;
+    }, 'Failed to upload school logo');
   }
 
   /**

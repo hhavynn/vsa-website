@@ -205,7 +205,7 @@ describe('filters, bulk actions and activity', () => {
   it('shows the year, the progress header, and an obvious next step after locking', async () => {
     renderWorkspace();
     expect(await screen.findByText('2026–27')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: '2026–27 ACE progress' })).toHaveTextContent('Assignments 1 / 3');
+    expect(await screen.findByRole('region', { name: '2026–27 ACE progress' })).toHaveTextContent('Assignments 1 / 3');
     fireEvent.click(await screen.findByRole('button', { name: 'Lock assignments' }));
     expect(await screen.findByText('Assignments locked')).toBeInTheDocument();
   });

@@ -26,6 +26,19 @@ const FILES = [
   'src/components/features/admin/OperationsDashboard.tsx',
   'src/pages/Admin/CabinetRollover.tsx',
   'src/pages/Admin/YearSetup.tsx',
+  'src/pages/UVSANetwork.tsx',
+  'src/components/features/admin/SchoolLogoField.tsx',
+  'src/components/features/uvsa/ExternalArchive.tsx',
+  'src/components/features/uvsa/ExternalEventCard.tsx',
+  'src/components/features/uvsa/FeaturedExternal.tsx',
+  'src/components/features/uvsa/FirstExternalGuide.tsx',
+  'src/components/features/uvsa/LinkButton.tsx',
+  'src/components/features/uvsa/NetworkHero.tsx',
+  'src/components/features/uvsa/NetworkInfoFooter.tsx',
+  'src/components/features/uvsa/SchoolCard.tsx',
+  'src/components/features/uvsa/SchoolDirectory.tsx',
+  'src/components/features/uvsa/SchoolVisualMark.tsx',
+  'src/components/features/uvsa/UpcomingExternals.tsx',
 ];
 
 it.each(FILES)('%s has no inline style props', (file) => {

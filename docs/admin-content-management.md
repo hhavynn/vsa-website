@@ -45,3 +45,23 @@ At the start of a board year:
 Rows can safely exist without an assigned term/year while content is being migrated. Public pages keep fallback behavior so older events and cabinet members do not disappear.
 
 Role templates are not automated yet. For a new cabinet year, create the members manually in `/admin/cabinet` using the current board structure. For 2026-2027, the board keeps last year's roles except the two-historian setup becomes one Historian and one Public Relations Chair.
+
+## UVSA school logos / Instagram PFPs (`/admin/uvsa-schools`)
+
+Each school has one image field, `uvsa_schools.logo_url`, shown on the school
+cards, the page hero, and every external-event card hosted by that school.
+
+- **Upload Image** compresses the file (`logo` preset, ≤512px WebP) and uploads
+  it to the public `uvsa_school_assets` bucket under `<school-slug>/`. The public
+  URL fills the field; the logo is **not live until you save the school**.
+- Or **paste an https image URL**. Instagram PFPs are not fetched automatically.
+- **Remove** clears the field (the page falls back to generated initials). It
+  does not delete the Storage object — replaced/removed logos stay in the bucket.
+- The public page only renders https URLs, plus Storage URLs from this project's
+  `uvsa_school_assets` bucket. The school list flags schools with **No logo**.
+- `uvsa_schools.image_url` has no public use and is no longer edited here; the
+  column is left untouched.
+
+The bucket comes from migration `20261002050000_create_uvsa_school_assets_bucket.sql`
+(public by URL, admin-only list/upload/update via `is_admin_user()`, no delete policy), which must be applied
+manually before uploads work.

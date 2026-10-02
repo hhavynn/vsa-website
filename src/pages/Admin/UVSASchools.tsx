@@ -18,6 +18,10 @@ import {
   uvsaNetworkSettingsRepository,
 } from "../../data/repos/uvsaNetworkSettings";
 import { uvsaSchoolsRepository } from "../../data/repos/uvsaSchools";
+import { SchoolLogoField } from "../../components/features/admin/SchoolLogoField";
+import { SchoolVisualMark } from "../../components/features/uvsa/SchoolVisualMark";
+import { getSafeLogoUrl } from "../../lib/uvsaSchoolLogos";
+import { ValidationError } from "../../data/errors";
 import { UVSAConfidenceLevel, UVSASchool, UVSASystemType } from "../../types";
 
 const SYSTEM_TYPES: UVSASystemType[] = ["UC", "CSU", "Private"];
@@ -50,7 +54,6 @@ type SchoolForm = {
   known_for: string;
   recurring_events: string;
   logo_url: string;
-  image_url: string;
   confidence_level: UVSAConfidenceLevel;
   verification_notes: string;
   is_active: boolean;
@@ -74,7 +77,6 @@ const emptySchoolForm: SchoolForm = {
   known_for: "",
   recurring_events: "",
   logo_url: "",
-  image_url: "",
   confidence_level: "high",
   verification_notes: "",
   is_active: true,
@@ -144,10 +146,9 @@ function schoolToForm(school: UVSASchool): SchoolForm {
     known_for: listToText(school.known_for),
     recurring_events: listToText(school.recurring_events),
     logo_url: school.logo_url || "",
-    image_url: school.image_url || "",
     // Optional on the shared type because anon cannot select it (#382); this
     // admin page reads the full row as `authenticated`, so it is always present.
-    confidence_level: school.confidence_level ?? 'low',
+    confidence_level: school.confidence_level ?? "low",
     verification_notes: school.verification_notes || "",
     is_active: school.is_active,
     sort_order: school.sort_order,
@@ -173,7 +174,6 @@ function formToSchool(form: SchoolForm): Partial<UVSASchool> {
     known_for: toList(form.known_for),
     recurring_events: toList(form.recurring_events),
     logo_url: toNullable(form.logo_url),
-    image_url: toNullable(form.image_url),
     confidence_level: form.confidence_level,
     verification_notes: toNullable(form.verification_notes),
     is_active: form.is_active,
@@ -269,6 +269,12 @@ export default function AdminUVSASchools() {
     event.preventDefault();
     if (!schoolForm.school_name.trim() || !schoolForm.short_name.trim()) {
       toast.error("School name and short name are required");
+      return;
+    }
+    if (schoolForm.logo_url.trim() && !getSafeLogoUrl(schoolForm.logo_url)) {
+      toast.error(
+        "Logo URL can't be shown publicly. Use an https link or upload an image.",
+      );
       return;
     }
     saveSchoolMutation.mutate({
@@ -548,19 +554,29 @@ export default function AdminUVSASchools() {
                   setSchoolForm({ ...schoolForm, vsa_name })
                 }
               />
-              <TextField
-                label="Logo URL"
+              <SchoolLogoField
+                school={{
+                  slug: slugify(schoolForm.slug || schoolForm.short_name),
+                  short_name: schoolForm.short_name || "School",
+                }}
                 value={schoolForm.logo_url}
                 onChange={(logo_url) =>
-                  setSchoolForm({ ...schoolForm, logo_url })
+                  setSchoolForm((current) => ({ ...current, logo_url }))
                 }
-              />
-              <TextField
-                label="Image URL"
-                value={schoolForm.image_url}
-                onChange={(image_url) =>
-                  setSchoolForm({ ...schoolForm, image_url })
-                }
+                onUpload={(file) => {
+                  const slug = slugify(
+                    schoolForm.slug || schoolForm.short_name,
+                  );
+                  if (!slug) {
+                    return Promise.reject(
+                      new ValidationError(
+                        "Enter the school's short name before uploading a logo.",
+                        "slug",
+                      ),
+                    );
+                  }
+                  return uvsaSchoolsRepository.uploadSchoolLogo(slug, file);
+                }}
               />
               <TextField
                 label="Instagram URL"
@@ -700,9 +716,10 @@ export default function AdminUVSASchools() {
                 {sortedSchools.map((school) => (
                   <div
                     key={school.id}
-                    className="flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between"
+                    className="flex flex-col gap-4 py-4 md:flex-row md:items-center"
                   >
-                    <div className="min-w-0">
+                    <SchoolVisualMark school={school} size="sm" />
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-serif text-xl text-text-primary">
                           {school.short_name}
@@ -713,6 +730,11 @@ export default function AdminUVSASchools() {
                         {!school.is_active && (
                           <span className="rounded-md bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
                             Hidden
+                          </span>
+                        )}
+                        {!getSafeLogoUrl(school.logo_url) && (
+                          <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
+                            No logo
                           </span>
                         )}
                       </div>
