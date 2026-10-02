@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
@@ -18,6 +18,9 @@ import { PreviewAsPublicButton } from '../../components/features/admin/preview/P
 import { buildEventPreview } from '../../components/features/admin/preview/eventPreview';
 import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
+import { buildDuplicateEventDraft } from '../../lib/adminEventDuplicate';
+import { isDirty } from '../../lib/adminDirty';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
 import { isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
@@ -133,6 +136,13 @@ export default function AdminEvents() {
   const [editUploading, setEditUploading] = useState(false);
   const [editCheckInCode, setEditCheckInCode] = useState('');
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedEventBaseline, setSelectedEventBaseline] = useState<Event | null>(null);
+  const [duplicatedFrom, setDuplicatedFrom] = useState<string | null>(null);
+
+  const createDirty = isDirty(EMPTY_EVENT, newEvent) || !!imageFile;
+  const editDirty = !!selectedEvent && (isDirty(selectedEventBaseline, selectedEvent) || !!editImageFile);
+  useUnsavedChangesGuard(createDirty || editDirty, uploading || editUploading);
 
   // Event days and times are San Diego wall-clock values; never read them in
   // the admin's device timezone.
@@ -338,7 +348,7 @@ export default function AdminEvents() {
       if (error) throw error;
       await eventsRepository.setCheckInCode(createdEvent.id, checkInCode);
       toast.success('Event created');
-      setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null);
+      setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null); setDuplicatedFrom(null);
       refreshTerms();
       refreshEvents(); setActiveTab('manage');
     } catch (err) {
@@ -443,6 +453,58 @@ export default function AdminEvents() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  function openEditor(event: Event) {
+    if (editDirty && !window.confirm('You have unsaved changes to another event. Discard them?')) return;
+    const suggestedTerm = findTermForDate(event.date, terms);
+    const opened = {
+      ...event,
+      academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
+    };
+    setSelectedEvent(opened);
+    setSelectedEventBaseline(opened);
+    setSelectedEventOriginalImageUrl(event.image_url ?? null);
+    setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
+    setSelectedEventOriginalPoints(event.points ?? 0);
+    setEditImageFile(null);
+    setEditImagePreview(null);
+    setEditCheckInCode('');
+    eventsRepository.getCheckInCode(event.id)
+      .then((code) => setEditCheckInCode(code ?? ''))
+      .catch(() => setEditCheckInCode(''));
+  }
+
+  /**
+   * Duplicate Event: copies the shape of an event (name, description, type,
+   * points, times, venue), never its history. The copy is a Draft, needs a new
+   * date, and carries no attendance, check-in code, image, or RSVP counts.
+   */
+  function duplicateEvent(event: Event) {
+    if (createDirty && !window.confirm('The Create form has unsaved changes. Replace them with the duplicate?')) return;
+    setNewEvent({ ...EMPTY_EVENT, ...buildDuplicateEventDraft(event) });
+    setImageFile(null);
+    setImagePreview(null);
+    setDuplicatedFrom(event.name);
+    setActiveTab('create');
+    toast.success('Duplicated as a Draft. Pick a new date to create it.');
+  }
+
+  // Quick Search deep link: ?event=<id> opens that event's editor once.
+  const eventParam = searchParams.get('event');
+  useEffect(() => {
+    if (!eventParam) return;
+    const target = events.find((item) => item.id === eventParam);
+    if (!target) return;
+    setActiveTab('manage');
+    openEditor(target);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('event');
+      return next;
+    }, { replace: true });
+    // openEditor reads current form state only to guard unsaved edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventParam, events]);
+
   const EventRow = ({ event }: { event: Event }) => (
     <div className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-start sm:p-5 transition-colors hover:bg-[var(--color-surface2)] last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
       {event.image_url && (
@@ -483,26 +545,18 @@ export default function AdminEvents() {
       </div>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <button
-          onClick={() => {
-            const suggestedTerm = findTermForDate(event.date, terms);
-            setSelectedEvent({
-              ...event,
-              academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
-            });
-            setSelectedEventOriginalImageUrl(event.image_url ?? null);
-            setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
-            setSelectedEventOriginalPoints(event.points ?? 0);
-            setEditImageFile(null);
-            setEditImagePreview(null);
-            setEditCheckInCode('');
-            eventsRepository.getCheckInCode(event.id)
-              .then((code) => setEditCheckInCode(code ?? ''))
-              .catch(() => setEditCheckInCode(''));
-          }}
+          onClick={() => openEditor(event)}
           className="flex-1 rounded border px-4 py-2 text-xs font-medium transition-colors hover:bg-[var(--color-surface2)] sm:flex-none sm:px-3 sm:py-1.5"
           style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
         >
           Edit
+        </button>
+        <button
+          onClick={() => duplicateEvent(event)}
+          className="flex-1 rounded border px-4 py-2 text-xs font-medium transition-colors hover:bg-[var(--color-surface2)] sm:flex-none sm:px-3 sm:py-1.5"
+          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+        >
+          Duplicate
         </button>
         <button
           onClick={() => setEventToDelete(event)}
@@ -621,10 +675,18 @@ export default function AdminEvents() {
                     disabledReason={createPreview.error}
                     className="py-3 sm:shrink-0"
                   />
-                  <button type="submit" disabled={uploading} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
+                  <button type="submit" disabled={uploading || !createDirty} className="vsa-btn-primary w-full py-3 disabled:opacity-50">
                     {uploading ? 'Creating...' : 'Create Event'}
                   </button>
                 </div>
+                {duplicatedFrom && (
+                  <p role="note" className="text-xs" style={{ color: 'var(--color-text2)' }}>
+                    Duplicated from “{duplicatedFrom}” as a Draft. Choose a new date, then create it. Attendance, check-in code, image, and RSVPs are not copied.
+                  </p>
+                )}
+                <p role="status" aria-live="polite" className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
+                  {createDirty ? 'Unsaved changes' : ''}
+                </p>
               </form>
             </div>
           ) : (
@@ -783,10 +845,10 @@ export default function AdminEvents() {
                   {editImageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>Remove new image</button>}
                 </div>
                 <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
-                  <button type="submit" disabled={editUploading} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
+                  <button type="submit" disabled={editUploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
                     {editUploading ? 'Saving...' : 'Save Changes'}
                   </button>
-                  <button type="button" onClick={() => { setSelectedEvent(null); setEditCheckInCode(''); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                  <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedEvent(null); setEditCheckInCode(''); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                     Cancel
                   </button>
                   <PreviewAsPublicButton
@@ -794,6 +856,9 @@ export default function AdminEvents() {
                     disabledReason={editPreview?.error}
                     className="sm:mr-auto"
                   />
+                  <p role="status" aria-live="polite" className="self-center font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
+                    {editDirty ? 'Unsaved changes' : ''}
+                  </p>
                 </div>
               </form>
               <EventRecapEditor event={selectedEvent} />
