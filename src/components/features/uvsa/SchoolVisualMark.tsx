@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { UVSASchool } from "../../../types";
 import { cn } from "../../../lib/utils";
+import { sanitizeHref } from "../../../utils/sanitizeUrl";
+import { InstagramIcon } from "./icons";
 import { getSupabaseImageUrl } from "../../../lib/supabaseImages";
 import {
   getFallbackPaletteClass,
@@ -37,11 +39,20 @@ const SIZE_PX: Record<SchoolMarkSize, number> = {
 };
 
 interface SchoolVisualMarkProps {
-  school?: Pick<UVSASchool, "logo_url" | "short_name" | "slug"> | null;
+  school?:
+    | (Pick<UVSASchool, "logo_url" | "short_name" | "slug"> &
+        Partial<Pick<UVSASchool, "instagram_url">>)
+    | null;
   fallbackLabel?: string;
   size?: SchoolMarkSize;
-  /** Decorative marks (e.g. a logo cluster) are hidden from assistive tech. */
+  /** Decorative marks are hidden from assistive tech. Ignored when the mark links out. */
   decorative?: boolean;
+  /**
+   * Link the mark to the school's Instagram (`instagram_url`) when it has one.
+   * Pass `false` where the mark sits inside another interactive element, or in
+   * admin previews.
+   */
+  interactive?: boolean;
   className?: string;
 }
 
@@ -51,12 +62,53 @@ interface SchoolVisualMarkProps {
  * a logo is still loading.
  */
 export function SchoolVisualMark({
+  interactive = true,
+  ...props
+}: SchoolVisualMarkProps) {
+  const { school, fallbackLabel = "VSA", size = "md" } = props;
+  const rawUrl = interactive ? school?.instagram_url?.trim() : null;
+  // sanitizeHref returns "#" for anything unsafe; render those as plain marks.
+  const href = rawUrl ? sanitizeHref(rawUrl) : null;
+
+  if (!href || href === "#") return <MarkImage {...props} />;
+
+  const name = school?.short_name || fallbackLabel;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Open ${name} VSA on Instagram`}
+      className={cn(
+        "group relative inline-flex shrink-0 rounded-full hover:ring-2 hover:ring-brand-600/30 dark:hover:ring-brand-400/30",
+        "motion-safe:transition-transform motion-safe:duration-150 motion-safe:hover:scale-105",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:focus-visible:ring-brand-400",
+      )}
+    >
+      {/* The link carries the accessible name; the image inside is presentational. */}
+      <MarkImage {...props} decorative />
+      {HOVER_BADGE_SIZES.has(size) && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] bg-surface text-brand-600 opacity-0 shadow-card transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 dark:text-brand-400"
+        >
+          <InstagramIcon size={12} />
+        </span>
+      )}
+    </a>
+  );
+}
+
+// Too small to carry an indicator on the compact marks.
+const HOVER_BADGE_SIZES = new Set<SchoolMarkSize>(["md", "card", "lg"]);
+
+function MarkImage({
   school,
   fallbackLabel = "VSA",
   size = "md",
   decorative = false,
   className,
-}: SchoolVisualMarkProps) {
+}: Omit<SchoolVisualMarkProps, "interactive">) {
   const label = school?.short_name || fallbackLabel;
   const logoUrl = getSafeLogoUrl(school?.logo_url);
   const fit =

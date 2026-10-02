@@ -15,6 +15,7 @@ const withLogo = (slug: string, short_name: string) =>
     slug,
     short_name,
     logo_url: OWN_LOGO_URL.replace("ucsd", slug),
+    instagram_url: `https://www.instagram.com/vsa${slug}/`,
   });
 
 describe("ExternalEventCard host logo", () => {
@@ -24,11 +25,27 @@ describe("ExternalEventCard host logo", () => {
         event={makeEvent({ uvsa_school: withLogo("uci", "UCI") })}
       />,
     );
-    expect(screen.getByAltText("UCI logo")).toHaveAttribute(
-      "src",
-      expect.stringContaining("/uci/"),
-    );
+    const mark = screen.getByRole("link", {
+      name: "Open UCI VSA on Instagram",
+    });
+    expect(
+      within(mark).getByRole("presentation", { hidden: true }),
+    ).toHaveAttribute("src", expect.stringContaining("/uci/"));
     expect(screen.getByText("UCI")).toBeInTheDocument();
+  });
+
+  it("links the host logo to the host's Instagram", () => {
+    render(
+      <ExternalEventCard
+        event={makeEvent({ uvsa_school: withLogo("uci", "UCI") })}
+      />,
+    );
+    const mark = screen.getByRole("link", {
+      name: "Open UCI VSA on Instagram",
+    });
+    expect(mark).toHaveAttribute("href", "https://www.instagram.com/vsauci/");
+    expect(mark).toHaveAttribute("target", "_blank");
+    expect(mark).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("falls back to host initials when the host has no logo", () => {
@@ -44,8 +61,29 @@ describe("ExternalEventCard host logo", () => {
       />,
     );
     expect(
+      screen.getByRole("link", { name: "Open UCI VSA on Instagram" }),
+    ).toHaveTextContent("UCI");
+  });
+
+  it("renders a plain placeholder when the host has no logo and no Instagram", () => {
+    render(
+      <ExternalEventCard
+        event={makeEvent({
+          uvsa_school: makeSchool({
+            slug: "uci",
+            short_name: "UCI",
+            logo_url: null,
+            instagram_url: null,
+          }),
+        })}
+      />,
+    );
+    expect(
       screen.getByRole("img", { name: "UCI logo placeholder" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Open UCI VSA/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("still renders when the host school did not join", () => {
@@ -231,7 +269,9 @@ describe("ExternalArchive", () => {
 
   it("shows host logos on archive rows and only available links", () => {
     render(<ExternalArchive {...props} events={events} />);
-    expect(screen.getByAltText("UCI logo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open UCI VSA on Instagram" }),
+    ).toHaveAttribute("href", "https://www.instagram.com/vsauci/");
     const row = screen.getByText("Fall Show").closest("li") as HTMLElement;
     expect(
       within(row).getByRole("link", { name: "Info for Fall Show" }),

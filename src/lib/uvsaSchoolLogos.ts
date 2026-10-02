@@ -113,3 +113,28 @@ export function getFallbackPaletteClass(
     0;
   return FALLBACK_PALETTES[hash % FALLBACK_PALETTES.length];
 }
+
+const NON_PROFILE_SEGMENTS = new Set([
+  "p",
+  "reel",
+  "reels",
+  "explore",
+  "stories",
+  "tv",
+  "accounts",
+]);
+
+/** `https://www.instagram.com/vsaatucsd/` -> `@vsaatucsd`; null for anything that isn't a profile link. */
+export function getInstagramHandle(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url.trim());
+    if (!/(^|\.)instagram\.com$/i.test(parsed.hostname)) return null;
+    const [segment] = parsed.pathname.split("/").filter(Boolean);
+    if (!segment || NON_PROFILE_SEGMENTS.has(segment.toLowerCase()))
+      return null;
+    return `@${segment}`;
+  } catch {
+    return null;
+  }
+}

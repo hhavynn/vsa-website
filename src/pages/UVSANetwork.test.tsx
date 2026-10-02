@@ -1,5 +1,5 @@
 /* eslint-disable testing-library/no-container, testing-library/no-node-access -- structural assertions (anchors, shimmer, section order) have no accessible role */
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import UVSANetwork from "./UVSANetwork";
 import { DEFAULT_UVSA_NETWORK_PAGE_SETTINGS } from "../data/repos/uvsaNetworkSettings";
@@ -184,5 +184,73 @@ describe("UVSANetwork page", () => {
     expect(
       screen.queryByText(DEFAULT_UVSA_NETWORK_PAGE_SETTINGS.empty_state_title),
     ).not.toBeInTheDocument();
+  });
+
+  it("links every school logo on the page to that school's Instagram, safely", () => {
+    renderPage();
+    const marks = screen.getAllByRole("link", {
+      name: /^Open .* VSA on Instagram$/,
+    });
+    // hero cluster + school cards + upcoming host logo + archive host logo
+    expect(marks.length).toBeGreaterThanOrEqual(5);
+    marks.forEach((mark) => {
+      expect(mark).toHaveAttribute(
+        "href",
+        expect.stringMatching(/^https:\/\/www\.instagram\.com\//),
+      );
+      expect(mark).toHaveAttribute("target", "_blank");
+      expect(mark).toHaveAttribute("rel", "noopener noreferrer");
+    });
+  });
+
+  it("links logos without relying on hardcoded URLs (follows instagram_url)", () => {
+    mockState.schools = [
+      makeSchool({
+        id: "1",
+        slug: "ucsd",
+        short_name: "UCSD",
+        instagram_url: "https://www.instagram.com/changed.handle/",
+      }),
+    ];
+    renderPage();
+    const hero = within(screen.getByLabelText("Schools in the network"));
+    expect(
+      hero.getByRole("link", { name: "Open UCSD VSA on Instagram" }),
+    ).toHaveAttribute("href", "https://www.instagram.com/changed.handle/");
+  });
+
+  it("leaves logos non-interactive for schools without an Instagram URL", () => {
+    mockState.schools = [
+      makeSchool({
+        id: "1",
+        slug: "ucsd",
+        short_name: "UCSD",
+        instagram_url: null,
+        linktree_url: null,
+        website_url: null,
+      }),
+    ];
+    mockState.upcoming = [];
+    mockState.past = [];
+    renderPage();
+    expect(
+      screen.queryByRole("link", { name: /on Instagram/ }),
+    ).not.toBeInTheDocument();
+    const schools = document.querySelector("#schools") as HTMLElement;
+    expect(
+      within(schools).getAllByRole("img", { name: "UCSD logo placeholder" })
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("never nests an interactive element inside a link or button, even with every card expanded", () => {
+    renderPage();
+    screen
+      .getAllByRole("button", { name: /^details$/i })
+      .forEach((button) => fireEvent.click(button));
+    const interactive = "a, button, input, select, textarea, summary";
+    document.querySelectorAll(interactive).forEach((el) => {
+      expect(el.querySelector(interactive)).toBeNull();
+    });
   });
 });

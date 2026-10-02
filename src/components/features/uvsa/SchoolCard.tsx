@@ -3,6 +3,7 @@ import { UVSASchool } from "../../../types";
 import { Badge } from "../../ui/Badge";
 import { cn } from "../../../lib/utils";
 import { isHomeBaseSchool } from "../../../lib/uvsaNetwork";
+import { getInstagramHandle } from "../../../lib/uvsaSchoolLogos";
 import {
   ChevronDownIcon,
   HomeIcon,
@@ -112,7 +113,9 @@ export function SchoolCard({ school }: { school: UVSASchool }) {
               aria-label={`${school.short_name} on ${primary.label}`}
             >
               {primary.icon && <InstagramIcon size={13} aria-hidden />}{" "}
-              {primary.label}
+              {primary.icon
+                ? (getInstagramHandle(primary.url) ?? primary.label)
+                : primary.label}
             </LinkButton>
           )}
 

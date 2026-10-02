@@ -64,7 +64,11 @@ export function SchoolLogoField({
       </legend>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <SchoolVisualMark school={{ ...school, logo_url: value }} size="lg" />
+        <SchoolVisualMark
+          school={{ ...school, logo_url: value }}
+          size="lg"
+          interactive={false}
+        />
 
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap gap-2">

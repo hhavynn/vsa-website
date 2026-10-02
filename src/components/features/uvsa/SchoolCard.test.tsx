@@ -17,7 +17,11 @@ describe("SchoolCard", () => {
       />,
     );
 
-    expect(screen.getByAltText("UCI logo")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("link", { name: "Open UCI VSA on Instagram" }),
+      ).getByRole("presentation", { hidden: true }),
+    ).toHaveAttribute("src", OWN_LOGO_URL);
     expect(screen.getByRole("heading", { name: "UCI" })).toBeInTheDocument();
     expect(screen.getByText("VSA at UCI")).toBeInTheDocument();
     expect(screen.getByText("UC")).toBeInTheDocument();
@@ -28,7 +32,7 @@ describe("SchoolCard", () => {
     expect(screen.getAllByText("La Jolla")).toHaveLength(1);
   });
 
-  it("offers Instagram as the one primary social action", () => {
+  it("offers Instagram as the one primary social action, labelled with the @handle", () => {
     render(
       <SchoolCard school={makeSchool({ slug: "uci", short_name: "UCI" })} />,
     );
@@ -38,7 +42,70 @@ describe("SchoolCard", () => {
       "https://www.instagram.com/vsaatucsd/",
     );
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(link).toHaveTextContent("@vsaatucsd");
+  });
+
+  it("makes the PFP link to Instagram too, and nothing else on the base card does", () => {
+    render(
+      <SchoolCard school={makeSchool({ slug: "uci", short_name: "UCI" })} />,
+    );
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(2);
+    links.forEach((link) => {
+      expect(link).toHaveAttribute(
+        "href",
+        "https://www.instagram.com/vsaatucsd/",
+      );
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+    expect(
+      screen.getByRole("link", { name: "Open UCI VSA on Instagram" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not make the whole card a link, so Details still works", () => {
+    render(<SchoolCard school={makeSchool()} />);
+    const card = screen.getByRole("article");
+    expect(card.closest("a")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /details/i }));
+    expect(screen.getByText("Home of Wild N Culture.")).toBeInTheDocument();
+  });
+
+  it("has no interactive element nested inside another", () => {
+    render(
+      <SchoolCard
+        school={makeSchool({ tiktok_url: "https://tiktok.com/@x" })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /details/i }));
+    const interactive = "a, button, input, select, textarea";
+    document.querySelectorAll(interactive).forEach((el) => {
+      expect(el.querySelector(interactive)).toBeNull();
+    });
+  });
+
+  it("falls back to the plain label when the Instagram URL is not a profile link", () => {
+    render(
+      <SchoolCard
+        school={makeSchool({
+          instagram_url: "https://www.instagram.com/p/abc123/",
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "UCSD on Instagram" }),
+    ).toHaveTextContent(/^\s*Instagram\s*$/);
+  });
+
+  it("keeps the PFP non-interactive when there is no Instagram URL", () => {
+    render(<SchoolCard school={makeSchool({ instagram_url: null })} />);
+    expect(
+      screen.queryByRole("link", { name: /on Instagram/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "UCSD logo placeholder" }),
+    ).toBeInTheDocument();
   });
 
   it("does not render a row of secondary social buttons on the base card", () => {
@@ -116,11 +183,11 @@ describe("SchoolCard", () => {
     expect(screen.queryByText("Home Base")).not.toBeInTheDocument();
   });
 
-  it("falls back to initials without a logo and still renders", () => {
+  it("falls back to clickable initials without a logo", () => {
     render(<SchoolCard school={makeSchool({ logo_url: null })} />);
     expect(
-      screen.getByRole("img", { name: "UCSD logo placeholder" }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Open UCSD VSA on Instagram" }),
+    ).toHaveTextContent("UCSD");
   });
 
   it("falls back to Linktree as the primary action when there is no Instagram", () => {

@@ -718,7 +718,11 @@ export default function AdminUVSASchools() {
                     key={school.id}
                     className="flex flex-col gap-4 py-4 md:flex-row md:items-center"
                   >
-                    <SchoolVisualMark school={school} size="sm" />
+                    <SchoolVisualMark
+                      school={school}
+                      size="sm"
+                      interactive={false}
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-serif text-xl text-text-primary">
