@@ -34,6 +34,7 @@ import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { MemberSearchSelect } from './MemberSearchSelect';
 import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
+import { runBulkWrites } from '../../../lib/bulkWrites';
 import {
   BulkActionBar,
   BulkConfirm,
@@ -315,11 +316,13 @@ export function HouseDraftEditor({
     return run(async () => {
       let done = 0;
       try {
-        for (const row of target) {
-          await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: bulkHouseId });
-          patchLocal(row.id, { house_profile_id: bulkHouseId });
-          done += 1;
-        }
+        await runBulkWrites(async () => {
+          for (const row of target) {
+            await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: bulkHouseId });
+            patchLocal(row.id, { house_profile_id: bulkHouseId });
+            done += 1;
+          }
+        });
       } catch (failure) {
         if (done > 0) toast.error(`Assigned ${done} of ${target.length} rows before it failed. The rest were not changed.`);
         throw failure;
@@ -341,11 +344,13 @@ export function HouseDraftEditor({
     return run(async () => {
       let done = 0;
       try {
-        for (const row of target) {
-          await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: null });
-          patchLocal(row.id, { house_profile_id: null });
-          done += 1;
-        }
+        await runBulkWrites(async () => {
+          for (const row of target) {
+            await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: null });
+            patchLocal(row.id, { house_profile_id: null });
+            done += 1;
+          }
+        });
       } catch (failure) {
         if (done > 0) toast.error(`Cleared ${done} of ${target.length} rows before it failed. The rest were not changed.`);
         throw failure;

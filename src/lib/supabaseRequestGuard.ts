@@ -14,6 +14,8 @@
 // Nothing here retries, sends data anywhere, persists anything, or reads
 // request headers or bodies (so tokens/keys cannot leak into logs).
 
+import { supabaseRequestTelemetry } from './supabaseRequestTelemetry';
+
 /** Every threshold lives here so they can be tuned in one place. */
 export const REQUEST_GUARD_CONFIG = {
   /** Burst protection: more than `burstMaxRequests` Data API requests (any method) inside this window trips the breaker. */
@@ -34,11 +36,17 @@ export const REQUEST_GUARD_CONFIG = {
   maxCooldownMs: 5 * 60_000,
   /** A trip within this long after a cooldown ends counts as a repeat offence. */
   escalationWindowMs: 2 * 60_000,
+  /**
+   * Total writes one `runBulkWrites` scope may send. Legitimate sequential per-row
+   * loops (attendance import profile updates, House/ACE bulk edits) are bounded by
+   * the number of members, which is well under this; a loop that blows past it is a bug.
+   */
+  bulkWriteBudget: 1_000,
 } as const;
 
 export type RequestGuardConfig = { -readonly [K in keyof typeof REQUEST_GUARD_CONFIG]: number };
 
-export type TripReason = 'burst' | 'repeat';
+export type TripReason = 'burst' | 'repeat' | 'bulk';
 
 export interface TripInfo {
   reason: TripReason;
@@ -76,6 +84,14 @@ export interface RequestGuardState {
 export interface RequestGuard {
   fetch: typeof fetch;
   getState: () => RequestGuardState;
+  /**
+   * Declares a legitimate bulk write, e.g. one PATCH per member in a loop. While
+   * `work` runs, writes (not reads) count against `bulkWriteBudget` for the whole
+   * scope instead of the per-minute burst window, so a big import is not cut off
+   * halfway and does not eat the budget the rest of the app needs. Exceeding the
+   * budget trips the breaker like any runaway loop. Nested scopes share one budget.
+   */
+  runBulkWrites: <T>(work: () => Promise<T>) => Promise<T>;
 }
 
 const DATA_API_PREFIX = '/rest/v1';
@@ -137,6 +153,8 @@ export function createRequestGuard(options: RequestGuardOptions = {}): RequestGu
   let trips = 0;
   let blockedRequests = 0;
   let lastReason: TripReason | null = null;
+  let bulkDepth = 0;
+  let bulkWrites = 0;
 
   function trim(timestamps: number[], windowMs: number, at: number) {
     while (timestamps.length > 0 && timestamps[0] <= at - windowMs) timestamps.shift();
@@ -165,7 +183,9 @@ export function createRequestGuard(options: RequestGuardOptions = {}): RequestGu
     const why =
       reason === 'burst'
         ? `more than ${config.burstMaxRequests} requests in ${config.burstWindowMs / 1000}s`
-        : `the same read repeated more than ${config.repeatMaxRequests} times in ${config.repeatWindowMs / 1000}s`;
+        : reason === 'bulk'
+          ? `more than ${config.bulkWriteBudget} writes in one bulk operation`
+          : `the same read repeated more than ${config.repeatMaxRequests} times in ${config.repeatWindowMs / 1000}s`;
     // One warning per trip, and a trip cannot happen again until the cooldown ends.
     // Only the path is logged: never headers, tokens, or query-string filters.
     warn(
@@ -190,6 +210,19 @@ export function createRequestGuard(options: RequestGuardOptions = {}): RequestGu
     }
     if (blockedUntil !== 0) blockedUntil = 0; // cooldown over: start from a clean slate
 
+    const isRead = request.method === 'GET' || request.method === 'HEAD';
+
+    if (bulkDepth > 0 && !isRead) {
+      // A declared bulk write: counted against the scope's own budget, not the burst window.
+      bulkWrites += 1;
+      if (bulkWrites > config.bulkWriteBudget) {
+        trip('bulk', target.path, at);
+        blockedRequests += 1;
+        return blockedResponse(blockedUntil - at);
+      }
+      return send(input, init);
+    }
+
     trim(recent, config.burstWindowMs, at);
     recent.push(at);
     if (recent.length > config.burstMaxRequests) {
@@ -198,7 +231,7 @@ export function createRequestGuard(options: RequestGuardOptions = {}): RequestGu
       return blockedResponse(blockedUntil - at);
     }
 
-    if (request.method === 'GET' || request.method === 'HEAD') {
+    if (isRead) {
       const repeatKey = `${request.method} ${target.key}`;
       const seen = repeats.get(repeatKey) ?? [];
       trim(seen, config.repeatWindowMs, at);
@@ -215,8 +248,30 @@ export function createRequestGuard(options: RequestGuardOptions = {}): RequestGu
     return send(input, init);
   }
 
+  async function runBulkWrites<T>(work: () => Promise<T>): Promise<T> {
+    if (bulkDepth === 0) bulkWrites = 0;
+    bulkDepth += 1;
+    try {
+      return await work();
+    } finally {
+      bulkDepth -= 1;
+    }
+  }
+
   return {
     fetch: guardedFetch as typeof fetch,
     getState: () => ({ blocked: now() < blockedUntil, blockedUntil, trips, blockedRequests, lastReason }),
+    runBulkWrites,
   };
 }
+
+/**
+ * The app's one guard, shared by the Supabase client (`src/lib/supabase.ts`) and
+ * `runBulkWrites` (`src/lib/bulkWrites.ts`). Request telemetry is wired in
+ * development only; production keeps just the breaker.
+ */
+const isDevelopment = process.env.NODE_ENV === 'development';
+export const supabaseRequestGuard = createRequestGuard({
+  onRequest: isDevelopment ? ({ url }) => supabaseRequestTelemetry.record(url) : undefined,
+  onTrip: isDevelopment ? () => console.info(supabaseRequestTelemetry.format()) : undefined,
+});

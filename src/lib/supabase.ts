@@ -1,7 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
-import { createRequestGuard } from './supabaseRequestGuard';
-import { supabaseRequestTelemetry } from './supabaseRequestTelemetry';
+import { supabaseRequestGuard } from './supabaseRequestGuard';
 
 // Singleton pattern for Supabase client
 let supabaseClient: SupabaseClient<Database> | null = null;
@@ -14,14 +13,6 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error('Missing Supabase environment variables');
     }
-
-    // Per-tab circuit breaker for Data API (/rest/v1) calls. See supabaseRequestGuard.ts.
-    // Request telemetry is wired in development only; production keeps just the breaker.
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const requestGuard = createRequestGuard({
-      onRequest: isDevelopment ? ({ url }) => supabaseRequestTelemetry.record(url) : undefined,
-      onTrip: isDevelopment ? () => console.info(supabaseRequestTelemetry.format()) : undefined,
-    });
 
     supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -36,8 +27,9 @@ export function getSupabaseClient(): SupabaseClient<Database> {
       db: {
         retry: false,
       },
+      // Per-tab circuit breaker for Data API (/rest/v1) calls. See supabaseRequestGuard.ts.
       global: {
-        fetch: requestGuard.fetch,
+        fetch: supabaseRequestGuard.fetch,
       },
     });
   }

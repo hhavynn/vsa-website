@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { runBulkWrites } from '../../lib/bulkWrites';
 import { AceFamily, AceFamilyMember } from '../../types';
 import { withErrorHandling } from '../errors';
 import { ImportPlan } from '../../lib/aceFamilyImport';
@@ -166,16 +167,18 @@ export class AceFamiliesRepository {
     return withErrorHandling(async () => {
       const linked: string[] = [];
       const skipped: string[] = [];
-      for (const link of links) {
-        const { data, error } = await supabase
-          .from('ace_family_members')
-          .update({ member_id: link.memberId, updated_at: new Date().toISOString() })
-          .eq('id', link.nodeId)
-          .is('member_id', null)
-          .select('id');
-        if (error) throw error;
-        (data && data.length > 0 ? linked : skipped).push(link.nodeId);
-      }
+      await runBulkWrites(async () => {
+        for (const link of links) {
+          const { data, error } = await supabase
+            .from('ace_family_members')
+            .update({ member_id: link.memberId, updated_at: new Date().toISOString() })
+            .eq('id', link.nodeId)
+            .is('member_id', null)
+            .select('id');
+          if (error) throw error;
+          (data && data.length > 0 ? linked : skipped).push(link.nodeId);
+        }
+      });
       return { linked, skipped };
     }, 'Failed to link ACE members');
   }

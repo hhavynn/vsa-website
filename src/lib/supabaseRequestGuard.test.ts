@@ -33,7 +33,7 @@ function setup(overrides: Partial<RequestGuardOptions> = {}) {
   };
 }
 
-const { burstMaxRequests, repeatMaxRequests, cooldownMs, maxCooldownMs, burstWindowMs, repeatWindowMs } = REQUEST_GUARD_CONFIG;
+const { burstMaxRequests, repeatMaxRequests, cooldownMs, maxCooldownMs, burstWindowMs, repeatWindowMs, bulkWriteBudget } = REQUEST_GUARD_CONFIG;
 
 describe('supabase request guard', () => {
   describe('normal traffic', () => {
@@ -271,6 +271,111 @@ describe('supabase request guard', () => {
       expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0);
       expect(body.code).toBe('over_request_rate_limit');
       expect(isSupabaseUnavailable({ ...body })).toBe(true);
+    });
+  });
+
+  describe('bulk write scope', () => {
+    const patchMember = (t: ReturnType<typeof setup>, n: number) => t.patch(rest(`members?id=eq.${n}`));
+
+    it('lets a legitimate per-member write loop run past the burst limit', async () => {
+      const t = setup();
+      const statuses: number[] = [];
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i < 900; i += 1) statuses.push((await patchMember(t, i)).status);
+      });
+
+      expect(statuses.every((status) => status === 200)).toBe(true);
+      expect(t.calls).toHaveLength(900);
+      expect(t.guard.getState().trips).toBe(0);
+      expect(t.warnings).toEqual([]);
+    });
+
+    it('is exactly what the same loop needs: without the scope it is cut off at the burst limit', async () => {
+      const t = setup();
+      const statuses: number[] = [];
+      for (let i = 0; i < 900; i += 1) statuses.push((await patchMember(t, i)).status);
+
+      expect(statuses.filter((status) => status === 200)).toHaveLength(burstMaxRequests);
+      expect(t.guard.getState().trips).toBe(1);
+    });
+
+    it('does not use up the burst budget the rest of the app needs', async () => {
+      const t = setup();
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i < 900; i += 1) await patchMember(t, i);
+      });
+      // The audit write and a page refresh straight after the loop still go through.
+      for (let i = 0; i < burstMaxRequests; i += 1) {
+        expect((await t.get(rest(`events?page=${i}`))).status).toBe(200);
+      }
+      expect(t.guard.getState().trips).toBe(0);
+    });
+
+    it('stays bounded: a loop past the bulk budget trips the breaker', async () => {
+      const t = setup();
+      let blockedAt = -1;
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i < bulkWriteBudget + 50; i += 1) {
+          if ((await patchMember(t, i)).status === 429) {
+            blockedAt = i;
+            break;
+          }
+        }
+      });
+
+      expect(blockedAt).toBe(bulkWriteBudget);
+      expect(t.guard.getState()).toMatchObject({ blocked: true, trips: 1, lastReason: 'bulk' });
+      expect(t.warnings).toHaveLength(1);
+    });
+
+    it('still protects reads inside the scope', async () => {
+      const t = setup();
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i <= repeatMaxRequests; i += 1) await t.get(rest('members?select=*'));
+      });
+      expect(t.guard.getState()).toMatchObject({ blocked: true, lastReason: 'repeat' });
+    });
+
+    it('ends the scope when the work finishes or throws, so later writes count again', async () => {
+      const t = setup();
+      await expect(
+        t.guard.runBulkWrites(async () => {
+          await patchMember(t, 1);
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+
+      for (let i = 0; i < burstMaxRequests; i += 1) await patchMember(t, i);
+      expect((await patchMember(t, 999)).status).toBe(429);
+    });
+
+    it('shares one budget across nested scopes and resets it for the next operation', async () => {
+      const t = setup();
+      await t.guard.runBulkWrites(async () => {
+        await t.guard.runBulkWrites(async () => {
+          for (let i = 0; i < bulkWriteBudget; i += 1) await patchMember(t, i);
+        });
+      });
+      expect(t.guard.getState().trips).toBe(0);
+
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i < bulkWriteBudget; i += 1) expect((await patchMember(t, i)).status).toBe(200);
+      });
+      expect(t.guard.getState().trips).toBe(0);
+    });
+
+    it('does not bypass a breaker that is already tripped', async () => {
+      const t = setup();
+      for (let i = 0; i <= repeatMaxRequests; i += 1) await t.get(rest('events'));
+      const sent = t.calls.length;
+
+      const statuses: number[] = [];
+      await t.guard.runBulkWrites(async () => {
+        for (let i = 0; i < 20; i += 1) statuses.push((await patchMember(t, i)).status);
+      });
+
+      expect(statuses.every((status) => status === 429)).toBe(true);
+      expect(t.calls).toHaveLength(sent);
     });
   });
 
