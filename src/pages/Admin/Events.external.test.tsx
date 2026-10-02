@@ -262,15 +262,13 @@ describe('Create Event', () => {
 
 describe('Manage Events', () => {
   async function openManage(user: typeof userEvent) {
-    await user.click(screen.getByRole('button', { name: /Manage/i }));
+    const manageBtn = await screen.findByRole('button', { name: /Manage/i });
+    await user.click(manageBtn);
   }
 
   async function openEditor(user: typeof userEvent, index: number) {
-    // Inside act so the check-in code lookup's state update is covered too.
-    await act(async () => {
-      user.click(screen.getAllByRole('button', { name: 'Edit' })[index]);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    const editButtons = await screen.findAllByRole('button', { name: 'Edit' });
+    fireEvent.click(editButtons[index]);
   }
 
   it('labels external events with their host, and flags a missing host', async () => {
@@ -281,7 +279,7 @@ describe('Manage Events', () => {
     renderEvents();
     await openManage(user);
 
-    expect(screen.getByText('External · UVSA SoCal')).toBeInTheDocument();
+    expect(await screen.findByText('External · UVSA SoCal')).toBeInTheDocument();
     // evt-nohost has no listing at all.
     expect(screen.getByText('⚠ Host missing')).toBeInTheDocument();
     expect(screen.queryByText(/External · UCI/)).not.toBeInTheDocument();
@@ -294,7 +292,8 @@ describe('Manage Events', () => {
     await openManage(user);
     await openEditor(user, 0);
 
-    expect(screen.getByLabelText('RSVP / Tickets')).toHaveValue('https://rsvp.example/old');
+    const rsvpInput = await screen.findByLabelText('RSVP / Tickets');
+    expect(rsvpInput).toHaveValue('https://rsvp.example/old');
     expect(screen.getByLabelText(/Host \/ Organizer/)).toHaveValue('uci-id');
 
     await user.selectOptions(screen.getByLabelText(/Host \/ Organizer/), 'uvsa_socal');
@@ -316,6 +315,7 @@ describe('Manage Events', () => {
     renderEvents();
     await openManage(user);
     await openEditor(user, 0);
+    await screen.findByDisplayValue('UVSA SoCal Fall Social');
     expect(screen.queryByText(/currently appears on the UVSA Network/)).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText(/Event Type/), 'gbm');
@@ -333,6 +333,7 @@ describe('Manage Events', () => {
     renderEvents();
     await openManage(user);
     await openEditor(user, 2);
+    await screen.findByDisplayValue('GBM 1');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('External Event Details')).not.toBeInTheDocument();
   });

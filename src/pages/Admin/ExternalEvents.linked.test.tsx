@@ -80,9 +80,11 @@ it('locks the synced fields on a linked row and sends no joined relations back',
     }),
   ];
   renderPage();
-  userEvent.click(screen.getByRole('button', { name: /Edit/ }));
+  const editBtn = await screen.findByRole('button', { name: /Edit/ });
+  fireEvent.click(editBtn);
 
-  const form = screen.getByText(/^Edit /).closest('div') as HTMLElement; // eslint-disable-line testing-library/no-node-access
+  const formHeading = await screen.findByText(/^Edit /);
+  const form = formHeading.closest('div') as HTMLElement; // eslint-disable-line testing-library/no-node-access
   expect(within(form).getByDisplayValue('Synced Title')).toBeDisabled();
   expect(within(form).getByText(/managed there and re-sync on every save/)).toBeInTheDocument();
 
@@ -97,9 +99,11 @@ it('locks the synced fields on a linked row and sends no joined relations back',
 it('hosts an unmirrored external by UVSA SoCal, clearing the school', async () => {
   mockState.events = [makeEvent({ id: 'plain', title: 'Mount Jamprov', uvsa_school: mockUci, uvsa_school_id: 'uci-id' })];
   renderPage();
-  userEvent.click(screen.getByRole('button', { name: /Edit/ }));
+  const editBtn = await screen.findByRole('button', { name: /Edit/ });
+  fireEvent.click(editBtn);
 
-  userEvent.selectOptions(screen.getByDisplayValue('UCI — VSA UCI'), 'uvsa_socal');
+  const hostSelect = await screen.findByDisplayValue('UCI — VSA UCI');
+  await userEvent.selectOptions(hostSelect, 'uvsa_socal');
   fireEvent.click(screen.getByRole('button', { name: /Save Event/ }));
 
   await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
