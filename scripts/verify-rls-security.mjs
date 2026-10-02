@@ -318,6 +318,7 @@ async function runTests() {
       ['uvsa_schools', 'confidence_level', '#382'],
       ['external_events', 'source_notes', '#382'],
       ['external_events', 'confidence_level', '#382'],
+      ['external_events', 'show_on_network', '20261002060000'],
     ];
     for (const [table, column, issue] of deniedReads) {
       const { error } = await anon.from(table).select(column).limit(1);

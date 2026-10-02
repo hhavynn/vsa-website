@@ -1,5 +1,6 @@
 import { ExternalEvent } from "../../../types";
 import { formatDateOnly } from "../../../lib/dateOnly";
+import { resolveExternalHost } from "../../../lib/externalEventLinking";
 import { isHomeBaseSchool } from "../../../lib/uvsaNetwork";
 import { Badge } from "../../ui/Badge";
 import {
@@ -9,15 +10,11 @@ import {
   MapPinIcon,
 } from "./icons";
 import { LinkButton } from "./LinkButton";
-import { SchoolVisualMark } from "./SchoolVisualMark";
-
-export function getEventHostName(event: ExternalEvent) {
-  return event.uvsa_school?.short_name || "SoCal VSA";
-}
+import { ExternalHostMark } from "./ExternalHostMark";
 
 /** RSVP / info / IG / host Linktree actions shared by the card and the spotlight. */
 export function ExternalEventActions({ event }: { event: ExternalEvent }) {
-  const linktree = event.uvsa_school?.linktree_url;
+  const host = resolveExternalHost(event);
   return (
     <>
       {event.rsvp_url && (
@@ -35,10 +32,22 @@ export function ExternalEventActions({ event }: { event: ExternalEvent }) {
           IG Post <InstagramIcon size={11} aria-hidden />
         </LinkButton>
       )}
-      {linktree && (
-        <LinkButton href={linktree}>
+      {event.ride_form_url && (
+        <LinkButton href={event.ride_form_url}>
+          UCSD Ride Form <ExternalLinkIcon size={10} aria-hidden />
+        </LinkButton>
+      )}
+      {host.linktreeUrl ? (
+        <LinkButton href={host.linktreeUrl}>
           Host Linktree <ExternalLinkIcon size={10} aria-hidden />
         </LinkButton>
+      ) : (
+        host.kind === "uvsa_socal" &&
+        host.instagramUrl && (
+          <LinkButton href={host.instagramUrl}>
+            {host.shortName} Instagram <InstagramIcon size={11} aria-hidden />
+          </LinkButton>
+        )
       )}
     </>
   );
@@ -46,18 +55,15 @@ export function ExternalEventActions({ event }: { event: ExternalEvent }) {
 
 /** Upcoming external card: the host school's logo leads, date is the loudest line. */
 export function ExternalEventCard({ event }: { event: ExternalEvent }) {
-  const host = getEventHostName(event);
+  const hostIdentity = resolveExternalHost(event);
+  const host = hostIdentity.shortName;
   const isHome = isHomeBaseSchool({ slug: event.uvsa_school?.slug ?? "" });
   const showPoints = isHome && event.points > 4;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-surface">
       <div className="flex items-start gap-4 p-5">
-        <SchoolVisualMark
-          school={event.uvsa_school}
-          fallbackLabel={host}
-          size="md"
-        />
+        <ExternalHostMark host={hostIdentity} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-sans text-xs font-semibold uppercase tracking-label text-text-secondary">
@@ -98,6 +104,12 @@ export function ExternalEventCard({ event }: { event: ExternalEvent }) {
         {event.description && (
           <p className="line-clamp-3 font-sans text-sm text-text-secondary">
             {event.description}
+          </p>
+        )}
+        {event.ride_info && (
+          <p className="font-sans text-xs text-text-secondary">
+            <span className="font-semibold text-text-primary">Rides: </span>
+            {event.ride_info}
           </p>
         )}
       </div>

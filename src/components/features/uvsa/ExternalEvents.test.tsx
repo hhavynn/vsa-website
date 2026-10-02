@@ -103,6 +103,67 @@ describe("ExternalEventCard host logo", () => {
   });
 });
 
+describe("ExternalEventCard hosts", () => {
+  it("shows a UVSA SoCal-hosted event with the UVSA identity and no school", () => {
+    render(
+      <ExternalEventCard
+        event={makeEvent({
+          host_type: "uvsa_socal",
+          uvsa_school_id: null,
+          uvsa_school: undefined,
+          title: "UVSA SoCal Fall Social",
+        })}
+      />,
+    );
+    expect(screen.getByText("UVSA SoCal")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "UVSA logo placeholder" }),
+    ).toBeInTheDocument();
+    // The mark opens the configured UVSA SoCal Instagram, like a school PFP would.
+    expect(
+      screen.getByRole("link", { name: "UVSA SoCal on Instagram" }),
+    ).toHaveAttribute("href", "https://www.instagram.com/uvsasocal/");
+  });
+
+  it("opens the host school's Instagram from its logo", () => {
+    render(
+      <ExternalEventCard
+        event={makeEvent({
+          uvsa_school: makeSchool({
+            slug: "uci",
+            short_name: "UCI",
+            instagram_url: "https://www.instagram.com/vsauci/",
+          }),
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "UCI on Instagram" }),
+    ).toHaveAttribute("href", "https://www.instagram.com/vsauci/");
+  });
+
+  it("renders the ride form and ride info only when they exist", () => {
+    const { rerender } = render(<ExternalEventCard event={makeEvent()} />);
+    expect(
+      screen.queryByRole("link", { name: /ride form/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Rides:/)).not.toBeInTheDocument();
+
+    rerender(
+      <ExternalEventCard
+        event={makeEvent({
+          ride_form_url: "https://forms.example/ride",
+          ride_info: "Meet at Gilman parking structure at 5:30 PM.",
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: /UCSD Ride Form/ }),
+    ).toHaveAttribute("href", "https://forms.example/ride");
+    expect(screen.getByText(/Meet at Gilman parking structure/)).toBeInTheDocument();
+  });
+});
+
 describe("UpcomingExternals", () => {
   const base = {
     heading: "Upcoming Externals",

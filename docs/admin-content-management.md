@@ -65,3 +65,14 @@ cards, the page hero, and every external-event card hosted by that school.
 The bucket comes from migration `20261002050000_create_uvsa_school_assets_bucket.sql`
 (public by URL, admin-only list/upload/update via `is_admin_user()`, no delete policy), which must be applied
 manually before uploads work.
+
+## External Event Linking (`/admin/events` and `/admin/external-events`)
+
+External events can be managed directly within `/admin/events` by selecting **Event Type = External Event**.
+
+- **Single Source of Truth**: Choosing External Event reveals host selection (either a UVSA SoCal member school or UVSA SoCal itself) and network linking options.
+- **Automatic Mirroring**: Saving the event creates or updates an `external_events` record linked via `source_event_id`, keeping `/uvsa-network` in sync without duplicate data entry.
+- **UVSA SoCal Host**: UVSA SoCal-hosted events do not need a dummy `uvsa_schools` record (`host_type = 'uvsa_socal'`, `uvsa_school_id = null`).
+- **Network Visibility & Drafts**: An admin toggle "Show on UVSA Network" controls whether the mirror listing appears on `/uvsa-network`. Unpublished / draft events automatically hide the linked external listing.
+- **Lifecycle & Safety**: Changing an event's type away from External Event hides the network listing while preserving details; deleting an event cascade-deletes its mirrored listing. Historical unlinked external events remain editable in `/admin/external-events`.
+- **Database Migration**: Schema changes are defined in `supabase/migrations/20261002060000_link_external_events_to_events.sql` (adds `host_type`, `source_event_id`, and `show_on_network` to `external_events` with constraints, unique index, and column grants).

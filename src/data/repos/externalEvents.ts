@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { withErrorHandling, NotFoundError } from '../errors';
 import { ExternalEvent } from '../../types';
 import { Database } from '../../types/database';
+import { ExternalSyncPlan, LinkedExternalPayload } from '../../lib/externalEventLinking';
 
 type ExternalEventInsert = Database['public']['Tables']['external_events']['Insert'];
 
@@ -25,7 +26,7 @@ export interface ExternalEventFilters {
  * Admin reads run as `authenticated`, which keeps table-level SELECT.
  */
 const PUBLIC_EXTERNAL_EVENT_COLUMNS =
-  'id, uvsa_school_id, title, event_type, date, academic_term_id, location, description, points, rsvp_url, ride_form_url, instagram_url, host_info_url, ride_info, status, photo_album_url, recap, is_featured, created_at, updated_at, uvsa_school:uvsa_schools(id, school_name, short_name, slug, system_type, city, vsa_name, instagram_url, linktree_url, website_url, facebook_url, youtube_url, tiktok_url, description, known_for, recurring_events, logo_url, image_url, is_active, sort_order, created_at, updated_at)' as const;
+  'id, host_type, source_event_id, uvsa_school_id, title, event_type, date, academic_term_id, location, description, points, rsvp_url, ride_form_url, instagram_url, host_info_url, ride_info, status, photo_album_url, recap, is_featured, created_at, updated_at, uvsa_school:uvsa_schools(id, school_name, short_name, slug, system_type, city, vsa_name, instagram_url, linktree_url, website_url, facebook_url, youtube_url, tiktok_url, description, known_for, recurring_events, logo_url, image_url, is_active, sort_order, created_at, updated_at)' as const;
 
 export class ExternalEventsRepository {
   /**
@@ -84,7 +85,7 @@ export class ExternalEventsRepository {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('external_events')
-        .select<string, ExternalEvent>('*, uvsa_school:uvsa_schools(*)')
+        .select<string, ExternalEvent>('*, uvsa_school:uvsa_schools(*), source_event:events(id, name)')
         .order('date', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -109,6 +110,74 @@ export class ExternalEventsRepository {
       // See the embed-cardinality note in getEvents.
       return data as unknown as ExternalEvent;
     }, 'Failed to fetch external event');
+  }
+
+  /**
+   * The listings that mirror the given events, keyed by source event id.
+   *
+   * Public: anon reads only non-draft rows (row policy), and only the public
+   * columns, so a hidden listing simply has no entry.
+   */
+  async getListingsBySourceEventIds(eventIds: string[]): Promise<Map<string, ExternalEvent>> {
+    return withErrorHandling(async () => {
+      const listings = new Map<string, ExternalEvent>();
+      if (eventIds.length === 0) return listings;
+
+      const { data, error } = await supabase
+        .from('external_events')
+        .select(PUBLIC_EXTERNAL_EVENT_COLUMNS)
+        .in('source_event_id', eventIds);
+
+      if (error) throw error;
+      for (const row of (data ?? []) as unknown as ExternalEvent[]) {
+        if (row.source_event_id) listings.set(row.source_event_id, row);
+      }
+      return listings;
+    }, 'Failed to fetch linked external listings');
+  }
+
+  /**
+   * Create or update the one listing that mirrors an event.
+   *
+   * Upserts on the unique `source_event_id`, so saving the same event twice
+   * updates in place and can never create a second listing. Columns the
+   * payload omits (featured, recap, photo album, source notes) are left alone.
+   */
+  async saveLinkedListing(sourceEventId: string, payload: LinkedExternalPayload): Promise<ExternalEvent> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('external_events')
+        .upsert(
+          { ...payload, source_event_id: sourceEventId } as ExternalEventInsert,
+          { onConflict: 'source_event_id' }
+        )
+        .select<string, ExternalEvent>()
+        .single();
+
+      if (error) throw error;
+      return data;
+    }, 'Failed to save the UVSA Network listing');
+  }
+
+  /**
+   * Hide an event's listing without deleting it: its links, recap, and album
+   * stay, and switching the event back to External Event reuses the record.
+   */
+  async hideLinkedListing(sourceEventId: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase
+        .from('external_events')
+        .update({ status: 'draft' })
+        .eq('source_event_id', sourceEventId);
+
+      if (error) throw error;
+    }, 'Failed to hide the UVSA Network listing');
+  }
+
+  /** Carries out the plan `planExternalSync` made for one event save. */
+  async applySyncPlan(sourceEventId: string, plan: ExternalSyncPlan): Promise<void> {
+    if (plan.action === 'upsert') await this.saveLinkedListing(sourceEventId, plan.payload);
+    else if (plan.action === 'hide') await this.hideLinkedListing(sourceEventId);
   }
 
   /**

@@ -495,8 +495,14 @@ export interface UVSASchool {
 
 export type ExternalEventStatus = 'draft' | 'upcoming' | 'past' | 'historical' | 'canceled';
 
+/** `uvsa_socal` hosts have no `uvsa_schools` row; see 20261002060000. */
+export type ExternalHostType = 'school' | 'uvsa_socal';
+
 export interface ExternalEvent {
   id: string;
+  host_type: ExternalHostType;
+  /** The normal event this listing mirrors; null for unmirrored externals. */
+  source_event_id: string | null;
   uvsa_school_id: string | null;
   title: string;
   event_type: string | null;
@@ -521,9 +527,13 @@ export interface ExternalEvent {
    */
   source_notes?: string | null;
   confidence_level?: UVSAConfidenceLevel;
+  /** Admin-only (not granted to anon). Hidden listings use `status = 'draft'`. */
+  show_on_network?: boolean;
   is_featured: boolean;
   created_at: string;
   updated_at: string;
   // Join data
   uvsa_school?: UVSASchool;
+  /** Admin reads only: the linked event's name, for the "Linked Event" link. */
+  source_event?: { id: string; name: string } | null;
 }

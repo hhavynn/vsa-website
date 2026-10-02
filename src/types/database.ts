@@ -1327,6 +1327,7 @@ export type Database = {
           description: string | null;
           event_type: string | null;
           host_info_url: string | null;
+          host_type: string;
           id: string;
           instagram_url: string | null;
           is_featured: boolean;
@@ -1337,6 +1338,8 @@ export type Database = {
           ride_form_url: string | null;
           ride_info: string | null;
           rsvp_url: string | null;
+          show_on_network: boolean;
+          source_event_id: string | null;
           source_notes: string | null;
           status: string;
           title: string;
@@ -1351,6 +1354,7 @@ export type Database = {
           description?: string | null;
           event_type?: string | null;
           host_info_url?: string | null;
+          host_type?: string;
           id?: string;
           instagram_url?: string | null;
           is_featured?: boolean;
@@ -1361,6 +1365,8 @@ export type Database = {
           ride_form_url?: string | null;
           ride_info?: string | null;
           rsvp_url?: string | null;
+          show_on_network?: boolean;
+          source_event_id?: string | null;
           source_notes?: string | null;
           status?: string;
           title: string;
@@ -1375,6 +1381,7 @@ export type Database = {
           description?: string | null;
           event_type?: string | null;
           host_info_url?: string | null;
+          host_type?: string;
           id?: string;
           instagram_url?: string | null;
           is_featured?: boolean;
@@ -1385,6 +1392,8 @@ export type Database = {
           ride_form_url?: string | null;
           ride_info?: string | null;
           rsvp_url?: string | null;
+          show_on_network?: boolean;
+          source_event_id?: string | null;
           source_notes?: string | null;
           status?: string;
           title?: string;
@@ -1397,6 +1406,13 @@ export type Database = {
             columns: ["academic_term_id"];
             isOneToOne: false;
             referencedRelation: "academic_terms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "external_events_source_event_id_fkey";
+            columns: ["source_event_id"];
+            isOneToOne: true;
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {

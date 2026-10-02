@@ -18,6 +18,11 @@ const mockState: {
   loading: boolean;
 } = { schools: [], upcoming: [], past: [], historical: [], loading: false };
 
+// Pin "today" so fixture dates never drift from upcoming to past as time passes.
+jest.mock("../utils/losAngelesDate", () => ({
+  ...jest.requireActual("../utils/losAngelesDate"),
+  getLosAngelesDateOnly: () => "2026-10-01",
+}));
 jest.mock("../hooks/useUVSASchools", () => ({
   useUVSASchools: () => ({
     schools: mockState.schools,
@@ -139,6 +144,51 @@ describe("UVSANetwork page", () => {
     expect(
       screen.getByRole("heading", { name: "Headline Night" }),
     ).toBeInTheDocument();
+  });
+
+  it("lists a linked UVSA SoCal-hosted event under Upcoming Externals with its organizer", () => {
+    mockState.upcoming = [
+      makeEvent({
+        id: "linked-1",
+        source_event_id: "evt-1",
+        host_type: "uvsa_socal",
+        uvsa_school_id: null,
+        uvsa_school: undefined,
+        title: "UVSA SoCal Fall Social",
+        date: "2026-10-24",
+        rsvp_url: "https://rsvp.example/socal",
+      }),
+    ];
+    renderPage();
+    const upcoming = document.querySelector("#upcoming") as HTMLElement;
+    expect(
+      within(upcoming).getByRole("heading", { name: "UVSA SoCal Fall Social" }),
+    ).toBeInTheDocument();
+    expect(within(upcoming).getByText("UVSA SoCal")).toBeInTheDocument();
+    expect(
+      within(upcoming).getByRole("link", { name: /rsvp/i }),
+    ).toHaveAttribute("href", "https://rsvp.example/socal");
+  });
+
+  it("moves an upcoming listing whose date has passed into the archive", () => {
+    mockState.upcoming = [
+      makeEvent({ id: "u1", title: "Still Coming", date: "2026-10-24" }),
+      makeEvent({
+        id: "lapsed",
+        source_event_id: "evt-2",
+        title: "Already Happened",
+        date: "2026-09-12",
+      }),
+    ];
+    renderPage();
+    const upcoming = document.querySelector("#upcoming") as HTMLElement;
+    const archive = document.querySelector("#archive") as HTMLElement;
+    expect(within(upcoming).getByText("Still Coming")).toBeInTheDocument();
+    expect(
+      within(upcoming).queryByText("Already Happened"),
+    ).not.toBeInTheDocument();
+    // The archive groups by academic year; 2026-09 falls in 2026–27.
+    expect(within(archive).getByRole("button", { name: /2026–27/ })).toBeInTheDocument();
   });
 
   it("puts the archive in a compact year-grouped list, not the main flow of cards", () => {
