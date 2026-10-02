@@ -106,7 +106,7 @@ export function PublicPreviewDialog({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-300">
                 <EyeIcon aria-hidden className="h-3 w-3" />
-                Preview · Not published
+                ADMIN PREVIEW — NOT PUBLIC
               </span>
               <span className="font-mono text-[11px] text-[var(--color-text3)]">{surface}</span>
             </div>

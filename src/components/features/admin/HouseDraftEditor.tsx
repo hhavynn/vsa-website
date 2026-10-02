@@ -1,9 +1,22 @@
 // Protected domain — House membership. Review/edit/preflight/lock/reveal for one
 // persisted House assignment batch. Locking is private; only "Reveal" writes
 // house_memberships, and it does so through the shared dated-membership writer.
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
+import { logAdminActivity } from '../../../data/repos/adminActivity';
+import { useOperatingYear } from '../../../hooks/useOperatingYear';
+import { useReviewMarks } from '../../../hooks/useReviewMarks';
+import { useUrlFilter, useUrlParam } from '../../../hooks/useUrlFilter';
+import { ACTIVITY_ACTIONS, activitySummary, buildUndoMetadata } from '../../../lib/adminActivity';
+import { planHouseAssign, planHouseClear, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../../lib/adminBulk';
+import { findPersonInTwoHouses, findSameMemberTwice } from '../../../lib/adminConflicts';
+import { applyQuickFilter, countByFilter, matchesText } from '../../../lib/adminFilters';
+import { NextStep, nextStepFor } from '../../../lib/adminNextSteps';
+import { buildReadiness, houseIssues } from '../../../lib/adminPreflight';
+import { houseProgress } from '../../../lib/adminProgress';
+import { HOUSE_ROW_FILTERS, HOUSE_ROW_FILTER_KEYS, HouseRowFacts, houseRowIsIn } from '../../../lib/adminQueues';
+import { describeYearContext } from '../../../lib/adminYearContext';
 import {
   HouseAssignmentBatch,
   HouseAssignmentDraft,
@@ -18,7 +31,22 @@ import type { BalanceSuggestion } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember, getMemberName, normalizeHouseLookup } from '../../../lib/houseAssignmentImport';
 import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals';
 import { formatAcademicYear } from '../../../lib/academicTerms';
+import { formatYearSpan } from '../../../lib/operationalStatus';
 import { MemberSearchSelect } from './MemberSearchSelect';
+import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
+import {
+  BulkActionBar,
+  BulkConfirm,
+  EmptyState,
+  FilterChips,
+  NextStepBanner,
+  PossibleDuplicates,
+  ReadinessPanel,
+  RowCheckbox,
+  WorkflowProgress,
+  YearContextBadge,
+  bulkBtnCls,
+} from './ops';
 
 export interface HouseDraftEditorProps {
   batch: HouseAssignmentBatch;
@@ -31,9 +59,9 @@ export interface HouseDraftEditorProps {
   onBatchChanged: () => void;
   /** Called after a reveal so the parent can reload the members.house cache. */
   onPublished: () => void;
+  /** Shown on open, e.g. right after a draft was saved. */
+  initialNextStep?: NextStep | null;
 }
-
-type RowFilter = 'all' | 'attention' | 'unassigned' | 'ambiguous' | 'unmatched' | 'duplicates';
 
 const selectCls =
   'w-full rounded border bg-[var(--color-surface2)] px-2 py-1.5 text-xs text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -65,12 +93,19 @@ export function HouseDraftEditor({
   onBack,
   onBatchChanged,
   onPublished,
+  initialNextStep = null,
 }: HouseDraftEditorProps) {
   const [batch, setBatch] = useState(initialBatch);
   const [drafts, setDrafts] = useState(initialDrafts);
   const [busy, setBusy] = useState(false);
-  const [filter, setFilter] = useState<RowFilter>('all');
+  const operatingYear = useOperatingYear();
+  const [filter, setFilter] = useUrlFilter(HOUSE_ROW_FILTER_KEYS);
+  const [houseFilter, setHouseFilter] = useUrlParam('house');
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [pendingClear, setPendingClear] = useState(false);
+  const [nextStep, setNextStep] = useState<NextStep | null>(initialNextStep);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [revealConfirmed, setRevealConfirmed] = useState(false);
   const [addMemberId, setAddMemberId] = useState<string | null>(null);
   const [addHouseId, setAddHouseId] = useState('');
@@ -109,26 +144,62 @@ export function HouseDraftEditor({
     return ids;
   }, [preflight]);
 
-  const visibleRows = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return drafts.filter((row) => {
-      if (needle) {
-        const name = ((row.member_id && memberNames.get(row.member_id)) || row.source_name).toLowerCase();
-        if (!name.includes(needle) && !row.source_name.toLowerCase().includes(needle)) return false;
-      }
-      const noHouse = !row.house_profile_id && !row.source_house;
-      switch (filter) {
-        case 'unassigned': return noHouse;
-        case 'ambiguous': return row.match_status === 'review';
-        case 'unmatched': return !row.member_id;
-        case 'duplicates': return duplicateRowIds.has(row.id);
-        case 'attention':
-          return noHouse || row.match_status === 'review' || !row.member_id || duplicateRowIds.has(row.id)
-            || (!!row.house_profile_id && !profileById.get(row.house_profile_id)?.is_active);
-        default: return true;
-      }
+  const draftIds = useMemo(() => drafts.map((row) => row.id), [drafts]);
+  const { reviewed, markReviewed } = useReviewMarks('house_assignment_draft', batch.id, draftIds, batch.academic_year_start);
+  const resolveHouseId = useCallback((text: string) => houseIdByText.get(normalizeHouseLookup(text)) ?? null, [houseIdByText]);
+
+  const facts = useMemo<HouseRowFacts[]>(
+    () =>
+      drafts.map((row) => ({
+        row,
+        duplicate: duplicateRowIds.has(row.id),
+        profile: row.house_profile_id ? profileById.get(row.house_profile_id) ?? null : null,
+        resolveHouseId,
+        reviewed: reviewed.has(row.id),
+      })),
+    [drafts, duplicateRowIds, profileById, resolveHouseId, reviewed],
+  );
+  const filterCounts = useMemo(() => countByFilter(facts, HOUSE_ROW_FILTERS), [facts]);
+  const houseFilterValid = !!houseFilter && profileById.has(houseFilter);
+
+  const visibleFacts = useMemo(() => {
+    const byFilter = applyQuickFilter(facts, HOUSE_ROW_FILTERS, filter);
+    return byFilter.filter((item) => {
+      if (houseFilterValid && !houseRowIsIn(item, houseFilter as string)) return false;
+      const name = (item.row.member_id && memberNames.get(item.row.member_id)) || item.row.source_name;
+      return matchesText(search, name, item.row.source_name);
     });
-  }, [drafts, filter, search, memberNames, duplicateRowIds, profileById]);
+  }, [facts, filter, houseFilter, houseFilterValid, search, memberNames]);
+  const visibleRows = useMemo(() => visibleFacts.map((item) => item.row), [visibleFacts]);
+
+  // Possible duplicates the admin should see before locking.
+  const conflicts = useMemo(() => {
+    const identities = drafts
+      .filter((row) => row.member_id)
+      .map((row) => ({ id: row.id, label: (row.member_id && memberNames.get(row.member_id)) || row.source_name, memberId: row.member_id }));
+    const houses = drafts
+      .filter((row) => row.member_id)
+      .map((row) => ({
+        id: row.id,
+        label: (row.member_id && memberNames.get(row.member_id)) || row.source_name,
+        memberId: row.member_id,
+        houseId: row.house_profile_id,
+        houseLabel: row.house_profile_id ? profileById.get(row.house_profile_id)?.display_name ?? null : null,
+      }));
+    const twoHouses = findPersonInTwoHouses(houses);
+    const flagged = new Set(twoHouses.flatMap((group) => group.items.map((item) => item.id)));
+    const sameMember = findSameMemberTwice(identities.filter((item) => !flagged.has(item.id)), 'same_member_twice', 'row');
+    return [...twoHouses, ...sameMember];
+  }, [drafts, memberNames, profileById]);
+
+  useEffect(
+    () =>
+      setSelected((current) => {
+        const next = pruneSelection(current, draftIds);
+        return next.size === current.size ? current : next;
+      }),
+    [draftIds],
+  );
 
   async function run(action: () => Promise<void>, failure: string) {
     setBusy(true);
@@ -146,10 +217,31 @@ export function HouseDraftEditor({
     setDrafts((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
   }
 
+  const houseNameOf = (profileId: string | null | undefined) => (profileId && profileById.get(profileId) ? houseLabel(profileById.get(profileId) as HouseProfileLite) : null);
+  const personNameOf = (row: HouseAssignmentDraft) => (row.member_id && memberNames.get(row.member_id)) || row.source_name;
+
+  function logHouseChange(row: HouseAssignmentDraft, patch: Partial<HouseAssignmentDraft>) {
+    if (!('house_profile_id' in patch) || (patch.house_profile_id ?? null) === (row.house_profile_id ?? null)) return;
+    logAdminActivity({
+      action: ACTIVITY_ACTIONS.houseAssignmentChanged,
+      entityType: 'house_assignment_draft',
+      entityId: row.id,
+      academicYearStart: batch.academic_year_start,
+      summary: activitySummary.houseChanged(personNameOf(row), houseNameOf(row.house_profile_id), houseNameOf(patch.house_profile_id)),
+      metadata: buildUndoMetadata({
+        kind: 'house_draft_house',
+        target: { batchId: batch.id, draftId: row.id },
+        before: row.house_profile_id ?? null,
+        after: patch.house_profile_id ?? null,
+      }),
+    });
+  }
+
   function editRow(row: HouseAssignmentDraft, patch: Partial<HouseAssignmentDraft>, failure = 'Failed to update the row.') {
     return run(async () => {
       await houseAssignmentsRepository.updateDraft(batch.id, row.id, patch);
       patchLocal(row.id, patch);
+      logHouseChange(row, patch);
     }, failure);
   }
 
@@ -196,6 +288,72 @@ export function HouseDraftEditor({
     }, 'Failed to add the person.');
   }
 
+  // ─── Bulk actions ──────────────────────────────────────────────────────────
+  const [bulkHouseId, setBulkHouseId] = useState('');
+  const selectedRowList = useMemo(() => selectedRows(drafts, selected, (row) => row.id), [drafts, selected]);
+  const assignPlan = useMemo(() => planHouseAssign(selectedRowList, bulkHouseId, editable), [selectedRowList, bulkHouseId, editable]);
+  const clearPlan = useMemo(() => planHouseClear(selectedRowList, editable), [selectedRowList, editable]);
+  const reviewPlan = useMemo(() => planMarkReviewed(selectedRowList, reviewed), [selectedRowList, reviewed]);
+
+  function bulkAssign() {
+    if (!bulkHouseId) {
+      toast.error('Choose a House first.');
+      return;
+    }
+    const target = assignPlan.eligible;
+    if (target.length === 0) {
+      toast.error(assignPlan.skipped[0]?.reason ?? 'Nothing to change.');
+      return;
+    }
+    return run(async () => {
+      for (const row of target) {
+        await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: bulkHouseId });
+        patchLocal(row.id, { house_profile_id: bulkHouseId });
+      }
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.houseBulkChanged,
+        entityType: 'house_assignment_batch',
+        entityId: batch.id,
+        academicYearStart: batch.academic_year_start,
+        summary: activitySummary.houseBulk(target.length, houseNameOf(bulkHouseId)),
+      });
+      toast.success(`Assigned ${target.length} ${target.length === 1 ? 'row' : 'rows'} to ${houseNameOf(bulkHouseId)}.${assignPlan.skipped.length ? ` ${assignPlan.skipped.length} skipped.` : ''}`);
+      setSelected(new Set());
+    }, 'Failed to assign the selected rows.');
+  }
+
+  function bulkClear() {
+    const target = clearPlan.eligible;
+    return run(async () => {
+      for (const row of target) {
+        await houseAssignmentsRepository.updateDraft(batch.id, row.id, { house_profile_id: null });
+        patchLocal(row.id, { house_profile_id: null });
+      }
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.houseBulkChanged,
+        entityType: 'house_assignment_batch',
+        entityId: batch.id,
+        academicYearStart: batch.academic_year_start,
+        summary: activitySummary.houseBulk(target.length, null),
+      });
+      toast.success(`Cleared the House on ${target.length} ${target.length === 1 ? 'row' : 'rows'}.`);
+      setPendingClear(false);
+      setSelected(new Set());
+    }, 'Failed to clear the selected rows.');
+  }
+
+  function bulkMarkReviewed() {
+    return run(async () => {
+      if (reviewPlan.eligible.length === 0) {
+        toast('All selected rows are already reviewed.');
+        return;
+      }
+      await markReviewed(reviewPlan.eligible.map((row) => row.id));
+      toast.success(`Marked ${reviewPlan.eligible.length} reviewed.`);
+      setSelected(new Set());
+    }, 'Failed to mark rows reviewed.');
+  }
+
   async function refreshBatch() {
     const fresh = await houseAssignmentsRepository.getBatch(batch.id);
     setBatch(fresh);
@@ -206,6 +364,14 @@ export function HouseDraftEditor({
     return run(async () => {
       await houseAssignmentsRepository.lockBatch(batch.id, memberNames);
       await refreshBatch();
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.houseBatchLocked,
+        entityType: 'house_assignment_batch',
+        entityId: batch.id,
+        academicYearStart: batch.academic_year_start,
+        summary: activitySummary.cycleLocked('House', batch.academic_year_start),
+      });
+      setNextStep(nextStepFor({ type: 'house_locked' }));
       toast.success('Locked. Nothing is public until you reveal.');
     }, 'Failed to lock.');
   }
@@ -215,6 +381,13 @@ export function HouseDraftEditor({
       await houseAssignmentsRepository.reopenBatch(batch.id);
       setRevealConfirmed(false);
       await refreshBatch();
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.houseBatchReopened,
+        entityType: 'house_assignment_batch',
+        entityId: batch.id,
+        academicYearStart: batch.academic_year_start,
+        summary: activitySummary.cycleUnlocked('House', batch.academic_year_start),
+      });
       toast.success('Reopened for editing.');
     }, 'Failed to reopen.');
   }
@@ -224,6 +397,15 @@ export function HouseDraftEditor({
       const result = await houseAssignmentsRepository.publishBatch(batch.id, userId);
       await refreshBatch();
       setRevealConfirmed(false);
+      if (!result.alreadyPublished) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.houseBatchPublished,
+          entityType: 'house_assignment_batch',
+          entityId: batch.id,
+          academicYearStart: batch.academic_year_start,
+          summary: activitySummary.published('House assignments', batch.academic_year_start, result.applied),
+        });
+      }
       toast.success(
         result.alreadyPublished
           ? 'Already revealed.'
@@ -255,6 +437,7 @@ export function HouseDraftEditor({
           <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
             {formatAcademicYear(batch.academic_year_start)} House assignments
           </h2>
+          <YearContextBadge context={describeYearContext(batch.academic_year_start, operatingYear)} className="mt-1" />
           <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
             {batchBadge(batch.status)} · effective {batch.effective_start_date}
             {batch.source_label ? ` · ${batch.source_label}` : ''}
@@ -307,6 +490,26 @@ export function HouseDraftEditor({
         </div>
       )}
 
+      <NextStepBanner step={nextStep} onFilter={setFilter} onPreview={() => setPreviewOpen(true)} onDismiss={() => setNextStep(null)} />
+
+      <WorkflowProgress
+        title={`${formatYearSpan(batch.academic_year_start)} Houses`}
+        steps={houseProgress({
+          status: batch.status,
+          rows: drafts.length,
+          matched: drafts.filter((row) => !!row.member_id && (row.match_status === 'match' || row.match_status === 'manual')).length,
+          assigned: counts.perHouse.reduce((sum, house) => sum + house.count, 0),
+        })}
+      />
+
+      {(batch.status === 'draft' || batch.status === 'locked') && drafts.length > 0 && (
+        <div>
+          <button type="button" onClick={() => setPreviewOpen(true)} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}>
+            Preview reveal
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="House counts">
           <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>House counts</h3>
@@ -329,37 +532,14 @@ export function HouseDraftEditor({
           )}
         </section>
 
-        <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Preflight">
-          <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Preflight</h3>
-          <ul className="mt-3 space-y-1 text-sm" style={{ color: 'var(--color-text)' }}>
-            <li>✓ {preflight.applicants} applicants</li>
-            <li>✓ {preflight.assigned} assigned</li>
-          </ul>
-          {preflight.blockers.length > 0 && (
-            <div className="mt-3">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-red-600 dark:text-red-400">Blocking</p>
-              <ul className="mt-1 space-y-1 text-xs text-red-600 dark:text-red-400">
-                {preflight.blockers.map((issue, index) => (
-                  <li key={`${issue.code}-${index}`}>✕ {issue.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {preflight.warnings.length > 0 && (
-            <div className="mt-3">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Needs attention</p>
-              <ul className="mt-1 space-y-1 text-xs text-amber-700 dark:text-amber-400">
-                {preflight.warnings.map((issue, index) => (
-                  <li key={`${issue.code}-${index}`}>⚠ {issue.message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {preflight.blockers.length === 0 && preflight.warnings.length === 0 && (
-            <p className="mt-3 text-xs" style={{ color: 'var(--color-text3)' }}>Nothing needs attention.</p>
-          )}
-        </section>
+        <ReadinessPanel
+          readiness={buildReadiness(houseIssues(preflight), { ready: batch.status === 'locked' ? 'Ready to Reveal' : 'Ready to Lock' })}
+          onFilter={setFilter}
+          passed={[`${preflight.applicants} applicants`, `${preflight.assigned} assigned`]}
+        />
       </div>
+
+      <PossibleDuplicates duplicates={conflicts} onCompare={() => setFilter('duplicates')} />
 
       <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Balance helper">
         <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Balance helper</h3>
@@ -406,7 +586,7 @@ export function HouseDraftEditor({
       <section className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Assignment rows">
         <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-end sm:justify-between" style={{ borderColor: 'var(--color-border)' }}>
           <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Rows</h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="search"
               value={search}
@@ -416,16 +596,44 @@ export function HouseDraftEditor({
               className="rounded border px-2 py-1.5 text-xs"
               style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
             />
-            <select value={filter} onChange={(event) => setFilter(event.target.value as RowFilter)} aria-label="Filter rows" className={`${selectCls} w-auto`} style={{ borderColor: 'var(--color-border)' }}>
-              <option value="all">All rows</option>
-              <option value="attention">Needs attention</option>
-              <option value="unassigned">Unassigned</option>
-              <option value="ambiguous">Ambiguous matches</option>
-              <option value="unmatched">No member</option>
-              <option value="duplicates">Duplicates</option>
+            <select
+              value={houseFilterValid ? (houseFilter as string) : ''}
+              onChange={(event) => setHouseFilter(event.target.value || null)}
+              aria-label="Filter by House"
+              className={`${selectCls} w-auto`}
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <option value="">By House: all</option>
+              {activeProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>
+              ))}
             </select>
           </div>
         </div>
+
+        <div className="border-b px-5 py-3" style={{ borderColor: 'var(--color-border)' }}>
+          <FilterChips filters={HOUSE_ROW_FILTERS} counts={filterCounts} active={filter} onChange={setFilter} label="Filter rows" />
+        </div>
+
+        <BulkActionBar count={selected.size} noun="row" onClear={() => { setSelected(new Set()); setPendingClear(false); }}>
+          {editable && (
+            <>
+              <label htmlFor="bulk-house" className="sr-only">House for selected rows</label>
+              <select id="bulk-house" value={bulkHouseId} onChange={(event) => setBulkHouseId(event.target.value)} className={`${selectCls} w-auto`} style={{ borderColor: 'var(--color-border)' }}>
+                <option value="">Assign selected →</option>
+                {activeProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>
+                ))}
+              </select>
+              <button type="button" disabled={busy || !bulkHouseId} onClick={bulkAssign} className={bulkBtnCls}>Assign</button>
+              <button type="button" disabled={busy} onClick={() => setPendingClear(true)} className={bulkBtnCls}>Clear assignment</button>
+            </>
+          )}
+          <button type="button" disabled={busy} onClick={bulkMarkReviewed} className={bulkBtnCls}>Mark reviewed</button>
+        </BulkActionBar>
+        {pendingClear && selected.size > 0 && (
+          <BulkConfirm plan={clearPlan} busy={busy} onConfirm={bulkClear} onCancel={() => setPendingClear(false)} skippedLabel={(row) => personNameOf(row)} />
+        )}
 
         {editable && (
           <div className="flex flex-wrap items-end gap-3 border-b px-5 py-3" style={{ borderColor: 'var(--color-border)' }}>
@@ -448,13 +656,33 @@ export function HouseDraftEditor({
           </div>
         )}
 
-        {visibleRows.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>No rows match this filter.</div>
+        {drafts.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              title="No House assignment rows yet."
+              description="Add someone manually above, or go back and import a sheet."
+              action={{ label: 'Back to Import Assignments', onClick: onBack }}
+            />
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
+            No rows match this filter.{' '}
+            <button type="button" onClick={() => { setFilter('all'); setHouseFilter(null); setSearch(''); }} className="bg-transparent p-0 font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--brand)' }}>
+              Show all {drafts.length}
+            </button>
+          </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="max-h-[70vh] overflow-auto">
             <table className="w-full min-w-[860px] text-sm">
-              <thead>
+              <thead className="sticky top-0 z-[1]">
                 <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+                  <th className="w-10 px-4 py-3 text-left">
+                    <RowCheckbox
+                      checked={visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.id))}
+                      onChange={() => setSelected(setSelection(visibleRows.map((row) => row.id), !visibleRows.every((row) => selected.has(row.id))))}
+                      label="Select all visible rows"
+                    />
+                  </th>
                   {['Sheet entry', 'Member', 'House', 'Match', ''].map((heading) => (
                     <th key={heading || 'actions'} className="px-4 py-3 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{heading}</th>
                   ))}
@@ -466,9 +694,13 @@ export function HouseDraftEditor({
                   const brokenHouse = (!!row.house_profile_id && !profile?.is_active) || (!row.house_profile_id && !!row.source_house);
                   const prefs = readPreferences(row.preferences);
                   return (
-                    <tr key={row.id} data-testid="house-draft-row">
+                    <tr key={row.id} data-testid="house-draft-row" data-reviewed={reviewed.has(row.id)}>
+                      <td className="px-4 py-3 align-top">
+                        <RowCheckbox checked={selected.has(row.id)} onChange={() => setSelected((current) => toggleSelected(current, row.id))} label={`Select ${row.source_name}`} />
+                      </td>
                       <td className="px-4 py-3 align-top">
                         <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{row.source_name || '—'}</p>
+                        {reviewed.has(row.id) && <p className="mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-green-700 dark:text-green-400">✓ Reviewed</p>}
                         {prefs.length > 0 && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>Prefers: {prefs.join(' › ')}</p>}
                         {duplicateRowIds.has(row.id) && <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">Duplicate member</p>}
                       </td>
@@ -528,6 +760,21 @@ export function HouseDraftEditor({
           </div>
         )}
       </section>
+      {previewOpen && (
+        <HouseRevealPreviewDialog
+          yearLabel={formatYearSpan(batch.academic_year_start)}
+          effectiveDate={batch.effective_start_date}
+          houses={counts.perHouse.map((house) => ({
+            label: house.label,
+            members: drafts
+              .filter((row) => row.house_profile_id === house.profileId && !!row.member_id && (row.match_status === 'match' || row.match_status === 'manual'))
+              .map((row) => personNameOf(row))
+              .sort((a, b) => a.localeCompare(b)),
+          }))}
+          notRevealed={drafts.filter((row) => !row.house_profile_id || !row.member_id).length}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -11,10 +11,10 @@ export function useOperatingYear(): number {
   const [yearStart, setYearStart] = useState(() => getAcademicYearStart(new Date()));
   useEffect(() => {
     let cancelled = false;
-    adminOperationsRepository
-      .resolveYearStart()
+    Promise.resolve()
+      .then(() => adminOperationsRepository.resolveYearStart())
       .then((resolved) => {
-        if (!cancelled) setYearStart(resolved);
+        if (!cancelled && typeof resolved === 'number') setYearStart(resolved);
       })
       .catch(() => undefined);
     return () => {

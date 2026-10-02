@@ -15,7 +15,7 @@ describe('PublicPreviewDialog', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Fall GBM' })).toBeInTheDocument();
-    expect(screen.getByText(/Preview · Not published/)).toBeInTheDocument();
+    expect(screen.getByText(/ADMIN PREVIEW — NOT PUBLIC/)).toBeInTheDocument();
     expect(screen.getByText('Draft — hidden')).toBeInTheDocument();
     expect(frameDocument().body.textContent).toContain('Public card');
   });
