@@ -200,3 +200,17 @@ it('recovers from an initial fetch error on the next all-time refresh', async ()
   expect(screen.queryByText('Leaderboard temporarily unavailable')).not.toBeInTheDocument();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
 });
+
+it('gives podium members tied at T1 the same first-place styling', async () => {
+  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
+    member('Gamma', 5), member('Beta', 10), member('Alpha', 10),
+  ]);
+  renderLeaderboard();
+  await advanceTime();
+
+  const podiumBadges = (text: string) =>
+    screen.getAllByText(text).filter((element) => element.style.background !== '').map((element) => element.style.background);
+
+  expect(podiumBadges('T1')).toEqual(['rgb(212, 132, 26)', 'rgb(212, 132, 26)']);
+  expect(podiumBadges('3')).toEqual(['rgb(180, 83, 9)']);
+});

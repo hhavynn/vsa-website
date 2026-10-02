@@ -947,6 +947,12 @@ export function Leaderboard() {
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
+const PODIUM_TIERS = {
+  1: { color: '#d4841a', icon: CrownIcon, pin: 'accent' as const, riser: 96 },
+  2: { color: '#94a3b8', icon: MedalIcon, pin: 'secondary' as const, riser: 64 },
+  3: { color: '#b45309', icon: AwardIcon, pin: 'primary' as const, riser: 40 },
+};
+
 function PodiumIndividual({
   top3,
   activeTab,
@@ -964,20 +970,21 @@ function PodiumIndividual({
   const third = top3[2];
   if (!first) return null;
 
+  // Medal styling follows the member's (possibly shared) rank, not their
+  // podium slot, so two members tied at T1 both get gold.
+  const tierFor = (entry: LeaderboardEntry) => PODIUM_TIERS[Math.min(entry.rank, 3) as 1 | 2 | 3];
+
   const cards = [
     {
-      entry: second, rank: 2, order: 'order-2 md:order-1', color: '#94a3b8', icon: MedalIcon, rotation: -2, pin: 'secondary' as const,
-      riser: 64, revealDelay: 0.15,
+      entry: second, order: 'order-2 md:order-1', rotation: -2, revealDelay: 0.15,
       gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: `to pass ${formatRank(first)}`, eventTiebreakDirection: 'fewer' as const,
     },
     {
-      entry: first, rank: 1, order: 'order-1 md:order-2', color: '#d4841a', icon: CrownIcon, rotation: 0, pin: 'accent' as const, featured: true,
-      riser: 96, revealDelay: 0.3,
+      entry: first, order: 'order-1 md:order-2', rotation: 0, revealDelay: 0.3,
       gap: first && second ? getLeaderboardGap(first, second, activeTab) : null, gapLabel: second ? `ahead of ${formatRank(second)}` : '', eventTiebreakDirection: 'more' as const,
     },
     {
-      entry: third, rank: 3, order: 'order-3 md:order-3', color: '#b45309', icon: AwardIcon, rotation: 2, pin: 'primary' as const,
-      riser: 40, revealDelay: 0,
+      entry: third, order: 'order-3 md:order-3', rotation: 2, revealDelay: 0,
       gap: second && third ? getLeaderboardGap(second, third, activeTab) : null, gapLabel: second ? `to pass ${formatRank(second)}` : '', eventTiebreakDirection: 'fewer' as const,
     },
   ];
@@ -993,10 +1000,11 @@ function PodiumIndividual({
       <div className="grid gap-6 md:grid-cols-3 md:items-end">
         {cards.map((card) => {
           if (!card.entry) return null;
-          const isFirst = card.rank === 1;
+          const tier = tierFor(card.entry);
+          const isFirst = card.entry.rank === 1;
           const rankLabel = card.entry.tiedCount > 1 ? `T${card.entry.rank}` : card.entry.rank;
           const value = activeTab === 'points' ? card.entry.points : card.entry.events_attended;
-          const Icon = card.icon;
+          const Icon = tier.icon;
 
           return (
             <motion.div
@@ -1012,7 +1020,7 @@ function PodiumIndividual({
               className={`${card.order} relative ${isFirst ? 'md:scale-110 md:z-10' : ''} md:rotate-[var(--podium-rotate)]`}
               style={{ '--podium-rotate': `${card.rotation}deg` } as CSSProperties}
             >
-              <PushPin color={card.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
+              <PushPin color={tier.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
 
               <div
                 role="button"
@@ -1037,7 +1045,7 @@ function PodiumIndividual({
                 <div className="absolute right-4 top-4">
                   <div 
                     className="flex h-12 w-12 items-center justify-center rounded-full font-mono text-2xl font-black text-white shadow-lg border-2 border-white/50"
-                    style={{ background: card.color }}
+                    style={{ background: tier.color }}
                   >
                     {rankLabel}
                   </div>
@@ -1045,7 +1053,7 @@ function PodiumIndividual({
 
                 {/* Icon */}
                 <div className="mb-4 flex justify-center">
-                  <div className="rounded-full bg-[var(--surface2)] p-4 shadow-inner" style={{ color: card.color }}>
+                  <div className="rounded-full bg-[var(--surface2)] p-4 shadow-inner" style={{ color: tier.color }}>
                     <Icon className="h-10 w-10" />
                   </div>
                 </div>
@@ -1099,9 +1107,9 @@ function PodiumIndividual({
               <div
                 aria-hidden
                 className="relative hidden overflow-hidden rounded-b-lg border-2 border-t-0 md:flex md:items-center md:justify-center"
-                style={{ height: card.riser, borderColor: card.color, background: `${card.color}12` }}
+                style={{ height: tier.riser, borderColor: tier.color, background: `${tier.color}12` }}
               >
-                <span className="font-mono text-5xl font-black opacity-15" style={{ color: card.color }}>
+                <span className="font-mono text-5xl font-black opacity-15" style={{ color: tier.color }}>
                   {rankLabel}
                 </span>
               </div>
