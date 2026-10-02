@@ -303,3 +303,49 @@ describe('member year advances across seasons (attendance import)', () => {
     expect(updates.year).toBeUndefined();
   });
 });
+
+describe('year advance on admin-confirmed (force-matched) rows', () => {
+  // Prod audit, Fall 2026 GBM #1: every returning member whose year was not
+  // advanced was a review row (ambiguous name / email-name conflict) that an
+  // admin force-matched. Enrichment bailed on `row.status !== 'match'`.
+  const twins = [
+    member({ id: 'm1', first_name: 'Ryan', last_name: 'Le', year: '1st Year', college: 'Marshall' }),
+    member({ id: 'm2', first_name: 'Ryan', last_name: 'Le', year: '4th Year', college: 'Revelle' }),
+  ];
+
+  const reviewRow = () => {
+    const result = matchOne(row({ displayName: 'Ryan Le', csvYear: '2nd Year', csvCollege: 'Marshall' }), twins);
+    expect(result.status).toBe('review');
+    expect(result.matchedMember?.id).toBe('m1');
+    return result;
+  };
+
+  test('an unconfirmed review row never moves a year', () => {
+    expect(getSafeAttendanceMemberEnrichment(reviewRow(), twins)).toEqual({});
+  });
+
+  test('a force-matched review row advances year', () => {
+    const updates = getSafeAttendanceMemberEnrichment(reviewRow(), twins, { adminConfirmed: true });
+    expect(updates.year).toBe('2nd Year');
+  });
+
+  test('a force-matched row still never rewinds a year', () => {
+    const result = matchOne(row({ displayName: 'Ryan Le', csvYear: '1st Year', csvCollege: 'Revelle' }), twins);
+    const updates = getSafeAttendanceMemberEnrichment({ ...result, matchedMember: twins[1] }, twins, { adminConfirmed: true });
+    expect(updates.year).toBeUndefined();
+  });
+
+  test('admin confirmation unlocks year only, not email or college', () => {
+    const result = matchOne(
+      row({ displayName: 'Ryan Le', csvYear: '2nd Year', csvEmail: 'other@ucsd.edu', csvCollege: 'Sixth' }),
+      [member({ id: 'm1', first_name: 'Ryan', last_name: 'Le', year: '1st Year' }), twins[1]],
+    );
+    const updates = getSafeAttendanceMemberEnrichment({ ...result, matchedMember: twins[0] }, twins, { adminConfirmed: true });
+    expect(updates).toEqual({ year: '2nd Year' });
+  });
+
+  test('adminConfirmed is ignored for rows that are not review rows', () => {
+    const dup = { ...reviewRow(), status: 'duplicate' as const };
+    expect(getSafeAttendanceMemberEnrichment(dup, twins, { adminConfirmed: true })).toEqual({});
+  });
+});

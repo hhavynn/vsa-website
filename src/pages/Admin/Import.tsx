@@ -93,7 +93,9 @@ function canMarkAsNew(row: RowResult): boolean {
 }
 
 function buildMemberEnrichment(row: RowResult, members: Member[]): MemberEnrichment {
-  return getSafeAttendanceMemberEnrichment(row, members) as MemberEnrichment;
+  return getSafeAttendanceMemberEnrichment(row, members, {
+    adminConfirmed: row.status === 'review' && row.manualOverride === 'force-match' && row.canForceMatch,
+  }) as MemberEnrichment;
 }
 
 function hasMemberEnrichment(row: RowResult, members: Member[]): boolean {

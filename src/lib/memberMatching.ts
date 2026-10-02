@@ -582,17 +582,30 @@ export function resolveMemberYearAdvance(
   return csvRank > storedRank ? csvYear : null;
 }
 
+export interface AttendanceEnrichmentOptions {
+  /**
+   * An admin explicitly force-matched this `review` row to `matchedMember`.
+   * Their confirmation already credits the member's attendance, so it is
+   * enough to advance year. It deliberately unlocks nothing else: a review
+   * row's email/college can belong to a different person (email-name
+   * conflicts, ambiguous names), so those stay fill-only on safe matches.
+   */
+  adminConfirmed?: boolean;
+}
+
 export function getSafeAttendanceMemberEnrichment(
   row: AttendanceMatchResult,
   members: AttendanceImportMember[],
+  { adminConfirmed = false }: AttendanceEnrichmentOptions = {},
 ): Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> {
   const member = row.matchedMember;
-  if (!member || row.status !== 'match') return {};
+  const confirmedReviewRow = adminConfirmed && row.status === 'review';
+  if (!member || (row.status !== 'match' && !confirmedReviewRow)) return {};
 
   const updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> = {};
   const safeHighConfidenceMatch = row.method === 'email' || row.method === 'exact_name' || (row.method === 'fuzzy_name' && row.score >= FUZZY_AUTO_THRESHOLD);
 
-  if (!member.email && row.csvEmail) {
+  if (row.status === 'match' && !member.email && row.csvEmail) {
     const email = normalizeEmail(row.csvEmail);
     const emailUsedByAnotherMember = members.some((candidate) => (
       candidate.id !== member.id && normalizeEmail(candidate.email) === email
@@ -601,8 +614,11 @@ export function getSafeAttendanceMemberEnrichment(
     if (canAttachEmail) updates.email = email;
   }
 
-  if (safeHighConfidenceMatch) {
+  if (safeHighConfidenceMatch && row.status === 'match') {
     if (!member.college && row.csvCollege) updates.college = row.csvCollege;
+  }
+
+  if ((safeHighConfidenceMatch && row.status === 'match') || confirmedReviewRow) {
     const advancedYear = resolveMemberYearAdvance(member.year, row.csvYear, row.invalidYear);
     if (advancedYear) updates.year = advancedYear;
   }
