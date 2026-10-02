@@ -12,7 +12,15 @@ jest.mock('react-hot-toast', () => {
   const toast = Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() });
   return { __esModule: true, default: toast, Toaster: () => null };
 });
-jest.mock('react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock('react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+  useQuery: () => ({ data: undefined }),
+  useMutation: () => ({ mutateAsync: jest.fn(), isLoading: false }),
+}));
+jest.mock('../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
+jest.mock('../../data/repos/adminOperations', () => ({
+  adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
+}));
 jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin-1' } }) }));
 const mockYears = [
   { id: 'cy-2026', label: '2026-2027 Cabinet', slug: '2026-2027', start_year: 2026, end_year: 2027, is_active: true },
@@ -36,6 +44,7 @@ jest.mock('../../data/repos/cabinetRoster', () => ({
     reopenCycle: jest.fn(),
     publishCycle: jest.fn(),
     deleteCycle: jest.fn(),
+    listStructureSource: jest.fn(),
   },
 }));
 jest.mock('../../data/repos/cabinetYears', () => ({
@@ -273,5 +282,70 @@ describe('switching rosters while a load is in flight', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(screen.getByRole('button', { name: '← All rosters' })).toBeEnabled();
+  });
+});
+
+describe('filters, bulk actions, structure copy, and preview', () => {
+  const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
+  const roster = () => [
+    draft('a1', { name: 'Havyn Nguyen', member_id: 'm-havyn', category: 'Executive Board', role: 'President' }),
+    draft('a2', { name: 'Zed Unknown', role: 'Webmaster' }),
+    draft('a3', { name: null, role: 'Historian' }),
+  ];
+
+  it('shows chips with counts and filters positions', async () => {
+    await openRoster('draft', roster());
+    expect(screen.getByRole('button', { name: /Unfilled position\s*1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Unlinked\s*1$/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Unlinked\s*1$/ }));
+    expect(screen.getAllByTestId('roster-row')).toHaveLength(1);
+  });
+
+  it('moves selected positions between boards and records it', async () => {
+    await openRoster('draft', roster());
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Webmaster' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select President' }));
+    await userEvent.selectOptions(screen.getByLabelText('Board for selected positions'), 'Executive Board');
+    await userEvent.click(screen.getByRole('button', { name: 'Set board' }));
+    await settle();
+    expect(repo.updateDraft).toHaveBeenCalledTimes(1);
+    expect(repo.updateDraft).toHaveBeenCalledWith('c1', 'a2', { category: 'Executive Board' });
+    expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ action: 'cabinet.bulk_changed' }));
+  });
+
+  it('copies only missing position structure from last year, never people', async () => {
+    await openRoster('draft', roster());
+    repo.listStructureSource.mockResolvedValue([
+      { role: 'President', category: 'Executive Board', display_order: 0 },
+      { role: 'Treasurer', category: 'Executive Board', display_order: 1 },
+    ]);
+    repo.addDrafts.mockResolvedValue([draft('n1', { role: 'Treasurer', name: null })]);
+    await userEvent.click(screen.getByRole('button', { name: /Copy missing positions from 2026–27/ }));
+    await settle();
+    expect(repo.addDrafts).toHaveBeenCalledWith('c1', [{ role: 'Treasurer', category: 'Executive Board', display_order: 4 }]);
+  });
+
+  it('previews the roster without writing, and publishing stays a separate button', async () => {
+    await openRoster('draft', roster());
+    await userEvent.click(screen.getByRole('button', { name: 'Preview Cabinet' }));
+    expect(screen.getByRole('dialog', { name: /Cabinet roster/ })).toBeInTheDocument();
+    expect(screen.getByText(/ADMIN PREVIEW — NOT PUBLIC/)).toBeInTheDocument();
+    for (const method of ['updateDraft', 'addDrafts', 'lockCycle', 'publishCycle'] as const) {
+      expect(repo[method]).not.toHaveBeenCalled();
+    }
+  });
+
+  it('flags the same person in the same role twice as a possible duplicate', async () => {
+    await openRoster('draft', [
+      draft('a1', { name: 'Ada Lovelace', role: 'Treasurer', member_id: 'm-havyn' }),
+      draft('a2', { name: 'Ada Lovelace', role: 'Treasurer', member_id: 'm-havyn' }),
+    ]);
+    expect(screen.getByRole('region', { name: 'Possible duplicates' })).toHaveTextContent(/listed 2 times/);
+  });
+
+  it('shows progress and the year context', async () => {
+    await openRoster('draft', roster());
+    expect(screen.getByRole('region', { name: '2027–28 Cabinet progress' })).toHaveTextContent('People 2 / 3');
+    expect(screen.getByText('Upcoming year · 2027–28')).toBeInTheDocument();
   });
 });

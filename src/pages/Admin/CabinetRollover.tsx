@@ -4,7 +4,39 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
-import { PreflightSummary, StatusBadge } from '../../components/features/admin/ops';
+import {
+  BulkActionBar,
+  EmptyState,
+  FilterChips,
+  ImportReviewPanel,
+  NextStepBanner,
+  PossibleDuplicates,
+  ReadinessPanel,
+  RowCheckbox,
+  StatusBadge,
+  WorkflowProgress,
+  YearContextBadge,
+  bulkBtnCls,
+} from '../../components/features/admin/ops';
+import { CabinetRosterPreviewDialog } from '../../components/features/admin/preview/CohortPreviewDialogs';
+import { logAdminActivity } from '../../data/repos/adminActivity';
+import { useOperatingYear } from '../../hooks/useOperatingYear';
+import { useReviewMarks } from '../../hooks/useReviewMarks';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
+import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
+import { planCabinetCategory, planMarkReviewed, pruneSelection, selectedRows, setSelection, toggleSelected } from '../../lib/adminBulk';
+import { duplicateRowIds, findCabinetDuplicates } from '../../lib/adminConflicts';
+import { applyQuickFilter, countByFilter } from '../../lib/adminFilters';
+import { reviewRosterEntries } from '../../lib/adminImportReview';
+import { NextStep, nextStepFor } from '../../lib/adminNextSteps';
+import { buildReadiness, cabinetIssues } from '../../lib/adminPreflight';
+import { rosterDraftsToPreviewMembers } from '../../lib/adminPreviewMappers';
+import { cabinetProgress } from '../../lib/adminProgress';
+import { ROSTER_FILTERS, ROSTER_FILTER_KEYS, RosterRowFacts } from '../../lib/adminQueues';
+import { planStructureCopy } from '../../lib/adminStructureCopy';
+import { describeYearContext } from '../../lib/adminYearContext';
+import { formatYearSpan } from '../../lib/operationalStatus';
 import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { cabinetRosterRepository } from '../../data/repos/cabinetRoster';
 import { cabinetYearsRepository } from '../../data/repos/cabinetYears';
@@ -20,6 +52,7 @@ import {
   buildRosterPreflight,
   formatRosterYears,
   guessCategory,
+  normalizeRole,
   parseRosterPaste,
   planRosterFill,
   rosterLinkSuggestion,
@@ -47,11 +80,14 @@ interface RosterRowProps {
   nameIndex: ReturnType<typeof buildMemberNameIndex>;
   claimedByOthers: ReadonlySet<string>;
   hasPhoto: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  reviewed: boolean;
   onSave: (draft: CabinetRosterDraft, patch: RosterDraftPatch) => void;
   onRemove: (draft: CabinetRosterDraft) => void;
 }
 
-function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthers, hasPhoto, onSave, onRemove }: RosterRowProps) {
+function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthers, hasPhoto, selected, onToggleSelect, reviewed, onSave, onRemove }: RosterRowProps) {
   const [values, setValues] = useState<Record<TextField, string>>(() => rowValues(draft));
   const [order, setOrder] = useState(String(draft.display_order));
 
@@ -82,8 +118,11 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
   const filled = !!draft.name?.trim();
 
   return (
-    <li className="rounded border p-4 border-[var(--color-border)]" data-testid="roster-row">
-      <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+    <li className="rounded border p-4 border-[var(--color-border)]" data-testid="roster-row" data-reviewed={reviewed}>
+      <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr_auto]">
+        <div className="pt-6">
+          <RowCheckbox checked={selected} onChange={() => onToggleSelect(draft.id)} label={`Select ${draft.role}`} />
+        </div>
         <div>
           <label className={`${labelCls} text-text-muted`} htmlFor={`roster-role-${draft.id}`}>Position</label>
           <input id={`roster-role-${draft.id}`} className={`${smallFieldCls} border-[var(--color-border)]`} value={values.role} disabled={!editable || busy} onChange={setValue('role')} onBlur={() => commit('role')} />
@@ -146,6 +185,7 @@ function RosterRow({ draft, editable, busy, memberById, nameIndex, claimedByOthe
             {hasPhoto ? '📷 Approved photo available' : 'No approved photo yet (not required to publish).'}
           </p>
         )}
+        {reviewed && <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-green-700 dark:text-green-400">✓ Reviewed</p>}
       </div>
 
       <details className="mt-3">
@@ -192,6 +232,10 @@ function rowValues(draft: CabinetRosterDraft): Record<TextField, string> {
   };
 }
 
+function yearLabelFor(year: CabinetYear | null | undefined) {
+  return year ? formatYearSpan(year.start_year) : 'new';
+}
+
 function previousYear(years: CabinetYear[], target: CabinetYear | undefined) {
   if (!target) return null;
   return years
@@ -218,6 +262,12 @@ export default function AdminCabinetRollover() {
   const [publicRowCount, setPublicRowCount] = useState<number | null>(null);
   const [publishConfirmed, setPublishConfirmed] = useState(false);
   const [activateConfirmed, setActivateConfirmed] = useState(false);
+  const operatingYear = useOperatingYear();
+  const [filter, setFilter] = useUrlFilter(ROSTER_FILTER_KEYS);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [nextStep, setNextStep] = useState<NextStep | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const cycle = useMemo(() => cycles.find((item) => item.id === cycleId) ?? null, [cycles, cycleId]);
   const cabinetYear = useMemo(() => cabinetYears.find((year) => year.id === cycle?.cabinet_year_id) ?? null, [cabinetYears, cycle]);
@@ -225,6 +275,20 @@ export default function AdminCabinetRollover() {
   const ordered = useMemo(() => sortRosterDrafts(drafts), [drafts]);
   const photoIds = useMemo(() => new Set(avatars.keys()), [avatars]);
   const preflight = useMemo(() => buildRosterPreflight(ordered, photoIds), [ordered, photoIds]);
+  // Pasted names that have not been placed yet are unsaved work.
+  useUnsavedChangesGuard(pasted.trim().length > 0, busy);
+  const draftIds = useMemo(() => ordered.map((draft) => draft.id), [ordered]);
+  const { reviewed, markReviewed } = useReviewMarks('cabinet_roster_draft', cycle?.id ?? null, draftIds, cabinetYear?.start_year ?? null);
+  const facts = useMemo<RosterRowFacts[]>(
+    () => ordered.map((draft) => ({ draft, hasPhoto: !!draft.member_id && photoIds.has(draft.member_id), reviewed: reviewed.has(draft.id) })),
+    [ordered, photoIds, reviewed],
+  );
+  const filterCounts = useMemo(() => countByFilter(facts, ROSTER_FILTERS), [facts]);
+  const visibleFacts = useMemo(() => applyQuickFilter(facts, ROSTER_FILTERS, filter), [facts, filter]);
+  const duplicates = useMemo(
+    () => findCabinetDuplicates(ordered.map((draft) => ({ id: draft.id, role: draft.role, name: draft.name, memberId: draft.member_id }))),
+    [ordered],
+  );
   const memberById = useMemo(() => new Map(directory.map((member) => [member.id, member])), [directory]);
   const nameIndex = useMemo(() => buildMemberNameIndex(directory), [directory]);
   const linkedIds = useMemo(() => ordered.map((draft) => draft.member_id).filter((id): id is string => !!id), [ordered]);
@@ -241,6 +305,14 @@ export default function AdminCabinetRollover() {
   }, []);
 
   useEffect(() => { loadCycles(); }, [loadCycles]);
+  useEffect(
+    () =>
+      setSelected((current) => {
+        const next = pruneSelection(current, draftIds);
+        return next.size === current.size ? current : next;
+      }),
+    [draftIds],
+  );
   useEffect(() => {
     memberLookupRepository.listMemberDirectory().then(setDirectory).catch((err) => {
       console.error(err);
@@ -331,6 +403,15 @@ export default function AdminCabinetRollover() {
       const result = await cabinetRosterRepository.createCycle({ cabinetYearId: targetYear.id, sourceCabinetYearId: source, userId });
       await loadCycles();
       setCycleId(result.cycle.id);
+      if (result.created) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.cabinetRosterStarted,
+          entityType: 'cabinet_roster_cycle',
+          entityId: result.cycle.id,
+          academicYearStart: targetYear.start_year,
+          summary: `Started the ${formatYearSpan(targetYear.start_year)} Cabinet roster (${result.positionsCopied} positions copied, no people)`,
+        });
+      }
       toast.success(result.created
         ? `Draft created with ${result.positionsCopied} position${result.positionsCopied === 1 ? '' : 's'}. No people were copied.`
         : 'A roster already exists for this year; opened it.');
@@ -352,6 +433,13 @@ export default function AdminCabinetRollover() {
       if (plan.inserts.length > 0) await cabinetRosterRepository.addDrafts(cycle.id, plan.inserts);
       setDraftsFor(cycle.id, await cabinetRosterRepository.getDrafts(cycle.id));
       setPasted('');
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.cabinetPositionAssigned,
+        entityType: 'cabinet_roster_cycle',
+        entityId: cycle.id,
+        academicYearStart: cabinetYear?.start_year ?? null,
+        summary: `Placed ${entries.length} ${entries.length === 1 ? 'person' : 'people'} into the ${yearLabelFor(cabinetYear)} Cabinet roster`,
+      });
       toast.success(`Placed ${entries.length} ${entries.length === 1 ? 'person' : 'people'} (${plan.linked} linked${plan.inserts.length ? `, ${plan.inserts.length} new position${plan.inserts.length === 1 ? '' : 's'}` : ''}).`);
     }, 'Failed to place the roster.');
   }
@@ -361,6 +449,23 @@ export default function AdminCabinetRollover() {
     return run(async () => {
       await cabinetRosterRepository.updateDraft(cycle.id, draft.id, patch);
       setDraftsFor(cycle.id, (current) => current.map((item) => (item.id === draft.id ? { ...item, ...patch } : item)));
+      if ('name' in patch && (patch.name ?? null) !== (draft.name ?? null)) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.cabinetPositionAssigned,
+          entityType: 'cabinet_roster_draft',
+          entityId: draft.id,
+          academicYearStart: cabinetYear?.start_year ?? null,
+          summary: activitySummary.cabinetAssigned(draft.role, draft.name ?? null, patch.name ?? null),
+        });
+      } else if ('member_id' in patch && (patch.member_id ?? null) !== (draft.member_id ?? null)) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.memberLinkChanged,
+          entityType: 'cabinet_roster_draft',
+          entityId: draft.id,
+          academicYearStart: cabinetYear?.start_year ?? null,
+          summary: activitySummary.memberLink(draft.name ?? draft.role, patch.member_id ? memberById.get(patch.member_id)?.fullName ?? 'a member' : null),
+        });
+      }
     }, 'Failed to save.');
   }
 
@@ -395,6 +500,14 @@ export default function AdminCabinetRollover() {
     return run(async () => {
       await cabinetRosterRepository.lockCycle(cycle.id);
       await refreshCycle();
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.cabinetRosterLocked,
+        entityType: 'cabinet_roster_cycle',
+        entityId: cycle.id,
+        academicYearStart: cabinetYear?.start_year ?? null,
+        summary: activitySummary.cycleLocked('Cabinet', cabinetYear?.start_year ?? 0),
+      });
+      setNextStep(nextStepFor({ type: 'cabinet_roster_complete' }));
       toast.success('Locked. The roster is still private.');
     }, 'Failed to lock.');
   }
@@ -413,6 +526,16 @@ export default function AdminCabinetRollover() {
       const result = await cabinetRosterRepository.publishCycle(cycle.id);
       await refreshCycle();
       invalidatePublicCabinet();
+      if (!result.alreadyPublished) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.cabinetRosterPublished,
+          entityType: 'cabinet_roster_cycle',
+          entityId: cycle.id,
+          academicYearStart: cabinetYear?.start_year ?? null,
+          summary: activitySummary.published('Cabinet roster', cabinetYear?.start_year ?? 0, result.created + result.updated),
+        });
+        setNextStep(nextStepFor({ type: 'cabinet_published' }));
+      }
       toast.success(result.alreadyPublished ? 'Already published.' : `Published: ${result.created} added, ${result.updated} updated.`);
     }, 'Failed to publish. Nothing was lost; fix the issue and publish again.');
   }
@@ -438,6 +561,78 @@ export default function AdminCabinetRollover() {
   }
 
   const yearLabel = formatRosterYears(cabinetYear);
+
+  // ─── Copy structure / bulk actions ─────────────────────────────────────────
+  const structureSource = useMemo(() => {
+    if (!cycle) return null;
+    return cabinetYears.find((year) => year.id === cycle.source_cabinet_year_id) ?? previousYear(cabinetYears, cabinetYear ?? undefined);
+  }, [cycle, cabinetYears, cabinetYear]);
+
+  function copyStructure() {
+    if (!cycle || !structureSource) return;
+    return run(async () => {
+      const source = await cabinetRosterRepository.listStructureSource(structureSource.id);
+      const plan = planStructureCopy(ordered, source);
+      if (plan.inserts.length === 0) {
+        toast('Every position from that year is already here.');
+        return;
+      }
+      const created = await cabinetRosterRepository.addDrafts(cycle.id, plan.inserts);
+      setDraftsFor(cycle.id, (current) => [...current, ...created]);
+      toast.success(`Copied ${created.length} position${created.length === 1 ? '' : 's'} from ${formatYearSpan(structureSource.start_year)}. No people were copied.`);
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.cabinetBulkChanged,
+        entityType: 'cabinet_roster_cycle',
+        entityId: cycle.id,
+        academicYearStart: cabinetYear?.start_year ?? null,
+        summary: `Copied ${created.length} positions from ${formatYearSpan(structureSource.start_year)} (structure only)`,
+      });
+    }, 'Failed to copy the position structure.');
+  }
+
+  const selectedDrafts = useMemo(() => selectedRows(ordered, selected, (draft) => draft.id), [ordered, selected]);
+  const categoryPlan = useMemo(() => planCabinetCategory(selectedDrafts, bulkCategory, !!editable), [selectedDrafts, bulkCategory, editable]);
+  const reviewPlan = useMemo(() => planMarkReviewed(selectedDrafts, reviewed, 'position'), [selectedDrafts, reviewed]);
+
+  function bulkSetCategory() {
+    if (!cycle) return;
+    if (!bulkCategory) {
+      toast.error('Choose a board first.');
+      return;
+    }
+    if (categoryPlan.eligible.length === 0) {
+      toast.error(categoryPlan.skipped[0]?.reason ?? 'Nothing to change.');
+      return;
+    }
+    return run(async () => {
+      for (const draft of categoryPlan.eligible) {
+        await cabinetRosterRepository.updateDraft(cycle.id, draft.id, { category: bulkCategory });
+      }
+      const ids = new Set(categoryPlan.eligible.map((draft) => draft.id));
+      setDraftsFor(cycle.id, (current) => current.map((item) => (ids.has(item.id) ? { ...item, category: bulkCategory } : item)));
+      logAdminActivity({
+        action: ACTIVITY_ACTIONS.cabinetBulkChanged,
+        entityType: 'cabinet_roster_cycle',
+        entityId: cycle.id,
+        academicYearStart: cabinetYear?.start_year ?? null,
+        summary: activitySummary.bulk(`Moved to ${bulkCategory}:`, categoryPlan.eligible.length, 'position'),
+      });
+      toast.success(`Moved ${categoryPlan.eligible.length} ${categoryPlan.eligible.length === 1 ? 'position' : 'positions'} to ${bulkCategory}.`);
+      setSelected(new Set());
+    }, 'Failed to move the selected positions.');
+  }
+
+  function bulkMarkReviewed() {
+    return run(async () => {
+      if (reviewPlan.eligible.length === 0) {
+        toast('All selected positions are already reviewed.');
+        return;
+      }
+      await markReviewed(reviewPlan.eligible.map((draft) => draft.id));
+      toast.success(`Marked ${reviewPlan.eligible.length} reviewed.`);
+      setSelected(new Set());
+    }, 'Failed to mark positions reviewed.');
+  }
 
   return (
     <>
@@ -465,7 +660,12 @@ export default function AdminCabinetRollover() {
             {loadingCycles ? (
               <p className="mt-4 text-sm text-text-muted">Loading…</p>
             ) : cycles.length === 0 ? (
-              <p className="mt-4 text-sm text-text-muted">No Cabinet drafts yet. Start one to begin.</p>
+              <div className="mt-4">
+                <EmptyState
+                  title="No Cabinet roster has been started."
+                  description="Create a draft for the next year below. Last year's positions are copied; people never are."
+                />
+              </div>
             ) : (
               <ul className="mt-4 divide-y border-[var(--color-border)]">
                 {cycles.map((item) => {
@@ -515,6 +715,7 @@ export default function AdminCabinetRollover() {
             <div>
               <button type="button" onClick={() => setCycleId(null)} disabled={busy} className="mb-2 bg-transparent p-0 text-xs font-semibold underline-offset-2 hover:underline disabled:opacity-50 text-text-secondary">← All rosters</button>
               <h2 className="font-serif text-2xl font-bold text-text-primary">{yearLabel} Cabinet</h2>
+              {cabinetYear && <YearContextBadge context={describeYearContext(cabinetYear.start_year, operatingYear)} className="mt-1" />}
               <div className="mt-1 flex items-center gap-2 text-xs text-text-muted">
                 <StatusBadge status={cycle.status} />
                 <span>{cabinetYear?.is_active ? 'Active Cabinet year' : 'Not the active Cabinet year'}</span>
@@ -535,6 +736,19 @@ export default function AdminCabinetRollover() {
               )}
             </div>
           </div>
+
+          <NextStepBanner step={nextStep} onFilter={setFilter} onPreview={() => setPreviewOpen(true)} onDismiss={() => setNextStep(null)} />
+
+          <WorkflowProgress
+            title={`${yearLabelFor(cabinetYear)} Cabinet`}
+            steps={cabinetProgress({ status: cycle.status, positions: preflight.positions, filled: preflight.filled, linked: preflight.linked })}
+          />
+
+          {cycle.status !== 'published' && preflight.filled > 0 && (
+            <div>
+              <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => setPreviewOpen(true)}>Preview Cabinet</button>
+            </div>
+          )}
 
           {cycle.status === 'locked' && (
             <div className="rounded border p-3 text-xs border-[var(--color-border)] bg-surface2 text-text-secondary">
@@ -573,7 +787,13 @@ export default function AdminCabinetRollover() {
             </div>
           )}
 
-          <PreflightSummary title="Cabinet preflight" lines={rosterPreflightLines(preflight)} emptyText="Add positions to run the preflight." />
+          <ReadinessPanel
+            title="Cabinet preflight"
+            readiness={buildReadiness(cabinetIssues(preflight), { ready: cycle.status === 'locked' ? 'Ready to Publish' : 'Ready to Lock' })}
+            onFilter={setFilter}
+            passed={preflight.passed}
+          />
+          <PossibleDuplicates duplicates={duplicates} onCompare={() => setFilter('needs_review')} />
 
           {editable && (
             <section className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface" aria-label="Paste roster">
@@ -581,16 +801,52 @@ export default function AdminCabinetRollover() {
               <p className="mt-1 text-xs text-text-muted">One person per line as &quot;Name, Role&quot;. Each person fills the first empty position with that role (or adds a position). Exact, unambiguous names link to members automatically; everything else is left for you to review.</p>
               <label htmlFor="roster-paste" className="sr-only">Pasted roster</label>
               <textarea id="roster-paste" rows={6} className={`${fieldCls} mt-3 font-mono text-xs border-[var(--color-border)]`} value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'Havyn Nguyen, Co-President\nApril Pham, Co-President'} />
+              <ImportReviewPanel
+                rows={reviewRosterEntries(parseRosterPaste(pasted), { nameIndex, knownRoles: new Set(ordered.map((draft) => normalizeRole(draft.role))), normalizeRole })}
+                hasInput={pasted.trim().length > 0}
+                filename="cabinet-import-problem-rows"
+              />
               <button type="button" className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !pasted.trim()} onClick={importRoster}>Place into roster</button>
             </section>
           )}
 
           <section aria-label="Positions">
+            {ordered.length > 0 && (
+              <div className="mb-3">
+                <FilterChips filters={ROSTER_FILTERS} counts={filterCounts} active={filter} onChange={setFilter} label="Filter positions" />
+              </div>
+            )}
+            <div className="mb-3 overflow-hidden rounded border" style={{ borderColor: selected.size > 0 ? 'var(--color-border)' : 'transparent' }}>
+              <BulkActionBar count={selected.size} noun="position" onClear={() => setSelected(new Set())}>
+                {editable && (
+                  <>
+                    <label htmlFor="bulk-category" className="sr-only">Board for selected positions</label>
+                    <select id="bulk-category" className={`${smallFieldCls} w-auto border-[var(--color-border)]`} value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value)}>
+                      <option value="">Set board →</option>
+                      {CABINET_ROSTER_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                    <button type="button" className={bulkBtnCls} disabled={busy || !bulkCategory} onClick={bulkSetCategory}>Set board</button>
+                  </>
+                )}
+                <button type="button" className={bulkBtnCls} disabled={busy} onClick={bulkMarkReviewed}>Mark reviewed</button>
+              </BulkActionBar>
+            </div>
             {ordered.length === 0 ? (
-              <p className="rounded border px-5 py-10 text-center text-sm border-[var(--color-border)] text-text-muted">No positions yet. Add one below or paste a roster.</p>
+              <EmptyState
+                title={`No positions on the ${yearLabelFor(cabinetYear)} roster yet.`}
+                description="Add one below, paste a roster, or copy last year's position structure."
+                action={editable && structureSource ? { label: `Copy position structure from ${formatYearSpan(structureSource.start_year)}`, onClick: () => { void copyStructure(); }, disabled: busy } : undefined}
+              />
+            ) : visibleFacts.length === 0 ? (
+              <p className="rounded border px-5 py-10 text-center text-sm border-[var(--color-border)] text-text-muted">
+                No positions match this filter.{' '}
+                <button type="button" onClick={() => setFilter('all')} className="bg-transparent p-0 font-semibold text-[var(--brand)] underline-offset-2 hover:underline">Show all {ordered.length}</button>
+              </p>
             ) : (
               <ul className="space-y-3">
-                {ordered.map((draft) => {
+                {visibleFacts.map(({ draft, reviewed: isReviewed }) => {
                   const claimedByOthers = new Set(linkedIds.filter((id) => id !== draft.member_id));
                   return (
                     <RosterRow
@@ -602,6 +858,9 @@ export default function AdminCabinetRollover() {
                       nameIndex={nameIndex}
                       claimedByOthers={claimedByOthers}
                       hasPhoto={!!draft.member_id && photoIds.has(draft.member_id)}
+                      selected={selected.has(draft.id)}
+                      onToggleSelect={(id) => setSelected((current) => toggleSelected(current, id))}
+                      reviewed={isReviewed}
                       onSave={saveDraft}
                       onRemove={removeDraft}
                     />
@@ -616,9 +875,22 @@ export default function AdminCabinetRollover() {
                   <input id="roster-new-role" className={`${fieldCls} border-[var(--color-border)]`} value={newRole} onChange={(event) => setNewRole(event.target.value)} placeholder="e.g. Historian" />
                 </div>
                 <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} disabled={busy || !newRole.trim()} onClick={addPosition}>Add position</button>
+                {structureSource && ordered.length > 0 && (
+                  <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-secondary`} disabled={busy} onClick={copyStructure}>
+                    Copy missing positions from {formatYearSpan(structureSource.start_year)}
+                  </button>
+                )}
               </div>
             )}
           </section>
+
+          {previewOpen && cabinetYear && (
+            <CabinetRosterPreviewDialog
+              members={rosterDraftsToPreviewMembers(ordered, cabinetYear.id)}
+              yearLabel={formatYearSpan(cabinetYear.start_year)}
+              onClose={() => setPreviewOpen(false)}
+            />
+          )}
         </div>
       )}
     </>
