@@ -38,6 +38,12 @@ jest.mock('../../hooks/useEvents', () => ({ useEvents: () => ({ events: [mockEve
 jest.mock('../../hooks/useAcademicTerms', () => ({
   useAcademicTerms: () => ({ terms: [], loading: false, error: null, refreshTerms: jest.fn() }),
 }));
+jest.mock('../../hooks/useExternalEvents', () => ({
+  useAdminExternalEvents: () => ({ events: [], loading: false, error: null, refreshEvents: jest.fn() }),
+}));
+jest.mock('../../hooks/useUVSASchools', () => ({
+  useAdminUVSASchools: () => ({ schools: [], loading: false, error: null, refreshSchools: jest.fn() }),
+}));
 jest.mock('../../hooks/useEventRecap', () => ({ useEventRecapEventIds: () => ({ recapEventIds: new Set<string>() }) }));
 jest.mock('../../data/repos/events', () => ({
   eventsRepository: { getCheckInCode: jest.fn().mockResolvedValue('ABC123'), setCheckInCode: jest.fn() },

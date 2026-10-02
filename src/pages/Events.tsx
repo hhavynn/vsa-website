@@ -20,6 +20,7 @@ import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
+import { useLinkedExternalListings } from '../hooks/useExternalEvents';
 import {
   useEvents,
   useInfiniteEvents,
@@ -194,6 +195,13 @@ export function Events() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Only external events carry a UVSA Network listing; one batched lookup
+  // covers both the upcoming list and the visible archive.
+  const externalEventIds = [...unfilteredUpcomingEvents, ...archivedEvents]
+    .filter((event) => event.event_type === 'external_event')
+    .map((event) => event.id);
+  const externalListings = useLinkedExternalListings(externalEventIds);
 
   const [featured, ...rest] = upcomingEventsAll;
   const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(unfilteredUpcomingEvents.length > 0);
@@ -401,7 +409,7 @@ export function Events() {
         {featured && (
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
-            <FeaturedEventCard event={featured} />
+            <FeaturedEventCard event={featured} external={externalListings.get(featured.id)} />
           </>
         )}
 
@@ -410,7 +418,7 @@ export function Events() {
             <Label className="mb-0">All Upcoming</Label>
             <div className="mt-5 mb-10 grid gap-4">
               {rest.map((event: Event) => (
-                <UpcomingEventRow key={event.id} event={event} />
+                <UpcomingEventRow key={event.id} event={event} external={externalListings.get(event.id)} />
               ))}
             </div>
           </>
@@ -548,6 +556,7 @@ export function Events() {
                       stats={memoryStats[event.id]}
                       terms={terms}
                       index={index}
+                      external={externalListings.get(event.id)}
                     />
                   ))}
                 </div>

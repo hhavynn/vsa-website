@@ -17,6 +17,13 @@ import {
   FaMapMarkerAlt 
 } from 'react-icons/fa';
 import { formatDateOnly } from '../../lib/dateOnly';
+import {
+  buildHostOptions,
+  hostColumns,
+  resolveExternalHost,
+  UVSA_SOCAL_HOST_VALUE,
+} from '../../lib/externalEventLinking';
+import { Link } from 'react-router-dom';
 
 // Icon components cast to any to avoid TS JSX errors
 const PlusIcon = FaPlus as any;
@@ -29,6 +36,7 @@ const MapPinIcon = FaMapMarkerAlt as any;
 
 const EMPTY_EVENT: Partial<ExternalEvent> = {
   title: '',
+  host_type: 'school',
   event_type: '',
   description: '',
   points: 4,
@@ -76,15 +84,19 @@ export default function AdminExternalEvents() {
     setIsAdding(false);
   };
 
+  const formHost = formData.host_type === 'uvsa_socal' ? UVSA_SOCAL_HOST_VALUE : (formData.uvsa_school_id ?? '');
+  const hostOptions = buildHostOptions(schools, formHost);
+  const isLinked = Boolean(formData.source_event_id);
+
   const handleSave = async () => {
     try {
-      if (!formData.title || !formData.uvsa_school_id) {
-        toast.error('Event title and host school are required');
+      if (!formData.title || !formHost) {
+        toast.error('Event title and host are required');
         return;
       }
 
-      // Ensure uvsa_school relation is not sent back to Supabase
-      const { uvsa_school, ...payload } = formData as any;
+      // Ensure the joined relations are not sent back to Supabase
+      const { uvsa_school, source_event, ...payload } = formData as any;
 
       await upsertMutation.mutateAsync(payload);
       toast.success(editingId ? 'Event updated' : 'Event added');
@@ -96,10 +108,14 @@ export default function AdminExternalEvents() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (event: ExternalEvent) => {
+    if (event.source_event_id) {
+      toast.error('Linked external events must be deleted from Admin → Events.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync(event.id);
       toast.success('Event deleted');
       refreshEvents();
     } catch (err) {
@@ -134,27 +150,39 @@ export default function AdminExternalEvents() {
             {isAdding ? 'Add New External Event' : `Edit ${formData.title}`}
           </h3>
           
+          {isLinked && (
+            <p className="mb-6 rounded border bg-[var(--color-surface2)] p-3 font-sans text-xs leading-5 text-[var(--color-text2)]" style={{ borderColor: 'var(--border)' }}>
+              This listing is linked to the event{' '}
+              <Link to={`/admin/events?event=${formData.source_event_id}`} className="font-semibold text-[var(--brand)] hover:underline">
+                {formData.source_event?.name ?? 'Linked Event'} ↗
+              </Link>
+              . Its title, date, location, description, and points are managed there and re-sync on every save; edit them in Admin → Events. Featured, Canceled, Historical, recap, and photo album are managed here.
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <label className={labelCls}>Event Title</label>
                 <input
                   className={inputCls}
+                  disabled={isLinked}
                   value={formData.title || ''}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g. Mount Jamprov"
                 />
               </div>
               <div>
-                <label className={labelCls}>Host School</label>
+                <label className={labelCls}>Host / Organizer</label>
                 <select
                   className={inputCls}
-                  value={formData.uvsa_school_id || ''}
-                  onChange={e => setFormData({ ...formData, uvsa_school_id: e.target.value })}
+                  value={formHost}
+                  onChange={e => setFormData({ ...formData, ...hostColumns(e.target.value) })}
                 >
-                  <option value="">Select a school</option>
-                  {schools.map(school => (
-                    <option key={school.id} value={school.id}>{school.school_name} ({school.short_name})</option>
+                  <option value="">Select a host</option>
+                  <option value={hostOptions.socal.value}>{hostOptions.socal.label}</option>
+                  <option disabled value="__divider">────────────</option>
+                  {hostOptions.schools.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>
@@ -173,6 +201,7 @@ export default function AdminExternalEvents() {
                   <input
                     type="number"
                     className={inputCls}
+                    disabled={isLinked}
                     value={formData.points || 4}
                     onChange={e => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
                   />
@@ -184,6 +213,7 @@ export default function AdminExternalEvents() {
                   <input
                     type="date"
                     className={inputCls}
+                    disabled={isLinked}
                     value={formData.date || ''}
                     onChange={e => setFormData({ ...formData, date: e.target.value })}
                   />
@@ -192,6 +222,7 @@ export default function AdminExternalEvents() {
                   <label className={labelCls}>Location</label>
                   <input
                     className={inputCls}
+                    disabled={isLinked}
                     value={formData.location || ''}
                     onChange={e => setFormData({ ...formData, location: e.target.value })}
                     placeholder="e.g. SDSU Campus"
@@ -252,6 +283,7 @@ export default function AdminExternalEvents() {
                 <label className={labelCls}>Description</label>
                 <textarea
                   className={`${inputCls} h-24`}
+                  disabled={isLinked}
                   value={formData.description || ''}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                 />
@@ -298,7 +330,7 @@ export default function AdminExternalEvents() {
           <div key={event.id} className="scrapbook-paper p-4 flex items-center justify-between border" style={{ borderColor: 'var(--border)' }}>
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-10 h-10 rounded bg-[var(--surface2)] flex items-center justify-center font-bold text-[var(--brand)] flex-shrink-0">
-                {event.uvsa_school?.short_name[0] || '?'}
+                {resolveExternalHost(event).shortName[0] || '?'}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -307,7 +339,12 @@ export default function AdminExternalEvents() {
                   {event.is_featured && <Badge label="Featured" color="yellow" />}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-[var(--text3)] mt-1">
-                  <span className="font-medium text-[var(--text2)]">{event.uvsa_school?.short_name}</span>
+                  <span className="font-medium text-[var(--text2)]">{resolveExternalHost(event).kind === 'missing' ? '⚠ Host missing' : resolveExternalHost(event).shortName}</span>
+                  {event.source_event && (
+                    <Link to={`/admin/events?event=${event.source_event.id}`} className="font-medium text-[var(--brand)] hover:underline">
+                      Linked Event: {event.source_event.name} ↗
+                    </Link>
+                  )}
                   {event.date && (
                     <span className="flex items-center gap-1">
                       <CalendarIcon size={12} /> {formatDateOnly(event.date, 'MMM d, yyyy')}
@@ -325,7 +362,23 @@ export default function AdminExternalEvents() {
               <Button variant="outline" size="sm" onClick={() => handleEdit(event)} className="flex gap-2">
                 <EditIcon size={16} /> Edit
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleDelete(event.id)} className="text-red-500 hover:text-red-600">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={Boolean(event.source_event_id)}
+                title={
+                  event.source_event_id
+                    ? 'Linked to a normal event. Delete the event in Admin → Events to remove both.'
+                    : 'Delete external event'
+                }
+                aria-label={
+                  event.source_event_id
+                    ? `Cannot delete linked event: ${event.title}`
+                    : `Delete ${event.title}`
+                }
+                onClick={() => handleDelete(event)}
+                className={event.source_event_id ? 'text-[var(--text3)]' : 'text-red-500 hover:text-red-600'}
+              >
                 <TrashIcon size={16} />
               </Button>
             </div>

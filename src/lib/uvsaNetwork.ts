@@ -1,5 +1,6 @@
 import { ExternalEvent, UVSASchool, UVSASystemType } from "../types";
 import { parseDateOnly } from "./dateOnly";
+import { effectiveExternalStatus } from "./externalEventLinking";
 
 export type SchoolFilter = "All" | UVSASystemType;
 
@@ -39,6 +40,26 @@ export function pickFeaturedUpcomingEvent(
   return upcomingEvents
     .filter((event) => event.is_featured && event.status === "upcoming")
     .sort((a, b) => dateValue(a) - dateValue(b))[0];
+}
+
+/**
+ * Nothing flips `upcoming` to `past` in the database, so a listing whose date
+ * has gone by (typically a linked event nobody re-edited) moves to the archive
+ * here instead of lingering in Upcoming Externals.
+ */
+export function splitLapsedUpcoming(
+  events: ExternalEvent[],
+  today: string,
+): { upcoming: ExternalEvent[]; lapsed: ExternalEvent[] } {
+  const upcoming: ExternalEvent[] = [];
+  const lapsed: ExternalEvent[] = [];
+  for (const event of events) {
+    (effectiveExternalStatus(event, today) === "upcoming"
+      ? upcoming
+      : lapsed
+    ).push(event);
+  }
+  return { upcoming, lapsed };
 }
 
 function dateValue(event: ExternalEvent) {

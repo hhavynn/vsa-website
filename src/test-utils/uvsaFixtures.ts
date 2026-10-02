@@ -36,6 +36,8 @@ export function makeEvent(
 ): ExternalEvent {
   return {
     id: "event-1",
+    host_type: "school",
+    source_event_id: null,
     uvsa_school_id: "school-2",
     title: "Sample External",
     event_type: "Pageant",

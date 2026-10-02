@@ -2,12 +2,14 @@ import { ExternalEvent } from "../../../types";
 import { formatDateOnly } from "../../../lib/dateOnly";
 import { Badge } from "../../ui/Badge";
 import { CalendarIcon, MapPinIcon } from "./icons";
-import { ExternalEventActions, getEventHostName } from "./ExternalEventCard";
-import { SchoolVisualMark } from "./SchoolVisualMark";
+import { resolveExternalHost } from "../../../lib/externalEventLinking";
+import { ExternalEventActions } from "./ExternalEventCard";
+import { ExternalHostMark } from "./ExternalHostMark";
 
 /** Large spotlight. Only ever rendered for a genuinely upcoming featured event. */
 export function FeaturedExternal({ event }: { event: ExternalEvent }) {
-  const host = getEventHostName(event);
+  const hostIdentity = resolveExternalHost(event);
+  const host = hostIdentity.shortName;
   const pointsNote =
     event.points && event.points !== 4
       ? `${event.points} points when announced by VSA at UCSD.`
@@ -17,11 +19,7 @@ export function FeaturedExternal({ event }: { event: ExternalEvent }) {
     <article className="overflow-hidden rounded-lg border border-brand-600/40 bg-surface dark:border-brand-400/40">
       <div className="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)]">
         <div className="flex items-center justify-center border-b border-[var(--color-border)] bg-surface2 p-6 sm:border-b-0 sm:border-r sm:p-8">
-          <SchoolVisualMark
-            school={event.uvsa_school}
-            fallbackLabel={host}
-            size="lg"
-          />
+          <ExternalHostMark host={hostIdentity} size="lg" />
         </div>
 
         <div className="space-y-4 p-6 sm:p-8">
@@ -60,6 +58,13 @@ export function FeaturedExternal({ event }: { event: ExternalEvent }) {
           {event.description && (
             <p className="max-w-3xl font-sans text-sm leading-7 text-text-secondary sm:text-base">
               {event.description}
+            </p>
+          )}
+
+          {event.ride_info && (
+            <p className="font-sans text-sm text-text-secondary">
+              <span className="font-semibold text-text-primary">Rides: </span>
+              {event.ride_info}
             </p>
           )}
 

@@ -10,7 +10,8 @@ import { getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../../../lib/eventTime';
 import { parseDateOnly } from '../../../lib/dateOnly';
 import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../../../lib/supabaseImages';
-import { AcademicTerm, Event } from '../../../types';
+import { AcademicTerm, Event, ExternalEvent } from '../../../types';
+import { ExternalEventLinks, ExternalHostedBy } from './ExternalEventHost';
 
 // Public event renderers shared by the /events page and the admin
 // "Preview As Public" dialog, so a draft is drawn by the exact same markup.
@@ -135,6 +136,7 @@ export function PastEventMemoryCard({
   stats,
   terms,
   index,
+  external,
 }: {
   event: Event;
   linkedAlbum?: string;
@@ -142,6 +144,8 @@ export function PastEventMemoryCard({
   stats?: EventMemoryStats;
   terms: AcademicTerm[];
   index: number;
+  /** The UVSA Network listing for an external event, when it has one. */
+  external?: ExternalEvent | null;
 }) {
   const d = eventDay(event);
   const termCode = getEventTermCode(event, terms);
@@ -210,6 +214,12 @@ export function PastEventMemoryCard({
           </span>
         </div>
 
+        {external && (
+          <div className="mt-2.5">
+            <ExternalHostedBy listing={external} compact />
+          </div>
+        )}
+
         {/* Stats row */}
         {(hasPoints || hasTotalPoints || houseKey) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -254,7 +264,7 @@ export function PastEventMemoryCard({
 }
 
 /** The large "Next Up" flyer for the soonest upcoming event. */
-export function FeaturedEventCard({ event }: { event: Event }) {
+export function FeaturedEventCard({ event, external }: { event: Event; external?: ExternalEvent | null }) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -293,6 +303,12 @@ export function FeaturedEventCard({ event }: { event: Event }) {
             {event.location}
           </div>
         )}
+        {external && (
+          <div className="mb-7 space-y-4">
+            <ExternalHostedBy listing={external} />
+            <ExternalEventLinks listing={external} />
+          </div>
+        )}
         <div className="flex flex-col gap-6">
           <AddToCalendarButton event={event} variant="ghost" align="left" />
           <EventInterestButtons eventId={event.id} initialCounts={event.interest_counts || null} />
@@ -329,7 +345,7 @@ export function FeaturedEventCard({ event }: { event: Event }) {
 }
 
 /** One row in the "All Upcoming" list. */
-export function UpcomingEventRow({ event }: { event: Event }) {
+export function UpcomingEventRow({ event, external }: { event: Event; external?: ExternalEvent | null }) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
@@ -388,6 +404,12 @@ export function UpcomingEventRow({ event }: { event: Event }) {
           <p className="mt-2 font-sans text-xs uppercase tracking-[.06em]" style={{ color: 'var(--color-text3)' }}>
             {event.location}
           </p>
+        )}
+        {external && (
+          <div className="mt-4 space-y-3">
+            <ExternalHostedBy listing={external} />
+            <ExternalEventLinks listing={external} />
+          </div>
         )}
       </div>
 

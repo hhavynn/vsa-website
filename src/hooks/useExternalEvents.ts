@@ -53,3 +53,18 @@ export function useDeleteExternalEvent() {
     },
   });
 }
+
+/** Listings for the given events, keyed by event id. Only external events need one. */
+export function useLinkedExternalListings(eventIds: string[]) {
+  const key = eventIds.join(',');
+  const { data } = useQuery<Map<string, ExternalEvent>>({
+    queryKey: ['external-events', 'linked', key],
+    queryFn: () => externalEventsRepository.getListingsBySourceEventIds(eventIds),
+    enabled: eventIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return data ?? EMPTY_LISTINGS;
+}
+
+const EMPTY_LISTINGS = new Map<string, ExternalEvent>();

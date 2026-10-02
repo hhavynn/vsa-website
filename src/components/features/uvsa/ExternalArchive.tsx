@@ -5,7 +5,7 @@ import { cn } from "../../../lib/utils";
 import { groupArchiveByAcademicYear } from "../../../lib/uvsaNetwork";
 import { Skeleton } from "../../ui/Skeleton";
 import { ChevronDownIcon } from "./icons";
-import { getEventHostName } from "./ExternalEventCard";
+import { resolveExternalHost } from "../../../lib/externalEventLinking";
 import { SchoolVisualMark } from "./SchoolVisualMark";
 
 export function ExternalArchive({
@@ -114,7 +114,8 @@ export function ExternalArchive({
 }
 
 function ArchiveRow({ event }: { event: ExternalEvent }) {
-  const host = getEventHostName(event);
+  const hostIdentity = resolveExternalHost(event);
+  const host = hostIdentity.shortName;
   const meta = [
     host,
     event.event_type,
@@ -131,8 +132,8 @@ function ArchiveRow({ event }: { event: ExternalEvent }) {
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <SchoolVisualMark
-        school={event.uvsa_school}
-        fallbackLabel={host}
+        school={hostIdentity.school}
+        fallbackLabel={hostIdentity.markLabel}
         size="xs"
       />
       <div className="min-w-0 flex-1 basis-48">

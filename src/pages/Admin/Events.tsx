@@ -5,14 +5,18 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { useEventRecapEventIds } from '../../hooks/useEventRecap';
+import { useAdminExternalEvents } from '../../hooks/useExternalEvents';
+import { useAdminUVSASchools } from '../../hooks/useUVSASchools';
 import { academicTermsRepository } from '../../data/repos/academicTerms';
 import { eventsRepository } from '../../data/repos/events';
+import { externalEventsRepository } from '../../data/repos/externalEvents';
 import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
 import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
+import { ExternalEventDetailsFields } from '../../components/features/admin/ExternalEventDetailsFields';
 import { EventPreviewDialog } from '../../components/features/admin/preview/EventPreviewDialog';
 import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { buildEventPreview } from '../../components/features/admin/preview/eventPreview';
@@ -20,10 +24,21 @@ import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { buildDuplicateEventDraft } from '../../lib/adminEventDuplicate';
 import { isDirty } from '../../lib/adminDirty';
+import {
+  buildExternalPreviewListing,
+  buildHostOptions,
+  describeExternalHostLabel,
+  detailsFromListing,
+  EMPTY_EXTERNAL_DETAILS,
+  ExternalDetailsForm,
+  isExternalEventType,
+  planExternalSync,
+  validateExternalDetails,
+} from '../../lib/externalEventLinking';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
-import { isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
+import { getLosAngelesDateOnly, isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 const EMPTY_EVENT: Partial<Event> = {
   name: '', description: '', date: '', location: '',
@@ -120,6 +135,13 @@ export default function AdminEvents() {
   const { events, refreshEvents } = useEvents({ include_unpublished: true });
   const { terms, loading: termsLoading, error: termsError, refreshTerms } = useAcademicTerms();
   const queryClient = useQueryClient();
+  const { events: externalListings, loading: externalListingsLoading } = useAdminExternalEvents();
+  const { schools, loading: schoolsLoading } = useAdminUVSASchools();
+  // One listing per event: the unique source_event_id makes this map lossless.
+  const listingByEventId = useMemo(
+    () => new Map(externalListings.filter((listing) => listing.source_event_id).map((listing) => [listing.source_event_id as string, listing])),
+    [externalListings]
+  );
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<Event>>(EMPTY_EVENT);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -139,9 +161,24 @@ export default function AdminEvents() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedEventBaseline, setSelectedEventBaseline] = useState<Event | null>(null);
   const [duplicatedFrom, setDuplicatedFrom] = useState<string | null>(null);
+  const [newExternal, setNewExternal] = useState<ExternalDetailsForm>(EMPTY_EXTERNAL_DETAILS);
+  const [selectedExternal, setSelectedExternal] = useState<ExternalDetailsForm>(EMPTY_EXTERNAL_DETAILS);
+  const [selectedExternalBaseline, setSelectedExternalBaseline] = useState<ExternalDetailsForm>(EMPTY_EXTERNAL_DETAILS);
 
-  const createDirty = isDirty(EMPTY_EVENT, newEvent) || !!imageFile;
-  const editDirty = !!selectedEvent && (isDirty(selectedEventBaseline, selectedEvent) || !!editImageFile);
+  // External fields only count while the Event Type that reveals them is chosen.
+  const createDirty =
+    isDirty(EMPTY_EVENT, newEvent) ||
+    (isExternalEventType(newEvent.event_type) && isDirty(EMPTY_EXTERNAL_DETAILS, newExternal)) ||
+    !!imageFile;
+  const editDirty =
+    !!selectedEvent &&
+    (isDirty(selectedEventBaseline, selectedEvent) ||
+      (isExternalEventType(selectedEvent.event_type) && isDirty(selectedExternalBaseline, selectedExternal)) ||
+      !!editImageFile);
+  const selectedListing = selectedEvent ? listingByEventId.get(selectedEvent.id) : undefined;
+  // Retyping an event that is on the UVSA Network hides its listing on save.
+  const showsTypeAwayWarning =
+    !!selectedEvent && !!selectedListing && selectedListing.status !== 'draft' && !isExternalEventType(selectedEvent.event_type);
   useUnsavedChangesGuard(createDirty || editDirty, uploading || editUploading);
 
   // Event days and times are San Diego wall-clock values; never read them in
@@ -237,6 +274,24 @@ export default function AdminEvents() {
     : null;
   const activePreview = previewTarget === 'create' ? createPreview : previewTarget === 'edit' ? editPreview : null;
 
+  // The listing an unsaved form would produce, drawn by the same components as
+  // the public pages. Built from form state only; nothing is written.
+  const today = getLosAngelesDateOnly();
+  const createExternalPreview = createPreview.event
+    ? buildExternalPreviewListing({ event: createPreview.event, dateOnly: newEvent.date ?? '', details: newExternal, schools, existing: null, today })
+    : null;
+  const editExternalPreview = editPreview?.event && selectedEvent
+    ? buildExternalPreviewListing({
+        event: editPreview.event,
+        dateOnly: formatDateForInput(selectedEvent.date, selectedEvent.start_time),
+        details: selectedExternal,
+        schools,
+        existing: selectedListing ?? null,
+        today,
+      })
+    : null;
+  const activeExternalPreview = previewTarget === 'create' ? createExternalPreview : previewTarget === 'edit' ? editExternalPreview : null;
+
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const upcomingEvents = events
@@ -315,11 +370,45 @@ export default function AdminEvents() {
     if (objectName) await supabase.storage.from('event_images').remove([objectName]);
   }
 
+  // Keeps the event's UVSA Network listing in step with it: upserts on the
+  // unique source_event_id (never a second row), or hides the listing when the
+  // event stopped being an External Event.
+  async function syncExternalListing({ eventId, draft, dateOnly, academicTermId, details }: {
+    eventId: string;
+    draft: Partial<Event>;
+    dateOnly: string;
+    academicTermId: string | null;
+    details: ExternalDetailsForm;
+  }) {
+    const plan = planExternalSync({
+      eventType: draft.event_type ?? 'other',
+      isPublished: draft.is_published ?? true,
+      details,
+      common: {
+        title: draft.name ?? '',
+        date: dateOnly,
+        academic_term_id: academicTermId,
+        location: draft.location || null,
+        description: draft.description || null,
+        points: draft.points ?? 0,
+      },
+      existing: listingByEventId.get(eventId) ?? null,
+      today: getLosAngelesDateOnly(),
+    });
+    await externalEventsRepository.applySyncPlan(eventId, plan);
+    queryClient.invalidateQueries(['external-events']);
+    queryClient.invalidateQueries(['admin-external-events']);
+  }
+
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.name || !newEvent.description || !newEvent.date || !newEvent.location) return;
     const timeError = validateEventTimes(newEvent.start_time, newEvent.end_time);
     if (timeError) { toast.error(timeError); return; }
+    const externalError = isExternalEventType(newEvent.event_type)
+      ? validateExternalDetails(newExternal, buildHostOptions(schools, newExternal.host))
+      : null;
+    if (externalError) { toast.error(externalError); return; }
     try {
       setUploading(true);
       const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
@@ -347,8 +436,21 @@ export default function AdminEvents() {
       }]).select('id').single();
       if (error) throw error;
       await eventsRepository.setCheckInCode(createdEvent.id, checkInCode);
-      toast.success('Event created');
-      setNewEvent(EMPTY_EVENT); setImageFile(null); setImagePreview(null); setDuplicatedFrom(null);
+      let listingFailed = false;
+      if (isExternalEventType(newEvent.event_type)) {
+        try {
+          await syncExternalListing({ eventId: createdEvent.id, draft: newEvent, dateOnly: newEvent.date, academicTermId, details: newExternal });
+        } catch (listingErr) {
+          console.error(listingErr);
+          listingFailed = true;
+        }
+      }
+      if (listingFailed) {
+        toast.error('Event created, but its UVSA Network listing could not be saved. Open the event and save it again to retry.');
+      } else {
+        toast.success('Event created');
+      }
+      setNewEvent(EMPTY_EVENT); setNewExternal(EMPTY_EXTERNAL_DETAILS); setImageFile(null); setImagePreview(null); setDuplicatedFrom(null);
       refreshTerms();
       refreshEvents(); setActiveTab('manage');
     } catch (err) {
@@ -364,6 +466,8 @@ export default function AdminEvents() {
       await removeEventImage(eventToDelete.image_url);
       await removeEventImage(eventToDelete.thumbnail_url);
       toast.success(`"${eventToDelete.name}" deleted`);
+      queryClient.invalidateQueries(['external-events']);
+      queryClient.invalidateQueries(['admin-external-events']);
       refreshEvents();
       if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
     } catch (err) {
@@ -376,6 +480,10 @@ export default function AdminEvents() {
     if (!selectedEvent) return;
     const timeError = validateEventTimes(selectedEvent.start_time, selectedEvent.end_time);
     if (timeError) { toast.error(timeError); return; }
+    const externalError = isExternalEventType(selectedEvent.event_type)
+      ? validateExternalDetails(selectedExternal, buildHostOptions(schools, selectedExternal.host))
+      : null;
+    if (externalError) { toast.error(externalError); return; }
     try {
       setEditUploading(true);
       let imageUrl = selectedEvent.image_url;
@@ -427,7 +535,16 @@ export default function AdminEvents() {
       }
       await removeEventImage(imageUrlToRemove);
       await removeEventImage(thumbnailUrlToRemove);
-      if (pointsChanged) {
+      let listingFailed = false;
+      try {
+        await syncExternalListing({ eventId: selectedEvent.id, draft: selectedEvent, dateOnly, academicTermId, details: selectedExternal });
+      } catch (listingErr) {
+        console.error(listingErr);
+        listingFailed = true;
+      }
+      if (listingFailed) {
+        toast.error('Event updated, but its UVSA Network listing could not be synced. Save the event again to retry.');
+      } else if (pointsChanged) {
         // Invalidate cached point totals so Find My Points and leaderboard
         // show fresh data after the DB trigger has synced attendance rows.
         queryClient.invalidateQueries(['find-my-points']);
@@ -436,6 +553,7 @@ export default function AdminEvents() {
         toast.success('Event updated.');
       }
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
+      setSelectedExternal(EMPTY_EXTERNAL_DETAILS); setSelectedExternalBaseline(EMPTY_EXTERNAL_DETAILS);
       setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
       setEditCheckInCode('');
       refreshTerms();
@@ -460,8 +578,11 @@ export default function AdminEvents() {
       ...event,
       academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
     };
+    const externalDetails = detailsFromListing(listingByEventId.get(event.id));
     setSelectedEvent(opened);
     setSelectedEventBaseline(opened);
+    setSelectedExternal(externalDetails);
+    setSelectedExternalBaseline(externalDetails);
     setSelectedEventOriginalImageUrl(event.image_url ?? null);
     setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
     setSelectedEventOriginalPoints(event.points ?? 0);
@@ -481,6 +602,8 @@ export default function AdminEvents() {
   function duplicateEvent(event: Event) {
     if (createDirty && !window.confirm('The Create form has unsaved changes. Replace them with the duplicate?')) return;
     setNewEvent({ ...EMPTY_EVENT, ...buildDuplicateEventDraft(event) });
+    // The copy keeps its host and links; the admin only has to pick a new date.
+    setNewExternal(detailsFromListing(listingByEventId.get(event.id)));
     setImageFile(null);
     setImagePreview(null);
     setDuplicatedFrom(event.name);
@@ -491,7 +614,7 @@ export default function AdminEvents() {
   // Quick Search deep link: ?event=<id> opens that event's editor once.
   const eventParam = searchParams.get('event');
   useEffect(() => {
-    if (!eventParam) return;
+    if (!eventParam || externalListingsLoading) return;
     const target = events.find((item) => item.id === eventParam);
     if (!target) return;
     setActiveTab('manage');
@@ -503,7 +626,7 @@ export default function AdminEvents() {
     }, { replace: true });
     // openEditor reads current form state only to guard unsaved edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventParam, events]);
+  }, [eventParam, events, externalListingsLoading]);
 
   const EventRow = ({ event }: { event: Event }) => (
     <div className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-start sm:p-5 transition-colors hover:bg-[var(--color-surface2)] last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
@@ -535,6 +658,14 @@ export default function AdminEvents() {
           <span className="rounded border px-1.5 py-0.5 font-mono text-[10px]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
             {EVENT_TYPE_LABELS[event.event_type]}
           </span>
+          {isExternalEventType(event.event_type) && (() => {
+            const host = describeExternalHostLabel(listingByEventId.get(event.id));
+            return (
+              <span className={`rounded border px-1.5 py-0.5 font-mono text-[10px] ${host.missing ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300' : ''}`} style={host.missing ? undefined : { borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
+                {host.text}
+              </span>
+            );
+          })()}
           <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{event.points} pts</span>
           {event.interest_counts && (
             <span className="rounded border border-brand-500/30 bg-brand-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] text-brand-700 dark:text-brand-300" title="Public interest: Interested / Going">
@@ -625,8 +756,8 @@ export default function AdminEvents() {
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Event Type *</label>
-                    <select value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                    <label htmlFor="create-event-type" className={labelCls}>Event Type *</label>
+                    <select id="create-event-type" value={newEvent.event_type} onChange={e => setNewEvent({...newEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
                       {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
@@ -640,6 +771,9 @@ export default function AdminEvents() {
                     termsError={termsError}
                     onChange={(termId) => setNewEvent({ ...newEvent, academic_term_id: termId })}
                   />
+                  {isExternalEventType(newEvent.event_type) && (
+                    <ExternalEventDetailsFields value={newExternal} onChange={setNewExternal} schools={schools} schoolsLoading={schoolsLoading} />
+                  )}
                 </div>
                 <label className="flex cursor-pointer items-start gap-3 rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                   <input
@@ -761,8 +895,8 @@ export default function AdminEvents() {
                     </div>
                   </div>
                   <div>
-                    <label className={labelCls}>Event Type *</label>
-                    <select value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
+                    <label htmlFor="edit-event-type" className={labelCls}>Event Type *</label>
+                    <select id="edit-event-type" value={selectedEvent.event_type} onChange={e => setSelectedEvent({...selectedEvent, event_type: e.target.value as Event['event_type']})} className={inputCls} required>
                       {Object.entries(EVENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
@@ -776,6 +910,15 @@ export default function AdminEvents() {
                     termsError={termsError}
                     onChange={(termId) => setSelectedEvent({ ...selectedEvent, academic_term_id: termId })}
                   />
+                  {isExternalEventType(selectedEvent.event_type) && (
+                    <ExternalEventDetailsFields value={selectedExternal} onChange={setSelectedExternal} schools={schools} schoolsLoading={schoolsLoading} />
+                  )}
+                  {showsTypeAwayWarning && (
+                    <div role="alert" className="col-span-full rounded border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-semibold">This event currently appears on the UVSA Network.</p>
+                      <p className="mt-1 text-xs leading-relaxed">Changing its type will hide the linked external listing. Its links and history are kept, and switching back to External Event restores it.</p>
+                    </div>
+                  )}
                   {selectedEvent.interest_counts && (
                     <div className="col-span-full rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                       <label className={labelCls}>Public Interest</label>
@@ -874,6 +1017,7 @@ export default function AdminEvents() {
             event={activePreview.event}
             terms={terms}
             isSaved={previewTarget === 'edit'}
+            external={activeExternalPreview}
             onClose={() => setPreviewTarget(null)}
           />
         )}
@@ -884,7 +1028,10 @@ export default function AdminEvents() {
             <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete Event</h3>
               <p className="mb-2 font-sans text-[15px]" style={{ color: 'var(--color-text)' }}>Delete <span className="font-bold">"{eventToDelete.name}"</span>?</p>
-              <p className="mb-6 font-sans text-xs leading-relaxed text-red-500">This cannot be undone. Attendance records will remain.</p>
+              <p className="mb-6 font-sans text-xs leading-relaxed text-red-500">
+                This cannot be undone. Attendance records will remain.
+                {listingByEventId.has(eventToDelete.id) && ' Its linked UVSA Network listing will be deleted too.'}
+              </p>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button onClick={() => setEventToDelete(null)} className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
                 <button onClick={handleDeleteConfirm} className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">Delete Event</button>

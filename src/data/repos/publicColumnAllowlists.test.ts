@@ -111,6 +111,19 @@ describe("anon column allowlists stay closed", () => {
     expect(columns).toContain("title");
   });
 
+  it("the public external-event select carries the link/host columns but not show_on_network", () => {
+    // 20261002060000 grants anon exactly host_type + source_event_id; the
+    // admin-only show_on_network must never join a public select.
+    const columns = columnConstant(
+      read("data/repos/externalEvents.ts"),
+      "PUBLIC_EXTERNAL_EVENT_COLUMNS"
+    );
+
+    expect(columns).toContain("host_type");
+    expect(columns).toContain("source_event_id");
+    expect(columns).not.toContain("show_on_network");
+  });
+
   it("no public read path selects '*' from a column-restricted table", () => {
     // getAllSchools and getAllEvents are admin-only and legitimately use '*';
     // they run as `authenticated`, which keeps table-level SELECT. Everything

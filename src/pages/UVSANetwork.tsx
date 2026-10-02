@@ -14,7 +14,11 @@ import {
   FALLBACK_UVSA_NETWORK,
   FALLBACK_LINKS,
 } from "../config/publicFallbackContent";
-import { pickFeaturedUpcomingEvent } from "../lib/uvsaNetwork";
+import {
+  pickFeaturedUpcomingEvent,
+  splitLapsedUpcoming,
+} from "../lib/uvsaNetwork";
+import { getLosAngelesDateOnly } from "../utils/losAngelesDate";
 import { NetworkHero } from "../components/features/uvsa/NetworkHero";
 import { SchoolDirectory } from "../components/features/uvsa/SchoolDirectory";
 import { UpcomingExternals } from "../components/features/uvsa/UpcomingExternals";
@@ -30,7 +34,7 @@ export default function UVSANetwork() {
   } = useUVSASchools();
   const { settings, error: settingsError } = useUVSANetworkPageSettings();
   const {
-    events: upcomingEvents,
+    events: upcomingRows,
     loading: upcomingLoading,
     error: upcomingError,
   } = useExternalEvents({ status: "upcoming" });
@@ -69,6 +73,8 @@ export default function UVSANetwork() {
     );
   }
 
+  const { upcoming: upcomingEvents, lapsed: lapsedEvents } =
+    splitLapsedUpcoming(upcomingRows, getLosAngelesDateOnly());
   const featuredEvent = pickFeaturedUpcomingEvent(upcomingEvents);
   const summerEmpty = shouldUseSummerEmptyState(upcomingEvents.length > 0)
     ? getSummerBreakMessage("externals")
@@ -113,7 +119,7 @@ export default function UVSANetwork() {
           <ExternalArchive
             heading={settings.showcase_heading}
             description={settings.showcase_description}
-            events={[...pastEvents, ...historicalEvents]}
+            events={[...pastEvents, ...lapsedEvents, ...historicalEvents]}
             loading={pastLoading || historicalLoading}
           />
         </RevealOnScrollWrapper>
