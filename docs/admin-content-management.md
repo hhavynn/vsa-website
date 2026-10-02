@@ -62,6 +62,7 @@ cards, the page hero, and every external-event card hosted by that school.
 - `uvsa_schools.image_url` has no public use and is no longer edited here; the
   column is left untouched.
 
-The bucket comes from migration `20261002050000_create_uvsa_school_assets_bucket.sql`
-(public by URL, admin-only list/upload/update via `is_admin_user()`, no delete policy), which must be applied
-manually before uploads work.
+The bucket comes from migration `20261002061737_create_uvsa_school_assets_bucket.sql`
+(public by URL, admin-only list/upload/update via `is_admin_user()`, no delete policy).
+It was applied to production on 2026-10-02 and the file is named after the version Supabase
+recorded.
