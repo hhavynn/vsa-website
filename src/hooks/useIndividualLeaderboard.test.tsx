@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, focusManager } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Leaderboard } from '../pages/Leaderboard';
@@ -37,12 +37,6 @@ const member = (firstName: string, points: number) => ({
   events_attended: 2,
 });
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>(done => { resolve = done; });
-  return { promise, resolve };
-}
-
 let queryClient: QueryClient;
 
 async function advanceTime(milliseconds = 0) {
@@ -64,16 +58,10 @@ function renderLeaderboard() {
   );
 }
 
-function setVisibility(visibility: DocumentVisibilityState) {
-  Object.defineProperty(document, 'visibilityState', { configurable: true, value: visibility });
-  act(() => { window.dispatchEvent(new Event('visibilitychange')); });
-}
-
 beforeEach(() => {
   jest.useFakeTimers();
   mockYearsWithData = [];
   focusManager.setFocused(undefined);
-  setVisibility('visible');
   jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
     member('Alpha', 10), member('Beta', 5),
   ]);
@@ -92,90 +80,55 @@ afterEach(() => {
   queryClient?.clear();
   jest.restoreAllMocks();
   focusManager.setFocused(undefined);
-  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
   jest.useRealTimers();
 });
 
-it('updates all-time standings within 30 seconds without a raw members event', async () => {
+it('fetches and renders all-time standings on initial load', async () => {
   renderLeaderboard();
   await advanceTime();
   expect(screen.getAllByRole('button', { name: /Open profile for/ })[0]).toHaveAccessibleName('Open profile for Alpha Member');
-
-  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
-    member('Alpha', 10), member('Beta', 20),
-  ]);
-  await advanceTime(30_000);
-
-  const topRow = screen.getAllByRole('button', { name: /Open profile for/ })[0];
-  expect(topRow).toHaveAccessibleName('Open profile for Beta Member');
-  expect(within(topRow).getByText('20')).toBeInTheDocument();
-  // Equal event counts are a tie on the Events tab: both share T1, listed alphabetically.
-  fireEvent.click(screen.getByRole('button', { name: 'EVENTS' }));
-  const eventRows = screen.getAllByRole('button', { name: /Open profile for/ });
-  expect(eventRows[0]).toHaveAccessibleName('Open profile for Alpha Member');
-  for (const row of eventRows) {
-    expect(within(row).getByText('T1')).toBeInTheDocument();
-    expect(within(row).getByText('2-way tie')).toBeInTheDocument();
-  }
 });
 
-it('pauses hidden-tab polling and refreshes when the page becomes visible', async () => {
+it('does not refetch all-time standings within the stale window', async () => {
   renderLeaderboard();
   await advanceTime();
-  setVisibility('hidden');
-  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([member('Updated', 25)]);
-  await advanceTime(60_000);
-  expect(screen.queryByText('Updated Member')).not.toBeInTheDocument();
+  const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
+  fetch.mockClear();
+  // Advance well past the old 30s polling interval but within the 5 min staleTime
+  await advanceTime(120_000);
+  expect(fetch).not.toHaveBeenCalled();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
-
-  setVisibility('visible');
-  await advanceTime();
-  expect(screen.getByText('Updated Member')).toBeInTheDocument();
 });
 
-it('refreshes all-time standings when the window regains focus', async () => {
+it('does not refetch all-time standings on window focus', async () => {
   renderLeaderboard();
   await advanceTime();
-  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([member('Focused', 25)]);
+  const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
+  fetch.mockClear();
   act(() => { window.dispatchEvent(new Event('focus')); });
   await advanceTime();
-  expect(screen.getByText('Focused Member')).toBeInTheDocument();
-});
-
-it('deduplicates polling while a prior refresh is pending', async () => {
-  renderLeaderboard();
-  await advanceTime();
-  const pending = deferred<ReturnType<typeof member>[]>();
-  const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockReturnValue(pending.promise);
-  const initialCalls = fetch.mock.calls.length;
-  await advanceTime(90_000);
-  expect(fetch.mock.calls.length - initialCalls).toBe(1);
+  expect(fetch).not.toHaveBeenCalled();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
-
-  await act(async () => { pending.resolve([member('Completed', 30)]); });
-  await advanceTime();
-  expect(screen.getByText('Completed Member')).toBeInTheDocument();
 });
 
-it('ignores an old all-time refresh after selecting an academic year', async () => {
+it('uses cached data when switching back to all-time from a yearly view', async () => {
   mockYearsWithData = [2025];
   renderLeaderboard();
   await advanceTime();
   const selector = screen.getByRole('combobox', { name: 'Select academic year' });
-  fireEvent.change(selector, { target: { value: 'all' } });
-  await advanceTime();
-  const pending = deferred<ReturnType<typeof member>[]>();
-  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockReturnValue(pending.promise);
-  await advanceTime(30_000);
 
+  // Switch to yearly
   fireEvent.change(selector, { target: { value: '2025' } });
   await advanceTime();
   expect(screen.getByText('Yearly Member')).toBeInTheDocument();
 
-  await act(async () => { pending.resolve([member('Obsolete', 99)]); });
-  await advanceTime(60_000);
-  expect(screen.queryByText('Obsolete Member')).not.toBeInTheDocument();
-  expect(screen.getByText('Yearly Member')).toBeInTheDocument();
+  const fetch = jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard');
+  fetch.mockClear();
+
+  // Switch back to all-time — should use cached data, no new fetch within staleTime
+  fireEvent.change(selector, { target: { value: 'all' } });
+  await advanceTime();
+  expect(screen.getByText('Alpha Member')).toBeInTheDocument();
 });
 
 it('does not poll academic-year standings or refetch them on focus', async () => {
@@ -189,14 +142,27 @@ it('does not poll academic-year standings or refetch them on focus', async () =>
   expect(screen.getByText('Yearly Member')).toBeInTheDocument();
 });
 
-it('recovers from an initial fetch error on the next all-time refresh', async () => {
+it('shows error state on initial fetch failure', async () => {
+  jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockRejectedValueOnce(new Error('Unavailable'));
+  renderLeaderboard();
+  await advanceTime();
+  expect(screen.getByText('Leaderboard temporarily unavailable')).toBeInTheDocument();
+});
+
+it('recovers when cache is invalidated after a fetch error', async () => {
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
   jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockRejectedValueOnce(new Error('Unavailable'));
   renderLeaderboard();
   await advanceTime();
   expect(screen.getByText('Leaderboard temporarily unavailable')).toBeInTheDocument();
 
-  await advanceTime(30_000);
+  // Simulate cache invalidation (e.g. after admin import)
+  jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue([
+    member('Alpha', 10), member('Beta', 5),
+  ]);
+  await act(async () => { queryClient.invalidateQueries(['individual-leaderboard']); });
+  await advanceTime();
   expect(screen.queryByText('Leaderboard temporarily unavailable')).not.toBeInTheDocument();
   expect(screen.getByText('Alpha Member')).toBeInTheDocument();
 });

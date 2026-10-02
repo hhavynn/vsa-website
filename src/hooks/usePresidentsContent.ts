@@ -21,7 +21,7 @@ export function normalizePresidentsContent(row: any): PresidentsContent {
 async function fetchPresidentsContent(): Promise<PresidentsContent> {
   const { data, error } = await supabase
     .from('homepage_content')
-    .select('*')
+    .select('presidents_names, presidents_role, presidents_message, presidents_photo_url, presidents_photo_thumbnail_url')
     .eq('id', PRESIDENTS_CONTENT_ID)
     .maybeSingle();
 
@@ -38,7 +38,7 @@ export function usePresidentsContent() {
     queryKey: PRESIDENTS_CONTENT_QUERY_KEY,
     queryFn: fetchPresidentsContent,
     placeholderData: DEFAULT_PRESIDENTS_CONTENT,
-    staleTime: 30 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 
   return {

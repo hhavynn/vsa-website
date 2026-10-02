@@ -130,6 +130,5 @@ serve(async (req: Request) => {
     );
   }
 
-  console.log(`Dispatched ${eventType} for event ${eventId} (op: ${type})`);
   return json({ triggered: true, reason: "Dispatched to GitHub", event_id: eventId });
 });

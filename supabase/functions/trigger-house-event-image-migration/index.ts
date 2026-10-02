@@ -131,6 +131,5 @@ serve(async (req: Request) => {
     );
   }
 
-  console.log(`Dispatched ${eventType} for house event ${houseEventId} (op: ${type})`);
   return json({ triggered: true, reason: "Dispatched to GitHub", house_event_id: houseEventId });
 });

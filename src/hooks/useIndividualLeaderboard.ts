@@ -35,12 +35,8 @@ export function useIndividualLeaderboard(year: number | 'all' | null) {
     },
     {
       enabled: year !== null,
-      // Raw members changes require private-table read access; refresh the existing public projection instead.
-      refetchInterval: year === 'all' ? 30_000 : false,
-      refetchIntervalInBackground: false,
-      refetchOnWindowFocus: year === 'all',
-      refetchOnReconnect: year === 'all',
-      cacheTime: 0,
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
       retry: false,
     },
   );
