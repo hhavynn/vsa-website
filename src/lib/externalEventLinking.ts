@@ -318,7 +318,8 @@ export function buildExternalPreviewListing({
   existing,
   today,
 }: {
-  event: Pick<Event, 'id' | 'name' | 'description' | 'location' | 'points' | 'is_published' | 'event_type'>;
+  event: Pick<Event, 'id' | 'name' | 'description' | 'location' | 'points' | 'is_published' | 'event_type'> &
+    Partial<Pick<Event, 'start_time' | 'end_time' | 'thumbnail_url' | 'image_url'>>;
   dateOnly: string;
   details: ExternalDetailsForm;
   schools: UVSASchool[];
@@ -352,6 +353,7 @@ export function buildExternalPreviewListing({
     instagram_url: orNull(details.instagram_url),
     host_info_url: orNull(details.host_info_url),
     ride_info: orNull(details.ride_info),
+    image_url: null,
     status,
     photo_album_url: null,
     recap: null,
@@ -359,6 +361,15 @@ export function buildExternalPreviewListing({
     is_featured: false,
     created_at: '',
     updated_at: '',
+    // The same flyer and time the saved listing will borrow from this event.
+    source_event: {
+      id: event.id,
+      name: event.name,
+      start_time: event.start_time ?? null,
+      end_time: event.end_time ?? null,
+      thumbnail_url: event.thumbnail_url ?? null,
+      image_url: event.image_url ?? null,
+    },
     uvsa_school: columns.uvsa_school_id
       ? schools.find((school) => school.id === columns.uvsa_school_id)
       : undefined,

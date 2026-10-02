@@ -14,6 +14,7 @@ const withLogo = (slug: string, short_name: string) =>
     id: `id-${slug}`,
     slug,
     short_name,
+    vsa_name: `VSA at ${short_name}`,
     logo_url: OWN_LOGO_URL.replace("ucsd", slug),
   });
 
@@ -28,7 +29,7 @@ describe("ExternalEventCard host logo", () => {
       "src",
       expect.stringContaining("/uci/"),
     );
-    expect(screen.getByText("UCI")).toBeInTheDocument();
+    expect(screen.getByText("VSA at UCI")).toBeInTheDocument();
   });
 
   it("falls back to host initials when the host has no logo", () => {
@@ -72,10 +73,10 @@ describe("ExternalEventCard host logo", () => {
       />,
     );
     expect(screen.getByText("Hosted by VSA at UCSD")).toBeInTheDocument();
-    expect(screen.getByText("5 pts")).toBeInTheDocument();
+    expect(screen.getByText("+5 pts")).toBeInTheDocument();
   });
 
-  it("leads with date and offers RSVP / info / IG / host Linktree as real links", () => {
+  it("offers RSVP / info / Instagram post as real links and keeps host links on the logo", () => {
     render(
       <ExternalEventCard
         event={makeEvent({
@@ -88,18 +89,21 @@ describe("ExternalEventCard host logo", () => {
         })}
       />,
     );
-    expect(screen.getByText("Sat, Nov 14, 2026")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /rsvp/i })).toHaveAttribute(
+    expect(screen.getByText("Sat, Nov 14")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /rsvp \/ tickets/i }),
+    ).toHaveAttribute("href", "https://example.com/rsvp");
+    expect(screen.getByRole("link", { name: /event info/i })).toHaveAttribute(
       "href",
-      "https://example.com/rsvp",
+      "https://example.com/info",
     );
     expect(
-      screen.getByRole("link", { name: /view info/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /ig post/i })).toBeInTheDocument();
+      screen.getByRole("link", { name: /instagram post/i }),
+    ).toHaveAttribute("href", "https://instagram.com/p/1");
+    // The host's own links are not extra buttons in the CTA row.
     expect(
-      screen.getByRole("link", { name: /host linktree/i }),
-    ).toHaveAttribute("href", "https://linktr.ee/uci");
+      screen.queryByRole("link", { name: /linktree/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -160,7 +164,9 @@ describe("ExternalEventCard hosts", () => {
     expect(
       screen.getByRole("link", { name: /UCSD Ride Form/ }),
     ).toHaveAttribute("href", "https://forms.example/ride");
-    expect(screen.getByText(/Meet at Gilman parking structure/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Meet at Gilman parking structure/),
+    ).toBeInTheDocument();
   });
 });
 
@@ -223,6 +229,38 @@ describe("UpcomingExternals", () => {
     );
     expect(screen.getByText("Back in fall")).toBeInTheDocument();
     expect(screen.queryByText("Nothing yet")).not.toBeInTheDocument();
+  });
+
+  it("shows an error panel instead of the empty or summer state when errored", () => {
+    render(
+      <UpcomingExternals
+        {...base}
+        events={[]}
+        error
+        summerEmpty={{
+          badge: "Summer break",
+          title: "Back in fall",
+          body: "See you then",
+        }}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Upcoming externals couldn't load right now.",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Upcoming Externals" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /instagram/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("instagram.com"),
+    );
+    expect(screen.queryByText("Nothing yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("Back in fall")).not.toBeInTheDocument();
+  });
+
+  it("does not show the error panel while still loading", () => {
+    render(<UpcomingExternals {...base} events={[]} loading error />);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("renders skeletons while loading", () => {
@@ -305,6 +343,22 @@ describe("ExternalArchive", () => {
   it("renders nothing when there is no archive", () => {
     const { container } = render(<ExternalArchive {...props} events={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows a notice, not nothing, when the archive failed to load", () => {
+    render(<ExternalArchive {...props} events={[]} error />);
+    expect(
+      screen.getByRole("heading", { name: props.heading }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /couldn't load right now/i,
+    );
+  });
+
+  it("keeps the partial archive visible alongside the notice", () => {
+    render(<ExternalArchive {...props} events={events} error />);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByText("Fall Show")).toBeInTheDocument();
   });
 
   it("shows a skeleton while loading", () => {

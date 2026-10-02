@@ -1,82 +1,70 @@
+import { useId } from "react";
 import { ExternalEvent } from "../../../types";
-import { formatDateOnly } from "../../../lib/dateOnly";
 import { Badge } from "../../ui/Badge";
-import { CalendarIcon, MapPinIcon } from "./icons";
-import { resolveExternalHost } from "../../../lib/externalEventLinking";
-import { ExternalEventActions } from "./ExternalEventCard";
-import { ExternalHostMark } from "./ExternalHostMark";
+import {
+  ExternalEventActions,
+  ExternalEventFacts,
+  ExternalHostLine,
+} from "./ExternalEventCard";
+import { ExternalEventImage } from "./ExternalEventImage";
 
-/** Large spotlight. Only ever rendered for a genuinely upcoming featured event. */
+/**
+ * Large spotlight for an explicitly featured, genuinely upcoming event. Same
+ * pieces as the card (flyer, host, facts, links), just given more room, so the
+ * page never shows two different designs for the same information.
+ */
 export function FeaturedExternal({ event }: { event: ExternalEvent }) {
-  const hostIdentity = resolveExternalHost(event);
-  const host = hostIdentity.shortName;
-  const pointsNote =
-    event.points && event.points !== 4
-      ? `${event.points} points when announced by VSA at UCSD.`
-      : null;
+  const titleId = useId();
 
   return (
-    <article className="overflow-hidden rounded-lg border border-brand-600/40 bg-surface dark:border-brand-400/40">
-      <div className="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="flex items-center justify-center border-b border-[var(--color-border)] bg-surface2 p-6 sm:border-b-0 sm:border-r sm:p-8">
-          <ExternalHostMark host={hostIdentity} size="lg" />
+    <article
+      aria-labelledby={titleId}
+      className="grid grid-cols-1 overflow-hidden rounded-lg border border-brand-600/40 bg-surface md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] dark:border-brand-400/40"
+    >
+      <ExternalEventImage
+        event={event}
+        className="md:aspect-auto md:h-full md:min-h-[26rem] md:border-b-0 md:border-r"
+        fallbackClassName="md:aspect-auto md:h-full md:border-b-0 md:border-r"
+        width={900}
+        height={1125}
+        sizes="(min-width: 768px) 45vw, 100vw"
+      />
+
+      <div className="flex flex-col gap-4 p-5 sm:p-8">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge label="Featured External" color="yellow" />
+          {event.event_type && (
+            <span className="font-sans text-xs font-semibold uppercase tracking-label text-text-secondary">
+              {event.event_type}
+            </span>
+          )}
         </div>
 
-        <div className="space-y-4 p-6 sm:p-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge label="Featured External" color="yellow" />
-            <Badge label={host} color="gray" />
-            {event.event_type && (
-              <span className="font-sans text-xs font-semibold uppercase tracking-label text-text-secondary">
-                {event.event_type}
-              </span>
-            )}
-          </div>
+        <ExternalHostLine event={event} />
 
-          <h3 className="font-serif text-3xl leading-tight text-text-primary sm:text-4xl">
-            {event.title}
-          </h3>
+        <h3
+          id={titleId}
+          className="font-serif text-3xl leading-tight text-text-primary sm:text-4xl"
+        >
+          {event.title}
+        </h3>
 
-          <div className="flex flex-wrap gap-x-5 gap-y-1.5 font-sans text-sm text-text-primary">
-            {event.date && (
-              <span className="inline-flex items-center gap-2 font-semibold">
-                <CalendarIcon
-                  size={13}
-                  aria-hidden
-                  className="text-brand-600 dark:text-brand-400"
-                />
-                {formatDateOnly(event.date, "EEEE, MMMM d, yyyy")}
-              </span>
-            )}
-            {event.location && (
-              <span className="inline-flex items-center gap-2 text-text-secondary">
-                <MapPinIcon size={12} aria-hidden /> {event.location}
-              </span>
-            )}
-          </div>
+        <ExternalEventFacts event={event} large />
 
-          {event.description && (
-            <p className="max-w-3xl font-sans text-sm leading-7 text-text-secondary sm:text-base">
-              {event.description}
-            </p>
-          )}
+        {event.description && (
+          <p className="max-w-3xl font-sans text-sm leading-7 text-text-secondary sm:text-base">
+            {event.description}
+          </p>
+        )}
+        {event.ride_info && (
+          <p className="font-sans text-sm text-text-secondary">
+            <span className="font-semibold text-text-primary">Rides: </span>
+            {event.ride_info}
+          </p>
+        )}
 
-          {event.ride_info && (
-            <p className="font-sans text-sm text-text-secondary">
-              <span className="font-semibold text-text-primary">Rides: </span>
-              {event.ride_info}
-            </p>
-          )}
-
-          {pointsNote && (
-            <p className="inline-flex rounded bg-surface2 px-3 py-2 font-sans text-xs font-medium text-text-secondary">
-              {pointsNote}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <ExternalEventActions event={event} />
-          </div>
+        <div className="mt-auto pt-1">
+          <ExternalEventActions event={event} />
         </div>
       </div>
     </article>

@@ -256,6 +256,23 @@ describe('buildExternalPreviewListing', () => {
     });
   });
 
+  it("carries the event's flyer and start time so the preview card matches the public one", () => {
+    const listing = buildExternalPreviewListing({
+      event: { ...event, start_time: '18:00:00', end_time: '20:00:00', thumbnail_url: 'https://cdn.example/t.webp', image_url: 'https://cdn.example/f.webp' },
+      dateOnly: '2026-10-24',
+      details: details({ host: UVSA_SOCAL_HOST_VALUE }),
+      schools,
+      existing: null,
+      today: TODAY,
+    });
+    expect(listing?.source_event).toMatchObject({
+      id: 'e1',
+      start_time: '18:00:00',
+      thumbnail_url: 'https://cdn.example/t.webp',
+      image_url: 'https://cdn.example/f.webp',
+    });
+  });
+
   it('resolves the chosen school for logo and links', () => {
     const listing = buildExternalPreviewListing({ event, dateOnly: '2026-10-24', details: details({ host: uci.id }), schools, existing: null, today: TODAY });
     expect(listing?.uvsa_school?.short_name).toBe('UCI');

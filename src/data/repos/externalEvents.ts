@@ -23,10 +23,14 @@ export interface ExternalEventFilters {
  * therefore fails for anon, and the nested `uvsa_schools(*)` fails for the same
  * reason — so both sides of the join must name their columns.
  *
+ * `source_event:events(...)` borrows the linked event's flyer and start/end
+ * time. Anon reads only published events' public columns (events allowlist,
+ * 20260820000000), so an unpublished source simply embeds as null.
+ *
  * Admin reads run as `authenticated`, which keeps table-level SELECT.
  */
 const PUBLIC_EXTERNAL_EVENT_COLUMNS =
-  'id, host_type, source_event_id, uvsa_school_id, title, event_type, date, academic_term_id, location, description, points, rsvp_url, ride_form_url, instagram_url, host_info_url, ride_info, status, photo_album_url, recap, is_featured, created_at, updated_at, uvsa_school:uvsa_schools(id, school_name, short_name, slug, system_type, city, vsa_name, instagram_url, linktree_url, website_url, facebook_url, youtube_url, tiktok_url, description, known_for, recurring_events, logo_url, image_url, is_active, sort_order, created_at, updated_at)' as const;
+  'id, host_type, source_event_id, uvsa_school_id, title, event_type, date, academic_term_id, location, description, points, rsvp_url, ride_form_url, instagram_url, host_info_url, ride_info, image_url, status, photo_album_url, recap, is_featured, created_at, updated_at, source_event:events(id, name, start_time, end_time, thumbnail_url, image_url), uvsa_school:uvsa_schools(id, school_name, short_name, slug, system_type, city, vsa_name, instagram_url, linktree_url, website_url, facebook_url, youtube_url, tiktok_url, description, known_for, recurring_events, logo_url, image_url, is_active, sort_order, created_at, updated_at)' as const;
 
 export class ExternalEventsRepository {
   /**
