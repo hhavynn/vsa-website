@@ -10,8 +10,14 @@
 --
 -- ACCESS MODEL
 -- ------------
---   read    public (bucket is public; the select policy also covers listing)
---   write   admins only — insert / update / delete all gated on is_admin_user()
+--   read    public by URL — the bucket's `public` flag serves objects without any
+--           storage.objects policy. SELECT on storage.objects is admin-only, so
+--           anonymous clients cannot LIST the bucket (which would expose
+--           uploads that were never saved onto a school).
+--   write   admins only — insert and update, gated on is_admin_user()
+--   delete  intentionally has NO policy: the repo never deletes Storage files,
+--           and the client never needs to. Add one in a new migration if that
+--           ever changes.
 --
 -- The bucket is constrained to raster images the client already produces
 -- (`prepareImageForUpload(file, 'logo')` => <=512px webp). SVG is deliberately
@@ -33,12 +39,15 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists "Public read access to uvsa school assets" on storage.objects;
-create policy "Public read access to uvsa school assets"
+drop policy if exists "Admins can list uvsa school assets" on storage.objects;
+create policy "Admins can list uvsa school assets"
   on storage.objects
   for select
-  to anon, authenticated
-  using (bucket_id = 'uvsa_school_assets');
+  to authenticated
+  using (
+    bucket_id = 'uvsa_school_assets'
+    and public.is_admin_user(auth.uid())
+  );
 
 drop policy if exists "Admins can upload uvsa school assets" on storage.objects;
 create policy "Admins can upload uvsa school assets"
@@ -60,16 +69,6 @@ create policy "Admins can update uvsa school assets"
     and public.is_admin_user(auth.uid())
   )
   with check (
-    bucket_id = 'uvsa_school_assets'
-    and public.is_admin_user(auth.uid())
-  );
-
-drop policy if exists "Admins can delete uvsa school assets" on storage.objects;
-create policy "Admins can delete uvsa school assets"
-  on storage.objects
-  for delete
-  to authenticated
-  using (
     bucket_id = 'uvsa_school_assets'
     and public.is_admin_user(auth.uid())
   );

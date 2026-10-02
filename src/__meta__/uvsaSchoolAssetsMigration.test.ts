@@ -1,5 +1,5 @@
 /**
- * The uvsa_school_assets bucket is public-read / admin-write and nothing else.
+ * The uvsa_school_assets bucket is public-by-URL / admin-only list+write and nothing else.
  * Guard the migration text so a later edit cannot quietly widen that.
  */
 import { readFileSync, readdirSync } from "fs";
@@ -33,17 +33,16 @@ describe("uvsa_school_assets bucket migration", () => {
     expect(sql).toMatch(/file_size_limit/);
   });
 
-  it("allows public read", () => {
-    const read = policy("Public read access to uvsa school assets");
-    expect(read).toMatch(/for select/i);
-    expect(read).toMatch(/to anon, authenticated/i);
-    expect(read).toMatch(/bucket_id = 'uvsa_school_assets'/);
+  it("serves objects by public URL but does not let anonymous clients list the bucket", () => {
+    expect(sql).toMatch(/'uvsa_school_assets',\s*'uvsa_school_assets',\s*true/);
+    // No policy may grant anon/public access to storage.objects.
+    expect(sql).not.toMatch(/to anon|to public|to anon, authenticated/i);
   });
 
   it.each([
+    ["Admins can list uvsa school assets", "select"],
     ["Admins can upload uvsa school assets", "insert"],
     ["Admins can update uvsa school assets", "update"],
-    ["Admins can delete uvsa school assets", "delete"],
   ])("%s is admin-only and scoped to the bucket", (name, verb) => {
     const body = policy(name);
     expect(body).toMatch(new RegExp(`for ${verb}`, "i"));
@@ -53,8 +52,13 @@ describe("uvsa_school_assets bucket migration", () => {
     expect(body).toMatch(/bucket_id = 'uvsa_school_assets'/);
   });
 
-  it("defines exactly the four expected policies", () => {
-    expect(sql.match(/create policy/gi)).toHaveLength(4);
+  it("defines no DELETE policy (the repo never deletes Storage files)", () => {
+    expect(sql).not.toMatch(/for delete/i);
+    expect(sql).not.toMatch(/for all/i);
+  });
+
+  it("defines exactly the three expected policies", () => {
+    expect(sql.match(/create policy/gi)).toHaveLength(3);
   });
 
   it("does not touch other buckets or tables", () => {

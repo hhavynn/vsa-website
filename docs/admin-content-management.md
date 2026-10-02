@@ -63,5 +63,5 @@ cards, the page hero, and every external-event card hosted by that school.
   column is left untouched.
 
 The bucket comes from migration `20261002050000_create_uvsa_school_assets_bucket.sql`
-(public read; admin-only write via `is_admin_user()`), which must be applied
+(public by URL, admin-only list/upload/update via `is_admin_user()`, no delete policy), which must be applied
 manually before uploads work.
