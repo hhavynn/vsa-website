@@ -33,7 +33,7 @@ export function CalendarFilters({
 }: Props) {
   return (
     <div>
-      <div className="vsa-filter-bar" role="group" aria-label="Filter calendar by category">
+      <div className="vsa-filter-bar mt-0 gap-1.5 sm:gap-2" role="group" aria-label="Filter calendar by category">
         {options.map((option) => (
           <button
             type="button"
@@ -43,7 +43,7 @@ export function CalendarFilters({
               if (option.key !== 'house') onHouseChange(null);
             }}
             aria-pressed={activeFilter === option.key}
-            className={`vsa-filter-btn ${activeFilter === option.key ? 'active' : ''}`}
+            className={`vsa-filter-btn px-3 py-1.5 ${activeFilter === option.key ? 'active' : ''}`}
           >
             {option.label}
           </button>
@@ -54,7 +54,7 @@ export function CalendarFilters({
             type="button"
             onClick={() => onPointsOnlyChange(!pointsOnly)}
             aria-pressed={pointsOnly}
-            className={`vsa-filter-btn ${pointsOnly ? 'active' : ''}`}
+            className={`vsa-filter-btn px-3 py-1.5 ${pointsOnly ? 'active' : ''}`}
           >
             ⭐ Points eligible
           </button>
@@ -67,7 +67,7 @@ export function CalendarFilters({
             type="button"
             onClick={() => onHouseChange(null)}
             aria-pressed={activeHouse === null}
-            className={`vsa-filter-btn ${activeHouse === null ? 'active' : ''}`}
+            className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === null ? 'active' : ''}`}
           >
             All houses
           </button>
@@ -77,7 +77,7 @@ export function CalendarFilters({
               key={house.name}
               onClick={() => onHouseChange(activeHouse === house.name ? null : house.name)}
               aria-pressed={activeHouse === house.name}
-              className={`vsa-filter-btn ${activeHouse === house.name ? 'active' : ''}`}
+              className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === house.name ? 'active' : ''}`}
             >
               <span
                 className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"

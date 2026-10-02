@@ -6,6 +6,8 @@ import { cn } from '../../../lib/utils';
 interface Props {
   item: CalendarItem;
   className?: string;
+  /** Requested image width; phone tiles are small, desktop flyers need more. */
+  width?: number;
 }
 
 /**
@@ -13,7 +15,7 @@ interface Props {
  * nothing when the item has no image or the image fails to load, so the
  * caller's colored backdrop shows through instead of a broken-image icon.
  */
-export function CalendarThumb({ item, className }: Props) {
+export function CalendarThumb({ item, className, width = 160 }: Props) {
   // Keyed by URL: a tile reused for another event (e.g. after a filter
   // change) must retry instead of inheriting the previous image's failure.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function CalendarThumb({ item, className }: Props) {
 
   return (
     <img
-      src={getSupabaseImageUrl(src, { width: 160 }) || src}
+      src={getSupabaseImageUrl(src, { width }) || src}
       alt=""
       loading="lazy"
       decoding="async"

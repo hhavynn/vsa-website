@@ -257,7 +257,9 @@ export function Calendar() {
         </div>
       </div>
 
-      <div className="vsa-container py-8 lg:py-10">
+      {/* Capped narrower than the hero so the week strip, board and agenda share one
+          readable column and cells never stretch across a very wide monitor. */}
+      <div className="vsa-container max-w-[1180px] py-8 lg:py-10">
         {allFailed ? (
           <>
             {supabaseDown && <DegradedModeBanner sourceName="calendar" className="mb-6" />}
@@ -276,9 +278,13 @@ export function Calendar() {
 
             <ThisWeekStrip items={weekItems} todayStr={todayStr} onSelectItem={openItem} />
 
-            {/* View toggle + month navigation */}
-            <div className="mb-5 mt-6 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex gap-2" role="group" aria-label="Calendar view">
+            {/* Month navigation (or list range) on the left, view toggle on the right */}
+            <div className="mb-3 mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <div
+                className="order-2 ml-auto inline-flex gap-1 rounded-lg border border-[var(--color-border)] bg-surface2 p-1"
+                role="group"
+                aria-label="Calendar view"
+              >
                 {(
                   [
                     { key: 'board', label: '🗓 Board' },
@@ -290,7 +296,7 @@ export function Calendar() {
                     key={option.key}
                     onClick={() => setView(option.key)}
                     aria-pressed={view === option.key}
-                    className={`vsa-filter-btn ${view === option.key ? 'active' : ''}`}
+                    className={`vsa-filter-btn px-3 py-1.5 ${view === option.key ? 'active' : ''}`}
                   >
                     {option.label}
                   </button>
@@ -298,17 +304,21 @@ export function Calendar() {
               </div>
 
               {view === 'board' ? (
-                <div className="flex items-center gap-2">
+                <div className="order-1 flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => shiftMonth(-1)}
                     disabled={!canGoPrev}
                     aria-label="Previous month"
-                    className="vsa-filter-btn disabled:opacity-40"
+                    className="vsa-filter-btn px-3 py-1.5 disabled:opacity-40"
                   >
                     ←
                   </button>
-                  <span className="min-w-[150px] text-center font-mono text-[12px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text)' }}>
+                  <span
+                    aria-live="polite"
+                    className="min-w-[150px] text-center font-sans text-[15px] font-black tracking-tight sm:text-[17px]"
+                    style={{ color: 'var(--text)' }}
+                  >
                     {getMonthTitle(monthCursor.year, monthCursor.monthIndex)}
                   </span>
                   <button
@@ -316,20 +326,20 @@ export function Calendar() {
                     onClick={() => shiftMonth(1)}
                     disabled={!canGoNext}
                     aria-label="Next month"
-                    className="vsa-filter-btn disabled:opacity-40"
+                    className="vsa-filter-btn px-3 py-1.5 disabled:opacity-40"
                   >
                     →
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-2" role="group" aria-label="Time range">
+                <div className="order-1 flex flex-wrap gap-2" role="group" aria-label="Time range">
                   {SCOPES.map((option) => (
                     <button
                       type="button"
                       key={option.key}
                       onClick={() => setScope(option.key)}
                       aria-pressed={scope === option.key}
-                      className={`vsa-filter-btn ${scope === option.key ? 'active' : ''}`}
+                      className={`vsa-filter-btn px-3 py-1.5 ${scope === option.key ? 'active' : ''}`}
                     >
                       {option.label}
                     </button>
@@ -365,7 +375,7 @@ export function Calendar() {
                   onToggleDay={toggleDay}
                 />
                 <p className="mt-3 hidden text-center font-mono text-[10px] uppercase tracking-[0.08em] sm:block" style={{ color: 'var(--color-text3)' }}>
-                  Tap a day or event for details
+                  Click an event for details · click a day or +N to see everything that day
                 </p>
                 <MonthAgenda
                   year={monthCursor.year}
