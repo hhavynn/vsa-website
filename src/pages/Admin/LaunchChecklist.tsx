@@ -190,10 +190,7 @@ export default function LaunchChecklist() {
       const nowIso = new Date().toISOString();
 
       // ── 1. Academic terms ──────────────────────────────────────────────────
-      const [activeTermsRes, totalTermsRes] = await Promise.all([
-        supabase.from('academic_terms').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('academic_terms').select('id', { count: 'exact', head: true }),
-      ]);
+      const activeTermsRes = await supabase.from('academic_terms').select('id', { count: 'exact', head: true }).eq('is_active', true);
 
       const activeTermCount = activeTermsRes.count ?? 0;
       const activeTermExists: CheckData = activeTermsRes.error
@@ -240,20 +237,20 @@ export default function LaunchChecklist() {
           : { status: 'needs_attention', count: missingPhotoCount, note: 'Members across all years with no photo' };
 
       // ── 4. Events ──────────────────────────────────────────────────────────
-      const [upcomingPublishedRes, draftRes] = await Promise.all([
-        supabase.from('events').select('id', { count: 'exact', head: true }).eq('is_published', true).gte('date', nowIso),
-        supabase.from('events').select('id', { count: 'exact', head: true }).eq('is_published', false),
-      ]);
+      // One read (the table is tiny) answers both the upcoming and the draft count.
+      const eventsRes = await supabase.from('events').select('is_published, date');
+      const eventRows = eventsRes.data ?? [];
+      const nowMs = Date.parse(nowIso);
 
-      const upcomingCount = upcomingPublishedRes.count ?? 0;
-      const publishedUpcomingEvents: CheckData = upcomingPublishedRes.error
+      const upcomingCount = eventRows.filter((row) => row.is_published === true && Date.parse(row.date) >= nowMs).length;
+      const publishedUpcomingEvents: CheckData = eventsRes.error
         ? { status: 'not_configured', note: 'Unable to load' }
         : upcomingCount > 0
           ? { status: 'good', count: upcomingCount }
           : { status: 'needs_attention', count: 0, note: 'No upcoming published events' };
 
-      const draftCount = draftRes.count ?? 0;
-      const draftEvents: CheckData = draftRes.error
+      const draftCount = eventRows.filter((row) => row.is_published === false).length;
+      const draftEvents: CheckData = eventsRes.error
         ? { status: 'not_configured', note: 'Unable to load' }
         : draftCount === 0
           ? { status: 'good', count: 0 }
@@ -332,9 +329,6 @@ export default function LaunchChecklist() {
           ? { status: 'good', count: openCount }
           : { status: 'needs_attention', count: 0, note: 'No application windows currently open' };
       }
-
-      // Suppress unused variable warning for totalTermsRes
-      void totalTermsRes;
 
       setState({
         activeTermExists,

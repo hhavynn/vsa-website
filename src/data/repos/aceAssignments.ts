@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { runBulkWrites } from '../../lib/bulkWrites';
 import { AceAssignmentCycle, AceAssignmentDraft, AceAssignmentStatus } from '../../types';
 import { ValidationError, withErrorHandling } from '../errors';
 import { DraftSeed, canTransitionCycle } from '../../lib/aceAssignments';
@@ -148,16 +149,18 @@ export class AceAssignmentsRepository {
     return withErrorHandling(async () => {
       const linked: string[] = [];
       const skipped: string[] = [];
-      for (const link of links) {
-        const { data, error } = await supabase
-          .from('ace_assignment_drafts')
-          .update({ little_member_id: link.memberId, updated_at: new Date().toISOString() })
-          .eq('id', link.draftId)
-          .is('little_member_id', null)
-          .select('id');
-        if (error) throw error;
-        (data && data.length > 0 ? linked : skipped).push(link.draftId);
-      }
+      await runBulkWrites(async () => {
+        for (const link of links) {
+          const { data, error } = await supabase
+            .from('ace_assignment_drafts')
+            .update({ little_member_id: link.memberId, updated_at: new Date().toISOString() })
+            .eq('id', link.draftId)
+            .is('little_member_id', null)
+            .select('id');
+          if (error) throw error;
+          (data && data.length > 0 ? linked : skipped).push(link.draftId);
+        }
+      });
       return { linked, skipped };
     }, 'Failed to link Littles');
   }

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
+import { runBulkWrites } from '../../lib/bulkWrites';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
@@ -509,26 +510,45 @@ export default function AdminImport() {
         toUpdate.map(r => ({ ...r, adminConfirmed: isAdminConfirmed(r) })),
         latestMembers,
       );
-      for (const { memberId, updates } of toEnrich) {
-        await supabase
-          .from('members')
-          .update({ ...updates, updated_at: new Date().toISOString() })
-          .eq('id', memberId);
-      }
+      let enrichedCount = 0;
+      await runBulkWrites(async () => {
+        for (const { memberId, updates } of toEnrich) {
+          const { error } = await supabase
+            .from('members')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', memberId);
+          if (!error) {
+            enrichedCount += 1;
+            continue;
+          }
+          console.error('Import: failed to update member profile', error);
+          // Paused by the request guard / rate limited: every remaining update would fail too.
+          if (error.code === 'over_request_rate_limit') break;
+        }
+      });
+      // Attendance is already recorded. Only updates confirmed written count as enriched;
+      // failed or skipped ones are reported below, never announced as success.
+      const enrichFailedCount = toEnrich.length - enrichedCount;
 
       const skippedMsg = skippedReviewRows.length || skippedDuplicateRows.length
         ? `, skipped ${skippedReviewRows.length + skippedDuplicateRows.length} unsafe/duplicate row${skippedReviewRows.length + skippedDuplicateRows.length !== 1 ? 's' : ''}`
         : '';
-      const enrichMsg = toEnrich.length ? `, enriched ${toEnrich.length} profile${toEnrich.length !== 1 ? 's' : ''}` : '';
+      const enrichMsg = enrichedCount ? `, enriched ${enrichedCount} profile${enrichedCount !== 1 ? 's' : ''}` : '';
       await recordImportAudit({
         status: 'completed',
         points: pts,
         createdMemberIdsByRowId,
         createdMembersCount: newMemberIds.length,
         createdAttendanceCount,
-        enrichedMembersCount: toEnrich.length,
+        enrichedMembersCount: enrichedCount,
       });
       toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${newMemberIds.length} new${enrichMsg}${skippedMsg}.`);
+      if (enrichFailedCount > 0) {
+        toast.error(
+          `${enrichFailedCount} profile update${enrichFailedCount !== 1 ? 's' : ''} did not save. Attendance and points were recorded. Check those members' year, college and email in Admin → Members.`,
+          { duration: 10000 },
+        );
+      }
       setStep('done');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);

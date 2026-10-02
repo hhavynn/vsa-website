@@ -65,6 +65,32 @@ export interface EventsOperationsInput {
   upcomingMissingInfo: number;
 }
 
+export interface UpcomingEventRow {
+  name: string;
+  date: string;
+  location: string | null;
+  check_in_form_url: string | null;
+  image_url: string | null;
+}
+
+const isBlank = (value: string | null | undefined) => value === null || value === undefined || value === '';
+
+/**
+ * Events health from the upcoming PUBLISHED events, ordered soonest first.
+ * A NULL or empty location / check-in form URL, or a missing image, all count as
+ * missing info (a NULL check-in URL once slipped through and the preflight said
+ * all was well).
+ */
+export function summarizeUpcomingEvents(rows: UpcomingEventRow[]): EventsOperationsInput {
+  const first = rows[0];
+  return {
+    next: first ? { title: first.name, date: first.date } : null,
+    upcoming: rows.length,
+    upcomingMissingLocation: rows.filter((row) => isBlank(row.location)).length,
+    upcomingMissingInfo: rows.filter((row) => isBlank(row.location) || isBlank(row.check_in_form_url) || isBlank(row.image_url)).length,
+  };
+}
+
 /** A null domain means it could not be loaded; the card says so instead of showing zeros. */
 export interface OperationsInputs {
   yearStart: number;
