@@ -14,8 +14,13 @@ interface ImageDropzoneProps {
   previewUrl?: string | null;
   /** Name and size of the picked file, shown under the preview. */
   file?: File | null;
-  /** Called with the picked file and a data-URL preview of it. */
-  onSelect: (file: File, previewUrl: string) => void;
+  /**
+   * Called with the picked file **immediately** (previewUrl is the current preview, or
+   * null), then again with the same file and its data-URL preview once that has been
+   * read. Forms must record the file on the first call: reading a large image can take
+   * a while and Submit must not be able to run in between with no file recorded.
+   */
+  onSelect: (file: File, previewUrl: string | null) => void;
   /** Shows a "Remove image" button when provided and there is something to remove. */
   onClear?: () => void;
   /** Also accept SVG (uploaded as-is, never resized). Only for the site logo. */
@@ -51,11 +56,12 @@ export function ImageDropzone({
       const picked = accepted[0];
       if (!picked) return;
       setProblems([]);
+      onSelect(picked, previewUrl ?? null);
       const reader = new FileReader();
       reader.onload = () => onSelect(picked, reader.result as string);
       reader.readAsDataURL(picked);
     },
-    [onSelect],
+    [onSelect, previewUrl],
   );
 
   const onDropRejected = useCallback(

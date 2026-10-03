@@ -247,7 +247,7 @@ export default function AdminContent() {
               previewUrl={previewPhoto ? sanitizeImageSrc(previewPhoto) : null}
               file={photoFile}
               previewAlt="Presidents preview"
-              onSelect={(file, preview) => { setPhotoFile(file); setPhotoPreview(preview); }}
+              onSelect={(file, preview) => { setPhotoFile(file); setPhotoPreview(preview ?? ''); }}
               onClear={() => { setForm({ ...form, photoUrl: '', photoThumbnailUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}
             />
           </div>

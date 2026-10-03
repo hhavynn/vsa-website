@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 /**
  * Pure logic for the two-phase image migration (#454).
  *
@@ -23,6 +25,13 @@ export interface RelinkEntry {
   filePath: string;
   /** Size of the file on disk; the deployed asset must match it. */
   bytes: number;
+  /** SHA-256 (hex) of the file on disk. The deployed asset must match it exactly, so a
+   *  stale file of the same size at a reused path (--overwrite) is never accepted. */
+  sha256: string;
+}
+
+export function sha256Hex(data: Uint8Array): string {
+  return createHash('sha256').update(data).digest('hex');
 }
 
 export interface RelinkPlan {
@@ -53,6 +62,9 @@ export function parsePlan(input: unknown): RelinkPlan {
     if (typeof e.bytes !== 'number' || !Number.isFinite(e.bytes) || e.bytes <= 0) {
       throw new Error(`${where}: bytes must be a positive number`);
     }
+    if (typeof e.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(e.sha256)) {
+      throw new Error(`${where}: sha256 must be a 64-character hex digest`);
+    }
     if (!SAFE_PATH.test(e.newPath as string) || (e.newPath as string).includes('..')) {
       throw new Error(`${where}: newPath must be a /images/... .webp path (got ${String(e.newPath)})`);
     }
@@ -82,10 +94,12 @@ export type AssetCheck = { ok: true } | { ok: false; reason: string };
 /**
  * The SPA fallback in vercel.json answers *any* missing path with 200 + index.html,
  * so a bare status check would "verify" a file that was never deployed. Require an
- * image content type and the exact byte length of the committed file.
+ * image content type and the exact bytes of the committed file (length, then SHA-256:
+ * with --overwrite a changed image reuses its path, and an old file of the same size
+ * must not pass).
  */
 export async function checkAssetServed(
-  entry: Pick<RelinkEntry, 'newPath' | 'bytes'>,
+  entry: Pick<RelinkEntry, 'newPath' | 'bytes' | 'sha256'>,
   baseUrl: string,
   fetchAsset: FetchAsset,
 ): Promise<AssetCheck> {
@@ -102,6 +116,10 @@ export async function checkAssetServed(
   if (res.body.byteLength !== entry.bytes) {
     return { ok: false, reason: `served ${res.body.byteLength} bytes, expected ${entry.bytes}` };
   }
+  const served = sha256Hex(res.body);
+  if (served !== entry.sha256) {
+    return { ok: false, reason: `served file differs from the committed one (sha256 ${served.slice(0, 12)}…, expected ${entry.sha256.slice(0, 12)}…); old deployment still live?` };
+  }
   return { ok: true };
 }
 
@@ -116,7 +134,7 @@ export interface WaitOptions {
 
 /** Polls until the asset is served correctly or the deadline passes (deploys take minutes). */
 export async function waitForAsset(
-  entry: Pick<RelinkEntry, 'newPath' | 'bytes'>,
+  entry: Pick<RelinkEntry, 'newPath' | 'bytes' | 'sha256'>,
   opts: WaitOptions,
 ): Promise<AssetCheck> {
   const deadline = opts.now() + opts.timeoutMs;

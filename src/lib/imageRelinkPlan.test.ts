@@ -1,4 +1,5 @@
 import {
+  sha256Hex,
   assetUrl,
   checkAssetServed,
   createPlan,
@@ -11,6 +12,9 @@ import {
   waitForAsset,
 } from '../../scripts/lib/imageRelink';
 
+// Four zero bytes: what `served()` returns by default.
+const ZERO4 = sha256Hex(new Uint8Array(4));
+
 const entry = (over: Partial<RelinkEntry> = {}): RelinkEntry => ({
   category: 'events',
   table: 'events',
@@ -20,6 +24,7 @@ const entry = (over: Partial<RelinkEntry> = {}): RelinkEntry => ({
   newPath: '/images/events/a_2026-01-01.webp',
   filePath: 'public/images/events/a_2026-01-01.webp',
   bytes: 4,
+  sha256: ZERO4,
   ...over,
 });
 
@@ -49,6 +54,8 @@ describe('parsePlan', () => {
     ['non-image path', { version: 1, entries: [entry({ newPath: '/admin/secret.webp' })] }],
     ['path traversal', { version: 1, entries: [entry({ newPath: '/images/../index.webp' })] }],
     ['empty file', { version: 1, entries: [entry({ bytes: 0 })] }],
+    ['missing digest', { version: 1, entries: [entry({ sha256: '' })] }],
+    ['malformed digest', { version: 1, entries: [entry({ sha256: 'abc' })] }],
   ])('rejects %s', (_name, input) => {
     expect(() => parsePlan(input)).toThrow();
   });
@@ -62,6 +69,17 @@ describe('checkAssetServed', () => {
   it('rejects the SPA fallback: HTTP 200 with index.html', async () => {
     const result = await checkAssetServed(entry(), 'https://x.com', served({ contentType: 'text/html; charset=utf-8', size: 4 }));
     expect(result.ok).toBe(false);
+  });
+
+  it('rejects a stale file of the same size at a reused path (--overwrite)', async () => {
+    const stale: FetchAsset = async () => ({
+      status: 200,
+      contentType: 'image/webp',
+      body: new Uint8Array([1, 2, 3, 4]), // same length as the new file, different bytes
+    });
+    const result = await checkAssetServed(entry(), 'https://x.com', stale);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toMatch(/differs from the committed one/);
   });
 
   it('rejects 404s, wrong sizes and network errors', async () => {

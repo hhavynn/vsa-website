@@ -22,7 +22,7 @@ Now:
 | (commit, push, wait for deploy) | | |
 | 2 | `--relink <plan> --base-url <origin>` | For each plan entry: check the production asset, then `UPDATE … WHERE id = ? AND <field> = <expected Storage URL>`. |
 
-Phase 2 treats an asset as served only when production returns **HTTP 200, an `image/*` content-type, and exactly the byte length of the committed file**. A status check alone is not enough: `vercel.json` answers every missing path with `200` + `index.html` (SPA fallback), so a file that never deployed would look healthy. It polls for up to `--wait-seconds` (the workflows use 900) because deploys take minutes.
+Phase 2 treats an asset as served only when production returns **HTTP 200, an `image/*` content-type, and exactly the bytes of the committed file (length and SHA-256)**. A status check alone is not enough: `vercel.json` answers every missing path with `200` + `index.html` (SPA fallback), so a file that never deployed would look healthy. It polls for up to `--wait-seconds` (the workflows use 900) because deploys take minutes.
 
 Outcomes per plan entry:
 
@@ -32,7 +32,7 @@ Outcomes per plan entry:
 
 If the push fails, the workflow fails before phase 2, so no row is touched. Storage originals are never deleted.
 
-> The bot commits use `[skip ci]`. That skips GitHub Actions; whether Vercel's own git integration still deploys such a commit depends on the project's Ignored Build Step setting, which is not in this repo. If it does not deploy, phase 2 times out and the rows simply stay on Storage until the next deploy of `main`; push anything to `main` (or redeploy in Vercel) and re-run the workflow.
+> **How the deploy starts.** Commits pushed with the workflow's `GITHUB_TOKEN` never trigger other workflows, so after pushing, the migration workflows run `gh workflow run deploy.yml --ref main` (`deploy.yml` has a `workflow_dispatch` trigger for this). Its Vercel step is skipped when the `VERCEL_TOKEN` secret is unset; in that case the Vercel git integration, which watches `main` directly, is the deploy path (not verifiable from this repo; the bot commits no longer carry `[skip ci]`, so they are not excluded from it). If neither deploys, phase 2 times out and the rows stay on Storage; fix the deploy and re-run. Phase 2 also compares a SHA-256 of the served file, so a stale file of the same size at a reused path (`--overwrite`) is not accepted.
 
 ### Categories
 

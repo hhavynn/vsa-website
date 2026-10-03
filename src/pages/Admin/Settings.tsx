@@ -130,7 +130,7 @@ export default function AdminSettings() {
                 previewUrl={previewSrc ? sanitizeImageSrc(previewSrc) : null}
                 file={logoFile}
                 previewAlt="Logo preview"
-                onSelect={(file, preview) => { setLogoFile(file); setLogoPreview(preview); }}
+                onSelect={(file, preview) => { setLogoFile(file); setLogoPreview(preview ?? ''); }}
                 onClear={() => { setLogoUrl(''); setLogoFile(null); setLogoPreview(''); }}
               />
             </div>

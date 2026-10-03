@@ -13,9 +13,13 @@ describe('ImageDropzone', () => {
     const onSelect = jest.fn();
     render(<ImageDropzone preset="event" onSelect={onSelect} />);
     drop(screen.getByTestId('image-dropzone-input'), [png()]);
-    await waitFor(() => expect(onSelect).toHaveBeenCalledTimes(1));
+    // The file is reported first (preview still the old one), then again with the preview.
+    await waitFor(() => expect(onSelect).toHaveBeenCalled());
     expect(onSelect.mock.calls[0][0].name).toBe('a.png');
-    expect(onSelect.mock.calls[0][1]).toMatch(/^data:image\/png/);
+    expect(onSelect.mock.calls[0][1]).toBeNull();
+    await waitFor(() => expect(onSelect).toHaveBeenCalledTimes(2));
+    expect(onSelect.mock.calls[1][0]).toBe(onSelect.mock.calls[0][0]);
+    expect(onSelect.mock.calls[1][1]).toMatch(/^data:image\/png/);
   });
 
   it('tells the admin when a file is too large instead of dropping it silently', async () => {
@@ -63,7 +67,7 @@ describe('ImageDropzone', () => {
     const accepted = jest.fn();
     render(<ImageDropzone preset="logo" allowSvg onSelect={accepted} />);
     drop(screen.getByTestId('image-dropzone-input'), [svg]);
-    await waitFor(() => expect(accepted).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(accepted).toHaveBeenCalled());
   });
 
   it('explains the preset limits up front', () => {

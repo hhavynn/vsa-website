@@ -43,6 +43,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write   # to dispatch deploy.yml after pushing files
 
 jobs:
   migrate:
@@ -113,6 +114,7 @@ jobs:
         run: npx tsx scripts/migrate-supabase-images-to-public.ts ${{ steps.args.outputs.MIGRATION_ARGS }} --plan-out "$RUNNER_TEMP/image-relink-plan.json"
 
       - name: Commit and push migrated images
+        id: commit
         if: ${{ steps.args.outputs.APPLY_MODE == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
@@ -128,7 +130,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new image files to commit."
           else
-            git commit -m "chore: migrate ${{ steps.args.outputs.CATEGORY }} images to static assets [skip ci]"
+            git commit -m "chore: migrate ${{ steps.args.outputs.CATEGORY }} images to static assets"
             # A failed push fails the job here, so the relink step below never runs
             # and no row is pointed at a file that did not ship.
             for attempt in 1 2 3; do
@@ -136,7 +138,17 @@ jobs:
               if [ "$attempt" = "3" ]; then echo "::error::push failed; rows left on Storage URLs"; exit 1; fi
               git pull --rebase origin main
             done
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Pushes made with GITHUB_TOKEN do not trigger other workflows, so start the
+      # production deploy explicitly (deploy.yml no-ops its Vercel step if VERCEL_TOKEN
+      # is unset, in which case the Vercel git integration is the deploy path).
+      - name: Start production deploy
+        if: ${{ steps.commit.outputs.pushed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
 
       # Relink only after production serves the new file (image content-type + exact
       # byte length), via a conditional update. Not-yet-served rows keep their Storage

@@ -415,7 +415,8 @@ async function migrateCategory(
         expectedUrl: rawUrl,
         newPath: publicPath,
         filePath: outputRelative,
-        bytes: fs.statSync(outputAbsolute).size,
+        bytes: webpBuffer.length,
+        sha256: createHash('sha256').update(webpBuffer).digest('hex'),
       });
       stats.relinksPlanned++;
       rows.push({
