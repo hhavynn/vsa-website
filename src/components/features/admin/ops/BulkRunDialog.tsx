@@ -54,7 +54,7 @@ export function BulkRunDialog<T>({
   scopeNote?: string;
   /** Extra warning copy (cascading effects) shown above the list. */
   extra?: ReactNode;
-  /** The write for one item. Throw to mark it failed. */
+  /** The write for one item. Throw to mark it failed; throw `BulkPartialError` if the main write committed but a follow-up did not. */
   run: (item: T) => Promise<unknown>;
   /** Called once the run completes (even partially) so the page can refetch. */
   onFinished?: (result: BulkRunResult<T>) => void;
@@ -102,7 +102,11 @@ export function BulkRunDialog<T>({
     });
     // Retried runs merge with what already succeeded so the summary stays whole.
     const merged: BulkRunResult<T> = result
-      ? { succeeded: [...result.succeeded, ...outcome.succeeded], failed: outcome.failed }
+      ? {
+          succeeded: [...result.succeeded, ...outcome.succeeded],
+          failed: outcome.failed,
+          warnings: [...(result.warnings ?? []), ...(outcome.warnings ?? [])],
+        }
       : outcome;
     setResult(merged);
     setQueue(outcome.failed.map((entry) => entry.item));
@@ -121,33 +125,33 @@ export function BulkRunDialog<T>({
 
       {phase === 'review' && (
         <>
-          <p id={descId} className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+          <p id={descId} className="mt-2 font-sans text-sm text-text-secondary">
             {plan.summary}
           </p>
           {scopeNote && (
-            <p className="mt-2 rounded border px-3 py-2 font-sans text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}>
+            <p className="mt-2 rounded border px-3 py-2 font-sans text-xs border-border-strong bg-surface2 text-text-primary">
               {scopeNote}
             </p>
           )}
           {extra}
           {plan.eligible.length > 0 && (
             <>
-              <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+              <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
                 Will change ({plan.eligible.length})
               </p>
-              <ul className="mt-1 max-h-56 divide-y overflow-y-auto rounded border font-sans text-sm" style={{ borderColor: 'var(--color-border)' }} aria-label="Items that will change">
+              <ul className="mt-1 max-h-56 divide-y divide-border-strong overflow-y-auto rounded border font-sans text-sm border-border-strong" aria-label="Items that will change">
                 {shown.map((item, index) => (
-                  <li key={index} className="flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-1.5" style={{ borderColor: 'var(--color-border)' }}>
+                  <li key={index} className="flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-1.5">
                     <span className="min-w-0 truncate">{itemLabel(item)}</span>
                     {changeLabel && (
-                      <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--color-text2)' }}>
+                      <span className="shrink-0 font-mono text-[11px] text-text-secondary">
                         {changeLabel(item)}
                       </span>
                     )}
                   </li>
                 ))}
                 {plan.eligible.length > shown.length && (
-                  <li className="px-3 py-1.5 text-xs" style={{ color: 'var(--color-text3)' }}>
+                  <li className="px-3 py-1.5 text-xs text-text-muted">
                     …and {plan.eligible.length - shown.length} more (all will be changed).
                   </li>
                 )}
@@ -156,10 +160,10 @@ export function BulkRunDialog<T>({
           )}
           {plan.skipped.length > 0 && (
             <>
-              <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+              <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">
                 Skipped ({plan.skipped.length})
               </p>
-              <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-y-auto pl-5 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+              <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-y-auto pl-5 font-sans text-xs text-text-secondary">
                 {plan.skipped.slice(0, 20).map((entry, index) => (
                   <li key={index}>
                     {itemLabel(entry.row)} — {entry.reason}
@@ -181,8 +185,7 @@ export function BulkRunDialog<T>({
                 onChange={(event) => setTyped(event.target.value)}
                 autoComplete="off"
                 spellCheck={false}
-                className="mt-1 w-full rounded border bg-transparent px-3 py-2 font-mono text-sm"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                className="mt-1 w-full rounded border bg-transparent px-3 py-2 font-mono text-sm border-border-strong text-text-primary"
               />
             </div>
           )}
@@ -199,21 +202,16 @@ export function BulkRunDialog<T>({
 
       {phase === 'running' && (
         <div id={descId} className="mt-3" role="status" aria-live="polite">
-          <p className="font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+          <p className="font-sans text-sm text-text-secondary">
             Working… {progress.done} of {progress.total}
           </p>
-          <div
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={progress.total}
-            aria-valuenow={progress.done}
+          <progress
+            value={progress.done}
+            max={Math.max(progress.total, 1)}
             aria-label="Bulk action progress"
-            className="mt-2 h-2 overflow-hidden rounded-full"
-            style={{ background: 'var(--color-surface2)' }}
-          >
-            <div className="h-full bg-brand-600 transition-all dark:bg-brand-400" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
-          </div>
-          <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+            className="mt-2 h-2 w-full appearance-none overflow-hidden rounded-full bg-surface2 [&::-moz-progress-bar]:bg-brand-600 [&::-webkit-progress-bar]:bg-surface2 [&::-webkit-progress-value]:bg-brand-600 [&::-webkit-progress-value]:transition-all dark:[&::-moz-progress-bar]:bg-brand-400 dark:[&::-webkit-progress-value]:bg-brand-400"
+          />
+          <p className="mt-2 font-sans text-xs text-text-muted">
             Keep this window open until it finishes.
           </p>
         </div>
@@ -232,8 +230,20 @@ export function BulkRunDialog<T>({
           >
             {summary.headline}
           </p>
+          {(result.warnings?.length ?? 0) > 0 && (
+            <>
+              <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">Saved, needs attention ({result.warnings?.length})</p>
+              <ul className="mt-1 max-h-32 list-disc space-y-0.5 overflow-y-auto pl-5 font-sans text-xs text-text-secondary" aria-label="Items that need attention">
+                {(result.warnings ?? []).map((entry, index) => (
+                  <li key={index}>
+                    {itemLabel(entry.item)} — {entry.error}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {result.failed.length > 0 && (
-            <ul className="mt-2 max-h-48 list-disc space-y-0.5 overflow-y-auto pl-5 font-sans text-xs" style={{ color: 'var(--color-text2)' }} aria-label="Items that failed">
+            <ul className="mt-2 max-h-48 list-disc space-y-0.5 overflow-y-auto pl-5 font-sans text-xs text-text-secondary" aria-label="Items that failed">
               {result.failed.map((entry, index) => (
                 <li key={index}>
                   {itemLabel(entry.item)} — {entry.error}

@@ -1,4 +1,4 @@
-import { runBulk, summarizeBulkResult } from './adminBulkRun';
+import { BulkPartialError, runBulk, summarizeBulkResult } from './adminBulkRun';
 import { pruneSelection, scopeDescription, selectedOffPage, selectionScope } from './adminSelection';
 
 describe('runBulk', () => {
@@ -42,6 +42,27 @@ describe('runBulk', () => {
       { concurrency: 3 },
     );
     expect(peak).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('BulkPartialError (committed, follow-up failed)', () => {
+  it('counts the item as changed, flags it for attention, and keeps it out of the failures', async () => {
+    const result = await runBulk(['a', 'b'], async (item) => {
+      if (item === 'b') throw new BulkPartialError('listing not synced');
+    });
+    expect(result.succeeded.sort()).toEqual(['a', 'b']);
+    expect(result.failed).toEqual([]);
+    expect(result.warnings).toEqual([{ item: 'b', error: 'listing not synced' }]);
+  });
+
+  it('summarizes as partial without claiming anything was left unchanged', () => {
+    const out = summarizeBulkResult(
+      { succeeded: ['a', 'b'], failed: [], warnings: [{ item: 'b', error: 'x' }] },
+      { past: 'Published', verb: 'publish', noun: 'event' },
+    );
+    expect(out.tone).toBe('partial');
+    expect(out.headline).toBe('Published 2 events. 1 saved but needs attention.');
+    expect(out.headline).not.toMatch(/unchanged/);
   });
 });
 

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { planBulk } from '../../../../lib/adminBulk';
+import { BulkPartialError } from '../../../../lib/adminBulkRun';
 import { BulkRunDialog } from './BulkRunDialog';
 
 interface Row { id: string; name: string; published: boolean }
@@ -63,6 +64,17 @@ describe('BulkRunDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Retry 1 failed' }));
     expect(await screen.findByText('Unpublished 5 events.')).toBeInTheDocument();
     expect(run).toHaveBeenCalledTimes(6);
+  });
+
+  it('shows a committed-but-unsynced item as needing attention, not failed, and does not offer retry', async () => {
+    const run = jest.fn(async (row: Row) => {
+      if (row.id === '1') throw new BulkPartialError('listing not synced');
+    });
+    setup(run);
+    await userEvent.click(screen.getByRole('button', { name: 'Unpublish 5' }));
+    expect(await screen.findByText('Unpublished 5 events. 1 saved but needs attention.')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Items that need attention' })).toHaveTextContent('Event 1 — listing not synced');
+    expect(screen.queryByRole('button', { name: /Retry/ })).toBeNull();
   });
 
   it('requires typing the count for a destructive plan of several items', async () => {

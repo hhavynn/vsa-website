@@ -64,8 +64,13 @@ Not migrated (intentional): the AceFamilies "already linked — link to same per
 ## Bulk actions
 
 - Pure planning: `planBulk` (`lib/adminBulk.ts`). Execution: `runBulk` (`lib/adminBulkRun.ts`, per-item results, small concurrency). UI: `BulkRunDialog` (preview of exactly which items change and what each becomes, skipped items with reasons, progress bar, per-item failure list, retry-failed).
+- Partial success: an op whose main write committed but a follow-up failed (e.g. the UVSA listing sync on Events) throws `BulkPartialError`; the item is counted as changed, listed under "needs attention", and not offered for retry. Bulk writes must go through the repository (never a bare `supabase` call) so a row deleted since the preview rejects instead of reporting a zero-row update as success.
 - Selection: `useRowSelection` + `lib/adminSelection.ts`. Selection is pruned to the current filter; the dialog states the scope ("All N matching …, including ones not shown on this page").
 - Destructive bulk of ≥5 items requires typing the count. No bulk delete exists on any surface.
 - Surfaces: Events (publish/unpublish, same write as the editor plus the UVSA listing sync), Resources (archive/restore, same `setArchived` as single). Members, House drafts, ACE assignments and Cabinet/Intern rollover already had `BulkConfirm`-based previews.
 - **Forbidden without `vsa-change-control` sign-off and a tested dry run:** bulk on points, attendance, House membership, leaderboard; `/admin/import` and `/admin/merge-suggestions`.
 - **Not yet done:** bulk operations are not written to the admin activity log (#216 audit-trail work).
+
+## Styling
+
+New shared admin components use semantic Tailwind tokens (`bg-surface`, `border-border-strong`, `text-text-primary`…), no inline `style` props (enforced for these files by `src/__meta__/noInlineStyles.test.ts`). Older admin pages still carry inline styles from before that rule.

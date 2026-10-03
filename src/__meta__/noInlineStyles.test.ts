@@ -7,6 +7,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const FILES = [
+  'src/components/common/ConfirmDialog.tsx',
+  'src/components/features/admin/AdminPageHeader.tsx',
+  'src/components/features/admin/ops/AdminFormShell.tsx',
+  'src/components/features/admin/ops/BulkRunDialog.tsx',
   'src/components/features/admin/ops/OperationsCard.tsx',
   'src/components/features/admin/ops/PreflightItem.tsx',
   'src/components/features/admin/ops/PreflightSummary.tsx',

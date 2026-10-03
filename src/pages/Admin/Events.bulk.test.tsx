@@ -43,12 +43,6 @@ const mockRefresh = jest.fn();
 jest.mock('../../lib/supabase', () => ({
   supabase: {
     from: () => ({
-      update: (payload: unknown) => ({
-        eq: (_column: string, id: string) => {
-          mockUpdate(payload, id);
-          return Promise.resolve({ error: mockState.failIds.includes(id) ? { message: 'row-level security' } : null });
-        },
-      }),
       delete: () => ({
         eq: (_column: string, id: string) => {
           mockDelete(id);
@@ -73,7 +67,15 @@ jest.mock('../../hooks/useEventRecap', () => ({ useEventRecapEventIds: () => ({ 
 jest.mock('../../components/features/admin/EventRecapEditor', () => ({ EventRecapEditor: () => null }));
 jest.mock('../../components/features/admin/ManualCheckIn', () => ({ ManualCheckIn: () => null }));
 jest.mock('../../data/repos/events', () => ({
-  eventsRepository: { getCheckInCode: () => Promise.resolve(''), setCheckInCode: () => Promise.resolve() },
+  eventsRepository: {
+    getCheckInCode: () => Promise.resolve(''),
+    setCheckInCode: () => Promise.resolve(),
+    // The bulk write goes through the repository (missing rows reject there).
+    updateEvent: (id: string, payload: unknown) => {
+      mockUpdate(payload, id);
+      return mockState.failIds.includes(id) ? Promise.reject(new Error('row-level security')) : Promise.resolve({});
+    },
+  },
 }));
 jest.mock('../../data/repos/externalEvents', () => ({ externalEventsRepository: { applySyncPlan: () => Promise.resolve() } }));
 jest.mock('../../data/repos/academicTerms', () => ({ academicTermsRepository: {} }));

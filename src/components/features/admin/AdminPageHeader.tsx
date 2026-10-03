@@ -36,13 +36,12 @@ export function AdminPageHeader({
 
   return (
     <header
-      className={`border-b px-6 py-6 sm:flex sm:items-start sm:justify-between sm:gap-4 sm:px-8 sm:py-8 ${className}`}
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+      className={`border-b border-border-strong bg-surface px-6 py-6 sm:flex sm:items-start sm:justify-between sm:gap-4 sm:px-8 sm:py-8 ${className}`}
     >
       <div className="min-w-0">
         {crumbs.length > 1 && (
           <nav aria-label="Breadcrumb" className="mb-2">
-            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+            <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
               {crumbs.map((crumb, index) => {
                 const last = index === crumbs.length - 1;
                 return (
@@ -54,11 +53,11 @@ export function AdminPageHeader({
                     )}
                     <li className="min-w-0 max-w-[16rem] truncate">
                       {crumb.to && !last ? (
-                        <Link to={crumb.to} className="font-semibold underline-offset-2 hover:underline hover:text-[var(--color-text)]">
+                        <Link to={crumb.to} className="font-semibold underline-offset-2 hover:underline hover:text-text-primary">
                           {crumb.label}
                         </Link>
                       ) : (
-                        <span aria-current={last ? 'page' : undefined} style={last ? { color: 'var(--color-text2)' } : undefined}>
+                        <span aria-current={last ? 'page' : undefined} className={last ? 'text-text-secondary' : undefined}>
                           {crumb.label}
                         </span>
                       )}
@@ -69,11 +68,11 @@ export function AdminPageHeader({
             </ol>
           </nav>
         )}
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">
           {heading}
         </h1>
         {blurb && (
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+          <p className="mt-2 font-sans text-sm text-text-secondary">
             {blurb}
           </p>
         )}

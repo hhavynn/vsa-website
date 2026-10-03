@@ -79,7 +79,7 @@ export function AdminFormShell({
       <fieldset disabled={busy} className="m-0 min-w-0 space-y-4 border-0 p-0">
         {children}
       </fieldset>
-      <div className="flex flex-wrap items-center gap-3 border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="flex flex-wrap items-center gap-3 border-t pt-4 border-border-strong">
         <SaveBar status={status} submit saveLabel={saveLabel} onDiscard={onDiscard} />
         {actions}
       </div>
@@ -113,7 +113,7 @@ export function AdminField({
   const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1 block font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+      <label htmlFor={id} className="mb-1 block font-sans text-sm font-medium text-text-primary">
         {label}
         {required && (
           <span aria-hidden="true" className="ml-0.5 text-red-600 dark:text-red-400">
@@ -123,7 +123,7 @@ export function AdminField({
       </label>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy, 'aria-required': required || undefined })}
       {hint && (
-        <p id={hintId} className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+        <p id={hintId} className="mt-1 font-sans text-xs text-text-muted">
           {hint}
         </p>
       )}

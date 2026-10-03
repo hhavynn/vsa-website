@@ -82,8 +82,7 @@ export function DialogFrame({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className={cn('max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-2xl', wide ? 'max-w-xl' : 'max-w-md')}
-        style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+        className={cn('bg-surface border-border-strong text-text-primary', 'max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-2xl', wide ? 'max-w-xl' : 'max-w-md')}
       >
         {children}
       </div>
@@ -203,14 +202,14 @@ export function ConfirmDialog({
       locked={busy}
       initialFocusRef={needsText ? inputRef : cancelRef}
     >
-      <h2 id={titleId} className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+      <h2 id={titleId} className="font-serif text-xl font-bold text-text-primary">
         {title}
       </h2>
-      <div id={descriptionId} className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+      <div id={descriptionId} className="mt-2 font-sans text-sm text-text-secondary">
         {description}
       </div>
       {consequences && consequences.length > 0 && (
-        <ul className="mt-3 list-disc space-y-1 pl-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+        <ul className="mt-3 list-disc space-y-1 pl-5 font-sans text-sm text-text-secondary">
           {consequences.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -219,7 +218,7 @@ export function ConfirmDialog({
       {children}
       {needsText && (
         <div className="mt-4">
-          <label htmlFor={inputId} className="block font-sans text-xs font-semibold" style={{ color: 'var(--color-text)' }}>
+          <label htmlFor={inputId} className="block font-sans text-xs font-semibold text-text-primary">
             Type <span className="font-mono">{requireText}</span> to confirm
           </label>
           <input
@@ -236,8 +235,7 @@ export function ConfirmDialog({
             disabled={busy}
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 w-full rounded border bg-transparent px-3 py-2 font-mono text-sm"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+            className="mt-1 w-full rounded border bg-transparent px-3 py-2 font-mono text-sm border-border-strong text-text-primary"
           />
         </div>
       )}

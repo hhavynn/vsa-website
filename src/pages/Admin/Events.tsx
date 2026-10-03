@@ -30,7 +30,7 @@ import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { buildDuplicateEventDraft } from '../../lib/adminEventDuplicate';
 import { isDirty } from '../../lib/adminDirty';
 import { BulkPlan, planBulk } from '../../lib/adminBulk';
-import { BulkRunResult, summarizeBulkResult } from '../../lib/adminBulkRun';
+import { BulkPartialError, BulkRunResult, summarizeBulkResult } from '../../lib/adminBulkRun';
 import { QuickFilter, allFilter, applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import {
   buildExternalPreviewListing,
@@ -558,8 +558,9 @@ export default function AdminEvents() {
   // The same write the Edit form makes for the visibility checkbox (events
   // .is_published), then the same UVSA Network listing sync it runs on save.
   async function setEventPublished(event: Event, publish: boolean) {
-    const { error } = await supabase.from('events').update({ is_published: publish }).eq('id', event.id);
-    if (error) throw error;
+    // Through the repository: it detects a row deleted since the preview
+    // (.select().single()) instead of reporting a zero-row update as success.
+    await eventsRepository.updateEvent(event.id, { is_published: publish });
     const listing = listingByEventId.get(event.id);
     if (!isExternalEventType(event.event_type) || !listing) return;
     try {
@@ -572,7 +573,9 @@ export default function AdminEvents() {
       });
     } catch (listingErr) {
       console.error(listingErr);
-      throw new Error(`${publish ? 'Published' : 'Unpublished'}, but its UVSA Network listing could not be synced. Open the event and save it again to retry.`);
+      // The visibility change already committed, so this is a partial success,
+      // not a failure: the bulk result must not say the event was left unchanged.
+      throw new BulkPartialError(`${publish ? 'Published' : 'Unpublished'}, but its UVSA Network listing could not be synced. Open the event and save it again to repair it.`);
     }
   }
 
