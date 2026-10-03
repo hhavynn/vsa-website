@@ -6,7 +6,9 @@ import { FadeContent } from '../../components/ui/FadeContent';
 import { formatAcademicYear } from '../../lib/academicTerms';
 import { adminOverviewRepository } from '../../data/repos/adminOverview';
 import { DEFAULT_OVERVIEW_STATS } from '../../lib/adminOverviewStats';
+import { warnsWhenNoUpcomingEvents } from '../../lib/adminAttention';
 import { ADMIN_HEALTH_QUERY_KEYS, HEALTH_QUERY_OPTIONS } from '../../lib/adminHealthQuery';
+import { AttentionQueue } from '../../components/features/admin/AttentionQueue';
 import { OperationsDashboard } from '../../components/features/admin/OperationsDashboard';
 import { RecentActivityCard } from '../../components/features/admin/RecentActivityCard';
 
@@ -432,6 +434,9 @@ export default function AdminOverview() {
 
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="mb-8 lg:mb-10">
+          <AttentionQueue signals={overview.data?.attention ?? null} loading={loading} failed={overview.isError} />
+        </div>
+        <div className="mb-8 lg:mb-10">
           <OperationsDashboard />
         </div>
         <div className="mb-8 lg:mb-10">
@@ -533,31 +538,6 @@ export default function AdminOverview() {
 
               <div className="space-y-6">
                 <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-                  <span className="scrapbook-pin" aria-hidden />
-                  <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
-                    Attention
-                  </h2>
-                  <div className="mt-6 space-y-6">
-                    <div>
-                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
-                        Pending Feedback
-                      </p>
-                      <p className="mt-2 font-serif text-[42px] leading-none text-[var(--accent)]">
-                        {stats.pendingFeedback}
-                      </p>
-                    </div>
-                    <div className="border-t pt-5" style={{ borderColor: 'var(--color-border)' }}>
-                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>
-                        Merge Exclusions
-                      </p>
-                      <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                        <span className="font-semibold text-[var(--color-text)]">{stats.mergeCandidates}</span> merge exclusions are stored. Review duplicates from the merge screen when needed.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="scrapbook-paper h-fit p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
                   <div className="flex items-center justify-between">
                     <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
                       Data Health
@@ -599,7 +579,7 @@ export default function AdminOverview() {
                 <HealthGroupCard title="Events" to="/admin/events">
                   <HealthItem label="Published events" value={stats.eventsPublished} status="good" />
                   <HealthItem label="Draft events" value={stats.eventsDraft} status={stats.eventsDraft > 0 ? 'warning' : 'neutral'} />
-                  <HealthItem label="Upcoming published" value={stats.eventsUpcomingPublished} status={stats.eventsUpcomingPublished > 0 ? 'good' : 'warning'} />
+                  <HealthItem label="Upcoming published" value={stats.eventsUpcomingPublished} status={stats.eventsUpcomingPublished > 0 ? 'good' : warnsWhenNoUpcomingEvents() ? 'warning' : 'neutral'} />
                   <HealthItem label="Missing image" value={stats.eventsMissingImage} status={stats.eventsMissingImage > 0 ? 'warning' : 'good'} />
                   <HealthItem label="Missing location" value={stats.eventsMissingLocation} status={stats.eventsMissingLocation > 0 ? 'warning' : 'good'} />
                 </HealthGroupCard>
@@ -655,7 +635,7 @@ export default function AdminOverview() {
                 <HealthGroupCard title="Applications" to="/admin/applications">
                   <HealthItem label="Total windows" value={stats.applicationsTotal} status="neutral" />
                   <HealthItem label="Currently open" value={stats.applicationsOpen} status={stats.applicationsOpen > 0 ? 'good' : 'neutral'} />
-                  <HealthItem label="Upcoming" value={stats.applicationsUpcoming} status="neutral" />
+                  <HealthItem label="Scheduled" value={stats.applicationsUpcoming} status="neutral" />
                   <HealthItem label="Closed" value={stats.applicationsClosed} status="neutral" />
                 </HealthGroupCard>
 

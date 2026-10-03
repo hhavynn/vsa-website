@@ -106,6 +106,24 @@ async function openManage() {
   await userEvent.click(screen.getByRole('button', { name: /^Manage/ }));
 }
 
+describe('Overview deep link', () => {
+  it('opens the Manage tab already filtered to drafts, not the empty Create form', () => {
+    mockState.events = [makeEvt('a', 'Spring GBM', true), makeEvt('b', 'Draft Mixer', false)];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/admin/events?filter=draft']}>
+          <AdminEvents />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Manage Events' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Draft/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Draft Mixer')).toBeInTheDocument();
+    expect(screen.queryByText('Spring GBM')).not.toBeInTheDocument();
+  });
+});
+
 beforeEach(() => {
   mockState.events = [
     makeEvt('a', 'Spring GBM', true),

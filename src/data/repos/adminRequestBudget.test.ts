@@ -48,7 +48,8 @@ describe('admin request budget', () => {
     // Was ~45 count probes for the health scan alone, plus the dashboard.
     expect(requests.length).toBeLessThanOrEqual(40);
     expect(requests.length).toBeLessThan(REQUEST_GUARD_CONFIG.burstMaxRequests / 4);
-    expect(requests.filter(isHead).length).toBeLessThanOrEqual(5);
+    // members x2 (health scan + Operations), academic terms, and the attention queue's three counts.
+    expect(requests.filter(isHead).length).toBeLessThanOrEqual(6);
   });
 
   it('never queries the same table with several count filters', async () => {

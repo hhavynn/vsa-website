@@ -15,6 +15,7 @@ import {
 } from "../lib/eventTime";
 import { ThisWeekInVSA } from "../components/features/home/ThisWeekInVSA";
 import { OpenOpportunities } from "../components/features/home/OpenOpportunities";
+import { ClosingSoonApplications } from "../components/features/home/ClosingSoonApplications";
 import { WrappedRecapCard } from "../components/features/home/WrappedRecapCard";
 import { PresidentsMessageSection } from "../components/features/home/PresidentsMessage";
 import { type ComponentType, useRef } from "react";
@@ -427,6 +428,8 @@ export function Home() {
       </section>
 
       <ThisWeekInVSA />
+
+      <ClosingSoonApplications />
 
       <RevealOnScrollWrapper>
         <section className="py-12 sm:py-16 bg-[var(--surface2)]">

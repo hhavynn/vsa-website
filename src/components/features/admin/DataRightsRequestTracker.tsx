@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import {
   DATA_RIGHTS_PRIORITY_LABELS,
   DATA_RIGHTS_REQUEST_PRIORITIES,
+  DATA_RIGHTS_CLOSED_STATUSES,
   DATA_RIGHTS_REQUEST_STATUSES,
   DATA_RIGHTS_REQUEST_TYPES,
   DATA_RIGHTS_STATUS_LABELS,
@@ -25,6 +26,7 @@ import {
   DataRightsRequestFormSchema,
 } from '../../../schemas';
 import { DataRightsRequestStatus, DataRightsRequestType } from '../../../types/database';
+import { useUrlFilter } from '../../../hooks/useUrlFilter';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Input, Textarea } from '../../ui/Input';
@@ -151,7 +153,9 @@ function downloadExportBundle(bundle: DataRightsExportBundle): void {
 export function DataRightsRequestTracker() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | DataRightsRequestStatus>('all');
+  // `?filter=open` is the Admin Overview's "open requests" link; unknown values fall back to all.
+  const [statusParam, setStatusFilter] = useUrlFilter(['all', 'open', ...DATA_RIGHTS_REQUEST_STATUSES]);
+  const statusFilter = statusParam as 'all' | 'open' | DataRightsRequestStatus;
   const [typeFilter, setTypeFilter] = useState<'all' | DataRightsRequestType>('all');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -178,7 +182,8 @@ export function DataRightsRequestTracker() {
     () =>
       requests.filter(
         (request) =>
-          (statusFilter === 'all' || request.status === statusFilter) &&
+          (statusFilter === 'all' ||
+            (statusFilter === 'open' ? !DATA_RIGHTS_CLOSED_STATUSES.includes(request.status) : request.status === statusFilter)) &&
           (typeFilter === 'all' || request.request_type === typeFilter),
       ),
     [requests, statusFilter, typeFilter],
@@ -328,10 +333,11 @@ export function DataRightsRequestTracker() {
                 Status
                 <select
                   value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as 'all' | DataRightsRequestStatus)}
+                  onChange={(event) => setStatusFilter(event.target.value as 'all' | 'open' | DataRightsRequestStatus)}
                   className={`${selectClassName} mt-1`}
                 >
                   <option value="all">All statuses</option>
+                  <option value="open">Open (not completed, rejected, or cancelled)</option>
                   {DATA_RIGHTS_REQUEST_STATUSES.map((status) => (
                     <option key={status} value={status}>{DATA_RIGHTS_STATUS_LABELS[status]}</option>
                   ))}

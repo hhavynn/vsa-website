@@ -1,6 +1,6 @@
 // Read-only data access for the Admin Overview page.
 //
-// One narrow read per table, all in a single parallel stage (~16 requests),
+// One narrow read per table, all in a single parallel stage (~17 requests),
 // instead of the ~45 count probes + sequential waterfalls the page used to
 // issue. Every number is derived in `lib/adminOverviewStats.ts`. Nothing here
 // writes, and a source that fails (or is truncated by the API row cap) is
@@ -23,6 +23,7 @@ import {
   OverviewVcnRow,
   buildOverviewSnapshot,
 } from '../../lib/adminOverviewStats';
+import { DATA_RIGHTS_CLOSED_STATUSES } from '../../constants/dataRightsRequests';
 import { academicTermsRepository } from './academicTerms';
 
 interface RowsResult<T> {
@@ -83,7 +84,9 @@ export class AdminOverviewRepository {
     const [
       members,
       academicTermCount,
-      mergeExclusions,
+      photoRequestsPending,
+      dataRightsOpen,
+      aiFeedbackUnresolved,
       events,
       gallery,
       cabinetMembers,
@@ -100,7 +103,10 @@ export class AdminOverviewRepository {
     ] = await Promise.all([
       readCount('members', supabase.from('members').select('*', { count: 'exact', head: true })),
       readCount('academic terms', supabase.from('academic_terms').select('*', { count: 'exact', head: true })),
-      readCount('merge exclusions', supabase.from('merge_exclusions').select('*', { count: 'exact', head: true })),
+      // Head counts for the attention queue: cheap, and only the numbers leave the database.
+      readCount('pending photo requests', supabase.from('member_photo_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
+      readCount('open data rights requests', supabase.from('data_rights_requests').select('*', { count: 'exact', head: true }).not('status', 'in', `(${DATA_RIGHTS_CLOSED_STATUSES.join(',')})`)),
+      readCount('unresolved Ask VSA feedback', supabase.from('ai_feedback').select('*', { count: 'exact', head: true }).is('resolved_at', null)),
       readRows<OverviewEventRow>('events', supabase.from('events').select('date, is_published, image_url, location, check_in_form_url, academic_term_id', EXACT)),
       readRows<OverviewGalleryRow>('gallery', supabase.from('gallery_events').select('cover_image_url, google_photos_url', EXACT)),
       readRows<OverviewCabinetRow>('cabinet members', supabase.from('cabinet_members').select('cabinet_year_id, image_url, role', EXACT)),
@@ -112,7 +118,7 @@ export class AdminOverviewRepository {
       readRows<OverviewProgramContentRow>('program content', supabase.from('program_content').select('is_published, status', EXACT)),
       readRows<OverviewFeedbackRow>('feedback', supabase.from('feedback').select('status', EXACT)),
       readRows<OverviewAiRow>('AI knowledge', untyped.from('ai_knowledge_base').select('is_public, is_active, last_verified_at', EXACT)),
-      readRows<OverviewApplicationRow>('application windows', supabase.from('application_links').select('open_at, due_at, is_enabled', EXACT)),
+      readRows<OverviewApplicationRow>('application windows', supabase.from('application_links').select('application_key, open_at, due_at, is_enabled, target_url', EXACT)),
       academicTermsRepository
         .getActiveTerm()
         .then((term) => ({ loaded: true, academicYearStart: term?.academic_year_start ?? null }))
@@ -125,7 +131,9 @@ export class AdminOverviewRepository {
     const sources: OverviewSources = {
       members,
       academicTermCount,
-      mergeExclusions,
+      photoRequestsPending,
+      dataRightsOpen,
+      aiFeedbackUnresolved,
       events,
       gallery,
       cabinetMembers,

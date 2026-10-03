@@ -7,7 +7,9 @@ function sources(overrides: Partial<OverviewSources> = {}): OverviewSources {
   return {
     members: 820,
     academicTermCount: 12,
-    mergeExclusions: 21,
+    photoRequestsPending: 3,
+    dataRightsOpen: 1,
+    aiFeedbackUnresolved: 4,
     events: [
       // upcoming, published, complete
       { date: '2026-10-10T01:00:00+00:00', is_published: true, image_url: '/images/events/a.jpg', location: 'PC East', check_in_form_url: 'https://forms.gle/a', academic_term_id: 't1' },
@@ -60,10 +62,10 @@ function sources(overrides: Partial<OverviewSources> = {}): OverviewSources {
       { is_public: false, is_active: true, last_verified_at: '2026-10-01T00:00:00Z' },
     ],
     applications: [
-      { open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: true },
-      { open_at: '2026-12-01T00:00:00Z', due_at: '2027-01-01T00:00:00Z', is_enabled: true },
-      { open_at: '2026-08-01T00:00:00Z', due_at: '2026-09-01T00:00:00Z', is_enabled: true },
-      { open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: false },
+      { application_key: 'ace_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'house_winter', open_at: '2026-12-01T00:00:00Z', due_at: '2027-01-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'house_fall', open_at: '2026-08-01T00:00:00Z', due_at: '2026-09-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'intern_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: false, target_url: 'https://forms.gle/x' },
     ],
     ...overrides,
   };
@@ -100,7 +102,6 @@ describe('buildOverviewSnapshot', () => {
       academicTerms: 12,
       feedback: 5,
       pendingFeedback: 2,
-      mergeCandidates: 21,
       housesCurrentYearStart: 2026,
       housesCurrentCount: 2,
       housesMissingImage: 1,
@@ -170,5 +171,31 @@ describe('buildOverviewSnapshot', () => {
   it('starts from the documented defaults', () => {
     expect(DEFAULT_OVERVIEW_STATS.members).toBe(0);
     expect(DEFAULT_OVERVIEW_STATS.cabinetActiveYear).toBeNull();
+  });
+
+  describe('attention signals', () => {
+    it('reuses the rows already read and the three head counts, with counts only', () => {
+      const { attention } = buildOverviewSnapshot(sources(), NOW, 2026);
+
+      expect(attention).toEqual({
+        applications: sources().applications,
+        draftEventDates: ['2026-11-01T01:00:00Z'],
+        photoRequestsPending: 3,
+        dataRightsOpen: 1,
+        aiFeedbackUnresolved: 4,
+        feedbackPending: 1,
+      });
+    });
+
+    it('reports a failed head count as unavailable instead of zero', () => {
+      const { attention, unavailable } = buildOverviewSnapshot(
+        sources({ photoRequestsPending: null, dataRightsOpen: null, aiFeedbackUnresolved: null, events: null, feedback: null }),
+        NOW,
+        2026,
+      );
+
+      expect(unavailable).toEqual(expect.arrayContaining(['photo requests', 'data rights requests', 'Ask VSA feedback']));
+      expect(attention).toMatchObject({ photoRequestsPending: null, dataRightsOpen: null, aiFeedbackUnresolved: null, draftEventDates: null, feedbackPending: null });
+    });
   });
 });

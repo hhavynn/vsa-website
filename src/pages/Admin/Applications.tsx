@@ -11,20 +11,31 @@ import {
   useAdminApplicationLinks,
 } from '../../hooks/useApplicationLinks';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { ApplicationPublicPreview, PreviewWindow } from '../../components/features/admin/ApplicationPublicPreview';
+import { ApplicationWindowCard } from '../../components/features/admin/ApplicationWindowCard';
 import { AdminField, AdminFormShell } from '../../components/features/admin/ops/AdminFormShell';
-import { applicationLinksRepository } from '../../data/repos/applicationLinks';
+import { applicationLinksRepository, ApplicationLinkFormData } from '../../data/repos/applicationLinks';
+import { logAdminActivity } from '../../data/repos/adminActivity';
 import { useAdminForm } from '../../hooks/useAdminForm';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
 import {
   APPLICATION_KEY_OPTIONS,
-  APPLICATION_STATUS_LABELS,
   DEFAULT_APPLICATION_MESSAGES,
   applicationKeyLabel,
-  formatApplicationDateTime,
-  getApplicationStatus,
+  combineLocalDateTime,
   splitLocalDateTime,
 } from '../../lib/applicationLinks';
+import { applicationWindowActivity } from '../../lib/applicationWindowActivity';
+import {
+  WINDOW_STATE_LABELS,
+  WindowState,
+  formatPacificDateTime,
+  getAdminWindowState,
+  opensInThePast,
+  validateApplicationWindow,
+} from '../../lib/applicationWindows';
 import { ApplicationLinkFormSchema, ApplicationLinkFormValues, applicationLinkPayload, isDriveLink } from '../../schemas/applicationLink';
-import { ApplicationKey, ApplicationLink, ApplicationStatus } from '../../types';
+import { ApplicationKey, ApplicationLink } from '../../types';
 
 type FormState = ApplicationLinkFormValues & { application_key: ApplicationKey };
 
@@ -35,7 +46,9 @@ const SERVER_CONSTRAINTS = {
   application_links_key_check: { field: 'application_key', message: 'That application type is not supported' },
 };
 
-type StatusFilter = 'all' | ApplicationStatus;
+// `?filter=` values (Admin Overview deep-links here), in the order the dropdown lists them.
+const STATE_FILTERS: ReadonlyArray<'all' | WindowState> = ['all', 'open', 'scheduled', 'closed', 'disabled', 'misconfigured'];
+type StatusFilter = (typeof STATE_FILTERS)[number];
 
 const inputCls =
   'mt-1 block w-full rounded border px-3 py-2 text-sm font-sans focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)]/20';
@@ -90,19 +103,6 @@ function formFromLink(link: ApplicationLink): FormState {
   };
 }
 
-function statusBadgeColor(status: ApplicationStatus): string {
-  switch (status) {
-    case 'open':
-      return 'var(--brand)';
-    case 'not_open':
-      return '#d97706';
-    case 'closed':
-      return 'var(--color-text3)';
-    default:
-      return 'var(--color-text3)';
-  }
-}
-
 const SCHEDULE_HELP_ID = 'application-schedule-help';
 
 function scheduleDescribedBy(existing: string | undefined) {
@@ -111,12 +111,12 @@ function scheduleDescribedBy(existing: string | undefined) {
 
 /** What deleting this window changes on the public site, based on where it is in its schedule. */
 function deleteConsequences(link: ApplicationLink): string[] {
-  const status = getApplicationStatus(link.open_at, link.due_at, link.is_enabled, new Date());
+  const { status } = getAdminWindowState(link, new Date());
   const lines: string[] = [];
   if (status === 'open') {
     lines.push('This window is open right now: the Apply button disappears from the public pages immediately.');
   } else if (status === 'not_open') {
-    lines.push(`It is scheduled to open ${formatApplicationDateTime(link.open_at) || 'later'}; that will no longer happen.`);
+    lines.push(`It is scheduled to open ${formatPacificDateTime(link.open_at) || 'later'}; that will no longer happen.`);
   } else {
     lines.push('It is not showing publicly right now, so the public pages will not change.');
   }
@@ -124,35 +124,95 @@ function deleteConsequences(link: ApplicationLink): string[] {
   return lines;
 }
 
+/** The form's current values as the window students would see, or an incomplete one while the schedule is blank. */
+function previewFromValues(values: FormState): PreviewWindow {
+  return {
+    application_key: values.application_key,
+    title: values.title.trim() || applicationKeyLabel(values.application_key),
+    description: values.description.trim() || null,
+    button_label: values.button_label.trim(),
+    target_url: values.target_url.trim(),
+    open_at: combineLocalDateTime(values.open_date, values.open_time, '00:00') ?? '',
+    due_at: combineLocalDateTime(values.due_date, values.due_time, '23:59') ?? '',
+    is_enabled: values.is_enabled,
+    before_open_message: values.before_open_message.trim() || null,
+    after_close_message: values.after_close_message.trim() || null,
+    sort_order: Number(values.sort_order) || 0,
+  };
+}
+
+// The insert payload types is_enabled as optional; the form always sets it.
+const asFacts = (payload: ApplicationLinkFormData) => ({
+  ...payload,
+  application_key: payload.application_key as ApplicationKey,
+  is_enabled: payload.is_enabled === true,
+});
+
+type PublishChange = 'publish' | 'relink' | null;
+
+/**
+ * What a save does to the public site. 'publish': the form link becomes reachable
+ * by students and was not before. 'relink': it already was, and the link itself
+ * changes, so a typo goes live immediately. Anything else (copy, a window that
+ * stays private) is null and saves without asking.
+ */
+function publishChange(before: ApplicationLink | null, values: FormState, now: Date): PublishChange {
+  let payload;
+  try {
+    payload = applicationLinkPayload(values);
+  } catch {
+    return null;
+  }
+  const wasPublic = before ? getAdminWindowState(before, now).isPublic : false;
+  const willBePublic = getAdminWindowState(asFacts(payload), now).isPublic;
+  if (!wasPublic && willBePublic) return 'publish';
+  if (wasPublic && willBePublic && before && before.target_url.trim() !== payload.target_url.trim()) return 'relink';
+  return null;
+}
+
+const hasPlaceholderUrl = (facts: { open_at: string; due_at: string; is_enabled: boolean; target_url: string }) =>
+  validateApplicationWindow(facts).some((issue) => issue.code === 'placeholder_url');
+
+interface PublishConfirm {
+  title: string;
+  closes: string;
+  change: PublishChange;
+  /** The link is a Google Drive file that must be shared publicly. */
+  drive: boolean;
+  /** The link still looks like the seeded example.com placeholder. */
+  placeholder: boolean;
+}
+
 export default function AdminApplications() {
   const queryClient = useQueryClient();
   const { links, loading, error, refetch } = useAdminApplicationLinks();
   const [selected, setSelected] = useState<ApplicationLink | null>(null);
   const [keyFilter, setKeyFilter] = useState<'all' | ApplicationKey>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useUrlFilter(STATE_FILTERS) as [StatusFilter, (key: StatusFilter) => void];
   const [deleteTarget, setDeleteTarget] = useState<ApplicationLink | null>(null);
-  const [driveConfirmOpen, setDriveConfirmOpen] = useState(false);
+  const [publishConfirm, setPublishConfirm] = useState<PublishConfirm | null>(null);
+  const [enableTarget, setEnableTarget] = useState<ApplicationLink | null>(null);
+
+  // One clock for the filter, the counts, and the cards, so a window cannot read
+  // Closed on its card while the "Open" filter still lists it.
+  const nowMs = Math.floor(Date.now() / 60_000) * 60_000;
+  const now = useMemo(() => new Date(nowMs), [nowMs]);
 
   const visibleLinks = useMemo(() => {
-    const now = new Date();
     return links.filter((link) => {
       if (keyFilter !== 'all' && link.application_key !== keyFilter) return false;
-      if (statusFilter !== 'all') {
-        const status = getApplicationStatus(link.open_at, link.due_at, link.is_enabled, now);
-        if (status !== statusFilter) return false;
-      }
+      if (statusFilter !== 'all' && getAdminWindowState(link, now).state !== statusFilter) return false;
       return true;
     });
-  }, [links, keyFilter, statusFilter]);
+  }, [links, keyFilter, statusFilter, now]);
 
   const counts = useMemo(() => {
-    const now = new Date();
-    const acc = { open: 0, not_open: 0, closed: 0, disabled: 0 };
+    const acc: Record<WindowState, number> = { open: 0, scheduled: 0, closed: 0, disabled: 0, misconfigured: 0 };
     links.forEach((link) => {
-      acc[getApplicationStatus(link.open_at, link.due_at, link.is_enabled, now)] += 1;
+      acc[getAdminWindowState(link, now).state] += 1;
     });
     return acc;
-  }, [links]);
+  }, [links, now]);
 
   const refresh = async () => {
     await queryClient.invalidateQueries(ADMIN_APPLICATION_LINKS_QUERY_KEY);
@@ -167,11 +227,15 @@ export default function AdminApplications() {
     successMessage: selected ? 'Application link updated' : 'Application link created',
     onSubmit: async (values) => {
       const payload = applicationLinkPayload(values);
-      if (selected) {
-        await applicationLinksRepository.updateApplicationLink(selected.id, payload);
-      } else {
-        await applicationLinksRepository.createApplicationLink(payload);
-      }
+      const before = selected;
+      const saved = before
+        ? await applicationLinksRepository.updateApplicationLink(before.id, payload)
+        : await applicationLinksRepository.createApplicationLink(payload);
+      // Best effort and never blocks the save: the entry reuses Recent Changes.
+      logAdminActivity({
+        ...applicationWindowActivity(before ? 'updated' : 'created', before, asFacts(payload)),
+        entityId: saved?.id ?? before?.id ?? null,
+      });
       try {
         await refresh();
       } catch (err) {
@@ -184,6 +248,12 @@ export default function AdminApplications() {
   const { form } = api;
   const { register, formState } = form;
   const errors = formState.errors;
+  const watched = form.watch() as FormState;
+  const draft = previewFromValues(watched);
+  const nowForForm = new Date();
+  const liveIssues = watched.open_date && watched.due_date ? validateApplicationWindow(draft).filter((issue) => issue.code !== 'placeholder_url') : [];
+  const savedState = selected ? getAdminWindowState(selected, nowForForm).state : null;
+  const showPastOpen = opensInThePast(draft.open_at, nowForForm) && savedState !== 'open';
 
   // Clears the editor without asking. Used after a save or delete, when nothing is unsaved.
   function resetForm() {
@@ -215,26 +285,78 @@ export default function AdminApplications() {
     }
   };
 
-  // Drive links need an explicit "this is public" acknowledgement, but only once the
-  // form is otherwise valid, so the admin is not asked to confirm something that cannot save.
+  // Two things need an explicit "yes" first, but only once the form is otherwise
+  // valid (so nobody confirms something that cannot save): a save that makes the
+  // form link reachable by students, and a Google Drive link that must be shared
+  // publicly. Copy-only edits and saves that publish nothing go straight through.
   const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isDriveLink(form.getValues('target_url'))) {
-      if (await form.trigger()) setDriveConfirmOpen(true);
+    const values = form.getValues() as FormState;
+    const change = publishChange(selected, values, new Date());
+    const drive = isDriveLink(values.target_url);
+    if (change || drive) {
+      if (await form.trigger()) {
+        const preview = previewFromValues(values);
+        setPublishConfirm({
+          title: values.title.trim(),
+          closes: formatPacificDateTime(preview.due_at),
+          change,
+          drive,
+          placeholder: change !== null && hasPlaceholderUrl(preview),
+        });
+      }
       return;
     }
     await api.submit(event);
   };
 
-  const handleToggle = async (link: ApplicationLink) => {
+  // Rejects when the write fails, so a confirmation dialog stays open and shows the
+  // error instead of closing as if it had worked. A failed refetch afterwards does not
+  // count: the write itself succeeded.
+  const applyToggle = async (link: ApplicationLink) => {
     try {
       await applicationLinksRepository.setApplicationLinkEnabled(link.id, !link.is_enabled);
-      toast.success(link.is_enabled ? 'Disabled' : 'Enabled');
+    } catch (err) {
+      console.error(err);
+      throw new Error('Failed to update the window. Nothing changed.');
+    }
+    logAdminActivity({
+      ...applicationWindowActivity('toggled', link, { ...link, is_enabled: !link.is_enabled }),
+      entityId: link.id,
+    });
+    toast.success(link.is_enabled ? 'Disabled' : 'Enabled');
+    try {
       await refresh();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // The no-dialog path: nothing to keep open, so report the failure as a toast.
+  const toggleWithToast = async (link: ApplicationLink) => {
+    try {
+      await applyToggle(link);
+    } catch {
       toast.error('Failed to update status');
     }
+  };
+
+  const handleToggle = async (link: ApplicationLink) => {
+    if (!link.is_enabled) {
+      // Enabling is the one toggle that can publish. Refuse a window that is broken,
+      // and ask first when it would go live immediately.
+      const next = getAdminWindowState({ ...link, is_enabled: true }, new Date());
+      const blocking = next.issues.find((issue) => issue.severity === 'error');
+      if (blocking) {
+        toast.error(`Not enabled. ${blocking.message}`);
+        return;
+      }
+      if (next.isPublic) {
+        setEnableTarget(link);
+        return;
+      }
+    }
+    await toggleWithToast(link);
   };
 
   // Runs from the confirm dialog: a failure is re-thrown so the dialog stays open and shows it.
@@ -246,6 +368,7 @@ export default function AdminApplications() {
       toast.error('Failed to delete application link');
       throw new Error('Failed to delete the application link. Nothing was removed.');
     }
+    logAdminActivity({ ...applicationWindowActivity('deleted', link, null), entityId: link.id });
     toast.success('Application link deleted');
     if (selected?.id === link.id) resetForm();
     try {
@@ -273,14 +396,12 @@ export default function AdminApplications() {
     );
   }
 
-  const now = new Date();
-
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Applications" />
 
       <AdminPageHeader
-        description={`${counts.open} open · ${counts.not_open} upcoming · ${counts.closed} closed · ${counts.disabled} disabled. Public pages only show a button while a window is open.`}
+        description={`${counts.open} open · ${counts.scheduled} scheduled · ${counts.closed} closed · ${counts.disabled} disabled${counts.misconfigured > 0 ? ` · ${counts.misconfigured} need fixing` : ''}. Public pages only show a button while a window is open. All times are Pacific Time (PT).`}
         actions={
           <button
             type="button"
@@ -310,10 +431,9 @@ export default function AdminApplications() {
                 <label htmlFor="application-status-filter" className={labelCls} style={{ color: 'var(--color-text3)' }}>Status</label>
                 <select id="application-status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className={inputCls} style={fieldStyle()}>
                   <option value="all">All statuses</option>
-                  <option value="open">Open</option>
-                  <option value="not_open">Not open yet</option>
-                  <option value="closed">Closed</option>
-                  <option value="disabled">Disabled</option>
+                  {STATE_FILTERS.filter((key): key is WindowState => key !== 'all').map((key) => (
+                    <option key={key} value={key}>{WINDOW_STATE_LABELS[key]}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -335,53 +455,17 @@ export default function AdminApplications() {
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                {visibleLinks.map((link) => {
-                  const status = getApplicationStatus(link.open_at, link.due_at, link.is_enabled, now);
-                  const hasUrl = !!link.target_url && /^https:\/\//i.test(link.target_url);
-                  return (
-                    <article
-                      key={link.id}
-                      className="px-4 py-4"
-                      style={{ background: selected?.id === link.id ? 'var(--color-surface2)' : 'transparent' }}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{link.title}</h3>
-                            <span className="rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
-                              {applicationKeyLabel(link.application_key)}
-                            </span>
-                          </div>
-                          <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                            Button: “{link.button_label}” · {hasUrl ? 'URL set' : 'No URL'}
-                          </p>
-                          <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                            Opens {formatApplicationDateTime(link.open_at) || '—'} · Closes {formatApplicationDateTime(link.due_at) || '—'}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: statusBadgeColor(status) }}>
-                            {APPLICATION_STATUS_LABELS[status]}
-                          </span>
-                          <span className="font-mono text-[10px]" style={{ color: link.is_enabled ? 'var(--brand)' : 'var(--color-text3)' }}>
-                            {link.is_enabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => selectLink(link)} className="rounded border px-2.5 py-1.5 font-sans text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
-                          Edit
-                        </button>
-                        <button type="button" onClick={() => handleToggle(link)} className="rounded border px-2.5 py-1.5 font-sans text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
-                          {link.is_enabled ? 'Disable' : 'Enable'}
-                        </button>
-                        <button type="button" onClick={() => setDeleteTarget(link)} className="rounded border px-2.5 py-1.5 font-sans text-xs" style={{ borderColor: 'var(--color-border)', color: '#dc2626' }}>
-                          Delete
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
+                {visibleLinks.map((link) => (
+                  <ApplicationWindowCard
+                    key={link.id}
+                    link={link}
+                    now={now}
+                    selected={selected?.id === link.id}
+                    onEdit={selectLink}
+                    onToggle={handleToggle}
+                    onDelete={setDeleteTarget}
+                  />
+                ))}
               </div>
             )}
           </section>
@@ -470,8 +554,19 @@ export default function AdminApplications() {
               </AdminField>
             </div>
             <p id="application-schedule-help" className="font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-              Dates and times are San Diego (Pacific) time, wherever you are editing from. Open date can be in the past. Due time defaults to 11:59 PM unless you change it.
+              Dates and times are Pacific Time (PT, San Diego), wherever you are editing from. Due time defaults to 11:59 PM PT unless you change it.
             </p>
+            {showPastOpen && (
+              <p role="status" className="rounded border px-3 py-2 font-sans text-xs" style={{ borderColor: '#d97706', color: '#b45309', background: 'var(--color-surface2)' }}>
+                The open time ({formatPacificDateTime(draft.open_at)}) is already in the past.
+                {watched.is_enabled ? ' This window opens for students as soon as you save.' : ' Once this window is enabled, it opens immediately.'}
+              </p>
+            )}
+            {liveIssues.filter((issue) => issue.severity === 'error').map((issue) => (
+              <p key={issue.code} role="status" className="font-sans text-xs" style={{ color: '#dc2626' }}>
+                {issue.message}
+              </p>
+            ))}
             <AdminField label="Before-open message" error={errors.before_open_message?.message}>
               {(p) => <textarea {...p} {...register('before_open_message')} className={`${formInputCls} min-h-[52px]`} style={fieldStyle()} />}
             </AdminField>
@@ -488,19 +583,57 @@ export default function AdminApplications() {
               </label>
             </div>
           </AdminFormShell>
+
+          <ApplicationPublicPreview draft={draft} now={nowForForm} />
         </aside>
       </div>
 
       <ConfirmDialog
-        open={driveConfirmOpen}
-        title="Publish a Google Drive link?"
-        description="This looks like a Google Drive link. Confirm it is shared publicly and safe to expose to the public when the window is open."
-        consequences={['While this window is open, anyone on the public page can follow the link.', 'If the Drive file is private, visitors will hit an access request instead.']}
-        confirmLabel="It is public, save"
+        open={publishConfirm !== null}
+        title={
+          publishConfirm?.change === 'publish'
+            ? `Make “${publishConfirm.title}” public?`
+            : publishConfirm?.change === 'relink'
+              ? `Change the live form link for “${publishConfirm.title}”?`
+              : 'Publish a Google Drive link?'
+        }
+        description={
+          publishConfirm?.change === 'publish'
+            ? `Saving opens this window now, so the form URL becomes publicly reachable from the VSA website until it closes ${publishConfirm.closes}.`
+            : publishConfirm?.change === 'relink'
+              ? 'This window is open right now. Saving points the public Apply button at the new link immediately.'
+              : 'This looks like a Google Drive link. Confirm it is shared publicly and safe to expose to the public when the window is open.'
+        }
+        consequences={[
+          ...(publishConfirm?.change === 'publish' ? ['Anyone on the public pages can follow the form link as soon as you save.', 'You can switch it back off with Disable, but anyone who already has the link keeps it.'] : []),
+          ...(publishConfirm?.change === 'relink' ? ['Students who open the form after you save go to the new link.', 'Check the new link before saving; a typo goes live at once.'] : []),
+          ...(publishConfirm?.placeholder ? ['The link still looks like a placeholder (example.com). Students would land on it.'] : []),
+          ...(publishConfirm?.drive
+            ? ['While this window is open, anyone on the public page can follow the link.', 'If the Drive file is private, visitors will hit an access request instead.']
+            : []),
+        ]}
+        confirmLabel={publishConfirm?.change === 'publish' ? 'Save and make public' : publishConfirm?.change === 'relink' ? 'Save new link' : 'It is public, save'}
         danger={false}
         onConfirm={() => api.submit()}
-        onClose={() => setDriveConfirmOpen(false)}
+        onClose={() => setPublishConfirm(null)}
       />
+
+      {enableTarget && (
+        <ConfirmDialog
+          open
+          title={`Enable “${enableTarget.title}”?`}
+          description={`This window is inside its open dates, so enabling it makes the form URL publicly reachable now, until it closes ${formatPacificDateTime(enableTarget.due_at)}.`}
+          consequences={[
+            'The Apply button appears on the public pages immediately.',
+            ...(hasPlaceholderUrl(enableTarget) ? ['The link still looks like a placeholder (example.com). Students would land on it.'] : []),
+            'You can switch it back off with Disable, but anyone who already has the link keeps it.',
+          ]}
+          confirmLabel="Enable and make public"
+          danger={false}
+          onConfirm={() => applyToggle(enableTarget)}
+          onClose={() => setEnableTarget(null)}
+        />
+      )}
 
       {deleteTarget && (
         <ConfirmDialog
