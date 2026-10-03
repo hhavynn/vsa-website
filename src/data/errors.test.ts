@@ -6,6 +6,9 @@ import {
   ValidationError,
   NetworkError,
   AuthorizationError,
+  AuthenticationError,
+  NotFoundError,
+  isKnownError,
   toUserMessage,
 } from './errors';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -248,5 +251,83 @@ describe('toUserMessage', () => {
   it('uses the fallback for plain errors and non-errors', () => {
     expect(toUserMessage(new Error('relation "public.x" does not exist'), FALLBACK)).toBe(FALLBACK);
     expect(toUserMessage('boom', FALLBACK)).toBe(FALLBACK);
+  });
+});
+
+describe('withErrorHandling: class mapping gaps (#291)', () => {
+  const run = (thrown: unknown, context?: string) =>
+    withErrorHandling(() => Promise.reject(thrown), context);
+
+  it('rethrows an existing NetworkError untouched', async () => {
+    const original = new NetworkError('offline');
+    await expect(run(original, 'Failed to load')).rejects.toBe(original);
+  });
+
+  it.each([
+    ['23503', 'Referenced record does not exist'],
+    ['23502', 'Required field is missing'],
+    ['42P01', 'Table does not exist'],
+    ['PGRST116', 'No rows found'],
+    ['PGRST301', 'JWT expired'],
+    ['PGRST302', 'JWT invalid'],
+  ])('maps PostgREST code %s to its friendly DatabaseError message', async (code, friendly) => {
+    const error = await run(realPostgrestPayload('raw database text', code), 'Failed to load').catch(
+      (e) => e as DatabaseError
+    );
+    expect(error).toBeInstanceOf(DatabaseError);
+    expect(error.message).toBe(friendly);
+    expect(error.code).toBe(code);
+  });
+
+  it('classifies a plain Error mentioning "network" as NetworkError', async () => {
+    await expect(run(new Error('network request dropped'), 'Failed to load')).rejects.toBeInstanceOf(
+      NetworkError
+    );
+  });
+
+  it('does not prefix a context onto a plain Error when none is supplied', async () => {
+    await expect(run(new Error('Object exceeds maximum size'))).rejects.toThrow(/^Object exceeds maximum size$/);
+  });
+
+  it('falls back to a bare "Unknown error occurred" when there is no context', async () => {
+    await expect(run('a bare string')).rejects.toThrow(/^Unknown error occurred$/);
+  });
+
+  it('treats a message-only object (no code or details) as unidentifiable, not as a DatabaseError', async () => {
+    const error = await run({ message: 'not from postgrest' }, 'Failed to load').catch((e) => e as Error);
+    expect(error).not.toBeInstanceOf(DatabaseError);
+    expect(error.message).toBe('Failed to load: Unknown error occurred');
+  });
+
+  it('characterization: a thrown NotFoundError is re-wrapped as a plain Error with the context prefix', async () => {
+    // withErrorHandling only passes DatabaseError / ValidationError / NetworkError
+    // through, so a NotFoundError thrown inside an operation reaches the caller as
+    // a generic Error ("<context>: <message>"), losing its class, resource and id.
+    // Pinned as current behaviour; see the final report.
+    const error = await run(new NotFoundError('Event not found', 'event', 'event-1'), 'Failed to fetch event').catch(
+      (e) => e as Error
+    );
+    expect(error.message).toBe('Failed to fetch event: Event not found');
+    expect(error).not.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('isKnownError', () => {
+  it.each([
+    ['DatabaseError', new DatabaseError('x')],
+    ['ValidationError', new ValidationError('x')],
+    ['AuthenticationError', new AuthenticationError()],
+    ['AuthorizationError', new AuthorizationError()],
+    ['NetworkError', new NetworkError()],
+    ['NotFoundError', new NotFoundError()],
+  ])('recognises %s', (_name, error) => {
+    expect(isKnownError(error)).toBe(true);
+  });
+
+  it('does not recognise a plain Error, a PostgREST payload, or a non-error', () => {
+    expect(isKnownError(new Error('x'))).toBe(false);
+    expect(isKnownError(realPostgrestPayload('x', '42501'))).toBe(false);
+    expect(isKnownError('x')).toBe(false);
+    expect(isKnownError(null)).toBe(false);
   });
 });

@@ -22,6 +22,8 @@ npm test           # Run tests (Jest + React Testing Library)
 npm test -- --testPathPattern=<file>  # Run a single test file
 npm run build      # Build for production
 npm run lint       # Lint TypeScript files in src/
+npm run typecheck  # TypeScript 5 type-check of src/ incl. tests (CI runs it; see docs/typechecking.md)
+npm run typecheck:edge && npm run test:edge   # Deno check + tests for supabase/functions (needs Deno; CI runs them)
 npm run format     # Format TypeScript files with Prettier
 ```
 

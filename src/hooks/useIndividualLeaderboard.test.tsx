@@ -1,8 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, focusManager } from 'react-query';
+import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { Leaderboard } from '../pages/Leaderboard';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { useIndividualLeaderboard } from './useIndividualLeaderboard';
 
 let mockYearsWithData: number[] = [];
 
@@ -191,4 +193,127 @@ it('gives podium members tied at T1 the same first-place styling', async () => {
 
   expect(podiumBadges('T1')).toEqual(['rgb(212, 132, 26)', 'rgb(212, 132, 26)']);
   expect(podiumBadges('3')).toEqual(['rgb(180, 83, 9)']);
+});
+
+// Hook-level characterization (#293). Covers the LEADERBOARD system only
+// (member_yearly_points / public_members via the repository); the check-in
+// system (event_attendance + user_points) is not involved. Repository calls are
+// spied above, so these assert the hook's own mapping and routing.
+describe('useIndividualLeaderboard hook', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  const yearlyRow = (overrides: Record<string, unknown> = {}) => ({
+    member_id: 'member-aaa',
+    first_name: 'Test',
+    last_name: 'Member',
+    college: 'Test College',
+    graduation_year: '2027',
+    total_points: 12,
+    events_attended: 4,
+    academic_year_start: 2025,
+    academic_year_end: 2026,
+    ...overrides,
+  });
+
+  function hookWrapper({ children }: { children: ReactNode }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+
+  function renderIndividual(year: number | 'all' | null) {
+    return renderHook(() => useIndividualLeaderboard(year), { wrapper: hookWrapper });
+  }
+
+  it('maps a yearly row: member_id -> id, graduation_year -> year, total_points -> points, events_attended kept', async () => {
+    jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([yearlyRow()]);
+
+    const { result } = renderIndividual(2025);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // The view no longer exposes user_id, so the hook currently passes
+    // `user_id: undefined` through. Pinned as-is, not as preferred behaviour.
+    expect(result.current.data).toStrictEqual([
+      {
+        id: 'member-aaa',
+        first_name: 'Test',
+        last_name: 'Member',
+        college: 'Test College',
+        year: '2027',
+        points: 12,
+        events_attended: 4,
+        user_id: undefined,
+      },
+    ]);
+    expect(leaderboardRepository.getYearlyLeaderboard).toHaveBeenCalledWith(2025);
+    expect(leaderboardRepository.getAllTimeLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('keeps zero-point members and null college/year in the yearly list', async () => {
+    jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([
+      yearlyRow({ member_id: 'member-zero', total_points: 0, events_attended: 0, college: null, graduation_year: null }),
+    ]);
+
+    const { result } = renderIndividual(2025);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.[0]).toMatchObject({ id: 'member-zero', points: 0, events_attended: 0, college: null, year: null });
+  });
+
+  it('returns the repository order as-is without re-sorting', async () => {
+    jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([
+      yearlyRow({ member_id: 'low', total_points: 1 }),
+      yearlyRow({ member_id: 'high', total_points: 9 }),
+    ]);
+
+    const { result } = renderIndividual(2025);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.map((m) => m.id)).toEqual(['low', 'high']);
+  });
+
+  it('returns an empty list for a year with no rows', async () => {
+    jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([]);
+
+    const { result } = renderIndividual(2019);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual([]);
+  });
+
+  it("'all' uses the all-time source and returns its rows unmapped", async () => {
+    const rows = [member('Alpha', 10), member('Beta', 0)];
+    jest.spyOn(leaderboardRepository, 'getAllTimeLeaderboard').mockResolvedValue(rows);
+
+    const { result } = renderIndividual('all');
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual(rows);
+    expect(leaderboardRepository.getAllTimeLeaderboard).toHaveBeenCalledTimes(1);
+    expect(leaderboardRepository.getYearlyLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('a null year is disabled: no data and neither source is queried', async () => {
+    const { result } = renderIndividual(null);
+
+    // Give an (incorrectly) enabled query a chance to fire.
+    await act(async () => { await Promise.resolve(); });
+
+    expect(result.current.isIdle).toBe(true);
+    expect(result.current.data).toBeUndefined();
+    expect(leaderboardRepository.getYearlyLeaderboard).not.toHaveBeenCalled();
+    expect(leaderboardRepository.getAllTimeLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a repository failure as a query error without retrying', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockRejectedValue(new Error('Unavailable'));
+
+    const { result } = renderIndividual(2025);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(leaderboardRepository.getYearlyLeaderboard).toHaveBeenCalledTimes(1);
+  });
 });

@@ -160,12 +160,23 @@ export class AuthRepository {
   }
 
   /**
-   * Check if user is admin
+   * Whether the user's profile is flagged admin. Reads only `is_admin`.
+   *
+   * This drives what the browser renders (the admin shell, the user menu); it
+   * is not authorization -- RLS on the underlying tables is. Anything other
+   * than an explicit `true` (no profile row, a null flag) is "not admin", and a
+   * query failure rejects so callers can fail closed.
    */
   async isUserAdmin(userId: string): Promise<boolean> {
     return withErrorHandling(async () => {
-      const profile = await this.getUserProfile(userId);
-      return profile.is_admin === true;
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.is_admin === true;
     }, 'Failed to check admin status');
   }
 

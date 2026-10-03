@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 import { supabaseRequestGuard } from './supabaseRequestGuard';
+import { createSessionExpiryFetch, refreshOrEndSession } from './sessionExpiry';
 
 // Singleton pattern for Supabase client
 let supabaseClient: SupabaseClient<Database> | null = null;
@@ -27,9 +28,16 @@ export function getSupabaseClient(): SupabaseClient<Database> {
       db: {
         retry: false,
       },
-      // Per-tab circuit breaker for Data API (/rest/v1) calls. See supabaseRequestGuard.ts.
+      // Per-tab circuit breaker for Data API (/rest/v1) calls (see
+      // supabaseRequestGuard.ts), wrapped so a server-side "JWT expired" on any
+      // request triggers one refresh (see sessionExpiry.ts).
       global: {
-        fetch: supabaseRequestGuard.fetch,
+        fetch: createSessionExpiryFetch({
+          fetch: supabaseRequestGuard.fetch,
+          refresh: async () => {
+            if (supabaseClient) await refreshOrEndSession(supabaseClient);
+          },
+        }),
       },
     });
   }

@@ -139,27 +139,93 @@ function createQueryBuilder<T>(
   return builder as unknown as MockQueryBuilder<T>;
 }
 
+/** The slice of a supabase-js session the app reads. */
+export interface AuthSession {
+  user: { id: string; email?: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+export type AuthListener = (event: string, session: AuthSession | null) => void;
+
+export interface AuthResult {
+  data: { user: AuthSession['user'] | null; session: AuthSession | null };
+  error: unknown | null;
+}
+
 export class SupabaseMock {
   private queued = new Map<string, QueryResult[]>();
   private defaults = new Map<string, QueryResult>();
   private recorded: RecordedQuery[] = [];
 
+  private authListeners = new Set<AuthListener>();
+  private authSession: AuthSession | null = null;
+  private signInResult: AuthResult = { data: { user: null, session: null }, error: null };
+  private signOutError: unknown | null = null;
+
   /**
-   * Signed-out auth stubs. The providers touch exactly six methods
-   * (getSession, getUser, onAuthStateChange, signInWithPassword, signUp,
-   * signOut); anything beyond that should be added deliberately rather than
+   * Auth stubs, signed out by default. The providers touch exactly these
+   * methods; anything beyond that should be added deliberately rather than
    * auto-stubbed, so an untested auth path fails loudly.
+   *
+   * Session behaviour is scriptable for auth-lifecycle tests: `setAuthSession`
+   * sets what `getSession` returns, `emitAuthEvent` plays an event to every
+   * subscriber the way supabase-js does (SIGNED_OUT on expiry, a fresh
+   * SIGNED_IN on tab refocus), and `signOut` emits SIGNED_OUT like the real one.
    */
   readonly auth = {
-    getSession: async () => ({ data: { session: null }, error: null }),
-    getUser: async () => ({ data: { user: null }, error: null }),
-    onAuthStateChange: (_callback?: unknown) => ({
-      data: { subscription: { unsubscribe: () => undefined } },
-    }),
-    signInWithPassword: async () => ({ data: { user: null, session: null }, error: null }),
+    getSession: async () => ({ data: { session: this.authSession }, error: null }),
+    getUser: async () => ({ data: { user: this.authSession?.user ?? null }, error: null }),
+    onAuthStateChange: (callback?: AuthListener) => {
+      if (callback) this.authListeners.add(callback);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              if (callback) this.authListeners.delete(callback);
+            },
+          },
+        },
+      };
+    },
+    signInWithPassword: async (_credentials?: unknown) => this.signInResult,
     signUp: async () => ({ data: { user: null, session: null }, error: null }),
-    signOut: async () => ({ error: null }),
+    signOut: async () => {
+      this.authSession = null;
+      this.emitAuthEvent('SIGNED_OUT', null);
+      return { error: this.signOutError };
+    },
+    refreshSession: async () => {
+      this.refreshSessionCalls += 1;
+      return { data: { session: this.authSession, user: this.authSession?.user ?? null }, error: null };
+    },
   };
+
+  /** Times `auth.refreshSession` was called since the last reset. */
+  refreshSessionCalls = 0;
+
+  /** Set the session `getSession` returns (null = signed out). */
+  setAuthSession(session: AuthSession | null): this {
+    this.authSession = session;
+    return this;
+  }
+
+  /** What `signInWithPassword` resolves with next (and until changed). */
+  setSignInResult(result: AuthResult): this {
+    this.signInResult = result;
+    return this;
+  }
+
+  /** Make `signOut` report a server-side failure (local state still clears). */
+  setSignOutError(error: unknown | null): this {
+    this.signOutError = error;
+    return this;
+  }
+
+  /** Deliver an auth event to every subscriber. Wrap in `act()` when rendered. */
+  emitAuthEvent(event: string, session: AuthSession | null): void {
+    if (event !== 'SIGNED_OUT') this.authSession = session;
+    this.authListeners.forEach((listener) => listener(event, session));
+  }
 
   /** The object to substitute for the real `supabase` client. */
   readonly client = {
@@ -195,6 +261,11 @@ export class SupabaseMock {
     this.queued.clear();
     this.defaults.clear();
     this.recorded = [];
+    this.authListeners.clear();
+    this.authSession = null;
+    this.signInResult = { data: { user: null, session: null }, error: null };
+    this.signOutError = null;
+    this.refreshSessionCalls = 0;
   }
 
   /** Queue one result for the next query against `table` (FIFO). */

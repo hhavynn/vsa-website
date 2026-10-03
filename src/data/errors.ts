@@ -201,6 +201,9 @@ export function toUserMessage(error: unknown, fallback: string): string {
   if (error instanceof AuthenticationError) return 'Please sign in and try again.';
   if (error instanceof AuthorizationError) return "You don't have permission to do that.";
   if (error instanceof DatabaseError) {
+    if (error.code === 'PGRST301' || error.code === 'PGRST302') {
+      return 'Your session expired. Try again, and sign in again if it keeps failing.';
+    }
     if (error.code === 'P0001' && error.message) return error.message;
     if (error.code === '42501') return "You don't have permission to do that.";
     if (error.code === '23505') return 'That already exists.';

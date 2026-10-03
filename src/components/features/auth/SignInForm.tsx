@@ -2,8 +2,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { useQueryClient } from 'react-query';
 import { useAuth } from '../../../hooks/useAuth';
-import { supabase } from '../../../lib/supabase';
+import { adminStatusQuery } from '../../../hooks/useAdmin';
 import { SignInSchema, type SignInFormData } from '../../../schemas';
 
 const inputCls = 'mt-1 block w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
@@ -33,9 +34,20 @@ export function signInErrorMessage(error: unknown): string {
   return 'Incorrect email or password.';
 }
 
-export function SignInForm() {
+interface SignInFormProps {
+  /**
+   * Called after an admin signs in, instead of navigating to the requested
+   * admin page. The session-expired prompt passes this so the page the admin
+   * was working on stays exactly where it is.
+   */
+  onSignedIn?: () => void;
+  defaultEmail?: string;
+}
+
+export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { signIn, signOut } = useAuth();
   const {
     register,
@@ -44,6 +56,7 @@ export function SignInForm() {
     setError: setFormError,
   } = useForm<SignInFormData>({
     resolver: zodResolver(SignInSchema),
+    defaultValues: defaultEmail ? { email: defaultEmail } : undefined,
   });
 
   const locationState = location.state as { from?: { pathname?: string; search?: string } } | null;
@@ -56,18 +69,17 @@ export function SignInForm() {
   const onSubmit = async (data: SignInFormData) => {
     try {
       const signedInUser = await signIn(data.email, data.password);
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('is_admin')
-        .eq('id', signedInUser.id)
-        .single();
-
-      if (error) {
+      // Always a fresh lookup (never a cached verdict) for a sign-in, and it
+      // seeds the cache so the admin shell does not repeat the query.
+      let isAdmin: boolean;
+      try {
+        isAdmin = await queryClient.fetchQuery({ ...adminStatusQuery(signedInUser.id), staleTime: 0 });
+      } catch {
         await signOut();
         throw new Error(ADMIN_CHECK_FAILED);
       }
 
-      if (!profile?.is_admin) {
+      if (!isAdmin) {
         await signOut();
         setFormError('root', {
           type: 'manual',
@@ -76,6 +88,10 @@ export function SignInForm() {
         return;
       }
 
+      if (onSignedIn) {
+        onSignedIn();
+        return;
+      }
       navigate(redirectTo, { replace: true });
     } catch (error) {
       setFormError('root', {

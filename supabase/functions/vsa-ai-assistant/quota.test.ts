@@ -1,4 +1,4 @@
-import { handler } from "./server-test-adapter.ts";
+import { handler } from "../_shared/server-test-adapter.ts";
 import "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {

@@ -129,6 +129,34 @@ describe('assignTiedRanks', () => {
     expect(reversed).toEqual(forward);
   });
 
+  it('still tie-breaks on events attended when everyone has zero points', () => {
+    expect(rankMembers([member('a', 'A', 0, 1), member('b', 'B', 0, 4), member('c', 'C', 0, 4)])).toEqual([
+      { id: 'b', rank: 1, tiedCount: 2 },
+      { id: 'c', rank: 1, tiedCount: 2 },
+      { id: 'a', rank: 3, tiedCount: 1 },
+    ]);
+  });
+
+  it('ranks a member with zero points and zero events last, below zero-point members who attended', () => {
+    const ranked = rankMembers([member('none', 'A', 0, 0), member('some', 'B', 0, 2), member('lead', 'C', 5, 1)]);
+    expect(ranked).toEqual([
+      { id: 'lead', rank: 1, tiedCount: 1 },
+      { id: 'some', rank: 2, tiedCount: 1 },
+      { id: 'none', rank: 3, tiedCount: 1 },
+    ]);
+  });
+
+  it('keeps zero-point, zero-event members in the list and ties them together', () => {
+    expect(rankMembers([member('x', 'X', 0, 0), member('y', 'Y', 0, 0)])).toEqual([
+      { id: 'x', rank: 1, tiedCount: 2 },
+      { id: 'y', rank: 1, tiedCount: 2 },
+    ]);
+  });
+
+  it('returns an empty list for no members', () => {
+    expect(rankMembers([])).toEqual([]);
+  });
+
   it('does not mutate the input array', () => {
     const input = [member('b', 'B', 1, 1), member('a', 'A', 9, 1)];
     assignTiedRanks(input, comparePointsThenEvents, compareMemberNames);
