@@ -7,6 +7,8 @@ export interface RelatedLink {
   to: string;
   label: string;
   description?: string;
+  /** Runs on click, before navigation (e.g. to reopen a collapsed same-page target). */
+  onClick?: () => void;
 }
 
 interface RelatedLinksProps {
@@ -52,6 +54,7 @@ export function RelatedLinks({
             <li key={link.to} className="min-w-0">
               <Link
                 to={link.to}
+                onClick={link.onClick}
                 className="group flex min-h-[48px] items-center justify-between gap-3 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition-colors duration-150 hover:border-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:hover:border-brand-400 dark:focus-visible:ring-brand-400"
               >
                 <span className="min-w-0">

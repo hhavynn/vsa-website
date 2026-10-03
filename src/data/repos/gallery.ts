@@ -6,6 +6,8 @@ export interface RelatedEvent {
   name: string;
   date: string;
   academic_term_id?: string | null;
+  /** Admins can read drafts through the join; only published events get a public link. */
+  is_published?: boolean;
 }
 
 export interface GalleryAlbum {
@@ -36,7 +38,7 @@ export class GalleryRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('gallery_events')
-        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date, academic_term_id)')
+        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date, academic_term_id, is_published)')
         .not('google_photos_url', 'is', null)
         .order('date', { ascending: false });
 

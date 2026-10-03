@@ -245,6 +245,24 @@ describe('Leaderboard related links', () => {
     await waitFor(() => expect(details.open).toBe(true));
   });
 
+  it('reopens and scrolls to the explainer when the link is clicked again after collapsing it', async () => {
+    const scrollIntoView = jest.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    await renderLoaded('/leaderboard#how-points-work');
+    const details = document.getElementById('how-points-work') as HTMLDetailsElement;
+    await waitFor(() => expect(details.open).toBe(true));
+
+    // Collapse it; the URL hash stays #how-points-work.
+    details.open = false;
+    fireEvent(details, new Event('toggle'));
+    await waitFor(() => expect(details.open).toBe(false));
+
+    // Same hash again: no location change, so the click itself must reopen it.
+    fireEvent.click(screen.getByRole('link', { name: /How points work/ }));
+    await waitFor(() => expect(details.open).toBe(true));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+  });
+
   it('keeps the explainer collapsed by default', async () => {
     await renderLoaded();
     const details = document.getElementById('how-points-work') as HTMLDetailsElement;

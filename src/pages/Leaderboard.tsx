@@ -526,6 +526,16 @@ export function Leaderboard() {
     if (location.hash === `#${POINTS_HELP_ANCHOR}`) setPointsHelpOpen(true);
   }, [location.hash]);
 
+  // Clicking the link while the hash is already #how-points-work (after the user
+  // collapsed the explainer) changes no URL part, so the effect above and the
+  // scroll manager never rerun. Reopen and scroll directly.
+  const revealPointsHelp = useCallback(() => {
+    setPointsHelpOpen(true);
+    window.requestAnimationFrame(() => {
+      document.getElementById(POINTS_HELP_ANCHOR)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    });
+  }, []);
+
   const academicYears = useMemo<AcademicYearOption[]>(
     () => buildAcademicYearOptions(terms, yearsWithData),
     [terms, yearsWithData]
@@ -806,7 +816,9 @@ export function Leaderboard() {
       <div className="vsa-container pt-8">
         <RelatedLinks
           heading="Looking for…?"
-          links={leaderboardRelatedLinks(location.pathname, location.search)}
+          links={leaderboardRelatedLinks(location.pathname, location.search).map((link) =>
+            link.to.endsWith(`#${POINTS_HELP_ANCHOR}`) ? { ...link, onClick: revealPointsHelp } : link,
+          )}
         />
         {summerBreak && (
           <div className="mt-4 rounded border px-4 py-3 font-sans text-xs leading-relaxed" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text3)' }}>

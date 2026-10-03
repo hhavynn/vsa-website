@@ -199,12 +199,17 @@ describe('Gallery album quick-look', () => {
     mockAlbums = [
       album('linked', {
         event_id: 'evt-1',
-        event: { id: 'evt-1', name: 'Fall GBM', date: '2025-10-01', academic_term_id: 'term-9' },
+        event: { id: 'evt-1', name: 'Fall GBM', date: '2025-10-01', academic_term_id: 'term-9', is_published: true },
       }),
       // Same name, no foreign key: must NOT be linked by title matching.
       album('lookalike', { title: 'Fall GBM' }),
       // A foreign key whose event the public cannot read (e.g. unpublished).
       album('hidden', { event_id: 'evt-2', event: null }),
+      // A signed-in admin can read a draft through the join; still no public link.
+      album('draft', {
+        event_id: 'evt-3',
+        event: { id: 'evt-3', name: 'Draft GBM', date: '2025-11-01', academic_term_id: 'term-9', is_published: false },
+      }),
     ];
     renderGallery();
 
@@ -218,6 +223,10 @@ describe('Gallery album quick-look', () => {
 
     fireEvent.keyDown(document, { key: 'ArrowRight' });
     expect(within(getDialog()).getByRole('heading', { name: 'Album hidden' })).toBeInTheDocument();
+    expect(within(getDialog()).queryByText(/Related event/)).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(within(getDialog()).getByRole('heading', { name: 'Album draft' })).toBeInTheDocument();
     expect(within(getDialog()).queryByText(/Related event/)).not.toBeInTheDocument();
   });
 });

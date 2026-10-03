@@ -11,6 +11,14 @@ export function eventAnchorId(eventId: string) {
   return `${EVENT_ANCHOR_PREFIX}${eventId}`;
 }
 
+/** The event id in a `#event-<id>` location hash, or null. */
+export function parseEventAnchor(hash: string): string | null {
+  const anchor = decodeURIComponent(hash.replace(/^#/, ''));
+  return anchor.startsWith(EVENT_ANCHOR_PREFIX) && anchor.length > EVENT_ANCHOR_PREFIX.length
+    ? anchor.slice(EVENT_ANCHOR_PREFIX.length)
+    : null;
+}
+
 interface AlbumLinkRow {
   event_id: string | null;
   google_photos_url: string | null;
@@ -29,14 +37,16 @@ export function buildEventAlbumMap(rows: AlbumLinkRow[]): Record<string, string>
 
 /**
  * Link from a gallery album to its related event on /events, or null. Requires
- * both the foreign key and the joined event row (the join is RLS-filtered, so a
- * draft/unpublished event never produces a link), and that they agree.
+ * the foreign key and the joined event row, that they agree, and that the event
+ * is published. RLS hides drafts from the public, but an admin viewing the
+ * public Gallery can read them through the join, and /events never lists a draft.
+ * Missing publication status is treated as unpublished.
  */
 export function getAlbumEventLink(
   album: Pick<GalleryAlbum, 'event_id' | 'event'>,
 ): RelatedLink | null {
   const { event_id: eventId, event } = album;
-  if (!eventId || !event || event.id !== eventId) return null;
+  if (!eventId || !event || event.id !== eventId || event.is_published !== true) return null;
 
   // Past events live in the term-filtered archive; `term` selects it so the
   // card is actually on screen, and the hash scrolls to it.

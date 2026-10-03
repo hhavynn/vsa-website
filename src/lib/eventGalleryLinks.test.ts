@@ -1,4 +1,4 @@
-import { buildEventAlbumMap, eventAnchorId, getAlbumEventLink } from './eventGalleryLinks';
+import { buildEventAlbumMap, eventAnchorId, getAlbumEventLink, parseEventAnchor } from './eventGalleryLinks';
 
 describe('event <-> gallery links are explicit only', () => {
   describe('buildEventAlbumMap (past event -> album)', () => {
@@ -24,7 +24,7 @@ describe('event <-> gallery links are explicit only', () => {
   });
 
   describe('getAlbumEventLink (album -> event)', () => {
-    const event = { id: 'e1', name: 'Fall GBM', date: '2025-10-01', academic_term_id: 'term-1' };
+    const event = { id: 'e1', name: 'Fall GBM', date: '2025-10-01', academic_term_id: 'term-1', is_published: true };
 
     it('links to the event archive for its term, anchored on the event card', () => {
       expect(getAlbumEventLink({ event_id: 'e1', event })).toEqual({
@@ -45,12 +45,33 @@ describe('event <-> gallery links are explicit only', () => {
       expect(getAlbumEventLink({ event_id: null, event })).toBeNull();
     });
 
+    it('returns null for a draft event an admin can read through the join', () => {
+      expect(getAlbumEventLink({ event_id: 'e1', event: { ...event, is_published: false } })).toBeNull();
+    });
+
+    it('treats a missing publication status as unpublished', () => {
+      const { is_published: _omitted, ...withoutStatus } = event;
+      expect(getAlbumEventLink({ event_id: 'e1', event: withoutStatus })).toBeNull();
+    });
+
     it('returns null when the event row is not publicly readable', () => {
       expect(getAlbumEventLink({ event_id: 'e1', event: null })).toBeNull();
     });
 
     it('returns null when the joined event disagrees with the foreign key', () => {
       expect(getAlbumEventLink({ event_id: 'e2', event })).toBeNull();
+    });
+  });
+
+  describe('parseEventAnchor', () => {
+    it('round-trips the anchor id', () => {
+      expect(parseEventAnchor(`#${eventAnchorId('abc-123')}`)).toBe('abc-123');
+    });
+
+    it('ignores other hashes', () => {
+      expect(parseEventAnchor('')).toBeNull();
+      expect(parseEventAnchor('#how-points-work')).toBeNull();
+      expect(parseEventAnchor('#event-')).toBeNull();
     });
   });
 });

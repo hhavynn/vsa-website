@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { RelatedLinks } from './RelatedLinks';
 
@@ -24,6 +24,13 @@ describe('RelatedLinks', () => {
     );
     // Related content, not a second nav bar.
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('runs a link\'s onClick handler', () => {
+    const onClick = jest.fn();
+    renderLinks(<RelatedLinks links={[{ to: '/x#y', label: 'Jump', onClick }]} />);
+    fireEvent.click(screen.getByRole('link', { name: /Jump/ }));
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('renders nothing when there is nothing relevant to offer', () => {

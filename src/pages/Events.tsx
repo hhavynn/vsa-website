@@ -1,5 +1,5 @@
-import { Link, useSearchParams } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
@@ -18,7 +18,7 @@ import { formatDateOnly } from '../lib/dateOnly';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
-import { buildEventAlbumMap } from '../lib/eventGalleryLinks';
+import { buildEventAlbumMap, eventAnchorId, parseEventAnchor } from '../lib/eventGalleryLinks';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLinkedExternalListings } from '../hooks/useExternalEvents';
@@ -35,6 +35,9 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
 import { FALLBACK_EVENTS, FALLBACK_LINKS } from '../config/publicFallbackContent';
+
+// Upper bound on archive pages fetched to reach a deep-linked event.
+const MAX_PAGES_FOR_EVENT_LINK = 10;
 
 type FilterKey = 'all' | Event['event_type'];
 
@@ -178,6 +181,27 @@ export function Events() {
   const archivedEvents = useMemo(() => {
     return pastEventsData?.pages.flatMap(page => page) ?? [];
   }, [pastEventsData]);
+
+  // A Gallery "related event" link (#event-<id>) targets a card that may sit
+  // beyond the first page of its term. Keep loading pages (bounded) until it is
+  // rendered, then scroll to it.
+  const { hash } = useLocation();
+  const targetEventId = parseEventAnchor(hash);
+  const targetEventLoaded = targetEventId !== null && archivedEvents.some((event) => event.id === targetEventId);
+  const targetPagesRequested = useRef(0);
+  useEffect(() => {
+    if (!targetEventId || targetEventLoaded || !hasMorePast || fetchingMorePast) return;
+    if (targetPagesRequested.current >= MAX_PAGES_FOR_EVENT_LINK) return;
+    targetPagesRequested.current += 1;
+    fetchMorePast();
+  }, [targetEventId, targetEventLoaded, hasMorePast, fetchingMorePast, fetchMorePast]);
+  useEffect(() => {
+    if (!targetEventId || !targetEventLoaded) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(eventAnchorId(targetEventId))?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [targetEventId, targetEventLoaded]);
 
   const [linkedAlbums, setLinkedAlbums] = useState<Record<string, string>>({});
   const [publishedRecaps, setPublishedRecaps] = useState<Record<string, string>>({});
