@@ -3,6 +3,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import { internCohortRepository } from '../../data/repos/internCohort';
 import { memberLookupRepository } from '../../data/repos/memberLookup';
@@ -235,6 +237,7 @@ export default function AdminInterns() {
   const [mentors, setMentors] = useState<MentorOption[]>([]);
   const [directory, setDirectory] = useState<MemberOption[]>([]);
   const [busy, setBusy] = useState(false);
+  const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
   const [newCabinetYearId, setNewCabinetYearId] = useState('');
   const [pasted, setPasted] = useState('');
   const [publishConfirmed, setPublishConfirmed] = useState(false);
@@ -496,13 +499,22 @@ export default function AdminInterns() {
     }, 'Failed to publish. Nothing was lost; fix the issue and publish again.');
   }
 
-  function discard() {
-    if (!cycle || !window.confirm('Delete this draft cohort? This cannot be undone.')) return;
-    return run(async () => {
+  // Runs inside the ConfirmDialog: it stays open and shows the error if this throws.
+  async function confirmDiscard() {
+    if (!cycle) return;
+    setBusy(true);
+    try {
       await internCohortRepository.deleteCycle(cycle.id);
       setCycleId(null);
       await loadCycles();
-    }, 'Failed to delete.');
+      toast.success('Draft cohort deleted.');
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to delete.');
+      throw err;
+    } finally {
+      setBusy(false);
+    }
   }
 
   // ─── Bulk actions ──────────────────────────────────────────────────────────
@@ -581,16 +593,19 @@ export default function AdminInterns() {
       <PageTitle title="Intern Cohort" />
       <Toaster position="top-right" />
 
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Intern Cohort</h1>
-        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-          Prepare the accepted intern cohort privately. Nothing is public until you publish; publishing adds the interns to the Cabinet page&apos;s Interns group, which is what the Internship page shows.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <Link to="/admin/cabinet" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Cabinet admin</Link>
-          <Link to="/intern-program" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>View public Internship page</Link>
-        </div>
-      </div>
+      <AdminPageHeader
+        description={
+          <>
+            Prepare the accepted intern cohort privately. Nothing is public until you publish; publishing adds the interns to the Cabinet page&apos;s Interns group, which is what the Internship page shows.
+          </>
+        }
+        actions={
+          <>
+            <Link to="/admin/cabinet" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>Cabinet admin</Link>
+            <Link to="/intern-program" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>View public Internship page</Link>
+          </>
+        }
+      />
 
       {!cycle ? (
         <div className="grid gap-6 p-4 sm:p-6 lg:p-8 lg:grid-cols-2">
@@ -651,7 +666,7 @@ export default function AdminInterns() {
             <div className="flex flex-wrap gap-2">
               {cycle.status === 'draft' && (
                 <>
-                  <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }} disabled={busy} onClick={discard}>Delete draft</button>
+                  <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }} disabled={busy} onClick={() => setDeleteDraftOpen(true)}>Delete draft</button>
                   <button type="button" className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !preflight.canLock} onClick={lock}>Lock cohort</button>
                 </>
               )}
@@ -803,6 +818,18 @@ export default function AdminInterns() {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={deleteDraftOpen}
+        title={`Delete the ${cycle ? formatCohortYears(cycle) : ''} intern cohort draft?`}
+        description="This deletes the private draft cohort and its interns. It cannot be undone."
+        consequences={[
+          'Draft only: nothing published changes. The public Cabinet page and Internship page are untouched.',
+          'Member links and mentor choices on the draft are removed with it. Club member records are not deleted.',
+        ]}
+        confirmLabel="Delete draft"
+        onConfirm={confirmDiscard}
+        onClose={() => setDeleteDraftOpen(false)}
+      />
     </>
   );
 }

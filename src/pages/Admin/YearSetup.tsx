@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageTitle } from '../../components/common/PageTitle';
 import { NextStepBanner, PreflightSummary, YearContextBadge } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
@@ -12,7 +13,7 @@ import { describeYearContext } from '../../lib/adminYearContext';
 import { yearSetupRepository } from '../../data/repos/yearSetup';
 import { useAuth } from '../../hooks/useAuth';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
-import { APPLICATION_STATUS_LABELS } from '../../lib/applicationLinks';
+import { APPLICATION_STATUS_LABELS, applicationKeyLabel } from '../../lib/applicationLinks';
 import { formatYearSpan, pluralize } from '../../lib/operationalStatus';
 import {
   EMPTY_SNAPSHOT,
@@ -96,7 +97,7 @@ export default function AdminYearSetup() {
   const [nextStep, setNextStep] = useState<NextStep | null>(null);
   const operatingYear = useOperatingYear();
   const [selectedApps, setSelectedApps] = useState<Record<string, boolean>>({});
-  const [resetConfirmed, setResetConfirmed] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
 
   const sourceDefault = useMemo(() => {
@@ -124,7 +125,7 @@ export default function AdminYearSetup() {
   useEffect(() => {
     if (loadingYears) return;
     setReport(null);
-    setResetConfirmed(false);
+    setResetDialogOpen(false);
     setOptions(defaultSetupOptions(targetYear, sourceDefault));
     loadSnapshot(targetYear).then((next) => {
       if (!next) return;
@@ -174,27 +175,50 @@ export default function AdminYearSetup() {
     }
   }
 
+  // Runs from the typed confirm dialog. Failures are thrown so the dialog stays
+  // open and names them; running it again only retries what is still unchanged.
   async function resetApplications() {
     const chosen = resetPlan.rows.filter((row) => selectedApps[row.id]);
     if (chosen.length === 0) return;
     setResetting(true);
+    let result: Awaited<ReturnType<typeof yearSetupRepository.resetApplications>>;
     try {
-      const result = await yearSetupRepository.resetApplications(chosen, targetYear);
+      result = await yearSetupRepository.resetApplications(chosen, targetYear);
       await loadSnapshot(targetYear);
-      setResetConfirmed(false);
-      if (result.failed.length > 0) toast.error(`${result.failed.length} window${result.failed.length === 1 ? '' : 's'} could not be updated.`);
-      else toast.success(`Updated ${pluralize(result.updated, 'application window')}. Add real dates and links in Applications before opening any.`);
     } catch (err) {
       console.error(err);
       toast.error('Failed to reset applications.');
+      throw new Error('Failed to reset applications. Try again.');
     } finally {
       setResetting(false);
     }
+    if (result.failed.length > 0) {
+      const names = result.failed.map((entry) => applicationKeyLabel(entry.key)).join(', ');
+      const message = `${pluralize(result.failed.length, 'window')} could not be updated (${names}); ${result.updated} updated. Try again to retry the rest.`;
+      toast.error(message);
+      throw new Error(message);
+    }
+    toast.success(`Updated ${pluralize(result.updated, 'application window')}. Add real dates and links in Applications before opening any.`);
   }
 
   const yearLabel = formatYearSpan(targetYear);
   const writeCount = plan?.writeCount ?? 0;
-  const selectedCount = resetPlan.rows.filter((row) => selectedApps[row.id] && (row.willDisable || row.willReplaceTiming)).length;
+  const resetTargets = resetPlan.rows.filter((row) => selectedApps[row.id] && (row.willDisable || row.willReplaceTiming));
+  const selectedCount = resetTargets.length;
+  // ASCII hyphen on purpose: the heading shows an en dash, which nobody can type quickly.
+  const resetPhrase = `${targetYear}-${String((targetYear + 1) % 100).padStart(2, '0')}`;
+  const resetConsequences = (() => {
+    const disabling = resetTargets.filter((row) => row.willDisable);
+    const retiming = resetTargets.filter((row) => row.willReplaceTiming);
+    const liveNow = resetTargets.filter((row) => row.openNow);
+    const lines: string[] = [];
+    if (disabling.length > 0) lines.push(`Disables ${pluralize(disabling.length, 'window')}: the public Apply button stops showing for them.`);
+    if (liveNow.length > 0) lines.push(`${pluralize(liveNow.length, 'window')} ${liveNow.length === 1 ? 'is' : 'are'} open right now and will stop accepting applicants immediately.`);
+    if (retiming.length > 0) lines.push(`Replaces the past open and due dates on ${pluralize(retiming.length, 'window')} with a disabled placeholder on Sep 1, ${targetYear}. The old dates are not kept.`);
+    lines.push('Never enables a window and never changes a link, title, or message.');
+    lines.push('To undo, re-enable each window and re-enter its dates in Applications.');
+    return lines;
+  })();
 
   return (
     <>
@@ -367,12 +391,30 @@ export default function AdminYearSetup() {
               )}
               {resetPlan.pending.length > 0 && (
                 <>
-                  <Check id="app-reset-confirm" checked={resetConfirmed} onChange={setResetConfirmed}>
-                    I confirm: disable the selected application windows.
-                  </Check>
-                  <button type="button" className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50" disabled={resetting || !resetConfirmed || selectedCount === 0} onClick={resetApplications}>
-                    {resetting ? 'Resetting…' : `Reset ${pluralize(selectedCount, 'application window')}`}
+                  <button type="button" className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50" disabled={resetting || selectedCount === 0} onClick={() => setResetDialogOpen(true)}>
+                    {resetting ? 'Resetting…' : `Reset ${pluralize(selectedCount, 'application window')}…`}
                   </button>
+                  <ConfirmDialog
+                    open={resetDialogOpen}
+                    title={`Reset application windows for ${yearLabel}?`}
+                    description={`This changes ${pluralize(selectedCount, 'application window')} on the live site.`}
+                    consequences={resetConsequences}
+                    requireText={resetPhrase}
+                    confirmLabel={`Reset ${pluralize(selectedCount, 'window')}`}
+                    onConfirm={resetApplications}
+                    onClose={() => setResetDialogOpen(false)}
+                  >
+                    <ul className="mt-3 space-y-1 rounded border px-3 py-2 font-sans text-xs border-[var(--color-border)]" aria-label="Windows that will change">
+                      {resetTargets.map((row) => (
+                        <li key={row.id}>
+                          <span className="font-semibold">{row.label}</span>
+                          <span className="ml-2 text-[var(--color-text3)]">
+                            {[row.willDisable ? 'disable' : null, row.willReplaceTiming ? 'replace past dates' : null].filter(Boolean).join(' + ')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </ConfirmDialog>
                 </>
               )}
               <Link to="/admin/applications" className="block text-xs font-semibold text-[var(--brand)] hover:underline">Open Applications →</Link>

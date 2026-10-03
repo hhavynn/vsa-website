@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useAdminCabinetRoles, useUpdateCabinetRole, useCreateCabinetRole, useDeleteCabinetRole } from '../../../hooks/useCabinetRoles';
 import { CabinetRoleDescription } from '../../../data/repos/cabinetRolesRepository';
 import { generateSlug } from '../../../utils/generateSlug';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
 
 const BOARD_GROUPS = [
   'Executive Board',
@@ -23,6 +24,7 @@ export function AdminCabinetRoleDescriptions() {
 
   const [selectedRole, setSelectedRole] = useState<CabinetRoleDescription | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<CabinetRoleDescription>>({});
 
   const [responsibilitiesText, setResponsibilitiesText] = useState('');
@@ -99,14 +101,18 @@ export function AdminCabinetRoleDescriptions() {
     }
   };
 
+  // Runs inside the ConfirmDialog: it stays open and shows the error if this throws.
   const handleDelete = async () => {
-    if (!selectedRole || !window.confirm(`Are you sure you want to delete ${selectedRole.role_name}?`)) return;
+    if (!selectedRole) return;
     try {
       await deleteRole.mutateAsync(selectedRole.role_slug);
-      toast.success('Role deleted successfully');
+      toast.success(`Deleted the ${selectedRole.role_name} role description`);
+      // The dialog unmounts with the edit form, so close it explicitly here.
+      setDeleteOpen(false);
       handleCancel();
     } catch (err) {
       toast.error('Failed to delete role');
+      throw err;
     }
   };
 
@@ -184,12 +190,26 @@ export function AdminCabinetRoleDescriptions() {
               </button>
             </div>
             {!isCreating && (
-              <button type="button" onClick={handleDelete} className="rounded border border-red-900/30 px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white" disabled={deleteRole.isLoading}>
+              <button type="button" onClick={() => setDeleteOpen(true)} className="rounded border border-red-900/30 px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-600 hover:text-white" disabled={deleteRole.isLoading}>
                 Delete
               </button>
             )}
           </div>
         </form>
+        {selectedRole && (
+          <ConfirmDialog
+            open={deleteOpen}
+            title={`Delete the ${selectedRole.role_name} role description?`}
+            description="This permanently deletes the description. It cannot be undone."
+            consequences={[
+              'The role is removed from the role descriptions on the public Cabinet page.',
+              'People already listed in this role are not affected.',
+            ]}
+            confirmLabel="Delete role"
+            onConfirm={handleDelete}
+            onClose={() => setDeleteOpen(false)}
+          />
+        )}
       </div>
     );
   }

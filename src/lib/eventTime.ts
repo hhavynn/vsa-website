@@ -2,6 +2,7 @@
 // Avoids timezone-shift bugs by keeping date and time handling separate.
 
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { formatDateOnly } from './dateOnly';
 
 /**
  * Format a SQL time value like "19:00:00" or "19:00" to "7:00 PM".
@@ -52,6 +53,15 @@ export function getEventDateOnly(isoOrDate: string, startTime?: string | null): 
   }
 
   return getLosAngelesDateOnly(instant);
+}
+
+/**
+ * "Mar 10, 2030" for an event's San Diego calendar day, whatever timezone the
+ * viewer's device is in. Composes getEventDateOnly (the San Diego day) with
+ * formatDateOnly (which formats a date-only string without shifting it).
+ */
+export function formatEventDay(isoOrDate: string, startTime?: string | null): string {
+  return formatDateOnly(getEventDateOnly(isoOrDate, startTime));
 }
 
 /**

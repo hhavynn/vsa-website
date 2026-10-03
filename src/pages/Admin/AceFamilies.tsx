@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from 'react-query';
 import { useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
 import {
@@ -24,6 +25,7 @@ import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../li
 import { isRenamed } from '../../lib/memberPhotos';
 import { supabase } from '../../lib/supabase';
 import { toUserMessage } from '../../data/errors';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { MemberLinkPicker, MemberLinkSuggestion } from '../../components/features/admin/MemberLinkPicker';
 import { AceLinkReviewPanel } from '../../components/features/admin/AceLinkReviewPanel';
 import { EmptyState, FilterChips, NextStepBanner, SaveBar, YearContextBadge } from '../../components/features/admin/ops';
@@ -505,6 +507,8 @@ export default function AdminAceFamilies() {
   const { members, refetch: refetchMembers } = useAdminAceFamilyMembers(selectedFamilyId);
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
   const [newMemberName, setNewMemberName] = useState('');
+  const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<AceFamilyMember | null>(null);
 
   // ── Import JSON state ──────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
@@ -768,18 +772,21 @@ export default function AdminAceFamilies() {
     }
   };
 
-  const handleDeleteFamily = async () => {
+  // Runs inside the typed ConfirmDialog: it stays open and shows the error if this throws.
+  const confirmDeleteFamily = async () => {
     if (!selectedFamily) return;
-    if (!window.confirm(`Delete fam "${selectedFamily.name}" and all its members? This cannot be undone.`)) return;
     try {
       await aceFamiliesRepository.deleteFamily(selectedFamily.id);
-      toast.success('Family deleted');
+      toast.success(`Deleted ${selectedFamily.name} and its members`);
+      // The dialog unmounts with the selected fam, so close it explicitly here.
+      setDeleteFamilyOpen(false);
       setSelectedFamilyId(null);
       await invalidateLists();
       await refetch();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete family');
+      throw err;
     }
   };
 
@@ -906,19 +913,35 @@ export default function AdminAceFamilies() {
     }
   };
 
-  const handleDeleteMember = async (id: string) => {
-    if (!window.confirm('Remove this member from the fam?')) return;
+  // Runs inside the ConfirmDialog: it stays open and shows the error if this throws.
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove) return;
     try {
-      const member = members.find((item) => item.id === id);
-      await aceFamiliesRepository.deleteMember(id);
-      await removeAceImage(member?.photo_url);
-      toast.success('Member removed');
+      await aceFamiliesRepository.deleteMember(memberToRemove.id);
+      await removeAceImage(memberToRemove.photo_url);
+      toast.success(`Removed ${memberToRemove.name} from the fam`);
       await refetchMembers();
     } catch (err) {
       console.error(err);
       toast.error('Failed to remove member');
+      throw err;
     }
   };
+
+  const handleDeleteMember = (id: string) => {
+    const member = members.find((item) => item.id === id);
+    if (member) setMemberToRemove(member);
+  };
+
+  const removeMemberConsequences = memberToRemove
+    ? [
+        ...(members.some((item) => item.parent_member_id === memberToRemove.id)
+          ? ['Their littles stay in the fam but become top-level people with no Big.']
+          : []),
+        ...(memberToRemove.photo_url ? ['Their uploaded photo is deleted.'] : []),
+        'Assignment drafts that picked them as a Big lose that choice.',
+      ]
+    : [];
 
   if (loading) {
     return (
@@ -945,62 +968,55 @@ export default function AdminAceFamilies() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="ACE Fams" />
 
-      <div
-        className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8"
-        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-      >
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
-            ACE Fams
-          </h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-            Manage timeless ACE families and Big/Little tree structure.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="tablist" aria-label="ACE admin sections" className="flex rounded border" style={{ borderColor: 'var(--color-border)' }}>
-            {(['families', 'assignments'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={view === tab}
-                onClick={() => setView(tab)}
-                className="px-4 py-2 text-[13px] font-semibold transition-colors"
-                style={{
-                  background: view === tab ? 'var(--color-surface2)' : 'transparent',
-                  color: view === tab ? 'var(--color-text)' : 'var(--color-text2)',
-                  border: 'none',
-                }}
-              >
-                {tab === 'families' ? 'Families' : 'Assignments'}
-              </button>
-            ))}
-          </div>
-          {view === 'families' && (
+      <AdminPageHeader
+        description="Manage timeless ACE families and Big/Little tree structure."
+        detail={selectedFamily?.name}
+        actions={
           <>
-          <button
-            type="button"
-            onClick={() => {
-              setImportOpen((o) => !o);
-              setImportError(null);
-            }}
-            className="rounded border bg-transparent px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-          >
-            {importOpen ? 'Close Import' : 'Import JSON'}
-          </button>
-          <button
-            type="button"
-            onClick={handleNewFamily}
-            className="vsa-btn-primary px-4 py-2 text-[13px]"
-          >
-            + New Fam
-          </button>
+            <div role="tablist" aria-label="ACE admin sections" className="flex rounded border" style={{ borderColor: 'var(--color-border)' }}>
+              {(['families', 'assignments'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === tab}
+                  onClick={() => setView(tab)}
+                  className="px-4 py-2 text-[13px] font-semibold transition-colors"
+                  style={{
+                    background: view === tab ? 'var(--color-surface2)' : 'transparent',
+                    color: view === tab ? 'var(--color-text)' : 'var(--color-text2)',
+                    border: 'none',
+                  }}
+                >
+                  {tab === 'families' ? 'Families' : 'Assignments'}
+                </button>
+              ))}
+            </div>
+            {view === 'families' && (
+            <>
+            <button
+              type="button"
+              onClick={() => {
+                setImportOpen((o) => !o);
+                setImportError(null);
+              }}
+              className="rounded border bg-transparent px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
+            >
+              {importOpen ? 'Close Import' : 'Import JSON'}
+            </button>
+            <button
+              type="button"
+              onClick={handleNewFamily}
+              className="vsa-btn-primary px-4 py-2 text-[13px]"
+            >
+              + New Fam
+            </button>
+            </>
+            )}
           </>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {view === 'families' && importOpen && (
         <div
@@ -1210,7 +1226,7 @@ export default function AdminAceFamilies() {
               {selectedFamily && (
                 <button
                   type="button"
-                  onClick={handleDeleteFamily}
+                  onClick={() => setDeleteFamilyOpen(true)}
                   className="rounded border px-3 py-1.5 font-sans text-xs text-red-500 hover:text-red-400"
                   style={{ borderColor: 'var(--color-border)', background: 'transparent' }}
                 >
@@ -1557,6 +1573,33 @@ export default function AdminAceFamilies() {
         </div>
       </div>
       )}
+
+      {selectedFamily && (
+        <ConfirmDialog
+          open={deleteFamilyOpen}
+          title={`Delete ${selectedFamily.name}?`}
+          description="This permanently deletes the fam and its whole Big/Little tree. It cannot be undone."
+          consequences={[
+            `Deletes all ${members.length} ${members.length === 1 ? 'person' : 'people'} in this fam.`,
+            'The fam disappears from the public ACE pages if it was published.',
+            'Assignment drafts that picked these people as a Big lose that choice. Club member records are not deleted.',
+          ]}
+          requireText={selectedFamily.name}
+          confirmLabel="Delete fam"
+          onConfirm={confirmDeleteFamily}
+          onClose={() => setDeleteFamilyOpen(false)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={memberToRemove !== null}
+        title={`Remove ${memberToRemove?.name ?? 'this person'} from the fam?`}
+        description="They are removed from this fam's tree. This cannot be undone."
+        consequences={removeMemberConsequences}
+        confirmLabel="Remove"
+        onConfirm={confirmRemoveMember}
+        onClose={() => setMemberToRemove(null)}
+      />
     </div>
   );
 }

@@ -1,18 +1,37 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "react-query";
 import toast from "react-hot-toast";
 import {
   adminMembersRepository,
   AdminMemberSummary,
 } from "../../../data/repos/adminMembers";
-import { toUserMessage } from "../../../data/errors";
-import { AdminMemberInput, AdminMemberSchema } from "../../../schemas";
+import { ValidationError } from "../../../data/errors";
+import { AdminMemberSchema } from "../../../schemas";
+import { useAdminForm } from "../../../hooks/useAdminForm";
 import { OFFICIAL_YEARS } from "../../../lib/yearNormalizer";
 import { MEMBER_COLLEGES } from "../../../constants/memberOptions";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
+import { AdminField, AdminFormShell } from "./ops/AdminFormShell";
 import { MemberWorkflowDialog } from "./MemberWorkflowDialog";
+
+const EMPTY_MEMBER = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  college: "",
+  year: "",
+};
+
+const DUPLICATE_EMAIL = "That email already belongs to a member.";
+
+// A database unique violation on the email lands on the email field. The repo's
+// own duplicate-email pre-check is mapped the same way in `createMember` below.
+const CONSTRAINTS = {
+  members_email: { field: "email", message: DUPLICATE_EMAIL },
+  "(email)": { field: "email", message: DUPLICATE_EMAIL },
+};
+
+const selectCls =
+  "min-h-[44px] w-full rounded border border-border-strong bg-surface2 p-2.5 text-sm";
 
 export function AddMemberModal({
   onClose,
@@ -21,128 +40,116 @@ export function AddMemberModal({
   onClose: () => void;
   onCreated: (member: AdminMemberSummary) => void | Promise<void>;
 }) {
+  const { form, submit, status, formError, discard, confirmDiscard } =
+    useAdminForm({
+      schema: AdminMemberSchema,
+      defaultValues: EMPTY_MEMBER,
+      successMessage: "Member created.",
+      constraints: CONSTRAINTS,
+      onSubmit: async (values) => {
+        let member: AdminMemberSummary;
+        try {
+          member = await adminMembersRepository.createMember(values);
+        } catch (error) {
+          // The repo's duplicate-email check has no field; give it one so the
+          // message sits beside the email input.
+          if (
+            error instanceof ValidationError &&
+            !error.field &&
+            /email already exists/i.test(error.message)
+          ) {
+            throw new ValidationError(error.message, "email");
+          }
+          throw error;
+        }
+        // The member exists now, so a list refresh failure must not read as
+        // "could not create" (which would invite a duplicate).
+        try {
+          await onCreated(member);
+        } catch (error) {
+          console.error(error);
+          toast.error(
+            "Member created, but the list could not refresh. Reload the page.",
+          );
+        }
+        return member;
+      },
+      onSuccess: onClose,
+    });
   const {
     register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AdminMemberInput>({
-    resolver: zodResolver(AdminMemberSchema),
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      email: "",
-      college: "",
-      year: "",
-    },
-  });
-  const create = useMutation(
-    (values: AdminMemberInput) => adminMembersRepository.createMember(values),
-    {
-      onSuccess: async (member) => {
-        await onCreated(member);
-        toast.success("Member created.");
-        onClose();
-      },
-    },
-  );
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const requestClose = () => {
+    if (confirmDiscard()) onClose();
+  };
+
   return (
     <MemberWorkflowDialog
       title="Add Member"
-      busy={create.isLoading}
-      onClose={onClose}
+      busy={isSubmitting}
+      onClose={requestClose}
     >
       <h2 className="text-lg font-semibold">Add Member</h2>
       <p className="mt-1 text-sm text-text-secondary">
         Search Members first to avoid creating a duplicate. Add their event
         attendance after creating the member.
       </p>
-      <form
-        onSubmit={handleSubmit((values) => create.mutate(values))}
-        className="mt-5 space-y-4"
+      <AdminFormShell
+        className="mt-5"
+        label="Add Member"
+        onSubmit={submit}
+        status={status}
+        formError={formError}
+        errors={errors}
+        onDiscard={discard}
+        saveLabel="Create member"
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            onClick={requestClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+        }
       >
-        <fieldset disabled={create.isLoading} className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="new-member-first"
-                className="mb-1 block text-sm font-medium"
-              >
-                First name
-              </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AdminField label="First name" required error={errors.first_name?.message}>
+            {(field) => (
               <Input
-                id="new-member-first"
+                {...field}
                 autoComplete="given-name"
-                aria-invalid={!!errors.first_name}
                 {...register("first_name")}
               />
-              {errors.first_name && (
-                <p
-                  role="alert"
-                  className="mt-1 text-sm text-red-700 dark:text-red-400"
-                >
-                  {errors.first_name.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor="new-member-last"
-                className="mb-1 block text-sm font-medium"
-              >
-                Last name
-              </label>
+            )}
+          </AdminField>
+          <AdminField label="Last name" required error={errors.last_name?.message}>
+            {(field) => (
               <Input
-                id="new-member-last"
+                {...field}
                 autoComplete="family-name"
-                aria-invalid={!!errors.last_name}
                 {...register("last_name")}
               />
-              {errors.last_name && (
-                <p
-                  role="alert"
-                  className="mt-1 text-sm text-red-700 dark:text-red-400"
-                >
-                  {errors.last_name.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <div>
-            <label
-              htmlFor="new-member-email"
-              className="mb-1 block text-sm font-medium"
-            >
-              Email (optional)
-            </label>
+            )}
+          </AdminField>
+        </div>
+        <AdminField label="Email (optional)" error={errors.email?.message}>
+          {(field) => (
             <Input
-              id="new-member-email"
+              {...field}
               type="email"
               autoComplete="email"
-              aria-invalid={!!errors.email}
               {...register("email")}
             />
-            {errors.email && (
-              <p
-                role="alert"
-                className="mt-1 text-sm text-red-700 dark:text-red-400"
-              >
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="new-member-college"
-                className="mb-1 block text-sm font-medium"
-              >
-                College
-              </label>
-              <select
-                id="new-member-college"
-                {...register("college")}
-                className="w-full rounded border border-border-strong bg-surface2 p-2.5 text-sm"
-              >
+          )}
+        </AdminField>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AdminField label="College" error={errors.college?.message}>
+            {(field) => (
+              <select {...field} {...register("college")} className={selectCls}>
                 <option value="">Unspecified</option>
                 {MEMBER_COLLEGES.map((college) => (
                   <option key={college.value} value={college.value}>
@@ -150,19 +157,11 @@ export function AddMemberModal({
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label
-                htmlFor="new-member-year"
-                className="mb-1 block text-sm font-medium"
-              >
-                Year
-              </label>
-              <select
-                id="new-member-year"
-                {...register("year")}
-                className="w-full rounded border border-border-strong bg-surface2 p-2.5 text-sm"
-              >
+            )}
+          </AdminField>
+          <AdminField label="Year" error={errors.year?.message}>
+            {(field) => (
+              <select {...field} {...register("year")} className={selectCls}>
                 <option value="">Unspecified</option>
                 {OFFICIAL_YEARS.map((year) => (
                   <option key={year} value={year}>
@@ -170,31 +169,10 @@ export function AddMemberModal({
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-        </fieldset>
-        {create.isError && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-            {toUserMessage(
-              create.error,
-              "Could not create the member. Try again.",
             )}
-          </p>
-        )}
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={create.isLoading}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" loading={create.isLoading}>
-            {create.isLoading ? "Creating…" : "Create member"}
-          </Button>
+          </AdminField>
         </div>
-      </form>
+      </AdminFormShell>
     </MemberWorkflowDialog>
   );
 }

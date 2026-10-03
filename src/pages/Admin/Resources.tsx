@@ -11,10 +11,17 @@ import {
   FaUndo,
 } from 'react-icons/fa';
 import { useQueryClient } from 'react-query';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { PageTitle } from '../../components/common/PageTitle';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { BulkActionBar, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops/BulkActionBar';
+import { BulkRunDialog } from '../../components/features/admin/ops/BulkRunDialog';
 import { PageLoader } from '../../components/common/PageLoader';
 import { PageError } from '../../components/common/PageError';
 import { RESOURCE_LINKS_QUERY_KEY, useResourceLinks } from '../../hooks/useResourceLinks';
+import { useRowSelection } from '../../hooks/useRowSelection';
+import { BulkPlan, planBulk } from '../../lib/adminBulk';
+import { BulkRunResult } from '../../lib/adminBulkRun';
 import {
   RESOURCE_LINK_CATEGORIES,
   ResourceLinkFormData,
@@ -134,6 +141,25 @@ function payloadFromForm(form: ResourceFormState): ResourceLinkFormData {
   };
 }
 
+const resourceId = (resource: ResourceLink) => resource.id;
+
+type BulkMode = 'archive' | 'restore';
+
+/**
+ * What a bulk archive/restore would do to the selected resources. Rows already
+ * in the target state are skipped with a reason rather than rewritten.
+ */
+export function planResourceArchive(rows: readonly ResourceLink[], mode: BulkMode): BulkPlan<ResourceLink> {
+  return planBulk(
+    rows,
+    (resource) => {
+      if (mode === 'archive') return resource.is_archived ? 'Already archived.' : null;
+      return resource.is_archived ? null : 'Not archived, nothing to restore.';
+    },
+    { verb: mode === 'archive' ? 'Archive' : 'Restore', noun: 'resource', nounPlural: 'resources' },
+  );
+}
+
 function uniqueValues(resources: ResourceLink[], field: 'role' | 'program' | 'workflow') {
   return Array.from(new Set(resources.map((resource) => resource[field]).filter(Boolean) as string[])).sort();
 }
@@ -150,6 +176,9 @@ export default function AdminResources() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [programFilter, setProgramFilter] = useState('all');
   const [workflowFilter, setWorkflowFilter] = useState('all');
+  const [deleteTarget, setDeleteTarget] = useState<ResourceLink | null>(null);
+  // The plan is frozen when the dialog opens so a refetch cannot change what was previewed.
+  const [bulk, setBulk] = useState<{ mode: BulkMode; plan: BulkPlan<ResourceLink>; scopeNote: string } | null>(null);
 
   const roleOptions = useMemo(() => uniqueValues(resources, 'role'), [resources]);
   const programOptions = useMemo(() => uniqueValues(resources, 'program'), [resources]);
@@ -184,6 +213,9 @@ export default function AdminResources() {
       return true;
     });
   }, [categoryFilter, programFilter, resources, roleFilter, search, statusFilter, workflowFilter]);
+
+  // The list is not paginated, so "this page" and "everything matching the filter" are the same rows.
+  const selection = useRowSelection(visibleResources, visibleResources, resourceId);
 
   const activeCount = useMemo(() => resources.filter((resource) => !resource.is_archived).length, [resources]);
   const archivedCount = useMemo(() => resources.filter((resource) => resource.is_archived).length, [resources]);
@@ -267,17 +299,43 @@ export default function AdminResources() {
     }
   };
 
+  // Runs from the confirm dialog: a failure is re-thrown so the dialog stays open and shows it.
   const handleDelete = async (resource: ResourceLink) => {
-    if (!window.confirm(`Delete "${resource.title}"? This removes the admin index row, not the Drive file.`)) return;
     try {
       await resourceLinksRepository.delete(resource.id);
-      toast.success('Resource deleted');
-      await refreshResources();
-      if (selectedResource?.id === resource.id) resetForm();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete resource');
+      throw new Error('Failed to delete the resource. Nothing was removed.');
     }
+    toast.success('Resource deleted');
+    if (selectedResource?.id === resource.id) resetForm();
+    try {
+      await refreshResources();
+    } catch (err) {
+      // The delete itself succeeded; a failed refetch must not read as a failed delete.
+      console.error(err);
+    }
+  };
+
+  const openBulk = (mode: BulkMode) => {
+    setBulk({
+      mode,
+      plan: planResourceArchive(selection.selectedRows, mode),
+      scopeNote: selection.describe('resource', 'resources'),
+    });
+  };
+
+  const finishBulk = (result: BulkRunResult<ResourceLink>) => {
+    const done = bulk?.mode === 'restore' ? 'Restored' : 'Archived';
+    if (result.failed.length === 0) {
+      toast.success(`${done} ${result.succeeded.length} resource${result.succeeded.length === 1 ? '' : 's'}`);
+      selection.clear();
+    } else {
+      toast.error(`${done} ${result.succeeded.length}, ${result.failed.length} failed. See the list for details.`);
+    }
+    if (selectedResource && result.succeeded.some((resource) => resource.id === selectedResource.id)) resetForm();
+    void refreshResources();
   };
 
   const handleVerify = async (resource: ResourceLink) => {
@@ -313,28 +371,20 @@ export default function AdminResources() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Admin Resources" />
 
-      <div
-        className="border-b px-5 py-5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-7"
-        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-      >
-        <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
-            Resources
-          </h1>
-          <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
-            {activeCount} active, {archivedCount} archived. Admin-only Drive, form, and doc pointers for cabinet work.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={resetForm}
-          className="mt-4 inline-flex items-center gap-2 rounded border px-3 py-2 font-sans text-xs font-medium transition-colors sm:mt-0"
-          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
-        >
-          <PlusIcon className="h-3 w-3" aria-hidden />
-          New Resource
-        </button>
-      </div>
+      <AdminPageHeader
+        description={`${activeCount} active, ${archivedCount} archived. Admin-only Drive, form, and doc pointers for cabinet work.`}
+        actions={
+          <button
+            type="button"
+            onClick={resetForm}
+            className="inline-flex items-center gap-2 rounded border px-3 py-2 font-sans text-xs font-medium transition-colors"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'transparent' }}
+          >
+            <PlusIcon className="h-3 w-3" aria-hidden />
+            New Resource
+          </button>
+        }
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]" style={{ padding: '20px 28px' }}>
         <div className="min-w-0 space-y-4">
@@ -419,6 +469,27 @@ export default function AdminResources() {
               </span>
             </div>
 
+            {visibleResources.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-b px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
+                <label className="flex items-center gap-2 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                  <RowCheckbox
+                    checked={selection.allOnPage}
+                    onChange={() => (selection.allOnPage ? selection.clear() : selection.selectAllMatching())}
+                    label={`Select all ${selection.totalMatching} matching this filter`}
+                  />
+                  Select all {selection.totalMatching} matching this filter
+                </label>
+              </div>
+            )}
+            <BulkActionBar count={selection.count} noun="resource" onClear={selection.clear}>
+              <button type="button" className={bulkBtnCls} onClick={() => openBulk('archive')}>
+                Archive…
+              </button>
+              <button type="button" className={bulkBtnCls} onClick={() => openBulk('restore')}>
+                Restore…
+              </button>
+            </BulkActionBar>
+
             {visibleResources.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <p className="font-sans text-sm font-medium" style={{ color: 'var(--color-text)' }}>No matching resources</p>
@@ -434,10 +505,12 @@ export default function AdminResources() {
                       key={resource.id}
                       resource={resource}
                       selected={selectedResource?.id === resource.id}
+                      checked={selection.isSelected(resource.id)}
+                      onToggle={selection.toggle}
                       onEdit={selectResource}
                       onCopy={handleCopy}
                       onArchive={handleArchive}
-                      onDelete={handleDelete}
+                      onDelete={setDeleteTarget}
                       onVerify={handleVerify}
                     />
                   ))}
@@ -447,11 +520,12 @@ export default function AdminResources() {
                   <table className="min-w-full table-fixed border-collapse">
                     <thead>
                       <tr className="border-b text-left" style={{ borderColor: 'var(--color-border)' }}>
-                        <th className="w-[30%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Resource</th>
+                        <th className="w-10 px-4 py-3"><span className="sr-only">Select</span></th>
+                        <th className="w-[28%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Resource</th>
                         <th className="w-[16%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Category</th>
                         <th className="w-[16%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Scope</th>
                         <th className="w-[14%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Verified</th>
-                        <th className="w-[24%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Actions</th>
+                        <th className="w-[22%] px-4 py-3 font-mono text-[10px] uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
@@ -460,10 +534,12 @@ export default function AdminResources() {
                           key={resource.id}
                           resource={resource}
                           selected={selectedResource?.id === resource.id}
+                          checked={selection.isSelected(resource.id)}
+                          onToggle={selection.toggle}
                           onEdit={selectResource}
                           onCopy={handleCopy}
                           onArchive={handleArchive}
-                          onDelete={handleDelete}
+                          onDelete={setDeleteTarget}
                           onVerify={handleVerify}
                         />
                       ))}
@@ -586,6 +662,61 @@ export default function AdminResources() {
           </form>
         </aside>
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={`Delete “${deleteTarget.title}”?`}
+          description="This removes the resource from the admin index. The Drive file or form it points to is not touched. This cannot be undone."
+          consequences={
+            deleteTarget.is_archived
+              ? ['The link and its notes (owner, program, workflow, dates) are lost from this list.']
+              : ['The link and its notes (owner, program, workflow, dates) are lost from this list.', 'Archive instead to hide it from the default view and bring it back later.']
+          }
+          confirmLabel="Delete resource"
+          onConfirm={() => handleDelete(deleteTarget)}
+          onClose={() => setDeleteTarget(null)}
+        >
+          {!deleteTarget.is_archived && (
+            <button
+              type="button"
+              className="mt-3 font-sans text-xs font-semibold underline underline-offset-2"
+              style={{ color: 'var(--color-text)', background: 'transparent', border: 'none', padding: 0 }}
+              onClick={async () => {
+                const target = deleteTarget;
+                setDeleteTarget(null);
+                await handleArchive(target);
+              }}
+            >
+              Archive “{deleteTarget.title}” instead
+            </button>
+          )}
+        </ConfirmDialog>
+      )}
+
+      {bulk && (
+        <BulkRunDialog
+          open
+          title={bulk.mode === 'archive' ? 'Archive resources' : 'Restore resources'}
+          plan={bulk.plan}
+          noun="resource"
+          verb={bulk.mode}
+          past={bulk.mode === 'archive' ? 'Archived' : 'Restored'}
+          itemLabel={(resource) => resource.title}
+          changeLabel={() => (bulk.mode === 'archive' ? 'Active → Archived' : 'Archived → Active')}
+          scopeNote={bulk.scopeNote}
+          extra={
+            <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+              {bulk.mode === 'archive'
+                ? 'Archiving also clears each resource’s Current flag. Nothing is deleted; Restore brings them back.'
+                : 'Restoring clears the Archived flag only. Resources that were Current stay not-Current until you edit them.'}
+            </p>
+          }
+          run={(resource) => resourceLinksRepository.setArchived(resource.id, bulk.mode === 'archive')}
+          onFinished={finishBulk}
+          onClose={() => setBulk(null)}
+        />
+      )}
     </div>
   );
 }
@@ -593,6 +724,8 @@ export default function AdminResources() {
 function ResourceCard({
   resource,
   selected,
+  checked,
+  onToggle,
   onEdit,
   onCopy,
   onArchive,
@@ -601,6 +734,8 @@ function ResourceCard({
 }: {
   resource: ResourceLink;
   selected: boolean;
+  checked: boolean;
+  onToggle: (id: string) => void;
   onEdit: (resource: ResourceLink) => void;
   onCopy: (url: string) => void;
   onArchive: (resource: ResourceLink) => void;
@@ -610,7 +745,8 @@ function ResourceCard({
   return (
     <article className="px-4 py-4" style={{ background: selected ? 'var(--color-surface2)' : 'transparent' }}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <RowCheckbox checked={checked} onChange={() => onToggle(resource.id)} label={`Select ${resource.title}`} />
+        <div className="min-w-0 flex-1">
           <h3 className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{resource.title}</h3>
           <p className="mt-1 break-words font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{resource.url}</p>
         </div>
@@ -628,6 +764,8 @@ function ResourceCard({
 function ResourceTableRow({
   resource,
   selected,
+  checked,
+  onToggle,
   onEdit,
   onCopy,
   onArchive,
@@ -636,6 +774,8 @@ function ResourceTableRow({
 }: {
   resource: ResourceLink;
   selected: boolean;
+  checked: boolean;
+  onToggle: (id: string) => void;
   onEdit: (resource: ResourceLink) => void;
   onCopy: (url: string) => void;
   onArchive: (resource: ResourceLink) => void;
@@ -644,6 +784,9 @@ function ResourceTableRow({
 }) {
   return (
     <tr style={{ background: selected ? 'var(--color-surface2)' : 'transparent' }}>
+      <td className="px-4 py-4 align-top">
+        <RowCheckbox checked={checked} onChange={() => onToggle(resource.id)} label={`Select ${resource.title}`} />
+      </td>
       <td className="px-4 py-4 align-top">
         <div className="font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{resource.title}</div>
         <div className="mt-1 truncate font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{resource.url}</div>

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { cn } from '../../lib/utils';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { MemberLinkPicker } from '../../components/features/admin/MemberLinkPicker';
 import {
   BulkActionBar,
@@ -255,6 +257,7 @@ export default function AdminCabinetRollover() {
   const [directory, setDirectory] = useState<MemberOption[]>([]);
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
   const [busy, setBusy] = useState(false);
+  const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
   const [newYearId, setNewYearId] = useState('');
   const [sourceYearId, setSourceYearId] = useState<string>('auto');
   const [pasted, setPasted] = useState('');
@@ -474,6 +477,7 @@ export default function AdminCabinetRollover() {
     return run(async () => {
       await cabinetRosterRepository.removeDraft(cycle.id, draft.id);
       setDraftsFor(cycle.id, (current) => current.filter((item) => item.id !== draft.id));
+      toast.success(`Removed ${draft.role} from the draft.`);
     }, 'Failed to remove.');
   }
 
@@ -551,13 +555,22 @@ export default function AdminCabinetRollover() {
     }, 'Failed to activate the Cabinet year.');
   }
 
-  function discard() {
-    if (!cycle || !window.confirm('Delete this draft roster? This cannot be undone.')) return;
-    return run(async () => {
+  // Runs inside the ConfirmDialog: it stays open and shows the error if this throws.
+  async function confirmDiscard() {
+    if (!cycle) return;
+    setBusy(true);
+    try {
       await cabinetRosterRepository.deleteCycle(cycle.id);
       setCycleId(null);
       await loadCycles();
-    }, 'Failed to delete.');
+      toast.success('Draft roster deleted.');
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to delete.');
+      throw err;
+    } finally {
+      setBusy(false);
+    }
   }
 
   const yearLabel = formatRosterYears(cabinetYear);
@@ -648,17 +661,20 @@ export default function AdminCabinetRollover() {
       <datalist id="roster-year-options">{YEAR_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
       <datalist id="roster-college-options">{COLLEGE_OPTIONS.map((option) => <option key={option} value={option} />)}</datalist>
 
-      <div className="border-b px-6 py-6 sm:px-8 sm:py-8 border-[var(--color-border)] bg-surface">
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-text-primary">Cabinet Rollover</h1>
-        <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed text-text-secondary">
-          Prepare next year&apos;s Cabinet privately: copy last year&apos;s positions (never its people), paste the new roster, link members, resolve warnings, lock, then publish. Publishing never makes a year the current Cabinet; activating is its own step.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <Link to="/admin/cabinet" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Cabinet admin</Link>
-          <Link to="/admin/year-setup" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">New Year Setup</Link>
-          <Link to="/admin/interns" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Intern cohort</Link>
-        </div>
-      </div>
+      <AdminPageHeader
+        description={
+          <>
+            Prepare next year&apos;s Cabinet privately: copy last year&apos;s positions (never its people), paste the new roster, link members, resolve warnings, lock, then publish. Publishing never makes a year the current Cabinet; activating is its own step.
+          </>
+        }
+        actions={
+          <>
+            <Link to="/admin/cabinet" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Cabinet admin</Link>
+            <Link to="/admin/year-setup" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">New Year Setup</Link>
+            <Link to="/admin/interns" className="rounded border px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)] border-[var(--color-border)]">Intern cohort</Link>
+          </>
+        }
+      />
 
       {!cycle ? (
         <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:p-8">
@@ -734,7 +750,7 @@ export default function AdminCabinetRollover() {
             <div className="flex flex-wrap gap-2">
               {cycle.status === 'draft' && (
                 <>
-                  <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-secondary`} disabled={busy} onClick={discard}>Delete draft</button>
+                  <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-secondary`} disabled={busy} onClick={() => setDeleteDraftOpen(true)}>Delete draft</button>
                   <button type="button" className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50" disabled={busy || !preflight.canLock} onClick={lock}>Lock roster</button>
                 </>
               )}
@@ -900,6 +916,18 @@ export default function AdminCabinetRollover() {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={deleteDraftOpen}
+        title={`Delete the ${yearLabel} Cabinet draft?`}
+        description="This deletes the private draft roster and its positions. It cannot be undone."
+        consequences={[
+          'Draft only: nothing published changes. The public Cabinet page and archive are untouched.',
+          'Member links on the draft are removed with it. Club member records are not deleted.',
+        ]}
+        confirmLabel="Delete draft"
+        onConfirm={confirmDiscard}
+        onClose={() => setDeleteDraftOpen(false)}
+      />
     </>
   );
 }
