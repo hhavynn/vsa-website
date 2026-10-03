@@ -8,7 +8,7 @@ import { formatYearSpan } from './operationalStatus';
 
 // ─── Actions and filters ─────────────────────────────────────────────────────
 
-export type ActivityFilterKey = 'all' | 'ace' | 'houses' | 'cabinet' | 'interns' | 'members' | 'year_setup';
+export type ActivityFilterKey = 'all' | 'ace' | 'houses' | 'cabinet' | 'interns' | 'members' | 'applications' | 'year_setup';
 
 export const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilterKey; label: string }> = [
   { key: 'all', label: 'All' },
@@ -17,6 +17,7 @@ export const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilterKey; label: st
   { key: 'cabinet', label: 'Cabinet' },
   { key: 'interns', label: 'Interns' },
   { key: 'members', label: 'Members' },
+  { key: 'applications', label: 'Applications' },
   { key: 'year_setup', label: 'Year Setup' },
 ];
 
@@ -27,6 +28,7 @@ const DOMAIN_FILTER: Record<string, ActivityFilterKey> = {
   cabinet: 'cabinet',
   intern: 'interns',
   member: 'members',
+  application: 'applications',
   year: 'year_setup',
 };
 
@@ -76,6 +78,10 @@ export const ACTIVITY_ACTIONS = {
   cabinetRosterPublished: 'cabinet.roster_published',
   memberLinkChanged: 'member.link_changed',
   memberBulkChanged: 'member.bulk_changed',
+  applicationWindowCreated: 'application.window_created',
+  applicationWindowUpdated: 'application.window_updated',
+  applicationWindowToggled: 'application.window_toggled',
+  applicationWindowDeleted: 'application.window_deleted',
   yearSetupCreated: 'year.setup_created',
 } as const;
 
@@ -201,6 +207,8 @@ export const activitySummary = {
   bulk: (verb: string, count: number, noun: string) => clampSummary(`${verb} ${count} ${count === 1 ? noun : `${noun}s`}`),
   memberLink: (member: string, to: string | null) =>
     clampSummary(to ? `Linked ${label(member, 'a record')} to member ${to}` : `Unlinked ${label(member, 'a record')} from its member`),
+  applicationWindow: (verb: 'Created' | 'Updated' | 'Deleted', title: string, detail?: string) =>
+    clampSummary(`${verb} application window "${label(title, 'Untitled')}"${detail ? `: ${detail}` : ''}`),
   yearSetup: (yearStart: number) => clampSummary(`Prepared the ${formatYearSpan(yearStart)} academic year`),
 };
 

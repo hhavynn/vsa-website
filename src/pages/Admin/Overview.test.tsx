@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminOverview from './Overview';
 import { adminOverviewRepository } from '../../data/repos/adminOverview';
 import { DEFAULT_OVERVIEW_STATS, OverviewSnapshot } from '../../lib/adminOverviewStats';
+import { EMPTY_ATTENTION_SIGNALS } from '../../lib/adminAttention';
 import { ADMIN_HEALTH_QUERY_KEYS } from '../../lib/adminHealthQuery';
 
 jest.mock('../../data/repos/adminOverview', () => ({ adminOverviewRepository: { load: jest.fn() } }));
@@ -12,8 +13,15 @@ jest.mock('../../components/features/admin/RecentActivityCard', () => ({ RecentA
 
 const load = adminOverviewRepository.load as jest.Mock;
 
-function snapshot(overrides: Partial<OverviewSnapshot['stats']> = {}, unavailable: string[] = []): OverviewSnapshot {
-  return { stats: { ...DEFAULT_OVERVIEW_STATS, members: 820, events: 44, eventsPublished: 40, eventsDraft: 4, aiTableExists: true, ...overrides }, unavailable };
+// Every attention source loaded and nothing is waiting, unless a test says otherwise.
+const CLEAR_ATTENTION = { applications: [], draftEventDates: [], photoRequestsPending: 0, dataRightsOpen: 0, aiFeedbackUnresolved: 0, feedbackPending: 0 };
+
+function snapshot(overrides: Partial<OverviewSnapshot['stats']> = {}, unavailable: string[] = [], attention: Partial<OverviewSnapshot['attention']> = {}): OverviewSnapshot {
+  return {
+    stats: { ...DEFAULT_OVERVIEW_STATS, members: 820, events: 44, eventsPublished: 40, eventsDraft: 4, aiTableExists: true, ...overrides },
+    attention: { ...EMPTY_ATTENTION_SIGNALS, ...CLEAR_ATTENTION, ...attention },
+    unavailable,
+  };
 }
 
 function renderOverview(client = new QueryClient()) {
@@ -94,5 +102,34 @@ describe('Admin Overview health scan', () => {
     renderOverview();
     await screen.findByText('820');
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  });
+
+  describe('attention queue', () => {
+    it('leads with what needs attention, each count linking to the page that resolves it', async () => {
+      load.mockResolvedValue(snapshot({}, [], { photoRequestsPending: 3, aiFeedbackUnresolved: 2, dataRightsOpen: 1, draftEventDates: [new Date(Date.now() + 3 * 86400000).toISOString()] }));
+      renderOverview();
+
+      await screen.findByRole('link', { name: /3 photo requests waiting for review/ });
+      const queue = screen.getByRole('region', { name: 'Needs attention' });
+      expect(within(queue).getByRole('link', { name: /3 photo requests waiting for review/ })).toHaveAttribute('href', '/admin/photo-requests?filter=pending');
+      expect(within(queue).getByRole('link', { name: /2 Ask VSA responses need review/ })).toHaveAttribute('href', '/admin/ai-feedback?filter=unresolved');
+      expect(within(queue).getByRole('link', { name: /1 open data-rights request/ })).toHaveAttribute('href', '/admin/data-rights?filter=open');
+      expect(within(queue).getByRole('link', { name: /1 unpublished event in the next 14 days/ })).toHaveAttribute('href', '/admin/events?filter=draft');
+      expect(within(queue).queryByText('You’re all caught up')).not.toBeInTheDocument();
+    });
+
+    it('says the admin is all caught up when nothing is waiting', async () => {
+      renderOverview();
+      expect(await screen.findByText('You’re all caught up')).toBeInTheDocument();
+    });
+
+    it('does not say caught up when a count could not be loaded', async () => {
+      load.mockResolvedValue(snapshot({}, ['photo requests'], { photoRequestsPending: null }));
+      renderOverview();
+
+      await screen.findByText('820');
+      expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
+      expect(screen.getByText(/Could not check: photo requests/)).toBeInTheDocument();
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useInitialUrlFilter } from '../../../hooks/useUrlFilter';
 import toast, { Toaster } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useQueryClient } from 'react-query';
@@ -32,7 +33,8 @@ type StatusFilter = 'pending' | 'all';
 export default function PhotoRequestsTab() {
   const [requests, setRequests] = useState<MemberPhotoRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<StatusFilter>('pending');
+  const initialFilter = useInitialUrlFilter<StatusFilter>(['pending', 'all'], 'pending');
+  const [filter, setFilter] = useState<StatusFilter>(initialFilter);
   const [busyId, setBusyId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 

@@ -28,6 +28,9 @@ export const DATA_RIGHTS_REQUEST_STATUSES: readonly DataRightsRequestStatus[] = 
   'cancelled',
 ];
 
+/** A request is "open" until it reaches one of these. Shared by the tracker's filter and the Overview count. */
+export const DATA_RIGHTS_CLOSED_STATUSES: readonly DataRightsRequestStatus[] = ['completed', 'rejected', 'cancelled'];
+
 export const DATA_RIGHTS_VERIFICATION_STATUSES: readonly DataRightsVerificationStatus[] = [
   'not_started',
   'pending',

@@ -7,7 +7,9 @@
 // not tiny (members) stay a single exact-count request in the repository.
 //
 // Pure: no I/O, so every number on the dashboard can be pinned by a unit test.
+import { AttentionSignals, EMPTY_ATTENTION_SIGNALS } from './adminAttention';
 import { getApplicationStatus } from './applicationLinks';
+import { ApplicationKey } from '../types';
 
 export interface OverviewStats {
   members: number;
@@ -19,7 +21,6 @@ export interface OverviewStats {
   cabinetYears: number;
   feedback: number;
   pendingFeedback: number;
-  mergeCandidates: number;
   eventsMissingTerms: number;
   upcomingEventsMissingInfo: number;
   galleryAlbumsMissingCover: number;
@@ -66,7 +67,6 @@ export const DEFAULT_OVERVIEW_STATS: OverviewStats = {
   cabinetYears: 0,
   feedback: 0,
   pendingFeedback: 0,
-  mergeCandidates: 0,
   eventsMissingTerms: 0,
   upcomingEventsMissingInfo: 0,
   galleryAlbumsMissingCover: 0,
@@ -148,6 +148,7 @@ export interface OverviewAiRow {
   last_verified_at: string | null;
 }
 export interface OverviewApplicationRow {
+  application_key: ApplicationKey;
   open_at: string;
   due_at: string;
   is_enabled: boolean;
@@ -171,7 +172,10 @@ export interface OverviewSources {
   programContent: OverviewProgramContentRow[] | null;
   feedback: OverviewFeedbackRow[] | null;
   academicTermCount: number | null;
-  mergeExclusions: number | null;
+  /** Head counts for the attention queue; `null` = that count failed. */
+  photoRequestsPending: number | null;
+  dataRightsOpen: number | null;
+  aiFeedbackUnresolved: number | null;
   /** `loaded: false` = the lookup failed; `academicYearStart: null` with `loaded: true` = no active term. */
   activeTerm: { loaded: boolean; academicYearStart: number | null };
   /** `null` = the table is missing / unreadable (pre-migration). */
@@ -181,6 +185,8 @@ export interface OverviewSources {
 
 export interface OverviewSnapshot {
   stats: OverviewStats;
+  /** Count-only signals for the "what needs attention" queue. */
+  attention: AttentionSignals;
   /** Labels of sources that failed, so the page can say its numbers may be incomplete. */
   unavailable: string[];
 }
@@ -265,8 +271,6 @@ export function buildOverviewSnapshot(sources: OverviewSources, now: Date, fallb
     stats.pendingFeedback = sources.feedback.filter((f) => f.status === 'pending' || f.status === 'in_progress').length;
   }
 
-  if (sources.mergeExclusions === null) unavailable.push('merge exclusions');
-  else stats.mergeCandidates = sources.mergeExclusions;
 
   // A failed lookup must not silently fall back to the browser-derived year:
   // the House count would look plausible but could be for the wrong year.
@@ -333,5 +337,20 @@ export function buildOverviewSnapshot(sources: OverviewSources, now: Date, fallb
     });
   }
 
-  return { stats, unavailable };
+  // The attention queue reuses rows already read above (events, feedback,
+  // application windows) plus three head counts; it adds no table reads of its own.
+  if (sources.photoRequestsPending === null) unavailable.push('photo requests');
+  if (sources.dataRightsOpen === null) unavailable.push('data rights requests');
+  if (sources.aiFeedbackUnresolved === null) unavailable.push('Ask VSA feedback');
+  const attention: AttentionSignals = {
+    ...EMPTY_ATTENTION_SIGNALS,
+    applications: sources.applications,
+    draftEventDates: events ? events.filter((e) => e.is_published === false).map((e) => e.date) : null,
+    photoRequestsPending: sources.photoRequestsPending,
+    dataRightsOpen: sources.dataRightsOpen,
+    aiFeedbackUnresolved: sources.aiFeedbackUnresolved,
+    feedbackPending: sources.feedback ? sources.feedback.filter((f) => f.status === 'pending').length : null,
+  };
+
+  return { stats, attention, unavailable };
 }

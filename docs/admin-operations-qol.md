@@ -10,7 +10,7 @@ Phase 4 of the yearly-operations system (after ACE assignments, House/Intern dra
 | **Quick filters with counts** | ACE assignments + family editor, Houses, Cabinet rollover, Interns, Members | Only the filters relevant to each domain (`src/lib/adminQueues.ts`). Choice lives in `?filter=`, so refresh and Back keep the admin's place. |
 | **Bulk actions** | Same pages | Checkbox selection, sticky bulk bar. Link selected *exact* matches (ACE), assign / clear House (Houses), set mentor / track (Interns), set board (Cabinet), mark reviewed, clear review flag (Members). Ambiguous identities are **never** bulk-resolved; skipped rows say why. Destructive bulk actions (clear House, remove mentor) confirm with the affected count. |
 | **Unsaved-changes protection** | ACE fam form, Events create/edit, Cabinet create/edit, Members editor, pasted imports | `Unsaved changes` label, Save disabled until something changed, warning on tab close, in-app link clicks, and switching records; a failed save keeps the form. |
-| **Recent Changes** | Admin → Recent Changes, Overview card | Append-only `admin_activity_log` (who, what, when). Filter by ACE / Houses / Cabinet / Interns / Members / Year Setup. |
+| **Recent Changes** | Admin → Recent Changes, Overview card | Append-only `admin_activity_log` (who, what, when). Filter by ACE / Houses / Cabinet / Interns / Members / Applications / Year Setup. |
 | **Practical undo** | Recent Changes, Overview | Only for a changed **House** on a draft row, **ACE Big**, **ACE node link**, **intern mentor**. Compare-and-set: refused if the value changed again or the batch/cycle is no longer a draft. Publication, reveal, Cabinet publication, year setup, deletions, and bulk edits are never offered one-click undo. |
 | **Import review** | ACE, House, Cabinet, Intern pastes, attendance import | Input → Parsed → Matched → Needs Review → Ready, a summary (`82 rows · 71 ready · 7 need review · 3 unmatched · 1 invalid`), show only problems, download / copy problem rows (CSV is formula-safe). Each problem row says why. |
 | **Duplicate / conflict flags** | Same pages | Same member twice, same ACE Little twice, one person in two Houses, accidental Cabinet duplicate slots, intern imported twice, lookalike names. Flags only; real merges stay in **Merge Review**. |
@@ -22,6 +22,7 @@ Phase 4 of the yearly-operations system (after ACE assignments, House/Intern dra
 | **Workflow progress header** | ACE, Houses, Cabinet, Interns | `Import ✓ Linking ✓ Assignments 42 / 47 Preflight ⚠ Locked — Published —`, with "Next up". Derived from persisted state only. |
 | **Year context** | Every yearly surface | `2026–27 · Current year` or `Viewing archived 2025–26 data`. Uses the active term / academic-year helpers. |
 | **Continue working** | Admin Overview | Derived from the same persisted cycle/batch status the dashboard already loads. No per-user tracking. |
+| **Needs attention** | Admin Overview (top) | Count-only queue, each item deep-linked to the filtered page that resolves it. See [`recruitment-status-and-attention.md`](recruitment-status-and-attention.md). |
 
 ### Deliberate scope choices
 

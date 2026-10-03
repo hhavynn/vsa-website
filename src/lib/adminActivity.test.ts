@@ -41,6 +41,7 @@ describe('activity filters', () => {
     expect(activityFilterFor('cabinet.roster_published')).toBe('cabinet');
     expect(activityFilterFor('intern.added')).toBe('interns');
     expect(activityFilterFor('member.link_changed')).toBe('members');
+    expect(activityFilterFor('application.window_updated')).toBe('applications');
     expect(activityFilterFor('year.setup_created')).toBe('year_setup');
     expect(activityFilterFor('mystery.thing')).toBeNull();
   });
@@ -50,6 +51,7 @@ describe('activity filters', () => {
     expect(matchesActivityFilter('ace.link_changed', 'houses')).toBe(false);
     expect(actionPrefixesFor('all')).toBeNull();
     expect(actionPrefixesFor('houses')).toEqual(['house.']);
+    expect(actionPrefixesFor('applications')).toEqual(['application.']);
   });
 
   it('every defined action belongs to some filter', () => {

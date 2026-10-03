@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useInitialUrlFilter } from '../../../hooks/useUrlFilter';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 
@@ -94,7 +95,9 @@ function ActionButton({
 const FeedbackTab: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // `?filter=pending` is the Admin Overview's "feedback to triage" link.
+  const initialStatus = useInitialUrlFilter<string>(['all', 'pending', 'in_progress', 'resolved', 'closed'], 'all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {

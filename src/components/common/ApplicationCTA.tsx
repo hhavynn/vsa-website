@@ -72,7 +72,11 @@ function MutedMessage({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CTABlock({
+/**
+ * One window's public card: Apply button while open, otherwise the before/after copy.
+ * Exported so the admin preview renders exactly what the site renders.
+ */
+export function CTABlock({
   link,
   fallbackKey,
   fallback,

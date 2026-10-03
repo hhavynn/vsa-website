@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useInitialUrlFilter } from '../../hooks/useUrlFilter';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -187,13 +188,16 @@ export default function AdminEvents() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  // `?filter=draft` is the Admin Overview's "unpublished events" link.
+  const initialStatus = useInitialUrlFilter(EVENT_STATUS_FILTERS.map((filter) => filter.key), 'all');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [visibleCount, setVisibleCount] = useState(MANAGE_PAGE_SIZE);
   const [bulkRun, setBulkRun] = useState<BulkPublishRun | null>(null);
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
   const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
+  // A `?filter=` deep link (Admin Overview) only means something on the Manage tab.
+  const [activeTab, setActiveTab] = useState<'create' | 'manage'>(initialStatus === 'all' ? 'create' : 'manage');
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);

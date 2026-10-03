@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ALL_FILTER_KEY, readFilterParam, withParam } from '../lib/adminFilters';
 
@@ -15,6 +15,18 @@ export function useUrlFilter(allowed: readonly string[], name = 'filter') {
     [name, setParams],
   );
   return [active, setActive] as const;
+}
+
+/**
+ * Reads `?filter=` once, when the page opens, as the starting value of a page's own
+ * filter state. For pages whose default is not "all" (the pending queue, unresolved
+ * feedback), where useUrlFilter's "no param = all" rule would change the default.
+ * Admin Overview's attention items deep-link through this.
+ */
+export function useInitialUrlFilter<T extends string>(allowed: readonly T[], fallback: T, name = 'filter'): T {
+  const [params] = useSearchParams();
+  const [initial] = useState(() => readFilterParam(params, name, allowed, fallback) as T);
+  return initial;
 }
 
 /** A free-form URL param (year, search text) with the same replace behavior. */

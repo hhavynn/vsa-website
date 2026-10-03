@@ -32,10 +32,11 @@ describe('adminOverviewRepository.load', () => {
     const perTable = queries.reduce<Record<string, number>>((acc, q) => ({ ...acc, [q.table]: (acc[q.table] ?? 0) + 1 }), {});
 
     expect(Object.values(perTable).every((n) => n === 1)).toBe(true);
-    // 15 table reads here + 1 active-term lookup (mocked) = 16 requests, down from ~45.
-    expect(queries).toHaveLength(15);
+    // 17 table reads here + 1 active-term lookup (mocked) = 18 requests, down from ~45.
+    // The attention queue's three counts replaced the old merge-exclusions count (net +2).
+    expect(queries).toHaveLength(17);
     expect(snapshot.unavailable).toEqual([]);
-    expect(queries.filter(isHeadCount).map((q) => q.table).sort()).toEqual(['academic_terms', 'members', 'merge_exclusions']);
+    expect(queries.filter(isHeadCount).map((q) => q.table).sort()).toEqual(['academic_terms', 'ai_feedback', 'data_rights_requests', 'member_photo_requests', 'members']);
   });
 
   it('is read-only', async () => {
