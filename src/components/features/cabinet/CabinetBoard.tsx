@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ProfileSpotlightCard } from '../../ui/ProfileSpotlightCard';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { type CabinetMemberRaw } from '../../../hooks/useCabinet';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { resolveMemberPhoto } from '../../../lib/memberPhotos';
 
 // The public Cabinet board (Executive / General Board / Interns / Other),
@@ -182,31 +182,17 @@ function Avatar({
   }
 
   return (
-    <img
-      src={getSupabaseImageUrl(imageUrl, {
-        width: size * 2,
-        height: size * 2,
-        resize: 'cover',
-        quality: 75,
-      })}
-      srcSet={`${getSupabaseImageUrl(imageUrl, {
-        width: size,
-        height: size,
-        resize: 'cover',
-        quality: 75,
-      })} 1x, ${getSupabaseImageUrl(imageUrl, {
-        width: size * 2,
-        height: size * 2,
-        resize: 'cover',
-        quality: 75,
-      })} 2x`}
+    <OptimizedImage
+      src={imageUrl}
       alt={name}
-      className="shrink-0 rounded-full object-cover border-2 border-[var(--color-surface)] shadow-sm"
       width={size}
       height={size}
+      widths={[size, size * 2]}
+      sizes={`${size}px`}
+      quality={75}
+      priority={priority}
+      className="shrink-0 rounded-full object-cover border-2 border-[var(--color-surface)] shadow-sm"
       style={{ width: size, height: size }}
-      loading={priority ? 'eager' : 'lazy'}
-      decoding="async"
       onError={() => setFailedUrls((urls) => [...urls, imageUrl])}
     />
   );
@@ -336,7 +322,23 @@ function ExecutiveRolePanel({
   );
 }
 
-function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; members: CabinetMember[]; onRoleClick?: (role: string) => void }) {
+// Page-wide budget of eager, high-priority photos. Only the topmost Cabinet photos can
+// be the LCP element; marking more (or marking per role panel) just makes them compete
+// with each other and with the page's other requests. Everything else stays lazy.
+const CABINET_PRIORITY_BUDGET = 2;
+
+function ExecutiveFeaturePanel({
+  role,
+  members,
+  onRoleClick,
+  priorityMemberIds,
+}: {
+  role: string;
+  members: CabinetMember[];
+  onRoleClick?: (role: string) => void;
+  /** Members whose photo is eager/high priority; chosen once for the whole page. */
+  priorityMemberIds: ReadonlySet<string>;
+}) {
   const isPresident = rolePriority(role) === 0;
 
   return (
@@ -383,7 +385,7 @@ function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; m
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
               <div className="relative shrink-0">
-                <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
+                <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={priorityMemberIds.has(member.id)} />
                 {isPresident && (
                   <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
                     <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
@@ -602,6 +604,15 @@ export function CabinetBoard({
   const generalRoles = groupByRole(genBoard);
   const { featured: featuredExecRoles, supporting: supportingExecRoles } = splitExecutiveRoles(execRoles);
   const allExecRoles = [...featuredExecRoles, ...supportingExecRoles];
+  // The presidents' panel(s) render first on the page; the budget is spent there, in
+  // render order, and nowhere else.
+  const priorityMemberIds: ReadonlySet<string> = new Set(
+    allExecRoles
+      .filter(([role]) => rolePriority(role) === 0)
+      .flatMap(([, roleMembers]) => roleMembers)
+      .slice(0, CABINET_PRIORITY_BUDGET)
+      .map((member) => member.id),
+  );
 
   return (
     <>
@@ -641,7 +652,7 @@ export function CabinetBoard({
                   className="cabinet-card mx-auto"
                   style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
                 >
-                  <ExecutiveFeaturePanel role={role} members={roleMembers} onRoleClick={onRoleClick} />
+                  <ExecutiveFeaturePanel role={role} members={roleMembers} onRoleClick={onRoleClick} priorityMemberIds={priorityMemberIds} />
                 </motion.div>
               ))}
           </motion.div>

@@ -8,11 +8,19 @@ type SupabaseImageOptions = {
 const OBJECT_PUBLIC_PATH = '/storage/v1/object/public/';
 const RENDER_PUBLIC_PATH = '/storage/v1/render/image/public/';
 const UNSUPPORTED_RENDER_EXTENSIONS = /\.(gif|svg)$/i;
-const ENABLE_IMAGE_TRANSFORMS = process.env.REACT_APP_SUPABASE_IMAGE_TRANSFORMS === 'true';
+
+// Read per call (not at module load) so tests can toggle the flag.
+function transformsEnabled() {
+  return process.env.REACT_APP_SUPABASE_IMAGE_TRANSFORMS === 'true';
+}
+
+export function supabaseImageTransformsEnabled() {
+  return transformsEnabled();
+}
 
 export function getSupabaseImageUrl(src: string | null | undefined, options: SupabaseImageOptions = {}) {
   if (!src) return '';
-  if (!ENABLE_IMAGE_TRANSFORMS) return src;
+  if (!transformsEnabled()) return src;
 
   try {
     const url = new URL(src);
@@ -41,7 +49,7 @@ export function getSupabaseImageSrcSet(
   options: Omit<SupabaseImageOptions, 'width'> = {},
 ) {
   if (!src) return undefined;
-  if (!ENABLE_IMAGE_TRANSFORMS) return undefined;
+  if (!transformsEnabled()) return undefined;
 
   return widths
     .map((width) => `${getSupabaseImageUrl(src, { ...options, width })} ${width}w`)

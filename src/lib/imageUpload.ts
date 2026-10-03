@@ -45,6 +45,37 @@ const PRESETS: Record<ImageUploadPreset, CompressionOptions> = {
   aceMember: { maxWidth: 700, maxHeight: 700, quality: 0.78, maxInputBytes: 8 * MB, outputType: 'image/webp' },
 };
 
+/** Limits a preset enforces, for UI that wants to show them before upload. */
+export function getPresetLimits(preset: ImageUploadPreset) {
+  const { maxWidth, maxHeight, maxInputBytes } = PRESETS[preset];
+  return { maxWidth, maxHeight, maxInputBytes };
+}
+
+export function formatBytes(bytes: number) {
+  if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/** Plain-language reason a dropped file was refused; shared by every admin upload. */
+export function describeUploadRejection(
+  rejection: { file: { name: string; size: number }; errors: readonly { code: string }[] },
+  preset: ImageUploadPreset,
+) {
+  const { maxInputBytes } = PRESETS[preset];
+  const { file, errors } = rejection;
+  const codes = errors.map((error) => error.code);
+  if (codes.includes('file-too-large')) {
+    return `${file.name} is ${formatBytes(file.size)}. The limit is ${formatBytes(maxInputBytes)}; try a smaller export.`;
+  }
+  if (codes.includes('file-invalid-type')) {
+    return `${file.name} isn't a supported image. Use a JPG, PNG, or WebP file.`;
+  }
+  if (codes.includes('too-many-files')) {
+    return 'Choose one image at a time.';
+  }
+  return `${file.name} couldn't be used. Use a JPG, PNG, or WebP image under ${formatBytes(maxInputBytes)}.`;
+}
+
 function isRasterImage(file: File) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
 }

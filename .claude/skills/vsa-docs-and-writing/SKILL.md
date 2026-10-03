@@ -82,6 +82,7 @@ Legend for Status: **living** = keep current; **snapshot** = dated point-in-time
 | `rls-verification-checklist.md` | RLS verification runbook (`verify-rls-security.mjs`) | Any RLS/grant change | living |
 | `security-headers-and-csp.md` | Vercel security headers policy; CSP rollout plan | `vercel.json` header changes | living |
 | `stitch-prompts.md` | One-off UI-generation prompts for stitch.withgoogle.com | — | **stale-candidate.** Design-exploration artifact, not a document of record; candidate for archive once the UI campaign no longer uses it. |
+| `storage-egress-audit.md` | Which public content is still Supabase Storage-backed (`npm run audit:storage-content`), expected vs abnormal, offline `public/images` measurement, and the external Supabase/Vercel quota-alert checklist | Image columns, buckets, audit script, or dashboard/plan settings change | living (re-date on update) |
 | `supabase-usage-audit.sql` | Egress/usage audit queries (run in Supabase SQL editor) | Storage/egress model changes | living (interpretation guide: `vsa-diagnostics-and-measurement`) |
 | `vsa-wrapped.md` | `/wrapped` year-in-review page: data rules, privacy | Wrapped page or its data changes | living (yearly refresh — see `vsa-seasonal-operations`) |
 

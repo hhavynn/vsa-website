@@ -2,35 +2,53 @@
 /**
  * scripts/migrate-supabase-images-to-public.ts
  *
- * Migrates Supabase Storage public images → /public/images static assets.
- * All images are compressed to WebP. Database URL fields are updated only
- * when --apply is passed. Dry-run is the default (read-only, zero writes).
+ * Migrates Supabase Storage public images → /public/images static assets in two
+ * phases, so a failed push or deploy can never leave a row pointing at a file
+ * that is not being served (#454):
+ *
+ *   Phase 1  --apply              Download, compress to WebP, write files, and write a
+ *                                 relink plan. NEVER touches the database.
+ *   (commit + push the files; wait for the production deploy)
+ *   Phase 2  --relink <plan>      For each plan entry, confirm the asset is actually
+ *                                 served by production (HTTP 200, image content-type,
+ *                                 exact byte length), then run a conditional update
+ *                                 (WHERE id = ? AND <field> = <expected Storage URL>).
+ *                                 Entries that are not served are left on Storage.
+ *
+ * Dry-run (no flags) is the default and is read-only. Supabase Storage originals are
+ * never deleted.
  *
  * Usage:
  *   npm run migrate:images:dry -- --category cabinet --limit 5
- *   npm run migrate:images:apply -- --category cabinet --limit 1
+ *   npm run migrate:images:apply -- --category cabinet --limit 1        # files + plan only
+ *   npm run migrate:images:relink -- --plan scripts/reports/image-relink-plan.json \
+ *       --base-url https://www.vsaatucsd.com --verify-only             # read-only check
+ *   npm run migrate:images:relink -- --plan <file> --base-url <origin>  # verify, then relink
  *   npm run migrate:images:dry                         # scan all categories
  *   npm run migrate:images:apply -- --overwrite        # rewrite files even if unchanged
  *   npm run migrate:images:dry -- --category events --event-id <uuid>
- *   npm run migrate:images:apply -- --category events --event-id <uuid>
  *   npm run migrate:images:dry -- --category house-events --house-event-id <uuid>
- *   npm run migrate:images:apply -- --category house-events --house-event-id <uuid>
  *
  * Supported categories: cabinet, events, gallery, houses, home, house-events
  *
  * Flags:
- *   --apply          Execute writes and DB updates (default: dry run)
+ *   --apply          Write files + relink plan (default: dry run). No DB writes.
+ *   --plan-out       Where --apply writes the plan (default scripts/reports/image-relink-plan.json)
+ *   --relink         Phase 2: path to a plan written by --apply (alias: --plan)
+ *   --base-url       Production origin used to verify assets before relinking
+ *   --wait-seconds   How long to keep polling for the deploy (default 600; 0 = single check)
+ *   --verify-only    With --relink: verify assets, write nothing
  *   --overwrite      Rewrite output files even when the derived image is identical
  *   --category       Migrate one category only
  *   --limit          Max rows to process
  *   --event-id       Filter to a single event (events category only)
  *   --house-event-id Filter to a single house event (house-events category only)
- *   --force-apply    Override branch guard (use with care)
+ *   --force-apply    With --relink: override the CI main-branch guard (use with care)
  *
  * Env (reads from .env.local):
  *   REACT_APP_SUPABASE_URL           required
- *   REACT_APP_SUPABASE_ANON_KEY      required (read access)
- *   SUPABASE_SERVICE_ROLE_KEY        recommended for --apply (bypasses RLS)
+ *   REACT_APP_SUPABASE_ANON_KEY      required for phase 1 (read access)
+ *   SUPABASE_SERVICE_ROLE_KEY        required for --relink (bypasses RLS)
  */
 
 import * as fs from 'fs';
@@ -40,6 +58,18 @@ import * as http from 'http';
 import { createHash } from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import {
+  assetUrl,
+  createPlan,
+  parsePlan,
+  relinkPlan,
+  summarizeRelink,
+  waitForAssets,
+  FetchedAsset,
+  RelinkClient,
+  RelinkEntry,
+} from './lib/imageRelink';
+import { CATEGORIES, CategoryConfig } from './lib/imageMigrationConfig';
 
 // ─── Env ─────────────────────────────────────────────────────────────────────
 
@@ -74,10 +104,16 @@ const ARG_CATEGORY = getArg('--category');
 const ARG_LIMIT = getArg('--limit') ? parseInt(getArg('--limit')!, 10) : undefined;
 const ARG_EVENT_ID = getArg('--event-id');
 const ARG_HOUSE_EVENT_ID = getArg('--house-event-id');
+const ARG_RELINK = getArg('--relink') ?? getArg('--plan');
+const ARG_BASE_URL = getArg('--base-url');
+const ARG_WAIT_SECONDS = getArg('--wait-seconds') ? parseInt(getArg('--wait-seconds')!, 10) : 600;
+const VERIFY_ONLY = rawArgs.includes('--verify-only');
+const DEFAULT_PLAN_PATH = path.resolve(process.cwd(), 'scripts', 'reports', 'image-relink-plan.json');
+const ARG_PLAN_OUT = getArg('--plan-out') ? path.resolve(process.cwd(), getArg('--plan-out')!) : DEFAULT_PLAN_PATH;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MigrationStatus = 'migrated' | 'skipped' | 'already_local' | 'error';
+type MigrationStatus = 'planned' | 'skipped' | 'already_local' | 'error';
 
 interface MigrationRow {
   rowId: string;
@@ -96,8 +132,8 @@ interface MigrationStats {
   alreadyLocal: number;
   imagesDownloaded: number;
   imagesCompressed: number;
-  dbRowsUpdated: number;
-  skipped: number;
+  relinksPlanned: number;
+  filesUnchanged: number;
   errors: number;
 }
 
@@ -109,149 +145,11 @@ interface MigrationReport {
   timestamp: string;
   stats: MigrationStats;
   rows: MigrationRow[];
+  plan: RelinkEntry[];
 }
 
 // ─── Category definitions ─────────────────────────────────────────────────────
-
-interface ImageField {
-  name: string;
-  suffix: string;
-}
-
-interface CategoryConfig {
-  table: string;
-  select: string;
-  imageFields: ImageField[];
-  getSlug: (row: Record<string, unknown>) => string;
-  outputDir: string;
-  maxWidth: number;
-  maxHeight: number;
-  quality: number;
-}
-
-function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
-
-function idSuffix(row: Record<string, unknown>): string {
-  return String(row['id'] ?? '').slice(0, 8);
-}
-
-const CATEGORIES: Record<string, CategoryConfig> = {
-  cabinet: {
-    table: 'cabinet_members',
-    select: 'id, name, image_url, thumbnail_url',
-    imageFields: [
-      { name: 'image_url', suffix: '' },
-      { name: 'thumbnail_url', suffix: '_thumb' },
-    ],
-    getSlug: (row) => {
-      const name = row['name'] ? slugify(String(row['name'])) : '';
-      return name ? `${name}_${idSuffix(row)}` : idSuffix(row);
-    },
-    outputDir: 'public/images/cabinet',
-    maxWidth: 800,
-    maxHeight: 800,
-    quality: 80,
-  },
-
-  events: {
-    table: 'events',
-    select: 'id, name, date, image_url, thumbnail_url',
-    imageFields: [
-      { name: 'image_url', suffix: '' },
-      { name: 'thumbnail_url', suffix: '_thumb' },
-    ],
-    getSlug: (row) => {
-      const name = row['name'] ? slugify(String(row['name'])) : '';
-      const date = row['date'] ? String(row['date']).slice(0, 10) : '';
-      if (name && date) return `${name}_${date}`;
-      if (name) return `${name}_${idSuffix(row)}`;
-      return idSuffix(row);
-    },
-    outputDir: 'public/images/events',
-    maxWidth: 1200,
-    maxHeight: 1200,
-    quality: 80,
-  },
-
-  gallery: {
-    table: 'gallery_events',
-    select: 'id, title, date, cover_image_url, cover_thumbnail_url',
-    imageFields: [
-      { name: 'cover_image_url', suffix: '' },
-      { name: 'cover_thumbnail_url', suffix: '_thumb' },
-    ],
-    getSlug: (row) => {
-      const title = row['title'] ? slugify(String(row['title'])) : '';
-      const date = row['date'] ? String(row['date']).slice(0, 10) : '';
-      if (title && date) return `${title}_${date}`;
-      if (title) return `${title}_${idSuffix(row)}`;
-      return idSuffix(row);
-    },
-    outputDir: 'public/images/gallery',
-    maxWidth: 1200,
-    maxHeight: 1200,
-    quality: 80,
-  },
-
-  houses: {
-    table: 'house_page_assets',
-    select: 'id, house, house_key, academic_year_start, image_url, image_thumbnail_url, cover_image_url, house_parent_image_url',
-    imageFields: [
-      { name: 'image_url', suffix: '' },
-      { name: 'image_thumbnail_url', suffix: '_thumb' },
-      { name: 'cover_image_url', suffix: '_cover' },
-      { name: 'house_parent_image_url', suffix: '_parent' },
-    ],
-    getSlug: (row) => {
-      const year = row['academic_year_start'] ? String(row['academic_year_start']) : 'unknown';
-      const houseIdentifier = row['house_key'] || row['house'] || idSuffix(row);
-      const house = slugify(String(houseIdentifier));
-      return `${year}_${house}`;
-    },
-    outputDir: 'public/images/houses',
-    maxWidth: 1200,
-    maxHeight: 1500,
-    quality: 80,
-  },
-
-  home: {
-    table: 'homepage_content',
-    select: 'id, presidents_photo_url, presidents_photo_thumbnail_url',
-    imageFields: [
-      { name: 'presidents_photo_url', suffix: '' },
-      { name: 'presidents_photo_thumbnail_url', suffix: '_thumb' },
-    ],
-    getSlug: (row) => `presidents_${idSuffix(row)}`,
-    outputDir: 'public/images/home',
-    maxWidth: 800,
-    maxHeight: 800,
-    quality: 80,
-  },
-
-  'house-events': {
-    table: 'house_events',
-    select: 'id, title, slug, image_url, image_thumbnail_url',
-    imageFields: [
-      { name: 'image_url', suffix: '' },
-      { name: 'image_thumbnail_url', suffix: '_thumb' },
-    ],
-    getSlug: (row) => {
-      const titleSlug = row['slug'] ? String(row['slug']) : slugify(String(row['title'] ?? ''));
-      const id = idSuffix(row);
-      return id && titleSlug ? `${id}-${titleSlug}` : (id || titleSlug || 'unknown');
-    },
-    outputDir: 'public/images/house-events',
-    maxWidth: 1200,
-    maxHeight: 1200,
-    quality: 80,
-  },
-};
+// Shared with scripts/audit-storage-backed-content.ts so the two cannot drift.
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -333,11 +231,12 @@ async function migrateCategory(
     alreadyLocal: 0,
     imagesDownloaded: 0,
     imagesCompressed: 0,
-    dbRowsUpdated: 0,
-    skipped: 0,
+    relinksPlanned: 0,
+    filesUnchanged: 0,
     errors: 0,
   };
   const rows: MigrationRow[] = [];
+  const plan: RelinkEntry[] = [];
 
   log(`\n─── ${categoryName} [${dryRun ? 'DRY RUN' : 'APPLY'}] ───`);
   log(`  Table:  ${config.table}`);
@@ -412,14 +311,14 @@ async function migrateCategory(
           originalUrl: rawUrl,
           localPath: outputAbsolute,
           publicPath,
-          status: 'migrated',
+          status: 'planned',
           reason: alreadyExists
-            ? 'File exists: would re-derive; relink if identical, otherwise save under a content-addressed name'
-            : 'Would download + compress → update DB',
+            ? 'File exists: would re-derive; reuse if identical, otherwise save under a content-addressed name. Row is relinked later by --relink.'
+            : 'Would download + compress → write file + relink plan entry (DB untouched until --relink)',
         });
         log(
           `  [DRY] ${rowId.slice(0, 8)} ${field.name}: ${rawUrl.slice(-50)} → ${publicPath}` +
-            (alreadyExists ? ' (file exists: relink if identical, else new hashed name)' : ''),
+            (alreadyExists ? ' (file exists: reuse if identical, else new hashed name)' : ''),
         );
         continue;
       }
@@ -495,8 +394,8 @@ async function migrateCategory(
       }
 
       if (!OVERWRITE && fileMatches(outputAbsolute, webpBuffer)) {
-        stats.skipped++;
-        log(`  UNCHANGED ${outputAbsolute} (file matches; relinking DB only)`);
+        stats.filesUnchanged++;
+        log(`  UNCHANGED ${outputAbsolute} (file matches; plan entry only)`);
       } else {
         fs.mkdirSync(path.dirname(outputAbsolute), { recursive: true });
         fs.writeFileSync(outputAbsolute, webpBuffer);
@@ -504,70 +403,31 @@ async function migrateCategory(
         log(`  SAVED ${outputAbsolute} (${kb} KB)`);
       }
 
-      // Update DB
-      try {
-        // Only relink if the row still holds the URL this run processed. An
-        // admin may have uploaded a newer image meanwhile; overwriting it with
-        // this (older) image's path would silently lose the new upload.
-        const { data: updatedRows, error: updateError } = await supabase
-          .from(config.table)
-          .update({ [field.name]: publicPath })
-          .eq('id', rowId)
-          .eq(field.name, rawUrl)
-          .select('id');
-
-        if (!updateError && (updatedRows ?? []).length === 0) {
-          rows.push({
-            rowId,
-            fieldName: field.name,
-            originalUrl: rawUrl,
-            localPath: outputAbsolute,
-            publicPath,
-            status: 'skipped',
-            reason: 'Row changed since it was read; left for the next run',
-          });
-          log(`  SKIP ${rowId.slice(0, 8)} ${field.name}: row changed since it was read (newer upload?)`);
-        } else if (updateError) {
-          stats.errors++;
-          rows.push({
-            rowId,
-            fieldName: field.name,
-            originalUrl: rawUrl,
-            localPath: outputAbsolute,
-            publicPath,
-            status: 'error',
-            error: `DB update failed: ${updateError.message} — local file kept, DB not updated`,
-          });
-          log(
-            `  ERROR db-update ${rowId.slice(0, 8)} ${field.name}: ${updateError.message}`,
-            'error',
-          );
-        } else {
-          stats.dbRowsUpdated++;
-          rows.push({
-            rowId,
-            fieldName: field.name,
-            originalUrl: rawUrl,
-            localPath: outputAbsolute,
-            publicPath,
-            status: 'migrated',
-          });
-          log(`  UPDATED DB ${rowId.slice(0, 8)} ${field.name} → ${publicPath}`);
-        }
-      } catch (err) {
-        stats.errors++;
-        const msg = err instanceof Error ? err.message : String(err);
-        rows.push({
-          rowId,
-          fieldName: field.name,
-          originalUrl: rawUrl,
-          localPath: outputAbsolute,
-          publicPath,
-          status: 'error',
-          error: `DB update threw: ${msg} — local file kept, DB not updated`,
-        });
-        log(`  ERROR db-update ${rowId.slice(0, 8)} ${field.name}: ${msg}`, 'error');
-      }
+      // Record the relink instead of doing it. The DB keeps its working Storage URL
+      // until --relink has confirmed this file is being served by production.
+      // Rows already on Storage are always planned, even when the file is
+      // unchanged, so a run whose relink failed is retried by the next run (#436).
+      plan.push({
+        category: categoryName,
+        table: config.table,
+        rowId,
+        field: field.name,
+        expectedUrl: rawUrl,
+        newPath: publicPath,
+        filePath: outputRelative,
+        bytes: webpBuffer.length,
+        sha256: createHash('sha256').update(webpBuffer).digest('hex'),
+      });
+      stats.relinksPlanned++;
+      rows.push({
+        rowId,
+        fieldName: field.name,
+        originalUrl: rawUrl,
+        localPath: outputAbsolute,
+        publicPath,
+        status: 'planned',
+      });
+      log(`  PLANNED ${rowId.slice(0, 8)} ${field.name} → ${publicPath} (DB unchanged)`);
     }
   }
 
@@ -575,10 +435,10 @@ async function migrateCategory(
   log(`    rows scanned:          ${stats.rowsScanned}`);
   log(`    with Supabase URL:     ${stats.rowsWithSupabaseUrl}`);
   log(`    already local:         ${stats.alreadyLocal}`);
-  log(`    unchanged files (DB relinked): ${stats.skipped}`);
+  log(`    unchanged files:       ${stats.filesUnchanged}`);
   log(`    images downloaded:     ${stats.imagesDownloaded}`);
   log(`    images compressed:     ${stats.imagesCompressed}`);
-  log(`    DB rows updated:       ${stats.dbRowsUpdated}`);
+  log(`    relinks planned:       ${stats.relinksPlanned} (DB not modified)`);
   log(`    errors:                ${stats.errors}`);
 
   return {
@@ -589,15 +449,148 @@ async function migrateCategory(
     timestamp: new Date().toISOString(),
     stats,
     rows,
+    plan,
   };
+}
+
+// ─── Phase 2: verify deployed assets, then relink ─────────────────────────────
+
+function fetchAsset(url: string): Promise<FetchedAsset> {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https://') ? https : http;
+    const req = mod.get(url, { headers: { 'cache-control': 'no-cache' } }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk: unknown) =>
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string)),
+      );
+      res.on('end', () =>
+        resolve({
+          status: res.statusCode ?? 0,
+          contentType: (res.headers['content-type'] as string | undefined) ?? null,
+          body: new Uint8Array(Buffer.concat(chunks)),
+        }),
+      );
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.setTimeout(30_000, () => {
+      req.destroy();
+      reject(new Error(`Timeout fetching ${url}`));
+    });
+  });
+}
+
+async function runRelink(planPath: string): Promise<void> {
+  const supabaseUrl = process.env['REACT_APP_SUPABASE_URL'];
+  const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+
+  if (!ARG_BASE_URL) {
+    log('ERROR: --relink needs --base-url <production origin> so assets can be verified first.', 'error');
+    process.exit(1);
+  }
+  if (!VERIFY_ONLY && (!supabaseUrl || !serviceKey)) {
+    log('ERROR: --relink needs REACT_APP_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or pass --verify-only).', 'error');
+    process.exit(1);
+  }
+
+  // Relinking is the step that changes what production serves. In CI only main
+  // may do it, because only main's files are what --base-url is serving.
+  if (!VERIFY_ONLY && !rawArgs.includes('--force-apply')) {
+    const githubRef = process.env['GITHUB_REF'];
+    const isCI = Boolean(process.env['CI'] || process.env['GITHUB_ACTIONS']);
+    if (isCI && githubRef && githubRef !== 'refs/heads/main') {
+      log(
+        `ERROR: --relink is only allowed on the main branch in CI (current ref: ${githubRef}).\n` +
+          `  Pass --verify-only to check assets without writing, or --force-apply to override.`,
+        'error',
+      );
+      process.exit(1);
+    }
+  }
+
+  const plan = parsePlan(JSON.parse(fs.readFileSync(path.resolve(process.cwd(), planPath), 'utf-8')));
+  log(`\nRelink plan: ${plan.entries.length} entr${plan.entries.length === 1 ? 'y' : 'ies'} (generated ${plan.generatedAt})`);
+  log(`Mode: ${VERIFY_ONLY ? 'VERIFY ONLY — no DB writes' : 'VERIFY, THEN RELINK'}`);
+  log(
+    `Verifying all assets against ${ARG_BASE_URL}; one shared deadline of ${Math.max(0, ARG_WAIT_SECONDS)}s for the whole run ` +
+      `(not per asset). Each asset must pass on its own before its rows are relinked.\n`,
+  );
+
+  const client: RelinkClient = (() => {
+    if (VERIFY_ONLY) {
+      return {
+        conditionalUpdate: async () => {
+          throw new Error('verify-only mode must not write');
+        },
+      };
+    }
+    const supabase = createClient(supabaseUrl!, serviceKey!);
+    return {
+      async conditionalUpdate(entry) {
+        const { data, error } = await supabase
+          .from(entry.table)
+          .update({ [entry.field]: entry.newPath })
+          .eq('id', entry.rowId)
+          .eq(entry.field, entry.expectedUrl)
+          .select('id');
+        if (error) return { error: error.message };
+        return (data ?? []).length === 0 ? 'row_changed' : 'updated';
+      },
+    };
+  })();
+
+  const results = await relinkPlan(plan, {
+    verifyOnly: VERIFY_ONLY,
+    client,
+    verifyAll: async (assets) => {
+      const checks = await waitForAssets(assets, {
+        baseUrl: ARG_BASE_URL,
+        fetchAsset,
+        timeoutMs: Math.max(0, ARG_WAIT_SECONDS) * 1000,
+        intervalMs: 15_000,
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        now: Date.now,
+      });
+      for (const asset of assets) {
+        const check = checks.get(asset.newPath);
+        log(
+          check?.ok
+            ? `  SERVED   ${assetUrl(ARG_BASE_URL, asset.newPath)}`
+            : `  MISSING  ${assetUrl(ARG_BASE_URL, asset.newPath)} — ${check && !check.ok ? check.reason : 'not checked'}`,
+          check?.ok ? 'info' : 'warn',
+        );
+      }
+      return checks;
+    },
+  });
+
+  for (const r of results) {
+    const tag = `${r.entry.table}.${r.entry.field} ${r.entry.rowId.slice(0, 8)}`;
+    if (r.outcome === 'relinked') log(`  RELINKED ${tag} → ${r.entry.newPath}`);
+    else if (r.outcome === 'would_relink') log(`  OK       ${tag} → ${r.entry.newPath} (verify-only)`);
+    else log(`  NOT RELINKED ${tag}: ${r.outcome}${r.detail ? ` (${r.detail})` : ''}`, 'warn');
+  }
+
+  const summary = summarizeRelink(results);
+  log(`\nRelink summary: ${JSON.stringify(summary)}`);
+  // Anything not relinked keeps its working Storage URL and is picked up by the next
+  // run. Only a genuine DB error fails the job; "not served yet" is reported loudly
+  // through the exit code too, so a deploy that never landed is not silent.
+  if (summary.error > 0 || summary.not_served > 0) process.exit(1);
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  log('\nSupabase Storage → /public/images migration');
-  log(`Mode: ${APPLY ? 'APPLY — will write files and update database' : 'DRY RUN — read-only, no changes'}`);
-  if (!APPLY) log('Pass --apply to execute changes.\n');
+  if (ARG_RELINK) {
+    log('\nSupabase Storage → /public/images relink (phase 2)');
+    await runRelink(ARG_RELINK);
+    return;
+  }
+
+  log('\nSupabase Storage → /public/images migration (phase 1: files + relink plan)');
+  log(`Mode: ${APPLY ? 'APPLY — writes files and a relink plan; the database is NOT modified' : 'DRY RUN — read-only, no changes'}`);
+  if (!APPLY) log('Pass --apply to write files and a relink plan.\n');
 
   const supabaseUrl = process.env['REACT_APP_SUPABASE_URL'];
   const supabaseKey =
@@ -612,32 +605,6 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  if (APPLY && !process.env['SUPABASE_SERVICE_ROLE_KEY']) {
-    log(
-      'WARN: --apply without SUPABASE_SERVICE_ROLE_KEY. DB updates may fail due to RLS.' +
-        ' Add SUPABASE_SERVICE_ROLE_KEY to .env.local for full write access.\n',
-      'warn',
-    );
-  }
-
-  // Safety guard: applying DB URL changes before files are deployed on main
-  // can temporarily break production images. Refuse apply unless on main in CI,
-  // or the operator explicitly passes --force-apply.
-  if (APPLY && !rawArgs.includes('--force-apply')) {
-    const githubRef = process.env['GITHUB_REF'];
-    const isCI = Boolean(process.env['CI'] || process.env['GITHUB_ACTIONS']);
-    if (isCI && githubRef && githubRef !== 'refs/heads/main') {
-      log(
-        `ERROR: --apply is only allowed on the main branch in CI.\n` +
-          `  Current ref: ${githubRef}\n` +
-          `  Updating DB before files land on main can break production image URLs.\n` +
-          `  Re-run the workflow on main, or pass --force-apply to override.`,
-        'error',
-      );
-      process.exit(1);
-    }
-  }
-
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   if (ARG_CATEGORY && !(ARG_CATEGORY in CATEGORIES)) {
@@ -650,12 +617,14 @@ async function main(): Promise<void> {
 
   const toRun = ARG_CATEGORY ? [ARG_CATEGORY] : Object.keys(CATEGORIES);
   const reports: MigrationReport[] = [];
+  let failedCategories = 0;
 
   for (const cat of toRun) {
     try {
       const report = await migrateCategory(supabase, cat, CATEGORIES[cat]);
       reports.push(report);
     } catch (err) {
+      failedCategories++;
       log(`FATAL error in category "${cat}": ${err}`, 'error');
     }
   }
@@ -671,11 +640,20 @@ async function main(): Promise<void> {
   fs.writeFileSync(reportFile, JSON.stringify(reports, null, 2));
   log(`\nReport: ${reportFile}`);
 
+  // Relink plan: consumed by `--relink` after the files are committed and deployed.
+  if (APPLY) {
+    const entries = reports.flatMap((r) => r.plan);
+    fs.mkdirSync(path.dirname(ARG_PLAN_OUT), { recursive: true });
+    fs.writeFileSync(ARG_PLAN_OUT, JSON.stringify(createPlan(entries), null, 2));
+    log(`Relink plan (${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}): ${ARG_PLAN_OUT}`);
+    log('Next: commit + push the files, wait for the deploy, then run --relink with --base-url.');
+  }
+
   // Grand totals
-  const totalErrors = reports.reduce((s, r) => s + r.stats.errors, 0);
-  const totalMigrated = reports.reduce((s, r) => s + r.stats.dbRowsUpdated, 0);
+  const totalErrors = reports.reduce((s, r) => s + r.stats.errors, 0) + failedCategories;
+  const totalPlanned = reports.reduce((s, r) => s + r.stats.relinksPlanned, 0);
   log(
-    `\nDone. ${totalMigrated} rows updated, ${totalErrors} error(s).${totalErrors > 0 ? ' See report for details.' : ''}`,
+    `\nDone. ${totalPlanned} relink${totalPlanned === 1 ? '' : 's'} planned, ${totalErrors} error(s). Database not modified.${totalErrors > 0 ? ' See report for details.' : ''}`,
   );
   if (totalErrors > 0) process.exit(1);
 }

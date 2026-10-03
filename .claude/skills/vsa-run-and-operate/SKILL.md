@@ -117,7 +117,7 @@ Logs: Supabase Dashboard → Edge Functions → *function* → Logs (this is the
 
 ## 5. The image-migration pipeline (egress-crisis machinery)
 
-This is the most operationally important system in the repo. Background: serving event/House/cabinet images straight from Supabase Storage blew the Supabase egress quota (full story: `vsa-failure-archaeology`). The fix: admin uploads still land in Supabase Storage (browsers cannot write into the repo), then a pipeline downloads, compresses to WebP (≤1200×1200, q80, via `sharp`), commits them under `public/images/…`, and rewrites the DB `image_url`/`thumbnail_url` to `/images/...` so Vercel's edge serves them with zero Supabase egress. Doc of record: `docs/event-image-migration.md`.
+This is the most operationally important system in the repo. Background: serving event/House/cabinet images straight from Supabase Storage blew the Supabase egress quota (full story: `vsa-failure-archaeology`). The fix: admin uploads still land in Supabase Storage (browsers cannot write into the repo), then a pipeline downloads, compresses to WebP (≤1200×1200, q80, via `sharp`), commits them under `public/images/…`, and — only after production is confirmed to serve each file — rewrites the DB `image_url`/`thumbnail_url` to `/images/...` so Vercel's edge serves them with zero Supabase egress (two phases, #454: `--apply` writes files + a relink plan and never touches the DB; `--relink` verifies, then does conditional updates). Doc of record: `docs/event-image-migration.md`.
 
 ### THE IRON RULE
 
@@ -133,10 +133,11 @@ npm run migrate:images:apply                                  # apply ALL catego
 npm run migrate:house-assets:dry                              # = --category houses, dry
 npm run migrate:house-assets:apply                            # = --category houses --apply
 npm run migrate:images:dry -- --category events --event-id <uuid>
-npm run migrate:images:apply -- --category events --force-apply    # local apply (see guard below)
+npm run migrate:images:apply -- --category events                  # phase 1: files + plan, NO DB writes
+npm run migrate:images:relink -- --relink scripts/reports/image-relink-plan.json --base-url https://www.vsaatucsd.com   # phase 2 (after push + deploy); add --verify-only to check without writing
 ```
 
-Flags (verified against the script header and arg parsing): `--apply`, `--overwrite` (re-download existing files), `--category <c>`, `--limit <n>`, `--event-id <uuid>`, `--house-event-id <uuid>`, `--force-apply`. Env (auto-loaded from `.env.local`): `REACT_APP_SUPABASE_URL` + `REACT_APP_SUPABASE_ANON_KEY` required; `SUPABASE_SERVICE_ROLE_KEY` needed for `--apply` DB updates (bypasses RLS — Row Level Security, Postgres per-row access policies). **Branch guard** (script lines ~598–607): in CI, `--apply` refuses to run off `main` unless `--force-apply` — because rewriting DB URLs to `/images/...` before those files are deployed on `main` serves broken images in production.
+Flags (see the script header): `--apply` (files + plan, no DB writes), `--plan-out <file>`, `--relink <plan>`, `--base-url <origin>`, `--wait-seconds <n>`, `--verify-only`, `--overwrite` (re-download existing files), `--category <c>`, `--limit <n>`, `--event-id <uuid>`, `--house-event-id <uuid>`, `--force-apply`. Env (auto-loaded from `.env.local`): `REACT_APP_SUPABASE_URL` + `REACT_APP_SUPABASE_ANON_KEY` required for phase 1; `SUPABASE_SERVICE_ROLE_KEY` needed for `--relink` (bypasses RLS — Row Level Security, Postgres per-row access policies). **Verification** (`scripts/lib/imageRelink.ts`): an asset counts as served only on HTTP 200 + `image/*` content-type + exact byte length + SHA-256 — `vercel.json`'s SPA fallback returns 200 + `index.html` for missing paths, so status alone proves nothing. **Branch guard**: in CI, `--relink` refuses to run off `main` unless `--force-apply` (only `main`'s files are what production serves). A failed push or deploy leaves rows on their working Storage URLs.
 
 ### The two workflows
 

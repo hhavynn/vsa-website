@@ -1,6 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useDropzone } from 'react-dropzone';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
@@ -8,6 +7,7 @@ import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpl
 import { DEFAULT_SITE_SETTINGS, SITE_SETTINGS_ID } from '../../data/siteSettings';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
+import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -24,22 +24,6 @@ export default function AdminSettings() {
     setLogoUrl(settings.logoUrl);
     setLogoAlt(settings.logoAlt || DEFAULT_SITE_SETTINGS.logoAlt);
   }, [settings]);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.svg'] },
-    maxFiles: 1,
-    maxSize: 5 * 1024 * 1024,
-  });
 
   async function uploadLogo(file: File): Promise<string> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'logo');
@@ -139,33 +123,16 @@ export default function AdminSettings() {
 
             <div>
               <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Upload Logo</label>
-              <div
-                {...getRootProps()}
-                className="mt-1 flex min-h-36 flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors"
-                style={{
-                  borderColor: isDragActive ? 'var(--color-brand)' : 'var(--color-border)',
-                  background: isDragActive ? 'var(--color-surface2)' : 'transparent',
-                }}
-              >
-                <input {...getInputProps()} />
-                {previewSrc ? (
-                  <img src={sanitizeImageSrc(previewSrc)} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} />
-                ) : (
-                  <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                    Drag and drop or click to upload
-                  </p>
-                )}
-              </div>
-              {previewSrc && (
-                <button
-                  type="button"
-                  className="mt-1.5 font-sans text-xs text-red-500 hover:text-red-400"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  onClick={() => { setLogoUrl(''); setLogoFile(null); setLogoPreview(''); }}
-                >
-                  Remove logo
-                </button>
-              )}
+              <ImageDropzone
+                className="mt-1"
+                preset="logo"
+                allowSvg
+                previewUrl={previewSrc ? sanitizeImageSrc(previewSrc) : null}
+                file={logoFile}
+                previewAlt="Logo preview"
+                onSelect={(file, preview) => { setLogoFile(file); setLogoPreview(preview ?? ''); }}
+                onClear={() => { setLogoUrl(''); setLogoFile(null); setLogoPreview(''); }}
+              />
             </div>
 
             <div>

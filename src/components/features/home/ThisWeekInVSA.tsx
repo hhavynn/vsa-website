@@ -14,7 +14,7 @@ import { supabase } from '../../../lib/supabase';
 import { formatDateOnly } from '../../../lib/dateOnly';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../../../utils/housePublicPointOverrides';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
@@ -195,12 +195,18 @@ function NextEventCard() {
                 className="relative overflow-hidden rounded-lg border border-border-strong bg-surface2"
               >
                 {(nextEvent.thumbnail_url || nextEvent.image_url) && (
-                  <img
-                    src={getSupabaseImageUrl(nextEvent.thumbnail_url || nextEvent.image_url, { width: 480, resize: 'contain', quality: 80 })}
+                  <OptimizedImage
+                    src={nextEvent.thumbnail_url || nextEvent.image_url}
+                    // Narrow sidebar card (h-52 poster); the thumbnail is plenty. Posters are
+                    // letterboxed (contain), so reserve a portrait box for transforms.
+                    width={480}
+                    height={600}
+                    resize="contain"
+                    quality={80}
+                    sizes="(min-width: 1280px) 290px, (min-width: 768px) 45vw, 100vw"
+                    widths={[480]}
                     alt={`${nextEvent.name} event poster`}
                     className="h-52 w-full border-b border-border-strong object-contain p-3"
-                    loading="lazy"
-                    decoding="async"
                   />
                 )}
                 <div className="p-4">
@@ -497,22 +503,20 @@ function LatestMemoryCard() {
       ) : (
         <>
           <Link to={memory.href} className="scrapbook-photo group relative block overflow-hidden" style={{ transform: 'rotate(-1deg)' }}>
-            {memory.thumbnailUrl ? (
-              <img
-                src={getSupabaseImageUrl(memory.thumbnailUrl, { width: 520, height: 330, resize: 'cover', quality: 72 })}
-                alt={memory.title}
-                className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-                decoding="async"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="flex aspect-[16/10] w-full items-center justify-center" style={{ background: 'var(--surface2)' }}>
-                <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>VSA</span>
-              </div>
-            )}
+            <OptimizedImage
+              src={memory.thumbnailUrl}
+              width={520}
+              height={330}
+              sizes="(min-width: 1280px) 290px, (min-width: 768px) 45vw, 100vw"
+              widths={[520]}
+              alt={memory.title}
+              className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              fallback={
+                <div className="flex aspect-[16/10] w-full items-center justify-center" style={{ background: 'var(--surface2)' }}>
+                  <span className="font-serif text-[28px] italic" style={{ color: 'var(--text3)' }}>VSA</span>
+                </div>
+              }
+            />
           </Link>
           <div>
             <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text3)' }}>

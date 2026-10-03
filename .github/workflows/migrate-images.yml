@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # to dispatch deploy.yml after pushing files
 
 jobs:
   migrate:
@@ -23,13 +24,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run migration (all categories)
+      - name: Guard — must run on main
+        # Phase 1 commits and pushes to the checked-out branch, and phase 2 only makes
+        # sense against what main serves. A non-main ref would push bot commits to it.
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "ERROR: this workflow only runs on main (current ref: ${{ github.ref }})."
+          exit 1
+
+      # Phase 1 (#454): write WebP files and a relink plan. The database is NOT touched,
+      # so every row keeps its working Supabase Storage URL until phase 2.
+      - name: Write migrated files and relink plan (all categories)
         env:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npm run migrate:images:apply
+        run: npm run migrate:images:apply -- --plan-out "$RUNNER_TEMP/image-relink-plan.json"
 
       - name: Commit and push new images if any
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -37,6 +49,38 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new images to commit."
           else
-            git commit -m "chore: migrate new Supabase images to static assets [skip ci]"
-            git push
+            git commit -m "chore: migrate new Supabase images to static assets"
+            # A failed push fails the job here, so the relink step below never runs
+            # and no row is pointed at a file that did not ship.
+            for attempt in 1 2 3; do
+              git push && break
+              if [ "$attempt" = "3" ]; then echo "::error::push failed; rows left on Storage URLs"; exit 1; fi
+              git pull --rebase origin main
+            done
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Pushes made with GITHUB_TOKEN do not trigger other workflows, so start the
+      # production deploy explicitly (deploy.yml no-ops its Vercel step if VERCEL_TOKEN
+      # is unset, in which case the Vercel git integration is the deploy path).
+      - name: Start production deploy
+        if: ${{ steps.commit.outputs.pushed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      # Phase 2 (#454): relink a row only once its file is actually served by production.
+      # Polls the deployed /images/... URL (image content-type + exact byte length, because
+      # the SPA fallback answers missing paths with 200 + index.html), then runs a
+      # conditional update. Anything not served is left on its Storage URL and retried
+      # by the next run. Never deletes Storage originals.
+      - name: Wait for deploy, then relink database rows
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://www.vsaatucsd.com' }}
+        run: |
+          npm run migrate:images:relink -- \
+            --relink "$RUNNER_TEMP/image-relink-plan.json" \
+            --base-url "$SITE_URL" \
+            --wait-seconds 900

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
 import { houseEventsRepository, HouseEventFormData } from '../../../data/repos/houseEvents';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
+import { ImageDropzone } from './ImageDropzone';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { formatAcademicYear, getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatDateOnly } from '../../../lib/dateOnly';
@@ -182,20 +182,6 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     }
   }, [draft.house_profile_ids.length, houseProfiles, editingEvent]);
 
-  const onDrop = (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
-  });
-
   function resetForm() {
     setDraft({
       ...emptyDraft(),
@@ -203,7 +189,6 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     });
     setEditingEvent(null);
     setImageFile(null);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
   }
 
@@ -211,7 +196,6 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     setEditingEvent(event);
     setDraft(draftFromEvent(event));
     setImageFile(null);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
   }
 
@@ -479,28 +463,19 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
             <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
               Images are compressed before upload to keep the site fast.
             </p>
-            <div {...getRootProps()} className={`mt-2 flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-5 transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
-              <input {...getInputProps()} />
-              {imagePreview || draft.image_thumbnail_url || draft.image_url ? (
-                <img src={imagePreview || draft.image_thumbnail_url || draft.image_url} alt="House event preview" className="max-h-44 rounded object-cover shadow-sm" />
-              ) : (
-                <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
-              )}
-            </div>
-            {(imageFile || draft.image_url) && (
-              <button
-                type="button"
-                className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600"
-                onClick={() => {
-                  setImageFile(null);
-                  if (imagePreview) URL.revokeObjectURL(imagePreview);
-                  setImagePreview(null);
-                  setDraft({ ...draft, image_url: '', image_thumbnail_url: '' });
-                }}
-              >
-                Remove image
-              </button>
-            )}
+            <ImageDropzone
+              className="mt-2"
+              preset="event"
+              previewUrl={imagePreview || draft.image_thumbnail_url || draft.image_url}
+              file={imageFile}
+              previewAlt="House event preview"
+              onSelect={(file, preview) => { setImageFile(file); setImagePreview(preview); }}
+              onClear={() => {
+                setImageFile(null);
+                setImagePreview(null);
+                setDraft({ ...draft, image_url: '', image_thumbnail_url: '' });
+              }}
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

@@ -86,7 +86,8 @@ Opens at [http://localhost:3000](http://localhost:3000).
 - `npm run lint` — lint `src/**/*.{ts,tsx}`
 - `npm run format` — format with Prettier
 - `npm run analyze` — build then inspect the JS bundle with source-map-explorer (`analyze:css` / `analyze:all` variants also exist)
-- `npm run migrate:images:dry` / `migrate:images:apply` — Supabase-Storage-to-public-asset image migration (`scripts/migrate-supabase-images-to-public.ts`); `migrate:house-assets:*` scopes it to house assets
+- `npm run migrate:images:dry` / `migrate:images:apply` / `migrate:images:relink` — Supabase-Storage-to-public-asset image migration (`scripts/migrate-supabase-images-to-public.ts`). `apply` writes files + a relink plan and never touches the DB; `relink` verifies production serves each file, then updates the rows. `migrate:house-assets:*` scopes it to house assets
+- `npm run audit:storage-content` — read-only audit of public content still served from Supabase Storage (`--local-assets` measures `public/images` offline); see `docs/storage-egress-audit.md`
 
 ## Project Structure
 

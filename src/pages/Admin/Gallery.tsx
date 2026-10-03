@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { useDropzone } from 'react-dropzone';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { formatDateOnly, toDateOnlyString } from '../../lib/dateOnly';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
@@ -72,47 +72,10 @@ export default function AdminGallery() {
 
   useEffect(() => { fetchAlbums(); fetchEventOptions(); }, []);
 
-  // Revoke stale object URL on unmount / change
-  useEffect(() => {
-    return () => { if (coverPreview) URL.revokeObjectURL(coverPreview); };
-  }, [coverPreview]);
-
-  const onDrop = useCallback((accepted: File[]) => {
-    const file = accepted[0];
-    if (!file) return;
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
-    setCoverFile(file);
-    setCoverPreview(URL.createObjectURL(file));
-  }, [coverPreview]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
-  });
-
   const removeCover = () => {
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(null);
     setCoverPreview(null);
   };
-
-  // Edit cover dropzone
-  const onEditDrop = useCallback((accepted: File[]) => {
-    const file = accepted[0];
-    if (!file) return;
-    if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
-    setEditCoverFile(file);
-    setEditCoverPreview(URL.createObjectURL(file));
-  }, [editCoverPreview]);
-
-  const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
-    onDrop: onEditDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
-  });
 
   async function uploadCoverImage(file: File): Promise<UploadedGalleryCover> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'galleryCover');
@@ -170,7 +133,6 @@ export default function AdminGallery() {
   };
 
   const closeEditModal = () => {
-    if (editCoverPreview) URL.revokeObjectURL(editCoverPreview);
     setAlbumToEdit(null);
     setEditCoverFile(null);
     setEditCoverPreview(null);
@@ -429,40 +391,16 @@ export default function AdminGallery() {
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                   New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
                 </p>
-                {coverPreview ? (
-                  <div className="mt-2 relative inline-block">
-                    <img
-                      src={coverPreview}
-                      alt="Cover preview"
-                      className="h-40 w-auto rounded object-cover border border-zinc-700"
-                    />
-                    <button
-                      type="button"
-                      onClick={removeCover}
-                      className="absolute top-2 right-2 w-6 h-6 bg-black/70 hover:bg-red-600 text-white rounded-full text-sm flex items-center justify-center transition-colors"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    {...getRootProps()}
-                    className={`mt-1 flex flex-col items-center justify-center border border-dashed rounded p-8 cursor-pointer transition-colors ${
-                      isDragActive
-                        ? 'border-zinc-400 bg-zinc-800/20'
-                        : 'border-zinc-700 bg-zinc-900/40 hover:border-zinc-500'
-                    }`}
-                  >
-                    <input {...getInputProps()} />
-                    <svg className="w-8 h-8 text-zinc-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-sm font-medium" style={{ color: 'var(--color-text2)' }}>
-                      {isDragActive ? 'Drop it here...' : 'Drag & drop a cover photo'}
-                    </p>
-                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>or click to browse - PNG, JPG, WebP</p>
-                  </div>
-                )}
+                <ImageDropzone
+                  className="mt-2"
+                  preset="galleryCover"
+                  previewUrl={coverPreview}
+                  file={coverFile}
+                  prompt="Drag & drop or click to upload a cover photo"
+                  previewAlt="Cover preview"
+                  onSelect={(file, preview) => { setCoverFile(file); setCoverPreview(preview); }}
+                  onClear={removeCover}
+                />
               </div>
 
               <button
@@ -658,39 +596,16 @@ export default function AdminGallery() {
                   </div>
                 )}
 
-                {editCoverPreview ? (
-                  <div className="relative mt-2">
-                    <p className="mb-1.5 text-xs" style={{ color: 'var(--color-text3)' }}>New cover staged</p>
-                    <img
-                      src={editCoverPreview}
-                      alt="New cover preview"
-                      className="w-full h-36 object-cover rounded border border-zinc-400/60"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { if (editCoverPreview) URL.revokeObjectURL(editCoverPreview); setEditCoverFile(null); setEditCoverPreview(null); }}
-                      className="absolute top-2 right-2 w-6 h-6 bg-black/70 hover:bg-red-600 text-white rounded-full text-sm flex items-center justify-center transition-colors"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    {...getEditRootProps()}
-                    className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded p-5 cursor-pointer transition-colors ${
-                      isEditDragActive
-                        ? 'border-zinc-400 bg-zinc-800/20'
-                        : 'border-zinc-700 bg-zinc-900/40 hover:border-zinc-500'
-                    }`}
-                  >
-                    <input {...getEditInputProps()} />
-                    <svg className="w-6 h-6 text-zinc-600 mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-sm" style={{ color: 'var(--color-text2)' }}>{isEditDragActive ? 'Drop it here...' : 'Drag & drop or click to replace cover'}</p>
-                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>PNG, JPG, WebP</p>
-                  </div>
-                )}
+                <ImageDropzone
+                  className="mt-2"
+                  preset="galleryCover"
+                  previewUrl={editCoverPreview}
+                  file={editCoverFile}
+                  prompt="Drag & drop or click to replace cover"
+                  previewAlt="New cover preview"
+                  onSelect={(file, preview) => { setEditCoverFile(file); setEditCoverPreview(preview); }}
+                  onClear={() => { setEditCoverFile(null); setEditCoverPreview(null); }}
+                />
               </div>
 
               {/* Actions */}

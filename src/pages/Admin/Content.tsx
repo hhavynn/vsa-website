@@ -1,6 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -13,6 +12,7 @@ import {
   PresidentsContent,
   splitPresidentsMessage,
 } from '../../data/presidentsContent';
+import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 import { ProgramContentManager } from '../../components/features/admin/ProgramContentManager';
 import { PreviewAsPublicButton, PublicPreviewDialog } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { PresidentsMessageSection } from '../../components/features/home/PresidentsMessage';
@@ -78,23 +78,6 @@ export default function AdminContent() {
       isMounted = false;
     };
   }, []);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setPhotoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
-  });
 
   async function uploadPhoto(file: File): Promise<{ photoUrl: string; photoThumbnailUrl: string }> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'homepage');
@@ -258,24 +241,15 @@ export default function AdminContent() {
 
           <div>
             <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Upload Photo</label>
-            <div
-              {...getRootProps()}
-              className="mt-1 flex min-h-44 flex-col items-center justify-center border border-dashed rounded p-6 cursor-pointer transition-colors"
-              style={{ borderColor: isDragActive ? 'var(--color-text2)' : 'var(--color-border)', background: isDragActive ? 'var(--color-surface2)' : 'transparent' }}
-            >
-              <input {...getInputProps()} />
-              {previewPhoto ? (
-                <img src={sanitizeImageSrc(previewPhoto)} alt="Presidents preview" className="max-h-52 rounded object-cover" />
-              ) : (
-                <p className="font-sans text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
-              )}
-            </div>
-            {previewPhoto && (
-              <button type="button" className="mt-1.5 font-sans text-xs text-red-500 hover:text-red-400" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => { setForm({ ...form, photoUrl: '', photoThumbnailUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}>
-                Remove photo
-              </button>
-            )}
+            <ImageDropzone
+              className="mt-1"
+              preset="homepage"
+              previewUrl={previewPhoto ? sanitizeImageSrc(previewPhoto) : null}
+              file={photoFile}
+              previewAlt="Presidents preview"
+              onSelect={(file, preview) => { setPhotoFile(file); setPhotoPreview(preview ?? ''); }}
+              onClear={() => { setForm({ ...form, photoUrl: '', photoThumbnailUrl: '' }); setPhotoFile(null); setPhotoPreview(''); }}
+            />
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">

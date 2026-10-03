@@ -6,9 +6,35 @@ Migrates event and House event images from Supabase Storage to repo-hosted `/pub
 **Admin uploads still go to Supabase first.** The browser cannot write directly into the Vercel `/public` directory — those files must live in the repo and be deployed through Vercel's build pipeline. So the flow is:
 
 1. Admin uploads → Supabase Storage (immediate, no deploy needed)
-2. Migration workflow → downloads those images, optimizes them, writes to `public/images/events/` or `public/images/house-events/`, commits, and pushes to `main`
+2. Migration workflow (phase 1) → downloads those images, optimizes them, writes to `public/images/events/` or `public/images/house-events/` **and a relink plan**, commits, and pushes to `main`. The database is not touched.
 3. Vercel redeploys `main` → image is now served from `/images/events/...` or `/images/house-events/...`
-4. DB row is updated to point at the local path instead of the Supabase URL
+4. Migration workflow (phase 2) → confirms production really serves each new file, **then** updates the DB row to the local path instead of the Supabase URL
+
+### Why the DB is updated last (#454)
+
+The row used to be relinked inside the same step that wrote the file, before anything was pushed or deployed. A failed push or deploy left the row pointing at a path that was not served (a 404) and later runs skipped it because it already looked local.
+
+Now:
+
+| Phase | Command | Writes |
+|---|---|---|
+| 1 | `--apply` | WebP files + a relink plan (`scripts/reports/image-relink-plan.json`). **Never the database.** |
+| (commit, push, wait for deploy) | | |
+| 2 | `--relink <plan> --base-url <origin>` | For each plan entry: check the production asset, then `UPDATE … WHERE id = ? AND <field> = <expected Storage URL>`. |
+
+Phase 2 treats an asset as served only when production returns **HTTP 200, an `image/*` content-type, and exactly the bytes of the committed file (length and SHA-256)**. A status check alone is not enough: `vercel.json` answers every missing path with `200` + `index.html` (SPA fallback), so a file that never deployed would look healthy. All distinct assets are polled together against **one shared deadline**: `--wait-seconds` (the workflows use 900) is the budget for the whole run, not per asset, so 50 missing files cost 15 minutes, not 12 hours. Each asset still has to pass on its own before its rows are relinked.
+
+Before anything is verified or written, the whole plan is validated against the migration's category table (`scripts/lib/imageMigrationConfig.ts`). A plan is data read from disk and the relink uses the service-role key, so it may only touch the configured table and image columns of a known category, point at a plain `.webp` file directly inside that category's `/images/...` directory, have a `filePath` that matches its `newPath`, and carry no conflicting writes to the same row and column. One bad entry rejects the entire plan.
+
+Outcomes per plan entry:
+
+- **relinked** — asset served, row still held the expected Storage URL, now points at `/images/...`.
+- **not served** — asset missing after the wait. The row is left on its working Storage URL; the job exits non-zero so a deploy that never landed is visible. The next run re-plans it (rows still on Storage are always planned, even if the file is already committed).
+- **row changed** — someone saved a newer upload (or another run already relinked it) between the plan and the relink. Left untouched.
+
+If the push fails, the workflow fails before phase 2, so no row is touched. Storage originals are never deleted.
+
+> **How the deploy starts.** Commits pushed with the workflow's `GITHUB_TOKEN` never trigger other workflows, so after pushing, the migration workflows run `gh workflow run deploy.yml --ref main` (`deploy.yml` has a `workflow_dispatch` trigger for this). Its Vercel step is skipped when the `VERCEL_TOKEN` secret is unset; in that case the Vercel git integration, which watches `main` directly, is the deploy path (not verifiable from this repo; the bot commits no longer carry `[skip ci]`, so they are not excluded from it). If neither deploys, phase 2 times out and the rows stay on Storage; fix the deploy and re-run. Phase 2 also compares a SHA-256 of the served file, so a stale file of the same size at a reused path (`--overwrite`) is not accepted.
 
 ### Categories
 
@@ -40,7 +66,7 @@ Go to **Actions → Migrate event images to static assets → Run workflow**.
 
 Leave `apply` set to `false`. Choose optional `event_id` and `limit` inputs.
 
-The workflow will print what it *would* download, compress, and update — but make no changes.
+The workflow will print what it *would* download, compress, and plan to relink — but make no changes.
 
 You can also run the script locally:
 
@@ -67,7 +93,7 @@ Requires `.env.local` with `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON
 
 **Always run a dry run first and review the output.**
 
-Apply mode must run from the `main` branch. This is enforced by the workflow. Updating the DB to `/images/events/...` before those files are deployed on `main` would temporarily serve broken images in production.
+Apply mode must run from the `main` branch. This is enforced by the workflow, because only `main`'s files are what production serves and what phase 2 verifies against.
 
 Recommended process:
 
@@ -76,30 +102,43 @@ Recommended process:
 3. Set `apply` to `true`
 4. Set `event_id` if migrating a single event
 5. Click **Run workflow** (must be run from `main`)
-6. Wait for the workflow to finish — it commits new WebP files and pushes to `main`
-7. Wait for Vercel to redeploy (usually 1–3 minutes)
-8. Visit `/events` and verify images load from `/images/events/...` URLs
+6. The workflow writes the files + plan, commits and pushes to `main`, then waits for Vercel to serve each new file (usually 1–3 minutes, up to 15) and only then relinks the rows
+7. Visit `/events` and verify images load from `/images/events/...` URLs
 
-To run apply locally (bypasses branch guard with `--force-apply`):
+To run it by hand (for example to retry after a "not served" failure):
 
 ```bash
-# Apply all events locally — requires SUPABASE_SERVICE_ROLE_KEY in .env.local
-npm run migrate:images:apply -- --category events --force-apply
+# Phase 1: files + plan, no DB writes (needs only the anon key)
+npm run migrate:images:apply -- --category events
 
-# Single event
-npm run migrate:images:apply -- --category events --event-id <uuid> --force-apply
+# Review, commit and push public/images/, wait for the Vercel deploy, then:
+
+# Check what is live without writing anything
+npm run migrate:images:relink -- --relink scripts/reports/image-relink-plan.json \
+  --base-url https://www.vsaatucsd.com --verify-only --wait-seconds 0
+
+# Phase 2: relink (needs SUPABASE_SERVICE_ROLE_KEY; refuses off main in CI unless --force-apply)
+npm run migrate:images:relink -- --relink scripts/reports/image-relink-plan.json \
+  --base-url https://www.vsaatucsd.com
 ```
+
+The workflows read the production origin from the `SITE_URL` repository variable and default to `https://www.vsaatucsd.com`.
 
 ## Script flags
 
 | Flag | Description |
 |---|---|
-| `--apply` | Execute writes and DB updates (default: dry run) |
+| `--apply` | Write files and a relink plan (default: dry run). Does not modify the database. |
+| `--plan-out <file>` | Where `--apply` writes the plan (default `scripts/reports/image-relink-plan.json`) |
+| `--relink <plan>` | Phase 2: verify each asset on production, then relink rows. Needs `--base-url`. |
+| `--base-url <origin>` | Production origin used to verify assets |
+| `--wait-seconds <n>` | Total time to poll for the deploy, shared by all assets (default 600; `0` = check once) |
+| `--verify-only` | With `--relink`: verify assets, write nothing |
 | `--category events` | Restrict to events table (script supports other categories too) |
 | `--event-id <uuid>` | Migrate a single event row |
 | `--limit <n>` | Max rows to process |
-| `--overwrite` | Rewrite output files even when the derived image is identical. Rows still on Supabase Storage are always re-derived and relinked; the file is only rewritten when the image changed (#436). |
-| `--force-apply` | Override the branch guard (use carefully) |
+| `--overwrite` | Rewrite output files even when the derived image is identical. Rows still on Supabase Storage are always re-derived and planned; the file is only rewritten when the image changed (#436). |
+| `--force-apply` | With `--relink`: override the CI main-branch guard (use carefully) |
 
 ## Image output
 
@@ -110,7 +149,7 @@ public/images/events/<event-name>_<date>.webp
 public/images/events/<event-name>_<date>_thumb.webp
 ```
 
-The DB field `image_url` (and `thumbnail_url`) is updated to `/images/events/<filename>.webp`.
+Once phase 2 confirms the file is served, the DB field `image_url` (and `thumbnail_url`) is updated to `/images/events/<filename>.webp`.
 
 ## Why old Supabase files are not deleted
 
@@ -118,11 +157,11 @@ Old Supabase Storage files are intentionally kept after migration. Deleting them
 
 ## Supabase egress reduction
 
-Once the DB `image_url` fields are updated to `/images/events/...`, the Supabase CDN stops serving those images. Vercel's edge network serves them instead — from the repo's static asset tree — without counting against Supabase egress.
+Once phase 2 has updated the DB `image_url` fields to `/images/events/...`, the Supabase CDN stops serving those images. Vercel's edge network serves them instead — from the repo's static asset tree — without counting against Supabase egress.
 
 ## Relationship to the daily migration workflow
 
-A separate `migrate-images.yml` workflow runs daily and applies all categories automatically. This `migrate-event-images.yml` workflow is for on-demand, targeted event migrations with dry-run safety built in. If you run both, the daily workflow will skip already-migrated images (local paths are not re-downloaded).
+A separate `migrate-images.yml` workflow runs daily and applies all categories automatically. This `migrate-event-images.yml` workflow is for on-demand, targeted event migrations with dry-run safety built in. If you run both, the daily workflow will skip already-migrated images (local paths are not re-downloaded). Both use the same two-phase flow, and their relink updates are conditional, so two runs cannot overwrite each other's work.
 
 ---
 

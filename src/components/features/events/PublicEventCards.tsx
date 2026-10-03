@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Badge, BadgeColor } from '../../ui/Badge';
@@ -9,7 +8,7 @@ import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/h
 import { getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../../../lib/eventTime';
 import { parseDateOnly } from '../../../lib/dateOnly';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { AcademicTerm, Event, ExternalEvent } from '../../../types';
 import { ExternalEventLinks, ExternalHostedBy } from './ExternalEventHost';
 
@@ -91,41 +90,32 @@ export function EventImage({
   resize?: 'cover' | 'contain';
   sizes?: string;
 }) {
+  // Thumbnail (720w) is what these slots already render; keep it rather than
+  // adding the 1200w full file as a srcset candidate (more egress, little gain).
   const imageUrl = event.thumbnail_url || event.image_url;
-  const [imageFailed, setImageFailed] = useState(false);
-
-  if (imageUrl && !imageFailed) {
-    return (
-      <img
-        src={getSupabaseImageUrl(imageUrl, {
-          width: imageWidth,
-          height: imageHeight,
-          resize,
-          quality: 72,
-        })}
-        srcSet={getSupabaseImageSrcSet(imageUrl, [Math.round(imageWidth / 2), imageWidth], {
-          resize,
-          quality: 72,
-        })}
-        sizes={sizes}
-        alt={event.name}
-        className={className}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        onError={() => setImageFailed(true)}
-      />
-    );
-  }
 
   return (
-    <div
-      className={`scrapbook-note flex items-center justify-center border ${className}`}
-      style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
-    >
-      <span className={titleClassName} style={{ color: 'var(--color-text2)' }}>
-        {event.name}
-      </span>
-    </div>
+    <OptimizedImage
+      src={imageUrl}
+      width={imageWidth}
+      height={imageHeight}
+      sizes={sizes}
+      widths={[Math.round(imageWidth / 2), imageWidth]}
+      resize={resize}
+      alt={event.name}
+      className={className}
+      priority={priority}
+      fallback={
+        <div
+          className={`scrapbook-note flex items-center justify-center border ${className}`}
+          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
+        >
+          <span className={titleClassName} style={{ color: 'var(--color-text2)' }}>
+            {event.name}
+          </span>
+        </div>
+      }
+    />
   );
 }
 

@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { Event } from '../../../types';
 import { CountdownTimer } from '../../common/CountdownTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { buildGcalAllDayDates, buildGcalTimedDates, formatEventTimeRange } from '../../../lib/eventTime';
 
 export interface EventCardProps {
@@ -13,7 +12,6 @@ export interface EventCardProps {
 
 export function EventCard({ event, onCheckIn }: EventCardProps) {
   const imageUrl = event.thumbnail_url || event.image_url;
-  const [imageFailed, setImageFailed] = useState(false);
 
   const handleSaveToCalendar = () => {
     if (!event.date) return;
@@ -49,32 +47,23 @@ export function EventCard({ event, onCheckIn }: EventCardProps) {
     <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-md overflow-hidden flex flex-col h-full hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors duration-150">
       {/* Image */}
       <div className="relative h-44 bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-        {imageUrl && !imageFailed ? (
-          <img
-            src={getSupabaseImageUrl(imageUrl, {
-              width: 520,
-              height: 330,
-              resize: 'cover',
-              quality: 72,
-            })}
-            srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], {
-              resize: 'cover',
-              quality: 72,
-            })}
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            alt={event.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <svg className="w-10 h-10 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        )}
+        <OptimizedImage
+          src={imageUrl}
+          // Thumbnail (720w) already covers the ~520px card slot; keep it rather than fetch the full file.
+          width={520}
+          height={330}
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          widths={[320, 520, 720]}
+          alt={event.name}
+          className="w-full h-full object-cover"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-zinc-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          }
+        />
         {/* Event type badge */}
         <span className="absolute top-3 left-3 px-2 py-0.5 text-xs font-medium border border-zinc-200/60 bg-white/80 dark:bg-zinc-900/80 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 rounded backdrop-blur-sm">
           {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
