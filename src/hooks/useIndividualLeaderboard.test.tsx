@@ -191,8 +191,10 @@ it('gives podium members tied at T1 the same first-place styling', async () => {
   const podiumBadges = (text: string) =>
     screen.getAllByText(text).filter((element) => element.style.background !== '').map((element) => element.style.background);
 
-  expect(podiumBadges('T1')).toEqual(['rgb(212, 132, 26)', 'rgb(212, 132, 26)']);
-  expect(podiumBadges('3')).toEqual(['rgb(180, 83, 9)']);
+  // Each podium member renders once in the compact phone podium and once in the
+  // staged desktop podium, so every badge appears twice; the styling is unchanged.
+  expect(podiumBadges('T1')).toEqual(Array(4).fill('rgb(212, 132, 26)'));
+  expect(podiumBadges('3')).toEqual(Array(2).fill('rgb(180, 83, 9)'));
 });
 
 // Hook-level characterization (#293). Covers the LEADERBOARD system only

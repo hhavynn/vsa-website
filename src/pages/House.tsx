@@ -25,6 +25,8 @@ import { HouseYearSelector } from '../components/features/house/HouseYearSelecto
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
+import { RelatedLinks } from '../components/common/RelatedLinks';
+import { houseRelatedLinks, POINTS_HELP_ANCHOR } from '../lib/relatedLinks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PERSONALITY — Flavor copy per house. Update each cycle as needed.
@@ -1031,7 +1033,7 @@ export function House() {
                     House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
                     {isHousePointOverrideActive(activeYear) 
                       ? "Totals reflect official public count for the year" 
@@ -1048,6 +1050,12 @@ export function House() {
                     className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
                   >
                     Full member rankings →
+                  </Link>
+                  <Link
+                    to={`/points#${POINTS_HELP_ANCHOR}`}
+                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                  >
+                    How points work →
                   </Link>
                 </div>
               </div>
@@ -1288,6 +1296,12 @@ export function House() {
             </div>
           </section>
         )}
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <RelatedLinks links={houseRelatedLinks(isArchive ? 'archive' : 'current')} />
+          </div>
+        </section>
 
         {/* ── Footer ── */}
         <section className="program-section">

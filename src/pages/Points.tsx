@@ -5,6 +5,8 @@ import { useFindMyPoints } from '../hooks/useFindMyPoints';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { Link } from 'react-router-dom';
+import { RelatedLinks } from '../components/common/RelatedLinks';
+import { POINTS_HELP_ANCHOR, pointsRelatedLinks } from '../lib/relatedLinks';
 
 export default function Points() {
   const { error } = useFindMyPoints('all'); // Check all-time to see if service is up
@@ -45,6 +47,7 @@ export default function Points() {
 
       <div className="vsa-container space-y-10 py-10">
         <FindMyPoints variant="page" />
+        <RelatedLinks heading="Related" links={pointsRelatedLinks()} />
         <div className="scrapbook-note flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
@@ -61,7 +64,9 @@ export default function Points() {
             Request a correction
           </Link>
         </div>
-        <PointsExplainer showCorrectionCta={false} />
+        <div id={POINTS_HELP_ANCHOR} className="scroll-mt-24">
+          <PointsExplainer showCorrectionCta={false} />
+        </div>
       </div>
     </>
   );

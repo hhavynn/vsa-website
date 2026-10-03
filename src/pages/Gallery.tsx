@@ -1,4 +1,5 @@
-import { type CSSProperties, useMemo } from 'react';
+import { type CSSProperties, type MouseEvent, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { formatDateOnly } from '../lib/dateOnly';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PageTitle } from '../components/common/PageTitle';
@@ -7,6 +8,7 @@ import { PageError } from '../components/common/PageError';
 import { useGallery, useGalleryStats } from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { motion, useReducedMotion } from 'framer-motion';
+import { AlbumFallback, AlbumLightbox } from '../components/features/gallery/AlbumLightbox';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -49,19 +51,18 @@ function getAlbumStyle(index: number): CSSProperties {
   } as CSSProperties;
 }
 
-function AlbumFallback() {
-  return (
-    <div className="gallery-memory-fallback">
-      <svg className="h-10 w-10" style={{ color: 'var(--text3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-      <span className="font-serif text-2xl italic" style={{ color: 'var(--text)' }}>VSA</span>
-    </div>
-  );
+// The quick-look is open when the current history entry carries an album id.
+// Using history state (not a query param) means Back closes it, a swipe
+// replaces the entry instead of stacking one per album, and the site's
+// scroll-to-top-on-URL-change behavior never fires behind the dialog.
+interface AlbumLocationState {
+  albumQuickLook?: string;
 }
 
 export default function Gallery() {
   const shouldReduceMotion = useReducedMotion();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { 
     data, 
     isLoading: loading, 
@@ -76,6 +77,36 @@ export default function Gallery() {
   const albums = useMemo(() => {
     return data?.pages.flatMap(page => page) ?? [];
   }, [data]);
+  const openAlbumId = (location.state as AlbumLocationState | null)?.albumQuickLook ?? null;
+  const openAlbumIndex = openAlbumId ? albums.findIndex((album) => album.id === openAlbumId) : -1;
+
+  const pagePath = `${location.pathname}${location.search}`;
+  const openAlbum = useCallback(
+    (albumId: string) => navigate(pagePath, { state: { albumQuickLook: albumId } }),
+    [navigate, pagePath],
+  );
+  const showAlbumAt = useCallback(
+    (albumIndex: number) => {
+      const target = albums[albumIndex];
+      if (target) navigate(pagePath, { replace: true, state: { albumQuickLook: target.id } });
+    },
+    [albums, navigate, pagePath],
+  );
+  const closeAlbum = useCallback(() => {
+    // A direct landing on this entry has nothing behind it to go back to.
+    if (location.key === 'default') navigate(pagePath, { replace: true, state: null });
+    else navigate(-1);
+  }, [location.key, navigate, pagePath]);
+
+  const handleAlbumClick = (event: MouseEvent<HTMLAnchorElement>, albumId: string) => {
+    // Modified clicks keep the real link (new tab to Google Photos).
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    openAlbum(albumId);
+  };
+
   const useSummerGalleryEmptyState = shouldUseSummerEmptyState(albums.length > 0);
   const summerGalleryMessage = getSummerBreakMessage('gallery');
 
@@ -157,7 +188,8 @@ export default function Gallery() {
                     href={album.google_photos_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${album.title}. Opens in a new tab`}
+                    aria-label={`${album.title}. Preview album`}
+                    onClick={(event: MouseEvent<HTMLAnchorElement>) => handleAlbumClick(event, album.id)}
                     className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
@@ -183,7 +215,7 @@ export default function Gallery() {
                       )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
                         <span className="font-sans text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                          View Full Album
+                          Preview Album
                         </span>
                       </div>
                     </div>
@@ -229,6 +261,15 @@ export default function Gallery() {
                 );
               })}
             </motion.div>
+
+            {openAlbumIndex >= 0 && (
+              <AlbumLightbox
+                albums={albums}
+                index={openAlbumIndex}
+                onIndexChange={showAlbumAt}
+                onClose={closeAlbum}
+              />
+            )}
 
             {hasNextPage && (
               <div className="mt-16 flex justify-center">

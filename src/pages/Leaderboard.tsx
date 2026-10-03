@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { Input } from '../components/ui/Input';
@@ -34,9 +34,10 @@ import {
   RankPlacement,
 } from '../utils/leaderboardRanking';
 import { buildAcademicYearOptions, resolveDefaultLeaderboardYear, type AcademicYearOption } from '../utils/leaderboardYears';
-import { Link } from 'react-router-dom';
 
 import { PointsExplainer } from '../components/features/points/PointsExplainer';
+import { RelatedLinks } from '../components/common/RelatedLinks';
+import { leaderboardRelatedLinks, POINTS_HELP_ANCHOR } from '../lib/relatedLinks';
 import { HouseMemberLeaderboard } from '../components/features/house/HouseMemberLeaderboard';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
@@ -134,7 +135,7 @@ function RankGapNote({
 }) {
   if (entry.tiedCount > 1) {
     return (
-      <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--brand)' }}>
+      <div className="mt-0.5 font-mono text-[10px] font-semibold sm:whitespace-nowrap" style={{ color: 'var(--brand)' }}>
         {entry.tiedCount.toLocaleString()}-way tie
       </div>
     );
@@ -148,7 +149,7 @@ function RankGapNote({
   if (gap.metric === 'tie') return null;
 
   return (
-    <div className="mt-0.5 font-mono text-[9px] font-semibold whitespace-nowrap" style={{ color: 'var(--text3)' }}>
+    <div className="mt-0.5 font-mono text-[10px] font-semibold sm:whitespace-nowrap" style={{ color: 'var(--text3)' }}>
       {getGapCaption(gap, `to ${formatRank(above)}`)}
     </div>
   );
@@ -220,6 +221,53 @@ function getMemberDisplayName(member: Pick<Member, 'first_name' | 'last_name'>) 
   return `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim() || 'VSA Member';
 }
 
+// Secondary profile detail (event-type breakdown, attendance history) is
+// collapsed behind a thumb-sized header on phones so the sheet opens on the
+// member's name, rank and totals; from `sm` up it starts expanded as before.
+function startsExpanded() {
+  return typeof window === 'undefined' || typeof window.matchMedia !== 'function'
+    ? true
+    : !window.matchMedia('(max-width: 639px)').matches;
+}
+
+function ProfileSection({
+  title,
+  summary,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(startsExpanded);
+
+  return (
+    <div className="mt-4 border-t border-[var(--border)] pt-1">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-[44px] w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+      >
+        <h3 className="font-serif text-base font-bold text-[var(--text)]">{title}</h3>
+        <span className="flex shrink-0 items-center gap-2 font-mono text-[11px] font-bold text-[var(--text3)]">
+          {summary}
+          <svg
+            className={`h-4 w-4 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+      {open && <div className="pb-1 pt-1">{children}</div>}
+    </div>
+  );
+}
+
 function PublicMemberProfileModal({
   member,
   avatarUrl,
@@ -289,15 +337,15 @@ function PublicMemberProfileModal({
                 <img
                   src={avatarUrl}
                   alt={displayName}
-                  className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
+                  className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-md dark:border-zinc-800"
                 />
               ) : (
-                <InitialsAvatar name={displayName} size={96} />
+                <InitialsAvatar name={displayName} size={80} />
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="truncate font-serif text-2xl font-bold text-[var(--text)]">{displayName}</h2>
-              <p className="mt-1 font-sans text-xs text-[var(--text2)]">{meta}</p>
+              <h2 className="break-words font-serif text-2xl font-bold leading-tight text-[var(--text)]">{displayName}</h2>
+              <p className="mt-1 break-words font-sans text-xs text-[var(--text2)]">{meta}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {isWithinTop(member, 3) && <StickerBadge color="gold" size="sm">TOP {member.rank}</StickerBadge>}
                 <StickerBadge color="primary" size="sm">{primaryLabel.toUpperCase()}</StickerBadge>
@@ -318,7 +366,7 @@ function PublicMemberProfileModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-[var(--border)] px-2 py-1 font-sans text-xs text-[var(--text2)] transition-colors hover:bg-[var(--surface2)]"
+            className="min-h-[44px] shrink-0 rounded-full border border-[var(--border)] px-4 font-sans text-xs text-[var(--text2)] transition-colors hover:bg-[var(--surface2)]"
             aria-label="Close member profile"
           >
             Close
@@ -327,36 +375,40 @@ function PublicMemberProfileModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text3)]">{primaryLabel}</p>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--text3)]">{primaryLabel}</p>
             <p className="mt-1 font-mono text-2xl font-black text-[var(--text)]">{primaryMetric}</p>
           </div>
           <div className="rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text3)]">{secondaryLabel}</p>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--text3)]">{secondaryLabel}</p>
             <p className="mt-1 font-mono text-2xl font-black text-[var(--text)]">{secondaryMetric}</p>
           </div>
         </div>
 
         {member.events_attended > 0 && (
-          <p className="mt-2 font-mono text-[10px] font-semibold text-[var(--text3)]">
+          <p className="mt-2 font-mono text-[11px] font-semibold text-[var(--text3)]">
             avg {avgPointsPerEvent.toFixed(1)} pts/event
           </p>
         )}
 
         {typeBreakdown.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {typeBreakdown.map(([type, count]) => (
-              <span
-                key={type}
-                className="rounded-full border border-[var(--border)] bg-[var(--surface2)] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-wide text-[var(--text2)]"
-              >
-                {EVENT_TYPE_LABELS[type] ?? type} × {count}
-              </span>
-            ))}
-          </div>
+          <ProfileSection title="By event type" summary={`${typeBreakdown.length}`}>
+            <div className="flex flex-wrap gap-1.5">
+              {typeBreakdown.map(([type, count]) => (
+                <span
+                  key={type}
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface2)] px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-[var(--text2)]"
+                >
+                  {EVENT_TYPE_LABELS[type] ?? type} × {count}
+                </span>
+              ))}
+            </div>
+          </ProfileSection>
         )}
 
-        <div className="mt-5 border-t border-[var(--border)] pt-4">
-          <h3 className="mb-3 font-serif text-base font-bold text-[var(--text)]">Events attended</h3>
+        <ProfileSection
+          title="Events attended"
+          summary={loadingHistory || historyError ? undefined : `${eventHistory.length}`}
+        >
           {loadingHistory ? (
             <div className="space-y-2" aria-hidden>
               {[0, 1, 2].map((i) => (
@@ -375,8 +427,8 @@ function PublicMemberProfileModal({
                   className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface2)] p-3"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-sans text-sm font-semibold text-[var(--text)]">{entry.event_name}</p>
-                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-[var(--text3)]">
+                    <p className="break-words font-sans text-sm font-semibold text-[var(--text)]">{entry.event_name}</p>
+                    <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-[var(--text3)]">
                       {formatDateOnly(entry.event_date, 'MMM d, yyyy')}
                       {' · '}
                       {EVENT_TYPE_LABELS[entry.event_type] ?? entry.event_type}
@@ -389,7 +441,7 @@ function PublicMemberProfileModal({
               ))}
             </ul>
           )}
-        </div>
+        </ProfileSection>
 
         <div className="mt-5 border-t border-[var(--border)] pt-4">
           <PhotoRequestSection
@@ -398,6 +450,14 @@ function PublicMemberProfileModal({
             buttonLabel={avatarUrl ? 'Update photo' : 'Request photo'}
           />
         </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 min-h-[48px] w-full rounded-lg border border-[var(--border)] bg-[var(--surface2)] font-sans text-sm font-semibold text-[var(--text)] sm:hidden"
+        >
+          Close
+        </button>
     </BottomSheet>
   );
 }
@@ -410,6 +470,8 @@ export function Leaderboard() {
   const { terms, loading: termsLoading } = useAcademicTerms();
   const { yearsWithData, loading: yearsWithDataLoading } = useLeaderboardYears();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [pointsHelpOpen, setPointsHelpOpen] = useState(false);
   const [byPoints, setByPoints] = useState<LeaderboardEntry[]>([]);
   const [byEvents, setByEvents] = useState<LeaderboardEntry[]>([]);
   const [houseStandings, setHouseStandings] = useState<HouseStanding[]>([]);
@@ -458,6 +520,11 @@ export function Leaderboard() {
     // setView already updates activeView directly on user interaction.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // "How points work" links (#how-points-work) must land on an open explainer.
+  useEffect(() => {
+    if (location.hash === `#${POINTS_HELP_ANCHOR}`) setPointsHelpOpen(true);
+  }, [location.hash]);
 
   const academicYears = useMemo<AcademicYearOption[]>(
     () => buildAcademicYearOptions(terms, yearsWithData),
@@ -706,7 +773,7 @@ export function Leaderboard() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     aria-pressed={activeTab === tab}
-                    className={`rounded-full border-2 px-4 py-1.5 font-mono text-[10px] font-bold tracking-wider transition-all ${
+                    className={`min-h-[40px] rounded-full border-2 px-4 py-1.5 font-mono text-[11px] font-bold tracking-wider transition-all ${
                       activeTab === tab 
                         ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
                         : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
@@ -737,19 +804,10 @@ export function Leaderboard() {
       </div>
 
       <div className="vsa-container pt-8">
-        <div className="scrapbook-paper flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
-              Looking for your own points?
-            </h2>
-            <p className="mt-1 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
-              Use the personal lookup to find your total, event count, and correction options.
-            </p>
-          </div>
-          <Link to="/points" className="vsa-btn-primary w-full shrink-0 text-center sm:w-auto">
-            Find My Points
-          </Link>
-        </div>
+        <RelatedLinks
+          heading="Looking for…?"
+          links={leaderboardRelatedLinks(location.pathname, location.search)}
+        />
         {summerBreak && (
           <div className="mt-4 rounded border px-4 py-3 font-sans text-xs leading-relaxed" style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text3)' }}>
             <span className="font-semibold" style={{ color: 'var(--text)' }}>{summerPointsMessage.title}.</span>{' '}
@@ -770,8 +828,8 @@ export function Leaderboard() {
             />
           )}
 
-            <div className="mt-12">
-              <div className="mb-6 flex items-center gap-3 px-2">
+            <div className="mt-8 md:mt-12">
+              <div className="mb-4 flex items-center gap-3 px-2 md:mb-6">
                 <div className="h-8 w-2 rounded-full bg-[var(--brand)]" />
                 <h3 className="font-serif text-2xl font-bold">Full Standings</h3>
               </div>
@@ -779,7 +837,7 @@ export function Leaderboard() {
               <div className="mb-6 relative">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)]" />
                 <Input
-                  className="pl-11 h-12 bg-[var(--surface)] border-2 border-[var(--border)] focus:ring-[var(--brand)]"
+                  className="pl-11 h-12 bg-[var(--surface)] border-2 border-[var(--border)] text-[16px] focus:ring-[var(--brand)] sm:text-sm"
                   placeholder="Search for a member..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -814,12 +872,12 @@ export function Leaderboard() {
                       setSelectedMember(entry);
                     }
                   }}
-                  className="group scrapbook-paper flex cursor-pointer items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+                  className="group scrapbook-paper flex cursor-pointer items-center gap-3 p-3 transition-all sm:gap-4 sm:p-4 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                       {/* Rank */}
-                      <div className="flex w-12 shrink-0 items-center justify-center sm:w-16">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 font-mono font-black transition-colors ${
+                      <div className="flex shrink-0 items-center justify-center sm:w-16">
+                        <div className={`flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border-2 px-1 font-mono text-sm font-black transition-colors sm:h-10 sm:min-w-[2.5rem] sm:text-base ${
                           isWithinTop(entry, 3) ? 'border-[var(--brand)] text-[var(--text)]' : 'border-[var(--border)] text-[var(--text3)] group-hover:border-[var(--brand)]/30'
                         }`}>
                           {formatRank(entry)}
@@ -836,24 +894,31 @@ export function Leaderboard() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate font-serif text-[16px] font-bold" style={{ color: 'var(--text)' }}>
+                          <div className="line-clamp-2 break-words font-serif text-[15px] font-bold leading-tight sm:truncate sm:text-[16px]" style={{ color: 'var(--text)' }}>
                             {entry.first_name} {entry.last_name}
                           </div>
                           <div className="truncate font-sans text-[11px]" style={{ color: 'var(--text3)' }}>
                             {[entry.year, entry.college].filter(Boolean).join(' • ') || 'VSA Member'}
                           </div>
+                          {/* On phones the gap caption lives under the name so it can
+                              wrap instead of squeezing the name/score columns. */}
+                          <div className="sm:hidden">
+                            <RankGapNote entries={entries} entry={entry} metric={activeTab} />
+                          </div>
                         </div>
                       </div>
 
                       {/* Score */}
-                      <div className="text-right shrink-0 px-2 sm:px-4">
-                        <div className="font-mono text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
+                      <div className="shrink-0 text-right sm:px-4">
+                        <div className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
                           {activeTab === 'points' ? 'PTS' : 'EVENTS'}
                         </div>
                         <div className="font-mono text-2xl font-black leading-none" style={{ color: 'var(--text)' }}>
                           <AnimatedCounter value={activeTab === 'points' ? entry.points : entry.events_attended} />
                         </div>
-                        <RankGapNote entries={entries} entry={entry} metric={activeTab} />
+                        <div className="hidden sm:block">
+                          <RankGapNote entries={entries} entry={entry} metric={activeTab} />
+                        </div>
                       </div>
 
                       {/* Secondary Stat (Desktop Only) */}
@@ -905,7 +970,12 @@ export function Leaderboard() {
           </>
         )}
 
-        <details className="group mt-16 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]">
+        <details
+          id={POINTS_HELP_ANCHOR}
+          open={pointsHelpOpen}
+          onToggle={(event) => setPointsHelpOpen(event.currentTarget.open)}
+          className="group mt-12 scroll-mt-24 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] md:mt-16"
+        >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 transition-colors hover:bg-[var(--surface2)] sm:px-6">
             <div>
               <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--text)' }}>
@@ -989,15 +1059,85 @@ function PodiumIndividual({
     },
   ];
 
+  // Phones get a compact three-row podium (rank, name, score on one line each)
+  // so the full standings start on the first screen; md+ keeps the staged cards.
+  const compactRows = [cards[1], cards[0], cards[2]].filter((card) => card.entry);
+
   return (
     <div className="mt-6">
-      <div className="mb-8 flex items-center gap-3 px-2">
+      <div className="mb-4 flex items-center gap-3 px-2 md:mb-8">
         <div className="h-8 w-2 rounded-full bg-[var(--accent)]" />
         <h3 className="font-serif text-2xl font-bold">Top Performers</h3>
         <StarIcon className="h-5 w-5 text-[color:var(--color-accent-text)]" />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 md:items-end">
+      <div className="space-y-2 md:hidden">
+        {compactRows.map((card) => {
+          const entry = card.entry;
+          const tier = tierFor(entry);
+          const name = getMemberDisplayName(entry);
+          const avatarUrl = memberAvatars.get(entry.id);
+          const value = activeTab === 'points' ? entry.points : entry.events_attended;
+          const rankLabel = entry.tiedCount > 1 ? `T${entry.rank}` : entry.rank;
+
+          return (
+            <div
+              key={entry.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open profile for ${name}`}
+              onClick={() => onSelectMember(entry)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectMember(entry);
+                }
+              }}
+              className="scrapbook-paper flex cursor-pointer items-center gap-3 border-2 p-3 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              style={{ borderColor: tier.color }}
+            >
+              <div
+                className="flex h-10 min-w-[2.5rem] shrink-0 items-center justify-center rounded-full px-1 font-mono text-base font-black text-white"
+                style={{ background: tier.color }}
+              >
+                {rankLabel}
+              </div>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  loading="lazy"
+                  className="h-11 w-11 shrink-0 rounded-full border-2 border-white object-cover dark:border-zinc-800"
+                />
+              ) : (
+                <InitialsAvatar name={name} size={44} />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="line-clamp-2 break-words font-serif text-base font-bold leading-tight" style={{ color: 'var(--text)' }}>
+                  {name}
+                </div>
+                {card.gap !== null && (
+                  <div className="mt-0.5 font-mono text-[10px] font-semibold" style={{ color: 'var(--text3)' }}>
+                    {card.gap.metric === 'tie'
+                      ? 'tied'
+                      : getGapCaption(card.gap, card.gapLabel, card.eventTiebreakDirection)}
+                  </div>
+                )}
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
+                  {activeTab === 'points' ? 'PTS' : 'EVENTS'}
+                </div>
+                <div className="font-mono text-2xl font-black leading-none" style={{ color: 'var(--text)' }}>
+                  <AnimatedCounter value={value} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden gap-6 md:grid md:grid-cols-3 md:items-end">
         {cards.map((card) => {
           if (!card.entry) return null;
           const tier = tierFor(card.entry);
@@ -1074,7 +1214,7 @@ function PodiumIndividual({
 
                 {/* Name */}
                 <div className="mb-4">
-                  <div className={`font-serif leading-tight font-bold ${isFirst ? 'text-2xl' : 'text-xl'}`} style={{ color: 'var(--text)' }}>
+                  <div className={`break-words font-serif leading-tight font-bold ${isFirst ? 'text-2xl' : 'text-xl'}`} style={{ color: 'var(--text)' }}>
                     {card.entry.first_name} {card.entry.last_name}
                   </div>
                   <div className="mt-1 font-mono text-[11px] font-bold opacity-60">VSA MEMBER</div>
@@ -1195,7 +1335,7 @@ function HouseStandingsWall({
                       <h4 className="truncate font-serif text-2xl font-bold sm:text-3xl" style={{ color: 'var(--text)' }}>
                         {standing.emoji ? `${standing.emoji} ` : ''}{label}
                       </h4>
-                      <div className="mt-1 flex items-center gap-2 font-mono text-[11px] font-bold opacity-60">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] font-bold opacity-60">
                         <span>{standing.unique_members} MEMBERS</span>
                         <span className="h-1 w-1 rounded-full bg-[var(--text3)]" />
                       <span>{standing.events_attended} CHECK-INS</span>

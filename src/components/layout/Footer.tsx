@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
-import { wrappedNavLabel } from '../../data/wrappedEdition';
+import { FOOTER_GROUPS, FOOTER_LEGAL_LINKS } from './navigation/footerLinks';
 
 const socialLinks = [
   {
@@ -18,31 +18,6 @@ const socialLinks = [
     label: 'Facebook',
     href: 'https://facebook.com/ucsdvsa',
     icon: <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>,
-  },
-];
-
-const footerGroups = [
-  {
-    title: 'Navigate',
-    links: [
-      { label: 'Home', to: '/' },
-      { label: 'Events', to: '/events' },
-      { label: 'Cabinet', to: '/cabinet' },
-      { label: 'Gallery', to: '/gallery' },
-      { label: 'Leaderboard', to: '/leaderboard' },
-      { label: wrappedNavLabel(), to: '/#wrapped' },
-      { label: 'Feedback', to: '/feedback' },
-    ],
-  },
-  {
-    title: 'Programs',
-    links: [
-      { label: 'ACE', to: '/ace' },
-      { label: 'House System', to: '/house-system' },
-      { label: 'Intern Program', to: '/intern-program' },
-      { label: 'VCN', to: '/vcn' },
-      { label: "Wild n' Culture", to: '/wild-n-culture' },
-    ],
   },
 ];
 
@@ -79,7 +54,7 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
-          {footerGroups.map((group) => (
+          {FOOTER_GROUPS.map((group) => (
             <div key={group.title}>
               <div className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
                 {group.title}
@@ -110,9 +85,11 @@ const Footer: React.FC = () => {
             Copyright {new Date().getFullYear()} VSA at UCSD. Est. 1977.
           </span>
           <div className="flex flex-wrap gap-x-4 gap-y-2 font-sans text-xs">
-            <Link to="/privacy" className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
-              Privacy Notice
-            </Link>
+            {FOOTER_LEGAL_LINKS.map((link) => (
+              <Link key={link.to} to={link.to} className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
+                {link.label}
+              </Link>
+            ))}
             {isConfigured && (
               <button
                 type="button"

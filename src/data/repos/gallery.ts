@@ -5,6 +5,7 @@ export interface RelatedEvent {
   id: string;
   name: string;
   date: string;
+  academic_term_id?: string | null;
 }
 
 export interface GalleryAlbum {
@@ -35,7 +36,7 @@ export class GalleryRepository {
     return withErrorHandling(async () => {
       let query = supabase
         .from('gallery_events')
-        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date)')
+        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date, academic_term_id)')
         .not('google_photos_url', 'is', null)
         .order('date', { ascending: false });
 

@@ -11,6 +11,7 @@ import { parseDateOnly } from '../../../lib/dateOnly';
 import { OptimizedImage } from '../../common/OptimizedImage';
 import { AcademicTerm, Event, ExternalEvent } from '../../../types';
 import { ExternalEventLinks, ExternalHostedBy } from './ExternalEventHost';
+import { eventAnchorId } from '../../../lib/eventGalleryLinks';
 
 // Public event renderers shared by the /events page and the admin
 // "Preview As Public" dialog, so a draft is drawn by the exact same markup.
@@ -152,9 +153,10 @@ export function PastEventMemoryCard({
 
   return (
     <motion.div
+      id={eventAnchorId(event.id)}
       whileHover={{ y: -4, rotate: 0 }}
       transition={{ duration: 0.2 }}
-      className={`scrapbook-photo group/spotlight relative min-w-[82vw] snap-start overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.22),transparent_46%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 sm:before:opacity-0 md:min-w-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
+      className={`scrapbook-photo group/spotlight relative scroll-mt-24 min-w-[82vw] snap-start overflow-hidden transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-10 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.22),transparent_46%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.1)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.18)] hover:before:opacity-100 hover:after:opacity-100 sm:before:opacity-0 md:min-w-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.38)] scrapbook-hover-tilt ${rotationClass}`}
     >
       {/* Image with optional gallery overlay */}
       <div className="relative">

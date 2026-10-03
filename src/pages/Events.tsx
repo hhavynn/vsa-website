@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
@@ -18,6 +18,7 @@ import { formatDateOnly } from '../lib/dateOnly';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
+import { buildEventAlbumMap } from '../lib/eventGalleryLinks';
 import { supabase } from '../lib/supabase';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { useLinkedExternalListings } from '../hooks/useExternalEvents';
@@ -106,7 +107,12 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
 
 export function Events() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(null);
+  // `?term=` deep-links straight to a past term's archive (used by Gallery's
+  // "related event" link). An unknown term falls back to the latest archive.
+  const [searchParams] = useSearchParams();
+  const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(
+    () => searchParams.get('term')
+  );
 
   const now = useMemo(() => new Date(), []);
   const oneDayAgo = useMemo(() => new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), [now]);
@@ -186,13 +192,9 @@ export function Events() {
       .not('google_photos_url', 'is', null)
       .then(({ data, error: err }) => {
         if (cancelled || err || !data) return;
-        const map: Record<string, string> = {};
-        for (const row of data as Array<{ event_id: string | null; google_photos_url: string | null }>) {
-          if (row.event_id && row.google_photos_url && !map[row.event_id]) {
-            map[row.event_id] = row.google_photos_url;
-          }
-        }
-        setLinkedAlbums(map);
+        setLinkedAlbums(
+          buildEventAlbumMap(data as Array<{ event_id: string | null; google_photos_url: string | null }>)
+        );
       });
     return () => { cancelled = true; };
   }, []);
