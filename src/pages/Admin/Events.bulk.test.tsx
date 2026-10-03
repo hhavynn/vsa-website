@@ -26,7 +26,6 @@ const baseEvent = {
   check_in_form_url: '',
   image_url: null,
   thumbnail_url: null,
-  is_code_expired: false,
   academic_term_id: 'term-1',
   interest_counts: null,
 };
@@ -84,11 +83,8 @@ jest.mock('../../hooks/useUVSASchools', () => ({
 }));
 jest.mock('../../hooks/useEventRecap', () => ({ useEventRecapEventIds: () => ({ recapEventIds: new Set<string>() }) }));
 jest.mock('../../components/features/admin/EventRecapEditor', () => ({ EventRecapEditor: () => null }));
-jest.mock('../../components/features/admin/ManualCheckIn', () => ({ ManualCheckIn: () => null }));
 jest.mock('../../data/repos/events', () => ({
   eventsRepository: {
-    getCheckInCode: () => Promise.resolve(''),
-    setCheckInCode: () => Promise.resolve(),
     // The bulk write goes through the repository (missing rows reject there).
     updateEvent: (id: string, payload: unknown) => {
       mockUpdate(payload, id);
@@ -245,7 +241,7 @@ describe('delete event', () => {
     fireEvent.click(within(row).getByRole('button', { name: 'Delete' }));
 
     const dialog = screen.getByRole('alertdialog', { name: 'Delete event?' });
-    expect(within(dialog).getByText(/every check-in and attendance record/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/every attendance record/)).toBeInTheDocument();
     expect(within(dialog).getByText(/uploaded image and thumbnail from storage/)).toBeInTheDocument();
     const confirm = within(dialog).getByRole('button', { name: 'Delete event' });
     expect(confirm).toBeDisabled();

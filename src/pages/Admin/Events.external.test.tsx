@@ -75,9 +75,9 @@ jest.mock('../../data/repos/academicTerms', () => ({
   academicTermsRepository: { ensureTermForDate: () => Promise.resolve({ id: 'term-1' }) },
 }));
 
-function renderEvents() {
+function renderEvents(client: QueryClient = new QueryClient()) {
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryRouter>
         <AdminEvents />
       </MemoryRouter>
@@ -291,6 +291,47 @@ describe('Manage Events', () => {
     expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 4, check_in_form_url: '' });
     expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('is_code_expired');
     expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('check_in_code');
+  });
+
+  // Retirement kept the only active points model (member_event_attendance). A
+  // points edit is synced into attendance rows by a database trigger, so the page
+  // must still drop the cached totals Find My Points and the leaderboard show.
+  describe('active points totals after an edit', () => {
+    async function editEvent(client: QueryClient, edit: () => void) {
+      renderEvents(client);
+      await openManage(userEvent);
+      await openEditor(userEvent, 2);
+      edit();
+      await submitForm();
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    }
+
+    it('refreshes Find My Points and the individual leaderboard when points change', async () => {
+      const client = new QueryClient();
+      const invalidate = jest.spyOn(client, 'invalidateQueries');
+      await editEvent(client, () => {
+        const pointsInput = screen
+          .getAllByRole('spinbutton')
+          .find((input) => (input as HTMLInputElement).value === '4') as HTMLInputElement;
+        fireEvent.change(pointsInput, { target: { value: '7' } });
+      });
+
+      expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 7 });
+      expect(invalidate).toHaveBeenCalledWith(['find-my-points']);
+      expect(invalidate).toHaveBeenCalledWith(['individual-leaderboard']);
+    });
+
+    it('leaves those totals alone when only other fields change', async () => {
+      const client = new QueryClient();
+      const invalidate = jest.spyOn(client, 'invalidateQueries');
+      await editEvent(client, () => {
+        fireEvent.change(screen.getByDisplayValue('Irvine'), { target: { value: 'Newport' } });
+      });
+
+      expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 4, location: 'Newport' });
+      expect(invalidate).not.toHaveBeenCalledWith(['find-my-points']);
+      expect(invalidate).not.toHaveBeenCalledWith(['individual-leaderboard']);
+    });
   });
 
   it('labels external events with their host, and flags a missing host', async () => {

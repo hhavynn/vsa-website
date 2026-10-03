@@ -45,7 +45,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 //                  them closed to anon/ordinary users, admins keep their
 //                  access, and admin manual check-in writes still work.
 //   post-migration the archives and the retired RPCs are revoked from every
-//                  API role, admins included. Reads must fail with 42501.
+//                  API role, admins included. Reads must fail with 42501, and
+//                  the ordinary-user and admin credentials are REQUIRED (the
+//                  run fails, never skips, without them).
 // Everything else is identical in both phases. Flip the phase (repo variable
 // RLS_RETIREMENT_PHASE) only after the migration is applied; see
 // docs/member-account-retirement.md.
@@ -56,6 +58,27 @@ if (!RETIREMENT_PHASES.includes(retirementPhase)) {
   process.exit(1);
 }
 const retired = retirementPhase === 'post-migration';
+
+// Fail closed. Before the migration the signed-in sections are optional (they
+// SKIP without credentials). After it, "the archives are closed" has to be
+// proven for every API audience, so an existing ordinary account and an
+// approved admin account are both required: a run that skipped either would
+// pass without having tested it. Never create a public member account for this.
+if (retired) {
+  const requiredCredentials = [
+    'RLS_TEST_USER_EMAIL',
+    'RLS_TEST_USER_PASSWORD',
+    'RLS_TEST_ADMIN_EMAIL',
+    'RLS_TEST_ADMIN_PASSWORD',
+  ];
+  const missingCredentials = requiredCredentials.filter((name) => !process.env[name]);
+  if (missingCredentials.length > 0) {
+    console.error('\x1b[31mFAIL\x1b[0m post-migration verification requires an existing ordinary authenticated test account AND an approved admin account.');
+    console.error(`Missing: ${missingCredentials.join(', ')}`);
+    console.error('Provide existing accounts only; do not create a public member account to run this check.');
+    process.exit(1);
+  }
+}
 
 let hasFailed = false;
 
@@ -425,7 +448,8 @@ async function runTests() {
   try {
     const userClient = await createUserClient();
     if (!userClient) {
-      reportSkip('ordinary authenticated user checks (email/password not provided in env)');
+      if (retired) reportFail('ordinary authenticated user checks cannot be skipped after the retirement migration');
+      else reportSkip('ordinary authenticated user checks (email/password not provided in env)');
     } else {
       if (retired) await expectRetiredArchivesDenied(userClient, 'ordinary user');
       const authUser = (await userClient.auth.getUser()).data.user;
@@ -612,7 +636,8 @@ async function runTests() {
   try {
     const adminClient = await createAdminClient();
     if (!adminClient) {
-      reportSkip('admin checks (email/password not provided in env)');
+      if (retired) reportFail('admin checks cannot be skipped after the retirement migration');
+      else reportSkip('admin checks (email/password not provided in env)');
     } else {
       for (const table of ['members', 'member_event_attendance']) {
         const { error } = await adminClient.from(table).select('*', { head: true });

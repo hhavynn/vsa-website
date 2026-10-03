@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "react-query";
 import { SignInForm } from "./SignInForm";
 import { supabaseMock } from "../../../test-utils/supabaseMock";
 
@@ -26,17 +27,23 @@ function Destination() {
 }
 
 function renderSignIn(pathname = "/admin/events", search = "?event=existing") {
+  // The form verifies admin status through the shared admin-status query.
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <MemoryRouter
-      initialEntries={[
-        { pathname: "/admin/login", state: { from: { pathname, search } } },
-      ]}
-    >
-      <Routes>
-        <Route path="/admin/login" element={<SignInForm />} />
-        <Route path="*" element={<Destination />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/admin/login", state: { from: { pathname, search } } },
+        ]}
+      >
+        <Routes>
+          <Route path="/admin/login" element={<SignInForm />} />
+          <Route path="*" element={<Destination />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   fireEvent.change(screen.getByLabelText("Email"), {
     target: { value: "admin@example.invalid" },

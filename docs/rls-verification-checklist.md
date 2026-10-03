@@ -115,7 +115,9 @@ Everything else is identical in both phases, including `anon cannot call check_i
 RLS_RETIREMENT_PHASE=post-migration node scripts/verify-rls-security.mjs
 ```
 
-Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `retirement_phase=post-migration`, and once it is green set the repository variable `RLS_RETIREMENT_PHASE=post-migration`. Until the variable is set, scheduled/PR/push runs keep verifying `pre-migration`, which fails loudly after the migration (admins can no longer read the archives); that failure is the reminder to flip the variable.
+The `post-migration` phase **fails closed**: it requires an existing ordinary authenticated test account *and* an approved admin account (`RLS_TEST_USER_*` and `RLS_TEST_ADMIN_*`). With either pair missing, the workflow stops with a clear error before running (and the script itself exits non-zero) rather than reporting SKIP, so a green post-migration run always covers anon, ordinary users and admins. `pre-migration` keeps the signed-in sections optional, as before. Never create a public member account to satisfy this.
+
+Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `retirement_phase=post-migration`, and once it is green set the repository variable `RLS_RETIREMENT_PHASE=post-migration`. Hosted public email signup must also be verified disabled (`GET /auth/v1/settings` returns `"disable_signup": true`); see the completion gates in [the retirement runbook](member-account-retirement.md). Until the variable is set, scheduled/PR/push runs keep verifying `pre-migration`, which fails loudly after the migration (admins can no longer read the archives); that failure is the reminder to flip the variable.
 
 ### In CI
 

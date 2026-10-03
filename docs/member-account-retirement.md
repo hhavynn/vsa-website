@@ -113,22 +113,23 @@ data-rights dependency preview. It also runs the companion catalog inventory bef
 This is focused compatibility proof, not a full Supabase chain replay or hosted
 schema test. The active deployed recalculation trigger bodies are not all tracked.
 
-Local evidence (2026-10-02, branch rebased on the then-current `main`; #507, #508
-and #509 were still open, so final integration is a separate step):
-- Full Jest: 154 suites / 1,505 tests passed, including admin authorization,
-  session/sign-out, retired account routes, member points, admin imports, the
-  source-boundary guard and the RLS verifier phase guard. Timezone suites passed
-  in UTC, America/New_York, Asia/Ho_Chi_Minh and America/Los_Angeles.
+Local evidence (2026-10-02, rebased onto `main` after #507, #508 and #509 merged):
+- Full Jest: 181 suites / 1,945 tests passed, including the admin session-expiry,
+  admin-status and sign-in lifecycle suites from #507, the #508 Events bulk/confirm
+  suites, member points, admin imports, the source-boundary guard, the admin-auth
+  retention guard and the RLS verifier phase guards. Timezone suites passed in UTC,
+  America/New_York, Asia/Ho_Chi_Minh and America/Los_Angeles (70 tests each).
 - ESLint reported no errors (only existing script-URL fixture warnings in tests);
-  production build compiled; `git diff --check` clean.
-- `src/types/database.ts` is the generated file from `main` again: the migration
-  preserves every legacy table, column and function, so the generated types keep
-  describing them. Type-checked with pinned TypeScript 5.6.3 / `target: es2015`
-  (the `tsconfig.typecheck.json` introduced by #507) plus the TypeScript 4.9 / es5
-  build.
+  `npm run typecheck` (TypeScript 5.6.3), `npm run build` (TypeScript 4.9, es5),
+  Edge Function `deno check` and `deno test` (52 tests) and `git diff --check`
+  passed.
+- `src/types/database.ts` is identical to `main`: the migration preserves every
+  legacy table, column and function, so the generated types keep describing them.
 - Hosted RLS verifier (read-only anon sections, production): `pre-migration` phase
-  passed; `post-migration` phase correctly failed on the six legacy archive reads
-  because the migration is not applied yet. An unknown phase exits non-zero.
+  passed; `post-migration` phase refuses to run without existing ordinary-user and
+  admin accounts, and (with them) would require `42501` on the six legacy archive
+  reads, which is expected to fail until the migration is applied. An unknown phase
+  exits non-zero.
 - Isolated PostgreSQL proofs and before/after companion SQL passed
   (`bash scripts/test-retired-member-check-in.sh`). Retired client grants/triggers
   returned zero rows afterward; synthetic row counts and active points totals were
@@ -139,36 +140,65 @@ and #509 were still open, so final integration is a separate step):
   login, and the leaderboard settles into its existing outage fallback.
   Real authentication, imports, known totals and hosted grants need staging QA.
 
-For manual rollout:
+### Manual rollout and completion gates
 
-1. Keep hosted public signup disabled for all enabled Auth channels. Local
-   `[auth].enable_signup` and `[auth.email].enable_signup` are false. Admin accounts
-   are existing/invited only; use the existing trusted admin approval process.
-2. Inventory the hosted catalog and snapshot aggregate counts/totals with the
-   read-only companion SQL below. Confirm no unexpected trigger/wrapper still
-   invokes retired functions. Take the normal backup before manual schema changes.
-3. Exercise the new frontend against the existing schema in a non-production
-   environment; it needs no archive tables or new columns. Test the migration
-   against a staging copy/branch of the live schema. Verify existing/invited admin
-   login, profile creation and event create/edit there.
-4. During a short coordinated rollout, manually apply the retirement migration
-   before deploying the new frontend. Older cached code attempting an obsolete
-   API must be denied; an old Admin Events editor can report a code-save failure
-   in this interval, so reload admin tabs after the deploy. Public points, House
-   views, imports and other active schema paths remain compatible.
-5. Re-run the read-only catalog/count checks. Verify no retained count or active
-   point total changed. Run the hosted RLS verification in the **post-migration**
-   phase with mutation mode off:
-   `RLS_RETIREMENT_PHASE=post-migration node scripts/verify-rls-security.mjs`, or
-   dispatch the `RLS verification` workflow with `retirement_phase=post-migration`.
-   Provide an existing ordinary account as well as an admin to exercise both
-   JWT audiences. Never create a public account to perform this check. When it
-   is green, set the repository variable `RLS_RETIREMENT_PHASE=post-migration` so
-   PR, push and scheduled runs keep asserting the retired state.
-6. Verify `/profile` is the generic 404, login rejects non-admins, public lookup/
-   leaderboard/House standings show the same known totals, and admin attendance/
-   CSV import still updates member totals in staging. Check mobile/light/dark
-   login and Events controls without performing production writes.
+**Retirement is not operationally complete until every box below is checked.**
+Merging the PR, applying the migration, or editing `supabase/config.toml` is not
+enough on its own. `config.toml` `enable_signup = false` only configures the local
+Supabase stack; it says nothing about the hosted project, whose Auth settings live
+in the Supabase dashboard. As of 2026-10-02 the hosted project still reports
+`"disable_signup": false` from `GET /auth/v1/settings` (issue #429 is open).
+
+Hosted setting and admin access (manual, dashboard):
+
+- [ ] **Hosted public email signup is disabled** for every enabled Auth channel
+  (Authentication → Sign In / Providers → turn off "Allow new users to sign up").
+  Verify with the public anon key, not by reading the dashboard:
+  `curl -s -H "apikey: $REACT_APP_SUPABASE_ANON_KEY" "$REACT_APP_SUPABASE_URL/auth/v1/settings"`
+  must return `"disable_signup": true`.
+- [ ] **No new public member account can be created.** Confirm the signup endpoint
+  refuses (do not complete a real signup against production; the settings response
+  above is the evidence, optionally plus a staging attempt).
+- [ ] **Existing/invited admin login still works** at `/admin/login`, a non-admin
+  account is turned away, and the session-expiry prompt still re-authenticates in
+  place. New admins are invited from the dashboard.
+
+Database and CI (manual apply, then the workflow):
+
+- [ ] Inventory the hosted catalog and snapshot aggregate counts/totals with the
+  read-only companion SQL below. Confirm no unexpected trigger/wrapper still
+  invokes retired functions. Take the normal backup before manual schema changes.
+- [ ] Exercise the new frontend against the existing schema in a non-production
+  environment (it needs no archive tables or new columns), and test the migration
+  against a staging copy/branch of the live schema.
+- [ ] **The retirement migration is applied**, manually, before the new frontend
+  deploys. Older cached code attempting an obsolete API must be denied; an old
+  Admin Events editor can report a code-save failure in this interval, so reload
+  admin tabs after the deploy. Public points, House views, imports and other
+  active schema paths remain compatible.
+- [ ] Re-run the read-only catalog/count checks. No retained count or active point
+  total changed.
+- [ ] **The post-migration RLS workflow passes with anon + ordinary authenticated +
+  admin coverage.** Configure the existing test accounts as repository secrets
+  (`RLS_TEST_USER_EMAIL`/`_PASSWORD`, `RLS_TEST_ADMIN_EMAIL`/`_PASSWORD`; an
+  existing ordinary account and an approved admin, never a newly created public
+  account), then dispatch `RLS verification` with `retirement_phase=post-migration`
+  (or run `RLS_RETIREMENT_PHASE=post-migration node scripts/verify-rls-security.mjs`).
+  This phase fails closed: with either account missing the workflow stops with a
+  clear error instead of skipping, so a green run proves all three audiences.
+- [ ] **Only then** set the repository variable `RLS_RETIREMENT_PHASE=post-migration`
+  so PR, push and scheduled runs keep asserting the retired state.
+
+Application checks (staging, without production writes):
+
+- [ ] `/profile` is the generic 404, login rejects non-admins, public lookup/
+  leaderboard/House standings show the same known totals, and admin attendance/
+  CSV import still updates member totals. Check mobile/light/dark login and Events
+  controls.
+
+Issue #429 (disable public email sign-up) must be referenced from the rollout and
+closed **only after** the hosted `disable_signup: true` response above has been
+observed. Do not close it because `config.toml` or this PR changed.
 
 Read-only catalog and aggregate inventory:
 [`member-account-retirement.sql`](./member-account-retirement.sql). Before apply,

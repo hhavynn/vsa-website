@@ -154,7 +154,10 @@ preserved data, migration scope, and manual deployment checks.
   invitation provisioning must still create a profile, and admin status is assigned
   through the existing trusted process.
 - Public Supabase signup must remain disabled. Both local `enable_signup`
-  settings are false; hosted Auth configuration must also be checked manually.
+  settings are false, but that configures only the local stack: the hosted project
+  must be verified separately (`GET /auth/v1/settings` with the public anon key must
+  return `"disable_signup": true`; issue #429). Retirement is not operationally
+  complete until that has been observed.
   No public OAuth/anonymous signup channel should be enabled.
 
 Retirement does not delete old Auth users or invalidate every existing JWT.
