@@ -239,6 +239,23 @@ describe('publishing needs an explicit yes', () => {
     await waitFor(() => expect(repo.updateApplicationLink).toHaveBeenCalledWith('open', expect.objectContaining({ target_url: 'https://forms.gle/the-new-form' })));
   });
 
+  it('keeps the confirmation open with an error when enabling fails, instead of closing as if it worked', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      mockLinks = [DISABLED];
+      repo.setApplicationLinkEnabled.mockRejectedValue(new Error('permission denied'));
+      renderPage();
+      await userEvent.click(within(card(/Disabled Window/)).getByRole('button', { name: 'Enable' }));
+      const dialog = await screen.findByRole('alertdialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Enable and make public' }));
+
+      expect(await within(screen.getByRole('alertdialog')).findByText(/Failed to update the window/)).toBeInTheDocument();
+      expect(logAdminActivity).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('asks before the Enable button publishes a window that is inside its dates', async () => {
     mockLinks = [DISABLED, FUTURE_DISABLED];
     renderPage();

@@ -5,7 +5,7 @@
  * existing This Week section untouched.
  */
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ClosingSoonApplications } from './ClosingSoonApplications';
 import { ThisWeekInVSA } from './ThisWeekInVSA';
@@ -19,8 +19,9 @@ const CLOSED_URL = 'https://forms.gle/already-closed';
 
 let mockLinks: PublicApplicationLink[] = [];
 let mockError: unknown = null;
+const mockRefetch = jest.fn();
 jest.mock('../../../hooks/useApplicationLinks', () => ({
-  usePublicApplicationLinks: () => ({ links: mockLinks, loading: false, error: mockError }),
+  usePublicApplicationLinks: () => ({ links: mockLinks, loading: false, error: mockError, refetch: mockRefetch }),
 }));
 
 // Plain functions, not jest.fn(): CRA resets mock implementations between tests.
@@ -162,6 +163,54 @@ describe('ClosingSoonApplications', () => {
     mockLinks = [link({ due_at: '2026-10-06T06:59:00Z' })];
     renderNotice();
     expect(screen.getByTestId('closing-soon-dot')).not.toHaveClass('motion-safe:animate-pulse');
+  });
+});
+
+describe('time boundaries', () => {
+  it('removes the Apply link at the exact close instant, without waiting for the minute tick', () => {
+    // Closes 20 seconds from now: well inside the 60 s polling interval.
+    mockLinks = [link({ due_at: new Date(NOW.getTime() + 20_000).toISOString() })];
+    renderNotice();
+    expect(screen.getByRole('link', { name: /Apply for a House/ })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(19_000);
+    });
+    expect(screen.getByRole('link', { name: /Apply for a House/ })).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(1_200);
+    });
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain(OPEN_URL);
+  });
+
+  it('refetches the masked links when a scheduled window opens, since its URL was withheld until then', () => {
+    mockLinks = [link({ status: 'not_open', target_url: null, open_at: new Date(NOW.getTime() + 30_000).toISOString(), due_at: '2026-10-03T06:59:00Z' })];
+    renderNotice();
+    expect(mockRefetch).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(29_000);
+    });
+    expect(mockRefetch).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(1_200);
+    });
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refetch for a close boundary or a disabled window', () => {
+    mockLinks = [
+      link({ due_at: new Date(NOW.getTime() + 10_000).toISOString() }),
+      link({ id: 'off', application_key: 'ace_application', is_enabled: false, status: 'disabled', target_url: null, open_at: new Date(NOW.getTime() + 5_000).toISOString() }),
+    ];
+    renderNotice();
+    act(() => {
+      jest.advanceTimersByTime(11_000);
+    });
+    expect(mockRefetch).not.toHaveBeenCalled();
   });
 });
 

@@ -118,7 +118,7 @@ export class AdminOverviewRepository {
       readRows<OverviewProgramContentRow>('program content', supabase.from('program_content').select('is_published, status', EXACT)),
       readRows<OverviewFeedbackRow>('feedback', supabase.from('feedback').select('status', EXACT)),
       readRows<OverviewAiRow>('AI knowledge', untyped.from('ai_knowledge_base').select('is_public, is_active, last_verified_at', EXACT)),
-      readRows<OverviewApplicationRow>('application windows', supabase.from('application_links').select('application_key, open_at, due_at, is_enabled', EXACT)),
+      readRows<OverviewApplicationRow>('application windows', supabase.from('application_links').select('application_key, open_at, due_at, is_enabled, target_url', EXACT)),
       academicTermsRepository
         .getActiveTerm()
         .then((term) => ({ loaded: true, academicYearStart: term?.academic_year_start ?? null }))

@@ -219,8 +219,19 @@ describe('closing soon (shared by the homepage and the Admin Overview)', () => {
     expect(result[0].row.application_key).toBe('house_fall');
   });
 
-  it('tells the homepage when the notice starts for a given deadline', () => {
-    expect(closingSoonStartsAt('2026-10-09T06:59:00Z').toISOString()).toBe('2026-10-02T06:59:00.000Z');
+  it('starts the notice at San Diego midnight, a whole number of calendar days before the deadline', () => {
+    // Due Oct 8 11:59 PM PDT -> shows from Oct 1 12:00 AM PDT.
+    expect(closingSoonStartsAt('2026-10-09T06:59:00Z').toISOString()).toBe('2026-10-01T07:00:00.000Z');
+    // Due Nov 3 11:59 PM PST, after clocks fell back: the start is still midnight Pacific (Oct 27, PDT).
+    expect(closingSoonStartsAt('2026-11-04T07:59:00Z').toISOString()).toBe('2026-10-27T07:00:00.000Z');
+  });
+
+  it('includes a deadline seven San Diego days out for the whole day, not only the last 168 hours', () => {
+    const morning = new Date('2026-10-01T15:00:00Z'); // 8:00 AM PDT
+    const rows = [window('house_fall', '2026-10-09T06:59:00Z'), window('ace_application', '2026-10-10T06:59:00Z')]; // Oct 8 / Oct 9, 11:59 PM PDT
+    expect(getClosingSoon(rows, morning).map((entry) => entry.row.application_key)).toEqual(['house_fall']);
+    const opening = [window('house_fall', '2026-12-01T07:59:00Z', { open_at: '2026-10-08T07:00:00Z' })];
+    expect(getOpeningSoon(opening, morning)).toHaveLength(1);
   });
 
   it('only offers a link when the row carries a usable URL', () => {

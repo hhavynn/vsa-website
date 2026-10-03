@@ -149,6 +149,8 @@ export interface OverviewAiRow {
 }
 export interface OverviewApplicationRow {
   application_key: ApplicationKey;
+  /** Read only so the attention queue can apply the same window-state rule as /admin/applications; never displayed. */
+  target_url: string;
   open_at: string;
   due_at: string;
   is_enabled: boolean;

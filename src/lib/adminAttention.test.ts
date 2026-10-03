@@ -11,6 +11,7 @@ import {
 
 // Thu Oct 1 2026, 9:00 AM PDT.
 const NOW = new Date('2026-10-01T16:00:00Z');
+const URL = 'https://forms.gle/x';
 
 /** Every source loaded and nothing waiting. */
 const CLEAR: AttentionSignals = {
@@ -41,8 +42,8 @@ describe('attention queue', () => {
         feedbackPending: 4,
         draftEventDates: ['2026-10-08T01:00:00Z'],
         applications: [
-          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true },
-          { application_key: 'ace_application', open_at: '2026-10-04T07:00:00Z', due_at: '2026-11-30T07:59:00Z', is_enabled: true },
+          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true, target_url: URL },
+          { application_key: 'ace_application', open_at: '2026-10-04T07:00:00Z', due_at: '2026-11-30T07:59:00Z', is_enabled: true, target_url: URL },
         ],
       }),
       NOW,
@@ -71,7 +72,7 @@ describe('attention queue', () => {
 
   it('words an application deadline with the same helper the homepage notice uses', () => {
     const queue = buildAttentionQueue(
-      signals({ applications: [{ application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true }] }),
+      signals({ applications: [{ application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true, target_url: URL }] }),
       NOW,
     );
     expect(byId(queue, 'applications-closing')).toMatchObject({ detail: 'House Applications close tomorrow', tone: 'urgent' });
@@ -81,8 +82,8 @@ describe('attention queue', () => {
     const queue = buildAttentionQueue(
       signals({
         applications: [
-          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-05T06:59:00Z', is_enabled: true },
-          { application_key: 'house_winter', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-06T06:59:00Z', is_enabled: true },
+          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-05T06:59:00Z', is_enabled: true, target_url: URL },
+          { application_key: 'house_winter', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-06T06:59:00Z', is_enabled: true, target_url: URL },
         ],
       }),
       NOW,
@@ -90,13 +91,45 @@ describe('attention queue', () => {
     expect(byId(queue, 'applications-closing')?.count).toBe(2);
   });
 
+  it('classifies windows like /admin/applications, so each count matches the rows its link shows', () => {
+    const queue = buildAttentionQueue(
+      signals({
+        applications: [
+          // Live and closing tomorrow, but the link is not https: the admin page files it under "needs fixing".
+          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true, target_url: 'http://insecure.example/x' },
+          // Healthy, closing in two days.
+          { application_key: 'ace_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-04T06:59:00Z', is_enabled: true, target_url: URL },
+        ],
+      }),
+      NOW,
+    );
+
+    expect(byId(queue, 'applications-closing')).toMatchObject({ count: 1, detail: 'ACE Applications close in 2 days' });
+    expect(byId(queue, 'applications-broken')).toMatchObject({ count: 1, to: '/admin/applications?filter=misconfigured', tone: 'urgent' });
+  });
+
+  it('measures the horizon in San Diego calendar days, not 168 hours', () => {
+    // 8 AM PT Oct 1: a deadline at 11:59 PM PT on Oct 8 is "in 7 days" and must be listed.
+    const morning = new Date('2026-10-01T15:00:00Z');
+    const queue = buildAttentionQueue(
+      signals({
+        applications: [
+          { application_key: 'house_fall', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-09T06:59:00Z', is_enabled: true, target_url: URL },
+          { application_key: 'ace_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-10T06:59:00Z', is_enabled: true, target_url: URL },
+        ],
+      }),
+      morning,
+    );
+    expect(byId(queue, 'applications-closing')).toMatchObject({ count: 1, detail: 'House Applications close in 7 days' });
+  });
+
   it('ignores application windows that are disabled, already closed, or far away', () => {
     const queue = buildAttentionQueue(
       signals({
         applications: [
-          { application_key: 'ace_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: false },
-          { application_key: 'house_fall', open_at: '2026-08-01T07:00:00Z', due_at: '2026-09-01T06:59:00Z', is_enabled: true },
-          { application_key: 'cabinet_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-12-01T07:59:00Z', is_enabled: true },
+          { application_key: 'ace_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: false, target_url: URL },
+          { application_key: 'house_fall', open_at: '2026-08-01T07:00:00Z', due_at: '2026-09-01T06:59:00Z', is_enabled: true, target_url: URL },
+          { application_key: 'cabinet_application', open_at: '2026-09-01T07:00:00Z', due_at: '2026-12-01T07:59:00Z', is_enabled: true, target_url: URL },
         ],
       }),
       NOW,

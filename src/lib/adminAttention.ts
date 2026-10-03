@@ -16,6 +16,7 @@ import {
   CLOSING_SOON_DAYS,
   OPENING_SOON_DAYS,
   WindowTiming,
+  getAdminWindowState,
   getClosingSoon,
   getOpeningSoon,
 } from './applicationWindows';
@@ -28,6 +29,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const ATTENTION_LINKS = {
   applicationsClosing: '/admin/applications?filter=open',
   applicationsOpening: '/admin/applications?filter=scheduled',
+  applicationsBroken: '/admin/applications?filter=misconfigured',
   photoRequests: '/admin/photo-requests?filter=pending',
   dataRights: '/admin/data-rights?filter=open',
   aiFeedback: '/admin/ai-feedback?filter=unresolved',
@@ -36,8 +38,11 @@ export const ATTENTION_LINKS = {
 } as const;
 
 /** The signals the Overview read. A `null` means that source could not be read (never "zero"). */
+/** A window plus its link, read only to classify the window like /admin/applications does (never shown). */
+export type AttentionWindow = WindowTiming & { target_url: string };
+
 export interface AttentionSignals {
-  applications: WindowTiming[] | null;
+  applications: AttentionWindow[] | null;
   /** Event dates (ISO) for events that are not published. */
   draftEventDates: string[] | null;
   photoRequestsPending: number | null;
@@ -94,7 +99,21 @@ export function buildAttentionQueue(signals: AttentionSignals, now: Date = new D
 
   if (signals.applications === null) unchecked.push('application windows');
   else {
-    const closing = getClosingSoon(signals.applications, now, CLOSING_SOON_DAYS, { dedupeByName: false });
+    // Classify with the admin page's own rule so each count matches the rows its link
+    // shows: a live window with a broken link is "needs fixing", not "closing soon".
+    const states = signals.applications.map((row) => ({ row, state: getAdminWindowState(row, now).state }));
+    const inState = (wanted: string) => states.filter(({ state }) => state === wanted).map(({ row }) => row);
+    const broken = states.filter(({ state }) => state === 'misconfigured').length;
+    if (broken > 0) {
+      items.push({
+        id: 'applications-broken',
+        count: broken,
+        label: `application ${broken === 1 ? 'window needs' : 'windows need'} fixing`,
+        to: ATTENTION_LINKS.applicationsBroken,
+        tone: 'urgent',
+      });
+    }
+    const closing = getClosingSoon(inState('open'), now, CLOSING_SOON_DAYS, { dedupeByName: false });
     if (closing.length > 0) {
       items.push({
         id: 'applications-closing',
@@ -105,7 +124,7 @@ export function buildAttentionQueue(signals: AttentionSignals, now: Date = new D
         tone: closing[0].daysUntilClose <= 1 ? 'urgent' : 'attention',
       });
     }
-    const opening = getOpeningSoon(signals.applications, now, OPENING_SOON_DAYS);
+    const opening = getOpeningSoon(inState('scheduled'), now, OPENING_SOON_DAYS);
     if (opening.length > 0) {
       items.push({
         id: 'applications-opening',

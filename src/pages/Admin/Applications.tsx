@@ -310,17 +310,33 @@ export default function AdminApplications() {
     await api.submit(event);
   };
 
+  // Rejects when the write fails, so a confirmation dialog stays open and shows the
+  // error instead of closing as if it had worked. A failed refetch afterwards does not
+  // count: the write itself succeeded.
   const applyToggle = async (link: ApplicationLink) => {
     try {
       await applicationLinksRepository.setApplicationLinkEnabled(link.id, !link.is_enabled);
-      logAdminActivity({
-        ...applicationWindowActivity('toggled', link, { ...link, is_enabled: !link.is_enabled }),
-        entityId: link.id,
-      });
-      toast.success(link.is_enabled ? 'Disabled' : 'Enabled');
+    } catch (err) {
+      console.error(err);
+      throw new Error('Failed to update the window. Nothing changed.');
+    }
+    logAdminActivity({
+      ...applicationWindowActivity('toggled', link, { ...link, is_enabled: !link.is_enabled }),
+      entityId: link.id,
+    });
+    toast.success(link.is_enabled ? 'Disabled' : 'Enabled');
+    try {
       await refresh();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // The no-dialog path: nothing to keep open, so report the failure as a toast.
+  const toggleWithToast = async (link: ApplicationLink) => {
+    try {
+      await applyToggle(link);
+    } catch {
       toast.error('Failed to update status');
     }
   };
@@ -340,7 +356,7 @@ export default function AdminApplications() {
         return;
       }
     }
-    await applyToggle(link);
+    await toggleWithToast(link);
   };
 
   // Runs from the confirm dialog: a failure is re-thrown so the dialog stays open and shows it.

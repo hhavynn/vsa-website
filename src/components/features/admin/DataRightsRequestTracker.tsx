@@ -26,7 +26,7 @@ import {
   DataRightsRequestFormSchema,
 } from '../../../schemas';
 import { DataRightsRequestStatus, DataRightsRequestType } from '../../../types/database';
-import { useInitialUrlFilter } from '../../../hooks/useUrlFilter';
+import { useUrlFilter } from '../../../hooks/useUrlFilter';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Input, Textarea } from '../../ui/Input';
@@ -154,8 +154,8 @@ export function DataRightsRequestTracker() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   // `?filter=open` is the Admin Overview's "open requests" link; unknown values fall back to all.
-  const initialStatus = useInitialUrlFilter<'all' | 'open' | DataRightsRequestStatus>(['all', 'open', ...DATA_RIGHTS_REQUEST_STATUSES], 'all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | DataRightsRequestStatus>(initialStatus);
+  const [statusParam, setStatusFilter] = useUrlFilter(['all', 'open', ...DATA_RIGHTS_REQUEST_STATUSES]);
+  const statusFilter = statusParam as 'all' | 'open' | DataRightsRequestStatus;
   const [typeFilter, setTypeFilter] = useState<'all' | DataRightsRequestType>('all');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);

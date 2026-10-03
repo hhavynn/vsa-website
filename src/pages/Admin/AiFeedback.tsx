@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useInitialUrlFilter } from '../../hooks/useUrlFilter';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AiFeedback, AiFeedbackFilters, aiFeedbackRepository } from '../../data/repos/aiFeedback';
 import { format } from 'date-fns';
@@ -10,8 +10,8 @@ export default function AdminAiFeedback() {
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState<string | null>(null);
   
-  const initialStatus = useInitialUrlFilter<NonNullable<AiFeedbackFilters['status']>>(['unresolved', 'resolved', 'all'], 'unresolved');
-  const [statusFilter, setStatusFilter] = useState<AiFeedbackFilters['status']>(initialStatus);
+  const [statusParam, setStatusFilter] = useUrlFilter(['unresolved', 'resolved', 'all'], 'filter', 'unresolved');
+  const statusFilter = statusParam as AiFeedbackFilters['status'];
   const [ratingFilter, setRatingFilter] = useState<AiFeedbackFilters['rating']>('all');
 
   useEffect(() => {

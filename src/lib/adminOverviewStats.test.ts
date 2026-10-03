@@ -62,10 +62,10 @@ function sources(overrides: Partial<OverviewSources> = {}): OverviewSources {
       { is_public: false, is_active: true, last_verified_at: '2026-10-01T00:00:00Z' },
     ],
     applications: [
-      { application_key: 'ace_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: true },
-      { application_key: 'house_winter', open_at: '2026-12-01T00:00:00Z', due_at: '2027-01-01T00:00:00Z', is_enabled: true },
-      { application_key: 'house_fall', open_at: '2026-08-01T00:00:00Z', due_at: '2026-09-01T00:00:00Z', is_enabled: true },
-      { application_key: 'intern_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: false },
+      { application_key: 'ace_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'house_winter', open_at: '2026-12-01T00:00:00Z', due_at: '2027-01-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'house_fall', open_at: '2026-08-01T00:00:00Z', due_at: '2026-09-01T00:00:00Z', is_enabled: true, target_url: 'https://forms.gle/x' },
+      { application_key: 'intern_application', open_at: '2026-09-01T00:00:00Z', due_at: '2026-11-01T00:00:00Z', is_enabled: false, target_url: 'https://forms.gle/x' },
     ],
     ...overrides,
   };

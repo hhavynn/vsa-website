@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ALL_FILTER_KEY, readFilterParam, withParam } from '../lib/adminFilters';
 
@@ -6,27 +6,20 @@ import { ALL_FILTER_KEY, readFilterParam, withParam } from '../lib/adminFilters'
  * A quick-filter choice kept in the URL (`?filter=unlinked`), so a refresh or
  * Back keeps the admin's place. Other params (view, year, cycle…) are kept.
  * Replaces history entries so filtering never fills the Back stack.
+ *
+ * `defaultKey` is the filter shown when the URL has none ("all" unless a page
+ * opens on a queue, like pending photo requests); choosing it removes the param.
+ * The URL is the source of truth, so Back/Forward and Admin Overview deep links
+ * always land on the filter in the address bar.
  */
-export function useUrlFilter(allowed: readonly string[], name = 'filter') {
+export function useUrlFilter(allowed: readonly string[], name = 'filter', defaultKey = ALL_FILTER_KEY) {
   const [params, setParams] = useSearchParams();
-  const active = readFilterParam(params, name, allowed);
+  const active = readFilterParam(params, name, allowed, defaultKey);
   const setActive = useCallback(
-    (key: string) => setParams((current) => withParam(current, name, key, ALL_FILTER_KEY), { replace: true }),
-    [name, setParams],
+    (key: string) => setParams((current) => withParam(current, name, key, defaultKey), { replace: true }),
+    [name, defaultKey, setParams],
   );
   return [active, setActive] as const;
-}
-
-/**
- * Reads `?filter=` once, when the page opens, as the starting value of a page's own
- * filter state. For pages whose default is not "all" (the pending queue, unresolved
- * feedback), where useUrlFilter's "no param = all" rule would change the default.
- * Admin Overview's attention items deep-link through this.
- */
-export function useInitialUrlFilter<T extends string>(allowed: readonly T[], fallback: T, name = 'filter'): T {
-  const [params] = useSearchParams();
-  const [initial] = useState(() => readFilterParam(params, name, allowed, fallback) as T);
-  return initial;
 }
 
 /** A free-form URL param (year, search text) with the same replace behavior. */

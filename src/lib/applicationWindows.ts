@@ -7,7 +7,7 @@
 // maskTargetUrl, the San Diego date helpers) instead of re-implementing window
 // gating. Authority: AGENTS.md § "Domain-critical facts"; vsa-seasonal-operations.
 import { ApplicationKey, ApplicationLink, ApplicationStatus, PublicApplicationLink } from '../types';
-import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import { getLosAngelesDateOnly, losAngelesDateTimeToIso } from '../utils/losAngelesDate';
 import { getApplicationStatus, maskTargetUrl } from './applicationLinks';
 
 const VSA_TIME_ZONE = 'America/Los_Angeles';
@@ -267,9 +267,17 @@ export function openingHeadline(key: ApplicationKey, openAt: Date, now: Date): s
   return `${applicationShortName(key)} open ${relativeDayPhrase(pacificDaysBetween(now, openAt))}`;
 }
 
-/** The instant the homepage notice starts showing for a window due at `dueAt`. */
+/**
+ * The instant the homepage notice starts showing for a window due at `dueAt`:
+ * midnight San Diego time, `days` calendar days before the due date. The horizon is
+ * measured in San Diego calendar days (like the "in N days" wording), so it does not
+ * drift an hour across a DST change or hide a deadline for the first 16 hours of a day.
+ */
 export function closingSoonStartsAt(dueAt: string | Date, days: number = CLOSING_SOON_DAYS): Date {
-  return new Date(new Date(dueAt).getTime() - days * DAY_MS);
+  const [year, month, day] = getLosAngelesDateOnly(new Date(dueAt)).split('-').map(Number);
+  const start = new Date(Date.UTC(year, month - 1, day - days));
+  const dateOnly = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-${String(start.getUTCDate()).padStart(2, '0')}`;
+  return new Date(losAngelesDateTimeToIso(dateOnly, '00:00'));
 }
 
 /**
@@ -286,12 +294,11 @@ export function getClosingSoon<T extends WindowTiming>(
   options: { dedupeByName?: boolean } = {},
 ): ClosingSoonWindow<T>[] {
   const { dedupeByName = true } = options;
-  const horizon = now.getTime() + days * DAY_MS;
   const seen = new Set<string>();
   return rows
     .filter((row) => getApplicationStatus(row.open_at, row.due_at, row.is_enabled, now) === 'open')
     .map((row) => ({ row, dueAt: new Date(row.due_at) }))
-    .filter(({ dueAt }) => dueAt.getTime() <= horizon)
+    .filter(({ dueAt }) => pacificDaysBetween(now, dueAt) <= days)
     .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
     .filter(({ row }) => {
       if (!dedupeByName) return true;
@@ -316,11 +323,10 @@ export interface OpeningSoonWindow<T extends WindowTiming> {
 
 /** Enabled windows that have not opened yet but will within `days`, soonest first. */
 export function getOpeningSoon<T extends WindowTiming>(rows: T[], now: Date = new Date(), days: number = OPENING_SOON_DAYS): OpeningSoonWindow<T>[] {
-  const horizon = now.getTime() + days * DAY_MS;
   return rows
     .filter((row) => getApplicationStatus(row.open_at, row.due_at, row.is_enabled, now) === 'not_open')
     .map((row) => ({ row, openAt: new Date(row.open_at) }))
-    .filter(({ openAt }) => openAt.getTime() <= horizon)
+    .filter(({ openAt }) => pacificDaysBetween(now, openAt) <= days)
     .sort((a, b) => a.openAt.getTime() - b.openAt.getTime())
     .map(({ row, openAt }) => ({ row, openAt, headline: openingHeadline(row.application_key, openAt, now) }));
 }

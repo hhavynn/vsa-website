@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useInitialUrlFilter } from '../../hooks/useUrlFilter';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -189,15 +189,18 @@ export default function AdminEvents() {
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   // `?filter=draft` is the Admin Overview's "unpublished events" link.
-  const initialStatus = useInitialUrlFilter(EVENT_STATUS_FILTERS.map((filter) => filter.key), 'all');
-  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [statusFilter, setStatusFilter] = useUrlFilter(EVENT_STATUS_FILTERS.map((filter) => filter.key));
   const [visibleCount, setVisibleCount] = useState(MANAGE_PAGE_SIZE);
   const [bulkRun, setBulkRun] = useState<BulkPublishRun | null>(null);
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
   const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
   // A `?filter=` deep link (Admin Overview) only means something on the Manage tab.
-  const [activeTab, setActiveTab] = useState<'create' | 'manage'>(initialStatus === 'all' ? 'create' : 'manage');
+  const [activeTab, setActiveTab] = useState<'create' | 'manage'>(statusFilter === 'all' ? 'create' : 'manage');
+  // Back/Forward or a new deep link can add a filter while the page is mounted.
+  useEffect(() => {
+    if (statusFilter !== 'all') setActiveTab('manage');
+  }, [statusFilter]);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);

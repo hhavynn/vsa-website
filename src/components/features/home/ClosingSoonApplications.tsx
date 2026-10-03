@@ -7,6 +7,10 @@ import { formatPacificDateTime, getClosingSoonNotices } from '../../../lib/appli
 const MAX_NOTICES = 3;
 /** How often the countdown wording is re-evaluated, so "tomorrow" turns into "today" without a reload. */
 const REFRESH_MS = 60 * 1000;
+/** Browsers clamp setTimeout to a signed 32-bit delay; a longer wait just re-arms. */
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+/** Fire just past the boundary so the status flip is already true when we re-check. */
+const BOUNDARY_SLACK_MS = 50;
 
 /**
  * A slim homepage notice for application windows that are open and about to close
@@ -19,15 +23,50 @@ const REFRESH_MS = 60 * 1000;
  * link comes from the masked public projection: a window that is scheduled or
  * closed has no URL there and cannot appear. No animation beyond a pulse that
  * reduced-motion users do not get (`motion-safe`).
+ *
+ * Time is handled at the actual boundaries, not by polling alone: a timer fires at
+ * the next close (the Apply link is removed the moment the window ends) and the
+ * next open (the masked projection is refetched, because a window that was
+ * scheduled when the page loaded arrived with its URL withheld). The minute tick
+ * only keeps the "tomorrow"/"today" wording fresh, and the clock is re-read when
+ * a throttled background tab becomes visible again.
  */
 export function ClosingSoonApplications() {
-  const { links, error } = usePublicApplicationLinks();
+  const { links, error, refetch } = usePublicApplicationLinks();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), REFRESH_MS);
-    return () => window.clearInterval(timer);
+    const tick = () => setNow(new Date());
+    const timer = window.setInterval(tick, REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
+
+  useEffect(() => {
+    const current = Date.now();
+    let next: { at: number; opens: boolean } | null = null;
+    for (const link of links) {
+      if (!link.is_enabled) continue;
+      const open = Date.parse(link.open_at);
+      const due = Date.parse(link.due_at) + 1;
+      if (open > current && (!next || open < next.at)) next = { at: open, opens: true };
+      if (due > current && (!next || due < next.at)) next = { at: due, opens: false };
+    }
+    if (!next) return undefined;
+    const boundary = next;
+    const timer = window.setTimeout(() => {
+      setNow(new Date());
+      // The server withholds the URL until a window opens, so only a refetch can bring it in.
+      if (boundary.opens) void refetch();
+    }, Math.min(Math.max(boundary.at - current, 0) + BOUNDARY_SLACK_MS, MAX_TIMEOUT_MS));
+    return () => window.clearTimeout(timer);
+  }, [links, now, refetch]);
 
   const notices = useMemo(() => getClosingSoonNotices(links, now), [links, now]);
   if (error || notices.length === 0) return null;

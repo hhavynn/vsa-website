@@ -10,7 +10,7 @@ const NOW = new Date('2026-10-01T16:00:00Z');
 
 let mockPublicLinks: PublicApplicationLink[] = [];
 jest.mock('../../../hooks/useApplicationLinks', () => ({
-  usePublicApplicationLinks: () => ({ links: mockPublicLinks, loading: false, error: null }),
+  usePublicApplicationLinks: () => ({ links: mockPublicLinks, loading: false, error: null, refetch: jest.fn() }),
 }));
 
 const CLEAR: AttentionSignals = {
@@ -85,7 +85,7 @@ describe('AttentionQueue', () => {
 
   it('uses the same closing-soon helper as the homepage notice for the same window', () => {
     const window = { application_key: 'house_fall' as const, open_at: '2026-09-01T07:00:00Z', due_at: '2026-10-03T06:59:00Z', is_enabled: true };
-    renderQueue({ ...CLEAR, applications: [window] });
+    renderQueue({ ...CLEAR, applications: [{ ...window, target_url: 'https://forms.gle/house' }] });
     const adminLink = screen.getByRole('link', { name: /application window closes within 7 days/ });
     const adminHeadline = within(adminLink).getByText('House Applications close tomorrow').textContent;
 
