@@ -13,6 +13,17 @@ name: RLS verification
 #   - RLS_ALLOW_MUTATION_TESTS is deliberately never set here, so the admin
 #     manual-check-in insert/delete and base-table write probes never run in CI.
 #
+# Retirement rollout phase: the member-account / code check-in retirement
+# migration is applied to production by hand, after the PR merges, so what is
+# true of the hosted database changes at that moment. RLS_RETIREMENT_PHASE
+# selects which assertions run (pre-migration is the default and describes
+# production before the migration; post-migration requires the retired archives
+# to be revoked from every API role, and fails if the ordinary-user and admin
+# test accounts are not configured rather than skipping them). Sequence: merge, apply the migration,
+# run this workflow manually with phase=post-migration, then set the repository
+# variable RLS_RETIREMENT_PHASE=post-migration so PR, push and scheduled runs
+# follow. See docs/member-account-retirement.md.
+#
 # Why a schedule as well as PRs: RLS regressions here have come from database
 # changes made outside PRs (#422, #423 found dashboard-created policies), which
 # no code change would trigger. The daily run catches those.
@@ -29,6 +40,15 @@ on:
   schedule:
     - cron: '17 15 * * *'
   workflow_dispatch:
+    inputs:
+      retirement_phase:
+        description: 'Retirement migration phase to verify (default: repository variable RLS_RETIREMENT_PHASE, else pre-migration)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - pre-migration
+          - post-migration
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -60,6 +80,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fail closed after the retirement migration: "retired archives are closed
+      # to anon, ordinary users AND admins" cannot be shown by a run whose
+      # signed-in sections were skipped. Existing accounts only; never create a
+      # public member account for this check.
+      - name: Require signed-in test accounts for post-migration verification
+        if: ${{ (inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE) == 'post-migration' }}
+        run: |
+          missing=""
+          for name in RLS_TEST_USER_EMAIL RLS_TEST_USER_PASSWORD RLS_TEST_ADMIN_EMAIL RLS_TEST_ADMIN_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Post-migration RLS verification cannot be skipped::Missing repository secrets:$missing. Post-migration verification needs an existing ordinary authenticated account AND an approved admin account."
+            exit 1
+          fi
+        env:
+          RLS_TEST_USER_EMAIL: ${{ secrets.RLS_TEST_USER_EMAIL }}
+          RLS_TEST_USER_PASSWORD: ${{ secrets.RLS_TEST_USER_PASSWORD }}
+          RLS_TEST_ADMIN_EMAIL: ${{ secrets.RLS_TEST_ADMIN_EMAIL }}
+          RLS_TEST_ADMIN_PASSWORD: ${{ secrets.RLS_TEST_ADMIN_PASSWORD }}
+
       - name: Verify RLS and grants
         run: node scripts/verify-rls-security.mjs
         env:
@@ -72,3 +113,4 @@ jobs:
           RLS_TEST_ADMIN_PASSWORD: ${{ secrets.RLS_TEST_ADMIN_PASSWORD }}
           RLS_TEST_EVENT_ID: ${{ secrets.RLS_TEST_EVENT_ID }}
           RLS_TEST_MEMBER_ID: ${{ secrets.RLS_TEST_MEMBER_ID }}
+          RLS_RETIREMENT_PHASE: ${{ inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE }}

@@ -3,11 +3,10 @@
  * events.test.ts (which owns the draft-exclusion guards and the basic
  * getEvents cases -- those are not repeated here).
  *
- * Events are not part of either points system's arithmetic, but note that
- * getEventById reads `event_attendance`, which belongs to the CHECK-IN system
- * (event_attendance + user_points), not the LEADERBOARD system
- * (member_event_attendance -> member_yearly_points / house_*). The two are not
- * unified; see docs/leaderboard-system.md. These tests only characterise the
+ * Events are not part of the points arithmetic. The retired code check-in
+ * system (event_attendance + user_points) is no longer read here; the only
+ * active points model is member_event_attendance -> member_yearly_points /
+ * house_*, see docs/leaderboard-system.md. These tests only characterise the
  * events repository's own behaviour.
  *
  * Fixture ids are made up.
@@ -62,7 +61,7 @@ describe('EventsRepository.getEvents: failure and filter paths', () => {
 
     // The interest error is not inspected; the event still renders with no counts.
     expect(event.interest_counts).toBeNull();
-    expect(event.attendance_count).toBe(0);
+    expect(event).not.toHaveProperty('attendance_count');
   });
 
   it('public projection omits check_in_form_url; the admin projection includes it', async () => {
@@ -171,105 +170,22 @@ describe('EventsRepository.getUpcomingEvents / getEventsByType', () => {
   });
 });
 
-describe('EventsRepository.getEventById', () => {
-  it('returns the event with attendance count and interest counts attached', async () => {
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', {
-      data: [{ checked_in_at: '2026-10-01T19:00:00Z' }, { checked_in_at: null }],
-      error: null,
-    });
-    supabaseMock.queueResult('event_interest_counts', {
-      data: { event_id: 'event-1', interested: 3, going: 1 },
-      error: null,
-    });
+describe('EventsRepository: retired code check-in surface', () => {
+  it.each(['getEventById', 'checkInUser', 'getCheckInCode', 'setCheckInCode', 'getEventStats'])(
+    'no longer exposes %s',
+    (method) => {
+      expect(eventsRepository).not.toHaveProperty(method);
+    },
+  );
 
-    const result = await eventsRepository.getEventById('event-1');
+  it('never reads the retired attendance or code tables while listing events', async () => {
+    supabaseMock.queueResult('events', { data: [publishedEvent], error: null });
 
-    expect(result).toMatchObject({
-      id: 'event-1',
-      attendance_count: 2,
-      user_attended: false,
-      interest_counts: { event_id: 'event-1', interested: 3, going: 1 },
-    });
-    expect(supabaseMock.filtersFor('events')).toEqual([['id', 'event-1']]);
-    expect(supabaseMock.filtersFor('event_attendance')).toEqual([['event_id', 'event-1']]);
-  });
+    await eventsRepository.getEvents();
 
-  it('reads the public column list from events (no check_in_form_url, no *)', async () => {
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-
-    await eventsRepository.getEventById('event-1');
-
-    const columns = String(firstCall('events', 'select')?.[0]);
-    expect(columns).not.toContain('check_in_form_url');
-    expect(columns).not.toContain('*');
-  });
-
-  it('reports user_attended true only when the given user has an attendance row', async () => {
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', {
-      data: [{ user_id: 'test-user-1', checked_in_at: '2026-10-01T19:00:00Z' }],
-      error: null,
-    });
-    const attended = await eventsRepository.getEventById('event-1', 'test-user-1');
-
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', {
-      data: [{ user_id: 'test-user-1', checked_in_at: '2026-10-01T19:00:00Z' }],
-      error: null,
-    });
-    const otherUser = await eventsRepository.getEventById('event-1', 'test-user-2');
-
-    expect(attended.user_attended).toBe(true);
-    expect(otherUser.user_attended).toBe(false);
-  });
-
-  it('handles no attendance rows (empty and null) and no interest row', async () => {
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', { data: [], error: null });
-    const empty = await eventsRepository.getEventById('event-1');
-
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', { data: null, error: null });
-    const missing = await eventsRepository.getEventById('event-1');
-
-    expect(empty).toMatchObject({ attendance_count: 0, user_attended: false, interest_counts: null });
-    expect(missing).toMatchObject({ attendance_count: 0, user_attended: false, interest_counts: null });
-  });
-
-  it('rejects when the event row is missing (null data, no error)', async () => {
-    supabaseMock.queueResult('events', { data: null, error: null });
-
-    // NotFoundError is re-wrapped by withErrorHandling; see errors.test.ts.
-    await expect(eventsRepository.getEventById('missing-event')).rejects.toThrow(
-      'Failed to fetch event: Event not found'
-    );
-    // Nothing further is queried once the event is known to be absent.
-    expect(supabaseMock.queriesFor('event_attendance')).toHaveLength(0);
-  });
-
-  it('maps a PostgREST no-rows error to a DatabaseError and preserves the code', async () => {
-    supabaseMock.queueResult('events', {
-      data: null,
-      error: postgrestError('JSON object requested, multiple (or no) rows returned', 'PGRST116'),
-    });
-
-    await expect(eventsRepository.getEventById('missing-event')).rejects.toMatchObject({
-      message: 'No rows found',
-      code: 'PGRST116',
-    });
-  });
-
-  it('rejects with a DatabaseError when the event read is denied', async () => {
-    supabaseMock.queueResult('events', { data: null, error: denied() });
-    await expect(eventsRepository.getEventById('event-1')).rejects.toBeInstanceOf(DatabaseError);
-  });
-
-  it('rejects with a DatabaseError when the attendance read fails', async () => {
-    supabaseMock.queueResult('events', { data: publishedEvent, error: null });
-    supabaseMock.queueResult('event_attendance', { data: null, error: denied() });
-
-    await expect(eventsRepository.getEventById('event-1')).rejects.toBeInstanceOf(DatabaseError);
+    const tables = supabaseMock.queries().map((query) => query.table);
+    expect(tables).not.toContain('event_attendance');
+    expect(tables).not.toContain('event_check_in_secrets');
   });
 });
 

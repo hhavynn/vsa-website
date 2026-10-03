@@ -6,7 +6,7 @@ Single source of truth for AI coding agents working in this repo.
 
 ## Project overview
 
-Vietnamese Student Association (VSA) at UCSD member website. This is a production-used site serving 600+ members. Members sign in to check in to events, track points, and view house standings. Admins manage events, gallery, cabinet, VCN archives, house programs, and site content. There is also a public-facing side (home, events, leaderboard, cabinet, gallery) that degrades gracefully when Supabase is unavailable.
+Vietnamese Student Association (VSA) at UCSD member website. This is a production-used site serving 600+ members. Members browse publicly to look up points and view house standings. Member accounts and code-based check-in are formally retired; Supabase Auth serves existing/invited approved admins only, with public signup disabled. Admins manage events, gallery, cabinet, VCN archives, house programs, and site content. There is also a public-facing side (home, events, leaderboard, cabinet, gallery) that degrades gracefully when Supabase is unavailable.
 
 **Tech stack:** Create React App · TypeScript · React 18 · React Router v6 · React Query v3 · Supabase (Auth + PostgreSQL + Storage) · Tailwind CSS v3 · Framer Motion · react-hook-form + Zod · react-hot-toast
 
@@ -58,7 +58,6 @@ Harness adapters: Claude → `CLAUDE.md`; Gemini → `GEMINI.md`; Antigravity �
 src/
   App.tsx                        Entry point; sets up provider hierarchy
   routes/index.tsx               All route definitions (lazy-loaded pages)
-  routes/ProtectedRoute.tsx      Auth gate
   routes/AdminRoute.tsx          Admin flag gate
   pages/                         One file per page/route; thin orchestration layer
     Admin/                       Admin-only pages
@@ -68,7 +67,7 @@ src/
     features/                    Feature-grouped components (admin/, auth/, events/, points/…)
     common/                      Shared utilities (ErrorBoundary, Modal, PageLoader, Skeleton…)
     ui/                          Base primitives (Button, Input, Card, Badge, Label)
-  context/                       React contexts (AuthContext, ThemeContext, PointsContext, SiteSettingsContext)
+  context/                       React contexts (AuthContext, ThemeContext, SiteSettingsContext)
   data/
     errors.ts                    Custom error classes + withErrorHandling() wrapper
     repos/                       Repository singletons — ALL Supabase queries live here
@@ -245,7 +244,7 @@ The canonical roster — every playbook with its edit/audit mode and one-line us
 - 2025–2026 Houses are Bowser, Donkey Kong, Boo, and Toad.
 - 2023–2024 Houses are drinks/treats, not designer Houses. Designer Houses belong to 2019–2020; Mario Houses belong only to 2025–2026.
 - Closed or future application URLs must not be exposed publicly.
-- **Two unreconciled points systems.** Public leaderboard, House standings and Find My Points read `member_event_attendance` (via the `member_yearly_points` family of views); signed-in check-in writes `event_attendance` + `user_points` through `check_in_to_event`. Never fix a leaderboard number by writing to the check-in tables. Canonical table: `docs/leaderboard-system.md`.
+- **One active points/attendance model.** Public leaderboard, House standings, Find My Points and admin imports use `members` / `member_event_attendance` and their views. Account/code check-in is retired; legacy tables are private retention archives only. Never write or transfer their totals into the active ledger. Canonical model: `docs/leaderboard-system.md`; owner decision: `docs/member-account-retirement.md`.
 - Application keys: `ace_application`, `house_fall`, `house_winter`, `house_spring`, `intern_application`, `cabinet_application`, `vcn_stage_ninja_interest`, `vcn_props_team_interest`, `wnc_team_form`.
 
 ---

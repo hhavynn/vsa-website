@@ -79,7 +79,7 @@ export const PointsExplainer: React.FC<PointsExplainerProps> = ({ showCorrection
                   Earn by Participating
                 </h4>
                 <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
-                  Attend GBMs, socials, fundraisers, and community events to earn points. Just make sure to check in with a cabinet member or use our check-in system!
+                  Attend GBMs, socials, fundraisers, and community events to earn points. Follow the attendance instructions shared by cabinet at each event.
                 </p>
               </div>
             </div>

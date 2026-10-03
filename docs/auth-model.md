@@ -34,7 +34,7 @@ ErrorBoundary
             AppRoutes (+ AnalyticsConsentBanner, Toaster)
 ```
 
-`PointsProvider` is **not** in the top-level stack. It wraps the route tree one level deeper, inside `src/routes/index.tsx` (imported at L13, applied at L181 and L293). This matters because `PointsProvider` can only be used inside `AppRoutes`, not above it.
+There is no account-points provider. `AuthProvider` supplies sessions only for admin workflows; public points lookup uses the member-based repository without auth.
 
 ---
 
@@ -79,9 +79,9 @@ All routes rendered as children of `<Layout />` that are **not** inside an `<Adm
 | `/feedback` | FeedbackPage |
 | `/privacy` | Privacy |
 
-### Parked route
+### Retired account routes
 
-`/profile` renders `<MemberAccountsUnavailable />`. See "Member accounts" below.
+`/profile` has been removed and uses the generic 404 page. There are no member signup or account routes. `/signin` remains an alias to `/admin/login` for existing admin bookmarks.
 
 ### Admin routes
 
@@ -128,7 +128,7 @@ Neither checks RLS. Neither prevents a client from bypassing the browser and cal
 
 RLS is not the only server-side boundary, though. Some paths deliberately bypass table policies, and each relies on its own checks:
 
-- **`SECURITY DEFINER` functions** run as their owner and skip RLS on the tables they touch. `check_in_to_event`, for example, reads `event_check_in_secrets` despite that table's RLS. Their boundary is the EXECUTE grant (`anon` / `authenticated`) plus the caller checks inside the function body.
+- **`SECURITY DEFINER` functions** run as their owner and skip RLS on the tables they touch. The admin data-rights routines, for example, read retained historical records despite the archives' revoked client grants. Their boundary is the EXECUTE grant (`anon` / `authenticated`) plus the caller checks inside the function body.
 - **Views** created by the migration role behave like definer objects: their `WHERE` clause and column list, and their grants (revoke-then-grant), are the access control, not the base table's policies.
 - **Edge Functions using the service role** bypass RLS entirely. Their boundary is their own auth/secret check before any query.
 
@@ -140,21 +140,39 @@ The rule of thumb: `AdminRoute` decides what the browser renders; RLS decides wh
 
 ## Member accounts
 
-General member accounts are deliberately parked in the current release. This is an intentional product decision, not a missing feature or bug.
+Member accounts are **formally retired**, by owner decision on 2026-10-02 (#233).
+See [member-account-retirement.md](./member-account-retirement.md) for rationale,
+preserved data, migration scope, and manual deployment checks.
 
-History: an admin-only sign-in redesign was introduced, reverted within ~22 hours, and then reintroduced deliberately via PR #28. The current model is:
+- Students browse publicly and use `/points` without login.
+- `AuthContext` has sign-in and sign-out only. There is no public signup API,
+  signup form, profile editor, account dashboard, or legacy account-points provider.
+- `/admin/login` remains for **existing/invited approved admins**.
+  `SignInForm` verifies `user_profiles.is_admin` and signs out non-admins or
+  callers whose admin status cannot be verified. `AdminRoute` repeats the UX gate.
+- `user_profiles`, `is_admin_user`, and the auth profile-creation trigger remain:
+  invitation provisioning must still create a profile, and admin status is assigned
+  through the existing trusted process.
+- Public Supabase signup must remain disabled. Both local `enable_signup`
+  settings are false, but that configures only the local stack: the hosted project
+  must be verified separately (`GET /auth/v1/settings` with the public anon key must
+  return `"disable_signup": true`; issue #429). Retirement is not operationally
+  complete until that has been observed.
+  No public OAuth/anonymous signup channel should be enabled.
 
-- The **shipped sign-in UI and admin panel** are admin-only: `SignInForm` signs a non-admin straight back out. **Supabase Auth itself is not restricted.** `AuthContext.signIn()` wraps an unrestricted `signInWithPassword`, and email sign-up is currently enabled (#429), so anyone can hold an `authenticated` session by calling the Auth API directly. Threat-model the `authenticated` role as "any stranger", not "an admin".
-- General members browse publicly and use the `/points` ("Find My Points") page to look up their points without an account.
-- `/profile` renders `MemberAccountsUnavailable` — a placeholder component that says "Not currently enabled" and links back to `/`.
-
-If member accounts are re-enabled in the future, `/profile` will need to be wired to a real page and the associated RLS policies will need review before launch.
+Retirement does not delete old Auth users or invalidate every existing JWT.
+Existing ordinary accounts may still authenticate directly to Supabase; the
+`authenticated` database role must **never** be equated with an approved admin.
+RLS and function guards remain mandatory, and the retirement migration denies
+ordinary and admin clients alike access to legacy archives and code RPCs.
+The public photo-request workflow, approved avatars, historical identity links,
+and admin data-rights tooling are preserved.
 
 ---
 
 ## Points and leaderboard
 
-For the dual-points system (event attendance points vs. house competition points) and how the leaderboard is calculated, see [`docs/leaderboard-system.md`](./leaderboard-system.md). That document is the authoritative source; this page does not restate it.
+For the single active member-based points/attendance model and how standings are calculated, see [`docs/leaderboard-system.md`](./leaderboard-system.md). That document is the authoritative source; this page does not restate it.
 
 ---
 

@@ -1,10 +1,5 @@
-// Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
-// system. See the two-systems table at the top of docs/leaderboard-system.md.
-// Protected domain — leaderboard and points calculation. Do not modify attendance
-// import, points calculation, House membership, or leaderboard calculation logic
-// unless explicitly requested. Two coexisting points systems exist; a "simple fix"
-// in one can silently corrupt the other. Authority: AGENTS.md § "Things to never do";
-// vsa-change-control § 1 (Forbidden tier); docs/leaderboard-system.md.
+// Active points model: roster attendance and public-safe aggregate views.
+// See docs/leaderboard-system.md; calculation/import changes require owner approval.
 import { supabase } from '../../lib/supabase';
 import { HouseAllTimePoints, HouseMemberRankEntry, HouseRecentActivity, HouseYearlyPoints, MemberEventHistoryEntry, MemberHouseBadge, MemberYearlyPoints } from '../../types';
 import { withErrorHandling } from '../errors';

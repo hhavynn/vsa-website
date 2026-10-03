@@ -48,7 +48,6 @@ export function buildEventPreview({
       event_type: draft.event_type ?? 'other',
       image_url: imageUrl || null,
       thumbnail_url: imageUrl ? thumbnailUrl : null,
-      is_code_expired: draft.is_code_expired ?? false,
       is_published: draft.is_published ?? true,
       academic_term_id: draft.academic_term_id ?? null,
       interest_counts: draft.interest_counts ?? null,

@@ -1,6 +1,6 @@
 // "Duplicate Event": copies the shape of an event, never its history. The copy
 // is always a Draft, needs a new date before it can be created, and carries no
-// attendance, check-in code, image, recap, RSVP counts, or term.
+// attendance, image, recap, RSVP counts, or term.
 import type { Event } from '../types';
 
 export interface DuplicateEventDraft {
@@ -50,7 +50,6 @@ export const NEVER_COPIED_EVENT_FIELDS = [
   'end_date',
   'image_url',
   'thumbnail_url',
-  'is_code_expired',
   'check_in_form_url',
   'interest_counts',
   'academic_term_id',

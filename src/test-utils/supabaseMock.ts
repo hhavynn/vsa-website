@@ -188,7 +188,6 @@ export class SupabaseMock {
       };
     },
     signInWithPassword: async (_credentials?: unknown) => this.signInResult,
-    signUp: async () => ({ data: { user: null, session: null }, error: null }),
     signOut: async () => {
       this.authSession = null;
       this.emitAuthEvent('SIGNED_OUT', null);

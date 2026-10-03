@@ -37,6 +37,49 @@ if (!supabaseUrl || !supabaseAnonKey) {
   process.exit(1);
 }
 
+// Rollout phase of the member-account / code check-in retirement migration
+// (supabase/migrations/20261003000000_retire_member_account_check_in.sql).
+// This script runs against the hosted production project, so what it must
+// assert depends on whether that migration has been applied there yet:
+//   pre-migration  (default) legacy archives still behave as before: RLS keeps
+//                  them closed to anon/ordinary users, admins keep their
+//                  access, and admin manual check-in writes still work.
+//   post-migration the archives and the retired RPCs are revoked from every
+//                  API role, admins included. Reads must fail with 42501, and
+//                  the ordinary-user and admin credentials are REQUIRED (the
+//                  run fails, never skips, without them).
+// Everything else is identical in both phases. Flip the phase (repo variable
+// RLS_RETIREMENT_PHASE) only after the migration is applied; see
+// docs/member-account-retirement.md.
+const RETIREMENT_PHASES = ['pre-migration', 'post-migration'];
+const retirementPhase = process.env.RLS_RETIREMENT_PHASE || 'pre-migration';
+if (!RETIREMENT_PHASES.includes(retirementPhase)) {
+  console.error(`\x1b[31mError:\x1b[0m RLS_RETIREMENT_PHASE must be one of ${RETIREMENT_PHASES.join(', ')} (got "${retirementPhase}").`);
+  process.exit(1);
+}
+const retired = retirementPhase === 'post-migration';
+
+// Fail closed. Before the migration the signed-in sections are optional (they
+// SKIP without credentials). After it, "the archives are closed" has to be
+// proven for every API audience, so an existing ordinary account and an
+// approved admin account are both required: a run that skipped either would
+// pass without having tested it. Never create a public member account for this.
+if (retired) {
+  const requiredCredentials = [
+    'RLS_TEST_USER_EMAIL',
+    'RLS_TEST_USER_PASSWORD',
+    'RLS_TEST_ADMIN_EMAIL',
+    'RLS_TEST_ADMIN_PASSWORD',
+  ];
+  const missingCredentials = requiredCredentials.filter((name) => !process.env[name]);
+  if (missingCredentials.length > 0) {
+    console.error('\x1b[31mFAIL\x1b[0m post-migration verification requires an existing ordinary authenticated test account AND an approved admin account.');
+    console.error(`Missing: ${missingCredentials.join(', ')}`);
+    console.error('Provide existing accounts only; do not create a public member account to run this check.');
+    process.exit(1);
+  }
+}
+
 let hasFailed = false;
 
 function reportPass(message) {
@@ -94,6 +137,7 @@ async function runTests() {
   console.log('============================================================');
   console.log('Running Supabase RLS / Security Hardening Verification');
   console.log(`Target database: ${supabaseUrl}`);
+  console.log(`Retirement phase: ${retirementPhase}`);
   console.log('============================================================\n');
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
@@ -213,6 +257,32 @@ async function runTests() {
     }
   }
 
+  // Post-migration only: these archives have no API audience, including
+  // signed-in admins. A head-only read must be refused with 42501; an empty
+  // result would only prove RLS, not the revoked grant. Catalog EXECUTE checks
+  // for the retired RPCs belong to docs/member-account-retirement.sql: probing a
+  // revoked mutation RPC directly would be unsafe if its grant regressed.
+  async function expectRetiredArchivesDenied(client, who) {
+    const archives = [
+      ['event_attendance', 'id', false],
+      ['user_points', 'user_id', false],
+      ['event_check_in_secrets', 'event_id', false],
+      ['check_in_codes', 'id', true],
+      ['check_in_code_usage', 'id', true],
+      ['check_ins', 'id', true],
+    ];
+    for (const [table, column, optional] of archives) {
+      const { error } = await client.from(table).select(column, { head: true }).limit(1);
+      if (error?.code === '42501') {
+        reportPass(`${who} cannot read retired archive ${table}`);
+      } else if (optional && ['42P01', 'PGRST205'].includes(error?.code)) {
+        reportSkip(`${who} archive ${table} is absent from this database`);
+      } else {
+        reportFail(`${who} archive ${table} read was not denied: code=${error?.code ?? 'none'}`);
+      }
+    }
+  }
+
   // ============================================================
   // 1. ANONYMOUS / PUBLIC CLIENT CHECKS
   // ============================================================
@@ -265,18 +335,22 @@ async function runTests() {
       reportFail(`anon photo reservation SELECT was not denied: HTTP ${quotaReadStatus}, code=${quotaReadError?.code ?? 'none'}`);
     }
 
-    // Query event_check_in_secrets
-    const { data: secData, error: secError } = await anon
-      .from('event_check_in_secrets')
-      .select('*')
-      .limit(1);
-
-    if (secError) {
-      reportPass(`anon cannot read event_check_in_secrets (${secError.message || secError.code})`);
-    } else if (secData && secData.length > 0) {
-      reportFail('anon read event_check_in_secrets successfully (returned rows)');
+    if (retired) {
+      await expectRetiredArchivesDenied(anon, 'anon');
     } else {
-      reportPass('anon cannot read event_check_in_secrets (returned empty list due to RLS)');
+      // Query event_check_in_secrets
+      const { data: secData, error: secError } = await anon
+        .from('event_check_in_secrets')
+        .select('*')
+        .limit(1);
+
+      if (secError) {
+        reportPass(`anon cannot read event_check_in_secrets (${secError.message || secError.code})`);
+      } else if (secData && secData.length > 0) {
+        reportFail('anon read event_check_in_secrets successfully (returned rows)');
+      } else {
+        reportPass('anon cannot read event_check_in_secrets (returned empty list due to RLS)');
+      }
     }
 
     // Call get_data_rights_dependency_preview RPC
@@ -374,8 +448,10 @@ async function runTests() {
   try {
     const userClient = await createUserClient();
     if (!userClient) {
-      reportSkip('ordinary authenticated user checks (email/password not provided in env)');
+      if (retired) reportFail('ordinary authenticated user checks cannot be skipped after the retirement migration');
+      else reportSkip('ordinary authenticated user checks (email/password not provided in env)');
     } else {
+      if (retired) await expectRetiredArchivesDenied(userClient, 'ordinary user');
       const authUser = (await userClient.auth.getUser()).data.user;
 
       for (const [table, columns] of [
@@ -427,53 +503,57 @@ async function runTests() {
         }
       };
 
-      const { error: attInsError } = await userClient
-        .from('event_attendance')
-        .insert([{ event_id: dummyUuid, user_id: authUser.id, points_earned: 0, check_in_type: 'code' }]);
-      expectInsertDenied('event_attendance', attInsError);
-
-      const { data: ownAttendance } = await userClient
-        .from('event_attendance')
-        .select('id, points_earned')
-        .eq('user_id', authUser.id)
-        .limit(1);
-      if (!ownAttendance || ownAttendance.length === 0) {
-        reportSkip('ordinary user event_attendance update probe (test user has no attendance rows)');
-      } else {
-        const { data, error } = await userClient
+      // Legacy archive write probes; post-migration the head-read check above
+      // already proves the grants are gone.
+      if (!retired) {
+        const { error: attInsError } = await userClient
           .from('event_attendance')
-          .update({ points_earned: ownAttendance[0].points_earned })
-          .eq('id', ownAttendance[0].id)
-          .select('id');
-        expectNoRowsUpdated('event_attendance', data, error);
-      }
+          .insert([{ event_id: dummyUuid, user_id: authUser.id, points_earned: 0, check_in_type: 'code' }]);
+        expectInsertDenied('event_attendance', attInsError);
 
-      // Read the caller's own row first. The insert probe is only
-      // non-destructive when that row exists: then an RLS bypass hits the
-      // primary key (23505) instead of creating a points row.
-      const { data: ownPoints } = await userClient
-        .from('user_points')
-        .select('points')
-        .eq('user_id', authUser.id)
-        .maybeSingle();
-      if (!ownPoints) {
-        reportSkip('ordinary user user_points insert probe (no existing row, so the probe could create one)');
-      } else {
-        const { error: ptsInsError } = await userClient
-          .from('user_points')
-          .insert([{ user_id: authUser.id, points: 0 }]);
-        expectInsertDenied('user_points', ptsInsError);
-      }
-
-      if (!ownPoints) {
-        reportSkip('ordinary user user_points update probe (test user has no user_points row)');
-      } else {
-        const { data, error } = await userClient
-          .from('user_points')
-          .update({ points: ownPoints.points })
+        const { data: ownAttendance } = await userClient
+          .from('event_attendance')
+          .select('id, points_earned')
           .eq('user_id', authUser.id)
-          .select('user_id');
-        expectNoRowsUpdated('user_points', data, error);
+          .limit(1);
+        if (!ownAttendance || ownAttendance.length === 0) {
+          reportSkip('ordinary user event_attendance update probe (test user has no attendance rows)');
+        } else {
+          const { data, error } = await userClient
+            .from('event_attendance')
+            .update({ points_earned: ownAttendance[0].points_earned })
+            .eq('id', ownAttendance[0].id)
+            .select('id');
+          expectNoRowsUpdated('event_attendance', data, error);
+        }
+
+        // Read the caller's own row first. The insert probe is only
+        // non-destructive when that row exists: then an RLS bypass hits the
+        // primary key (23505) instead of creating a points row.
+        const { data: ownPoints } = await userClient
+          .from('user_points')
+          .select('points')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+        if (!ownPoints) {
+          reportSkip('ordinary user user_points insert probe (no existing row, so the probe could create one)');
+        } else {
+          const { error: ptsInsError } = await userClient
+            .from('user_points')
+            .insert([{ user_id: authUser.id, points: 0 }]);
+          expectInsertDenied('user_points', ptsInsError);
+        }
+
+        if (!ownPoints) {
+          reportSkip('ordinary user user_points update probe (test user has no user_points row)');
+        } else {
+          const { data, error } = await userClient
+            .from('user_points')
+            .update({ points: ownPoints.points })
+            .eq('user_id', authUser.id)
+            .select('user_id');
+          expectNoRowsUpdated('user_points', data, error);
+        }
       }
 
       // Public tables: readable by everyone, writable only by admins.
@@ -500,18 +580,20 @@ async function runTests() {
 
       }
 
-      // Attempt to read event_check_in_secrets
-      const { data: userSecData, error: userSecError } = await userClient
-        .from('event_check_in_secrets')
-        .select('*')
-        .limit(1);
+      if (!retired) {
+        // Attempt to read event_check_in_secrets
+        const { data: userSecData, error: userSecError } = await userClient
+          .from('event_check_in_secrets')
+          .select('*')
+          .limit(1);
 
-      if (userSecError) {
-        reportPass(`ordinary user cannot read event_check_in_secrets (${userSecError.message || userSecError.code})`);
-      } else if (userSecData && userSecData.length > 0) {
-        reportFail('ordinary user read event_check_in_secrets successfully!');
-      } else {
-        reportPass('ordinary user cannot read event_check_in_secrets (returned empty list due to RLS)');
+        if (userSecError) {
+          reportPass(`ordinary user cannot read event_check_in_secrets (${userSecError.message || userSecError.code})`);
+        } else if (userSecData && userSecData.length > 0) {
+          reportFail('ordinary user read event_check_in_secrets successfully!');
+        } else {
+          reportPass('ordinary user cannot read event_check_in_secrets (returned empty list due to RLS)');
+        }
       }
 
       // Attempt to read data-rights request rows
@@ -554,7 +636,8 @@ async function runTests() {
   try {
     const adminClient = await createAdminClient();
     if (!adminClient) {
-      reportSkip('admin checks (email/password not provided in env)');
+      if (retired) reportFail('admin checks cannot be skipped after the retirement migration');
+      else reportSkip('admin checks (email/password not provided in env)');
     } else {
       for (const table of ['members', 'member_event_attendance']) {
         const { error } = await adminClient.from(table).select('*', { head: true });
@@ -562,16 +645,20 @@ async function runTests() {
         else reportPass(`admin retains raw ${table} read privileges`);
       }
 
-      // Query event_check_in_secrets
-      const { data: adminSecData, error: adminSecError } = await adminClient
-        .from('event_check_in_secrets')
-        .select('*')
-        .limit(1);
-
-      if (adminSecError) {
-        reportFail(`admin cannot read event_check_in_secrets: ${adminSecError.message}`);
+      if (retired) {
+        await expectRetiredArchivesDenied(adminClient, 'admin');
       } else {
-        reportPass('admin can read event_check_in_secrets');
+        // Query event_check_in_secrets
+        const { data: adminSecData, error: adminSecError } = await adminClient
+          .from('event_check_in_secrets')
+          .select('*')
+          .limit(1);
+
+        if (adminSecError) {
+          reportFail(`admin cannot read event_check_in_secrets: ${adminSecError.message}`);
+        } else {
+          reportPass('admin can read event_check_in_secrets');
+        }
       }
 
       // Query data_rights_requests
@@ -610,7 +697,9 @@ async function runTests() {
       }
 
       // Admin write / mutation permissions (gated by RLS_ALLOW_MUTATION_TESTS=true)
-      if (!allowMutations) {
+      if (retired) {
+        reportSkip('admin legacy manual check-in write probes (retired by the post-migration phase)');
+      } else if (!allowMutations) {
         reportSkip('admin write mutation checks (RLS_ALLOW_MUTATION_TESTS is not set to true)');
       } else {
         console.log('\n\x1b[33mWARNING: Running admin mutation tests as RLS_ALLOW_MUTATION_TESTS=true.\x1b[0m');

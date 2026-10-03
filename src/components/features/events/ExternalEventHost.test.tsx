@@ -114,7 +114,6 @@ describe('/events cards for an external event', () => {
     location: 'Irvine',
     points: 4,
     event_type: 'external_event',
-    is_code_expired: false,
     is_published: true,
     academic_term_id: null,
     interest_counts: null,

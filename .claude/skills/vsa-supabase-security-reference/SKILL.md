@@ -175,7 +175,9 @@ grant select (id, first_name, last_name, college, year, house, points, events_at
 
 ---
 
-## 3. Server-authoritative check-in design (points protection)
+## 3. Retired check-in design (historical points protection)
+
+**Current status:** account/code check-in is formally retired by owner decision #233 (2026-10-02). The forward retirement migration removes client table/column grants, legacy function EXECUTE grants and automatic code/points-bootstrap triggers while retaining historical rows and privacy dependencies. See `docs/member-account-retirement.md`; the design below explains past hardening, not a current sanctioned API.
 
 **The original vulnerability**: check-in was client-authoritative — `events.check_in_code` was client-readable, clients could INSERT their own `event_attendance` rows and UPDATE their own `user_points.total_points` directly. Any user could grant themselves arbitrary points. Points/attendance/leaderboard are protected domains (AGENTS.md), so the fix rebuilt the whole path server-side across three migrations:
 
@@ -187,7 +189,7 @@ grant select (id, first_name, last_name, college, year, house, points, events_at
 | `user_points`: user UPDATE policies dropped; self-INSERT allowed only with `total_points`/`points` = 0 (bootstrap for pre-trigger accounts); admin-only modify policy | Users can create their empty row but can never choose a point value; all increments flow through the DEFINER RPC or admin paths | `20260619000000` §D + `20260620010000` §2 |
 | Auto-generation trigger `create_event_check_in_secret` (AFTER INSERT on events) | Every event gets *some* code even if the admin UI never sets one | `20260620000000` §B |
 
-Design lesson to reuse: **secrets in their own admin-only table + a DEFINER RPC that takes only the secret and derives everything else server-side + generic error strings**. Note: a second, import-based points system (`members`/`member_event_attendance`) powers the public leaderboard — consolidation is future work; see `vsa-architecture-contract`.
+Design lesson to reuse: **secrets in their own admin-only table + a DEFINER RPC that takes only the secret and derives everything else server-side + generic error strings**. The active points model is `members` / `member_event_attendance` and its views; the retired ledger is an archive, not a consolidation target. See `docs/leaderboard-system.md`.
 
 ---
 

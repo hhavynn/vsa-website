@@ -1,6 +1,6 @@
 ---
 name: vsa-architecture-contract
-description: Load this before any structural change to the VSA website — adding pages/routes/providers, touching the data layer or Supabase client, adding fetching logic, changing auth/admin gating, points/check-in flows, degraded-mode behavior, or the Ask VSA assistant. Provides the system map (CRA SPA → Supabase → Vercel), the exact provider hierarchy and route tiers, the invariants that must hold (with WHY and violation-detection commands), and the known-weak points labeled OPEN. Trigger keywords: architecture, invariant, repository layer, provider, route tier, degraded mode, server-authoritative points, dual points systems.
+description: Load this before any structural change to the VSA website — adding pages/routes/providers, touching the data layer or Supabase client, adding fetching logic, changing auth/admin gating, points/check-in flows, degraded-mode behavior, or the Ask VSA assistant. Provides the system map (CRA SPA → Supabase → Vercel), the exact provider hierarchy and route tiers, the invariants that must hold (with WHY and violation-detection commands), and the known-weak points labeled OPEN. Trigger keywords: architecture, invariant, repository layer, provider, route tier, degraded mode, member-based points, retired account archives.
 ---
 
 # VSA Architecture Contract
@@ -48,17 +48,21 @@ ErrorBoundary
                └─ AppRoutes  +  AnalyticsConsentBanner  +  Toaster (react-hot-toast)
 ```
 
-`PointsProvider` is NOT in `App.tsx` — it wraps the route tree inside `src/routes/index.tsx` (line ~181). Order matters: anything needing auth must sit inside `AuthProvider`; anything using react-query must sit inside `QueryClientProvider`. Root `CLAUDE.md` now points to `src/App.tsx` instead of copying this hierarchy; source remains the ground truth.
+Account-points providers were removed with the formal retirement decision (#233). Order matters: anything needing auth must sit inside `AuthProvider`; anything using react-query must sit inside `QueryClientProvider`. Root `CLAUDE.md` now points to `src/App.tsx` instead of copying this hierarchy; source remains the ground truth.
 
 ### Route tiers (verified in `src/routes/index.tsx`, 2026-07-06)
 
 | Tier | Gate | Routes |
 |---|---|---|
 | Public | none (inside `Layout`) | `/`, `/events`, `/calendar`, `/leaderboard`, `/cabinet`, `/get-involved`, `/gallery`, `/ace`, `/house*`, `/intern-program`, `/vcn*`, `/wild-n-culture`, `/uvsa-network`, `/points`, `/feedback`, `/privacy`, `/admin/login` |
-| Parked | none — renders a static notice | `/profile` → `MemberAccountsUnavailable` component (member accounts intentionally disabled this release; `/points` is a public no-account lookup) |
 | Admin | `<AdminRoute>` wrapping `<AdminLayout>` | all `/admin/*` pages (~28 routes) |
 
-There is currently **no `ProtectedRoute` tier** — member-account routes are parked, so `AdminRoute` (`src/routes/AdminRoute.tsx`) is the only gate component. It redirects unauthenticated users to `/admin/login` and non-admins to `/admin/login` with `state.unauthorized=true`. If you reintroduce member accounts, that is a change-control decision, not a routing tweak — see `vsa-change-control`.
+Member accounts and `/profile` are formally retired. `AdminRoute`
+(`src/routes/AdminRoute.tsx`) is the only gate component. It redirects
+unauthenticated and non-admin users to `/admin/login`, preserving the requested
+admin path. Public `/points` needs no account. Supabase signup remains disabled;
+admins use existing/invited accounts. See `docs/member-account-retirement.md`.
+
 
 ## 2. Invariants
 
@@ -71,7 +75,7 @@ Each row: the rule, WHY it exists, and how to detect a violation. All verified 2
 | 3 | Server state is fetched via react-query (`useQuery`/`useMutation`) calling repositories — not raw `useEffect` + `useState` fetching. | react-query provides caching (5-min staleTime), dedupe, and retry; raw effects re-fetch on every mount, which costs egress and causes loading flicker. | Code review: any new `useEffect` whose body awaits a repo/supabase call and `setState`s the result. (Legacy exceptions exist in hooks, e.g. `src/hooks/useAdmin.ts` — don't add more.) |
 | 4 | Every page is lazy-loaded in `src/routes/index.tsx` via `React.lazy()` + `Suspense` (`PageLoader` fallback). | Keeps the initial bundle small on a mobile-heavy audience; one eagerly-imported page drags its whole dependency tree into the main chunk. | `grep -n "^import.*pages" src/routes/index.tsx` — should return nothing (pages appear only inside `lazy(() => import(...))`; 48 `lazy(` calls as of 2026-07-06). Confirm with `npm run analyze` (see `vsa-diagnostics-and-measurement`). |
 | 5 | **Degraded mode**: the app must render usefully with Supabase down or over quota. See §3. | The egress crisis took Supabase-served content down while the site stayed up; public pages must never white-screen because the database is unreachable. | New public-facing data fetch with no `isSupabaseUnavailable()` handling and no `ContentUnavailableState`/fallback path. Manual test: block `*.supabase.co` in devtools and load each public page. |
-| 6 | **Server-authoritative points**: clients cannot write `event_attendance` or `user_points` directly. Check-ins happen only via the `check_in_to_event(uuid, text)` RPC — SECURITY DEFINER, EXECUTE granted to `authenticated` only, revoked from `anon` (migration `20260619000000_emergency_security_hardening.sql`, L173–237). Migration `20260620010000_harden_attendance_rls.sql` dropped all user insert/update/delete policies on both tables. `pointsRepository.addPoints()` deliberately throws (`src/data/repos/points.ts` L83–89). | Points feed the leaderboard and House competition; a client-writable path lets anyone award themselves points. This was a real hardening response — see `vsa-failure-archaeology`. | Any client-side `.insert`/`.update`/`.upsert` on those tables: `grep -rn "event_attendance\|user_points" src/ \| grep -i "insert\|update\|upsert"`. Any migration re-adding user write policies on them. The sanctioned call site is `src/hooks/useEventAttendance.ts` (L19). |
+| 6 | **One active points/attendance model**: `members` / `member_event_attendance` and their safe views supply public/admin standings. Account/code check-in is retired; archive tables have no direct client grants and obsolete RPCs are non-executable by API roles after manual retirement. | Separate account totals were never leaderboard truth. Formal retirement prevents contradictory totals while retaining historical privacy dependencies. | `memberAccountRetirement.test.ts` guards application paths; `pointsModelBoundary.test.ts` exercises every leaderboard method; retirement SQL fixture checks archive ACLs and preserved active triggers. |
 | 7 | **Ask VSA prompt-vs-DB split**: behavior rules (tone, refusals, scope) live in the `SYSTEM_PROMPT` constant inside `supabase/functions/vsa-ai-assistant/index.ts` (L34); volatile facts (dates, names, links) live as rows in the `ai_knowledge_base` table, retrieved via the `match_ai_knowledge_base` RPC (index.ts L382). Superseded facts are deactivated (`is_active = false`), never deleted (see `supabase/migrations/20260704000001_ai_knowledge_v2_dedupe.sql`). | Facts change every quarter; redeploying an Edge Function to fix a date is slow and error-prone, while admins can edit DB rows from `/admin/ai-knowledge`. Deactivation preserves an audit trail. | A date, person, or URL hardcoded into `SYSTEM_PROMPT`; or a behavior rule stuffed into a knowledge row; or a `DELETE FROM ai_knowledge_base` in a migration. Deploy order when both change: migrations → frontend → edge function. |
 | 8 | **Admin gating**: `is_admin` boolean on `user_profiles`, read by the `useAdmin()` hook (`src/hooks/useAdmin.ts`, L26–33), enforced in routing by `AdminRoute`. Client gating is UX only — the real enforcement is RLS admin policies in Postgres. | A client check can always be bypassed with curl + the anon key; every admin capability must ALSO be denied by RLS (see `vsa-supabase-security-reference`). Note the `user_profiles` RLS recursion outage started exactly here (fix: `supabase/migrations/20260620020000_fix_user_profiles_rls_recursion.sql`). | An `/admin/*` route added outside the `<AdminRoute>` block in `src/routes/index.tsx`; or an admin-only table whose migration has no admin RLS policy. (Doc drift note: `AGENTS.md` says `useAdmin()` lives in `AuthContext.tsx`; verified location is `src/hooks/useAdmin.ts`.) |
 | 9 | `src/types/database.ts` is the single source of truth for DB row types and domain enums (string unions like `SiteEventType`, `ApplicationKey`). Update it in the same PR as any schema migration. | The Supabase client is typed with this `Database` generic; drift between it and the schema produces silently-wrong types everywhere. | A migration PR that doesn't touch `src/types/database.ts`; duplicate enum/type definitions: `grep -rn "type SiteEventType\|type ApplicationKey" src/ \| grep -v types/database` |
@@ -93,13 +97,13 @@ State these plainly in reviews; none of them is intentional design.
 
 | # | Weakness | Evidence | Status |
 |---|---|---|---|
-| 1 | **Dual points systems.** Public/admin leaderboard truth is `member_event_attendance` + `events` + `academic_terms`, read through the `member_yearly_points` / `house_member_yearly_points` views (`src/data/repos/leaderboard.ts` L9/L93/L134). A second system (`event_attendance` + `user_points`, fed by `check_in_to_event`) exists for authenticated check-ins. They are NOT reconciled. | `docs/leaderboard-system.md` L11, L44 ("Future work should consolidate…") | OPEN — consolidation is future work. Never present the systems as unified; never "fix" a leaderboard number by writing to the check-in tables. |
+| 1 | **Account/code points retirement.** The member-based model remains authoritative; old account ledgers are retained privately without application paths. | `docs/leaderboard-system.md`; `docs/member-account-retirement.md` | RESOLVED in source by owner decision #233; backend freeze requires manual migration apply/verification. |
 | 2 | **Thin automated tests.** The suite remains primarily metadata, utils/schemas/data helpers, and one `App.test.tsx` smoke test. Derive the current inventory with `find src -name "*.test.ts*" \| sort`; do not copy a count. Zero repository, RLS, or full-page behavior tests exist — invariants 1–8 above are enforced mainly by review. | `vsa-validation-and-qa` §2 + discovery command | OPEN — see `vsa-validation-and-qa` for how to add tests. |
 | 3 | **Aging platform.** CRA (`react-scripts` ^5.0.1 — CRA is deprecated upstream), TypeScript ^4.9.5, `react-query` ^3.39.3 (superseded by TanStack Query v4/v5 with a different import path and API). `npm run eject` is explicitly forbidden (`AGENTS.md` L274). Any migration off CRA is a major change-control item. | `package.json` L19/25/28/75 | OPEN |
 | 4 | **Client-side admin check is fetch-per-mount.** `useAdmin()` does a raw `useEffect` + `select is_admin` (not react-query, not cached) — a legacy exception to invariant 3 and a per-navigation query. Safe only because RLS is the real boundary. | `src/hooks/useAdmin.ts` | OPEN |
-| 5 | **Check-in bypasses the repo layer.** The `check_in_to_event` RPC is called from `src/hooks/useEventAttendance.ts`, not from a repository — the one sanctioned deviation from invariant 1. Don't copy the pattern. | `src/hooks/useEventAttendance.ts` L19 | OPEN (candidate cleanup: move into `pointsRepository`) |
-| 6 | **Documentation location drift.** Root `CLAUDE.md` now points to `src/App.tsx` for provider hierarchy, and `AGENTS.md` points to `src/hooks/useAdmin.ts` for admin lookup instead of copying stale structure. | compare docs vs. files above | **RESOLVED 2026-07-10** — keep source pointers instead of restoring copied inventories. |
-| 7 | **Member accounts parked, code retained.** `/profile` renders `MemberAccountsUnavailable`; auth plumbing (`AuthProvider`, `PointsProvider`, `event_attendance` flow) remains live for admin sign-in and future re-enable. Dead-looking code here may not be dead. | `src/routes/index.tsx` L130–168, L220–224 | OPEN |
+| 5 | **Obsolete check-in repo exception removed.** The old hook, RPC call, provider and repository are deleted rather than moved. | `docs/member-account-retirement.md` | RESOLVED — #234 and #464 are obsolete through retirement, not RPC repair. |
+| 6 | **Documentation location drift.** Root `CLAUDE.md` points to `src/App.tsx` for provider hierarchy; `AGENTS.md` points to `src/hooks/useAdmin.ts` for admin lookup. | Source pointers | RESOLVED — preserve source pointers instead of copied inventories. |
+| 7 | **Member accounts formally retired.** No parked profile product or public signup API remains; admin auth/profile bootstrap is retained. | `src/routes/index.tsx`; `src/context/AuthContext.tsx`; `docs/member-account-retirement.md` | RESOLVED — #233 owner decision dated 2026-10-02. |
 
 ## 5. If you are about to violate an invariant
 
@@ -111,19 +115,21 @@ Stop. An invariant violation is a **change-control decision, not an implementati
 
 ## Provenance and maintenance
 
+Retirement sections updated 2026-10-02 against this cleanup. Runtime source and the retirement decision supersede older line/count inventories below. Deleted historical paths are provenance only.
+
 Verified 2026-07-06 on branch `codex/reactbits-ui` (clean tree, HEAD `368fbf63`) against: `src/App.tsx`, `src/routes/index.tsx`, `src/routes/AdminRoute.tsx`, `src/lib/supabase.ts`, `src/data/errors.ts`, `src/data/repos/` (23 files), `src/data/repos/events.ts`, `src/data/repos/points.ts`, `src/data/repos/leaderboard.ts`, `src/hooks/useAdmin.ts`, `src/hooks/useEventAttendance.ts`, `src/utils/isSupabaseUnavailable.ts`, `src/config/publicFallbackContent.ts`, `src/lib/supabaseImages.ts`, `vercel.json`, `package.json`, `AGENTS.md`, `docs/leaderboard-system.md`, `docs/event-image-migration.md`, `supabase/migrations/20260619000000_emergency_security_hardening.sql`, `20260620010000_harden_attendance_rls.sql`, `20260620020000_fix_user_profiles_rls_recursion.sql`, `20260704000001_ai_knowledge_v2_dedupe.sql`, `supabase/functions/vsa-ai-assistant/index.ts`.
 
 Re-verification one-liners (run when this file feels stale):
 
 ```bash
 grep -n "Provider" src/App.tsx                          # provider hierarchy
-grep -n "AdminRoute\|MemberAccountsUnavailable" src/routes/index.tsx   # route tiers
+grep -n "AdminRoute" src/routes/index.tsx   # route tiers
 grep -c "lazy(" src/routes/index.tsx                    # lazy-loaded pages (48 as of 2026-07-06)
 ls src/data/repos | wc -l                               # repo count (23)
 grep -rln "lib/supabase" src/pages src/components       # invariant 1 (expect empty)
 grep -rn "createClient" src/ | grep -v "lib/supabase\|setupTests\|src/scripts"  # invariant 2 (expect empty)
 grep -n "check_in_to_event" supabase/migrations/20260619000000_emergency_security_hardening.sql
-grep -rn "check_in_to_event" src/                       # sanctioned call sites
+grep -rn "check_in_to_event" src/                       # test guards only; no application call
 grep -n "SYSTEM_PROMPT\|match_ai_knowledge_base" supabase/functions/vsa-ai-assistant/index.ts
 grep -n "is_admin" src/hooks/useAdmin.ts
 find src -name "*.test.*" | wc -l                       # test-file count

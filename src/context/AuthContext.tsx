@@ -7,7 +7,6 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<User>;
-  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   /**
    * True when the session ended without the user asking for it: the refresh
@@ -194,11 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.user;
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-  };
-
   const signOut = async () => {
     signingOutRef.current = true;
     try {
@@ -218,7 +212,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     signIn,
-    signUp,
     signOut,
     sessionExpired,
     resolveExpiredSession,

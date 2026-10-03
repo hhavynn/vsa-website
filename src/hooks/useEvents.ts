@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from 'react-query';
 import { eventsRepository, EventFilters } from '../data/repos/events';
-import { EventWithAttendance } from '../data/repos/events';
+import { Event } from '../types';
 import { CreateEventFormData, UpdateEventFormData } from '../schemas';
 
 export function useEvents(filters?: EventFilters) {
-  const { data: events = [], isLoading: loading, error, refetch: refreshEvents } = useQuery<EventWithAttendance[]>({
+  const { data: events = [], isLoading: loading, error, refetch: refreshEvents } = useQuery<Event[]>({
     queryKey: ['events', filters],
     queryFn: () => eventsRepository.getEvents(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -26,7 +26,7 @@ export function usePublishedPastEventArchiveAvailability(dateTo: string) {
 }
 
 export function useInfiniteEvents(filters: Omit<EventFilters, 'limit' | 'offset'> = {}) {
-  return useInfiniteQuery<EventWithAttendance[]>({
+  return useInfiniteQuery<Event[]>({
     queryKey: ['events', 'infinite', filters],
     queryFn: ({ pageParam = 0 }) =>
       eventsRepository.getEvents({
@@ -37,15 +37,6 @@ export function useInfiniteEvents(filters: Omit<EventFilters, 'limit' | 'offset'
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === EVENTS_PAGE_SIZE ? allPages.length : undefined;
     },
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useEvent(id: string, userId?: string) {
-  return useQuery({
-    queryKey: ['event', id, userId],
-    queryFn: () => eventsRepository.getEventById(id, userId),
-    enabled: !!id,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -69,14 +60,6 @@ function useEventsByType(eventType: string, limit?: number) {
   });
 }
 
-function useEventStats() {
-  return useQuery({
-    queryKey: 'event-stats',
-    queryFn: () => eventsRepository.getEventStats(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-}
-
 function useCreateEvent() {
   const queryClient = useQueryClient();
 
@@ -84,7 +67,6 @@ function useCreateEvent() {
     mutationFn: (eventData: CreateEventFormData) => eventsRepository.createEvent(eventData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: 'event-stats' });
     },
   });
 }
@@ -98,7 +80,6 @@ function useUpdateEvent() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', variables.id] });
-      queryClient.invalidateQueries({ queryKey: 'event-stats' });
     },
   });
 }
@@ -110,28 +91,8 @@ function useDeleteEvent() {
     mutationFn: (id: string) => eventsRepository.deleteEvent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: 'event-stats' });
     },
   });
 }
 
-function useCheckInEvent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ eventId, userId, checkInType, code }: {
-      eventId: string;
-      userId: string;
-      checkInType: 'code' | 'manual';
-      code?: string;
-    }) => eventsRepository.checkInUser(eventId, userId, checkInType, code),
-    onSuccess: (data, variables) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['event', variables.eventId] });
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['user-points'] });
-      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
-    },
-  });
-}
 /* eslint-enable @typescript-eslint/no-unused-vars */

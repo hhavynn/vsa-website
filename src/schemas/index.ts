@@ -22,7 +22,6 @@ export const EventSchema = z.object({
   check_in_form_url: z.string().url('Invalid URL format'),
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
-  is_code_expired: z.boolean().default(false),
   is_published: z.boolean().default(true),
   academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
@@ -30,28 +29,10 @@ export const EventSchema = z.object({
 export const CreateEventSchema = EventSchema.omit({ id: true });
 export const UpdateEventSchema = EventSchema.partial();
 
-// User profile schemas
-export const UserProfileSchema = z.object({
-  first_name: z.string().min(1, 'First name is required').max(50, 'First name must be less than 50 characters'),
-  last_name: z.string().min(1, 'Last name is required').max(50, 'Last name must be less than 50 characters'),
-  avatar_url: z.string().url('Invalid avatar URL').optional().or(z.literal('')),
-});
-
 // Authentication schemas
 export const SignInSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-export const SignUpSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Password confirmation must be at least 6 characters'),
-  firstName: z.string().min(1, 'First name is required').max(50, 'First name must be less than 50 characters'),
-  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name must be less than 50 characters'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
 });
 
 // Feedback schemas
@@ -62,12 +43,6 @@ export const FeedbackSchema = z.object({
   name: z.string().max(100, 'Name must be less than 100 characters').optional(),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
 });
-
-// Event attendance schemas
-export const CheckInCodeSchema = z.object({
-  code: z.string().min(1, 'Check-in code is required').max(20, 'Check-in code must be less than 20 characters'),
-});
-
 
 // Admin schemas
 export const AdminEventUpdateSchema = z.object({
@@ -81,7 +56,6 @@ export const AdminEventUpdateSchema = z.object({
   check_in_form_url: z.string().url('Invalid URL format').optional(),
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
-  is_code_expired: z.boolean().optional(),
   is_published: z.boolean().optional(),
   academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
 });
@@ -295,11 +269,8 @@ export type Event = z.infer<typeof EventSchema>;
 export type EventFormData = z.infer<typeof EventSchema>;
 export type CreateEventFormData = z.infer<typeof CreateEventSchema>;
 export type UpdateEventFormData = z.infer<typeof UpdateEventSchema>;
-export type UserProfileFormData = z.infer<typeof UserProfileSchema>;
 export type SignInFormData = z.infer<typeof SignInSchema>;
-export type SignUpFormData = z.infer<typeof SignUpSchema>;
 export type FeedbackFormData = z.infer<typeof FeedbackSchema>;
-export type CheckInCodeFormData = z.infer<typeof CheckInCodeSchema>;
 export type AdminEventUpdateFormData = z.infer<typeof AdminEventUpdateSchema>;
 export type DataRightsRequestFormData = z.infer<typeof DataRightsRequestFormSchema>;
 export type MemberPhotoRequestFormData = z.infer<typeof MemberPhotoRequestFormSchema>;

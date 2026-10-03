@@ -1,5 +1,5 @@
-// Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
-// system. See the two-systems table at the top of docs/leaderboard-system.md.
+// Account-free attendance and points use the member ledger.
+// Architecture and import rules: docs/leaderboard-system.md.
 // Protected domain — attendance import. This page writes to member_event_attendance
 // and creates member rows; changes here directly affect points and event history for
 // real members. Do not modify import logic unless explicitly requested.

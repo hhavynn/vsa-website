@@ -55,7 +55,6 @@ const baseEvent: Event = {
   points: 10,
   event_type: 'gbm',
   check_in_form_url: '',
-  is_code_expired: false,
   is_published: true,
 };
 
