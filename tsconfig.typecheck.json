@@ -1,0 +1,13 @@
+{
+  // Used only by `npm run typecheck`. The real build keeps tsconfig.json (target
+  // es5, TypeScript 4.9 via react-scripts); this config exists because that
+  // TypeScript cannot parse zod's v4 .d.cts typings and so skips semantic
+  // checking entirely. See docs/typechecking.md.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // TypeScript 5 rejects the `u` regex flag in src/lib/memberMatching.ts under
+    // es5 (TS1501). es2015 is the lowest target that accepts it; the es5-only
+    // class of error (e.g. for-of over a Map) is still caught by `npm run build`.
+    "target": "es2015"
+  }
+}

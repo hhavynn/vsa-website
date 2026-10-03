@@ -95,11 +95,32 @@ Everything nested inside the `<Route element={<AdminRoute />}>` wrapper. `AdminR
 
 ### What `useAdmin()` does
 
-`useAdmin()` (`src/hooks/useAdmin.ts`) reads `user_profiles.is_admin` from Supabase client-side and returns `{ isAdmin: boolean, loading: boolean }`. It fires on every user change. If the query fails, `isAdmin` defaults to `false`.
+`useAdmin()` (`src/hooks/useAdmin.ts`) returns `{ isAdmin: boolean, loading: boolean }`. The lookup is a react-query entry keyed `['admin-status', userId]`, fetched through `authRepository.isUserAdmin()` (which reads only `user_profiles.is_admin`). Every consumer (the admin route guard, the user menu, the sign-in page) shares that one entry, so navigating the admin area does not re-query. It is fresh for 10 minutes and re-checks on tab focus after that.
+
+- **Fails closed.** `isAdmin` is `true` only for an explicit `true` for the signed-in user. No user, a failed first lookup, a missing profile row, and a lookup still in flight are all `false`. A failed *background* re-check of an already-verified admin keeps the last verified answer rather than ejecting them mid-edit; RLS is what actually stops a demoted admin.
+- **Keyed by user id, not by the `user` object.** supabase-js re-emits `SIGNED_IN` with a fresh object whenever the tab regains focus. Keying on object identity used to make the admin shell flash its loader and remount, discarding unsaved form state.
+- **Never shows one account's answer to another.** A different id is a different cache entry, and the cache is emptied when the account changes (below).
 
 ### What `AdminRoute` does
 
-`AdminRoute` (`src/routes/AdminRoute.tsx`) consumes `useAdmin()`. If `loading` is true, it shows a spinner. If the session has no user, or if `isAdmin` is false, it redirects to `/admin/login`. Otherwise it renders the child route.
+`AdminRoute` (`src/routes/AdminRoute.tsx`) consumes `useAdmin()`. If `loading` is true, it shows a spinner. If the session has no user, or if `isAdmin` is false, it redirects to `/admin/login`. Otherwise it renders the child route. The one exception is a session that ends unprompted while an admin is signed in (next section).
+
+### Session lifecycle: sign-out, expiry and re-authentication
+
+| Situation | What happens |
+| --- | --- |
+| Token refresh succeeds (idle expiry, tab refocus, hourly rotation) | supabase-js swaps the token and emits `TOKEN_REFRESHED` / `SIGNED_IN`. Nothing visible changes: no loader, no remount, no re-query, cache kept. |
+| Refresh is rejected (refresh token expired or revoked) or the user signed out in another tab | supabase-js emits `SIGNED_OUT`. `AuthProvider` sets `sessionExpired`, and `AdminRoute` keeps the page mounted behind an opaque **re-authentication prompt** (`SessionExpiredDialog`) instead of redirecting. Unsaved form state survives. Signing back in with the same account uncovers the page and revalidates its queries; a different account gets a fresh page; "Leave admin" discards the page and its cache after the usual unsaved-changes confirmation. |
+| Refresh fails for network reasons | supabase-js keeps the session and retries. Nothing is reset; requests fail with ordinary network errors. |
+| A request is rejected mid-flight with an expired JWT (`PGRST301`/`PGRST302`) | The query client's cache error handlers (`src/lib/queryClient.ts`, `src/lib/sessionExpiry.ts`) force one token refresh. A live refresh token recovers silently (retry the action); a dead one becomes `SIGNED_OUT` and the prompt above. `toUserMessage` reads these codes as "Your session expired. Try again, and sign in again if it keeps failing." |
+| Deliberate sign-out (`signOut()`) | Not treated as expiry. User state, `['admin-status', ...]` and the **entire** react-query cache are cleared, even if the server refuses the request. `AdminRoute` redirects to `/admin/login`. |
+| A different account signs in without signing out | The whole cache is cleared before the new account's data loads. |
+
+On unprompted session loss the cache is not emptied outright: queries nothing is displaying are dropped, but those still mounted are kept, because their rows are already on screen in the page being held open. Emptying them would blank that page and strand its later invalidations. They are revalidated when the same account signs back in and cleared on any other outcome.
+
+While the prompt is open the held page is `inert` and `aria-hidden`, so keyboard focus, find-in-page and screen readers cannot reach admin content behind the cover, and focus moves to the password field. Known limits, all UX or hygiene rather than access (the server already denies a signed-out client): content portalled outside the admin page (quick search, preview dialogs) is covered visually but not inerted; signing in at the prompt with a *different* account discards the held page, because that account's identity is only known after it signs in; and if the Supabase `signOut()` request itself fails (offline), local state is cleared but supabase-js may still hold the stored session and restore it on the next tab refocus. Leaving the admin area while a session is marked expired drops the held page's cached rows.
+
+Session lifetime is a Supabase Auth project setting and is deliberately **not** extended as a fix for expiry UX; that is a security decision for the owner.
 
 ### What neither provides
 

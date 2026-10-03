@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from "react-query";
+import { QueryClientProvider } from "react-query";
+import { createQueryClient } from "./lib/queryClient";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import AppRoutes from "./routes";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -8,15 +9,7 @@ import { AnalyticsConsentProvider } from "./context/AnalyticsConsentContext";
 import { AnalyticsConsentBanner } from "./components/common/AnalyticsConsentBanner";
 import { Toaster } from "react-hot-toast";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes default
-      cacheTime: 10 * 60 * 1000,
-    },
-  },
-});
+const queryClient = createQueryClient();
 
 function App() {
   return (
