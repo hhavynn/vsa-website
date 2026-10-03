@@ -75,6 +75,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # Deno 2 treats the repo's package.json as its npm configuration, so it
+      # needs the project's node_modules (for example @types/node) to resolve
+      # types, exactly as on a developer machine.
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
