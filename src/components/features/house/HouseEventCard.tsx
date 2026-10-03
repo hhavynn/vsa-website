@@ -2,7 +2,7 @@ import { HouseEvent, HousePageAsset } from '../../../types';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { formatDateOnly } from '../../../lib/dateOnly';
 import { buildGcalTimedDates, formatEventTimeRange } from '../../../lib/eventTime';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 
 function nextDateOnly(dateOnly: string): string {
   const [year, month, day] = dateOnly.split('-').map(Number);
@@ -73,15 +73,14 @@ export function HouseEventCard({
             <span className="font-serif text-3xl italic" style={{ color }}>VSA</span>
           </div>
           {imageUrl ? (
-            <img
-              src={getSupabaseImageUrl(imageUrl, { width: 480, height: 360, resize: 'cover', quality: 72 })}
+            <OptimizedImage
+              src={imageUrl}
               alt={event.title}
+              width={480}
+              height={360}
+              widths={[240, 480]}
+              sizes="(min-width: 1024px) 240px, (min-width: 640px) 200px, 100vw"
               className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
             />
           ) : null}
         </div>

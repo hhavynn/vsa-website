@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -12,8 +12,8 @@ import { eventsRepository } from '../../data/repos/events';
 import { externalEventsRepository } from '../../data/repos/externalEvents';
 import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
-import { useDropzone } from 'react-dropzone';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
 import { ExternalEventDetailsFields } from '../../components/features/admin/ExternalEventDetailsFields';
@@ -302,32 +302,6 @@ export default function AdminEvents() {
     .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const eventIds = useMemo(() => events.map((event: Event) => event.id), [events]);
   const { recapEventIds } = useEventRecapEventIds(eventIds);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1, maxSize: 10 * 1024 * 1024,
-  });
-
-  const onEditDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setEditImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setEditImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
-    onDrop: onEditDrop, accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1, maxSize: 10 * 1024 * 1024,
-  });
 
   async function uploadImage(file: File): Promise<UploadedEventImage> {
     // Admin browser uploads go to Supabase Storage. Moving permanent/static
@@ -796,13 +770,14 @@ export default function AdminEvents() {
                   <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                     Images are compressed before upload to keep the site fast. New uploads also create a smaller public thumbnail.
                   </p>
-                  <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
-                    <input {...getInputProps()} />
-                    {imagePreview
-                      ? <img src={imagePreview} alt="Preview" className="max-h-48 rounded object-cover shadow-sm" />
-                      : <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>}
-                  </div>
-                  {imageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setImageFile(null); setImagePreview(null); }}>Remove image</button>}
+                  <ImageDropzone
+                    className="mt-2"
+                    preset="event"
+                    previewUrl={imagePreview}
+                    file={imageFile}
+                    onSelect={(file, preview) => { setImageFile(file); setImagePreview(preview); }}
+                    onClear={() => { setImageFile(null); setImagePreview(null); }}
+                  />
                 </div>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                   <PreviewAsPublicButton
@@ -980,13 +955,15 @@ export default function AdminEvents() {
                       <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedEvent({...selectedEvent, image_url: '', thumbnail_url: null})}>Remove image</button>
                     </div>
                   )}
-                  <div {...getEditRootProps()} className={`flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
-                    <input {...getEditInputProps()} />
-                    {editImagePreview
-                      ? <img src={editImagePreview} alt="New preview" className="max-h-40 rounded object-cover shadow-sm" />
-                      : <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to replace image</p>}
-                  </div>
-                  {editImageFile && <button type="button" className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => { setEditImageFile(null); setEditImagePreview(null); }}>Remove new image</button>}
+                  <ImageDropzone
+                    preset="event"
+                    previewUrl={editImagePreview}
+                    file={editImageFile}
+                    prompt="Drag and drop or click to replace image"
+                    previewAlt="New preview"
+                    onSelect={(file, preview) => { setEditImageFile(file); setEditImagePreview(preview); }}
+                    onClear={() => { setEditImageFile(null); setEditImagePreview(null); }}
+                  />
                 </div>
                 <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
                   <button type="submit" disabled={editUploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">

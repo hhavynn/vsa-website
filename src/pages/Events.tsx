@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import {
   FeaturedEventCard,
   PastEventMemoryCard,
@@ -14,7 +15,6 @@ import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
-import { getSupabaseImageUrl } from '../lib/supabaseImages';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { houseSlugFromKey } from '../utils/houseSlug';
@@ -66,19 +66,20 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
   return (
     <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
-        {imageUrl ? (
-          <img
-            src={getSupabaseImageUrl(imageUrl, { width: 320, height: 220, resize: 'cover', quality: 72 })}
-            alt={event.title}
-            className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="flex aspect-[4/3] items-center justify-center">
-            <span className="font-serif text-2xl italic" style={{ color }}>VSA</span>
-          </div>
-        )}
+        <OptimizedImage
+          src={imageUrl}
+          // Thumbnail already covers the 120px (sm+) / full-width (mobile) slot.
+          width={320}
+          height={240}
+          sizes="(min-width: 640px) 120px, 100vw"
+          alt={event.title}
+          className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fallback={
+            <div className="flex aspect-[4/3] items-center justify-center">
+              <span className="font-serif text-2xl italic" style={{ color }}>VSA</span>
+            </div>
+          }
+        />
       </div>
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2">

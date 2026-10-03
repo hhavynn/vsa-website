@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { useDropzone } from 'react-dropzone';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
@@ -13,6 +12,7 @@ import { isRenamed } from '../../lib/memberPhotos';
 import { isDirty } from '../../lib/adminDirty';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
+import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 import { CabinetPreviewDialog } from '../../components/features/admin/preview/CabinetPreviewDialog';
 import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { buildCabinetPreviewMembers } from '../../components/features/admin/preview/cabinetPreview';
@@ -322,40 +322,6 @@ export default function AdminCabinet() {
     }
   };
 
-  // Dropzone for CREATE
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 8 * 1024 * 1024,
-  });
-
-  // Dropzone for EDIT
-  const onEditDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setEditImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setEditImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
-
-  const { getRootProps: getEditRootProps, getInputProps: getEditInputProps, isDragActive: isEditDragActive } = useDropzone({
-    onDrop: onEditDrop,
-    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
-    maxFiles: 1,
-    maxSize: 8 * 1024 * 1024,
-  });
-
   const uploadImage = async (file: File): Promise<UploadedCabinetImage> => {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'cabinet');
     const { file: thumbnailFile } = await prepareImageForUpload(file, 'cabinetThumbnail');
@@ -641,14 +607,13 @@ export default function AdminCabinet() {
                 <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                   New uploads create a smaller public thumbnail. Older images may still use original URLs until thumbnails are regenerated.
                 </p>
-                <div {...getRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-8 cursor-pointer transition-colors ${isDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
-                  <input {...getInputProps()} />
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="h-24 w-24 rounded-full object-cover shadow-sm" />
-                  ) : (
-                    <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload</p>
-                  )}
-                </div>
+                <ImageDropzone
+                  className="mt-2"
+                  preset="cabinet"
+                  previewUrl={imagePreview}
+                  file={imageFile}
+                  onSelect={(file, preview) => { setImageFile(file); setImagePreview(preview); }}
+                />
               </div>
               <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                 <PreviewAsPublicButton onClick={() => setPreviewTarget('create')} className="py-3 sm:shrink-0" />
@@ -804,14 +769,14 @@ export default function AdminCabinet() {
                     <button type="button" className="text-xs font-semibold text-red-500 hover:text-red-600" onClick={() => setSelectedMember({...selectedMember, image_url: '', thumbnail_url: null})}>Remove image</button>
                   </div>
                 )}
-                <div {...getEditRootProps()} className={`mt-2 flex flex-col items-center justify-center border border-dashed rounded-lg p-6 cursor-pointer transition-colors ${isEditDragActive ? 'border-[var(--brand)] bg-[var(--brand)]/5' : 'border-[var(--color-border)] hover:bg-[var(--color-surface2)]'}`}>
-                  <input {...getEditInputProps()} />
-                  {editImagePreview ? (
-                    <img src={editImagePreview} alt="Preview" className="h-20 w-20 rounded-full object-cover shadow-sm" />
-                  ) : (
-                    <p className="text-xs" style={{ color: 'var(--color-text3)' }}>Drag and drop or click to upload new photo</p>
-                  )}
-                </div>
+                <ImageDropzone
+                  className="mt-2"
+                  preset="cabinet"
+                  previewUrl={editImagePreview}
+                  file={editImageFile}
+                  prompt="Drag and drop or click to upload new photo"
+                  onSelect={(file, preview) => { setEditImageFile(file); setEditImagePreview(preview); }}
+                />
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
                 <button type="submit" disabled={uploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>

@@ -1,6 +1,6 @@
 import { type CSSProperties, useMemo } from 'react';
 import { formatDateOnly } from '../lib/dateOnly';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PageTitle } from '../components/common/PageTitle';
 import { GallerySkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
@@ -146,6 +146,8 @@ export default function Gallery() {
               className="gallery-memory-wall"
             >
               {albums.map((album, index) => {
+                // Cards render the 720px thumbnail only. Offering the 1400px cover in a srcset
+                // would make hi-DPI phones download the larger file: more egress than before.
                 const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
 
                 return (
@@ -164,25 +166,16 @@ export default function Gallery() {
                       {coverUrl ? (
                         <>
                           <AlbumFallback />
-                          <img
-                            src={getSupabaseImageUrl(coverUrl, {
-                              width: 520,
-                              height: 330,
-                              resize: 'cover',
-                              quality: 72,
-                            })}
-                            srcSet={getSupabaseImageSrcSet(coverUrl, [360, 520, 720], {
-                              resize: 'cover',
-                              quality: 72,
-                            })}
-                            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+                          <OptimizedImage
+                            src={coverUrl}
+                            width={520}
+                            height={330}
+                            // Mobile: 82vw swipe cards; 640-768px: two masonry columns;
+                            // wider: 12-col grid, widest card spans 5/12 of a 1280px container.
+                            sizes="(max-width: 639px) 82vw, (max-width: 768px) 50vw, (max-width: 1280px) 42vw, 512px"
+                            widths={[360, 520, 720]}
                             alt=""
                             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
-                            loading="lazy"
-                            decoding="async"
-                            onError={(event) => {
-                              event.currentTarget.style.display = 'none';
-                            }}
                           />
                         </>
                       ) : (

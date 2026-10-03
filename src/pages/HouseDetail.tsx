@@ -9,7 +9,7 @@ import { houseEventsRepository } from '../data/repos/houseEvents';
 import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta, parseYearSlug } from '../lib/academicTerms';
-import { getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { HousePageAsset, HouseYearlyPoints } from '../types';
 import { houseSlugFromKey, matchesHouseSlug } from '../utils/houseSlug';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
@@ -68,12 +68,16 @@ function HouseParentsSection({ house, label, color }: { house: HousePageAsset; l
         >
           {parentImage ? (
             <div className="rounded border p-3" style={{ borderColor: `${color}33`, background: 'var(--color-surface2)' }}>
-              <img
-                src={getSupabaseImageUrl(parentImage, { width: 1100, height: 1500, resize: 'contain', quality: 78 })}
+              <OptimizedImage
+                src={parentImage}
                 alt={`${label} House Parent announcement`}
+                width={1100}
+                height={1500}
+                widths={[800, 1100]}
+                sizes="(min-width: 768px) 768px, 100vw"
+                resize="contain"
+                quality={78}
                 className="mx-auto max-h-[78vh] w-full object-contain"
-                loading="lazy"
-                decoding="async"
               />
             </div>
           ) : (
@@ -306,12 +310,17 @@ export function HouseDetail() {
             </div>
             <div className="scrapbook-photo overflow-hidden" style={{ borderColor: `${color}66` }}>
               {heroImage ? (
-                <img
-                  src={getSupabaseImageUrl(heroImage, { width: 720, height: 540, resize: 'cover', quality: 74 })}
+                // The hero is the first image in the viewport on this page: never lazy.
+                <OptimizedImage
+                  src={heroImage}
                   alt={house.image_alt || label}
+                  width={720}
+                  height={540}
+                  widths={[480, 720]}
+                  sizes="(min-width: 1024px) 560px, 100vw"
+                  quality={74}
+                  priority
                   className="aspect-[4/3] w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
                 />
               ) : (
                 <div className="flex aspect-[4/3] items-center justify-center" style={{ background: `${color}12` }}>

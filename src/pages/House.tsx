@@ -15,7 +15,7 @@ import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
-import { getSupabaseImageSrcSet, getSupabaseImageUrl } from '../lib/supabaseImages';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { HouseEvent, HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
 import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
@@ -436,14 +436,15 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
           <div className="flex h-full w-full items-center justify-center bg-[var(--color-surface2)]">
             <span className="font-serif text-lg italic" style={{ color }}>VSA</span>
           </div>
-          <img
-            src={getSupabaseImageUrl(imageUrl, { width: 128, height: 128, resize: 'cover', quality: 70 })}
+          <OptimizedImage
+            src={imageUrl}
             alt={event.title}
+            width={128}
+            height={128}
+            widths={[64, 128]}
+            sizes="64px"
+            quality={70}
             className="-mt-16 h-full w-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
           />
         </div>
       )}
@@ -874,17 +875,14 @@ export function House() {
                           <span className="font-serif text-5xl">{emoji || label.slice(0, 2).toUpperCase()}</span>
                         </div>
                         {imageUrl ? (
-                          <img
-                            src={getSupabaseImageUrl(imageUrl, { width: 520, height: 390, resize: 'cover', quality: 72 })}
-                            srcSet={getSupabaseImageSrcSet(imageUrl, [320, 520, 720], { resize: 'cover', quality: 72 })}
+                          <OptimizedImage
+                            src={imageUrl}
+                            width={520}
+                            height={390}
+                            widths={[320, 520, 720]}
                             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
                             alt={asset.image_alt || label}
                             className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
                           />
                         ) : null}
 

@@ -1,57 +1,91 @@
-import { useState, useEffect } from 'react';
+import { ImgHTMLAttributes, ReactNode, useEffect, useState } from 'react';
+import { buildImageAttrs, getLoadingAttrs, ImageVariant } from '../../lib/imageDelivery';
 
-interface OptimizedImageProps {
-  src: string;
+type NativeImgProps = Omit<
+  ImgHTMLAttributes<HTMLImageElement>,
+  'src' | 'srcSet' | 'width' | 'height' | 'loading' | 'alt' | 'sizes'
+>;
+
+export interface OptimizedImageProps extends NativeImgProps {
+  /** Full-size image URL. Empty/nullish renders `fallback`. */
+  src: string | null | undefined;
+  /** Required. Use "" only for purely decorative images. */
   alt: string;
-  className?: string;
+  /**
+   * Intrinsic (or 1x display) size. Always set on the element so the browser
+   * reserves the box before the file arrives (no layout shift). CSS still
+   * controls the rendered size.
+   */
+  width: number;
+  height: number;
+  /**
+   * The image is above the fold / likely the LCP element: loads eagerly with
+   * high fetch priority. Everything else is lazy. Never mark a whole grid.
+   */
+  priority?: boolean;
+  /** `sizes` for the srcset. Defaults to `${width}px` when a srcset is produced. */
   sizes?: string;
-  loading?: 'lazy' | 'eager';
+  /** Intrinsic pixel width of `src`. Needed for `lowRes` to take effect. */
+  srcWidth?: number;
+  /** Smaller file of the same picture (the row's thumbnail), as a srcset candidate. */
+  lowRes?: ImageVariant | null;
+  /** Candidate widths when Supabase transforms are enabled. */
+  widths?: number[];
+  resize?: 'cover' | 'contain' | 'fill';
+  quality?: number;
+  /** Rendered instead of the image when `src` is missing or the file fails to load. */
+  fallback?: ReactNode;
 }
 
+/**
+ * The one way to render a public content image: explicit dimensions, lazy by
+ * default, eager + high priority on request, responsive `srcset` when a
+ * smaller variant exists, and graceful failure. Renders a bare `<img>` so
+ * existing aspect-ratio/object-fit wrappers keep working.
+ */
 export function OptimizedImage({
   src,
   alt,
-  className = '',
-  sizes = '100vw',
-  loading = 'lazy'
+  width,
+  height,
+  priority = false,
+  sizes,
+  srcWidth,
+  lowRes,
+  widths,
+  resize,
+  quality,
+  fallback = null,
+  onError,
+  ...rest
 }: OptimizedImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [error, setError] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
+  // A new URL gets a fresh chance even if the previous one failed.
   useEffect(() => {
-    const img = new Image();
-    img.src = src;
-    img.onload = () => setIsLoaded(true);
-    img.onerror = () => setError(true);
+    setFailedSrc(null);
   }, [src]);
 
-  if (error) {
-    return (
-      <div className={`bg-gray-800 flex items-center justify-center ${className}`}>
-        <span className="text-gray-400">Failed to load image</span>
-      </div>
-    );
-  }
+  if (!src || failedSrc === src) return <>{fallback}</>;
+
+  const attrs = buildImageAttrs({ src, srcWidth, lowRes, width, height, widths, resize, quality });
+  const extra = getLoadingAttrs(priority) as Record<string, string>;
 
   return (
-    <div className={`relative ${className}`}>
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-gray-800 animate-pulse" />
-      )}
-      <img
-        src={src}
-        alt={alt}
-        loading={loading}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        } ${className}`}
-        sizes={sizes}
-        srcSet={`
-          ${src}?w=400 400w,
-          ${src}?w=800 800w,
-          ${src}?w=1200 1200w
-        `}
-      />
-    </div>
+    <img
+      {...rest}
+      {...extra}
+      src={attrs.src}
+      srcSet={attrs.srcSet}
+      sizes={attrs.srcSet ? sizes ?? `${width}px` : undefined}
+      width={width}
+      height={height}
+      alt={alt}
+      decoding="async"
+      onError={(event) => {
+        setFailedSrc(src);
+        onError?.(event);
+      }}
+    />
   );
-} 
+}

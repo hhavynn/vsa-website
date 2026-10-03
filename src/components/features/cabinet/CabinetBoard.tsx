@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ProfileSpotlightCard } from '../../ui/ProfileSpotlightCard';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { type CabinetMemberRaw } from '../../../hooks/useCabinet';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { resolveMemberPhoto } from '../../../lib/memberPhotos';
 
 // The public Cabinet board (Executive / General Board / Interns / Other),
@@ -182,31 +182,17 @@ function Avatar({
   }
 
   return (
-    <img
-      src={getSupabaseImageUrl(imageUrl, {
-        width: size * 2,
-        height: size * 2,
-        resize: 'cover',
-        quality: 75,
-      })}
-      srcSet={`${getSupabaseImageUrl(imageUrl, {
-        width: size,
-        height: size,
-        resize: 'cover',
-        quality: 75,
-      })} 1x, ${getSupabaseImageUrl(imageUrl, {
-        width: size * 2,
-        height: size * 2,
-        resize: 'cover',
-        quality: 75,
-      })} 2x`}
+    <OptimizedImage
+      src={imageUrl}
       alt={name}
-      className="shrink-0 rounded-full object-cover border-2 border-[var(--color-surface)] shadow-sm"
       width={size}
       height={size}
+      widths={[size, size * 2]}
+      sizes={`${size}px`}
+      quality={75}
+      priority={priority}
+      className="shrink-0 rounded-full object-cover border-2 border-[var(--color-surface)] shadow-sm"
       style={{ width: size, height: size }}
-      loading={priority ? 'eager' : 'lazy'}
-      decoding="async"
       onError={() => setFailedUrls((urls) => [...urls, imageUrl])}
     />
   );

@@ -7,10 +7,7 @@ import { usePresidentsContent } from "../hooks/usePresidentsContent";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { eventsRepository, PublicEventPreview } from "../data/repos/events";
 import { EventInterestButtons } from "../components/features/events/EventInterestButtons";
-import {
-  getSupabaseImageSrcSet,
-  getSupabaseImageUrl,
-} from "../lib/supabaseImages";
+import { OptimizedImage } from "../components/common/OptimizedImage";
 import {
   formatEventDateRange,
   formatEventTime,
@@ -99,16 +96,18 @@ function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
     >
       {imageUrl && (
         <div className="flex shrink-0 items-center justify-center rounded-t-lg border-b border-border-strong bg-surface2 p-4 sm:w-2/5 sm:rounded-l-lg sm:rounded-tr-none sm:border-b-0 sm:border-r">
-          <img
-            src={getSupabaseImageUrl(imageUrl, {
-              width: 640,
-              resize: "contain",
-              quality: 80,
-            })}
+          <OptimizedImage
+            src={imageUrl}
+            // Thumbnail (720w) already covers this slot. Posters are letterboxed
+            // (contain), so reserve a portrait box for transforms.
+            width={640}
+            height={800}
+            resize="contain"
+            quality={80}
+            sizes="(min-width: 1280px) 240px, (min-width: 640px) 40vw, 100vw"
+            widths={[640]}
             alt={`${event.name} event poster`}
             className="h-64 w-full object-contain sm:h-72"
-            loading="lazy"
-            decoding="async"
           />
         </div>
       )}
@@ -272,12 +271,14 @@ export function Home() {
                     : "vsa-float 7s ease-in-out infinite",
                 }}
               >
-                <img
+                <OptimizedImage
                   src={logoSrc}
+                  width={210}
+                  height={210}
+                  priority
+                  sizes="min(210px, 58vw)"
                   alt="VSA at UC San Diego lantern artwork"
                   className="aspect-square w-full object-cover"
-                  loading="eager"
-                  decoding="async"
                 />
               </div>
               <div className="scrapbook-tape absolute -top-3 left-1/2 h-7 w-28 -translate-x-1/2 rotate-[-2deg] opacity-70" />
@@ -404,21 +405,17 @@ export function Home() {
                     : "vsa-float 7s ease-in-out infinite",
                 }}
               >
-                <img
-                  src={getSupabaseImageUrl(logoSrc, {
-                    width: 420,
-                    height: 420,
-                    resize: "contain",
-                    quality: 78,
-                  })}
-                  srcSet={getSupabaseImageSrcSet(logoSrc, [240, 420, 720], {
-                    resize: "contain",
-                    quality: 78,
-                  })}
+                <OptimizedImage
+                  src={logoSrc}
+                  width={420}
+                  height={420}
+                  resize="contain"
+                  quality={78}
+                  widths={[240, 420, 720]}
+                  priority
                   sizes="(min-width: 1024px) 360px, 80vw"
                   alt={siteSettings.logoAlt || "VSA logo lantern"}
                   className="h-full w-full object-contain"
-                  decoding="async"
                 />
               </div>
               <p className="scrapbook-sticker scrapbook-sticker-gold mt-8 text-center scrapbook-rotate-sm-right">
