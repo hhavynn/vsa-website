@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { CATEGORIES } from './imageMigrationConfig';
 
 /**
  * Pure logic for the two-phase image migration (#454).
@@ -44,34 +45,97 @@ export function createPlan(entries: RelinkEntry[], now: Date = new Date()): Reli
   return { version: 1, generatedAt: now.toISOString(), entries };
 }
 
-const SAFE_PATH = /^\/images\/[A-Za-z0-9._\-/]+\.webp$/;
+const SUPABASE_STORAGE_URL = /supabase\.co\/storage\/v1\/object\/public\//;
+const ROW_ID = /^[A-Za-z0-9-]{1,64}$/;
+const FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\.webp$/;
+const HEX64 = /^[0-9a-f]{64}$/;
 
-/** Validates untrusted JSON (a plan read back from disk) before it can drive DB writes. */
+function ownCategory(name: string) {
+  return Object.prototype.hasOwnProperty.call(CATEGORIES, name) ? CATEGORIES[name] : undefined;
+}
+
+/**
+ * Full validation of a plan, run before any service-role write. `CATEGORIES` is the
+ * only authority for where a plan may write: a plan file is data read from disk, so a
+ * tampered one must not be able to name another table, another column, or a path
+ * outside the category's image directory.
+ *
+ * Returns the plan with exact duplicates removed; throws listing every problem found.
+ */
+export function validatePlan(plan: RelinkPlan): RelinkPlan {
+  const problems: string[] = [];
+  const kept: RelinkEntry[] = [];
+  const byTarget = new Map<string, RelinkEntry>();
+  const byPath = new Map<string, RelinkEntry>();
+
+  plan.entries.forEach((e, index) => {
+    const where = `entry ${index}`;
+    const bad = (msg: string) => problems.push(`${where}: ${msg}`);
+
+    for (const key of ['category', 'table', 'rowId', 'field', 'expectedUrl', 'newPath', 'filePath'] as const) {
+      if (typeof e[key] !== 'string' || !e[key]) return bad(`missing ${key}`);
+    }
+    if (typeof e.bytes !== 'number' || !Number.isInteger(e.bytes) || e.bytes <= 0) {
+      return bad('bytes must be a positive integer');
+    }
+    if (typeof e.sha256 !== 'string' || !HEX64.test(e.sha256)) return bad('sha256 must be a 64-character hex digest');
+
+    const category = ownCategory(e.category);
+    if (!category) return bad(`unknown category "${e.category}"`);
+    if (e.table !== category.table) {
+      return bad(`table "${e.table}" is not "${category.table}", the table for category "${e.category}"`);
+    }
+    const field = category.imageFields.find((f) => f.name === e.field);
+    if (!field) return bad(`field "${e.field}" is not an image field of "${category.table}"`);
+
+    if (!ROW_ID.test(e.rowId)) return bad('rowId has unexpected characters');
+    if (!SUPABASE_STORAGE_URL.test(e.expectedUrl)) return bad('expectedUrl is not a Supabase Storage public URL');
+
+    const publicDir = `/${category.outputDir.replace(/^public\//, '')}/`;
+    if (!e.newPath.startsWith(publicDir)) return bad(`newPath must be inside ${publicDir} (got ${e.newPath})`);
+    const fileName = e.newPath.slice(publicDir.length);
+    if (!FILE_NAME.test(fileName)) return bad(`newPath file name "${fileName}" is not a plain .webp file name`);
+    if (field.suffix && !fileName.endsWith(`${field.suffix}.webp`)) {
+      return bad(`newPath for ${e.field} must end with ${field.suffix}.webp`);
+    }
+    if (e.filePath !== `public${e.newPath}`) {
+      return bad(`filePath must be public${e.newPath} (got ${e.filePath}); newPath and filePath must correspond`);
+    }
+
+    // One write per row/field, and one set of bytes per public path.
+    const target = `${e.table}\u0000${e.rowId}\u0000${e.field}`;
+    const earlier = byTarget.get(target);
+    if (earlier) {
+      if (earlier.newPath === e.newPath && earlier.expectedUrl === e.expectedUrl && earlier.sha256 === e.sha256) return; // exact duplicate
+      return bad(`conflicts with an earlier entry for ${e.table}.${e.field} row ${e.rowId}`);
+    }
+    const sameAsset = byPath.get(e.newPath);
+    if (sameAsset && (sameAsset.sha256 !== e.sha256 || sameAsset.bytes !== e.bytes)) {
+      return bad(`${e.newPath} appears with different file contents`);
+    }
+
+    byTarget.set(target, e);
+    if (!sameAsset) byPath.set(e.newPath, e);
+    kept.push(e);
+  });
+
+  if (problems.length > 0) throw new Error(`Invalid relink plan:\n  ${problems.join('\n  ')}`);
+  return { ...plan, entries: kept };
+}
+
+/** Parses untrusted JSON (a plan read back from disk) and fully validates it. */
 export function parsePlan(input: unknown): RelinkPlan {
   if (!input || typeof input !== 'object') throw new Error('Plan is not an object');
   const plan = input as Partial<RelinkPlan>;
   if (plan.version !== 1) throw new Error(`Unsupported plan version: ${String(plan.version)}`);
   if (!Array.isArray(plan.entries)) throw new Error('Plan has no entries array');
+  if (plan.entries.some((entry) => !entry || typeof entry !== 'object')) throw new Error('Plan entries must be objects');
 
-  const entries = plan.entries.map((raw, index): RelinkEntry => {
-    const e = raw as Partial<RelinkEntry>;
-    const where = `entry ${index}`;
-    for (const key of ['category', 'table', 'rowId', 'field', 'expectedUrl', 'newPath', 'filePath'] as const) {
-      if (typeof e[key] !== 'string' || !e[key]) throw new Error(`${where}: missing ${key}`);
-    }
-    if (typeof e.bytes !== 'number' || !Number.isFinite(e.bytes) || e.bytes <= 0) {
-      throw new Error(`${where}: bytes must be a positive number`);
-    }
-    if (typeof e.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(e.sha256)) {
-      throw new Error(`${where}: sha256 must be a 64-character hex digest`);
-    }
-    if (!SAFE_PATH.test(e.newPath as string) || (e.newPath as string).includes('..')) {
-      throw new Error(`${where}: newPath must be a /images/... .webp path (got ${String(e.newPath)})`);
-    }
-    return e as RelinkEntry;
+  return validatePlan({
+    version: 1,
+    generatedAt: String(plan.generatedAt ?? ''),
+    entries: plan.entries as RelinkEntry[],
   });
-
-  return { version: 1, generatedAt: String(plan.generatedAt ?? ''), entries };
 }
 
 /** Joins a site origin and an absolute path without doubling slashes. */
@@ -123,28 +187,65 @@ export async function checkAssetServed(
   return { ok: true };
 }
 
+export type AssetRef = Pick<RelinkEntry, 'newPath' | 'bytes' | 'sha256'>;
+
 export interface WaitOptions {
   baseUrl: string;
   fetchAsset: FetchAsset;
+  /** One budget for the whole run, not per asset. */
   timeoutMs: number;
   intervalMs: number;
   sleep: (ms: number) => Promise<void>;
   now: () => number;
+  /** Max simultaneous requests within a polling round (default 6). */
+  concurrency?: number;
 }
 
-/** Polls until the asset is served correctly or the deadline passes (deploys take minutes). */
-export async function waitForAsset(
-  entry: Pick<RelinkEntry, 'newPath' | 'bytes' | 'sha256'>,
-  opts: WaitOptions,
-): Promise<AssetCheck> {
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+/**
+ * Polls every distinct asset together against ONE shared deadline: a round checks all
+ * still-unresolved assets (bounded concurrency), sleeps, and repeats until they all pass
+ * or the deadline is reached. Elapsed time is bounded by `timeoutMs` however many assets
+ * there are. Each asset is judged only on its own status, content-type and digest.
+ * Returns the latest verdict per `newPath`.
+ */
+export async function waitForAssets(assets: AssetRef[], opts: WaitOptions): Promise<Map<string, AssetCheck>> {
   const deadline = opts.now() + opts.timeoutMs;
-  let last: AssetCheck = { ok: false, reason: 'not checked' };
-  for (;;) {
-    last = await checkAssetServed(entry, opts.baseUrl, opts.fetchAsset);
-    if (last.ok) return last;
-    if (opts.now() + opts.intervalMs > deadline) return last;
+  const concurrency = opts.concurrency ?? 6;
+  const results = new Map<string, AssetCheck>();
+
+  const unique = new Map<string, AssetRef>();
+  for (const asset of assets) if (!unique.has(asset.newPath)) unique.set(asset.newPath, asset);
+  let pending = Array.from(unique.values());
+
+  while (pending.length > 0) {
+    const verdicts = await mapLimit(pending, concurrency, (asset) =>
+      checkAssetServed(asset, opts.baseUrl, opts.fetchAsset),
+    );
+    const stillPending: AssetRef[] = [];
+    pending.forEach((asset, i) => {
+      results.set(asset.newPath, verdicts[i]);
+      if (!verdicts[i].ok) stillPending.push(asset);
+    });
+    pending = stillPending;
+
+    if (pending.length === 0 || opts.now() + opts.intervalMs > deadline) break;
     await opts.sleep(opts.intervalMs);
   }
+  return results;
 }
 
 // ─── Relink ──────────────────────────────────────────────────────────────────
@@ -165,27 +266,28 @@ export interface RelinkResult {
 }
 
 export interface RelinkOptions {
-  /** Resolves once the entry's asset is verified, or reports why it is not served. */
-  verify: (entry: RelinkEntry) => Promise<AssetCheck>;
+  /** Verifies every distinct asset once (under one shared deadline) and returns a verdict per `newPath`. */
+  verifyAll: (assets: AssetRef[]) => Promise<Map<string, AssetCheck>>;
   client: RelinkClient;
   /** Verify everything but write nothing. */
   verifyOnly?: boolean;
 }
 
 /**
- * Verifies each distinct asset once, then relinks only the entries whose asset is
- * served. An unverified entry is left untouched, which keeps its Storage URL live.
+ * Validates the whole plan first (nothing is verified or written if any entry is out of
+ * bounds), verifies all assets, then relinks only the entries whose own asset passed. An
+ * unverified entry is left untouched, which keeps its Storage URL live.
  */
 export async function relinkPlan(plan: RelinkPlan, opts: RelinkOptions): Promise<RelinkResult[]> {
-  const verdicts = new Map<string, AssetCheck>();
-  const results: RelinkResult[] = [];
+  const valid = validatePlan(plan);
 
-  for (const entry of plan.entries) {
-    let verdict = verdicts.get(entry.newPath);
-    if (!verdict) {
-      verdict = await opts.verify(entry);
-      verdicts.set(entry.newPath, verdict);
-    }
+  const assets = new Map<string, AssetRef>();
+  for (const entry of valid.entries) if (!assets.has(entry.newPath)) assets.set(entry.newPath, entry);
+  const verdicts = await opts.verifyAll(Array.from(assets.values()));
+
+  const results: RelinkResult[] = [];
+  for (const entry of valid.entries) {
+    const verdict = verdicts.get(entry.newPath) ?? { ok: false as const, reason: 'not verified' };
 
     if (!verdict.ok) {
       results.push({ entry, outcome: 'not_served', detail: verdict.reason });

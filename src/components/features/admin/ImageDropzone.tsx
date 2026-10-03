@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import {
   describeUploadRejection,
@@ -51,17 +51,43 @@ export function ImageDropzone({
   const { maxWidth, maxHeight, maxInputBytes } = getPresetLimits(preset);
   const [problems, setProblems] = useState<string[]>([]);
 
+  // Only the most recent selection may deliver a preview. Every new pick, clear and
+  // unmount bumps the generation and aborts the in-flight read, and a finished read
+  // also checks that the form still holds the file it was reading, so a slow read of
+  // file A can never revert the form to A after B was chosen, or resurrect a cleared image.
+  const generation = useRef(0);
+  const activeReader = useRef<FileReader | null>(null);
+  const currentFile = useRef(file);
+  currentFile.current = file;
+
+  const cancelRead = useCallback(() => {
+    generation.current += 1;
+    activeReader.current?.abort();
+    activeReader.current = null;
+  }, []);
+
+  useEffect(() => cancelRead, [cancelRead]);
+
   const onDrop = useCallback(
     (accepted: File[]) => {
       const picked = accepted[0];
       if (!picked) return;
       setProblems([]);
+      cancelRead();
+      const mine = generation.current;
       onSelect(picked, previewUrl ?? null);
       const reader = new FileReader();
-      reader.onload = () => onSelect(picked, reader.result as string);
+      activeReader.current = reader;
+      reader.onload = () => {
+        if (generation.current !== mine) return;
+        // `file` is optional; when the form tracks it, it must still be this file.
+        if (currentFile.current !== undefined && currentFile.current !== picked) return;
+        activeReader.current = null;
+        onSelect(picked, reader.result as string);
+      };
       reader.readAsDataURL(picked);
     },
-    [onSelect, previewUrl],
+    [onSelect, previewUrl, cancelRead],
   );
 
   const onDropRejected = useCallback(
@@ -125,6 +151,7 @@ export function ImageDropzone({
           className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600"
           onClick={() => {
             setProblems([]);
+            cancelRead();
             onClear();
           }}
         >

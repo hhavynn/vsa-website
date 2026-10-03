@@ -64,7 +64,7 @@ import {
   parsePlan,
   relinkPlan,
   summarizeRelink,
-  waitForAsset,
+  waitForAssets,
   FetchedAsset,
   RelinkClient,
   RelinkEntry,
@@ -511,7 +511,10 @@ async function runRelink(planPath: string): Promise<void> {
   const plan = parsePlan(JSON.parse(fs.readFileSync(path.resolve(process.cwd(), planPath), 'utf-8')));
   log(`\nRelink plan: ${plan.entries.length} entr${plan.entries.length === 1 ? 'y' : 'ies'} (generated ${plan.generatedAt})`);
   log(`Mode: ${VERIFY_ONLY ? 'VERIFY ONLY — no DB writes' : 'VERIFY, THEN RELINK'}`);
-  log(`Verifying against ${ARG_BASE_URL} (waiting up to ${ARG_WAIT_SECONDS}s per asset)\n`);
+  log(
+    `Verifying all assets against ${ARG_BASE_URL}; one shared deadline of ${Math.max(0, ARG_WAIT_SECONDS)}s for the whole run ` +
+      `(not per asset). Each asset must pass on its own before its rows are relinked.\n`,
+  );
 
   const client: RelinkClient = (() => {
     if (VERIFY_ONLY) {
@@ -539,8 +542,8 @@ async function runRelink(planPath: string): Promise<void> {
   const results = await relinkPlan(plan, {
     verifyOnly: VERIFY_ONLY,
     client,
-    verify: async (entry) => {
-      const check = await waitForAsset(entry, {
+    verifyAll: async (assets) => {
+      const checks = await waitForAssets(assets, {
         baseUrl: ARG_BASE_URL,
         fetchAsset,
         timeoutMs: Math.max(0, ARG_WAIT_SECONDS) * 1000,
@@ -548,13 +551,16 @@ async function runRelink(planPath: string): Promise<void> {
         sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
         now: Date.now,
       });
-      log(
-        check.ok
-          ? `  SERVED   ${assetUrl(ARG_BASE_URL, entry.newPath)}`
-          : `  MISSING  ${assetUrl(ARG_BASE_URL, entry.newPath)} — ${check.reason}`,
-        check.ok ? 'info' : 'warn',
-      );
-      return check;
+      for (const asset of assets) {
+        const check = checks.get(asset.newPath);
+        log(
+          check?.ok
+            ? `  SERVED   ${assetUrl(ARG_BASE_URL, asset.newPath)}`
+            : `  MISSING  ${assetUrl(ARG_BASE_URL, asset.newPath)} — ${check && !check.ok ? check.reason : 'not checked'}`,
+          check?.ok ? 'info' : 'warn',
+        );
+      }
+      return checks;
     },
   });
 

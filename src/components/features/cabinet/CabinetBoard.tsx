@@ -322,7 +322,23 @@ function ExecutiveRolePanel({
   );
 }
 
-function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; members: CabinetMember[]; onRoleClick?: (role: string) => void }) {
+// Page-wide budget of eager, high-priority photos. Only the topmost Cabinet photos can
+// be the LCP element; marking more (or marking per role panel) just makes them compete
+// with each other and with the page's other requests. Everything else stays lazy.
+const CABINET_PRIORITY_BUDGET = 2;
+
+function ExecutiveFeaturePanel({
+  role,
+  members,
+  onRoleClick,
+  priorityMemberIds,
+}: {
+  role: string;
+  members: CabinetMember[];
+  onRoleClick?: (role: string) => void;
+  /** Members whose photo is eager/high priority; chosen once for the whole page. */
+  priorityMemberIds: ReadonlySet<string>;
+}) {
   const isPresident = rolePriority(role) === 0;
 
   return (
@@ -369,7 +385,7 @@ function ExecutiveFeaturePanel({ role, members, onRoleClick }: { role: string; m
           >
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
               <div className="relative shrink-0">
-                <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={index < 2} />
+                <Avatar image={getCabinetPhotoUrl(member)} memberId={member.member_id} name={member.name} size={isPresident ? 112 : 104} priority={priorityMemberIds.has(member.id)} />
                 {isPresident && (
                   <div className="absolute -bottom-2 -right-1 rounded-full bg-[var(--color-surface)] p-1 shadow-sm border border-[var(--color-border)]">
                     <div className="rounded-full bg-teal-500/10 p-1 text-teal-600 dark:text-teal-400">
@@ -588,6 +604,15 @@ export function CabinetBoard({
   const generalRoles = groupByRole(genBoard);
   const { featured: featuredExecRoles, supporting: supportingExecRoles } = splitExecutiveRoles(execRoles);
   const allExecRoles = [...featuredExecRoles, ...supportingExecRoles];
+  // The presidents' panel(s) render first on the page; the budget is spent there, in
+  // render order, and nowhere else.
+  const priorityMemberIds: ReadonlySet<string> = new Set(
+    allExecRoles
+      .filter(([role]) => rolePriority(role) === 0)
+      .flatMap(([, roleMembers]) => roleMembers)
+      .slice(0, CABINET_PRIORITY_BUDGET)
+      .map((member) => member.id),
+  );
 
   return (
     <>
@@ -627,7 +652,7 @@ export function CabinetBoard({
                   className="cabinet-card mx-auto"
                   style={cabCardStyle(0, EXEC_PATTERNS, 1, true)}
                 >
-                  <ExecutiveFeaturePanel role={role} members={roleMembers} onRoleClick={onRoleClick} />
+                  <ExecutiveFeaturePanel role={role} members={roleMembers} onRoleClick={onRoleClick} priorityMemberIds={priorityMemberIds} />
                 </motion.div>
               ))}
           </motion.div>

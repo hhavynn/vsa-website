@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describeUploadRejection } from '../../../lib/imageUpload';
 import { ImageDropzone } from './ImageDropzone';
 
@@ -81,5 +82,133 @@ describe('describeUploadRejection', () => {
     expect(
       describeUploadRejection({ file: { name: 'x.png', size: 1 }, errors: [{ code: 'weird' }] }, 'avatar'),
     ).toContain('x.png');
+  });
+});
+
+describe('ImageDropzone stale reads', () => {
+  // Controllable FileReader: reads finish only when the test says so.
+  class FakeReader {
+    static all: FakeReader[] = [];
+    static ignoreAbort = false;
+    result: string | null = null;
+    aborted = false;
+    onload: (() => void) | null = null;
+    file!: File;
+    readAsDataURL(file: File) {
+      this.file = file;
+      FakeReader.all.push(this);
+    }
+    abort() {
+      if (!FakeReader.ignoreAbort) this.aborted = true;
+    }
+    finish() {
+      if (this.aborted) return;
+      this.result = `data:image/png;base64,${this.file.name}`;
+      this.onload?.();
+    }
+  }
+
+  const realReader = global.FileReader;
+  beforeEach(() => {
+    FakeReader.all = [];
+    FakeReader.ignoreAbort = false;
+    (global as unknown as { FileReader: unknown }).FileReader = FakeReader;
+  });
+  afterEach(() => {
+    (global as unknown as { FileReader: unknown }).FileReader = realReader;
+  });
+
+  function Harness({ initialPreview = null }: { initialPreview?: string | null }) {
+    const [file, setFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(initialPreview);
+    return (
+      <>
+        <ImageDropzone
+          preset="event"
+          file={file}
+          previewUrl={preview}
+          onSelect={(f, p) => {
+            setFile(f);
+            setPreview(p);
+          }}
+          onClear={() => {
+            setFile(null);
+            setPreview(null);
+          }}
+        />
+        <button type="button" onClick={() => { setFile(null); setPreview(null); }}>
+          external reset
+        </button>
+      </>
+    );
+  }
+
+  const pick = async (name: string, expectedReaders: number) => {
+    drop(screen.getByTestId('image-dropzone-input'), [png(name)]);
+    await waitFor(() => expect(FakeReader.all).toHaveLength(expectedReaders));
+  };
+
+  it.each([
+    ['abort() works', false],
+    ['abort() is ignored (generation check alone must hold)', true],
+  ])('keeps B when A finishes last (%s)', async (_label, ignoreAbort) => {
+    FakeReader.ignoreAbort = ignoreAbort;
+    render(<Harness />);
+
+    await pick('a.png', 1);
+    await pick('b.png', 2);
+    // B is the current file immediately, before any read has finished.
+    expect(screen.getByText(/^b\.png ·/)).toBeInTheDocument();
+
+    act(() => FakeReader.all[1].finish()); // B finishes first
+    act(() => FakeReader.all[0].finish()); // A finishes last: must be ignored
+
+    expect(screen.getByText(/^b\.png ·/)).toBeInTheDocument();
+    expect(screen.queryByText(/^a\.png ·/)).not.toBeInTheDocument();
+    expect(screen.getByAltText('Preview')).toHaveAttribute('src', 'data:image/png;base64,b.png');
+  });
+
+  it('aborts the previous read when a new file is picked', async () => {
+    render(<Harness />);
+    await pick('a.png', 1);
+    await pick('b.png', 2);
+    expect(FakeReader.all[0].aborted).toBe(true);
+    expect(FakeReader.all[1].aborted).toBe(false);
+  });
+
+  it('does not resurrect an image that was cleared while a read was active', async () => {
+    FakeReader.ignoreAbort = true;
+    render(<Harness initialPreview="data:image/png;base64,old" />);
+    await pick('a.png', 1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image' }));
+    act(() => FakeReader.all[0].finish());
+
+    expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^a\.png ·/)).not.toBeInTheDocument();
+  });
+
+  it('does not resurrect an image the form reset itself while a read was active', async () => {
+    FakeReader.ignoreAbort = true;
+    render(<Harness />);
+    await pick('a.png', 1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'external reset' }));
+    act(() => FakeReader.all[0].finish());
+
+    expect(screen.queryByAltText('Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^a\.png ·/)).not.toBeInTheDocument();
+  });
+
+  it('ignores a read that finishes after unmount', async () => {
+    FakeReader.ignoreAbort = true;
+    const onSelect = jest.fn();
+    const { unmount } = render(<ImageDropzone preset="event" onSelect={onSelect} />);
+    drop(screen.getByTestId('image-dropzone-input'), [png('a.png')]);
+    await waitFor(() => expect(FakeReader.all).toHaveLength(1));
+    const callsBefore = onSelect.mock.calls.length;
+    unmount();
+    act(() => FakeReader.all[0].finish());
+    expect(onSelect.mock.calls.length).toBe(callsBefore);
   });
 });

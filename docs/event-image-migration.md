@@ -22,7 +22,9 @@ Now:
 | (commit, push, wait for deploy) | | |
 | 2 | `--relink <plan> --base-url <origin>` | For each plan entry: check the production asset, then `UPDATE … WHERE id = ? AND <field> = <expected Storage URL>`. |
 
-Phase 2 treats an asset as served only when production returns **HTTP 200, an `image/*` content-type, and exactly the bytes of the committed file (length and SHA-256)**. A status check alone is not enough: `vercel.json` answers every missing path with `200` + `index.html` (SPA fallback), so a file that never deployed would look healthy. It polls for up to `--wait-seconds` (the workflows use 900) because deploys take minutes.
+Phase 2 treats an asset as served only when production returns **HTTP 200, an `image/*` content-type, and exactly the bytes of the committed file (length and SHA-256)**. A status check alone is not enough: `vercel.json` answers every missing path with `200` + `index.html` (SPA fallback), so a file that never deployed would look healthy. All distinct assets are polled together against **one shared deadline**: `--wait-seconds` (the workflows use 900) is the budget for the whole run, not per asset, so 50 missing files cost 15 minutes, not 12 hours. Each asset still has to pass on its own before its rows are relinked.
+
+Before anything is verified or written, the whole plan is validated against the migration's category table (`scripts/lib/imageMigrationConfig.ts`). A plan is data read from disk and the relink uses the service-role key, so it may only touch the configured table and image columns of a known category, point at a plain `.webp` file directly inside that category's `/images/...` directory, have a `filePath` that matches its `newPath`, and carry no conflicting writes to the same row and column. One bad entry rejects the entire plan.
 
 Outcomes per plan entry:
 
@@ -130,7 +132,7 @@ The workflows read the production origin from the `SITE_URL` repository variable
 | `--plan-out <file>` | Where `--apply` writes the plan (default `scripts/reports/image-relink-plan.json`) |
 | `--relink <plan>` | Phase 2: verify each asset on production, then relink rows. Needs `--base-url`. |
 | `--base-url <origin>` | Production origin used to verify assets |
-| `--wait-seconds <n>` | How long to poll for the deploy (default 600; `0` = check once) |
+| `--wait-seconds <n>` | Total time to poll for the deploy, shared by all assets (default 600; `0` = check once) |
 | `--verify-only` | With `--relink`: verify assets, write nothing |
 | `--category events` | Restrict to events table (script supports other categories too) |
 | `--event-id <uuid>` | Migrate a single event row |
