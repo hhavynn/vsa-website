@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { formatDateOnly, toDateOnlyString } from '../../lib/dateOnly';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 
 interface GalleryAlbum {
@@ -253,6 +255,8 @@ export default function AdminGallery() {
     }
   };
 
+  // Resolves when the album is gone; rejects (after a toast) so ConfirmDialog
+  // stays open with the error instead of closing as if it worked.
   const handleDelete = async () => {
     if (!albumToDelete) return;
     try {
@@ -269,8 +273,7 @@ export default function AdminGallery() {
     } catch (err) {
       console.error('Error deleting album:', err);
       toast.error('Failed to delete album');
-    } finally {
-      setAlbumToDelete(null);
+      throw err;
     }
   };
 
@@ -281,23 +284,24 @@ export default function AdminGallery() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Gallery Management" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Gallery</h1>
-          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <AdminPageHeader
+        description={
+          <span className="block max-w-2xl leading-relaxed">
             Add Google Photos albums, recap links, and cover images for the public <Link to="/gallery" className="font-semibold text-[var(--brand)] hover:underline">Gallery</Link>. Linked albums also add photo buttons to matching past events.
-          </p>
-        </div>
-        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-          {(['create', 'manage'] as const).map((tab, i) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
-              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-              {tab === 'create' ? 'Add Album' : 'Manage Albums'}
-            </button>
-          ))}
-        </div>
-      </div>
+          </span>
+        }
+        actions={
+          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+            {(['create', 'manage'] as const).map((tab, i) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className="min-h-[44px] font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+                style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+                {tab === 'create' ? 'Add Album' : 'Manage Albums'}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="scrapbook-paper min-h-[500px]" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -635,34 +639,26 @@ export default function AdminGallery() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {albumToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete Album</h3>
-            <p className="mb-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>Are you sure you want to remove:</p>
-            <p className="mb-2 font-sans text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>"{albumToDelete.title}"</p>
-            <p className="mb-6 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-              This removes it from the website. Your Google Photos album won't be affected.
-            </p>
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                onClick={() => setAlbumToDelete(null)}
-                className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-              >
-                Remove Album
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!albumToDelete}
+        title="Delete album?"
+        description={
+          albumToDelete ? (
+            <>
+              Delete <span className="font-bold">"{albumToDelete.title}"</span> from the website. Your Google Photos album won't be affected.
+            </>
+          ) : null
+        }
+        consequences={[
+          'It disappears from the public Gallery right away.',
+          ...(albumToDelete?.event_id ? ['Its photo buttons on the linked event are removed.'] : []),
+          ...(extractSupabasePublicObjectName(albumToDelete?.cover_image_url, 'gallery_images') ? ['The cover image uploaded for it is deleted from storage.'] : []),
+        ]}
+        confirmLabel="Delete album"
+        onConfirm={handleDelete}
+        onClose={() => setAlbumToDelete(null)}
+      />
       </div>
     </div>
   );

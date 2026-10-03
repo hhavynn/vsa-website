@@ -105,8 +105,10 @@ it does not reserve capacity. No new secrets or provider dependencies are needed
 Focused handler tests (fake HTTP backend; these do not prove SQL concurrency):
 
 ```bash
-deno test --no-lock --allow-env --allow-net --import-map supabase/functions/vsa-ai-assistant/test-import-map.json supabase/functions/vsa-ai-assistant/quota.test.ts
+npm run test:edge   # every Edge Function test; also run by CI (the `edge-functions` job)
 ```
+
+`quota.test.ts` covers quota admission and failure handling. `safety.test.ts` covers the private-information filter (each documented category, adversarial casing, the known gaps it pins, and that logs carry only SHA-256 hashes). Neither needs `--allow-net`, Gemini, or a database. The per-session/per-IP thresholds live in the `reserve_ai_quota` SQL function and are checked by `quota_postgres_test.py` below.
 
 Run the local PostgreSQL regression script only against a disposable database:
 

@@ -14,6 +14,11 @@ import { supabase } from '../../lib/supabase';
 import { AcademicTerm, Event } from '../../types';
 import { PageTitle } from '../../components/common/PageTitle';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { BulkActionBar, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops/BulkActionBar';
+import { BulkRunDialog } from '../../components/features/admin/ops/BulkRunDialog';
+import { FilterChips } from '../../components/features/admin/ops/FilterChips';
 import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
 import { ExternalEventDetailsFields } from '../../components/features/admin/ExternalEventDetailsFields';
@@ -24,6 +29,9 @@ import { EVENT_TYPE_LABELS } from '../../constants/eventTypes';
 import { getAcademicTermMeta } from '../../lib/academicTerms';
 import { buildDuplicateEventDraft } from '../../lib/adminEventDuplicate';
 import { isDirty } from '../../lib/adminDirty';
+import { BulkPlan, planBulk } from '../../lib/adminBulk';
+import { BulkPartialError, BulkRunResult, summarizeBulkResult } from '../../lib/adminBulkRun';
+import { QuickFilter, allFilter, applyQuickFilter, countByFilter } from '../../lib/adminFilters';
 import {
   buildExternalPreviewListing,
   buildHostOptions,
@@ -36,8 +44,9 @@ import {
   validateExternalDetails,
 } from '../../lib/externalEventLinking';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { useRowSelection } from '../../hooks/useRowSelection';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
-import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
+import { formatEventDay, getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
 import { getLosAngelesDateOnly, isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 const EMPTY_EVENT: Partial<Event> = {
@@ -54,6 +63,37 @@ type UploadedEventImage = {
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2.5 text-[15px] sm:py-2 sm:text-sm focus:outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] bg-[var(--color-surface2)] border-[var(--color-border)] text-[var(--color-text)] placeholder-[var(--color-text3)]';
 const labelCls = 'block text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--color-text3)]';
+
+// Manage lists the first page of events (upcoming first, then past) and adds
+// more on request, so "select this page" and "select all matching" differ.
+const MANAGE_PAGE_SIZE = 25;
+
+const getEventId = (event: Event) => event.id;
+const isPublishedEvent = (event: Event) => Boolean(event.is_published);
+
+const EVENT_STATUS_FILTERS: ReadonlyArray<QuickFilter<Event>> = [
+  allFilter<Event>('All'),
+  { key: 'published', label: 'Published', predicate: isPublishedEvent, hint: 'Visible on the public Events page' },
+  { key: 'draft', label: 'Draft', predicate: (event) => !isPublishedEvent(event), hint: 'Only visible in Admin' },
+];
+
+// What the delete dialog says about Storage. Cleanup runs after the row is
+// gone and can fail without undoing the delete, so the copy says so.
+function storageCleanupConsequence(event: Event): string[] {
+  const files = [
+    extractSupabasePublicObjectName(event.image_url, 'event_images') ? 'image' : null,
+    extractSupabasePublicObjectName(event.thumbnail_url, 'event_images') ? 'thumbnail' : null,
+  ].filter(Boolean);
+  if (files.length === 0) return [];
+  return [`Then removes its uploaded ${files.join(' and ')} from storage. If that cleanup fails the event is still deleted and you will be told.`];
+}
+
+interface BulkPublishRun {
+  publish: boolean;
+  plan: BulkPlan<Event>;
+  scopeNote: string;
+  offPage: number;
+}
 
 function findTermForDate(dateString: string | null | undefined, terms: AcademicTerm[]) {
   const meta = dateString ? getAcademicTermMeta(dateString) : null;
@@ -148,6 +188,9 @@ export default function AdminEvents() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(MANAGE_PAGE_SIZE);
+  const [bulkRun, setBulkRun] = useState<BulkPublishRun | null>(null);
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
   const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
@@ -292,14 +335,29 @@ export default function AdminEvents() {
     : null;
   const activeExternalPreview = previewTarget === 'create' ? createExternalPreview : previewTarget === 'edit' ? editExternalPreview : null;
 
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const upcomingEvents = events
-    .filter((e: Event) => new Date(e.date) >= oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const pastEvents = events
-    .filter((e: Event) => new Date(e.date) < oneDayAgo)
-    .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Upcoming first (soonest first), then past (most recent first). Memoized so
+  // the row selection below sees stable lists between renders.
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const matching = applyQuickFilter(events, EVENT_STATUS_FILTERS, statusFilter);
+    return {
+      upcomingEvents: matching
+        .filter((e: Event) => new Date(e.date) >= oneDayAgo)
+        .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+      pastEvents: matching
+        .filter((e: Event) => new Date(e.date) < oneDayAgo)
+        .sort((a: Event, b: Event) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    };
+  }, [events, statusFilter]);
+  const statusCounts = useMemo(() => countByFilter(events, EVENT_STATUS_FILTERS), [events]);
+  const filterRows = useMemo(() => [...upcomingEvents, ...pastEvents], [upcomingEvents, pastEvents]);
+  const visibleUpcoming = useMemo(() => upcomingEvents.slice(0, visibleCount), [upcomingEvents, visibleCount]);
+  const visiblePast = useMemo(
+    () => pastEvents.slice(0, Math.max(0, visibleCount - upcomingEvents.length)),
+    [pastEvents, upcomingEvents.length, visibleCount]
+  );
+  const pageRows = useMemo(() => [...visibleUpcoming, ...visiblePast], [visibleUpcoming, visiblePast]);
+  const selection = useRowSelection(filterRows, pageRows, getEventId);
   const eventIds = useMemo(() => events.map((event: Event) => event.id), [events]);
   const { recapEventIds } = useEventRecapEventIds(eventIds);
 
@@ -339,9 +397,25 @@ export default function AdminEvents() {
     };
   }
 
-  async function removeEventImage(url?: string | null) {
+  // Best-effort Storage cleanup. Supabase Storage reports failures in the
+  // returned `{ error }` rather than throwing, so both are checked. Resolves
+  // true when the file is gone (or there was nothing to remove), false when it
+  // could not be removed; it never throws, so callers whose real work already
+  // committed cannot be pushed into a failure path by cleanup.
+  async function removeEventImage(url?: string | null): Promise<boolean> {
     const objectName = extractSupabasePublicObjectName(url, 'event_images');
-    if (objectName) await supabase.storage.from('event_images').remove([objectName]);
+    if (!objectName) return true;
+    try {
+      const { error } = await supabase.storage.from('event_images').remove([objectName]);
+      if (error) {
+        console.error(error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   }
 
   // Keeps the event's UVSA Network listing in step with it: upserts on the
@@ -432,22 +506,107 @@ export default function AdminEvents() {
     } finally { setUploading(false); }
   };
 
+  // Two separate stages with different meanings. (1) The row delete: if it
+  // fails nothing was deleted, so we toast and rethrow and ConfirmDialog stays
+  // open with the error. (2) Once it succeeds the event is permanently gone:
+  // nothing after this point may throw or say deletion failed, and image /
+  // thumbnail cleanup is best-effort, reported as a warning instead.
   const handleDeleteConfirm = async () => {
     if (!eventToDelete) return;
+    const event = eventToDelete;
     try {
-      const { error } = await supabase.from('events').delete().eq('id', eventToDelete.id);
+      const { error } = await supabase.from('events').delete().eq('id', event.id);
       if (error) throw error;
-      await removeEventImage(eventToDelete.image_url);
-      await removeEventImage(eventToDelete.thumbnail_url);
-      toast.success(`"${eventToDelete.name}" deleted`);
+    } catch (err) {
+      console.error(err); toast.error('Failed to delete event');
+      throw err;
+    }
+
+    // From here the event no longer exists.
+    const imageCleaned = await removeEventImage(event.image_url);
+    const thumbnailCleaned = await removeEventImage(event.thumbnail_url);
+    const failedFiles = (imageCleaned ? 0 : 1) + (thumbnailCleaned ? 0 : 1);
+    if (failedFiles === 0) {
+      toast.success(`"${event.name}" deleted`);
+    } else {
+      toast(
+        `"${event.name}" was deleted, but ${failedFiles === 1 ? 'one old storage file' : 'its old image and thumbnail files'} could not be cleaned up. Nothing to retry here; an admin can remove ${failedFiles === 1 ? 'it' : 'them'} from the event_images storage bucket.`,
+        { icon: '⚠️', duration: 10000 },
+      );
+    }
+    try {
       queryClient.invalidateQueries(['external-events']);
       queryClient.invalidateQueries(['admin-external-events']);
       refreshEvents();
-      if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
-    } catch (err) {
-      console.error(err); toast.error('Failed to delete event');
-    } finally { setEventToDelete(null); }
+      if (selectedEvent?.id === event.id) setSelectedEvent(null);
+    } catch (refreshErr) {
+      // The delete already happened; a refresh hiccup must not read as a failed delete.
+      console.error(refreshErr);
+    }
   };
+
+  // ─── Bulk publish / unpublish (Manage tab) ──────────────────────────────────
+
+  // Why an event cannot be published in bulk, or null. Publishing an External
+  // Event also publishes its UVSA Network listing, which needs a valid host;
+  // the editor enforces that on save, so bulk does not bypass it.
+  function bulkPublishBlocker(event: Event, publish: boolean): string | null {
+    if (isPublishedEvent(event) === publish) return publish ? 'Already published.' : 'Already a draft.';
+    if (publish && isExternalEventType(event.event_type)) {
+      const listing = listingByEventId.get(event.id);
+      if (!listing) return 'External Event with no UVSA host yet. Open it and save to set one.';
+      const details = detailsFromListing(listing);
+      const problem = validateExternalDetails(details, buildHostOptions(schools, details.host));
+      if (problem) return `${problem} Open it and save to fix.`;
+    }
+    return null;
+  }
+
+  function startBulkPublish(publish: boolean) {
+    const plan = planBulk(selection.selectedRows, (event) => bulkPublishBlocker(event, publish), {
+      verb: publish ? 'Publish' : 'Unpublish',
+      noun: 'event',
+    });
+    const filterLabel = statusFilter === 'all' ? undefined : EVENT_STATUS_FILTERS.find((filter) => filter.key === statusFilter)?.label;
+    setBulkRun({ publish, plan, scopeNote: selection.describe('event', 'events', filterLabel), offPage: selection.offPage });
+  }
+
+  // The same write the Edit form makes for the visibility checkbox (events
+  // .is_published), then the same UVSA Network listing sync it runs on save.
+  async function setEventPublished(event: Event, publish: boolean) {
+    // Through the repository: it detects a row deleted since the preview
+    // (.select().single()) instead of reporting a zero-row update as success.
+    await eventsRepository.updateEvent(event.id, { is_published: publish });
+    const listing = listingByEventId.get(event.id);
+    if (!isExternalEventType(event.event_type) || !listing) return;
+    try {
+      await syncExternalListing({
+        eventId: event.id,
+        draft: { ...event, is_published: publish },
+        dateOnly: formatDateForInput(event.date, event.start_time),
+        academicTermId: event.academic_term_id ?? null,
+        details: detailsFromListing(listing),
+      });
+    } catch (listingErr) {
+      console.error(listingErr);
+      // The visibility change already committed, so this is a partial success,
+      // not a failure: the bulk result must not say the event was left unchanged.
+      throw new BulkPartialError(`${publish ? 'Published' : 'Unpublished'}, but its UVSA Network listing could not be synced. Open the event and save it again to repair it.`);
+    }
+  }
+
+  function finishBulkPublish(result: BulkRunResult<Event>) {
+    const publish = bulkRun?.publish ?? true;
+    const outcome = summarizeBulkResult(result, {
+      past: publish ? 'Published' : 'Unpublished',
+      verb: publish ? 'publish' : 'unpublish',
+      noun: 'event',
+    });
+    if (outcome.tone === 'success') toast.success(outcome.headline);
+    else toast.error(outcome.headline);
+    selection.clear();
+    refreshEvents();
+  }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -507,8 +666,11 @@ export default function AdminEvents() {
       if (editCheckInCode) {
         await eventsRepository.setCheckInCode(selectedEvent.id, editCheckInCode);
       }
-      await removeEventImage(imageUrlToRemove);
-      await removeEventImage(thumbnailUrlToRemove);
+      const imageCleaned = await removeEventImage(imageUrlToRemove);
+      const thumbnailCleaned = await removeEventImage(thumbnailUrlToRemove);
+      if (!imageCleaned || !thumbnailCleaned) {
+        toast('Event saved, but an old image file could not be removed from storage.', { icon: '⚠️', duration: 8000 });
+      }
       let listingFailed = false;
       try {
         await syncExternalListing({ eventId: selectedEvent.id, draft: selectedEvent, dateOnly, academicTermId, details: selectedExternal });
@@ -603,8 +765,13 @@ export default function AdminEvents() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventParam, events, externalListingsLoading]);
 
-  const EventRow = ({ event }: { event: Event }) => (
-    <div className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-start sm:p-5 transition-colors hover:bg-[var(--color-surface2)] last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
+  // Called as a function (not rendered as <EventRow />) so rows keep their DOM,
+  // and the checkbox keeps focus, when selection state re-renders the page.
+  const renderEventRow = (event: Event) => (
+    <div key={event.id} className="flex flex-col gap-4 border-b p-4 sm:flex-row sm:items-start sm:p-5 transition-colors hover:bg-[var(--color-surface2)] last:border-b-0" style={{ borderColor: 'var(--color-border)' }}>
+      <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center sm:-ml-2.5 sm:-mt-2.5">
+        <RowCheckbox checked={selection.isSelected(event.id)} onChange={() => selection.toggle(event.id)} label={`Select ${event.name}`} />
+      </label>
       {event.image_url && (
         <img src={event.image_url} alt={event.name} className="h-40 w-full shrink-0 rounded border object-cover sm:h-16 sm:w-16" style={{ borderColor: 'var(--color-border)' }} />
       )}
@@ -678,24 +845,24 @@ export default function AdminEvents() {
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Events" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Events</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+      <AdminPageHeader
+        description={
+          <>
             {events.length} events total. Published events appear on <Link to="/events" className="font-semibold text-[var(--brand)] hover:underline">/events</Link>, homepage previews, and Ask VSA event answers.
-          </p>
-        </div>
-        {/* Tab toggle */}
-        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-          {(['create', 'manage'] as const).map((tab, i) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
-              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-              {tab === 'create' ? 'Create Event' : `Manage (${events.length})`}
-            </button>
-          ))}
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+            {(['create', 'manage'] as const).map((tab, i) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className="min-h-[44px] font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+                style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+                {tab === 'create' ? 'Create Event' : `Manage (${events.length})`}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -807,29 +974,95 @@ export default function AdminEvents() {
                   Edit dates, points, images, public visibility, and recap links. Draft events are kept here until they are ready.
                 </p>
               </div>
-              {upcomingEvents.length === 0 && pastEvents.length === 0 && (
+              {events.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-8" style={{ borderColor: 'var(--color-border)' }}>
+                  <FilterChips
+                    filters={EVENT_STATUS_FILTERS}
+                    counts={statusCounts}
+                    active={statusFilter}
+                    onChange={setStatusFilter}
+                    label="Filter events by visibility"
+                  />
+                  {pageRows.length > 0 && (
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                      <RowCheckbox
+                        checked={selection.allOnPage}
+                        onChange={() => (selection.allOnPage ? selection.clear() : selection.selectPage())}
+                        label="Select all events on this page"
+                      />
+                      Select all on this page
+                    </label>
+                  )}
+                </div>
+              )}
+              <BulkActionBar count={selection.count} noun="event" onClear={selection.clear}>
+                <button
+                  type="button"
+                  className={`${bulkBtnCls} min-h-[44px] sm:min-h-0`}
+                  disabled={externalListingsLoading || schoolsLoading}
+                  onClick={() => startBulkPublish(true)}
+                >
+                  Publish
+                </button>
+                <button
+                  type="button"
+                  className={`${bulkBtnCls} min-h-[44px] sm:min-h-0`}
+                  disabled={externalListingsLoading || schoolsLoading}
+                  onClick={() => startBulkPublish(false)}
+                >
+                  Unpublish
+                </button>
+                {selection.canSelectAllMatching && selection.scope !== 'filter' && (
+                  <button type="button" className={`${bulkBtnCls} min-h-[44px] sm:min-h-0`} onClick={selection.selectAllMatching}>
+                    Select all {selection.totalMatching} matching events
+                  </button>
+                )}
+                {selection.scope === 'filter' && (
+                  <span className="font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                    All {selection.totalMatching} matching events are selected, including ones not shown.
+                  </span>
+                )}
+              </BulkActionBar>
+              {events.length === 0 && (
                 <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
                   No events found. Create an event to add it to Admin; leave it as a draft until it is ready for the public Events page.
                 </p>
               )}
-              {upcomingEvents.length > 0 && (
+              {events.length > 0 && filterRows.length === 0 && (
+                <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
+                  No {statusFilter === 'draft' ? 'draft' : 'published'} events.
+                </p>
+              )}
+              {visibleUpcoming.length > 0 && (
                 <div className="mb-2">
                   <div className="border-b bg-[var(--color-surface2)] px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
                     <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Upcoming ({upcomingEvents.length})</p>
                   </div>
                   <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                    {upcomingEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
+                    {visibleUpcoming.map((e: Event) => renderEventRow(e))}
                   </div>
                 </div>
               )}
-              {pastEvents.length > 0 && (
+              {visiblePast.length > 0 && (
                 <div>
                   <div className="border-y bg-[var(--color-surface2)] px-4 py-2" style={{ borderColor: 'var(--color-border)' }}>
                     <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Past ({pastEvents.length})</p>
                   </div>
                   <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                    {pastEvents.map((e: Event) => <EventRow key={e.id} event={e} />)}
+                    {visiblePast.map((e: Event) => renderEventRow(e))}
                   </div>
+                </div>
+              )}
+              {filterRows.length > pageRows.length && (
+                <div className="border-t p-4 text-center" style={{ borderColor: 'var(--color-border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((count) => count + MANAGE_PAGE_SIZE)}
+                    className="min-h-[44px] rounded border px-4 py-2 font-sans text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    Show {Math.min(MANAGE_PAGE_SIZE, filterRows.length - pageRows.length)} more ({filterRows.length - pageRows.length} not shown)
+                  </button>
                 </div>
               )}
             </div>
@@ -1000,22 +1233,63 @@ export default function AdminEvents() {
           />
         )}
 
-        {/* Delete Confirmation */}
-        {eventToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete Event</h3>
-              <p className="mb-2 font-sans text-[15px]" style={{ color: 'var(--color-text)' }}>Delete <span className="font-bold">"{eventToDelete.name}"</span>?</p>
-              <p className="mb-6 font-sans text-xs leading-relaxed text-red-500">
-                This cannot be undone. Attendance records will remain.
-                {listingByEventId.has(eventToDelete.id) && ' Its linked UVSA Network listing will be deleted too.'}
-              </p>
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button onClick={() => setEventToDelete(null)} className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
-                <button onClick={handleDeleteConfirm} className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">Delete Event</button>
-              </div>
-            </div>
-          </div>
+        {/* Delete Confirmation: typed tier, because deleting an event cascades. */}
+        <ConfirmDialog
+          open={!!eventToDelete}
+          title="Delete event?"
+          description={
+            eventToDelete ? (
+              <>
+                This permanently deletes <span className="font-bold">"{eventToDelete.name}"</span> and cannot be undone.
+              </>
+            ) : null
+          }
+          consequences={
+            eventToDelete
+              ? [
+                  'Deletes every check-in and attendance record for this event, and the points members earned from it.',
+                  'Deletes its check-in code, recap notes, and Interested / Going counts.',
+                  ...(listingByEventId.has(eventToDelete.id) ? ['Deletes its linked UVSA Network listing.'] : []),
+                  'Gallery albums linked to it are kept but lose the link.',
+                  ...storageCleanupConsequence(eventToDelete),
+                ]
+              : []
+          }
+          requireText={eventToDelete?.name}
+          confirmLabel="Delete event"
+          onConfirm={handleDeleteConfirm}
+          onClose={() => setEventToDelete(null)}
+        />
+
+        {bulkRun && (
+          <BulkRunDialog<Event>
+            open
+            title={bulkRun.publish ? 'Publish events' : 'Unpublish events'}
+            plan={bulkRun.plan}
+            noun="event"
+            verb={bulkRun.publish ? 'publish' : 'unpublish'}
+            past={bulkRun.publish ? 'Published' : 'Unpublished'}
+            itemLabel={(event) => `${event.name} — ${formatEventDay(event.date, event.start_time)}`}
+            changeLabel={() => (bulkRun.publish ? 'Draft → Published' : 'Published → Draft')}
+            scopeNote={bulkRun.scopeNote}
+            extra={
+              <>
+                {bulkRun.offPage > 0 && (
+                  <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                    {bulkRun.offPage} selected {bulkRun.offPage === 1 ? 'event is' : 'events are'} not shown on this page. {bulkRun.offPage === 1 ? 'It is' : 'They are'} included below.
+                  </p>
+                )}
+                <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text2)' }}>
+                  {bulkRun.publish
+                    ? 'Published events appear on /events, homepage previews, and Ask VSA.'
+                    : 'Drafts disappear from /events, homepage previews, and Ask VSA, and stay editable here. Linked UVSA Network listings are hidden too.'}
+                </p>
+              </>
+            }
+            run={(event) => setEventPublished(event, bulkRun.publish)}
+            onFinished={finishBulkPublish}
+            onClose={() => setBulkRun(null)}
+          />
         )}
       </div>
     </div>

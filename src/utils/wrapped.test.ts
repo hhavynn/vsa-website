@@ -71,6 +71,62 @@ describe('house standings helpers', () => {
     expect(sumCommunityPoints(houses)).toBe(950);
     expect(sumCommunityPoints([])).toBe(0);
   });
+
+  // Characterization (#293). LEADERBOARD system (house_yearly_points); not the
+  // check-in system. sortHouseStandings returns an ordered list; callers derive
+  // rank from position (index + 1), so order is the only thing pinned here.
+  describe('sortHouseStandings edge cases', () => {
+    it('keeps input order for Houses tied on points (stable sort)', () => {
+      const tied = [
+        makeHouse({ house: 'Toad', total_points: 50 }),
+        makeHouse({ house: 'Boo', total_points: 50 }),
+        makeHouse({ house: 'Bowser', total_points: 50 }),
+      ];
+      expect(sortHouseStandings(tied).map((h) => h.house)).toEqual(['Toad', 'Boo', 'Bowser']);
+      expect(sortHouseStandings([...tied].reverse()).map((h) => h.house)).toEqual(['Bowser', 'Boo', 'Toad']);
+    });
+
+    it('keeps tied Houses in input order within a larger list', () => {
+      const mixed = [
+        makeHouse({ house: 'Toad', total_points: 10 }),
+        makeHouse({ house: 'Boo', total_points: 30 }),
+        makeHouse({ house: 'Bowser', total_points: 10 }),
+        makeHouse({ house: 'Donkey Kong', total_points: 30 }),
+      ];
+      expect(sortHouseStandings(mixed).map((h) => h.house)).toEqual(['Boo', 'Donkey Kong', 'Toad', 'Bowser']);
+    });
+
+    it('places a House with zero points last but keeps it in the list', () => {
+      const withZero = [
+        makeHouse({ house: 'Boo', total_points: 0 }),
+        makeHouse({ house: 'Bowser', total_points: 7 }),
+      ];
+      expect(sortHouseStandings(withZero).map((h) => h.house)).toEqual(['Bowser', 'Boo']);
+    });
+
+    it('treats a missing total_points as zero', () => {
+      const missing = makeHouse({ house: 'Boo' });
+      Reflect.deleteProperty(missing, 'total_points');
+      const sorted = sortHouseStandings([missing, makeHouse({ house: 'Toad', total_points: 1 })]);
+      expect(sorted.map((h) => h.house)).toEqual(['Toad', 'Boo']);
+    });
+
+    it('returns an empty list for an empty input', () => {
+      expect(sortHouseStandings([])).toEqual([]);
+    });
+
+    it('picks the first-listed House as winner when positive totals tie', () => {
+      const tied = [
+        makeHouse({ house: 'Toad', total_points: 50 }),
+        makeHouse({ house: 'Boo', total_points: 50 }),
+      ];
+      expect(pickHouseWinner(tied)?.house).toBe('Toad');
+    });
+
+    it('returns no winner when every House is at zero', () => {
+      expect(pickHouseWinner([makeHouse({ total_points: 0 }), makeHouse({ house: 'Boo', total_points: 0 })])).toBeNull();
+    });
+  });
 });
 
 describe('buildPublicHouseStandings', () => {
@@ -89,6 +145,23 @@ describe('buildPublicHouseStandings', () => {
       2025
     );
     expect(standings[0].total_points).toBe(125);
+  });
+
+  it('overrides Houses by the row\'s own academic_year_start; the argument only decides placeholder injection', () => {
+    // Characterization: a 2026 row passed with academicYearStart 2025 is not overridden.
+    const rows = [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2026 })];
+    expect(buildPublicHouseStandings(rows, 2025)[0].total_points).toBe(999);
+  });
+
+  it('keeps an unknown House at its calculated total in the override year', () => {
+    const rows = [makeHouse({ house: 'Test House', display_name: 'Test House', total_points: 12, academic_year_start: 2025 })];
+    expect(buildPublicHouseStandings(rows, 2025)[0].total_points).toBe(12);
+  });
+
+  it('does not mutate the input rows', () => {
+    const rows = [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2025 })];
+    buildPublicHouseStandings(rows, 2025);
+    expect(rows[0].total_points).toBe(999);
   });
 
   it('leaves non-override years untouched', () => {

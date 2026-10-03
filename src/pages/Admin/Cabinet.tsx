@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { useCabinetYears } from '../../hooks/useCabinetYears';
 import { getCurrentCabinetYear } from '../../lib/cabinetYears';
 import { CabinetYear } from '../../types';
@@ -457,6 +459,7 @@ export default function AdminCabinet() {
     }
   };
 
+  // Runs inside the typed ConfirmDialog: it stays open and shows the error if this throws.
   const handleDeleteConfirm = async () => {
     if (!memberToDelete) return;
     try {
@@ -469,8 +472,7 @@ export default function AdminCabinet() {
     } catch (err) {
       console.error('Error deleting member:', err);
       toast.error('Failed to delete member');
-    } finally {
-      setMemberToDelete(null);
+      throw err;
     }
   };
 
@@ -491,27 +493,32 @@ export default function AdminCabinet() {
     }
   };
 
+  const deleteYearLabel = memberToDelete
+    ? cabinetYears.find((year) => year.id === memberToDelete.cabinet_year_id)?.label ?? null
+    : null;
+
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Cabinet Management" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Cabinet</h1>
-          <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <AdminPageHeader
+        description={
+          <>
             Manage names, roles, photos, bios, and cabinet years for the public <Link to="/cabinet" className="font-semibold text-[var(--brand)] hover:underline">Cabinet</Link> page. Archive years should stay tied to their own cabinet year.
-          </p>
-        </div>
-        <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-          {(['manage', 'create', 'roles'] as const).map((tab, i) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
-              style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-              {tab === 'manage' ? 'Manage' : tab === 'roles' ? 'Role Descriptions' : 'Add Member'}
-            </button>
-          ))}
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
+            {(['manage', 'create', 'roles'] as const).map((tab, i) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
+                style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
+                {tab === 'manage' ? 'Manage' : tab === 'roles' ? 'Role Descriptions' : 'Add Member'}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {activeTab !== 'roles' && (
         <div className="flex flex-wrap items-center gap-4 border-b px-6 py-4 sm:px-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -801,19 +808,25 @@ export default function AdminCabinet() {
         />
       )}
 
-      {/* Delete Confirmation */}
-      {memberToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="scrapbook-paper w-full max-w-sm p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h3 className="mb-3 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Remove Member</h3>
-            <p className="mb-6 font-sans text-[15px] text-[var(--color-text)]">Remove <span className="font-bold">{memberToDelete.name}</span> from the directory? This cannot be undone.</p>
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button onClick={() => setMemberToDelete(null)} className="rounded border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
-              <button onClick={handleDeleteConfirm} className="rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700">Remove</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation (typed: this is a cabinet record) */}
+      <ConfirmDialog
+        open={memberToDelete !== null}
+        title={`Remove ${memberToDelete?.name ?? 'this member'}?`}
+        description="This permanently deletes the cabinet record. It cannot be undone."
+        consequences={
+          memberToDelete
+            ? [
+                `Removes ${memberToDelete.name} from the public Cabinet page and ${deleteYearLabel ? `the ${deleteYearLabel}` : 'the'} archive.`,
+                ...(memberToDelete.image_url || memberToDelete.thumbnail_url ? ['Deletes their uploaded photo.'] : []),
+                'Roster and intern drafts lose their link to this record. Club member records are not deleted.',
+              ]
+            : []
+        }
+        requireText={memberToDelete?.name}
+        confirmLabel="Remove member"
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setMemberToDelete(null)}
+      />
       <datalist id="cabinet-role-options">
         {roleSuggestions.map((role) => (
           <option key={role} value={role} />

@@ -4,6 +4,8 @@ import { useAdminExternalEvents, useUpsertExternalEvent, useDeleteExternalEvent 
 import { useAdminUVSASchools } from '../../hooks/useUVSASchools';
 import { ExternalEvent } from '../../types';
 import { PageTitle } from '../../components/common/PageTitle';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge, BadgeColor } from '../../components/ui/Badge';
@@ -66,6 +68,7 @@ export default function AdminExternalEvents() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<ExternalEvent>>(EMPTY_EVENT);
   const [isAdding, setIsAdding] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<ExternalEvent | null>(null);
 
   const handleEdit = (event: ExternalEvent) => {
     setEditingId(event.id);
@@ -126,41 +129,50 @@ export default function AdminExternalEvents() {
     }
   };
 
-  const handleDelete = async (event: ExternalEvent) => {
+  const handleDelete = (event: ExternalEvent) => {
     if (event.source_event_id) {
       toast.error('Linked external events must be deleted from Admin → Events.');
       return;
     }
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    setEventToDelete(event);
+  };
+
+  // Rejects (after a toast) so ConfirmDialog stays open showing the error.
+  const confirmDelete = async () => {
+    if (!eventToDelete) return;
     try {
-      await deleteMutation.mutateAsync(event.id);
-      toast.success('Event deleted');
+      await deleteMutation.mutateAsync(eventToDelete.id);
+      toast.success(`"${eventToDelete.title}" deleted`);
       refreshEvents();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete event');
+      throw err;
     }
   };
 
   if (loading && events.length === 0) return <div className="p-8 text-center">Loading events...</div>;
 
   return (
+    <div className="flex-1 overflow-y-auto">
+      <PageTitle title="Manage External Events" />
+      <AdminPageHeader
+        description={
+          <>
+            <span className="block">{events.length} events managed</span>
+            <span className="mt-1 block max-w-2xl text-xs leading-5 text-[var(--color-text3)]">
+              Linked events use the flyer from Admin → Events; standalone externals can use an https flyer image link. Ride forms are coordinated outside the website for now.
+            </span>
+          </>
+        }
+        actions={
+          <Button onClick={handleAdd} className="flex min-h-[44px] gap-2">
+            <PlusIcon size={18} /> Add Event
+          </Button>
+        }
+      />
+
     <div className="vsa-container py-8 max-w-6xl">
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex flex-col gap-1">
-          <PageTitle title="Manage External Events" />
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>
-            External Events
-          </h1>
-          <p className="font-sans text-sm text-[var(--color-text3)]">{events.length} events managed</p>
-          <p className="max-w-2xl font-sans text-xs leading-5 text-[var(--color-text3)]">
-            Linked events use the flyer from Admin → Events; standalone externals can use an https flyer image link. Ride forms are coordinated outside the website for now.
-          </p>
-        </div>
-        <Button onClick={handleAdd} className="flex gap-2">
-          <PlusIcon size={18} /> Add Event
-        </Button>
-      </div>
 
       {(isAdding || editingId) && (
         <Card className="mb-12 p-6 scrapbook-paper">
@@ -423,6 +435,22 @@ export default function AdminExternalEvents() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!eventToDelete}
+        title="Delete external event?"
+        description={
+          eventToDelete ? (
+            <>
+              Delete <span className="font-bold">"{eventToDelete.title}"</span>. It is removed from the UVSA Network page and can't be restored.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete event"
+        onConfirm={confirmDelete}
+        onClose={() => setEventToDelete(null)}
+      />
+    </div>
     </div>
   );
 }

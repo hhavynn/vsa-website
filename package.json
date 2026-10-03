@@ -43,6 +43,9 @@
     "analyze:css": "npm run build && npx source-map-explorer 'build/static/css/*.css'",
     "analyze:all": "npm run build && npx source-map-explorer 'build/static/**/*.{js,css}'",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "typecheck": "npx --yes -p typescript@5.6.3 tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck:edge": "deno check --no-lock 'supabase/functions/**/*.ts'",
+    "test:edge": "deno test --no-lock --allow-env --import-map supabase/functions/_shared/test-import-map.json supabase/functions",
     "format": "prettier --write src/**/*.{ts,tsx}",
     "audit:image-exif": "node scripts/audit-image-exif.mjs",
     "migrate:images:dry": "tsx scripts/migrate-supabase-images-to-public.ts",
@@ -51,7 +54,7 @@
     "migrate:house-assets:apply": "tsx scripts/migrate-supabase-images-to-public.ts --category houses --apply",
     "migrate:images:relink": "tsx scripts/migrate-supabase-images-to-public.ts",
     "audit:storage-content": "tsx scripts/audit-storage-backed-content.ts",
-    "test:timezones": "for tz in UTC America/New_York Asia/Ho_Chi_Minh America/Los_Angeles; do echo \"TZ=$tz\"; TZ=$tz CI=true node ./node_modules/react-scripts/bin/react-scripts.js test --watchAll=false src/lib/applicationWindowBoundaries src/utils/seasonalBoundaries src/utils/losAngelesDate || exit 1; done"
+    "test:timezones": "for tz in UTC America/New_York Asia/Ho_Chi_Minh America/Los_Angeles; do echo \"TZ=$tz\"; TZ=$tz CI=true node ./node_modules/react-scripts/bin/react-scripts.js test --watchAll=false src/lib/applicationWindowBoundaries src/utils/seasonalBoundaries src/utils/losAngelesDate src/lib/eventDayLabel src/pages/Admin/Events.bulk || exit 1; done"
   },
   "eslintConfig": {
     "extends": [

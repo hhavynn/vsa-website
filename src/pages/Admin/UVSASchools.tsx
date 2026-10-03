@@ -10,7 +10,9 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { IconBaseProps } from "react-icons";
+import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { PageTitle } from "../../components/common/PageTitle";
+import { AdminPageHeader } from "../../components/features/admin/AdminPageHeader";
 import { Button } from "../../components/ui/Button";
 import {
   DEFAULT_UVSA_NETWORK_PAGE_SETTINGS,
@@ -196,6 +198,7 @@ export default function AdminUVSASchools() {
       settingsToInput(DEFAULT_UVSA_NETWORK_PAGE_SETTINGS),
     );
   const [isEditingSchool, setIsEditingSchool] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UVSASchool | null>(null);
 
   const schoolsQuery = useQuery(schoolsQueryKey, () =>
     uvsaSchoolsRepository.getAllSchools(),
@@ -294,38 +297,33 @@ export default function AdminUVSASchools() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const confirmDelete = (school: UVSASchool) => {
-    if (
-      window.confirm(`Delete ${school.short_name} from the UVSA network page?`)
-    ) {
-      deleteSchoolMutation.mutate(school.id);
+  // Runs from the confirm dialog; mutateAsync re-throws so a failure keeps it open.
+  const deleteSchool = async (school: UVSASchool) => {
+    await deleteSchoolMutation.mutateAsync(school.id);
+    if (schoolForm.id === school.id) {
+      setSchoolForm(emptySchoolForm);
+      setIsEditingSchool(false);
     }
   };
 
   return (
     <>
       <PageTitle title="UVSA Network Admin" />
+      <AdminPageHeader
+        description="Edit the public UVSA network page: its copy, school logos, links, and display order."
+        actions={
+          <a
+            href="/uvsa-network"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface2"
+          >
+            View public page <ExternalLinkAltIcon size={12} />
+          </a>
+        }
+      />
       <div className="min-h-screen bg-bg px-4 py-8">
         <div className="mx-auto max-w-6xl space-y-8">
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">
-                Public content
-              </p>
-              <h1 className="mt-2 font-serif text-3xl text-text-primary sm:text-4xl">
-                UVSA Network
-              </h1>
-            </div>
-            <a
-              href="/uvsa-network"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface2"
-            >
-              View public page <ExternalLinkAltIcon size={12} />
-            </a>
-          </header>
-
           <form
             onSubmit={handleSettingsSubmit}
             className="rounded-md border border-border bg-surface p-5 shadow-sm"
@@ -761,7 +759,7 @@ export default function AdminUVSASchools() {
                         variant="outline"
                         size="sm"
                         className="gap-2 text-red-700"
-                        onClick={() => confirmDelete(school)}
+                        onClick={() => setDeleteTarget(school)}
                         disabled={deleteSchoolMutation.isLoading}
                       >
                         <TrashIcon size={12} /> Delete
@@ -774,6 +772,26 @@ export default function AdminUVSASchools() {
           </section>
         </div>
       </div>
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={`Delete ${deleteTarget.short_name}?`}
+          description={
+            deleteTarget.is_active
+              ? `${deleteTarget.school_name} will be removed from the public UVSA network page. This cannot be undone.`
+              : `${deleteTarget.school_name} is already hidden from the public page. This deletes its record and cannot be undone.`
+          }
+          consequences={[
+            ...(deleteTarget.is_active ? ["Its logo, Instagram link, and description disappear from the public network page right away."] : []),
+            "Events linked to this school are kept but lose their school link.",
+            "An uploaded logo file is left in storage; nothing will point to it.",
+            "To hide it without deleting, turn off “Show on public page” under Edit.",
+          ]}
+          confirmLabel="Delete school"
+          onConfirm={() => deleteSchool(deleteTarget)}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </>
   );
 }
