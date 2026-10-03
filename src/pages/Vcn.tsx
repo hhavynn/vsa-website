@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
+import { ApplicationCTA } from '../components/common/ApplicationCTA';
+import { RelatedLinks } from '../components/common/RelatedLinks';
+import { programRelatedLinks } from '../lib/relatedLinks';
 
 const highlights = [
   { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances, from traditional Vietnamese dance to contemporary choreography.' },
@@ -123,6 +126,20 @@ export function VCN() {
               </div>
             ))}
             </div>
+          </div>
+        </section>
+
+        <section className="program-section">
+          <div className="program-section-inner">
+            <RelatedLinks links={programRelatedLinks()}>
+              {/* Open windows only: closed/future forms stay hidden and no URL is
+                  ever read from anywhere but the public application-link model. */}
+              <ApplicationCTA
+                applicationKeys={['vcn_stage_ninja_interest', 'vcn_props_team_interest']}
+                heading="Get involved in VCN"
+                openOnly
+              />
+            </RelatedLinks>
           </div>
         </section>
 

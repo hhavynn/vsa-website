@@ -176,7 +176,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                 <div className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
 
                 <div className="flex flex-1 items-center gap-2 min-w-0">
-                  <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
+                  <span className="break-words font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
                     {emoji} {label}{yearSuffix}
                   </span>
                   {!loading && members.length > 0 && (
@@ -260,7 +260,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                             {/* Name + meta */}
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
+                                <span className="break-words font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
                                   {name}
                                 </span>
                                 {isTop && (
