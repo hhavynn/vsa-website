@@ -74,11 +74,11 @@ By default, the script performs read checks and guarded zero-row view probes; ba
 - **Anon: upload reservation check** — count-only SELECT on `member_photo_upload_reservations` must return permission denied.
 - **User: raw-member privacy checks** — head/count-only reads of `members` and `member_event_attendance` must be denied or return zero rows; the same account must retain SELECT on `public_members`. No private values are printed. Requires existing ordinary test credentials; never create a live account to run this.
 - **Admin: raw-member checks** — head-only reads of both base tables must succeed, preserving import/review permissions.
-- **Anon/user/admin: retired archive checks** — head-only reads of `event_attendance`, `user_points`, `event_check_in_secrets`, `check_in_codes`, `check_in_code_usage`, and `check_ins` must return `42501`. Older code/usage/check-in tables may be absent. Empty results do not prove privilege revocation.
+- **Post-migration phase only — anon/user/admin retired archive checks** — head-only reads of `event_attendance`, `user_points`, `event_check_in_secrets`, `check_in_codes`, `check_in_code_usage`, and `check_ins` must return `42501`. Older code/usage/check-in tables may be absent. Empty results do not prove privilege revocation. In the default `pre-migration` phase these reads are not asserted as `42501` (production still has the legacy grants); instead the pre-retirement legacy assertions run: anon/ordinary users cannot read rows of `event_check_in_secrets`, admins can, and the gated admin manual check-in probes behave as before. See [Retirement phase](#retirement-phase).
 - **Anon: data rights RPC check** — attempts to call preview/export functions. Expects access denied.
 - **Anon: data rights requests check** — attempts to query requests history. Expects access denied or empty list.
 - **Anon and user: zero-row writes through public views (#472)** — attempts `UPDATE` and `DELETE` through every public view listed in the script. Expects `42501`. Supabase's default privileges grant `ALL` on new views to `anon` and `authenticated`, and a simple single-table view runs as its owner, so a leftover write grant bypasses the base table's RLS. A write that succeeds is reported as FAIL naming the view. Non-destructive: every write is filtered on the nil UUID, the same filter is read first and the probe is not run if it matches anything, and the base tables have only row-level triggers, so a zero-row write fires nothing. Aggregate and join views reject writes with `55000` before Postgres checks grants, so for them the script prints one SKIP line; any other error is a FAIL. Filtering a write needs `SELECT` on the view, so a role that cannot read it gets `42501` whether or not the write grant exists: a denied read on a view the role should read is a FAIL, and anon on `my_member_photo_requests` (signed-in only by design) is a SKIP that the signed-in run covers. The signed-in run needs the `RLS_TEST_USER_*` account. **When you add a view, add it to `simpleViews` or `nonUpdatableViews` in the script.**
-- **User: write probes, gated by `RLS_ALLOW_MUTATION_TESTS=true`** — attempts current-value updates on `events`, `members`, and `member_event_attendance`. Expects denial or zero updated rows. These probes do not exercise retired archives or code RPCs.
+- **User: write probes, gated by `RLS_ALLOW_MUTATION_TESTS=true`** — attempts current-value updates on `events`, `members`, and `member_event_attendance`. Expects denial or zero updated rows. In `pre-migration` mode the legacy `event_attendance`/`user_points` probes also run; they never run in `post-migration` mode.
 - **User: data rights check** — attempts to read data rights requests or call admin RPCs. Expects access denied.
 - **Admin: data rights read check** — attempts to read data rights requests. Expects success.
 - **Admin: RPC access check** — calls dependency/export handlers with a nil request UUID in read-only mode, so no real export/audit row is created. A real `RLS_TEST_DATA_RIGHTS_REQUEST_ID` is used only with mutation opt-in. Expects authorization access, even when the nil request is not found.
@@ -91,7 +91,7 @@ If you set `RLS_ALLOW_MUTATION_TESTS=true`, use a disposable local/staging datab
 
 Public-view INSERT probes use `{ id: null }` and expect `42501`. If grants regress, a constraint can reject the row only after BEFORE INSERT triggers have run; those triggers can change other rows. Data-rights handlers may create audit records. Keep these probes disabled for production.
 
-There are no legacy manual check-in inserts, account points writes, or code RPC calls in this verifier.
+In the default `pre-migration` phase the verifier still includes the legacy admin manual check-in insert/cleanup and `user_points` write probes; `post-migration` mode has none of them, and the verifier never calls a code RPC other than the anon `check_in_to_event` denial check, which holds in both phases.
 
 ---
 
@@ -99,6 +99,23 @@ There are no legacy manual check-in inserts, account points writes, or code RPC 
 
 - **PASS:** The security rule behaves as expected (e.g. access is blocked for users, or granted for admins).
 - **FAIL:** A privilege mismatch was detected. For example, if any API account can read a retired archive, retirement privileges are misconfigured. **Stop immediately and check database migrations.**
+
+### Retirement phase
+
+`RLS_RETIREMENT_PHASE` selects what the verifier asserts about the retired member-account / code check-in objects. It exists because the retirement migration is applied to production manually, after merge, so CI must be valid both before and after that moment without weakening either state:
+
+| Phase | When | Legacy archives (`event_attendance`, `user_points`, `event_check_in_secrets`, optional code tables) |
+|---|---|---|
+| `pre-migration` (default) | Production has not had `20261003000000_retire_member_account_check_in.sql` applied | Anon/ordinary users get no rows; admins keep access; legacy admin write probes run when mutation tests are enabled |
+| `post-migration` | After the migration is applied | Every role, admins included, gets `42501` on a head read |
+
+Everything else is identical in both phases, including `anon cannot call check_in_to_event`. An unknown value exits non-zero. The migration-level proof (grants, trigger detachment, retired overloads) is separate and offline: `bash scripts/test-retired-member-check-in.sh`.
+
+```bash
+RLS_RETIREMENT_PHASE=post-migration node scripts/verify-rls-security.mjs
+```
+
+Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `retirement_phase=post-migration`, and once it is green set the repository variable `RLS_RETIREMENT_PHASE=post-migration`. Until the variable is set, scheduled/PR/push runs keep verifying `pre-migration`, which fails loudly after the migration (admins can no longer read the archives); that failure is the reminder to flip the variable.
 
 ### In CI
 

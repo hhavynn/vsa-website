@@ -2,6 +2,10 @@
 # Offline only: creates a disposable cluster with no TCP listener or app env.
 set -euo pipefail
 
+# macOS postmaster aborts ("became multithreaded during startup") without a
+# valid locale in the environment.
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
 if ! command -v rtk >/dev/null 2>&1; then
   rtk() { "$@"; }
 fi

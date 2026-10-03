@@ -85,6 +85,19 @@ data has not been inspected, so even an apparently empty table is preserved.
 
 ## Verification and rollout
 
+Verification is split so CI is valid before and after the coordinated rollout:
+
+| Layer | Runs | Proves |
+|---|---|---|
+| Hosted RLS verifier, `pre-migration` phase (default) | PR / push / daily CI | Production as it is today is still locked down; unaffected by this PR |
+| Offline PostgreSQL fixture/assertions (`scripts/test-retired-member-check-in.sh`) | Locally, before apply | The migration itself revokes the intended grants and detaches triggers |
+| Hosted RLS verifier, `post-migration` phase | Manually after apply, then by CI once `RLS_RETIREMENT_PHASE` is set | The migration really landed on the hosted project |
+
+The hosted verifier never needs the migration to be applied before merge, and no
+assertion is weakened: the legacy-state assertions are the ones that already ran on
+`main`, and the retired-state assertions are strictly stronger (`42501` for every
+role, admins included).
+
 Offline SQL proof requires local `initdb`, `pg_ctl`, and `psql`:
 
 ```bash
@@ -100,23 +113,30 @@ data-rights dependency preview. It also runs the companion catalog inventory bef
 This is focused compatibility proof, not a full Supabase chain replay or hosted
 schema test. The active deployed recalculation trigger bodies are not all tracked.
 
-Local evidence (2026-10-02):
-- Full Jest: 152 suites / 1,493 tests passed, including admin authorization,
-  session/sign-out, retired account routes, member points and admin imports.
-- ESLint passed with nine existing script-URL fixture warnings; production build
-  compiled successfully; security verifier syntax and diff whitespace checks passed.
-- Isolated PostgreSQL proofs and before/after companion SQL passed. Retired client
-  grants/triggers returned zero rows afterward; synthetic row counts and active
-  points totals were unchanged.
-- Repository TypeScript 4.9 `tsc --noEmit` fails parsing dependency Zod v4
-  declarations; reproduced in the untouched original checkout. Cached TypeScript
-  5.6 also detects existing Unicode-regex/es5 target conflicts there. Compatibility
-  check with that cached compiler and `--noEmit --target es2015` passed here.
-  No dependency, lockfile or compiler-config change was bundled.
-- Offline browser QA used an unreachable localhost Supabase URL and dummy public
-  key, with no hosted requests: approved-admin login renders at desktop/mobile,
-  profile is a generic 404, public points lookup renders without login, and the
-  leaderboard settles into its existing outage fallback.
+Local evidence (2026-10-02, branch rebased on the then-current `main`; #507, #508
+and #509 were still open, so final integration is a separate step):
+- Full Jest: 154 suites / 1,505 tests passed, including admin authorization,
+  session/sign-out, retired account routes, member points, admin imports, the
+  source-boundary guard and the RLS verifier phase guard. Timezone suites passed
+  in UTC, America/New_York, Asia/Ho_Chi_Minh and America/Los_Angeles.
+- ESLint reported no errors (only existing script-URL fixture warnings in tests);
+  production build compiled; `git diff --check` clean.
+- `src/types/database.ts` is the generated file from `main` again: the migration
+  preserves every legacy table, column and function, so the generated types keep
+  describing them. Type-checked with pinned TypeScript 5.6.3 / `target: es2015`
+  (the `tsconfig.typecheck.json` introduced by #507) plus the TypeScript 4.9 / es5
+  build.
+- Hosted RLS verifier (read-only anon sections, production): `pre-migration` phase
+  passed; `post-migration` phase correctly failed on the six legacy archive reads
+  because the migration is not applied yet. An unknown phase exits non-zero.
+- Isolated PostgreSQL proofs and before/after companion SQL passed
+  (`bash scripts/test-retired-member-check-in.sh`). Retired client grants/triggers
+  returned zero rows afterward; synthetic row counts and active points totals were
+  unchanged.
+- Offline browser QA (earlier run) used an unreachable localhost Supabase URL and
+  dummy public key, with no hosted requests: approved-admin login renders at
+  desktop/mobile, profile is a generic 404, public points lookup renders without
+  login, and the leaderboard settles into its existing outage fallback.
   Real authentication, imports, known totals and hosted grants need staging QA.
 
 For manual rollout:
@@ -137,9 +157,14 @@ For manual rollout:
    in this interval, so reload admin tabs after the deploy. Public points, House
    views, imports and other active schema paths remain compatible.
 5. Re-run the read-only catalog/count checks. Verify no retained count or active
-   point total changed. Run `scripts/verify-rls-security.mjs` with mutation mode
-   off; provide an existing ordinary account as well as an admin to exercise both
-   JWT audiences. Never create a public account to perform this check.
+   point total changed. Run the hosted RLS verification in the **post-migration**
+   phase with mutation mode off:
+   `RLS_RETIREMENT_PHASE=post-migration node scripts/verify-rls-security.mjs`, or
+   dispatch the `RLS verification` workflow with `retirement_phase=post-migration`.
+   Provide an existing ordinary account as well as an admin to exercise both
+   JWT audiences. Never create a public account to perform this check. When it
+   is green, set the repository variable `RLS_RETIREMENT_PHASE=post-migration` so
+   PR, push and scheduled runs keep asserting the retired state.
 6. Verify `/profile` is the generic 404, login rejects non-admins, public lookup/
    leaderboard/House standings show the same known totals, and admin attendance/
    CSV import still updates member totals in staging. Check mobile/light/dark

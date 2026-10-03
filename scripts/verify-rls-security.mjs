@@ -37,6 +37,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
   process.exit(1);
 }
 
+// Rollout phase of the member-account / code check-in retirement migration
+// (supabase/migrations/20261003000000_retire_member_account_check_in.sql).
+// This script runs against the hosted production project, so what it must
+// assert depends on whether that migration has been applied there yet:
+//   pre-migration  (default) legacy archives still behave as before: RLS keeps
+//                  them closed to anon/ordinary users, admins keep their
+//                  access, and admin manual check-in writes still work.
+//   post-migration the archives and the retired RPCs are revoked from every
+//                  API role, admins included. Reads must fail with 42501.
+// Everything else is identical in both phases. Flip the phase (repo variable
+// RLS_RETIREMENT_PHASE) only after the migration is applied; see
+// docs/member-account-retirement.md.
+const RETIREMENT_PHASES = ['pre-migration', 'post-migration'];
+const retirementPhase = process.env.RLS_RETIREMENT_PHASE || 'pre-migration';
+if (!RETIREMENT_PHASES.includes(retirementPhase)) {
+  console.error(`\x1b[31mError:\x1b[0m RLS_RETIREMENT_PHASE must be one of ${RETIREMENT_PHASES.join(', ')} (got "${retirementPhase}").`);
+  process.exit(1);
+}
+const retired = retirementPhase === 'post-migration';
+
 let hasFailed = false;
 
 function reportPass(message) {
@@ -94,9 +114,11 @@ async function runTests() {
   console.log('============================================================');
   console.log('Running Supabase RLS / Security Hardening Verification');
   console.log(`Target database: ${supabaseUrl}`);
+  console.log(`Retirement phase: ${retirementPhase}`);
   console.log('============================================================\n');
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
+  const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
 
   // Writes through public views (#472). Supabase's default privileges grant
@@ -212,8 +234,10 @@ async function runTests() {
     }
   }
 
-  // These archives have no direct API audience, including signed-in admins.
-  // Catalog EXECUTE checks belong to the retirement SQL runbook: probing a
+  // Post-migration only: these archives have no API audience, including
+  // signed-in admins. A head-only read must be refused with 42501; an empty
+  // result would only prove RLS, not the revoked grant. Catalog EXECUTE checks
+  // for the retired RPCs belong to docs/member-account-retirement.sql: probing a
   // revoked mutation RPC directly would be unsafe if its grant regressed.
   async function expectRetiredArchivesDenied(client, who) {
     const archives = [
@@ -288,7 +312,23 @@ async function runTests() {
       reportFail(`anon photo reservation SELECT was not denied: HTTP ${quotaReadStatus}, code=${quotaReadError?.code ?? 'none'}`);
     }
 
-    await expectRetiredArchivesDenied(anon, 'anon');
+    if (retired) {
+      await expectRetiredArchivesDenied(anon, 'anon');
+    } else {
+      // Query event_check_in_secrets
+      const { data: secData, error: secError } = await anon
+        .from('event_check_in_secrets')
+        .select('*')
+        .limit(1);
+
+      if (secError) {
+        reportPass(`anon cannot read event_check_in_secrets (${secError.message || secError.code})`);
+      } else if (secData && secData.length > 0) {
+        reportFail('anon read event_check_in_secrets successfully (returned rows)');
+      } else {
+        reportPass('anon cannot read event_check_in_secrets (returned empty list due to RLS)');
+      }
+    }
 
     // Call get_data_rights_dependency_preview RPC
     const { data: rpc1Data, error: rpc1Error } = await anon.rpc('get_data_rights_dependency_preview', { p_request_id: dummyUuid });
@@ -364,6 +404,14 @@ async function runTests() {
       }
     }
 
+    // Check-in stays server-authoritative and signed-in only (#381 / #385).
+    const { error: checkInError } = await anon.rpc('check_in_to_event', { p_code: 'RLS-VERIFY-NOT-A-CODE' });
+    if (checkInError?.code === '42501') {
+      reportPass('anon cannot call check_in_to_event (#381)');
+    } else {
+      reportFail(`anon call to check_in_to_event was not denied (#381): ${JSON.stringify(checkInError)}`);
+    }
+
     // my_member_photo_requests is readable by signed-in members only.
     await expectViewWritesDenied(anon, 'anon', { withoutSelect: ['my_member_photo_requests'] });
   } catch (err) {
@@ -379,7 +427,8 @@ async function runTests() {
     if (!userClient) {
       reportSkip('ordinary authenticated user checks (email/password not provided in env)');
     } else {
-      await expectRetiredArchivesDenied(userClient, 'ordinary user');
+      if (retired) await expectRetiredArchivesDenied(userClient, 'ordinary user');
+      const authUser = (await userClient.auth.getUser()).data.user;
 
       for (const [table, columns] of [
         ['members', 'id, user_id'],
@@ -401,6 +450,20 @@ async function runTests() {
       if (!allowMutations) {
         reportSkip('ordinary user write probes (RLS_ALLOW_MUTATION_TESTS is not true)');
       } else {
+      // Write probes are non-destructive: if RLS wrongly allows a write, the
+      // probe still changes nothing. Inserts collide with a constraint that is
+      // checked after RLS (unknown event -> 23503, existing row -> 23505), and
+      // updates write a row's current values back with .select() so the
+      // affected-row count is visible.
+      const expectInsertDenied = (label, error) => {
+        if (error?.code === '42501') {
+          reportPass(`ordinary user cannot insert ${label} (RLS)`);
+        } else if (error?.code === '23503' || error?.code === '23505') {
+          reportFail(`ordinary user passed RLS inserting ${label}; only a constraint stopped it (${error.code})`);
+        } else {
+          reportFail(`ordinary user insert into ${label} gave unexpected result: ${JSON.stringify(error)}`);
+        }
+      };
       const expectNoRowsUpdated = (label, data, error) => {
         // Only an authorization error proves RLS/grants rejected the write. Any
         // other error (schema cache, constraint, trigger, network) means the
@@ -415,6 +478,59 @@ async function runTests() {
           reportPass(`ordinary user cannot update ${label} (0 rows updated due to RLS)`);
         }
       };
+
+      // Legacy archive write probes; post-migration the head-read check above
+      // already proves the grants are gone.
+      if (!retired) {
+        const { error: attInsError } = await userClient
+          .from('event_attendance')
+          .insert([{ event_id: dummyUuid, user_id: authUser.id, points_earned: 0, check_in_type: 'code' }]);
+        expectInsertDenied('event_attendance', attInsError);
+
+        const { data: ownAttendance } = await userClient
+          .from('event_attendance')
+          .select('id, points_earned')
+          .eq('user_id', authUser.id)
+          .limit(1);
+        if (!ownAttendance || ownAttendance.length === 0) {
+          reportSkip('ordinary user event_attendance update probe (test user has no attendance rows)');
+        } else {
+          const { data, error } = await userClient
+            .from('event_attendance')
+            .update({ points_earned: ownAttendance[0].points_earned })
+            .eq('id', ownAttendance[0].id)
+            .select('id');
+          expectNoRowsUpdated('event_attendance', data, error);
+        }
+
+        // Read the caller's own row first. The insert probe is only
+        // non-destructive when that row exists: then an RLS bypass hits the
+        // primary key (23505) instead of creating a points row.
+        const { data: ownPoints } = await userClient
+          .from('user_points')
+          .select('points')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+        if (!ownPoints) {
+          reportSkip('ordinary user user_points insert probe (no existing row, so the probe could create one)');
+        } else {
+          const { error: ptsInsError } = await userClient
+            .from('user_points')
+            .insert([{ user_id: authUser.id, points: 0 }]);
+          expectInsertDenied('user_points', ptsInsError);
+        }
+
+        if (!ownPoints) {
+          reportSkip('ordinary user user_points update probe (test user has no user_points row)');
+        } else {
+          const { data, error } = await userClient
+            .from('user_points')
+            .update({ points: ownPoints.points })
+            .eq('user_id', authUser.id)
+            .select('user_id');
+          expectNoRowsUpdated('user_points', data, error);
+        }
+      }
 
       // Public tables: readable by everyone, writable only by admins.
       const publicWriteProbes = [
@@ -438,6 +554,22 @@ async function runTests() {
 
       await expectViewWritesDenied(userClient, 'ordinary user');
 
+      }
+
+      if (!retired) {
+        // Attempt to read event_check_in_secrets
+        const { data: userSecData, error: userSecError } = await userClient
+          .from('event_check_in_secrets')
+          .select('*')
+          .limit(1);
+
+        if (userSecError) {
+          reportPass(`ordinary user cannot read event_check_in_secrets (${userSecError.message || userSecError.code})`);
+        } else if (userSecData && userSecData.length > 0) {
+          reportFail('ordinary user read event_check_in_secrets successfully!');
+        } else {
+          reportPass('ordinary user cannot read event_check_in_secrets (returned empty list due to RLS)');
+        }
       }
 
       // Attempt to read data-rights request rows
@@ -488,7 +620,21 @@ async function runTests() {
         else reportPass(`admin retains raw ${table} read privileges`);
       }
 
-      await expectRetiredArchivesDenied(adminClient, 'admin');
+      if (retired) {
+        await expectRetiredArchivesDenied(adminClient, 'admin');
+      } else {
+        // Query event_check_in_secrets
+        const { data: adminSecData, error: adminSecError } = await adminClient
+          .from('event_check_in_secrets')
+          .select('*')
+          .limit(1);
+
+        if (adminSecError) {
+          reportFail(`admin cannot read event_check_in_secrets: ${adminSecError.message}`);
+        } else {
+          reportPass('admin can read event_check_in_secrets');
+        }
+      }
 
       // Query data_rights_requests
       const { data: adminReqData, error: adminReqError } = await adminClient
@@ -525,7 +671,70 @@ async function runTests() {
         reportPass('admin can access generate_data_rights_export RPC');
       }
 
+      // Admin write / mutation permissions (gated by RLS_ALLOW_MUTATION_TESTS=true)
+      if (retired) {
+        reportSkip('admin legacy manual check-in write probes (retired by the post-migration phase)');
+      } else if (!allowMutations) {
+        reportSkip('admin write mutation checks (RLS_ALLOW_MUTATION_TESTS is not set to true)');
+      } else {
+        console.log('\n\x1b[33mWARNING: Running admin mutation tests as RLS_ALLOW_MUTATION_TESTS=true.\x1b[0m');
+        const testUserId = process.env.RLS_TEST_MEMBER_ID || dummyUuid;
 
+        // Try direct manual insert on event_attendance
+        const { data: admAttData, error: admAttError } = await adminClient
+          .from('event_attendance')
+          .insert([{
+            event_id: testEventId,
+            user_id: testUserId,
+            points_earned: 5,
+            check_in_type: 'manual'
+          }])
+          .select();
+
+        if (admAttError) {
+          reportFail(`admin direct insert event_attendance failed: ${admAttError.message}`);
+        } else {
+          reportPass('admin can directly insert event_attendance (manual check-in support)');
+
+          // Cleanup direct insert
+          const { error: admAttDelError } = await adminClient
+            .from('event_attendance')
+            .delete()
+            .eq('event_id', testEventId)
+            .eq('user_id', testUserId);
+
+          if (admAttDelError) {
+            reportFail(`admin direct delete event_attendance cleanup failed: ${admAttDelError.message}`);
+          } else {
+            reportPass('admin can directly delete event_attendance (cleanup)');
+          }
+        }
+
+        // user_points is server-authoritative: only SECURITY DEFINER code
+        // (check_in_to_event, the signup trigger) writes it, so even admins get
+        // no client write policy. Probe with the admin's own existing row so an
+        // unexpected allow hits the primary key (23505) instead of writing.
+        const adminUser = (await adminClient.auth.getUser()).data.user;
+        const { data: adminPointsRow } = await adminClient
+          .from('user_points')
+          .select('user_id')
+          .eq('user_id', adminUser.id)
+          .maybeSingle();
+
+        if (!adminPointsRow) {
+          reportSkip('admin user_points write probe (admin has no user_points row, so the probe could create one)');
+        } else {
+          const { error: admPtsError } = await adminClient
+            .from('user_points')
+            .insert([{ user_id: adminUser.id, points: 0 }]);
+
+          if (admPtsError?.code === '42501') {
+            reportPass('admin cannot write user_points directly (server-authoritative)');
+          } else {
+            reportFail(`admin passed RLS inserting user_points: ${JSON.stringify(admPtsError)}`);
+          }
+        }
+      }
     }
   } catch (err) {
     reportFail(`Unexpected error during admin checks: ${err.message}`);

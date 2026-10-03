@@ -792,6 +792,86 @@ export type Database = {
         };
         Relationships: [];
       };
+      check_in_code_usage: {
+        Row: {
+          code_id: string;
+          id: string;
+          used_at: string | null;
+          used_by: string;
+        };
+        Insert: {
+          code_id: string;
+          id?: string;
+          used_at?: string | null;
+          used_by: string;
+        };
+        Update: {
+          code_id?: string;
+          id?: string;
+          used_at?: string | null;
+          used_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "check_in_code_usage_code_id_fkey";
+            columns: ["code_id"];
+            isOneToOne: false;
+            referencedRelation: "check_in_codes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      check_in_codes: {
+        Row: {
+          code: string;
+          created_at: string | null;
+          created_by: string;
+          event_type: string;
+          expires_at: string;
+          id: string;
+          points: number;
+        };
+        Insert: {
+          code: string;
+          created_at?: string | null;
+          created_by: string;
+          event_type: string;
+          expires_at: string;
+          id?: string;
+          points: number;
+        };
+        Update: {
+          code?: string;
+          created_at?: string | null;
+          created_by?: string;
+          event_type?: string;
+          expires_at?: string;
+          id?: string;
+          points?: number;
+        };
+        Relationships: [];
+      };
+      check_ins: {
+        Row: {
+          checked_in_at: string | null;
+          event_id: string | null;
+          id: number;
+          user_id: string | null;
+        };
+        Insert: {
+          checked_in_at?: string | null;
+          event_id?: string | null;
+          id?: never;
+          user_id?: string | null;
+        };
+        Update: {
+          checked_in_at?: string | null;
+          event_id?: string | null;
+          id?: never;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       data_rights_request_events: {
         Row: {
           created_at: string;
@@ -925,6 +1005,104 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "members";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      event_attendance: {
+        Row: {
+          check_in_type: string | null;
+          checked_in_at: string | null;
+          checked_in_by: string | null;
+          created_at: string | null;
+          event_id: string | null;
+          id: string;
+          points_earned: number | null;
+          updated_at: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          check_in_type?: string | null;
+          checked_in_at?: string | null;
+          checked_in_by?: string | null;
+          created_at?: string | null;
+          event_id?: string | null;
+          id?: string;
+          points_earned?: number | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          check_in_type?: string | null;
+          checked_in_at?: string | null;
+          checked_in_by?: string | null;
+          created_at?: string | null;
+          event_id?: string | null;
+          id?: string;
+          points_earned?: number | null;
+          updated_at?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_attendance_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_attendance_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "house_recent_activity";
+            referencedColumns: ["event_id"];
+          },
+          {
+            foreignKeyName: "event_attendance_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "member_event_history";
+            referencedColumns: ["event_id"];
+          },
+        ];
+      };
+      event_check_in_secrets: {
+        Row: {
+          check_in_code: string;
+          created_at: string;
+          event_id: string;
+        };
+        Insert: {
+          check_in_code: string;
+          created_at?: string;
+          event_id: string;
+        };
+        Update: {
+          check_in_code?: string;
+          created_at?: string;
+          event_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_check_in_secrets_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_check_in_secrets_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "house_recent_activity";
+            referencedColumns: ["event_id"];
+          },
+          {
+            foreignKeyName: "event_check_in_secrets_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "member_event_history";
+            referencedColumns: ["event_id"];
           },
         ];
       };
@@ -1081,6 +1259,7 @@ export type Database = {
           event_type: string | null;
           id: string;
           image_url: string | null;
+          is_code_expired: boolean;
           is_published: boolean;
           location: string | null;
           name: string;
@@ -1100,6 +1279,7 @@ export type Database = {
           event_type?: string | null;
           id?: string;
           image_url?: string | null;
+          is_code_expired?: boolean;
           is_published?: boolean;
           location?: string | null;
           name: string;
@@ -1119,6 +1299,7 @@ export type Database = {
           event_type?: string | null;
           id?: string;
           image_url?: string | null;
+          is_code_expired?: boolean;
           is_published?: boolean;
           location?: string | null;
           name?: string;
@@ -2753,6 +2934,32 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_points: {
+        Row: {
+          last_updated: string | null;
+          points: number;
+          user_id: string;
+        };
+        Insert: {
+          last_updated?: string | null;
+          points?: number;
+          user_id: string;
+        };
+        Update: {
+          last_updated?: string | null;
+          points?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_points_user_profiles";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "user_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_profiles: {
         Row: {
           avatar_url: string | null;
@@ -3606,6 +3813,8 @@ export type Database = {
         };
         Returns: undefined;
       };
+      check_in_to_event: { Args: { p_code: string }; Returns: Json };
+      generate_check_in_code: { Args: never; Returns: string };
       generate_data_rights_export: {
         Args: { p_request_id: string };
         Returns: Json;
@@ -3618,6 +3827,7 @@ export type Database = {
         Args: { event_type: Database["public"]["Enums"]["event_type"] };
         Returns: number;
       };
+      get_user_points: { Args: { uid: string }; Returns: number };
       is_admin_user: { Args: { p_user_id?: string }; Returns: boolean };
       match_ai_knowledge_base: {
         Args: { match_limit?: number; query_text: string };
