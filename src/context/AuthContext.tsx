@@ -17,9 +17,16 @@ type AuthContextType = {
    */
   sessionExpired: boolean;
   /**
+   * Settles an expired session once whoever signed back in has been verified as
+   * an admin: the same account revalidates its queries in place, another
+   * account starts from an empty cache. Until this is called the session stays
+   * "expired", so a rejected sign-in attempt leaves the prompt (and the page it
+   * is holding) where it was.
+   */
+  resolveExpiredSession: (userId: string) => void;
+  /**
    * Gives up on an expired session: forgets it and drops its cached data. The
-   * user chose to leave rather than sign back in. Signing back in needs no
-   * call; the provider resolves that itself.
+   * user chose to leave rather than sign back in.
    */
   discardExpiredSession: () => void;
 };
@@ -40,8 +47,11 @@ export const AuthContext = createContext<AuthContextType | undefined>(
  *   tab): queries nothing is displaying are dropped, but those still mounted
  *   are kept. Their rows are already on screen in the admin page that the
  *   admin shell is holding open for re-authentication, and emptying them would
- *   blank that page and strand its later invalidations. Signing back in as the
- *   same account revalidates everything; anything else clears the lot.
+ *   blank that page and strand its later invalidations. The session stays
+ *   "expired" until `resolveExpiredSession` (a verified admin signed back in:
+ *   the same account revalidates everything, another starts clean) or
+ *   `discardExpiredSession` (the user left); a sign-in that is turned away
+ *   leaves it expired.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -59,18 +69,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const adoptSession = useCallback(
     (next: Session) => {
       const nextId = next.user.id;
-      const expiredId = expiredUserIdRef.current;
-      if (expiredId !== null) {
-        expiredUserIdRef.current = null;
-        setSessionExpired(false);
-        if (expiredId === nextId) {
-          // Same person back after an expiry: whatever failed or went stale
-          // while signed out gets refetched, in place.
-          void queryClient.invalidateQueries();
-        } else {
-          queryClient.clear();
-        }
-      } else if (userIdRef.current !== null && userIdRef.current !== nextId) {
+      // While an expiry is pending, who may keep the held page's cache is
+      // decided by resolveExpiredSession, after the new sign-in is verified.
+      if (
+        expiredUserIdRef.current === null &&
+        userIdRef.current !== null &&
+        userIdRef.current !== nextId
+      ) {
         queryClient.clear();
       }
       userIdRef.current = nextId;
@@ -88,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
 
       if (unprompted) {
-        if (previousId !== null) {
+        if (previousId !== null && expiredUserIdRef.current === null) {
           expiredUserIdRef.current = previousId;
           setSessionExpired(true);
           queryClient.removeQueries({ inactive: true });
@@ -98,12 +103,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
+
+      if (expiredUserIdRef.current !== null) {
+        // An account that signed in at the expiry prompt was turned away. Back
+        // to waiting for a verified sign-in; the held page is untouched.
+        queryClient.removeQueries(['admin-status']);
+        return;
+      }
       expiredUserIdRef.current = null;
       setSessionExpired(false);
       queryClient.clear();
     },
     [queryClient]
   );
+
+  const resolveExpiredSession = useCallback(
+    (userId: string) => {
+      const expiredId = expiredUserIdRef.current;
+      if (expiredId === null) return;
+      expiredUserIdRef.current = null;
+      setSessionExpired(false);
+      if (expiredId === userId) {
+        void queryClient.invalidateQueries();
+      } else {
+        queryClient.clear();
+      }
+    },
+    [queryClient]
+  );
+
+  const discardExpiredSession = useCallback(() => {
+    expiredUserIdRef.current = null;
+    setSessionExpired(false);
+    queryClient.clear();
+  }, [queryClient]);
 
   useEffect(() => {
     let mounted = true;
@@ -181,8 +214,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const discardExpiredSession = useCallback(() => endSession(false), [endSession]);
-
   const value = {
     user,
     session,
@@ -190,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     sessionExpired,
+    resolveExpiredSession,
     discardExpiredSession,
   };
 

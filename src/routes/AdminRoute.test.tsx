@@ -239,6 +239,59 @@ describe('the session ends while the admin is editing', () => {
     expect(await screen.findByLabelText('Draft')).toHaveValue('');
   });
 
+  it('keeps the page and shows the reason when a non-admin account is turned away at the prompt', async () => {
+    signedInAs('admin-1', true);
+    renderAdmin();
+    await userEvent.type(await screen.findByLabelText('Draft'), 'unsaved work');
+    await emit('SIGNED_OUT', null);
+
+    const intruder = sessionFor('member-9');
+    supabaseMock.setDefault('user_profiles', { data: { is_admin: false }, error: null });
+    supabaseMock.setSignInResult({ data: { user: intruder.user, session: intruder }, error: null });
+    await userEvent.type(await screen.findByLabelText(/password/i), 'a password');
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/admins only/i);
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.queryByTestId('login')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Draft')).toHaveValue('unsaved work');
+  });
+
+  it('keeps the page and shows the reason when the same account is no longer an admin', async () => {
+    signedInAs('admin-1', true);
+    renderAdmin();
+    await userEvent.type(await screen.findByLabelText('Draft'), 'unsaved work');
+    await emit('SIGNED_OUT', null);
+
+    supabaseMock.setDefault('user_profiles', { data: { is_admin: false }, error: null });
+    await userEvent.type(await screen.findByLabelText(/password/i), 'a password');
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/admins only/i);
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Draft')).toHaveValue('unsaved work');
+  });
+
+  it('keeps focus inside the prompt, wrapping at both ends', async () => {
+    signedInAs('admin-1', true);
+    renderAdmin();
+    await screen.findByLabelText('Draft');
+    await emit('SIGNED_OUT', null);
+    const password = await screen.findByLabelText(/password/i);
+    const leave = screen.getByRole('button', { name: /leave admin/i });
+
+    leave.focus();
+    await userEvent.tab();
+    expect(screen.getByLabelText(/email/i)).toHaveFocus();
+
+    await userEvent.tab({ shift: true });
+    expect(leave).toHaveFocus();
+
+    // Something outside grabbing focus is pulled back in.
+    act(() => screen.getByRole('button', { name: /sign out/i }).focus());
+    expect([screen.getByLabelText(/email/i), password, leave]).toContain(document.activeElement); // eslint-disable-line testing-library/no-node-access
+  });
+
   it('lets them leave, discarding the page and its cached data, after confirming', async () => {
     signedInAs('admin-1', true);
     const { client } = renderAdmin();

@@ -17,7 +17,7 @@ interface AdminRouteProps {
 export function AdminRoute({ children }: AdminRouteProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, sessionExpired, discardExpiredSession } = useAuth();
+  const { user, sessionExpired, resolveExpiredSession, discardExpiredSession } = useAuth();
   const { isAdmin, loading } = useAdmin();
 
   // The admin this shell last verified. If their session ends unprompted, the
@@ -25,10 +25,24 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // behind a re-authentication prompt, instead of being redirected away.
   const verifiedAdmin = useRef<{ id: string; email?: string } | null>(null);
   useEffect(() => {
-    if (user && isAdmin && !loading) {
+    if (!sessionExpired && user && isAdmin && !loading) {
       verifiedAdmin.current = { id: user.id, email: user.email };
     }
-  }, [user, isAdmin, loading]);
+  }, [sessionExpired, user, isAdmin, loading]);
+
+  const held = verifiedAdmin.current;
+  // The prompt stays up from the moment the session ends until someone has
+  // signed back in AND been verified as an admin. A sign-in that is turned
+  // away (not an admin any more, lookup failed) therefore lands back on the
+  // prompt, with its error still showing, rather than on a generic login page.
+  const promptOpen = sessionExpired && held !== null;
+  const verifying = promptOpen && !!user;
+
+  useEffect(() => {
+    if (promptOpen && user && isAdmin && !loading) {
+      resolveExpiredSession(user.id);
+    }
+  }, [promptOpen, user, isAdmin, loading, resolveExpiredSession]);
 
   // Leaving the admin area while a session is still marked expired means the
   // held page and its cached rows are abandoned: drop them rather than leaving
@@ -43,13 +57,6 @@ export function AdminRoute({ children }: AdminRouteProps) {
     },
     []
   );
-
-  const held = verifiedAdmin.current;
-  const sessionEnded = !user && sessionExpired && held !== null;
-  // Same admin signed back in, access being re-checked: keep the page up.
-  const reverifying = !!user && loading && held !== null && user.id === held.id;
-
-  const promptOpen = sessionEnded || reverifying;
 
   if (!promptOpen) {
     if (loading) {
@@ -88,7 +95,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
   return (
     <>
       <div
-        key={user?.id ?? held?.id ?? 'signed-out'}
+        key={promptOpen ? held?.id : user?.id ?? 'signed-out'}
         style={{ display: 'contents' }}
         {...(promptOpen ? INERT_PROPS : {})}
       >
@@ -97,7 +104,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
       {promptOpen && (
         <SessionExpiredDialog
           email={held?.email}
-          verifying={reverifying}
+          verifying={verifying}
           onLeave={() => {
             if (!confirmLeaveIfUnsaved()) return;
             discardExpiredSession();

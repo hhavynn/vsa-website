@@ -143,29 +143,66 @@ describe('session ends unprompted (refresh rejected, expired, signed out in anot
     expect(auth.sessionExpired).toBe(false);
   });
 
-  it('revalidates everything when the same account signs back in', async () => {
+  it('stays expired after a sign-in until it is resolved, then revalidates when it is the same account', async () => {
     await signedInAs('admin-1');
     await emit('SIGNED_OUT', null);
 
     await emit('SIGNED_IN', sessionFor('admin-1'));
 
+    // Signed in, but not yet verified as an admin: still the expiry prompt.
     expect(screen.getByTestId('user')).toHaveTextContent('admin-1');
+    expect(auth.sessionExpired).toBe(true);
+    expect(activeFetches).toHaveBeenCalledTimes(1);
+
+    act(() => auth.resolveExpiredSession('admin-1'));
+
     expect(auth.sessionExpired).toBe(false);
     // Invalidation refetches the query that stayed on screen.
     await waitFor(() => expect(activeFetches).toHaveBeenCalledTimes(2));
   });
 
-  it('clears the whole cache when a different account signs in instead', async () => {
+  it('clears the whole cache when a different account is resolved instead', async () => {
     const { client } = await signedInAs('admin-1');
     await emit('SIGNED_OUT', null);
-
     client.setQueryData(['admin-rows'], ['private']);
-
     await emit('SIGNED_IN', sessionFor('someone-else'));
+    expect(client.getQueryData(['admin-rows'])).toEqual(['private']);
+
+    act(() => auth.resolveExpiredSession('someone-else'));
 
     expect(auth.sessionExpired).toBe(false);
     expect(client.getQueryData(['admin-rows'])).toBeUndefined();
-    // The mounted query restarts instead of being revalidated in place.
+    await waitFor(() => expect(activeFetches).toHaveBeenCalledTimes(2));
+  });
+
+  it('stays expired, with the held cache, when an account that signed in at the prompt is signed back out', async () => {
+    const { client } = await signedInAs('admin-1');
+    await emit('SIGNED_OUT', null);
+    client.setQueryData(['admin-status', 'someone-else'], false);
+    await emit('SIGNED_IN', sessionFor('someone-else'));
+
+    await act(async () => {
+      await auth.signOut();
+    });
+
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
+    expect(auth.sessionExpired).toBe(true);
+    expect(client.getQueryData(['admin-status', 'someone-else'])).toBeUndefined();
+    expect(client.getQueryData(['on-screen'])).toBe('on-screen-data');
+    // And the original account can still resume.
+    act(() => auth.resolveExpiredSession('admin-1'));
+    expect(auth.sessionExpired).toBe(false);
+  });
+
+  it('keeps the original expired account when a second session ends during the prompt', async () => {
+    await signedInAs('admin-1');
+    await emit('SIGNED_OUT', null);
+    await emit('SIGNED_IN', sessionFor('someone-else'));
+    await emit('SIGNED_OUT', null);
+
+    act(() => auth.resolveExpiredSession('admin-1'));
+
+    // Resolved as the same account (revalidation, no cache wipe).
     await waitFor(() => expect(activeFetches).toHaveBeenCalledTimes(2));
   });
 
