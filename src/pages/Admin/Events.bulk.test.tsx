@@ -11,6 +11,11 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import AdminEvents from './Events';
 
+jest.mock('react-hot-toast', () => {
+  const fn = jest.fn();
+  return { __esModule: true, default: Object.assign(fn, { success: jest.fn(), error: jest.fn(), dismiss: jest.fn() }) };
+});
+
 const baseEvent = {
   description: 'desc',
   start_time: null,
@@ -35,7 +40,13 @@ const makeEvt = (id: string, name: string, isPublished: boolean, extra: Record<s
   ...extra,
 });
 
-const mockState: { events: Array<ReturnType<typeof makeEvt>>; failIds: string[] } = { events: [], failIds: [] };
+const mockState: {
+  events: Array<ReturnType<typeof makeEvt>>;
+  failIds: string[];
+  deleteFails: boolean;
+  storage: 'ok' | 'error' | 'throw';
+} = { events: [], failIds: [], deleteFails: false, storage: 'ok' };
+const mockRemove = jest.fn();
 const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
 const mockRefresh = jest.fn();
@@ -46,11 +57,19 @@ jest.mock('../../lib/supabase', () => ({
       delete: () => ({
         eq: (_column: string, id: string) => {
           mockDelete(id);
-          return Promise.resolve({ error: null });
+          return Promise.resolve({ error: mockState.deleteFails ? { message: 'update or delete violates foreign key' } : null });
         },
       }),
     }),
-    storage: { from: () => ({ remove: () => Promise.resolve({}) }) },
+    storage: {
+      from: () => ({
+        remove: (names: string[]) => {
+          mockRemove(names);
+          if (mockState.storage === 'throw') return Promise.reject(new Error('network down'));
+          return Promise.resolve({ error: mockState.storage === 'error' ? { message: 'Storage denied' } : null });
+        },
+      }),
+    },
   },
 }));
 jest.mock('../../hooks/useEvents', () => ({ useEvents: () => ({ events: mockState.events, refreshEvents: mockRefresh }) }));
@@ -98,6 +117,9 @@ beforeEach(() => {
     makeEvt('c', 'Fall Social', true),
   ];
   mockState.failIds = [];
+  mockState.deleteFails = false;
+  mockState.storage = 'ok';
+  mockRemove.mockClear();
   mockUpdate.mockClear();
   mockDelete.mockClear();
   mockRefresh.mockClear();
@@ -199,9 +221,24 @@ describe('bulk publish / unpublish', () => {
   });
 });
 
+const IMAGE = 'https://proj.supabase.co/storage/v1/object/public/event_images/spring.jpg';
+const THUMB = 'https://proj.supabase.co/storage/v1/object/public/event_images/spring-thumb.jpg';
+
+async function confirmDeleteOfSpringGbm() {
+  const row = screen.getByRole('checkbox', { name: 'Select Spring GBM' }).closest('div.flex') as HTMLElement; // eslint-disable-line testing-library/no-node-access
+  fireEvent.click(within(row).getByRole('button', { name: 'Delete' }));
+  const dialog = screen.getByRole('alertdialog', { name: 'Delete event?' });
+  await userEvent.type(within(dialog).getByRole('textbox'), 'Spring GBM');
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Delete event' }));
+  return dialog;
+}
+
 describe('delete event', () => {
-  it('needs the event name typed, and lists what cascades, before deleting', async () => {
-    const toastSuccess = jest.spyOn(toast, 'success');
+  beforeEach(() => {
+    mockState.events = [makeEvt('a', 'Spring GBM', true, { image_url: IMAGE, thumbnail_url: THUMB }), makeEvt('b', 'Draft Mixer', false)];
+  });
+
+  it('needs the event name typed, and lists what cascades (including image and thumbnail), before deleting', async () => {
     const confirmSpy = jest.spyOn(window, 'confirm');
     await openManage();
     const row = screen.getByRole('checkbox', { name: 'Select Spring GBM' }).closest('div.flex') as HTMLElement; // eslint-disable-line testing-library/no-node-access
@@ -209,17 +246,76 @@ describe('delete event', () => {
 
     const dialog = screen.getByRole('alertdialog', { name: 'Delete event?' });
     expect(within(dialog).getByText(/every check-in and attendance record/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/uploaded image and thumbnail from storage/)).toBeInTheDocument();
     const confirm = within(dialog).getByRole('button', { name: 'Delete event' });
     expect(confirm).toBeDisabled();
     expect(mockDelete).not.toHaveBeenCalled();
 
     await userEvent.type(within(dialog).getByRole('textbox'), 'Spring GBM');
     await waitFor(() => expect(confirm).toBeEnabled());
-    await userEvent.click(confirm);
-
-    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('a'));
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(toastSuccess).toHaveBeenCalledWith('"Spring GBM" deleted');
     expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('database delete fails: the dialog stays open with the error, nothing is cleaned up, no success', async () => {
+    mockState.deleteFails = true;
+    await openManage();
+    const dialog = await confirmDeleteOfSpringGbm();
+
+    expect(await within(dialog).findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog', { name: 'Delete event?' })).toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith('Failed to delete event');
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+    expect(mockRemove).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
+  });
+
+  it('delete and cleanup both succeed: plain success, both files removed', async () => {
+    await openManage();
+    await confirmDeleteOfSpringGbm();
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(mockDelete).toHaveBeenCalledWith('a');
+    expect(mockRemove).toHaveBeenCalledWith(['spring.jpg']);
+    expect(mockRemove).toHaveBeenCalledWith(['spring-thumb.jpg']);
+    expect(toast.success).toHaveBeenCalledWith('"Spring GBM" deleted');
+    expect(toast).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Storage returns an error', 'error' as const],
+    ['Storage cleanup throws', 'throw' as const],
+  ])('delete succeeds but %s: still reported deleted, with a cleanup warning and no retry', async (_label, mode) => {
+    mockState.storage = mode;
+    await openManage();
+    await confirmDeleteOfSpringGbm();
+
+    // The confirmation closes: the event is gone, there is nothing to retry.
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledTimes(1);
+    const message = (toast as unknown as jest.Mock).mock.calls[0][0] as string;
+    expect(message).toMatch(/"Spring GBM" was deleted, but/);
+    expect(message).toMatch(/could not be cleaned up/);
+    expect(message).toMatch(/Nothing to retry/);
+    // Both files were attempted even though the first one failed.
+    expect(mockRemove).toHaveBeenCalledTimes(2);
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+});
+
+describe('bulk preview event dates', () => {
+  it('names the San Diego day, not the device-timezone day', async () => {
+    // 7:00 PM Pacific on Mar 9 is already Mar 10 in UTC and Asia/Ho_Chi_Minh.
+    mockState.events = [makeEvt('e', 'Evening Mixer', true, { date: '2030-03-10T03:00:00Z', start_time: '19:00:00' })];
+    await openManage();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all events on this page' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Unpublish' }));
+    const willChange = within(screen.getByRole('alertdialog', { name: 'Unpublish events' })).getByRole('list', { name: 'Items that will change' });
+    expect(willChange).toHaveTextContent('Evening Mixer — Mar 9, 2030');
   });
 });

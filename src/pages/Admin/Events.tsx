@@ -46,7 +46,7 @@ import {
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useRowSelection } from '../../hooks/useRowSelection';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
-import { getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
+import { formatEventDay, getEventDateOnly, isEndAfterStart, timeToInputValue } from '../../lib/eventTime';
 import { getLosAngelesDateOnly, isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 const EMPTY_EVENT: Partial<Event> = {
@@ -77,8 +77,16 @@ const EVENT_STATUS_FILTERS: ReadonlyArray<QuickFilter<Event>> = [
   { key: 'draft', label: 'Draft', predicate: (event) => !isPublishedEvent(event), hint: 'Only visible in Admin' },
 ];
 
-const shortEventDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// What the delete dialog says about Storage. Cleanup runs after the row is
+// gone and can fail without undoing the delete, so the copy says so.
+function storageCleanupConsequence(event: Event): string[] {
+  const files = [
+    extractSupabasePublicObjectName(event.image_url, 'event_images') ? 'image' : null,
+    extractSupabasePublicObjectName(event.thumbnail_url, 'event_images') ? 'thumbnail' : null,
+  ].filter(Boolean);
+  if (files.length === 0) return [];
+  return [`Then removes its uploaded ${files.join(' and ')} from storage. If that cleanup fails the event is still deleted and you will be told.`];
+}
 
 interface BulkPublishRun {
   publish: boolean;
@@ -415,9 +423,25 @@ export default function AdminEvents() {
     };
   }
 
-  async function removeEventImage(url?: string | null) {
+  // Best-effort Storage cleanup. Supabase Storage reports failures in the
+  // returned `{ error }` rather than throwing, so both are checked. Resolves
+  // true when the file is gone (or there was nothing to remove), false when it
+  // could not be removed; it never throws, so callers whose real work already
+  // committed cannot be pushed into a failure path by cleanup.
+  async function removeEventImage(url?: string | null): Promise<boolean> {
     const objectName = extractSupabasePublicObjectName(url, 'event_images');
-    if (objectName) await supabase.storage.from('event_images').remove([objectName]);
+    if (!objectName) return true;
+    try {
+      const { error } = await supabase.storage.from('event_images').remove([objectName]);
+      if (error) {
+        console.error(error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   }
 
   // Keeps the event's UVSA Network listing in step with it: upserts on the
@@ -508,24 +532,42 @@ export default function AdminEvents() {
     } finally { setUploading(false); }
   };
 
-  // Resolves once the event is gone; rejects (after a toast) so ConfirmDialog
-  // stays open with the error instead of closing as if it worked. The row is
-  // deleted first, then its images, as before.
+  // Two separate stages with different meanings. (1) The row delete: if it
+  // fails nothing was deleted, so we toast and rethrow and ConfirmDialog stays
+  // open with the error. (2) Once it succeeds the event is permanently gone:
+  // nothing after this point may throw or say deletion failed, and image /
+  // thumbnail cleanup is best-effort, reported as a warning instead.
   const handleDeleteConfirm = async () => {
     if (!eventToDelete) return;
+    const event = eventToDelete;
     try {
-      const { error } = await supabase.from('events').delete().eq('id', eventToDelete.id);
+      const { error } = await supabase.from('events').delete().eq('id', event.id);
       if (error) throw error;
-      await removeEventImage(eventToDelete.image_url);
-      await removeEventImage(eventToDelete.thumbnail_url);
-      toast.success(`"${eventToDelete.name}" deleted`);
-      queryClient.invalidateQueries(['external-events']);
-      queryClient.invalidateQueries(['admin-external-events']);
-      refreshEvents();
-      if (selectedEvent?.id === eventToDelete.id) setSelectedEvent(null);
     } catch (err) {
       console.error(err); toast.error('Failed to delete event');
       throw err;
+    }
+
+    // From here the event no longer exists.
+    const imageCleaned = await removeEventImage(event.image_url);
+    const thumbnailCleaned = await removeEventImage(event.thumbnail_url);
+    const failedFiles = (imageCleaned ? 0 : 1) + (thumbnailCleaned ? 0 : 1);
+    if (failedFiles === 0) {
+      toast.success(`"${event.name}" deleted`);
+    } else {
+      toast(
+        `"${event.name}" was deleted, but ${failedFiles === 1 ? 'one old storage file' : 'its old image and thumbnail files'} could not be cleaned up. Nothing to retry here; an admin can remove ${failedFiles === 1 ? 'it' : 'them'} from the event_images storage bucket.`,
+        { icon: '⚠️', duration: 10000 },
+      );
+    }
+    try {
+      queryClient.invalidateQueries(['external-events']);
+      queryClient.invalidateQueries(['admin-external-events']);
+      refreshEvents();
+      if (selectedEvent?.id === event.id) setSelectedEvent(null);
+    } catch (refreshErr) {
+      // The delete already happened; a refresh hiccup must not read as a failed delete.
+      console.error(refreshErr);
     }
   };
 
@@ -650,8 +692,11 @@ export default function AdminEvents() {
       if (editCheckInCode) {
         await eventsRepository.setCheckInCode(selectedEvent.id, editCheckInCode);
       }
-      await removeEventImage(imageUrlToRemove);
-      await removeEventImage(thumbnailUrlToRemove);
+      const imageCleaned = await removeEventImage(imageUrlToRemove);
+      const thumbnailCleaned = await removeEventImage(thumbnailUrlToRemove);
+      if (!imageCleaned || !thumbnailCleaned) {
+        toast('Event saved, but an old image file could not be removed from storage.', { icon: '⚠️', duration: 8000 });
+      }
       let listingFailed = false;
       try {
         await syncExternalListing({ eventId: selectedEvent.id, draft: selectedEvent, dateOnly, academicTermId, details: selectedExternal });
@@ -1229,7 +1274,7 @@ export default function AdminEvents() {
                   'Deletes its check-in code, recap notes, and Interested / Going counts.',
                   ...(listingByEventId.has(eventToDelete.id) ? ['Deletes its linked UVSA Network listing.'] : []),
                   'Gallery albums linked to it are kept but lose the link.',
-                  ...(extractSupabasePublicObjectName(eventToDelete.image_url, 'event_images') ? ['Deletes its uploaded image from storage.'] : []),
+                  ...storageCleanupConsequence(eventToDelete),
                 ]
               : []
           }
@@ -1247,7 +1292,7 @@ export default function AdminEvents() {
             noun="event"
             verb={bulkRun.publish ? 'publish' : 'unpublish'}
             past={bulkRun.publish ? 'Published' : 'Unpublished'}
-            itemLabel={(event) => `${event.name} — ${shortEventDate(event.date)}`}
+            itemLabel={(event) => `${event.name} — ${formatEventDay(event.date, event.start_time)}`}
             changeLabel={() => (bulkRun.publish ? 'Draft → Published' : 'Published → Draft')}
             scopeNote={bulkRun.scopeNote}
             extra={

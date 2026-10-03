@@ -49,7 +49,7 @@
     "migrate:images:apply": "tsx scripts/migrate-supabase-images-to-public.ts --apply",
     "migrate:house-assets:dry": "tsx scripts/migrate-supabase-images-to-public.ts --category houses",
     "migrate:house-assets:apply": "tsx scripts/migrate-supabase-images-to-public.ts --category houses --apply",
-    "test:timezones": "for tz in UTC America/New_York Asia/Ho_Chi_Minh America/Los_Angeles; do echo \"TZ=$tz\"; TZ=$tz CI=true node ./node_modules/react-scripts/bin/react-scripts.js test --watchAll=false src/lib/applicationWindowBoundaries src/utils/seasonalBoundaries src/utils/losAngelesDate || exit 1; done"
+    "test:timezones": "for tz in UTC America/New_York Asia/Ho_Chi_Minh America/Los_Angeles; do echo \"TZ=$tz\"; TZ=$tz CI=true node ./node_modules/react-scripts/bin/react-scripts.js test --watchAll=false src/lib/applicationWindowBoundaries src/utils/seasonalBoundaries src/utils/losAngelesDate src/lib/eventDayLabel src/pages/Admin/Events.bulk || exit 1; done"
   },
   "eslintConfig": {
     "extends": [

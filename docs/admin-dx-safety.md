@@ -38,7 +38,7 @@ Do not overuse typed — it stops meaning anything. `src/lib/adminDestructiveGua
 
 | Surface | Action | Tier | Notes / cascade shown in dialog |
 |---|---|---|---|
-| Events | Delete event | typed | Cascades to check-ins/attendance (and the points earned from them), check-in code, recap notes, interest counts, linked UVSA listing; gallery albums keep but lose the link. Verified against prod FKs 2026-10-02. |
+| Events | Delete event | typed | Cascades to check-ins/attendance (and the points earned from them), check-in code, recap notes, interest counts, linked UVSA listing; gallery albums keep but lose the link. Verified against prod FKs 2026-10-02. Row delete and image/thumbnail Storage cleanup are separate: once the row is gone the UI never says deletion failed; a Storage `{ error }` or throw shows an "event deleted, cleanup failed" warning (no retry). |
 | Gallery | Delete album | standard | Removes from public Gallery, event photo buttons, cover image; Google Photos untouched. |
 | External Events | Delete listing | standard | Removed from UVSA Network page. |
 | ACE Families | Delete fam | typed | Deletes its people; assignment drafts lose Big picks; club member records kept. |
@@ -64,7 +64,7 @@ Not migrated (intentional): the AceFamilies "already linked — link to same per
 ## Bulk actions
 
 - Pure planning: `planBulk` (`lib/adminBulk.ts`). Execution: `runBulk` (`lib/adminBulkRun.ts`, per-item results, small concurrency). UI: `BulkRunDialog` (preview of exactly which items change and what each becomes, skipped items with reasons, progress bar, per-item failure list, retry-failed).
-- Partial success: an op whose main write committed but a follow-up failed (e.g. the UVSA listing sync on Events) throws `BulkPartialError`; the item is counted as changed, listed under "needs attention", and not offered for retry. Bulk writes must go through the repository (never a bare `supabase` call) so a row deleted since the preview rejects instead of reporting a zero-row update as success.
+- Partial success: an op whose main write committed but a follow-up failed (e.g. the UVSA listing sync on Events) throws `BulkPartialError`; the item is counted as changed, listed under "needs attention", and not offered for retry. Event days in the preview use `formatEventDay` (San Diego day via `getEventDateOnly` + `formatDateOnly`), never the device timezone. Bulk writes must go through the repository (never a bare `supabase` call) so a row deleted since the preview rejects instead of reporting a zero-row update as success.
 - Selection: `useRowSelection` + `lib/adminSelection.ts`. Selection is pruned to the current filter; the dialog states the scope ("All N matching …, including ones not shown on this page").
 - Destructive bulk of ≥5 items requires typing the count. No bulk delete exists on any surface.
 - Surfaces: Events (publish/unpublish, same write as the editor plus the UVSA listing sync), Resources (archive/restore, same `setArchived` as single). Members, House drafts, ACE assignments and Cabinet/Intern rollover already had `BulkConfirm`-based previews.
