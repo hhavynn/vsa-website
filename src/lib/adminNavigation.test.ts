@@ -57,9 +57,8 @@ describe('admin navigation ↔ router parity', () => {
   it('has no duplicate destinations, and every parent resolves', () => {
     const paths = ADMIN_NAV_ITEMS.map((item) => item.to);
     expect(new Set(paths).size).toBe(paths.length);
-    for (const item of ADMIN_NAV_ITEMS) {
-      if (item.parent) expect(adminNavItemFor(item.parent)).not.toBeNull();
-    }
+    const unresolved = ADMIN_NAV_ITEMS.filter((item) => item.parent && !adminNavItemFor(item.parent)).map((item) => item.to);
+    expect(unresolved).toEqual([]);
   });
 
   it('keeps the established group names and order', () => {

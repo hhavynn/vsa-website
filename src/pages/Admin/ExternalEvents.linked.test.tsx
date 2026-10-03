@@ -137,10 +137,35 @@ it('disables deletion of linked mirror rows and directs deletion to Admin Events
 
   const enabledDeleteBtn = screen.getByRole('button', { name: /Delete Plain Event/i });
   expect(enabledDeleteBtn).toBeEnabled();
-  window.confirm = jest.fn(() => true);
+  const confirmSpy = jest.spyOn(window, 'confirm');
+  const toastSuccess = jest.spyOn(toast, 'success');
   fireEvent.click(enabledDeleteBtn);
-  expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this event?');
-  expect(mockDeleteMutateAsync).toHaveBeenCalledWith('plain');
+  // A named confirmation dialog, not window.confirm; nothing is deleted yet.
+  const dialog = screen.getByRole('alertdialog', { name: 'Delete external event?' });
+  expect(within(dialog).getByText(/Plain Event/)).toBeInTheDocument();
+  expect(confirmSpy).not.toHaveBeenCalled();
+  expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Delete event' }));
+  await waitFor(() => expect(mockDeleteMutateAsync).toHaveBeenCalledWith('plain'));
+  await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+  expect(toastSuccess).toHaveBeenCalledWith('"Plain Event" deleted');
+  confirmSpy.mockRestore();
+});
+
+it('keeps the delete dialog open with the error when deleting fails', async () => {
+  mockState.events = [makeEvent({ id: 'plain', title: 'Plain Event' })];
+  mockDeleteMutateAsync.mockRejectedValue(new Error('boom'));
+  const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  const toastError = jest.spyOn(toast, 'error');
+  renderPage();
+
+  fireEvent.click(screen.getByRole('button', { name: /Delete Plain Event/i }));
+  fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete event' }));
+  expect(await screen.findByRole('alert')).toBeInTheDocument();
+  expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  expect(toastError).toHaveBeenCalledWith('Failed to delete event');
+  consoleError.mockRestore();
 });
 
 describe('Flyer Image URL on save', () => {

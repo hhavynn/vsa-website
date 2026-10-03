@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import { AddMemberModal } from "./AddMemberModal";
 import { MemberAttendanceModal } from "./MemberAttendanceModal";
 import { adminMembersRepository } from "../../../data/repos/adminMembers";
+import { ValidationError } from "../../../data/errors";
+import { hasUnsavedChanges } from "../../../hooks/useUnsavedChangesGuard";
 
 jest.mock("../../../data/repos/adminMembers", () => ({
   adminMembersRepository: {
@@ -62,14 +64,19 @@ function mount(ui: React.ReactElement) {
 it("creates a member with optional email and keeps invalid names from saving", async () => {
   const onCreated = jest.fn();
   mount(<AddMemberModal onClose={jest.fn()} onCreated={onCreated} />);
-  fireEvent.click(screen.getByRole("button", { name: "Create member" }));
-  expect(await screen.findByText("First name is required")).toBeInTheDocument();
-  expect(mockRepo.createMember).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText("First name"), {
-    target: { value: "Lan" },
-  });
-  fireEvent.change(screen.getByLabelText("Last name"), {
+  // Create stays disabled until something is entered; a last name alone is invalid.
+  expect(screen.getByRole("button", { name: "Create member" })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(/Last name/), {
     target: { value: "Tran" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create member" }));
+  // Shown beside the field and in the form's error summary.
+  expect(
+    (await screen.findAllByText("First name is required")).length,
+  ).toBeGreaterThan(0);
+  expect(mockRepo.createMember).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText(/First name/), {
+    target: { value: "Lan" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Create member" }));
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(member));
@@ -80,6 +87,50 @@ it("creates a member with optional email and keeps invalid names from saving", a
     college: "",
     year: "",
   });
+});
+
+it("puts a duplicate email beside the email field and keeps what was typed", async () => {
+  const onCreated = jest.fn();
+  const onClose = jest.fn();
+  mockRepo.createMember.mockRejectedValue(
+    new ValidationError(
+      "A member with this email already exists. Search Members to edit their attendance.",
+    ),
+  );
+  mount(<AddMemberModal onClose={onClose} onCreated={onCreated} />);
+  fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Lan" } });
+  fireEvent.change(screen.getByLabelText(/Last name/), { target: { value: "Tran" } });
+  fireEvent.change(screen.getByLabelText(/Email/), {
+    target: { value: "lan@example.com" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create member" }));
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Email/)).toHaveAttribute("aria-invalid", "true"),
+  );
+  expect(screen.getByLabelText(/Email/)).toHaveValue("lan@example.com");
+  expect(screen.getByLabelText(/First name/)).toHaveValue("Lan");
+  expect(onCreated).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("asks before closing with unsaved edits and closes straight away when clean", async () => {
+  const onClose = jest.fn();
+  mount(<AddMemberModal onClose={onClose} onCreated={jest.fn()} />);
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(false);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(confirm).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalledTimes(1);
+
+  fireEvent.change(screen.getByLabelText(/First name/), { target: { value: "Lan" } });
+  await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(onClose).toHaveBeenCalledTimes(1);
+
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(onClose).toHaveBeenCalledTimes(2);
+  confirm.mockRestore();
 });
 
 it("adds attendance and immediately reloads history, totals and shared point caches", async () => {

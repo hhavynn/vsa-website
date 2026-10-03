@@ -7,6 +7,11 @@ describe('confirm phrase', () => {
     expect(confirmPhraseMatches('  SMITH  FAM  ', 'Smith Fam')).toBe(true);
   });
 
+  it('treats en and em dashes as hyphens', () => {
+    expect(confirmPhraseMatches('2027-28', '2027–28')).toBe(true);
+    expect(confirmPhraseMatches('2027—28', '2027-28')).toBe(true);
+  });
+
   it('rejects partial, extra, or empty input', () => {
     expect(confirmPhraseMatches('smith', 'Smith Fam')).toBe(false);
     expect(confirmPhraseMatches('smith fam please', 'Smith Fam')).toBe(false);

@@ -13,6 +13,7 @@ import { OFFICIAL_YEARS } from '../../lib/yearNormalizer';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { Button } from '../../components/ui/Button';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { AddMemberModal } from '../../components/features/admin/AddMemberModal';
 import { MemberAttendanceModal } from '../../components/features/admin/MemberAttendanceModal';
 import { MEMBER_COLLEGES } from '../../constants/memberOptions';
@@ -441,32 +442,31 @@ export default function AdminMembers() {
       <Toaster position="top-right" />
 
       {/* PAGE HEADER */}
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Members</h1>
-          <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>{members.length} total members</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setAddingMember(true)}>Add Member</Button>
-          <button
-            onClick={() => {
-              const rows = [
-                ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-                ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
-              ];
-              const csv = rows.map(r => r.join(',')).join('\n');
-              const a = document.createElement('a');
-              a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-              a.download = 'vsa-members.csv';
-              a.click();
-            }}
-            className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-            style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
-          >
-            Export CSV
-          </button>
-        </div>
-      </div>
+      <AdminPageHeader
+        description={`${members.length} total members`}
+        actions={
+          <>
+            <Button onClick={() => setAddingMember(true)}>Add Member</Button>
+            <button
+              onClick={() => {
+                const rows = [
+                  ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
+                  ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
+                ];
+                const csv = rows.map(r => r.join(',')).join('\n');
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                a.download = 'vsa-members.csv';
+                a.click();
+              }}
+              className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+              style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
+            >
+              Export CSV
+            </button>
+          </>
+        }
+      />
 
       <div className="p-4 sm:p-6 lg:p-8">
 

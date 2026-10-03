@@ -32,6 +32,7 @@ import { HouseImportMember, getMemberName, normalizeHouseLookup } from '../../..
 import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatYearSpan } from '../../../lib/operationalStatus';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { MemberSearchSelect } from './MemberSearchSelect';
 import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
 import { runBulkWrites } from '../../../lib/bulkWrites';
@@ -111,6 +112,7 @@ export function HouseDraftEditor({
   const [nextStep, setNextStep] = useState<NextStep | null>(initialNextStep);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [revealConfirmed, setRevealConfirmed] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [addMemberId, setAddMemberId] = useState<string | null>(null);
   const [addHouseId, setAddHouseId] = useState('');
 
@@ -441,13 +443,24 @@ export function HouseDraftEditor({
     }, 'Failed to reveal. Nothing was lost; fix the issue and reveal again.');
   }
 
-  function discard() {
-    if (!window.confirm('Delete this draft? This cannot be undone.')) return;
-    return run(async () => {
+  // Runs from the confirm dialog. A failure is re-thrown so the dialog stays
+  // open and shows it. deleteBatch only accepts a draft, so a published batch
+  // and its House memberships can never be removed from here.
+  async function deleteDraft() {
+    setBusy(true);
+    try {
       await houseAssignmentsRepository.deleteBatch(batch.id);
+      toast.success('Draft deleted.');
       onBatchChanged();
       onBack();
-    }, 'Failed to delete the draft.');
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error && err.message ? err.message : 'Failed to delete the draft.';
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const toneBlock = 'rounded border p-3 text-xs';
@@ -472,7 +485,7 @@ export function HouseDraftEditor({
         <div className="flex flex-wrap gap-2">
           {batch.status === 'draft' && (
             <>
-              <button type="button" onClick={discard} disabled={busy} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+              <button type="button" onClick={() => setConfirmDelete(true)} disabled={busy} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                 Delete draft
               </button>
               <button type="button" onClick={lock} disabled={busy || !preflight.canLock} className="vsa-btn-primary px-5 py-2 text-xs disabled:opacity-50">
@@ -480,6 +493,18 @@ export function HouseDraftEditor({
               </button>
             </>
           )}
+          <ConfirmDialog
+            open={confirmDelete}
+            title={`Delete the ${formatAcademicYear(batch.academic_year_start)} House draft?`}
+            description={`This deletes the draft and its ${drafts.length} assignment ${drafts.length === 1 ? 'row' : 'rows'}, including edits made here. It cannot be undone.`}
+            consequences={[
+              'Only the draft is removed. Published House assignments and memberships are not affected.',
+              'A draft has not been revealed, so no member’s House changes.',
+            ]}
+            confirmLabel="Delete draft"
+            onConfirm={deleteDraft}
+            onClose={() => setConfirmDelete(false)}
+          />
           {batch.status === 'locked' && (
             <button type="button" onClick={reopen} disabled={busy} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
               Reopen draft

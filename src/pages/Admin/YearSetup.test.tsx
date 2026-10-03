@@ -148,7 +148,37 @@ describe('application reset', () => {
     expect(within(apps).getByLabelText(/House Application — Fall/)).not.toBeChecked();
     expect(within(apps).getByText(/open now/)).toBeInTheDocument();
     expect(within(apps).getByText(/never opens a window and never touches a link/)).toBeInTheDocument();
-    expect(within(apps).getByRole('button', { name: /Reset 1 application window/ })).toBeDisabled();
+    expect(within(apps).getByRole('button', { name: /Reset 1 application window/ })).toBeEnabled();
+    expect(repo.resetApplications).not.toHaveBeenCalled();
+  });
+
+  it('opens a typed confirmation that lists exactly what will change, and writes nothing yet', async () => {
+    await renderWizard();
+    const apps = screen.getByRole('region', { name: 'Applications' });
+
+    await userEvent.click(within(apps).getByRole('button', { name: /Reset 1 application window/ }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('Reset application windows for 2027–28?')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Disables 1 window: the public Apply button stops showing/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Replaces the past open and due dates on 1 window with a disabled placeholder on Sep 1, 2027/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Never enables a window and never changes a link/)).toBeInTheDocument();
+    expect(within(within(dialog).getByRole('list', { name: 'Windows that will change' })).getByText('ACE Application')).toBeInTheDocument();
+    expect(repo.resetApplications).not.toHaveBeenCalled();
+  });
+
+  it('keeps Confirm disabled until the target year is typed', async () => {
+    await renderWizard();
+    const apps = screen.getByRole('region', { name: 'Applications' });
+    await userEvent.click(within(apps).getByRole('button', { name: /Reset 1 application window/ }));
+    const dialog = screen.getByRole('alertdialog');
+    const confirm = within(dialog).getByRole('button', { name: 'Reset 1 window' });
+
+    expect(confirm).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText(/Type 2027-28 to confirm/), '2026-27');
+    expect(confirm).toBeDisabled();
+    await userEvent.clear(within(dialog).getByLabelText(/Type 2027-28 to confirm/));
+    await userEvent.type(within(dialog).getByLabelText(/Type 2027-28 to confirm/), '2027-28');
+    expect(confirm).toBeEnabled();
     expect(repo.resetApplications).not.toHaveBeenCalled();
   });
 
@@ -157,13 +187,32 @@ describe('application reset', () => {
     await renderWizard();
     const apps = screen.getByRole('region', { name: 'Applications' });
 
-    await userEvent.click(within(apps).getByLabelText(/I confirm: disable/));
     await userEvent.click(within(apps).getByRole('button', { name: /Reset 1 application window/ }));
+    const dialog = screen.getByRole('alertdialog');
+    await userEvent.type(within(dialog).getByLabelText(/Type 2027-28 to confirm/), '2027-28');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reset 1 window' }));
     await settle();
 
     expect(repo.resetApplications).toHaveBeenCalledTimes(1);
     const [rows, targetYear] = repo.resetApplications.mock.calls[0];
     expect(rows.map((row) => row.id)).toEqual(['a-ace']);
     expect(targetYear).toBe(2027);
+    expect(jest.requireMock('react-hot-toast').default.success).toHaveBeenCalledWith(expect.stringContaining('Updated 1 application window'));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps the dialog open and names the windows that failed', async () => {
+    repo.resetApplications.mockResolvedValue({ updated: 0, failed: [{ key: 'ace_application', message: 'denied' }] });
+    await renderWizard();
+    const apps = screen.getByRole('region', { name: 'Applications' });
+
+    await userEvent.click(within(apps).getByRole('button', { name: /Reset 1 application window/ }));
+    const dialog = screen.getByRole('alertdialog');
+    await userEvent.type(within(dialog).getByLabelText(/Type 2027-28 to confirm/), '2027-28');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reset 1 window' }));
+    await settle();
+
+    expect(within(screen.getByRole('alertdialog')).getByRole('alert')).toHaveTextContent('1 window could not be updated (ACE Application)');
+    expect(jest.requireMock('react-hot-toast').default.error).toHaveBeenCalled();
   });
 });

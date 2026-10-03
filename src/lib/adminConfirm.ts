@@ -9,9 +9,12 @@
 //              everywhere trains people to click through, so ordinary deletes
 //              stay standard.
 
-/** Case, spacing, and surrounding whitespace never make a correct name "wrong". */
+/**
+ * Case, spacing, and surrounding whitespace never make a correct name "wrong".
+ * En/em dashes fold to a hyphen so a label like "2027–28" can be typed on any keyboard.
+ */
 export function normalizeConfirmPhrase(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().toLowerCase();
+  return value.replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 export function confirmPhraseMatches(input: string, phrase: string): boolean {

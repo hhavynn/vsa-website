@@ -17,12 +17,12 @@ describe('AdminPageHeader', () => {
   it('links parents on nested routes and marks the current page', () => {
     at('/admin/cabinet/rollover', <AdminPageHeader />);
     expect(screen.getByRole('link', { name: 'Cabinet' })).toHaveAttribute('href', '/admin/cabinet');
-    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cabinet Rollover').closest('li')).toHaveAttribute('aria-current', 'page');
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Cabinet Rollover')).toHaveAttribute('aria-current', 'page');
   });
 
   it('appends a detail crumb and renders the actions slot', () => {
     at('/admin/ace', <AdminPageHeader detail="Smith fam" actions={<button>New fam</button>} description="Families" />);
-    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Smith fam').closest('li')).toHaveAttribute('aria-current', 'page');
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByText('Smith fam')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'ACE Families' })).toHaveAttribute('href', '/admin/ace');
     expect(screen.getByRole('button', { name: 'New fam' })).toBeInTheDocument();
     expect(screen.getByText('Families')).toBeInTheDocument();

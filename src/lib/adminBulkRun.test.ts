@@ -23,7 +23,7 @@ describe('runBulk', () => {
   it('handles an empty list and supabase-style error objects', async () => {
     expect((await runBulk([], async () => undefined)).succeeded).toEqual([]);
     const r = await runBulk([1], async () => {
-      throw { message: 'permission denied', code: '42501' };
+      return Promise.reject({ message: 'permission denied', code: '42501' });
     });
     expect(r.failed[0].error).toBe('permission denied');
   });

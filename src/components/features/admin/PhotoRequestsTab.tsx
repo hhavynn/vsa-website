@@ -12,6 +12,7 @@ import { memberLookupRepository } from '../../../data/repos/memberLookup';
 import { Label } from '../../ui/Label';
 import { toUserMessage } from '../../../data/errors';
 import { MEMBER_AVATARS_QUERY_KEY } from '../../../hooks/useMemberAvatars';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', fontSize: 13,
@@ -124,6 +125,7 @@ function RequestCard({
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectNote, setShowRejectNote] = useState(false);
   const [events, setEvents] = useState<MemberPhotoRequestEvent[] | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   const badge = STATUS_BADGE[request.status];
   const isPending = request.status === 'pending';
@@ -191,8 +193,9 @@ function RequestCard({
     }
   }
 
+  // Runs from the confirm dialog. Failures are re-thrown so the dialog stays
+  // open and shows them; the toast covers the case where it is dismissed.
   async function handleRemove() {
-    if (!window.confirm('Remove this approved photo from public display? This clears the member’s avatar and deletes the published thumbnail.')) return;
     setBusy(true);
     try {
       await photoRequestsRepository.removeApprovedAvatar(request, rejectNote || 'Privacy removal');
@@ -200,7 +203,9 @@ function RequestCard({
       onChanged();
     } catch (error) {
       console.error(error);
-      toast.error(toUserMessage(error, 'Failed to remove.'));
+      const message = toUserMessage(error, 'Failed to remove.');
+      toast.error(message);
+      throw new Error(message);
     } finally {
       setBusy(false);
     }
@@ -357,7 +362,7 @@ function RequestCard({
       {isApproved && (
         <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
           <button
-            onClick={handleRemove}
+            onClick={() => setConfirmRemove(true)}
             disabled={busy}
             className="font-sans text-xs rounded border px-4 py-2 disabled:opacity-40"
             style={{ borderColor: '#dc2626', color: '#dc2626', background: 'transparent', cursor: 'pointer' }}
@@ -367,6 +372,19 @@ function RequestCard({
           <p className="font-sans text-[11px] mt-1.5" style={{ color: 'var(--color-text3)' }}>
             Clears the member’s avatar, deletes the published thumbnail, and records an audit event. Use for privacy/data-rights requests.
           </p>
+          <ConfirmDialog
+            open={confirmRemove}
+            title="Remove this photo from public display?"
+            description={<>This takes {request.submitted_name}’s approved photo off the site. It cannot be undone; the member would need to submit a new photo.</>}
+            consequences={[
+              'Clears the member’s profile avatar, so the photo disappears from public pages that show avatars.',
+              'Deletes the published thumbnail and the original uploaded file.',
+              'Marks this request Removed and records an audit event.',
+            ]}
+            confirmLabel="Remove photo"
+            onConfirm={handleRemove}
+            onClose={() => setConfirmRemove(false)}
+          />
         </div>
       )}
 

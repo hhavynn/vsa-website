@@ -52,13 +52,15 @@ export function AdminPageHeader({
                         ›
                       </li>
                     )}
-                    <li className="min-w-0 max-w-[16rem] truncate" aria-current={last ? 'page' : undefined}>
+                    <li className="min-w-0 max-w-[16rem] truncate">
                       {crumb.to && !last ? (
                         <Link to={crumb.to} className="font-semibold underline-offset-2 hover:underline hover:text-[var(--color-text)]">
                           {crumb.label}
                         </Link>
                       ) : (
-                        <span style={last ? { color: 'var(--color-text2)' } : undefined}>{crumb.label}</span>
+                        <span aria-current={last ? 'page' : undefined} style={last ? { color: 'var(--color-text2)' } : undefined}>
+                          {crumb.label}
+                        </span>
                       )}
                     </li>
                   </Fragment>

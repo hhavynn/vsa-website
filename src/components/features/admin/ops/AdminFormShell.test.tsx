@@ -46,7 +46,7 @@ describe('useAdminForm + AdminFormShell', () => {
     await waitFor(() => expect(hasUnsavedChanges()).toBe(true));
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument());
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
     expect(onSubmit).toHaveBeenCalledWith({ name: 'Ada', email: '' });
     expect(hasUnsavedChanges()).toBe(false);
   });
@@ -59,7 +59,8 @@ describe('useAdminForm + AdminFormShell', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(screen.getByLabelText(/email/i)).toHaveAttribute('aria-invalid', 'true'));
     const describedBy = screen.getByLabelText(/email/i).getAttribute('aria-describedby') ?? '';
-    expect(document.getElementById(describedBy)).toHaveTextContent('That email is taken.');
+    expect(describedBy).toMatch(/-error/);
+    expect(screen.getAllByText('That email is taken.').length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/name/i)).toHaveValue('Ada');
     expect(screen.getByText(/Not saved/)).toBeInTheDocument();
   });

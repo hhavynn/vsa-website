@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { planBulk } from '../../../../lib/adminBulk';
 import { BulkRunDialog } from './BulkRunDialog';
@@ -61,7 +61,7 @@ describe('BulkRunDialog', () => {
     expect(screen.getByText('Event 2 — permission denied')).toBeInTheDocument();
     failEvent2 = false;
     await userEvent.click(screen.getByRole('button', { name: 'Retry 1 failed' }));
-    await waitFor(() => expect(screen.getByText('Unpublished 5 events.')).toBeInTheDocument());
+    expect(await screen.findByText('Unpublished 5 events.')).toBeInTheDocument();
     expect(run).toHaveBeenCalledTimes(6);
   });
 
