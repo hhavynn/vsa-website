@@ -21,7 +21,6 @@ export interface Event {
   check_in_form_url?: string;
   image_url?: string | null;
   thumbnail_url?: string | null;
-  is_code_expired: boolean;
   is_published: boolean;
   academic_term_id?: string | null;
   interest_counts?: EventInterestCounts | null;
@@ -343,16 +342,6 @@ export interface HouseMembership {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface EventAttendance {
-  id: string;
-  event_id: string;
-  user_id: string;
-  points_earned: number;
-  check_in_type: 'code' | 'manual';
-  checked_in_by?: string;
-  checked_in_at: string;
 }
 
 export interface User {

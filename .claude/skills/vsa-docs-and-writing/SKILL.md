@@ -74,7 +74,7 @@ Legend for Status: **living** = keep current; **snapshot** = dated point-in-time
 | `gemini-cli-workflow.md` | Gemini CLI lifecycle (Research → Strategy → Execution) | Gemini workflow changes | living |
 | `graphify-workflow.md` | Graphify install, usage, hook, commit rules | Graphify tooling/conventions change | living |
 | `house-image-migration.md` | House profile/parent image migration to `/public/images/houses/` | House image pipeline changes | living |
-| `leaderboard-system.md` | Yearly leaderboard data model; documents the DUAL points systems | Leaderboard/points schema or view changes | living |
+| `leaderboard-system.md` | Single active member-based points/attendance model; links to the account/check-in retirement decision | Leaderboard/points schema or view changes | living |
 | `leaderboard-test-checklist.md` | Manual QA checklist for leaderboard surfaces | Leaderboard UI changes | living |
 | `member-photo-requests.md` | Member photo request/approval system + egress design | Photo request flow changes | living |
 | `privacy-data-rights-architecture.md` | Data-rights architecture + admin runbook (reviewed 2026-06-19) | Data-rights schema/flows change | living (re-date on update) |

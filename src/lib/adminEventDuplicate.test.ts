@@ -15,7 +15,6 @@ const source: Event = {
   check_in_form_url: 'https://forms.example/secret',
   image_url: 'https://img.example/a.png',
   thumbnail_url: 'https://img.example/a-t.png',
-  is_code_expired: true,
   is_published: true,
   academic_term_id: 'term-fall-26',
   interest_counts: { event_id: 'evt-1', interested_count: 40, going_count: 20, updated_at: '' },
@@ -36,7 +35,7 @@ describe('buildDuplicateEventDraft', () => {
 
   it('never copies attendance-adjacent or identifying data', () => {
     const copied = Object.keys(draft);
-    for (const field of ['id', 'image_url', 'thumbnail_url', 'is_code_expired', 'interest_counts']) {
+    for (const field of ['id', 'image_url', 'thumbnail_url', 'interest_counts']) {
       expect(copied).not.toContain(field);
     }
     expect(draft.check_in_form_url).toBe('');

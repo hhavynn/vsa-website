@@ -19,7 +19,6 @@ import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader
 import { BulkActionBar, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops/BulkActionBar';
 import { BulkRunDialog } from '../../components/features/admin/ops/BulkRunDialog';
 import { FilterChips } from '../../components/features/admin/ops/FilterChips';
-import { ManualCheckIn } from '../../components/features/admin/ManualCheckIn';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
 import { ExternalEventDetailsFields } from '../../components/features/admin/ExternalEventDetailsFields';
 import { EventPreviewDialog } from '../../components/features/admin/preview/EventPreviewDialog';
@@ -195,11 +194,9 @@ export default function AdminEvents() {
   const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('create');
-  const [copiedCode, setCopiedCode] = useState(false);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
-  const [editCheckInCode, setEditCheckInCode] = useState('');
   const [previewTarget, setPreviewTarget] = useState<'create' | 'edit' | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedEventBaseline, setSelectedEventBaseline] = useState<Event | null>(null);
@@ -486,7 +483,6 @@ export default function AdminEvents() {
     try {
       setUploading(true);
       const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
-      const checkInCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Combine date + start_time into a full local datetime for the date column.
       const startTime = newEvent.start_time || '00:00';
       if (!isExistingLosAngelesWallClock(newEvent.date, startTime)) {
@@ -501,7 +497,6 @@ export default function AdminEvents() {
         event_type: newEvent.event_type, check_in_form_url: newEvent.check_in_form_url || '',
         points: newEvent.points, image_url: uploadedImage?.imageUrl ?? null,
         thumbnail_url: uploadedImage?.thumbnailUrl ?? null,
-        is_code_expired: false,
         is_published: newEvent.is_published ?? true,
         academic_term_id: academicTermId,
         start_time: newEvent.start_time || null,
@@ -509,7 +504,6 @@ export default function AdminEvents() {
         end_date: newEvent.end_date || null,
       }]).select('id').single();
       if (error) throw error;
-      await eventsRepository.setCheckInCode(createdEvent.id, checkInCode);
       let listingFailed = false;
       if (isExternalEventType(newEvent.event_type)) {
         try {
@@ -680,7 +674,6 @@ export default function AdminEvents() {
         date: isoDate, location: selectedEvent.location,
         event_type: selectedEvent.event_type, points: selectedEvent.points,
         ...(imageChanged ? { image_url: imageUrl || null, thumbnail_url: imageUrl ? thumbnailUrl : null } : {}),
-        is_code_expired: selectedEvent.is_code_expired,
         is_published: selectedEvent.is_published ?? true,
         check_in_form_url: selectedEvent.check_in_form_url || '',
         academic_term_id: academicTermId,
@@ -689,9 +682,6 @@ export default function AdminEvents() {
         end_date: selectedEvent.end_date || null,
       }).eq('id', selectedEvent.id);
       if (error) throw error;
-      if (editCheckInCode) {
-        await eventsRepository.setCheckInCode(selectedEvent.id, editCheckInCode);
-      }
       const imageCleaned = await removeEventImage(imageUrlToRemove);
       const thumbnailCleaned = await removeEventImage(thumbnailUrlToRemove);
       if (!imageCleaned || !thumbnailCleaned) {
@@ -718,20 +708,11 @@ export default function AdminEvents() {
       setEditImageFile(null); setEditImagePreview(null); setSelectedEvent(null);
       setSelectedExternal(EMPTY_EXTERNAL_DETAILS); setSelectedExternalBaseline(EMPTY_EXTERNAL_DETAILS);
       setSelectedEventOriginalImageUrl(null); setSelectedEventOriginalThumbnailUrl(null); setSelectedEventOriginalPoints(0);
-      setEditCheckInCode('');
       refreshTerms();
       refreshEvents();
     } catch (err) {
       console.error(err); toast.error('Failed to update event');
     } finally { setEditUploading(false); }
-  };
-
-  const handleCopyCode = async () => {
-    if (!editCheckInCode) return;
-    await navigator.clipboard.writeText(editCheckInCode);
-    setCopiedCode(true);
-    toast.success('Copied');
-    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   function openEditor(event: Event) {
@@ -751,16 +732,12 @@ export default function AdminEvents() {
     setSelectedEventOriginalPoints(event.points ?? 0);
     setEditImageFile(null);
     setEditImagePreview(null);
-    setEditCheckInCode('');
-    eventsRepository.getCheckInCode(event.id)
-      .then((code) => setEditCheckInCode(code ?? ''))
-      .catch(() => setEditCheckInCode(''));
   }
 
   /**
    * Duplicate Event: copies the shape of an event (name, description, type,
    * points, times, venue), never its history. The copy is a Draft, needs a new
-   * date, and carries no attendance, check-in code, image, or RSVP counts.
+   * date, and carries no attendance, image, or RSVP counts.
    */
   function duplicateEvent(event: Event) {
     if (createDirty && !window.confirm('The Create form has unsaved changes. Replace them with the duplicate?')) return;
@@ -983,7 +960,7 @@ export default function AdminEvents() {
                 </div>
                 {duplicatedFrom && (
                   <p role="note" className="text-xs" style={{ color: 'var(--color-text2)' }}>
-                    Duplicated from “{duplicatedFrom}” as a Draft. Choose a new date, then create it. Attendance, check-in code, image, and RSVPs are not copied.
+                    Duplicated from “{duplicatedFrom}” as a Draft. Choose a new date, then create it. Attendance, image, and RSVPs are not copied.
                   </p>
                 )}
                 <p role="status" aria-live="polite" className="font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
@@ -1100,7 +1077,7 @@ export default function AdminEvents() {
             <div className="scrapbook-paper my-8 w-full max-w-5xl" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
               <div className="flex items-center justify-between border-b px-6 py-5" style={{ borderColor: 'var(--color-border)' }}>
                 <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Edit Event</h2>
-                <button onClick={() => { setSelectedEvent(null); setEditCheckInCode(''); }} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
+                <button onClick={() => { setSelectedEvent(null); }} className="text-2xl leading-none transition-colors hover:text-[var(--color-text)]" style={{ color: 'var(--color-text3)' }}>&times;</button>
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-5 p-6 sm:p-8">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-6">
@@ -1190,19 +1167,6 @@ export default function AdminEvents() {
                 </label>
                 <div><label className={labelCls}>Description *</label><textarea value={selectedEvent.description ?? ''} onChange={e => setSelectedEvent({...selectedEvent, description: e.target.value})} className={inputCls} rows={4} required /></div>
                 <div>
-                  <label className={labelCls}>Check-in Code</label>
-                  <div className="mt-1 flex gap-2">
-                    <input type="text" value={editCheckInCode} onChange={e => setEditCheckInCode(e.target.value)} className={`${inputCls} mt-0 font-mono tracking-widest`} />
-                    <button type="button" onClick={handleCopyCode} className={`shrink-0 rounded border px-4 py-2 text-sm font-semibold transition-colors ${copiedCode ? 'border-emerald-600 bg-emerald-600/20 text-emerald-600 dark:text-emerald-400' : 'bg-[var(--color-surface2)] hover:bg-[var(--color-surface)]'}`} style={{ borderColor: copiedCode ? '' : 'var(--color-border)', color: copiedCode ? '' : 'var(--color-text)' }}>
-                      {copiedCode ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm" style={{ color: 'var(--color-text2)' }}>
-                    <input type="checkbox" checked={selectedEvent.is_code_expired} onChange={e => setSelectedEvent({...selectedEvent, is_code_expired: e.target.checked})} className="rounded border-[var(--color-border)] bg-[var(--color-surface2)] text-[var(--brand)] focus:ring-[var(--brand)]" />
-                    Mark code as expired
-                  </label>
-                </div>
-                <div>
                   <label className={labelCls}>Image</label>
                   <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
                     Images are compressed before upload to keep the site fast. New uploads also create a smaller public thumbnail.
@@ -1225,7 +1189,7 @@ export default function AdminEvents() {
                   <button type="submit" disabled={editUploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
                     {editUploading ? 'Saving...' : 'Save Changes'}
                   </button>
-                  <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedEvent(null); setEditCheckInCode(''); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                  <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedEvent(null); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                     Cancel
                   </button>
                   <PreviewAsPublicButton
@@ -1239,9 +1203,6 @@ export default function AdminEvents() {
                 </div>
               </form>
               <EventRecapEditor event={selectedEvent} />
-              <div className="border-t p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                <ManualCheckIn eventId={selectedEvent.id} onSuccess={refreshEvents} />
-              </div>
             </div>
           </div>
         )}
@@ -1270,8 +1231,8 @@ export default function AdminEvents() {
           consequences={
             eventToDelete
               ? [
-                  'Deletes every check-in and attendance record for this event, and the points members earned from it.',
-                  'Deletes its check-in code, recap notes, and Interested / Going counts.',
+                  'Deletes every attendance record for this event, and the points members earned from it.',
+                  'Deletes its recap notes and Interested / Going counts.',
                   ...(listingByEventId.has(eventToDelete.id) ? ['Deletes its linked UVSA Network listing.'] : []),
                   'Gallery albums linked to it are kept but lose the link.',
                   ...storageCleanupConsequence(eventToDelete),

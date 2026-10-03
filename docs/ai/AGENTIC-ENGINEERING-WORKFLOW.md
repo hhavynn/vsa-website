@@ -74,7 +74,7 @@ Anything touching: **auth, RLS, grants, migrations, points calculation, attendan
 
 The protected-domain list and the annotated never-do list live in root `AGENTS.md` and `vsa-change-control`. Those are authoritative; this section only tells you how hard to work.
 
-**Points work is high-risk twice over:** there are two unreconciled points systems (leaderboard: `member_event_attendance`; check-in: `event_attendance` + `user_points`). Before touching either, read the table at the top of `docs/leaderboard-system.md`.
+**Points work is high-risk:** the active model is `members` / `member_event_attendance` and their views. Account/code check-in is retired; legacy tables remain private archives, not a second active points source. Before touching points or retained archives, read `docs/leaderboard-system.md` and `docs/member-account-retirement.md`.
 
 ---
 

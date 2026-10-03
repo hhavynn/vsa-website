@@ -12,7 +12,7 @@ The website for the Vietnamese Student Association at UCSD — built with Create
 - **Privacy / data rights** — public feedback form, privacy page, and an admin data-rights anonymization workflow
 - **Analytics** — consent-gated GA4 in the app, plus admin reporting via an `analytics-proxy` Edge Function
 
-Member account self-service (`/profile`) is intentionally parked for this release; `/points` remains a public, no-login lookup.
+Member accounts and code-based check-in are formally retired. `/points` remains a public, no-login lookup; Supabase Auth is used for existing/invited approved admins only, with public signup disabled. See [the retirement decision](docs/member-account-retirement.md).
 
 ## Tech Stack
 
@@ -99,7 +99,7 @@ vsa-website/
 │   │   ├── common/        # Shared utilities (ErrorBoundary, Modal, PageLoader, ...)
 │   │   └── ui/             # Base UI primitives (Button, Input, Card, Badge, Alert)
 │   ├── pages/              # Route-level pages, incl. pages/Admin/*
-│   ├── routes/             # Route table, ProtectedRoute, AdminRoute
+│   ├── routes/             # Route table and AdminRoute
 │   ├── data/
 │   │   ├── repos/          # Repository classes wrapping Supabase queries
 │   │   └── errors.ts       # Custom error classes + withErrorHandling()

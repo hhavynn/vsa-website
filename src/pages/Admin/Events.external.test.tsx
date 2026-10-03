@@ -26,7 +26,6 @@ const baseEvent = {
   check_in_form_url: '',
   image_url: null,
   thumbnail_url: null,
-  is_code_expired: false,
   is_published: true,
   academic_term_id: 'term-1',
   interest_counts: null,
@@ -69,11 +68,6 @@ jest.mock('../../hooks/useUVSASchools', () => ({
   useAdminUVSASchools: () => ({ schools: mockSchools, loading: false, error: null, refreshSchools: jest.fn() }),
 }));
 jest.mock('../../components/features/admin/EventRecapEditor', () => ({ EventRecapEditor: () => null }));
-jest.mock('../../components/features/admin/ManualCheckIn', () => ({ ManualCheckIn: () => null }));
-jest.mock('../../data/repos/events', () => ({
-  // Plain functions: CRA's resetMocks would wipe jest.fn() implementations.
-  eventsRepository: { getCheckInCode: () => Promise.resolve(''), setCheckInCode: () => Promise.resolve() },
-}));
 jest.mock('../../data/repos/externalEvents', () => ({
   externalEventsRepository: { applySyncPlan: (...args: unknown[]) => mockApplySyncPlan(...args) },
 }));
@@ -232,6 +226,19 @@ describe('Create Event', () => {
     expect(mockApplySyncPlan).not.toHaveBeenCalled();
   });
 
+  it('creates an event without code fields and keeps the attendance form URL', async () => {
+    renderEvents();
+    await fillCreateForm(userEvent, 'gbm');
+    await userEvent.type(screen.getByPlaceholderText('https://forms.google.com/...'), 'https://forms.example/attendance');
+    await submitForm();
+
+    await waitFor(() => expect(mockInsert).toHaveBeenCalledTimes(1));
+    const payload = mockInsert.mock.calls[0][0][0];
+    expect(payload.check_in_form_url).toBe('https://forms.example/attendance');
+    expect(payload).not.toHaveProperty('is_code_expired');
+    expect(payload).not.toHaveProperty('check_in_code');
+  });
+
   it('previews organizer, logo and links without creating or updating any rows', async () => {
     const user = userEvent;
     renderEvents();
@@ -270,6 +277,21 @@ describe('Manage Events', () => {
     const editButtons = await screen.findAllByRole('button', { name: 'Edit' });
     fireEvent.click(editButtons[index]);
   }
+
+  it('edits points and the form URL without code or account check-in controls', async () => {
+    renderEvents();
+    await openManage(userEvent);
+    await openEditor(userEvent, 2);
+    expect(screen.queryByText('Check-in Code')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mark code as expired')).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/Event Type/), 'mixer');
+    await submitForm();
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][0]).toMatchObject({ points: 4, check_in_form_url: '' });
+    expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('is_code_expired');
+    expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('check_in_code');
+  });
 
   it('labels external events with their host, and flags a missing host', async () => {
     mockListings.push(

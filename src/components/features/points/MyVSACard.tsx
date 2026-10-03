@@ -1,5 +1,5 @@
-// Points system: LEADERBOARD (member_event_attendance + views) — not the check-in
-// system. See the two-systems table at the top of docs/leaderboard-system.md.
+// Account-free attendance and points use the member ledger.
+// Architecture and import rules: docs/leaderboard-system.md.
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';

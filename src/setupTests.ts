@@ -64,7 +64,6 @@ jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
     auth: {
       signIn: jest.fn(),
-      signUp: jest.fn(),
       signOut: jest.fn(),
       onAuthStateChange: jest.fn(),
       getUser: jest.fn(),

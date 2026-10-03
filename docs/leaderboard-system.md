@@ -2,31 +2,31 @@
 
 This document describes the yearly leaderboard system implemented in May 2026.
 
-## ⚠️ Read first: there are two points systems, and they are not reconciled
+## One active points and attendance model
 
-This is the canonical explanation (#310). `AGENTS.md`, the agentic workflow doc and the
-`vsa-architecture-contract` skill point here.
+Owner decision dated 2026-10-02: member accounts and code-based check-in are
+formally retired (#233). This is not a temporary pause or a points-system merge.
+See [the retirement decision and rollout](./member-account-retirement.md).
 
-| | **Leaderboard system** (public standings) | **Check-in system** (signed-in accounts) |
-|---|---|---|
-| **Stores points in** | `member_event_attendance` (one row per member per event, `points_earned`), totals cached on `members` | `event_attendance` (one row per user per event) and `user_points` (one total per auth user) |
-| **Keyed by** | `members.id`: a roster person, whether or not they have an account | `auth.users.id`: a signed-in account |
-| **Written by** | Admin attendance import (`src/pages/Admin/Import.tsx`) and Admin Members attendance editor (`src/data/repos/adminMembers.ts`), `smart_merge_members`; triggers `sync_attendance_points_on_event_update` (on `events`) and `sync_member_points` (on `member_event_attendance`, recalculates `members` totals via `recalculate_member_points`). Admin Members creates/edits member profiles and attendance; Admin Points only reads | The `check_in_to_event` RPC for members (server-authoritative since #145); **admin manual check-in** (`ManualCheckIn` on `/admin/events` → `useEventAttendance.manuallyCheckIn`, a direct `event_attendance` insert that RLS allows for admins only, restored in #422); and `handle_new_user_points`, which creates the `user_points` row at sign-up. Non-admin client writes are blocked by RLS (#422) |
-| **Read by** | `/leaderboard`, `/points` (Find My Points), House standings, member profiles and event history, via `member_yearly_points`, `house_member_yearly_points`, `house_*_points` and `member_event_history` (`src/data/repos/leaderboard.ts`) | The signed-in header points badge and dashboard (`src/data/repos/points.ts`, `usePoints`, `PointsContext`, `MemberDashboard`) |
-| **Authoritative for** | **Every public number**: leaderboard, House standings, Find My Points, Wrapped | Only a signed-in account's own check-in history. Member accounts are currently parked (#233) |
+| Concern | Active model |
+|---|---|
+| Identity | `members.id`, independent of Supabase Auth |
+| Ledger | `member_event_attendance`, one member/event pair with `points_earned` |
+| Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members` |
+| Recalculation | `sync_member_points` / `recalculate_member_points`; event edits use `sync_attendance_points_on_event_update` |
+| Readers | `/points`, `/leaderboard`, House standings, member cards/history, Wrapped, Admin Points |
+| Public projections | `member_yearly_points`, `house_member_yearly_points`, House aggregate views, `member_event_history`, `public_members` |
+| Authentication | Existing/invited approved admins only; students use public lookup without accounts |
 
-**Easy to confuse:** `user_points` (check-in total per account) and `member_yearly_points`
-(leaderboard view per roster member per year) are different systems despite the similar names.
+The legacy `event_attendance`, `user_points`, and code-storage tables remain
+private archives for retention and data-rights dependencies. The retirement
+migration removes client access and legacy execution grants and unregisters
+code-generation/account-points triggers. No current point calculation reads them.
+Do not write or transfer archive totals into the member ledger.
 
-**Never** fix a leaderboard number by writing to `event_attendance` or `user_points`; the leaderboard
-never reads them, so the numbers will just disagree permanently. Fix the attendance record in
-`member_event_attendance` (via the import or admin tools) instead.
-
-**Status: OPEN.** Consolidation is future work that needs its own design and owner sign-off. Neither
-system is "the wrong one to be deleted": the leaderboard system is the public source of truth, and
-the check-in system is the only server-authoritative self-service path. A guard test
-(`src/data/repos/pointsSystemsBoundary.test.ts`) fails if either repository starts reading the other
-system's tables.
+`pointsModelBoundary.test.ts` exercises every leaderboard repository method and
+guards against archive/RPC dependencies. `memberAccountRetirement.test.ts` guards
+the application against restoring obsolete APIs, components, hooks, or providers.
 
 ## Overview
 
@@ -73,7 +73,6 @@ The Member History modal includes:
 
 ## Future Considerations
 
-- **System Consolidation (OPEN)**: see "two points systems" at the top of this document. Consolidating the check-in system (`event_attendance`, `user_points`) into the `members` system depends on verified `user_id` coverage for all members, and needs its own design and owner sign-off.
 - **Auto-Term Assignment**: New events should automatically be assigned to the current active term to ensure data consistency.
 
 ### Live verification limitation

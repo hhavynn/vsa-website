@@ -24,7 +24,6 @@ const mockEvent = {
   check_in_form_url: 'https://forms.example/secret',
   image_url: 'https://img.example/a.png',
   thumbnail_url: null,
-  is_code_expired: false,
   is_published: true,
   academic_term_id: 'term-1',
   interest_counts: { event_id: 'evt-1', interested_count: 4, going_count: 2, updated_at: '' },
@@ -45,9 +44,6 @@ jest.mock('../../hooks/useUVSASchools', () => ({
   useAdminUVSASchools: () => ({ schools: [], loading: false, error: null, refreshSchools: jest.fn() }),
 }));
 jest.mock('../../hooks/useEventRecap', () => ({ useEventRecapEventIds: () => ({ recapEventIds: new Set<string>() }) }));
-jest.mock('../../data/repos/events', () => ({
-  eventsRepository: { getCheckInCode: jest.fn().mockResolvedValue('ABC123'), setCheckInCode: jest.fn() },
-}));
 jest.mock('../../data/repos/academicTerms', () => ({ academicTermsRepository: {} }));
 
 function renderEvents() {

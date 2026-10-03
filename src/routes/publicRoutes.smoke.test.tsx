@@ -73,9 +73,6 @@ const PUBLIC_ROUTES = [
   '/points',
   '/feedback',
   '/privacy',
-  // Member accounts are intentionally parked for this release, but the route
-  // is public and reachable, so it still has to render.
-  '/profile',
   '/admin/login',
   // Redirects to /admin/login; included so the redirect itself is covered.
   '/signin',
@@ -108,6 +105,16 @@ function renderRoute(path: string) {
     </QueryClientProvider>
   );
 }
+
+describe('retired member account routes', () => {
+  beforeEach(() => supabaseMock.reset());
+
+  it.each(['/profile', '/signup', '/register', '/sign-up'])('treats retired member URL %s as a missing page', async (path) => {
+    renderRoute(path);
+    expect(await screen.findByText('Page not found')).toBeInTheDocument();
+    expect(screen.queryByText('Not currently enabled')).not.toBeInTheDocument();
+  });
+});
 
 describe('public routes render without crashing (#294)', () => {
   let consoleError: jest.SpyInstance;
