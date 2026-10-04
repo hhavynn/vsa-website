@@ -14,6 +14,7 @@ import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
+import { Skeleton } from '../../ui/Skeleton';
 import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
 import { formatRank, isWithinTop } from '../../../utils/leaderboardRanking';
 
@@ -208,8 +209,8 @@ function RecentActivity({ memberId }: { memberId: string }) {
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <div className="h-10 w-full animate-pulse rounded-lg bg-[var(--color-surface2)]" />
-        <div className="h-10 w-full animate-pulse rounded-lg bg-[var(--color-surface2)]" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
       </div>
     );
   }

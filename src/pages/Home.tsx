@@ -150,7 +150,7 @@ function UpcomingEventCard({ event }: { event: PublicEventPreview }) {
         <div className="mt-auto flex w-full flex-wrap items-center justify-between gap-3 border-t border-border-strong pt-4">
           <Link
             to="/events"
-            aria-label={`View details for ${event.name}`}
+            aria-label={`Event details for ${event.name}`}
             className="inline-flex min-h-[44px] items-center gap-2 font-sans text-sm font-semibold text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-brand-400"
           >
             Event details <span aria-hidden>→</span>

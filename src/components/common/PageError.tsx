@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface PageErrorProps {
   error?: Error;
@@ -16,6 +16,7 @@ export function PageError({
   message = "We encountered an unexpected error. Please try again.",
   showRetry = true
 }: PageErrorProps) {
+  const shouldReduceMotion = useReducedMotion();
   const handleRetry = () => {
     if (resetError) {
       resetError();
@@ -26,7 +27,7 @@ export function PageError({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="min-h-[400px] flex items-center justify-center p-8"
     >

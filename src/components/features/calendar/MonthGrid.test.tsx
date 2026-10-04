@@ -191,6 +191,13 @@ describe('MonthAgenda', () => {
     );
   }
 
+  it('spells the category out in text so the coloured edge is never the only cue', () => {
+    renderAgenda(null);
+    const meta = screen.getAllByText(/General Events · /);
+    expect(meta.length).toBeGreaterThanOrEqual(2);
+    expect(meta[0]).toHaveTextContent('General Events · 6 PM · Price Center · +1 pts');
+  });
+
   it('lists every event in the month by day', () => {
     renderAgenda(null);
     expect(screen.getByRole('heading', { name: '2 things in October' })).toBeInTheDocument();

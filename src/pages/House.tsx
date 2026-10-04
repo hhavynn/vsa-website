@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { readableInk } from '../lib/readableInk';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
@@ -194,7 +195,7 @@ function RecentActivityPulse({
   return (
     <HousePulseCard
       title="Recent activity"
-      footer={<Link to="/leaderboard?view=houses" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">Full leaderboard →</Link>}
+      footer={<Link to="/leaderboard?view=houses" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">Full leaderboard →</Link>}
     >
       {loading ? (
         <PulseLoading />
@@ -397,7 +398,7 @@ function HouseAnchorNav() {
             <a
               key={item.href}
               href={item.href}
-              className="shrink-0 rounded-full px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-[var(--color-surface2)]"
+              className="inline-flex touch:min-h-11 items-center shrink-0 rounded-full px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider transition-colors hover:bg-[var(--color-surface2)]"
               style={{ color: 'var(--color-text2)' }}
             >
               {item.label}
@@ -457,7 +458,7 @@ function HouseEventPreviewCard({ event }: { event: HouseEvent }) {
             House Event
           </span>
           {event.houses && event.houses.length > 0 && (
-            <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
+            <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider" style={{ background: color, color: readableInk(color) }}>
               {housesLabel}
             </span>
           )}
@@ -891,8 +892,8 @@ export function House() {
                         {/* Rank badge overlay */}
                         {rank !== null && !isArchive && (
                           <div
-                            className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black text-white shadow-md"
-                            style={{ background: color }}
+                            className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black shadow-md"
+                            style={{ background: color, color: readableInk(color) }}
                           >
                             #{rank}
                           </div>
@@ -1041,19 +1042,19 @@ export function House() {
                   </span>
                   <Link
                     to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"}
-                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
                   >
                     Full Leaderboard →
                   </Link>
                   <Link
                     to="/leaderboard?view=houses"
-                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
                   >
                     Full member rankings →
                   </Link>
                   <Link
                     to={`/points#${POINTS_HELP_ANCHOR}`}
-                    className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
+                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
                   >
                     How points work →
                   </Link>
@@ -1233,7 +1234,7 @@ export function House() {
             <div className="program-section-inner">
               <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
                 <div className="program-eyebrow mb-0">Upcoming House Events</div>
-                <Link to="/events" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+                <Link to="/events" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
                   See all events →
                 </Link>
               </div>

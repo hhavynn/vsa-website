@@ -18,7 +18,7 @@ function ThemeToggleInline({ isMobile = false }: { isMobile?: boolean }) {
     <button
       onClick={toggleTheme}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-      className={`${isMobile ? 'h-10 w-full justify-start gap-2 px-3' : 'h-9 w-9 justify-center'} flex items-center rounded-full border border-[var(--border2)] bg-[var(--surface2)] text-[var(--text2)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]`}
+      className={`${isMobile ? 'h-10 w-full justify-start gap-2 px-3' : 'h-9 w-9 justify-center'} flex touch:min-h-11 touch:min-w-11 items-center rounded-full border border-[var(--border2)] bg-[var(--surface2)] text-[var(--text2)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]`}
     >
       {isDark ? (
         <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

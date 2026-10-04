@@ -39,6 +39,7 @@ import type { CalendarHouseTag } from '../utils/calendar';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const QUERY_OPTIONS = { staleTime: 5 * 60 * 1000, retry: 1 } as const;
 
@@ -69,9 +70,9 @@ function SummerEmptyCard({ message }: { message: ReturnType<typeof getSummerBrea
 function LoadingBoard() {
   return (
     <div className="space-y-4" aria-hidden>
-      <div className="scrapbook-paper h-28 animate-pulse p-4" />
-      <div className="scrapbook-paper h-72 animate-pulse p-4" />
-      <div className="scrapbook-paper h-24 animate-pulse p-4" />
+      <Skeleton className="h-28 w-full rounded-lg" />
+      <Skeleton className="h-72 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
     </div>
   );
 }

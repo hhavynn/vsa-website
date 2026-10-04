@@ -4,6 +4,7 @@ import { formatDateOnly } from '../../../lib/dateOnly';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { getItemColor } from './calendarTheme';
+import { readableInk } from '../../../lib/readableInk';
 
 const ROTATIONS = ['scrapbook-rotate-sm-left', '', 'scrapbook-rotate-sm-right'];
 
@@ -62,8 +63,8 @@ export function CalendarItemCard({ item, index, onSelect }: Props) {
           {item.houses.map((house) => (
             <span
               key={house.name}
-              className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
-              style={{ background: house.color }}
+              className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+              style={{ background: house.color, color: readableInk(house.color) }}
             >
               {house.name}
             </span>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { FALLBACK_ASK_VSA } from "../../../config/publicFallbackContent";
@@ -155,4 +155,18 @@ it("does not send error or rate-limit messages back as approved conversation his
     { role: "user", content: "What is ACE?" },
     { role: "user", content: "What is a House?" },
   ]);
+});
+
+it("labels who is speaking in text, not only by bubble colour and side", async () => {
+  backend(() => response("VSA is open to all students."));
+  await openAssistant();
+  await ask("What is VSA?");
+
+  // eslint-disable-next-line testing-library/no-node-access -- locating the message group around a bubble
+  const yourTurn = screen.getByText("What is VSA?").closest(".max-w-\\[88\\%\\]") as HTMLElement;
+  expect(within(yourTurn).getByText("You")).toBeInTheDocument();
+  const answer = screen.getByText("VSA is open to all students.");
+  // eslint-disable-next-line testing-library/no-node-access -- locating the message group around a bubble
+  const answerTurn = answer.closest(".max-w-\\[88\\%\\]") as HTMLElement;
+  expect(within(answerTurn).getByText("Ask VSA")).toBeInTheDocument();
 });

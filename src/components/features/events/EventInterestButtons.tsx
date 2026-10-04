@@ -99,7 +99,7 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
           onClick={() => handleSignal('interested')}
           disabled={loading}
           aria-pressed={userSignal === 'interested'}
-          className={`flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
+          className={`chip-check flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
             userSignal === 'interested'
               ? 'bg-brand-600 text-white shadow-sm'
               : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]'
@@ -114,7 +114,7 @@ export function EventInterestButtons({ eventId, initialCounts, compact = false }
           onClick={() => handleSignal('going')}
           disabled={loading}
           aria-pressed={userSignal === 'going'}
-          className={`flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
+          className={`chip-check flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
             userSignal === 'going'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)]'

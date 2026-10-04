@@ -29,7 +29,8 @@ function countLabel(count: number): string {
 }
 
 function itemMeta(item: CalendarItem): string {
-  const parts = [item.startTime ? formatEventTime(item.startTime) : 'All day'];
+  // Category stays in text so the coloured edge is never the only cue.
+  const parts = [item.categoryLabel, item.startTime ? formatEventTime(item.startTime) : 'All day'];
   if (item.location) parts.push(item.location);
   if ((item.points ?? 0) > 0) parts.push(`+${item.points} pts`);
   return parts.join(' · ');

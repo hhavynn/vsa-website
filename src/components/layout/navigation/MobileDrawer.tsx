@@ -196,7 +196,7 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
               <Link
                 to="/"
                 onClick={onClose}
-                className="font-serif text-[16px] tracking-[-0.01em] transition-opacity hover:opacity-80"
+                className="inline-flex touch:min-h-11 items-center font-serif text-[16px] tracking-[-0.01em] transition-opacity hover:opacity-80"
                 style={{ color: 'var(--color-text)' }}
               >
                 VSA <span className="font-light italic" style={{ color: 'var(--brand)' }}>at UCSD</span>

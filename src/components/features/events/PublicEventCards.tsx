@@ -5,6 +5,7 @@ import { AddToCalendarButton } from './AddToCalendarButton';
 import { EventInterestButtons } from './EventInterestButtons';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { readableInk } from '../../../lib/readableInk';
 import { getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../../../lib/eventTime';
 import { parseDateOnly } from '../../../lib/dateOnly';
@@ -224,8 +225,8 @@ export function PastEventMemoryCard({
             )}
             {houseLabel && houseColor && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
-                style={{ background: houseColor }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+                style={{ background: houseColor, color: readableInk(houseColor) }}
                 title={`${houseLabel} had the most members attend`}
               >
                 {houseEmoji} {houseLabel} led

@@ -1299,3 +1299,8 @@
 @container ace (min-width: 1080px) {
   .ace-app .ace-ghost-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* 44x44 touch-target floor for the family tabs on phone widths / coarse pointers (#244). */
+@media (max-width: 767px), (pointer: coarse) {
+  .ace-app .ace-famtabs-tab { min-height: 44px; }
+}

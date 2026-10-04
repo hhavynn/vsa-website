@@ -117,11 +117,17 @@ describe('Leaderboard mobile layout contract', () => {
 
     const compact = document.querySelector('.md\\:hidden') as HTMLElement;
     expect(compact).not.toBeNull();
-    const rows = within(compact).getAllByRole('button');
-    expect(rows).toHaveLength(3);
-    expect(within(rows[0]).getByText('1')).toBeInTheDocument();
-    expect(within(rows[0]).getByText(`${LONG_NAME.first} ${LONG_NAME.last}`)).toBeInTheDocument();
-    expect(within(rows[0]).getByText('90')).toBeInTheDocument();
+    // The member's name is the button (its ::after stretches over the whole row),
+    // so the row is the button's card.
+    const openers = within(compact).getAllByRole('button');
+    expect(openers).toHaveLength(3);
+    const firstRow = openers[0].closest('.scrapbook-paper') as HTMLElement;
+    expect(firstRow).not.toBeNull();
+    expect(openers[0].className).toMatch(/after:absolute/);
+    expect(openers[0].className).toMatch(/after:inset-0/);
+    expect(within(firstRow).getByText('1')).toBeInTheDocument();
+    expect(within(firstRow).getByText(`${LONG_NAME.first} ${LONG_NAME.last}`)).toBeInTheDocument();
+    expect(within(firstRow).getByText('90')).toBeInTheDocument();
   });
 
   it('shows a shared T-rank for a tie and a tie caption in the list', async () => {

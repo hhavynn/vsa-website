@@ -6,8 +6,9 @@ import { useQueryClient } from 'react-query';
 import { useAuth } from '../../../hooks/useAuth';
 import { adminStatusQuery } from '../../../hooks/useAdmin';
 import { SignInSchema, type SignInFormData } from '../../../schemas';
+import { FieldError, FormAlert } from '../../ui/FieldError';
 
-const inputCls = 'mt-1 block w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
+const inputCls = 'mt-1 block w-full touch:min-h-11 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 px-3 py-2 text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500';
 const labelCls = 'block text-xs font-medium text-text-secondary uppercase tracking-widest mb-1';
 
 const ADMIN_CHECK_FAILED = 'Unable to verify admin access.';
@@ -115,7 +116,7 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
           placeholder="Enter your email"
         />
         {errors.email && (
-          <p id="sign-in-email-error" role="alert" className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+          <FieldError id="sign-in-email-error" message={errors.email.message} />
         )}
       </div>
 
@@ -131,21 +132,19 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
           placeholder="Enter your password"
         />
         {errors.password && (
-          <p id="sign-in-password-error" role="alert" className="mt-1 text-xs text-red-400">{errors.password.message}</p>
+          <FieldError id="sign-in-password-error" message={errors.password.message} />
         )}
       </div>
 
       {errors.root && (
-        <div role="alert" className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-sm">
-          {errors.root.message}
-        </div>
+        <FormAlert>{errors.root.message}</FormAlert>
       )}
 
       <button
         type="submit"
         disabled={isSubmitting}
         aria-busy={isSubmitting}
-        className="w-full flex justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
+        className="w-full flex touch:min-h-11 items-center justify-center py-2.5 px-4 rounded text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-150 disabled:opacity-50"
       >
         {isSubmitting ? 'Verifying access...' : 'Sign In'}
       </button>

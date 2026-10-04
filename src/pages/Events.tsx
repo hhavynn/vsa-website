@@ -35,6 +35,7 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
 import { FALLBACK_EVENTS, FALLBACK_LINKS } from '../config/publicFallbackContent';
+import { readableInk } from '../lib/readableInk';
 
 // Upper bound on archive pages fetched to reach a deep-linked event.
 const MAX_PAGES_FOR_EVENT_LINK = 10;
@@ -60,10 +61,14 @@ function sortTermsByDateDesc(a: AcademicTerm, b: AcademicTerm) {
   return bDate - aDate;
 }
 
+function houseFill(h: Pick<HousePageAsset, 'accent_color' | 'house'>): string {
+  return h.accent_color || HOUSE_COLORS[h.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
+}
+
 function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: HousePageAsset }) {
   const eventHouses = event.houses && event.houses.length > 0 ? event.houses : house ? [house] : [];
   const primaryHouse = eventHouses[0] || house;
-  const color = primaryHouse?.accent_color || HOUSE_COLORS[primaryHouse?.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
+  const color = primaryHouse ? houseFill(primaryHouse) : 'var(--brand)';
   const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
   const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
 
@@ -90,7 +95,7 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
           <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">House event</span>
           <div className="flex flex-wrap gap-1">
             {eventHouses.map((h) => (
-              <span key={h.id} className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: h.accent_color || HOUSE_COLORS[h.house as keyof typeof HOUSE_COLORS] || 'var(--brand)' }}>
+              <span key={h.id} className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider" style={{ background: houseFill(h), color: readableInk(houseFill(h)) }}>
                 {h.display_name || h.house}
               </span>
             ))}
@@ -502,7 +507,7 @@ export function Events() {
                   House-specific hangouts and socials are separate from all-VSA events.
                 </p>
               </div>
-              <Link to="/house-system" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+              <Link to="/house-system" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
                 See Houses
               </Link>
             </div>
@@ -593,7 +598,7 @@ export function Events() {
                     <button
                       onClick={() => fetchMorePast()}
                       disabled={fetchingMorePast}
-                      className="vsa-btn-outline group relative min-w-[200px] overflow-hidden"
+                      className="vsa-btn-ghost group relative min-w-[200px]"
                     >
                       <span className="relative z-10 flex items-center justify-center gap-2">
                         {fetchingMorePast ? (
