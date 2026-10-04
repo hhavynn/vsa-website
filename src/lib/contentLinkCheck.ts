@@ -462,6 +462,9 @@ export async function runLinkChecks(
           // The first URL was vetted by the caller; a later hop that fails the policy is not contacted.
           return { url: startUrl, status: 'skipped', httpStatus: null, reason: 'redirects_to_unchecked_host' };
         }
+        // A GET is only ever sent where a one-byte range is harmless. Once the method has fallen back to GET,
+        // a redirect onto a Supabase host must stop here: a server that ignores Range could send an original.
+        if (method === 'GET' && plan.noGet) return { url: startUrl, status: 'skipped', httpStatus: null, reason: 'redirects_to_unchecked_host' };
         await waitForHost(new URL(current).hostname.toLowerCase(), plan.storage ? options.storageDelayMs : options.externalDelayMs);
         const response = await deps.fetch(current, {
           method,

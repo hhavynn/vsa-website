@@ -412,12 +412,22 @@ export default function AdminAiKnowledge() {
       setSelectedId(saved.id);
       setForm(toFormState(saved));
       setSuccessText(selectedSnippet ? 'Knowledge snippet saved.' : 'Knowledge snippet created.');
-      void aiKnowledgeRepository.loadEntityContext([saved]).then((context) =>
-        setEntityContext((current) => ({
-          applications: context.applications ?? current.applications,
-          events: context.events === null ? current.events : Array.from(new Map([...(current.events ?? []), ...context.events].map((event) => [event.id, event])).values()),
-        })),
-      );
+      // Merge what this snippet points at into the context already loaded for every other snippet.
+      // loadEntityContext only reads what the one snippet links to (an unlinked snippet yields empty
+      // lists), so an empty result must never replace the windows or events the others rely on.
+      const savedType = saved.linked_entity_type;
+      const savedKey = saved.linked_entity_key;
+      if (savedType) {
+        void aiKnowledgeRepository.loadEntityContext([saved]).then((context) =>
+          setEntityContext((current) => ({
+            applications: savedType === 'application' && context.applications !== null ? context.applications : current.applications,
+            events:
+              savedType !== 'event' || context.events === null
+                ? current.events
+                : [...(current.events ?? []).filter((event) => event.id !== savedKey), ...context.events],
+          })),
+        );
+      }
       void queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
     } catch (error) {
       console.error(error);

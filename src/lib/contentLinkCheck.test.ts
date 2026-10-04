@@ -274,6 +274,22 @@ describe('redirects are re-checked hop by hop', () => {
     expect(outcome).toMatchObject({ status: 'skipped', reason: 'head_unsupported' });
   });
 
+  it('never sends the GET fallback to a Supabase host reached by a redirect after HEAD was refused', async () => {
+    // The origin refuses HEAD, so the check falls back to a ranged GET; that GET then redirects into Storage.
+    const { d, calls } = redirectingDeps((url, method) => {
+      if (url.startsWith('https://origin.example.org')) return method === 'HEAD' ? { status: 405 } : redirectTo(STORAGE);
+      return { status: 200, type: 'image/webp' };
+    });
+    const [outcome] = await runLinkChecks([{ url: 'https://origin.example.org/a.webp', kind: 'image' }], d);
+
+    expect(calls.map((c) => [c.method, c.url])).toEqual([
+      ['HEAD', 'https://origin.example.org/a.webp'],
+      ['GET', 'https://origin.example.org/a.webp'],
+    ]);
+    expect(calls.some((c) => c.url === STORAGE)).toBe(false);
+    expect(outcome).toMatchObject({ status: 'skipped', reason: 'redirects_to_unchecked_host' });
+  });
+
   it('follows ordinary redirects, spacing each hop, and judges the final answer', async () => {
     const { d, calls } = redirectingDeps((url) => (url.endsWith('/old') ? redirectTo('/new', 301) : { status: 200, type: 'image/webp' }));
     const [outcome] = await runLinkChecks([{ url: 'https://cdn.example.org/old', kind: 'image' }], d);

@@ -83,4 +83,28 @@ describe('content health migration', () => {
   it('adds no policy to, and drops no policy from, ai_knowledge_base', () => {
     expect(code).not.toMatch(/(create|drop) policy[^;]*ai_knowledge_base/i);
   });
+
+  describe('follow-up 20261004010000: direct reads follow the same rule as retrieval', () => {
+    const followUp = fs.readdirSync(migrationsDir).find((name) => name.startsWith('20261004010000_ai_knowledge_public_read'));
+    const followUpCode = (followUp ? fs.readFileSync(path.join(migrationsDir, followUp), 'utf8') : '').replace(/--.*$/gm, '');
+
+    it('narrows only the public read policy: it keeps the old conditions and adds the linked-event one', () => {
+      expect(followUp).toBeDefined();
+      expect(followUpCode.match(/drop policy[^;]*;/gi)).toEqual(['drop policy if exists "Public can read active AI knowledge" on public.ai_knowledge_base;']);
+      const policy = followUpCode.match(/create policy[\s\S]*?;/i)?.[0] ?? '';
+      expect(policy).toMatch(/for select/i);
+      expect(policy).toMatch(/is_public = true\s+and is_active = true/i);
+      expect(policy).toMatch(/linked_entity_type is distinct from 'event'/i);
+      expect(policy).toMatch(/e\.is_published is true/i);
+      // It must not widen access: no role grants it, no write verb.
+      expect(policy).not.toMatch(/for (insert|update|delete|all)/i);
+      expect(followUpCode).not.toMatch(/\bgrant\b/i);
+    });
+
+    it('touches no other table, policy, function or row', () => {
+      expect(followUpCode.match(/create policy/gi)).toHaveLength(1);
+      expect(followUpCode).not.toMatch(/\b(alter|create|drop)\s+(table|function|trigger|view)\b/i);
+      expect(followUpCode).not.toMatch(/^\s*(update|delete\s+from|insert\s+into)\s/im);
+    });
+  });
 });

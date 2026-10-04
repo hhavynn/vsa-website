@@ -36,7 +36,7 @@ The table already carried most of what freshness needs: `last_verified_at` (when
 
 The reviewer is **not** stored on `ai_knowledge_base`: that table is readable by anon for active public rows. "Mark reviewed" sets `last_verified_at` and writes `ai.knowledge_reviewed` to the admin-only `admin_activity_log` (Recent Changes → Ask VSA), which carries the actor (pinned to the signed-in admin by RLS) and time. The page shows a first-name label from that entry, and only when the entry is the current review (within 5 minutes of `last_verified_at`).
 
-**A public snippet never describes an unpublished event**, enforced in the database as well as the UI: a trigger (`guard_ai_knowledge_linked_event`) refuses to save or reactivate an active public snippet linked to an event that is not published, and `match_ai_knowledge_base` skips such a snippet if its event is unpublished or deleted after it was linked. Nothing is deactivated or rewritten automatically; the snippet is flagged High in Content Health until an admin fixes it. Dates on the page are Pacific-time calendar dates, and saving other edits never re-stamps the review date.
+**A public snippet never describes an unpublished event**, enforced in the database as well as the UI: a trigger (`guard_ai_knowledge_linked_event`) refuses to save or reactivate an active public snippet linked to an event that is not published, and both `match_ai_knowledge_base` and the public read policy on `ai_knowledge_base` (narrowed by `20261004010000`) hide such a snippet if its event is unpublished or deleted after it was linked, so anon cannot read its text directly from the table either. Admins still see it, so it can be fixed. Nothing is deactivated or rewritten automatically; the snippet is flagged High in Content Health until an admin fixes it. Dates on the page are Pacific-time calendar dates, and saving other edits never re-stamps the review date.
 
 Rules live in `src/lib/aiKnowledgeFreshness.ts` and are deterministic. Only active, public rows are evaluated.
 
@@ -100,7 +100,7 @@ npm run check:content-links -- --apply    # also write the cache (needs the migr
 
 ## Schema and access
 
-Migration `20261004000000_content_health_state_and_ai_knowledge_entity_link.sql` (additive, forward-only, apply manually):
+Migrations `20261004000000_content_health_state_and_ai_knowledge_entity_link.sql` and its follow-up `20261004010000_ai_knowledge_public_read_linked_event.sql` (additive, forward-only, apply manually):
 
 - `ai_knowledge_base.linked_entity_type`, `linked_entity_key`: nullable, constrained to `application`/`event` with a key. Anon can read them on active public rows; they hold only a public identifier.
 - `content_health_state`: RLS on, `anon` has nothing, admins (`is_admin_user`) read everything. Admins can insert/update/delete **only** `acknowledgement` rows, as themselves, and can update only `kind`, `subject_key`, `fingerprint`, `acknowledged_at`, `expires_at` (so `acknowledged_by` cannot be rewritten). `link_check` and `check_run` rows come only from the weekly job (service role), so an admin cannot mark a failing link healthy.

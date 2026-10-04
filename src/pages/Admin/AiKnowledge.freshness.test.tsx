@@ -189,6 +189,28 @@ describe('Ask VSA knowledge freshness', () => {
       expect(repo.updateSnippet.mock.calls[0][1].last_verified_at).toBe('2026-09-25T19:00:00.000Z');
     });
 
+    it('keeps the application windows other snippets rely on when an unrelated snippet is saved', async () => {
+      const LINKED = snippet({ id: 'app', title: 'House fall window', linked_entity_type: 'application', linked_entity_key: 'house_fall', last_verified_at: new Date().toISOString() });
+      const PLAIN = snippet({ id: 'plain', title: 'Plain fact' });
+      repo.listAdminSnippets.mockResolvedValue([LINKED, PLAIN]);
+      // The first load finds the window; a later read for the unlinked snippet would return nothing.
+      repo.loadEntityContext.mockImplementation(async (rows: AiKnowledgeSnippet[]) => ({
+        applications: rows.some((r) => r.linked_entity_type === 'application') ? [{ application_key: 'house_fall', due_at: daysAhead(30), updated_at: daysAgo(100) }] : [],
+        events: [],
+      }));
+      repo.updateSnippet.mockImplementation(async (_id: string, payload: Record<string, unknown>) => ({ ...PLAIN, ...payload }));
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: /Plain fact/ }));
+      await waitFor(() => expect(repo.loadEntityContext).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(repo.updateSnippet).toHaveBeenCalled());
+
+      // The application-linked snippet must not turn into "no longer exists" (High).
+      expect(await screen.findByRole('button', { name: /House fall window/ })).toBeInTheDocument();
+      expect(screen.queryByText(/no longer exists/)).not.toBeInTheDocument();
+    });
+
     it('shows the repository\u2019s refusal when a snippet cannot be reactivated against a draft event', async () => {
       repo.listAdminSnippets.mockResolvedValue([snippet({ id: 'off', title: 'Draft mixer', is_active: false, linked_entity_type: 'event', linked_entity_key: 'draft-event' })]);
       repo.setSnippetActive.mockRejectedValue(new ValidationError('That event is not published, so Ask VSA cannot use it.', 'linked_entity_key'));

@@ -190,6 +190,12 @@ async function main() {
 
   const supabaseHost = new URL(url as string).hostname;
   const { rowsByTable, complete: readComplete } = await readTargetRows();
+  // An applied run that could not read every source would record a fresh "last checked" over a scan
+  // that skipped something, and exit green. Stop before contacting any host; a dry run may continue.
+  if (APPLY && !readComplete) {
+    out('ERROR: not every table could be read in full, so this run would record an incomplete scan as fresh. Nothing was contacted or written.');
+    process.exit(1);
+  }
   const usages = collectLinkUsages(rowsByTable, { supabaseHost });
   const { cache, tableExists } = await readCache();
   if (APPLY && !tableExists) {
