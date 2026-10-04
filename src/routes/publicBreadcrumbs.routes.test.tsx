@@ -72,6 +72,12 @@ describe('breadcrumbs on nested public routes', () => {
     expect(crumbs()).toEqual(['Home', 'House', 'Archive', '2021–22']);
   });
 
+  it('/house/year/<future year>: the coming-soon placeholder still gets a trail, with no archive claim', async () => {
+    renderRoute('/house/year/2090-2091');
+    await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    expect(crumbs()).toEqual(['Home', 'House', '2090–91']);
+  });
+
   it.each(['/events', '/gallery', '/vcn', '/house', '/leaderboard', '/get-involved'])('%s is a flat page and gets no breadcrumb', async (path) => {
     renderRoute(path);
     // Wait for the page itself, then assert the absence.

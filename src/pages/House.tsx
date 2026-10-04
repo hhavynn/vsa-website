@@ -663,6 +663,7 @@ export function House() {
     return (
       <>
         <PageTitle title={`House Program ${activeYearLabel}`} />
+        <PublicBreadcrumbs context={{ currentYear }} />
         <div className="program-app">
           <EditorialHero
             eyebrow="Not announced yet"
