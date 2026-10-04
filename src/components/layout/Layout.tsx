@@ -8,6 +8,7 @@ import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 import { keepHashTargetInView } from '../../utils/hashScroll';
+import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
 
 function ScrollManager() {
   const { pathname, search, hash } = useLocation();
@@ -30,7 +31,7 @@ function ScrollManager() {
   return null;
 }
 
-export function Layout() {
+function LayoutShell() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
 
@@ -63,5 +64,13 @@ export function Layout() {
       <MobileQuickDock />
       <VsaAiAssistant />
     </div>
+  );
+}
+
+export function Layout() {
+  return (
+    <PublicSearchProvider>
+      <LayoutShell />
+    </PublicSearchProvider>
   );
 }

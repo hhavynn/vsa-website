@@ -4,6 +4,7 @@ import { NavLogo } from './NavLogo';
 import { NavLinks } from './NavLinks';
 import { UserMenu } from './UserMenu';
 import { MobileDrawer } from './MobileDrawer';
+import { PublicSearchButton } from '../../features/search/PublicSearchButton';
 
 function FindMyPointsShortcut() {
   const { pathname } = useLocation();
@@ -50,7 +51,8 @@ export const NavigationShell = memo(function NavigationShell() {
             <NavLinks />
           </div>
 
-          <div className="md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
+            <PublicSearchButton compact />
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(prev => !prev)}
@@ -72,6 +74,7 @@ export const NavigationShell = memo(function NavigationShell() {
           </div>
 
           <div className="hidden items-center gap-2.5 md:flex">
+            <PublicSearchButton />
             <FindMyPointsShortcut />
             <UserMenu />
           </div>

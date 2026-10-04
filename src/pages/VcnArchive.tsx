@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { VcnArchiveSkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
@@ -149,6 +150,7 @@ export function VCNArchive() {
     return (
       <>
         <PageTitle title="VCN Archive" />
+        <PublicBreadcrumbs />
         <DegradedModeBanner sourceName="vcn-archive" />
         <div className="vsa-container py-20">
           <ContentUnavailableState
@@ -174,6 +176,7 @@ export function VCNArchive() {
   return (
     <>
       <PageTitle title="VCN Archive" />
+      <PublicBreadcrumbs />
       {/* Degraded mode already handled above with full page fallback */}
 
       <div className="program-app">
