@@ -54,6 +54,7 @@ function sources(overrides: Partial<OverviewSources> = {}): OverviewSources {
       { is_published: true, status: 'hidden' },
     ],
     feedback: [{ status: 'pending' }, { status: 'in_progress' }, { status: 'resolved' }, { status: 'resolved' }, { status: null }],
+    contentHealthState: [],
     activeTerm: { loaded: true, academicYearStart: 2026 },
     ai: [
       { is_public: true, is_active: true, last_verified_at: '2026-09-01T00:00:00Z' },
@@ -184,6 +185,8 @@ describe('buildOverviewSnapshot', () => {
         dataRightsOpen: 1,
         aiFeedbackUnresolved: 4,
         feedbackPending: 1,
+        // The fixture rows carry no ids, so Content Health has nothing it can point at.
+        contentHealth: { issues: 0, urgent: 0 },
       });
     });
 
@@ -196,6 +199,61 @@ describe('buildOverviewSnapshot', () => {
 
       expect(unavailable).toEqual(expect.arrayContaining(['photo requests', 'data rights requests', 'Ask VSA feedback']));
       expect(attention).toMatchObject({ photoRequestsPending: null, dataRightsOpen: null, aiFeedbackUnresolved: null, draftEventDates: null, feedbackPending: null });
+    });
+  });
+
+  describe('content health', () => {
+    const health = (overrides: Partial<OverviewSources> = {}) =>
+      buildOverviewSnapshot(
+        sources({
+          events: [
+            { id: 'd1', name: 'Mixer', date: '2026-09-12T02:00:00Z', is_published: false, image_url: null, location: null, check_in_form_url: null, academic_term_id: null, updated_at: '2026-08-01T00:00:00Z' },
+            { id: 'ok', name: 'GBM', date: '2026-10-20T02:00:00Z', is_published: true, image_url: '/a.jpg', location: 'PC', check_in_form_url: null, academic_term_id: 't', updated_at: '2026-09-01T00:00:00Z' },
+          ],
+          ai: [{ id: 'k1', title: 'Expired', is_public: true, is_active: true, last_verified_at: '2026-09-01T00:00:00Z', valid_until: '2026-10-01T00:00:00Z' }],
+          contentHealthState: [
+            {
+              kind: 'link_check',
+              subject_key: 'https://cdn.example.org/x.png',
+              check_status: 'failed',
+              http_status: 404,
+              failure_reason: 'http_404',
+              checked_at: '2026-10-01T08:00:00Z',
+              failing_since: '2026-10-01T08:00:00Z',
+              consecutive_failures: 1,
+              detail: [{ table: 'events', id: 'ok', field: 'image_url', label: 'GBM', path: '/admin/events', kind: 'image' }],
+            },
+          ],
+          ...overrides,
+        }),
+        NOW,
+        2026,
+      );
+
+    it('counts findings from the rows already read plus the one cache read, and hands the queue counts only', () => {
+      const { attention, contentHealth } = health();
+      // draft event past its date + expired Ask VSA fact + dead image.
+      expect(contentHealth.counts).toEqual({ total: 3, high: 1, medium: 2, low: 0 });
+      expect(attention.contentHealth).toEqual({ issues: 3, urgent: 1 });
+      // The queue never sees a name, a reason, or a URL.
+      expect(JSON.stringify(attention)).not.toMatch(/Mixer|Expired|cdn\.example/);
+    });
+
+    it('reports a clean result as zero issues', () => {
+      const { attention } = health({ events: [], ai: [], contentHealthState: [] });
+      expect(attention.contentHealth).toEqual({ issues: 0, urgent: 0 });
+    });
+
+    it('does not claim "no issues" when nothing could be checked', () => {
+      const { attention, contentHealth } = health({ events: null, gallery: null, programContent: null, ai: null });
+      expect(attention.contentHealth).toBeNull();
+      expect(contentHealth.unchecked).toEqual(['events', 'gallery', 'program content', 'Ask VSA knowledge']);
+    });
+
+    it('still checks everything else when the cache table is not there yet', () => {
+      const { attention, contentHealth } = health({ contentHealthState: null });
+      expect(attention.contentHealth).toEqual({ issues: 2, urgent: 0 });
+      expect(contentHealth.links.available).toBe(false);
     });
   });
 });

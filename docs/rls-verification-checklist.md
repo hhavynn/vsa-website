@@ -148,6 +148,9 @@ Run [member-account-retirement.sql](member-account-retirement.sql) using an auth
 ### Check 3: admin-only Auth
 Verify hosted Supabase **Allow new users to sign up** remains disabled. Existing/invited approved admins must still sign in through `/admin/login`. Local `supabase/config.toml` disables signup, but it does not update hosted Auth settings. Do not create member accounts for verification.
 
+### Check 4: content health cache table
+`content_health_state` (migration `20261004000000`) is admin-only. Before applying it to production, run [verify-content-health.sql](../scripts/verify-content-health.sql) against a local or staging database (`psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f scripts/verify-content-health.sql`; one rolled-back transaction, every line prints `PASS`). It proves anon and non-admins read and write nothing, an admin can write only their own `acknowledgement` rows (never a link-check or check-run result, and never `acknowledged_by`), the entity-link constraint on `ai_knowledge_base` accepts only the documented pairs, and a public snippet linked to an unpublished or deleted event is hidden from retrieval **and** from direct anon reads. It uses one dedicated fixture snippet and needs both `20261004000000` and `20261004010000` applied. After applying to production, `verify-rls-security.mjs` adds an anon read probe for the table (a SKIP while the table is absent, never a PASS). The weekly link-check job writes with the service role from a GitHub Actions secret only (`.github/workflows/content-link-check.yml`); the service-role key still never belongs in this verifier's environment.
+
 ---
 
 ## 9. Security Commandments (What NOT to do)

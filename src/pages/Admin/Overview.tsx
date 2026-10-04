@@ -572,7 +572,10 @@ export default function AdminOverview() {
                   Content Health Dashboard
                 </h2>
                 <p className="mt-1 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                  Quickly see what public content is missing, stale, hidden, broken, or still using legacy storage.
+                  Quickly see what public content is missing, stale, hidden, broken, or still using legacy storage.{' '}
+                  <Link to="/admin/content-health" className="font-semibold text-brand-600 underline-offset-2 hover:underline dark:text-brand-400">
+                    See what needs fixing, with links to the pages that fix it →
+                  </Link>
                 </p>
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

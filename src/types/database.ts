@@ -434,13 +434,19 @@ export type Database = {
       };
       ai_knowledge_base: {
         Row: {
+          academic_year: string | null;
+          aliases: string[];
           category: string;
+          confidence: string;
           content: string;
           created_at: string;
+          freshness: string;
           id: string;
           is_active: boolean;
           is_public: boolean;
           last_verified_at: string | null;
+          linked_entity_key: string | null;
+          linked_entity_type: string | null;
           priority: number;
           search_vector: unknown;
           source_type: string;
@@ -448,15 +454,22 @@ export type Database = {
           tags: string[];
           title: string;
           updated_at: string;
+          valid_until: string | null;
         };
         Insert: {
+          academic_year?: string | null;
+          aliases?: string[];
           category: string;
+          confidence?: string;
           content: string;
           created_at?: string;
+          freshness?: string;
           id?: string;
           is_active?: boolean;
           is_public?: boolean;
           last_verified_at?: string | null;
+          linked_entity_key?: string | null;
+          linked_entity_type?: string | null;
           priority?: number;
           search_vector?: unknown;
           source_type: string;
@@ -464,15 +477,22 @@ export type Database = {
           tags?: string[];
           title: string;
           updated_at?: string;
+          valid_until?: string | null;
         };
         Update: {
+          academic_year?: string | null;
+          aliases?: string[];
           category?: string;
+          confidence?: string;
           content?: string;
           created_at?: string;
+          freshness?: string;
           id?: string;
           is_active?: boolean;
           is_public?: boolean;
           last_verified_at?: string | null;
+          linked_entity_key?: string | null;
+          linked_entity_type?: string | null;
           priority?: number;
           search_vector?: unknown;
           source_type?: string;
@@ -480,6 +500,7 @@ export type Database = {
           tags?: string[];
           title?: string;
           updated_at?: string;
+          valid_until?: string | null;
         };
         Relationships: [];
       };
@@ -869,6 +890,61 @@ export type Database = {
           event_id?: string | null;
           id?: never;
           user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      content_health_state: {
+        Row: {
+          id: string;
+          kind: string;
+          subject_key: string;
+          check_status: string | null;
+          http_status: number | null;
+          failure_reason: string | null;
+          checked_at: string | null;
+          failing_since: string | null;
+          consecutive_failures: number;
+          detail: Json | null;
+          fingerprint: string | null;
+          acknowledged_by: string | null;
+          acknowledged_at: string | null;
+          expires_at: string | null;
+          created_at: string;
+        };
+        // Admins write acknowledgements only (RLS); link-check and check-run rows come from the scheduled job.
+        Insert: {
+          id?: string;
+          kind: string;
+          subject_key: string;
+          check_status?: string | null;
+          http_status?: number | null;
+          failure_reason?: string | null;
+          checked_at?: string | null;
+          failing_since?: string | null;
+          consecutive_failures?: number;
+          detail?: Json | null;
+          fingerprint?: string | null;
+          acknowledged_by?: string | null;
+          acknowledged_at?: string | null;
+          expires_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          subject_key?: string;
+          check_status?: string | null;
+          http_status?: number | null;
+          failure_reason?: string | null;
+          checked_at?: string | null;
+          failing_since?: string | null;
+          consecutive_failures?: number;
+          detail?: Json | null;
+          fingerprint?: string | null;
+          acknowledged_by?: string | null;
+          acknowledged_at?: string | null;
+          expires_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

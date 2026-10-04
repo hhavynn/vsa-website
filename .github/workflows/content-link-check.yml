@@ -1,0 +1,63 @@
+name: Content link check
+
+# Weekly check of the public images and links that Admin > Content Health reports on (#287).
+# It only reads content and writes its own cache rows in `content_health_state`; it never
+# edits or deletes content, never downloads a Storage original (HEAD only), and never contacts
+# Instagram/Google Drive/Docs/Photos hosts. See scripts/check-content-links.ts for the full rules.
+#
+# The schedule is DORMANT until a repository variable turns it on, so merging this does not
+# start calling the database or third-party hosts by itself:
+#   1. Apply migration 20261004000000_content_health_state_and_ai_knowledge_entity_link.sql.
+#   2. Run this workflow once by hand (apply: true) and read the summary.
+#   3. Set the repository variable CONTENT_LINK_CHECK_ENABLED to "true" to enable the weekly run.
+
+on:
+  schedule:
+    - cron: '17 9 * * 1'   # Mondays 09:17 UTC, off the hour on purpose
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the results to content_health_state. Default false = check and print only."
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: content-link-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Manual runs always work; the schedule only runs once the owner has enabled it.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.CONTENT_LINK_CHECK_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check images and links
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APPLY: ${{ github.event_name == 'schedule' && 'true' || inputs.apply }}
+        run: |
+          if [ "$APPLY" = "true" ]; then
+            npm run check:content-links -- --apply
+          else
+            npm run check:content-links
+          fi

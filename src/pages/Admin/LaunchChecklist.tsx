@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
 import { getApplicationStatus } from '../../lib/applicationLinks';
+import { getAcademicTermMeta, formatAcademicYear } from '../../lib/academicTerms';
+import { evaluateAllKnowledge, summarizeKnowledgeFreshness } from '../../lib/aiKnowledgeFreshness';
+import { aiKnowledgeRepository } from '../../data/repos/aiKnowledge';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +39,7 @@ interface ChecklistState {
   programContentEntries: CheckData;
   // Ask VSA
   aiSnippetsActive: CheckData;
+  aiKnowledgeCurrent: CheckData;
   aiTableExists: boolean;
   // Applications
   applicationsOpen: CheckData;
@@ -56,6 +60,7 @@ const DEFAULT_STATE: ChecklistState = {
   vcnCurrentPublished: LOADING,
   programContentEntries: LOADING,
   aiSnippetsActive: LOADING,
+  aiKnowledgeCurrent: LOADING,
   aiTableExists: false,
   applicationsOpen: LOADING,
   applicationsTotal: LOADING,
@@ -190,9 +195,13 @@ export default function LaunchChecklist() {
       const nowIso = new Date().toISOString();
 
       // ── 1. Academic terms ──────────────────────────────────────────────────
-      const activeTermsRes = await supabase.from('academic_terms').select('id', { count: 'exact', head: true }).eq('is_active', true);
+      // Rows, not a head count: the active term's year also tells the Ask VSA freshness check which year is current.
+      const activeTermsRes = await supabase.from('academic_terms').select('academic_year_start').eq('is_active', true);
 
-      const activeTermCount = activeTermsRes.count ?? 0;
+      const activeTermCount = activeTermsRes.data?.length ?? 0;
+      const currentYearStart: number | null = activeTermsRes.error
+        ? null
+        : activeTermsRes.data?.[0]?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null;
       const activeTermExists: CheckData = activeTermsRes.error
         ? { status: 'not_configured', note: 'Unable to load' }
         : activeTermCount > 0
@@ -293,17 +302,40 @@ export default function LaunchChecklist() {
       let aiTableExists = false;
       let aiSnippetsActive: CheckData = { status: 'not_installed' };
 
-      const aiRes = await (supabase.from('ai_knowledge_base' as any) as any)
-        .select('id', { count: 'exact', head: true })
-        .eq('is_public', true)
-        .eq('is_active', true);
+      let aiKnowledgeCurrent: CheckData = { status: 'not_installed' };
+
+      // One read (the table is small) answers both the active count and the freshness check, with the
+      // same columns and rules as the Overview and Content Health. Until the entity-link migration is
+      // applied the read is retried without those two columns.
+      const AI_BASE = 'id, title, source_type, is_public, is_active, freshness, academic_year, valid_until, last_verified_at, created_at';
+      const readAi = (columns: string) => (supabase.from('ai_knowledge_base' as any) as any).select(columns).eq('is_public', true);
+      let aiRes = await readAi(`${AI_BASE}, linked_entity_type, linked_entity_key`);
+      if (aiRes.error?.code === '42703') aiRes = await readAi(AI_BASE);
 
       if (!aiRes.error) {
         aiTableExists = true;
-        const aiCount = aiRes.count ?? 0;
+        const aiRows = (aiRes.data ?? []) as Array<{ id: string; title: string; is_active: boolean; linked_entity_type?: string | null; linked_entity_key?: string | null }>;
+        const aiCount = aiRows.filter((row) => row.is_active).length;
         aiSnippetsActive = aiCount > 0
           ? { status: 'good', count: aiCount }
           : { status: 'needs_attention', count: 0, note: 'No active public snippets' };
+
+        // Reads application windows / events only for snippets that link to one (none, today).
+        const entities = await aiKnowledgeRepository.loadEntityContext(aiRows as never[]);
+        const results = evaluateAllKnowledge(aiRows as never[], {
+          now: new Date(),
+          currentAcademicYearStart: currentYearStart,
+          applications: entities.applications,
+          events: entities.events,
+        });
+        const summary = summarizeKnowledgeFreshness(results.values());
+        aiKnowledgeCurrent = summary.total === 0
+          ? { status: 'good', note: currentYearStart === null ? 'No stale or expired snippets' : `No stale or expired snippets for ${formatAcademicYear(currentYearStart)}` }
+          : {
+              status: 'needs_attention',
+              count: summary.total,
+              note: `${summary.stale} stale or expired, ${summary.reviewDue} due for review${summary.high > 0 ? `; ${summary.high} high priority (prior year, or linked to something that is gone or unpublished)` : ''}`,
+            };
       }
 
       // ── 9. Applications (table may not exist) ──────────────────────────────
@@ -341,6 +373,7 @@ export default function LaunchChecklist() {
         vcnCurrentPublished,
         programContentEntries,
         aiSnippetsActive,
+        aiKnowledgeCurrent,
         aiTableExists,
         applicationsOpen,
         applicationsTotal,
@@ -530,6 +563,11 @@ export default function LaunchChecklist() {
                   link="/admin/ai-knowledge"
                 />
                 <CheckItem
+                  label="Ask VSA knowledge is current (no stale or expired snippets)"
+                  data={state.aiKnowledgeCurrent}
+                  link="/admin/ai-knowledge?filter=review"
+                />
+                <CheckItem
                   label="Review snippets for accuracy before launch"
                   forceStatus="manual"
                   link="/admin/ai-knowledge"
@@ -555,6 +593,12 @@ export default function LaunchChecklist() {
               label="Run storage egress audit if Supabase Storage URLs remain"
               forceStatus="manual"
               note="Use the Content Health Dashboard on the admin overview to count legacy storage URLs"
+            />
+            <CheckItem
+              label="Review Content Health: broken images and links, stale drafts, incomplete events"
+              forceStatus="manual"
+              link="/admin/content-health"
+              note="Nothing marked high priority should be left open at launch"
             />
           </Section>
 

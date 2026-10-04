@@ -8,7 +8,7 @@ import { formatYearSpan } from './operationalStatus';
 
 // ─── Actions and filters ─────────────────────────────────────────────────────
 
-export type ActivityFilterKey = 'all' | 'ace' | 'houses' | 'cabinet' | 'interns' | 'members' | 'applications' | 'year_setup';
+export type ActivityFilterKey = 'all' | 'ace' | 'houses' | 'cabinet' | 'interns' | 'members' | 'applications' | 'ask_vsa' | 'year_setup';
 
 export const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilterKey; label: string }> = [
   { key: 'all', label: 'All' },
@@ -18,6 +18,7 @@ export const ACTIVITY_FILTERS: ReadonlyArray<{ key: ActivityFilterKey; label: st
   { key: 'interns', label: 'Interns' },
   { key: 'members', label: 'Members' },
   { key: 'applications', label: 'Applications' },
+  { key: 'ask_vsa', label: 'Ask VSA' },
   { key: 'year_setup', label: 'Year Setup' },
 ];
 
@@ -29,6 +30,7 @@ const DOMAIN_FILTER: Record<string, ActivityFilterKey> = {
   intern: 'interns',
   member: 'members',
   application: 'applications',
+  ai: 'ask_vsa',
   year: 'year_setup',
 };
 
@@ -82,6 +84,7 @@ export const ACTIVITY_ACTIONS = {
   applicationWindowUpdated: 'application.window_updated',
   applicationWindowToggled: 'application.window_toggled',
   applicationWindowDeleted: 'application.window_deleted',
+  aiKnowledgeReviewed: 'ai.knowledge_reviewed',
   yearSetupCreated: 'year.setup_created',
 } as const;
 
@@ -209,6 +212,7 @@ export const activitySummary = {
     clampSummary(to ? `Linked ${label(member, 'a record')} to member ${to}` : `Unlinked ${label(member, 'a record')} from its member`),
   applicationWindow: (verb: 'Created' | 'Updated' | 'Deleted', title: string, detail?: string) =>
     clampSummary(`${verb} application window "${label(title, 'Untitled')}"${detail ? `: ${detail}` : ''}`),
+  aiKnowledgeReviewed: (title: string) => clampSummary(`Reviewed Ask VSA knowledge "${label(title, 'Untitled')}"`),
   yearSetup: (yearStart: number) => clampSummary(`Prepared the ${formatYearSpan(yearStart)} academic year`),
 };
 
