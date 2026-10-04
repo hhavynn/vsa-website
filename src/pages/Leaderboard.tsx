@@ -46,6 +46,7 @@ import { ContentUnavailableState } from '../components/common/ContentUnavailable
 import { FALLBACK_HOUSE_STANDINGS_2025_2026 } from '../config/publicFallbackContent';
 import { Skeleton } from '../components/ui/Skeleton';
 import { readableInk } from '../lib/readableInk';
+import { cn } from '../lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
@@ -195,7 +196,10 @@ function ProfileOpener({
       type="button"
       aria-label={`Open profile for ${name}`}
       onClick={onOpen}
-      className={`block min-w-0 cursor-pointer text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--brand)] ${className ?? ''}`}
+      className={cn(
+        "block min-w-0 cursor-pointer text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--brand)]",
+        className
+      )}
     >
       {children}
     </button>

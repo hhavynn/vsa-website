@@ -77,11 +77,20 @@ const COMPRESSIBLE = new Set(['.html', '.js', '.css', '.json', '.svg', '.txt', '
 
 function startServer() {
   const server = http.createServer((request, response) => {
-    const urlPath = decodeURIComponent(request.url.split('?')[0]);
-    let file = path.join(BUILD, urlPath);
-    if (!file.startsWith(BUILD)) file = BUILD;
-    if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      file = urlPath.startsWith('/static/') ? null : path.join(BUILD, 'index.html');
+    let urlPath;
+    try {
+      urlPath = decodeURIComponent(request.url.split('?')[0]);
+    } catch {
+      response.writeHead(400).end('bad request');
+      return;
+    }
+    // Resolve inside the build root only; anything that escapes it is treated as missing.
+    const safeRoot = path.resolve(BUILD);
+    const candidate = path.resolve(safeRoot, `.${urlPath}`);
+    const rel = path.relative(safeRoot, candidate);
+    let file = !path.isAbsolute(rel) && !rel.startsWith('..') && !urlPath.includes('\0') ? candidate : null;
+    if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      file = urlPath.startsWith('/static/') ? null : path.resolve(safeRoot, 'index.html');
     }
     if (!file || !fs.existsSync(file)) {
       response.writeHead(404).end('not found');
@@ -103,6 +112,19 @@ function startServer() {
     response.writeHead(200, headers).end(body);
   });
   return new Promise((resolve) => server.listen(PORT, () => resolve(server)));
+}
+
+// Fail loudly when a route cannot be loaded, so a dead server or bad build never yields
+// deceptively clean zeros.
+async function openRoute(page, route, reload = false) {
+  const url = `http://localhost:${PORT}${route}`;
+  const response = reload
+    ? await page.reload({ waitUntil: 'networkidle0', timeout: 60000 })
+    : await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
+  if (!response || !response.ok()) {
+    throw new Error(`${route}: expected a 2xx response, got ${response ? response.status() : 'none'}`);
+  }
+  await page.waitForSelector('#root > *', { timeout: 30000 });
 }
 
 const slug = (route) => (route === '/' ? 'home' : route.replace(/^\//, '').replace(/\//g, '_'));
@@ -314,7 +336,7 @@ async function runProbe() {
               v.onINP(rec, { reportAllChanges: true });
             });
           });
-          await page.goto(`http://localhost:${PORT}${route}`, { waitUntil: 'networkidle0', timeout: 60000 }).catch(() => {});
+          await openRoute(page, route);
           await new Promise((r) => setTimeout(r, 1500));
           // content hidden at rest, before anything scrolls into view
           const hiddenBeforeScroll = await page.evaluate(STUCK_HIDDEN);
@@ -378,7 +400,7 @@ async function runProbe() {
               await page.evaluate(() => {
                 try { localStorage.setItem('vsa-analytics-consent-v1', 'declined'); } catch {}
               });
-              await page.reload({ waitUntil: 'networkidle0', timeout: 60000 }).catch(() => {});
+              await openRoute(page, route, true);
               await new Promise((r) => setTimeout(r, 1500));
               entry.touchTargets = await page.evaluate(COLLECT_TOUCH_TARGETS, INTERACTIVE);
             }
@@ -430,7 +452,7 @@ async function runStates() {
           if (seed) localStorage.setItem('vsa-analytics-consent-v1', 'declined');
         } catch {}
       }, seedConsent);
-      await page.goto(`http://localhost:${PORT}${state.route}`, { waitUntil: 'networkidle0', timeout: 60000 }).catch(() => {});
+      await openRoute(page, state.route);
       await sleep(1200);
       let note = '';
       try {

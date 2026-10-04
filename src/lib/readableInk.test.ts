@@ -20,6 +20,10 @@ describe('readableInk', () => {
     expect(readableInk(null)).toBe('var(--color-on-brand)');
   });
 
+  it('does not guess for colours with alpha', () => {
+    expect(readableInk('#00000000')).toBe('var(--color-on-brand)');
+  });
+
   it('expands 3-digit hex', () => {
     expect(readableInk('#fff')).toBe('#061014');
   });

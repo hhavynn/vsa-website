@@ -7,11 +7,11 @@ const DARK_INK = '#061014';
 const LIGHT_INK = '#ffffff';
 
 function parseHex(color: string): [number, number, number] | null {
-  const match = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(color.trim());
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
   if (!match) return null;
   let hex = match[1];
   if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
-  const value = parseInt(hex.slice(0, 6), 16);
+  const value = parseInt(hex, 16);
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
 
@@ -34,8 +34,9 @@ export function contrastRatio(a: string, b: string): number | null {
 
 /**
  * Returns whichever of near-black / white has the higher contrast against
- * `background`. Non-hex backgrounds (CSS variables, e.g. `var(--brand)`) fall
- * back to the theme's on-brand foreground, which is paired with that fill.
+ * `background`. Anything that is not an opaque 3- or 6-digit hex (CSS variables
+ * such as `var(--brand)`, or 8-digit hex whose alpha would change the real
+ * contrast) falls back to the theme's on-brand foreground.
  */
 export function readableInk(background: string | null | undefined): string {
   const parsed = background ? parseHex(background) : null;

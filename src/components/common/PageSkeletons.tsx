@@ -181,7 +181,8 @@ export function EventsSkeleton() {
  */
 export function HouseDetailSkeleton() {
   return (
-    <>
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading House page…</span>
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
           <Skeleton className="h-3 w-44" />
@@ -214,14 +215,15 @@ export function HouseDetailSkeleton() {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 /** VCN archive: editorial hero, then a stack of production cards. */
 export function VcnArchiveSkeleton() {
   return (
-    <>
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading VCN archive…</span>
       <HeroSkeleton lines={1} />
       <div className="vsa-container py-8 lg:py-10">
         <Skeleton className="mb-5 h-4 w-44" />
@@ -236,6 +238,6 @@ export function VcnArchiveSkeleton() {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
