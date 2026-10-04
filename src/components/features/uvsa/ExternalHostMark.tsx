@@ -29,7 +29,7 @@ export function ExternalHostMark({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${host.shortName} on Instagram`}
-      className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
+      className="touch-hit shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
     >
       {mark}
     </a>

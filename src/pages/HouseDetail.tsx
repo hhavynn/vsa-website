@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
-import { PageLoader } from '../components/common/PageLoader';
+import { HouseDetailSkeleton } from '../components/common/PageSkeletons';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
@@ -223,7 +223,7 @@ export function HouseDetail() {
   const isDegraded = isSupabaseUnavailable(pastError);
 
   if (termsLoading || housesLoading || (needsYearFallback && fallbackLoading)) {
-    return <PageLoader message="Loading House page..." />;
+    return <HouseDetailSkeleton />;
   }
 
   if (fallbackHouse) {

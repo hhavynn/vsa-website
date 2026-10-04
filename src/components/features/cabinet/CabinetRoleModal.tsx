@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { CabinetRoleDescription } from '../../../data/repos/cabinetRolesRepository';
 
 interface CabinetRoleModalProps {
@@ -9,6 +9,7 @@ interface CabinetRoleModalProps {
 }
 
 export function CabinetRoleModal({ isOpen, role, onClose }: CabinetRoleModalProps) {
+  const shouldReduceMotion = useReducedMotion();
   const modalRef = React.useRef<HTMLDivElement>(null);
   const previousFocusRef = React.useRef<HTMLElement | null>(null);
 
@@ -104,10 +105,10 @@ export function CabinetRoleModal({ isOpen, role, onClose }: CabinetRoleModalProp
         <motion.div
           ref={modalRef}
           tabIndex={-1}
-          initial={{ opacity: 0, y: 100, scale: 0.95 }}
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 100, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', damping: 25, stiffness: 300 }}
           className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto bg-surface border border-border-strong rounded-2xl shadow-2xl z-10 flex flex-col focus:outline-none"
           role="dialog"
           aria-modal="true"

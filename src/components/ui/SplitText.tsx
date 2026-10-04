@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { cn } from "../../lib/utils";
 
@@ -17,7 +17,10 @@ export function SplitText({
   stagger = 0.035,
   disabled = false,
 }: SplitTextProps) {
-  if (disabled) {
+  const shouldReduceMotion = useReducedMotion();
+
+  // Reduced motion: no per-character blur/rise, just the final text.
+  if (disabled || shouldReduceMotion) {
     return <span className={className}>{text}</span>;
   }
 

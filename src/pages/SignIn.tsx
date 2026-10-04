@@ -5,6 +5,7 @@ import { PageTitle } from '../components/common/PageTitle';
 import { PageLoader } from '../components/common/PageLoader';
 import { useAuth } from '../hooks/useAuth';
 import { useAdmin } from '../hooks/useAdmin';
+import { FormAlert } from '../components/ui/FieldError';
 
 export function SignIn() {
   const navigate = useNavigate();
@@ -45,9 +46,7 @@ export function SignIn() {
           <div className="border rounded" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '32px' }}>
             {showUnauthorized ? (
               <div className="space-y-4">
-                <div className="rounded border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400">
-                  This account is signed in, but it is not authorized for the VSA admin panel.
-                </div>
+                <FormAlert>This account is signed in, but it is not authorized for the VSA admin panel.</FormAlert>
                 <button
                   onClick={signOut}
                   className="w-full rounded bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700"
@@ -64,9 +63,7 @@ export function SignIn() {
             Admin access is limited to approved VSA website maintainers.
           </p>
           {locationState?.unauthorized && !showUnauthorized && (
-            <p className="mt-3 text-center font-sans text-xs text-red-400">
-              Please sign in with an admin account to continue.
-            </p>
+            <FormAlert className="mt-3 text-xs">Please sign in with an admin account to continue.</FormAlert>
           )}
         </div>
       </div>

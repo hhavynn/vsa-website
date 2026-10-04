@@ -28,7 +28,7 @@ export function AddToGoogleCalendarLink({ item, className = '' }: Props) {
       rel="noopener noreferrer"
       aria-label={`Add ${item.title} to Google Calendar (opens in new tab)`}
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex max-w-full items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-[0.04em] no-underline transition-colors duration-150 hover:bg-[var(--surface2)] ${className}`}
+      className={`inline-flex max-w-full touch:min-h-11 items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-center font-mono text-[11px] font-semibold uppercase tracking-[0.04em] no-underline transition-colors duration-150 hover:bg-[var(--surface2)] ${className}`}
       style={{
         borderColor: 'var(--color-border-strong)',
         background: 'var(--color-surface)',

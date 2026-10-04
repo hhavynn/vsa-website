@@ -5,6 +5,7 @@ import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { getDetailLinkLabel, getItemColor } from './calendarTheme';
+import { readableInk } from '../../../lib/readableInk';
 
 export type CalendarOverlayState =
   | { mode: 'item'; item: CalendarItem }
@@ -51,8 +52,8 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
         {item.houses.map((house) => (
           <span
             key={house.name}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
-            style={{ background: house.color }}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
+            style={{ background: house.color, color: readableInk(house.color) }}
           >
             {house.name}
           </span>
@@ -171,7 +172,7 @@ export function CalendarDetailModal({ overlay, todayStr, onClose, onSelectItem }
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-full font-sans text-lg leading-none transition-colors hover:bg-[var(--surface2)]"
+          className="-mr-1 -mt-1 flex h-8 w-8 touch:h-11 touch:w-11 items-center justify-center rounded-full font-sans text-lg leading-none transition-colors hover:bg-[var(--surface2)]"
           style={{ color: 'var(--color-text2)' }}
         >
           ✕

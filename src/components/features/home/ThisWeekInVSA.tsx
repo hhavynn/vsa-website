@@ -236,7 +236,7 @@ function NextEventCard() {
                     aria-current={i === safeIndex ? 'true' : undefined}
                     aria-label={`Show event ${i + 1} of ${stack.length}: ${event.name}`}
                     onClick={() => goToIndex(i)}
-                    className="flex h-11 w-8 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                    className="flex h-11 w-8 touch:w-11 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                   >
                     <span aria-hidden className={cn('h-1.5 rounded-full', i === safeIndex ? 'w-4 bg-brand-600 dark:bg-brand-400' : 'w-1.5 bg-text-secondary')} />
                   </button>
@@ -268,7 +268,7 @@ function NextEventCard() {
             </Link>
           )}
 
-          <Link to="/events" className="mt-auto font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+          <Link to="/events" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             View event
           </Link>
         </>
@@ -356,7 +356,7 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
               {useSummerEmptyState ? summerMessage.body : 'We’ll update this space as House announcements and points are released. Check back for the first standings!'}
             </p>
           </div>
-          <Link to="/leaderboard?view=houses" className="mt-auto font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
+          <Link to="/leaderboard?view=houses" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
             Full standings
           </Link>
         </>
@@ -385,7 +385,7 @@ function HouseStandingsCard({ academicYearStart }: { academicYearStart: number |
               );
             })}
           </div>
-          <Link to="/leaderboard?view=houses" className="mt-auto font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+          <Link to="/leaderboard?view=houses" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             Full standings
           </Link>
         </>
@@ -529,7 +529,7 @@ function LatestMemoryCard() {
               {memory.label}
             </p>
           </div>
-          <Link to={memory.href} className="mt-auto font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
+          <Link to={memory.href} className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             {memory.cta}
           </Link>
         </>
@@ -558,7 +558,7 @@ function FindMyPointsCard() {
           Find My Points <ArrowUpRightIcon className="h-4 w-4 shrink-0" aria-hidden />
         </Link>
       </div>
-      <Link to="/leaderboard" className="mt-auto font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
+      <Link to="/leaderboard" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
         Explore the leaderboard →
       </Link>
     </div>

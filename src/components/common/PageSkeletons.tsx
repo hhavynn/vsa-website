@@ -174,3 +174,70 @@ export function EventsSkeleton() {
     </>
   );
 }
+
+/**
+ * House detail: back link + sticker row + title/description beside a hero
+ * image on large screens, then the upcoming/past events grid.
+ */
+export function HouseDetailSkeleton() {
+  return (
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading House page…</span>
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <Skeleton className="h-3 w-44" />
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
+            <div>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <Skeleton className="h-6 w-24 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <Skeleton className="mb-4 h-12 w-2/3 max-w-md" />
+              <Skeleton className="mt-2 h-4 w-full max-w-xl" />
+              <Skeleton className="mt-2 h-4 w-3/4 max-w-xl" />
+            </div>
+            <Skeleton className="h-[220px] w-full rounded-lg lg:h-[260px]" />
+          </div>
+        </div>
+      </div>
+      <div className="vsa-container py-8 lg:py-10">
+        <Skeleton className="mb-5 h-6 w-48" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="scrapbook-paper grid gap-4 p-4 sm:grid-cols-[120px_minmax(0,1fr)]" style={{ borderColor: 'var(--color-border)' }}>
+              <Skeleton className="aspect-[4/3] w-full rounded" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** VCN archive: editorial hero, then a stack of production cards. */
+export function VcnArchiveSkeleton() {
+  return (
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading VCN archive…</span>
+      <HeroSkeleton lines={1} />
+      <div className="vsa-container py-8 lg:py-10">
+        <Skeleton className="mb-5 h-4 w-44" />
+        <div className="flex flex-col gap-7">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="scrapbook-paper space-y-3 p-5 sm:p-6" style={{ borderColor: 'var(--color-border)' }}>
+              <Skeleton className="aspect-video w-full rounded" />
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

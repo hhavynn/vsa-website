@@ -407,7 +407,7 @@ export function VsaAiAssistant() {
               <button
                 type="button"
                 onClick={closeAssistant}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-[var(--color-surface)] text-[var(--color-text2)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                className="inline-flex h-8 w-8 touch:h-11 touch:w-11 shrink-0 items-center justify-center rounded-lg border bg-[var(--color-surface)] text-[var(--color-text2)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                 style={{ borderColor: 'var(--color-border)' }}
                 aria-label="Close VSA AI Assistant"
               >
@@ -462,7 +462,7 @@ export function VsaAiAssistant() {
                       type="button"
                       onClick={() => sendMessage(question)}
                       disabled={loading}
-                      className="rounded-full border px-3 py-1.5 text-left font-sans text-[12px] font-semibold shadow-sm transition-colors hover:border-brand-600 hover:bg-brand-50 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-brand-400/10 dark:hover:text-brand-300"
+                      className="touch:min-h-11 rounded-full border px-3 py-1.5 text-left font-sans text-[12px] font-semibold shadow-sm transition-colors hover:border-brand-600 hover:bg-brand-50 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-brand-400/10 dark:hover:text-brand-300"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
                     >
                       {question}
@@ -481,6 +481,10 @@ export function VsaAiAssistant() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[88%] ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      {/* Who said it is spelled out, not left to bubble colour and side. */}
+                      <p className="mb-0.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text2)]">
+                        {message.role === 'user' ? 'You' : 'Ask VSA'}
+                      </p>
                       <div
                         className={`rounded-2xl px-3.5 py-2.5 font-sans text-sm leading-6 ${
                           message.role === 'user'
@@ -692,7 +696,7 @@ export function VsaAiAssistant() {
           whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
           type="button"
           onClick={restoreAssistant}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
+          className="inline-flex h-10 w-10 touch:h-11 touch:w-11 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
           style={{ borderColor: 'var(--color-border)' }}
           aria-label="Restore Ask VSA"
         >
@@ -722,7 +726,7 @@ export function VsaAiAssistant() {
           <button
             type="button"
             onClick={minimizeAssistant}
-            className="absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface)] text-[var(--color-text2)] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:hidden"
+            className="touch-hit absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface)] text-[var(--color-text2)] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:hidden"
             style={{ borderColor: 'var(--color-border)' }}
             aria-label="Minimize Ask VSA"
           >

@@ -10,7 +10,7 @@ export const NavLogo = memo(function NavLogo() {
   return (
     <Link
       to="/"
-      className="flex shrink-0 items-center gap-2.5 transition-opacity duration-150 hover:opacity-85"
+      className="flex shrink-0 items-center gap-2.5 transition-opacity duration-150 hover:opacity-85 touch:min-h-11 touch:min-w-11"
       aria-label="VSA at UCSD Home"
     >
       <img

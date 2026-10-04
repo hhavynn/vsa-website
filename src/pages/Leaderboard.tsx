@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
@@ -44,6 +44,9 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
 import { FALLBACK_HOUSE_STANDINGS_2025_2026 } from '../config/publicFallbackContent';
+import { Skeleton } from '../components/ui/Skeleton';
+import { readableInk } from '../lib/readableInk';
+import { cn } from '../lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (SVG implementations to avoid react-icons type issues)
@@ -170,6 +173,38 @@ function getGapCaption(
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES & UTILS
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The member's name is the real <button>; its ::after stretches the hit area
+ * over the whole (relatively positioned) card. The accessible name
+ * "Open profile for <name>" therefore contains the button's visible text
+ * (WCAG 2.5.3 Label in Name) and nothing is nested inside a role="button" div.
+ */
+function ProfileOpener({
+  name,
+  onOpen,
+  className,
+  children,
+}: {
+  name: string;
+  onOpen: () => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Open profile for ${name}`}
+      onClick={onOpen}
+      className={cn(
+        "block min-w-0 cursor-pointer text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--brand)]",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 type LeaderboardEntry = Member & RankPlacement;
 
@@ -412,7 +447,7 @@ function PublicMemberProfileModal({
           {loadingHistory ? (
             <div className="space-y-2" aria-hidden>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-12 animate-pulse rounded-md bg-[var(--surface2)]" />
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
               ))}
             </div>
           ) : historyError ? (
@@ -783,7 +818,7 @@ export function Leaderboard() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     aria-pressed={activeTab === tab}
-                    className={`min-h-[40px] rounded-full border-2 px-4 py-1.5 font-mono text-[11px] font-bold tracking-wider transition-all ${
+                    className={`chip-check min-h-[40px] touch:min-h-11 rounded-full border-2 px-4 py-1.5 font-mono text-[11px] font-bold tracking-wider transition-all ${
                       activeTab === tab 
                         ? 'border-[var(--accent)] bg-[var(--accent)] text-[color:var(--color-on-accent)] shadow-sm'
                         : 'border-[var(--border)] bg-[var(--surface2)] text-[var(--text3)] hover:border-[var(--accent)]'
@@ -874,17 +909,7 @@ export function Leaderboard() {
               {paginatedData.map((entry) => (
                 <div
                   key={entry.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Open profile for ${getMemberDisplayName(entry)}`}
-                  onClick={() => setSelectedMember(entry)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedMember(entry);
-                    }
-                  }}
-                  className="group scrapbook-paper flex cursor-pointer items-center gap-3 p-3 transition-all sm:gap-4 sm:p-4 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+                  className="group scrapbook-paper flex items-center gap-3 p-3 transition-all sm:gap-4 sm:p-4 hover:-translate-y-0.5 hover:shadow-lg"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                       {/* Rank */}
@@ -906,9 +931,15 @@ export function Leaderboard() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="line-clamp-2 break-words font-serif text-[15px] font-bold leading-tight sm:truncate sm:text-[16px]" style={{ color: 'var(--text)' }}>
-                            {entry.first_name} {entry.last_name}
-                          </div>
+                          <ProfileOpener
+                            name={getMemberDisplayName(entry)}
+                            onOpen={() => setSelectedMember(entry)}
+                            className="max-w-full text-left"
+                          >
+                            <span className="line-clamp-2 block break-words font-serif text-[15px] font-bold leading-tight sm:truncate sm:text-[16px]" style={{ color: 'var(--text)' }}>
+                              {entry.first_name} {entry.last_name}
+                            </span>
+                          </ProfileOpener>
                           <div className="truncate font-sans text-[11px]" style={{ color: 'var(--text3)' }}>
                             {[entry.year, entry.college].filter(Boolean).join(' • ') || 'VSA Member'}
                           </div>
@@ -1095,22 +1126,12 @@ function PodiumIndividual({
           return (
             <div
               key={entry.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Open profile for ${name}`}
-              onClick={() => onSelectMember(entry)}
-              onKeyDown={event => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSelectMember(entry);
-                }
-              }}
-              className="scrapbook-paper flex cursor-pointer items-center gap-3 border-2 p-3 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              className="scrapbook-paper flex items-center gap-3 border-2 p-3"
               style={{ borderColor: tier.color }}
             >
               <div
-                className="flex h-10 min-w-[2.5rem] shrink-0 items-center justify-center rounded-full px-1 font-mono text-base font-black text-white"
-                style={{ background: tier.color }}
+                className="flex h-10 min-w-[2.5rem] shrink-0 items-center justify-center rounded-full px-1 font-mono text-base font-black"
+                style={{ background: tier.color, color: readableInk(tier.color) }}
               >
                 {rankLabel}
               </div>
@@ -1125,9 +1146,11 @@ function PodiumIndividual({
                 <InitialsAvatar name={name} size={44} />
               )}
               <div className="min-w-0 flex-1">
-                <div className="line-clamp-2 break-words font-serif text-base font-bold leading-tight" style={{ color: 'var(--text)' }}>
-                  {name}
-                </div>
+                <ProfileOpener name={name} onOpen={() => onSelectMember(entry)} className="max-w-full text-left">
+                  <span className="line-clamp-2 block break-words font-serif text-base font-bold leading-tight" style={{ color: 'var(--text)' }}>
+                    {name}
+                  </span>
+                </ProfileOpener>
                 {card.gap !== null && (
                   <div className="mt-0.5 font-mono text-[10px] font-semibold" style={{ color: 'var(--text3)' }}>
                     {card.gap.metric === 'tie'
@@ -1175,17 +1198,7 @@ function PodiumIndividual({
               <PushPin color={tier.pin} className="left-1/2 top-[-10px] -translate-x-1/2" />
 
               <div
-                role="button"
-                tabIndex={0}
-                aria-label={`Open profile for ${getMemberDisplayName(card.entry)}`}
-                onClick={() => onSelectMember(card.entry)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    onSelectMember(card.entry);
-                  }
-                }}
-                className={`scrapbook-paper overflow-hidden p-6 text-center shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand)] ${
+                className={`scrapbook-paper overflow-hidden p-6 text-center shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-lg ${
                   isFirst
                     ? 'border-4 border-[var(--accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface2)]'
                     : 'border-2 border-[var(--border)]'
@@ -1196,8 +1209,8 @@ function PodiumIndividual({
                 {/* Rank Badge */}
                 <div className="absolute right-4 top-4">
                   <div 
-                    className="flex h-12 w-12 items-center justify-center rounded-full font-mono text-2xl font-black text-white shadow-lg border-2 border-white/50"
-                    style={{ background: tier.color }}
+                    className="flex h-12 w-12 items-center justify-center rounded-full font-mono text-2xl font-black shadow-lg border-2 border-white/50"
+                    style={{ background: tier.color, color: readableInk(tier.color) }}
                   >
                     {rankLabel}
                   </div>
@@ -1226,9 +1239,11 @@ function PodiumIndividual({
 
                 {/* Name */}
                 <div className="mb-4">
-                  <div className={`break-words font-serif leading-tight font-bold ${isFirst ? 'text-2xl' : 'text-xl'}`} style={{ color: 'var(--text)' }}>
-                    {card.entry.first_name} {card.entry.last_name}
-                  </div>
+                  <ProfileOpener name={getMemberDisplayName(card.entry)} onOpen={() => onSelectMember(card.entry)}>
+                    <span className={`block break-words font-serif leading-tight font-bold ${isFirst ? 'text-2xl' : 'text-xl'}`} style={{ color: 'var(--text)' }}>
+                      {card.entry.first_name} {card.entry.last_name}
+                    </span>
+                  </ProfileOpener>
                   <div className="mt-1 font-mono text-[11px] font-bold opacity-60">VSA MEMBER</div>
                 </div>
 

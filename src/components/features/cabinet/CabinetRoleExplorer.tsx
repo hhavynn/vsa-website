@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useCabinetRoles } from '../../../hooks/useCabinetRoles';
 import { CabinetRoleDescription } from '../../../data/repos/cabinetRolesRepository';
 
@@ -14,6 +14,7 @@ const ALL_GROUPS: BoardGroup[] = [
 ];
 
 function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleDescription; expanded: boolean; onToggle: () => void }) {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <div className="overflow-hidden rounded-xl border transition-all" style={{ borderColor: expanded ? 'var(--brand)' : 'var(--color-border)', background: 'var(--color-surface)' }}>
       <button
@@ -48,7 +49,7 @@ function RoleCard({ role, expanded, onToggle }: { role: CabinetRoleDescription; 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
           >
             <div className="border-t p-4 sm:p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}>
               <div className="grid gap-6 md:grid-cols-2">
@@ -123,7 +124,7 @@ export function CabinetRoleExplorer() {
       <div className="mb-6 flex flex-wrap justify-center gap-2">
         <button
           onClick={() => setActiveGroup('All')}
-          className={`rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
+          className={`touch:min-h-11 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
             activeGroup === 'All'
               ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-zinc-950'
               : 'border bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]'
@@ -136,7 +137,7 @@ export function CabinetRoleExplorer() {
           <button
             key={group}
             onClick={() => setActiveGroup(group)}
-            className={`rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
+            className={`touch:min-h-11 rounded-full px-4 py-1.5 font-sans text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 ${
               activeGroup === group
                 ? 'bg-brand-600 text-white dark:bg-brand-400 dark:text-zinc-950'
                 : 'border bg-[var(--color-surface)] text-[var(--color-text2)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]'

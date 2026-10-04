@@ -40,7 +40,9 @@ function LayoutShell() {
       <ScrollManager />
       <NavigationShell />
 
-      <main id="main-content" className="flex-grow pt-[60px]">
+      {/* min-h-screen keeps the (tall, mobile) footer below the fold while a route
+          chunk or data skeleton is showing, so it does not jump when content lands. */}
+      <main id="main-content" className="flex-grow min-h-screen pt-[60px]">
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
             <motion.div

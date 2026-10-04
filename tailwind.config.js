@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -116,5 +118,13 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `touch:` applies on phone-width viewports (< 768px) and on any
+    // coarse-pointer device (tablets, landscape phones). Used for the 44x44px
+    // touch-target floor so desktop density is unchanged. The same condition
+    // is mirrored in src/index.css (`@media (max-width: 767px), (pointer: coarse)`).
+    plugin(({ addVariant }) => {
+      addVariant('touch', ['@media (max-width: 767px)', '@media (pointer: coarse)']);
+    }),
+  ],
 };

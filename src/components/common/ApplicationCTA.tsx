@@ -9,6 +9,7 @@ import {
 } from '../../lib/applicationLinks';
 import { isSupabaseUnavailable } from '../../utils/isSupabaseUnavailable';
 import { FALLBACK_APPLICATIONS, FALLBACK_LINKS } from '../../config/publicFallbackContent';
+import { Skeleton } from '../ui/Skeleton';
 
 type FallbackOverrides = Partial<Record<'not_open' | 'closed' | 'unavailable', string>>;
 
@@ -160,10 +161,7 @@ export function ApplicationCTA({
   if (loading) {
     return (
       <div className={className} aria-busy="true">
-        <div
-          className="h-16 w-full animate-pulse rounded-lg border"
-          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}
-        />
+        <Skeleton className="h-16 w-full rounded-lg" />
       </div>
     );
   }

@@ -228,7 +228,7 @@ export function Cabinet() {
               {!isViewingArchive && members.length > 0 && (
                 <a
                   href="#cabinet-role-explorer"
-                  className="mt-4 inline-flex font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
+                  className="mt-4 inline-flex touch:min-h-11 items-center font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400"
                 >
                   Explore cabinet roles ↓
                 </a>
@@ -271,7 +271,7 @@ export function Cabinet() {
                     <button
                       type="button"
                       onClick={copyCurrentLink}
-                      className="mt-2 rounded border px-3 py-1.5 font-sans text-[12px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                      className="mt-2 rounded border px-3 py-1.5 touch:min-h-11 font-sans text-[12px] font-semibold transition-colors hover:bg-[var(--color-surface2)]"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
                     >
                       {copyStatus === 'copied' ? 'Link copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy link'}

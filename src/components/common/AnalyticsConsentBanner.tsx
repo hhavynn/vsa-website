@@ -50,7 +50,7 @@ export function AnalyticsConsentBanner() {
             type="button"
             onClick={closePreferences}
             aria-label="Close analytics preferences"
-            className="rounded-md px-2 py-1 text-xl leading-none text-[var(--color-text2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            className="inline-flex touch:min-h-11 touch:min-w-11 items-center justify-center rounded-md px-2 py-1 text-xl leading-none text-[var(--color-text2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
           >
             ×
           </button>

@@ -55,7 +55,7 @@ function WrappedNavLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link
       to={to}
-      className="inline-flex items-center justify-center rounded-full border border-border-strong bg-surface2 px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.06em] text-text-secondary transition-colors duration-150 hover:border-[var(--brand)] hover:bg-[var(--glow)] hover:text-[var(--brand)]"
+      className="inline-flex touch:min-h-11 items-center justify-center rounded-full border border-border-strong bg-surface2 px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.06em] text-text-secondary transition-colors duration-150 hover:border-[var(--brand)] hover:bg-[var(--glow)] hover:text-[var(--brand)]"
     >
       {children}
     </Link>
