@@ -2,6 +2,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
+import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { PageLoader } from '../components/common/PageLoader';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
@@ -284,6 +285,7 @@ export function HouseDetail() {
     <>
       <PageTitle title={`${label} House`} />
       {isDegraded && <DegradedModeBanner sourceName="house" />}
+      <PublicBreadcrumbs context={{ currentYear, houseLabel: label }} />
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
           <Link to={backHref} className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">

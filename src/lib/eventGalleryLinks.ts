@@ -48,11 +48,15 @@ export function getAlbumEventLink(
   const { event_id: eventId, event } = album;
   if (!eventId || !event || event.id !== eventId || event.is_published !== true) return null;
 
-  // Past events live in the term-filtered archive; `term` selects it so the
-  // card is actually on screen, and the hash scrolls to it.
+  return { to: pastEventPath(event), label: event.name };
+}
+
+/**
+ * Where a past event's card lives on /events. Past events sit in the
+ * term-filtered archive; `term` selects it so the card is actually on screen,
+ * and the hash scrolls to it.
+ */
+export function pastEventPath(event: { id: string; academic_term_id?: string | null }): string {
   const term = event.academic_term_id ?? 'unassigned';
-  return {
-    to: `/events?term=${encodeURIComponent(term)}#${eventAnchorId(event.id)}`,
-    label: event.name,
-  };
+  return `/events?term=${encodeURIComponent(term)}#${eventAnchorId(event.id)}`;
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
@@ -74,6 +75,7 @@ export function VCNCurrent() {
     return (
       <>
         <PageTitle title="VCN — This Year's Show" />
+        <PublicBreadcrumbs />
         <DegradedModeBanner sourceName="vcn" />
         <div className="vsa-container py-20">
           <ContentUnavailableState
@@ -97,6 +99,7 @@ export function VCNCurrent() {
     return (
       <>
         <PageTitle title="VCN — This Year's Show" />
+        <PublicBreadcrumbs />
         <div className="program-app min-h-[60vh]">
           <EditorialHero
             eyebrow="Current Production"
@@ -130,6 +133,7 @@ export function VCNCurrent() {
   return (
     <>
       <PageTitle title={`VCN ${currentVcn.year}${currentVcn.title ? ` — ${currentVcn.title}` : ''}`} />
+      <PublicBreadcrumbs />
 
       <div className="program-app">
         <EditorialHero

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
+import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { Label } from '../components/ui/Label';
 import { LEGACY_HOUSE_ARCHIVE, LegacyHouseArchiveYear, getLegacyHouseArchiveYears } from '../data/legacyHouseArchive';
 
@@ -87,6 +88,7 @@ export function HouseArchive() {
   return (
     <>
       <PageTitle title="House Archive" />
+      <PublicBreadcrumbs />
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">
           <Link to="/house" className="font-mono text-[11px] uppercase tracking-wider text-brand-600 dark:text-brand-400">

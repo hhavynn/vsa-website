@@ -45,6 +45,19 @@ export interface PublishedPastEventArchiveAvailability {
   hasUnassignedEvents: boolean;
 }
 
+/** Upper bound on events the search index loads (newest first). */
+export const PUBLIC_SEARCH_EVENT_LIMIT = 500;
+
+export interface PublicSearchEvent {
+  id: string;
+  name: string;
+  date: string;
+  end_date: string | null;
+  location: string | null;
+  event_type: Event['event_type'];
+  academic_term_id: string | null;
+}
+
 /**
  * Every `events` column an anonymous visitor may read.
  *
@@ -251,6 +264,26 @@ export class EventsRepository {
       date_from: new Date().toISOString(),
       limit,
     });
+  }
+
+  /**
+   * The slim projection site search indexes: published events only, with just
+   * the fields a result shows. One bounded query, fetched once per session by
+   * the search palette -- not per keystroke. Same `is_published` filter and
+   * anon-readable columns as every other public read above.
+   */
+  async getPublicSearchEntries(limit: number = PUBLIC_SEARCH_EVENT_LIMIT): Promise<PublicSearchEvent[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, date, end_date, location, event_type, academic_term_id')
+        .eq('is_published', true)
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []) as PublicSearchEvent[];
+    }, 'Failed to fetch events for search');
   }
 
   async getPublicUpcomingPreview(dateFrom: string, limit: number = 4): Promise<PublicEventPreview[]> {

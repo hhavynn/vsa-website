@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
+import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ProgramContentCallout } from '../components/features/program/ProgramContentCallout';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
@@ -709,6 +710,7 @@ export function House() {
     <>
       <PageTitle title={isArchive ? `House Archive ${activeYearLabel}` : 'House Program'} />
       {isDegradedMode && <DegradedModeBanner sourceName="house" />}
+      <PublicBreadcrumbs context={{ currentYear }} />
 
       <div className="program-app">
 

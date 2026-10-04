@@ -30,6 +30,16 @@ export interface GalleryFilters {
   date_to?: string;
 }
 
+/** Upper bound on albums the search index loads (newest first). */
+export const PUBLIC_SEARCH_ALBUM_LIMIT = 300;
+
+export interface PublicSearchAlbum {
+  id: string;
+  title: string;
+  date: string;
+  google_photos_url: string;
+}
+
 export class GalleryRepository {
   /**
    * Get gallery albums with optional pagination
@@ -65,6 +75,25 @@ export class GalleryRepository {
         event: Array.isArray(row.event) ? (row.event[0] ?? null) : (row.event ?? null),
       })) as GalleryAlbum[];
     }, 'Failed to fetch gallery albums');
+  }
+
+  /**
+   * The slim projection site search indexes. Same visibility rule as getAlbums
+   * (an album is public exactly when it has a Google Photos URL), one bounded
+   * query fetched once per session -- not per keystroke.
+   */
+  async getPublicSearchAlbums(limit: number = PUBLIC_SEARCH_ALBUM_LIMIT): Promise<PublicSearchAlbum[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('gallery_events')
+        .select('id, title, date, google_photos_url')
+        .not('google_photos_url', 'is', null)
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []) as PublicSearchAlbum[];
+    }, 'Failed to fetch gallery albums for search');
   }
 
   /**
