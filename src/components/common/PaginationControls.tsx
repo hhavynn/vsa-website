@@ -83,7 +83,7 @@ export function PaginationControls({
                   : (Number(e.target.value) as RowsPerPageOption)
               )
             }
-            className={`rounded-lg border ${t.selectBorder} ${t.selectBg} px-3 py-1.5 text-sm ${t.selectText} ${t.selectFocus} transition-colors`}
+            className={`rounded-lg border ${t.selectBorder} ${t.selectBg} px-3 py-1.5 text-sm touch:min-h-11 ${t.selectText} ${t.selectFocus} transition-colors`}
           >
             {ROWS_PER_PAGE_OPTIONS.map(option => (
               <option key={option} value={option}>
@@ -102,7 +102,7 @@ export function PaginationControls({
         <button
           onClick={() => onPageChange(Math.max(1, page - 1))}
           disabled={page === 1}
-          className={`rounded-lg border ${t.btnBorder} px-3 py-2 text-sm font-medium ${t.btnText} transition-colors ${t.btnHover} disabled:cursor-not-allowed disabled:opacity-40`}
+          className={`rounded-lg border ${t.btnBorder} px-3 py-2 text-sm font-medium touch:min-h-11 touch:min-w-11 ${t.btnText} transition-colors ${t.btnHover} disabled:cursor-not-allowed disabled:opacity-40`}
         >
           Previous
         </button>
@@ -112,7 +112,7 @@ export function PaginationControls({
         <button
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
           disabled={page === totalPages}
-          className={`rounded-lg border ${t.btnBorder} px-3 py-2 text-sm font-medium ${t.btnText} transition-colors ${t.btnHover} disabled:cursor-not-allowed disabled:opacity-40`}
+          className={`rounded-lg border ${t.btnBorder} px-3 py-2 text-sm font-medium touch:min-h-11 touch:min-w-11 ${t.btnText} transition-colors ${t.btnHover} disabled:cursor-not-allowed disabled:opacity-40`}
         >
           Next
         </button>

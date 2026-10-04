@@ -129,7 +129,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
           House Rankings{selectedYearLabel ? ` · ${selectedYearLabel}` : ''}
         </div>
         {showLeaderboardLink && (
-          <Link to="/leaderboard?view=houses" className="font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
+          <Link to="/leaderboard?view=houses" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
             Full Leaderboard →
           </Link>
         )}

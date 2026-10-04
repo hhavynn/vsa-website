@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
@@ -81,6 +81,7 @@ const extraLinks = [
 ];
 
 export function GetInvolved() {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <>
       <PageTitle title="Get Involved" />
@@ -171,7 +172,7 @@ export function GetInvolved() {
           <motion.div
             className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : "hidden"}
             whileInView="show"
             viewport={{ once: true }}
           >
@@ -229,7 +230,7 @@ export function GetInvolved() {
               <Link
                 key={item.link}
                 to={item.link}
-                className="inline-flex max-w-full items-center rounded-lg border px-4 py-2 font-sans text-sm text-left transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                className="inline-flex max-w-full touch:min-h-11 items-center rounded-lg border px-4 py-2 font-sans text-sm text-left transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
                 style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text2)' }}
               >
                 {item.label}

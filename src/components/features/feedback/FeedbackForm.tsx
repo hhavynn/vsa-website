@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { toast } from 'react-hot-toast';
 import { FeedbackSchema, type FeedbackFormData } from '../../../schemas';
+import { FieldError, FormAlert } from '../../ui/FieldError';
 
 interface FeedbackFormProps {
   onSuccess?: () => void;
@@ -13,7 +14,7 @@ interface FeedbackFormProps {
   defaultTitle?: string;
 }
 
-const inputCls = 'w-full px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600';
+const inputCls = 'w-full touch:min-h-11 px-2 py-1 border border-zinc-300 dark:border-zinc-700 rounded bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600';
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
 
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel, defaultType = 'feature', defaultTitle = '' }) => {
@@ -83,7 +84,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.name && (
-            <p id="feedback-name-error" role="alert" className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+            <FieldError id="feedback-name-error" message={errors.name.message} />
           )}
         </div>
         <div>
@@ -98,7 +99,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.email && (
-            <p id="feedback-email-error" role="alert" className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+            <FieldError id="feedback-email-error" message={errors.email.message} />
           )}
         </div>
       </div>
@@ -120,7 +121,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             <option value="other">Other</option>
           </select>
           {errors.type && (
-            <p id="feedback-type-error" role="alert" className="mt-1 text-xs text-red-400">{errors.type.message}</p>
+            <FieldError id="feedback-type-error" message={errors.type.message} />
           )}
         </div>
         <div>
@@ -135,7 +136,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.title && (
-            <p id="feedback-title-error" role="alert" className="mt-1 text-xs text-red-400">{errors.title.message}</p>
+            <FieldError id="feedback-title-error" message={errors.title.message} />
           )}
         </div>
       </div>
@@ -152,14 +153,12 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
           className={`${inputCls} resize-none`}
         />
         {errors.description && (
-          <p id="feedback-description-error" role="alert" className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+          <FieldError id="feedback-description-error" message={errors.description.message} />
         )}
       </div>
 
       {errors.root && (
-        <div role="alert" className="p-3 rounded border border-red-900/40 bg-red-950/20 text-red-400 text-xs">
-          {errors.root.message}
-        </div>
+        <FormAlert className="text-xs">{errors.root.message}</FormAlert>
       )}
 
       <div className="flex justify-end pt-2">
@@ -176,7 +175,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className="rounded-lg bg-[var(--brand)] px-6 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="touch:min-h-11 rounded-lg bg-[var(--brand)] px-6 py-2.5 font-sans text-[13px] font-semibold text-[var(--color-on-brand)] transition-opacity duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Sending...' : 'Submit Feedback'}
         </button>

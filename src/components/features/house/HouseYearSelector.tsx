@@ -52,7 +52,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
               to={opt.route}
               aria-current={isActive ? 'page' : undefined}
               className={`
-                shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors duration-150
+                chip-check shrink-0 inline-flex touch:min-h-11 items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wide transition-colors duration-150
                 ${isActive
                   ? 'border-[var(--brand)] bg-[var(--color-surface2)] text-[var(--brand)]'
                   : 'border-[var(--color-border)] text-[var(--color-text2)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]'
@@ -77,7 +77,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
         {moreYears.length > 0 && (
           <div className="relative inline-block">
             <select
-              className="appearance-none rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              className="appearance-none touch:min-h-11 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
               value={activeStartYear && !PRIMARY_YEAR_OPTIONS.some(o => o.startYear === activeStartYear) ? activeStartYear : ""}
               onChange={(e) => {
                 if (e.target.value) {

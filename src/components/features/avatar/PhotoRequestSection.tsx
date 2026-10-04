@@ -1,6 +1,7 @@
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Label } from '../../ui/Label';
+import { FieldError, FormAlert } from '../../ui/FieldError';
 import { MemberPhotoRequestFormSchema } from '../../../schemas';
 import { photoRequestsRepository } from '../../../data/repos/photoRequests';
 import { toUserMessage } from '../../../data/errors';
@@ -15,15 +16,6 @@ const inputStyle: React.CSSProperties = {
 };
 
 const DANGER = 'var(--color-danger, #dc2626)';
-
-function FieldError({ id, message }: { id: string; message?: string }) {
-  if (!message) return null;
-  return (
-    <p id={id} className="mt-1 font-sans text-[11px] leading-snug" style={{ color: DANGER }}>
-      {message}
-    </p>
-  );
-}
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -211,7 +203,7 @@ export function PhotoRequestSection({
         <button
           onClick={() => { setFormError(null); setFieldErrors({}); setModalOpen(true); }}
           disabled={!canSubmit || submitted}
-          className="font-sans text-xs border rounded px-2.5 py-1.5 transition-colors duration-150 disabled:opacity-50"
+          className="font-sans text-xs border rounded px-2.5 py-1.5 touch:min-h-11 transition-colors duration-150 disabled:opacity-50"
           style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', background: 'transparent', cursor: !canSubmit || submitted ? 'default' : 'pointer' }}
         >
           {submitted ? 'Request submitted' : buttonLabel}
@@ -269,7 +261,7 @@ export function PhotoRequestSection({
                   aria-describedby={fieldErrors.name ? `${ids.name}-error` : undefined}
                   style={fieldErrors.name ? { ...inputStyle, borderColor: DANGER } : inputStyle}
                 />
-                <FieldError id={`${ids.name}-error`} message={fieldErrors.name} />
+                <FieldError announce={false} id={`${ids.name}-error`} message={fieldErrors.name} />
               </div>
               <div className="absolute opacity-0 -z-10 w-0 h-0 pointer-events-none" aria-hidden="true">
                 <label htmlFor="middle_name">Middle Name</label>
@@ -296,7 +288,7 @@ export function PhotoRequestSection({
                   aria-describedby={fieldErrors.email ? `${ids.email}-error` : undefined}
                   style={fieldErrors.email ? { ...inputStyle, borderColor: DANGER } : inputStyle}
                 />
-                <FieldError id={`${ids.email}-error`} message={fieldErrors.email} />
+                <FieldError announce={false} id={`${ids.email}-error`} message={fieldErrors.email} />
               </div>
               <div>
                 <Label id={`${ids.file}-label`} className="mb-1.5">Photo</Label>
@@ -318,7 +310,7 @@ export function PhotoRequestSection({
                 <p className="font-sans text-[11px] mt-1" style={{ color: 'var(--color-text3)' }}>
                   JPEG, PNG, or WebP up to 5 MB. It will be resized before display.
                 </p>
-                <FieldError id={`${ids.file}-error`} message={fieldErrors.file} />
+                <FieldError announce={false} id={`${ids.file}-error`} message={fieldErrors.file} />
               </div>
               <div>
                 <Label className="mb-1.5">Note to admins (optional)</Label>
@@ -353,17 +345,12 @@ export function PhotoRequestSection({
                   />
                   <span>I understand and consent to my photo being reviewed and, if approved, displayed publicly on the VSA website.</span>
                 </label>
-                <FieldError id={`${ids.consent}-error`} message={fieldErrors.consent} />
+                <FieldError announce={false} id={`${ids.consent}-error`} message={fieldErrors.consent} />
               </div>
 
               {formError && (
-                <div
-                  ref={errorRef}
-                  role="alert"
-                  className="rounded border p-3 font-sans text-xs leading-relaxed"
-                  style={{ color: DANGER, borderColor: DANGER, background: 'color-mix(in srgb, var(--color-danger, #dc2626) 8%, transparent)' }}
-                >
-                  {formError}
+                <div ref={errorRef}>
+                  <FormAlert className="text-xs">{formError}</FormAlert>
                 </div>
               )}
             </div>

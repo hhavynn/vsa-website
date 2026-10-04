@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
-import { PageLoader } from '../components/common/PageLoader';
+import { VcnArchiveSkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
 import { usePublishedVcnArchives } from '../hooks/useVcnArchives';
 import { VCNArchive as VCNArchiveEntry } from '../types';
@@ -140,7 +140,7 @@ export function VCNArchive() {
     return (
       <>
         <PageTitle title="VCN Archive" />
-        <PageLoader message="Loading VCN archive..." />
+        <VcnArchiveSkeleton />
       </>
     );
   }

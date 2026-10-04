@@ -7,6 +7,7 @@ import { SiteSettingsProvider } from "./context/SiteSettingsContext";
 import { AnalyticsConsentProvider } from "./context/AnalyticsConsentContext";
 import { AnalyticsConsentBanner } from "./components/common/AnalyticsConsentBanner";
 import { Toaster } from "react-hot-toast";
+import { MotionConfig } from "framer-motion";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,8 +27,13 @@ function App() {
           <AnalyticsConsentProvider>
             <AuthProvider>
               <SiteSettingsProvider>
-                <AppRoutes />
-                <AnalyticsConsentBanner />
+                {/* Safety net: with prefers-reduced-motion, every framer-motion
+                    transform/layout animation is skipped. Components still opt
+                    out of opacity reveals explicitly so nothing stays hidden. */}
+                <MotionConfig reducedMotion="user">
+                  <AppRoutes />
+                  <AnalyticsConsentBanner />
+                </MotionConfig>
                 <Toaster position="top-right" />
               </SiteSettingsProvider>
             </AuthProvider>

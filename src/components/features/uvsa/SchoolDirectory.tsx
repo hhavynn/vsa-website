@@ -58,14 +58,14 @@ export function SchoolDirectory({
                 onClick={() => setFilter(option)}
                 aria-pressed={filter === option}
                 className={cn(
-                  "min-h-[36px] rounded-full border px-3.5 py-1.5 font-sans text-xs font-semibold transition-colors",
+                  "chip-check inline-flex touch:min-h-11 min-h-[36px] items-center rounded-full border px-3.5 py-1.5 font-sans text-xs font-semibold transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400",
                   filter === option
                     ? "border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-[#050810]"
                     : "border-[var(--color-border)] bg-surface text-text-secondary hover:bg-surface2 hover:text-text-primary",
                 )}
               >
-                {option} <span className="opacity-70">{counts[option]}</span>
+                {option} <span className="font-normal">{counts[option]}</span>
               </button>
             ))}
           </div>

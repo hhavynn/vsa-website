@@ -45,7 +45,7 @@ const Footer: React.FC = () => {
                   target={link.href.startsWith('mailto') ? undefined : '_blank'}
                   rel={link.href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
                   aria-label={link.label}
-                  className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-lg border bg-[var(--surface2)] text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                  className="inline-flex h-[38px] w-[38px] touch:h-11 touch:w-11 items-center justify-center rounded-lg border bg-[var(--surface2)] text-[var(--text3)] transition-colors duration-150 hover:border-[var(--brand)] hover:text-[var(--brand)]"
                   style={{ borderColor: 'var(--border)' }}
                 >
                   {link.icon}
@@ -63,7 +63,7 @@ const Footer: React.FC = () => {
                 <Link
                   key={link.label}
                   to={link.to}
-                  className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]"
+                  className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]"
                 >
                   {link.label}
                 </Link>
@@ -75,8 +75,8 @@ const Footer: React.FC = () => {
             <div className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
               Connect
             </div>
-            <a className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
-            <a className="mb-2.5 block font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
+            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
+            <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
           </div>
         </div>
 
@@ -86,7 +86,7 @@ const Footer: React.FC = () => {
           </span>
           <div className="flex flex-wrap gap-x-4 gap-y-2 font-sans text-xs">
             {FOOTER_LEGAL_LINKS.map((link) => (
-              <Link key={link.to} to={link.to} className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
+              <Link key={link.to} to={link.to} className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
                 {link.label}
               </Link>
             ))}
@@ -94,7 +94,7 @@ const Footer: React.FC = () => {
               <button
                 type="button"
                 onClick={openPreferences}
-                className="text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                className="inline-flex touch:min-h-11 items-center text-[var(--text2)] underline-offset-2 hover:text-[var(--brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
               >
                 Analytics preferences
               </button>

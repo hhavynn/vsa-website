@@ -53,6 +53,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       className={cn(
         'inline-flex items-center justify-center rounded',
+        // 44x44 touch-target floor on phone widths / coarse pointers (#244)
+        'touch:min-h-11 touch:min-w-11',
         'font-sans tracking-[-0.01em] whitespace-nowrap',
         'transition-colors duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',

@@ -1,5 +1,5 @@
 import { type CSSProperties, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ProfileSpotlightCard } from '../../ui/ProfileSpotlightCard';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { type CabinetMemberRaw } from '../../../hooks/useCabinet';
@@ -365,7 +365,7 @@ function ExecutiveFeaturePanel({
             {isPresident ? 'Executive Lead' : 'Executive Core'}
           </div>
           {isPresident && (
-            <div className="h-1 w-1 rounded-full bg-brand-500 animate-pulse" />
+            <div className="h-1 w-1 rounded-full bg-brand-500 motion-safe:animate-pulse" />
           )}
         </div>
         <button
@@ -592,6 +592,7 @@ export function CabinetBoard({
   /** Off in previews: reveal immediately instead of waiting for scroll. */
   revealOnScroll?: boolean;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const reveal = revealOnScroll
     ? { whileInView: 'show', viewport: { once: true } }
     : { animate: 'show' };
@@ -639,7 +640,7 @@ export function CabinetBoard({
           {/* 1. Executive Leads (Priority 0 - Presidents) */}
           <motion.div
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : 'hidden'}
             {...reveal}
             className="mb-10"
           >
@@ -660,7 +661,7 @@ export function CabinetBoard({
           {/* 2. Supporting Executive Roles (VPs, ICC, Sec, Treas) */}
           <motion.div
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : 'hidden'}
             {...reveal}
             className="cabinet-positions-grid"
           >
@@ -700,7 +701,7 @@ export function CabinetBoard({
 
           <motion.div
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : 'hidden'}
             {...reveal}
             className="cabinet-wall"
           >
@@ -740,7 +741,7 @@ export function CabinetBoard({
 
           <motion.div
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : 'hidden'}
             {...reveal}
             className="cabinet-wall"
           >
@@ -769,7 +770,7 @@ export function CabinetBoard({
           </div>
           <motion.div
             variants={containerVariants}
-            initial="hidden"
+            initial={shouldReduceMotion ? false : 'hidden'}
             {...reveal}
             className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
           >

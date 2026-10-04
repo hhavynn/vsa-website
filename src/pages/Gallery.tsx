@@ -182,14 +182,9 @@ export default function Gallery() {
                 const coverUrl = album.cover_thumbnail_url || album.cover_image_url;
 
                 return (
-                  <motion.a
+                  <motion.article
                     key={album.id}
                     variants={shouldReduceMotion ? undefined : itemVariants}
-                    href={album.google_photos_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${album.title}. Preview album`}
-                    onClick={(event: MouseEvent<HTMLAnchorElement>) => handleAlbumClick(event, album.id)}
                     className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
@@ -235,7 +230,18 @@ export default function Gallery() {
                         )}
                       </div>
                       <h2 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
-                        {album.title}
+                        {/* The title is the link; its ::after stretches over the whole card, so the
+                            accessible name ("<title>. Preview album") contains the visible text. */}
+                        <a
+                          href={album.google_photos_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${album.title}. Preview album`}
+                          onClick={(event: MouseEvent<HTMLAnchorElement>) => handleAlbumClick(event, album.id)}
+                          className="after:absolute after:inset-0 after:z-10 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand-600"
+                        >
+                          {album.title}
+                        </a>
                       </h2>
                       {album.description && (
                         <p className="mt-1 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
@@ -257,7 +263,7 @@ export default function Gallery() {
                         </span>
                       </div>
                     </div>
-                  </motion.a>
+                  </motion.article>
                 );
               })}
             </motion.div>
@@ -276,7 +282,7 @@ export default function Gallery() {
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
-                  className="vsa-btn-outline group relative min-w-[200px] overflow-hidden"
+                  className="vsa-btn-ghost group relative min-w-[200px]"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     {isFetchingNextPage ? (

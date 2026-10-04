@@ -44,7 +44,7 @@ export function ExternalHostedBy({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`${host.shortName} ${link.label}`}
-                className="inline-flex min-h-[32px] items-center gap-1 font-sans text-xs font-medium text-brand-600 underline-offset-2 hover:underline dark:text-brand-400"
+                className="inline-flex min-h-[32px] touch:min-h-11 items-center gap-1 font-sans text-xs font-medium text-brand-600 underline-offset-2 hover:underline dark:text-brand-400"
               >
                 {link.label} <span aria-hidden>↗</span>
               </a>

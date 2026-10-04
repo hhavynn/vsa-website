@@ -343,6 +343,69 @@
     color: var(--color-on-brand);
   }
 
+  /* Selected state is not colour-only: a check mark precedes the label.
+     The second declaration gives the glyph an empty accessible name where the
+     `content: x / alt` syntax is supported (aria-pressed already announces the
+     state), and falls back to the plain glyph elsewhere. */
+  .vsa-filter-btn.active::before {
+    content: '\2713';
+    content: '\2713' / '';
+    margin-right: 6px;
+  }
+
+  /* Opt-in selected-state mark for chips styled with Tailwind utilities
+     instead of .vsa-filter-btn (same glyph, driven by the ARIA state). */
+  .chip-check[aria-pressed='true']::before,
+  .chip-check[aria-current='page']::before,
+  .chip-check[aria-selected='true']::before {
+    content: '\2713';
+    content: '\2713' / '';
+    margin-right: 0.35em;
+  }
+
+  /* Touch-target floor (#244): controls reach a 44x44 CSS px hit area on phone
+     widths and coarse pointers; desktop density is unchanged. Mirrors the
+     `touch:` Tailwind variant in tailwind.config.js. */
+  @media (max-width: 767px), (pointer: coarse) {
+    .vsa-btn-primary,
+    .vsa-btn-ghost,
+    .vsa-filter-btn,
+    .scrapbook-select {
+      min-height: 44px;
+    }
+
+    .vsa-btn-primary,
+    .vsa-btn-ghost,
+    .vsa-filter-btn {
+      justify-content: center;
+    }
+
+    .vsa-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      min-width: 44px;
+    }
+
+    .touch-hit::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      min-width: 44px;
+      min-height: 44px;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  /* Expand the tap area of a small control without changing its artwork.
+     The element must not already use ::after. Tailwind's `absolute`/`fixed`
+     utilities override this position. */
+  .touch-hit {
+    position: relative;
+  }
+
   .scrapbook-board {
     position: relative;
     background:
@@ -729,6 +792,16 @@
   .vsa-delay-2 { animation-delay: 0.2s; }
   .vsa-delay-3 { animation-delay: 0.3s; }
   .vsa-delay-4 { animation-delay: 0.4s; }
+
+  /* Reduced motion: the entrance animations' end state is the element's
+     natural state, so dropping the animation never leaves content hidden. */
+  @media (prefers-reduced-motion: reduce) {
+    .vsa-animate-slide-up,
+    .vsa-animate-fade-in,
+    .vsa-particle {
+      animation: none;
+    }
+  }
 
   .vsa-particle {
     position: absolute;
@@ -1621,6 +1694,12 @@ html.dark {
     scroll-behavior: smooth;
     background-color: var(--color-bg);
     color: var(--color-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   body {
