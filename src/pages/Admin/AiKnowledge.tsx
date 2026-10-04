@@ -1,20 +1,44 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { FilterChips } from '../../components/features/admin/ops';
+import { FreshnessBadge, FreshnessCard } from '../../components/features/admin/KnowledgeFreshness';
 import { toUserMessage } from '../../data/errors';
 import {
   AI_KNOWLEDGE_CONFIDENCE_LEVELS,
   AI_KNOWLEDGE_FRESHNESS_LEVELS,
   AI_KNOWLEDGE_SOURCE_TYPES,
   AiKnowledgeConfidence,
+  AiKnowledgeEntityContext,
   AiKnowledgeFreshness,
+  AiKnowledgeLinkedEntityType,
+  AiKnowledgeReview,
   AiKnowledgeSnippet,
   AiKnowledgeSourceType,
   aiKnowledgeRepository,
 } from '../../data/repos/aiKnowledge';
+import { academicTermsRepository } from '../../data/repos/academicTerms';
+import { useUrlFilter } from '../../hooks/useUrlFilter';
+import { QuickFilter, applyQuickFilter, countByFilter } from '../../lib/adminFilters';
+import { ADMIN_HEALTH_QUERY_KEYS } from '../../lib/adminHealthQuery';
+import { getAcademicTermMeta } from '../../lib/academicTerms';
+import { compareByUrgency, evaluateAllKnowledge } from '../../lib/aiKnowledgeFreshness';
+import { APPLICATION_KEY_OPTIONS } from '../../lib/applicationLinks';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
-type SortMode = 'priority' | 'updated';
+type SortMode = 'priority' | 'updated' | 'urgency';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Reads the results the page computed (see `results` below), so the chip counts and the list agree.
+type Reviewable = { snippet: AiKnowledgeSnippet; needsReview: boolean };
+const FRESHNESS_FILTERS: ReadonlyArray<QuickFilter<Reviewable>> = [
+  { key: 'all', label: 'All', predicate: () => true },
+  { key: 'review', label: 'Needs review', hint: 'Stale, expired, or due for another look', predicate: (row) => row.needsReview },
+  { key: 'current', label: 'Current', predicate: (row) => !row.needsReview },
+];
+const FRESHNESS_FILTER_KEYS = FRESHNESS_FILTERS.map((filter) => filter.key);
 
 interface SnippetFormState {
   title: string;
@@ -30,6 +54,8 @@ interface SnippetFormState {
   academic_year: string;
   valid_until_date: string;
   last_verified_date: string;
+  linked_entity_type: AiKnowledgeLinkedEntityType | '';
+  linked_entity_key: string;
   is_active: boolean;
 }
 
@@ -47,6 +73,8 @@ const DEFAULT_FORM: SnippetFormState = {
   academic_year: '',
   valid_until_date: '',
   last_verified_date: '',
+  linked_entity_type: '',
+  linked_entity_key: '',
   is_active: true,
 };
 
@@ -57,9 +85,25 @@ function formatDate(value: string | null | undefined) {
   return date.toLocaleDateString();
 }
 
+// Every date on this page is a Pacific-time calendar date, like the rest of the site, so
+// opening and saving a snippet from any timezone never shifts a review or expiry date.
+const SITE_TIMEZONE = 'America/Los_Angeles';
+
+function pacificDate(ms: number) {
+  return new Date(ms).toLocaleDateString('en-CA', { timeZone: SITE_TIMEZONE });
+}
+
 function toDateInput(value: string | null | undefined) {
   if (!value) return '';
-  return value.slice(0, 10);
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? '' : pacificDate(at);
+}
+
+// valid_until is stored as the start of the day AFTER the last valid day, so the date to show is one tick earlier.
+function validUntilToDateInput(value: string | null | undefined) {
+  if (!value) return '';
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? '' : pacificDate(at - 1);
 }
 
 function toFormState(snippet: AiKnowledgeSnippet): SnippetFormState {
@@ -75,8 +119,10 @@ function toFormState(snippet: AiKnowledgeSnippet): SnippetFormState {
     confidence: snippet.confidence ?? 'high',
     freshness: snippet.freshness ?? 'stable',
     academic_year: snippet.academic_year ?? '',
-    valid_until_date: toDateInput(snippet.valid_until),
+    valid_until_date: validUntilToDateInput(snippet.valid_until),
     last_verified_date: toDateInput(snippet.last_verified_at),
+    linked_entity_type: snippet.linked_entity_type ?? '',
+    linked_entity_key: snippet.linked_entity_key ?? '',
     is_active: snippet.is_active,
   };
 }
@@ -88,9 +134,10 @@ function parseTags(value: string) {
     .filter(Boolean);
 }
 
+// 19:00 UTC is noon in Pacific daylight time and 11:00 in standard time: the same Pacific date either way.
 function toTimestamp(value: string) {
   if (!value) return null;
-  return new Date(`${value}T12:00:00`).toISOString();
+  return new Date(`${value}T19:00:00Z`).toISOString();
 }
 
 // valid_until is an expiry boundary (retrieval excludes rows where valid_until <= now()),
@@ -98,9 +145,12 @@ function toTimestamp(value: string) {
 // at noon. Use the start of the next day as the cutoff.
 function toEndOfDayTimestamp(value: string) {
   if (!value) return null;
-  const nextDay = new Date(`${value}T00:00:00`);
-  nextDay.setDate(nextDay.getDate() + 1);
-  return nextDay.toISOString();
+  const [year, month, day] = value.split('-').map(Number);
+  const nextDayStart = Date.UTC(year, month - 1, day + 1);
+  const nextDate = new Date(nextDayStart).toISOString().slice(0, 10);
+  // Midnight Pacific is 07:00 UTC in daylight time and 08:00 UTC in standard time.
+  const midnight = [7, 8].map(hour => nextDayStart + hour * 60 * 60 * 1000).find(candidate => pacificDate(candidate) === nextDate);
+  return new Date(midnight ?? nextDayStart + 8 * 60 * 60 * 1000).toISOString();
 }
 
 function getSafetyWarnings(form: SnippetFormState) {
@@ -130,6 +180,7 @@ function validateForm(form: SnippetFormState) {
   const errors: string[] = [];
   const priority = Number(form.priority);
 
+  if (form.last_verified_date && form.last_verified_date > pacificDate(Date.now())) errors.push('Last verified date cannot be in the future.');
   if (!form.title.trim()) errors.push('Title is required.');
   if (!form.content.trim()) errors.push('Content is required.');
   if (!form.category.trim()) errors.push('Category is required.');
@@ -140,6 +191,11 @@ function validateForm(form: SnippetFormState) {
   const sourceUrl = form.source_url.trim();
   if (sourceUrl && !sourceUrl.startsWith('/') && !/^https?:\/\//i.test(sourceUrl)) {
     errors.push('Source URL should be a public site path like /events or a full https:// URL.');
+  }
+
+  if (form.linked_entity_type && !form.linked_entity_key.trim()) errors.push('Choose what this snippet refers to, or set "Refers to" back to nothing.');
+  if (form.linked_entity_type === 'event' && form.linked_entity_key.trim() && !UUID.test(form.linked_entity_key.trim())) {
+    errors.push('An event link must be the event\u2019s id (copy it from the event\u2019s page URL in /admin/events).');
   }
 
   return errors;
@@ -166,12 +222,20 @@ export default function AdminAiKnowledge() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortMode, setSortMode] = useState<SortMode>('priority');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [successText, setSuccessText] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const [now] = useState(() => new Date());
+  const [freshnessFilter, setFreshnessFilter] = useUrlFilter(FRESHNESS_FILTER_KEYS);
+  // Arriving from a Content Health or Overview link (?filter=review) opens on the most urgent first.
+  const [sortMode, setSortMode] = useState<SortMode>(freshnessFilter === 'review' ? 'urgency' : 'priority');
+  const [currentYearStart, setCurrentYearStart] = useState<number | null>(null);
+  const [entityContext, setEntityContext] = useState<AiKnowledgeEntityContext>({ applications: null, events: null });
+  const [reviews, setReviews] = useState<Map<string, AiKnowledgeReview>>(new Map());
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -180,9 +244,17 @@ export default function AdminAiKnowledge() {
       setLoading(true);
       setErrorText(null);
       try {
-        const data = await aiKnowledgeRepository.listAdminSnippets();
+        const [data, term, latestReviews] = await Promise.all([
+          aiKnowledgeRepository.listAdminSnippets(),
+          // `undefined` = the lookup failed, so the year rule is skipped rather than guessed.
+          academicTermsRepository.getActiveTerm().catch(() => undefined),
+          aiKnowledgeRepository.listLatestReviews(),
+        ]);
         if (!mounted) return;
         setSnippets(data);
+        setReviews(latestReviews);
+        setCurrentYearStart(term === undefined ? null : term?.academic_year_start ?? getAcademicTermMeta(new Date())?.academicYearStart ?? null);
+        void aiKnowledgeRepository.loadEntityContext(data).then((context) => mounted && setEntityContext(context));
         if (data.length > 0) {
           setSelectedId(data[0].id);
           setForm(toFormState(data[0]));
@@ -215,10 +287,29 @@ export default function AdminAiKnowledge() {
 
   const safetyWarnings = useMemo(() => getSafetyWarnings(form), [form]);
 
+  // The same rules the Content Health page and the Overview count use.
+  const results = useMemo(
+    () => evaluateAllKnowledge(snippets, { now, currentAcademicYearStart: currentYearStart, applications: entityContext.applications, events: entityContext.events }),
+    [snippets, now, currentYearStart, entityContext],
+  );
+  const reviewable = useMemo<Reviewable[]>(
+    () => snippets.map((snippet) => ({ snippet, needsReview: (results.get(snippet.id)?.status ?? 'current') !== 'current' })),
+    [snippets, results],
+  );
+  const freshnessCounts = useMemo(() => countByFilter(reviewable, FRESHNESS_FILTERS), [reviewable]);
+  const selectedResult = selectedId ? results.get(selectedId) : undefined;
+  const selectedReview = useMemo(() => {
+    const review = selectedId ? reviews.get(selectedId) : undefined;
+    const verified = selectedSnippet?.last_verified_at ? Date.parse(selectedSnippet.last_verified_at) : NaN;
+    // Show who only when the log entry is that review, not an older one the date has since been edited past.
+    return review && Math.abs(Date.parse(review.reviewedAt) - verified) < 5 * 60 * 1000 ? review : null;
+  }, [reviews, selectedId, selectedSnippet]);
+
   const filteredSnippets = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
-    return snippets
+    return applyQuickFilter(reviewable, FRESHNESS_FILTERS, freshnessFilter)
+      .map(row => row.snippet)
       .filter(snippet => {
         if (categoryFilter !== 'all' && snippet.category !== categoryFilter) return false;
         if (statusFilter === 'active' && !snippet.is_active) return false;
@@ -239,13 +330,18 @@ export default function AdminAiKnowledge() {
         return haystack.includes(query);
       })
       .sort((a, b) => {
+        if (sortMode === 'urgency') {
+          const rank = (snippet: AiKnowledgeSnippet) => ({ result: results.get(snippet.id)!, reviewedAt: snippet.last_verified_at ?? snippet.created_at });
+          const byUrgency = compareByUrgency(rank(a), rank(b));
+          if (byUrgency !== 0) return byUrgency;
+        }
         if (sortMode === 'priority') {
           const byPriority = (b.priority ?? 0) - (a.priority ?? 0);
           if (byPriority !== 0) return byPriority;
         }
         return Date.parse(b.updated_at ?? '') - Date.parse(a.updated_at ?? '');
       });
-  }, [categoryFilter, searchTerm, snippets, sortMode, statusFilter]);
+  }, [categoryFilter, freshnessFilter, results, reviewable, searchTerm, sortMode, statusFilter]);
 
   const activeCount = snippets.filter(snippet => snippet.is_active).length;
   const inactiveCount = snippets.length - activeCount;
@@ -293,7 +389,13 @@ export default function AdminAiKnowledge() {
       freshness: form.freshness,
       academic_year: form.academic_year,
       valid_until: toEndOfDayTimestamp(form.valid_until_date),
-      last_verified_at: toTimestamp(form.last_verified_date),
+      // Saving other edits must not re-stamp the review date; only an edit to the date field does.
+      last_verified_at:
+        !selectedSnippet || form.last_verified_date !== toDateInput(selectedSnippet.last_verified_at) ? toTimestamp(form.last_verified_date) : undefined,
+      // Named only when there is a link to set or clear, so snippets with no link never touch the column.
+      ...(form.linked_entity_type || selectedSnippet?.linked_entity_type
+        ? { linked_entity_type: form.linked_entity_type || null, linked_entity_key: form.linked_entity_type ? form.linked_entity_key.trim() : null }
+        : {}),
     };
 
     setSaving(true);
@@ -310,11 +412,39 @@ export default function AdminAiKnowledge() {
       setSelectedId(saved.id);
       setForm(toFormState(saved));
       setSuccessText(selectedSnippet ? 'Knowledge snippet saved.' : 'Knowledge snippet created.');
+      void aiKnowledgeRepository.loadEntityContext([saved]).then((context) =>
+        setEntityContext((current) => ({
+          applications: context.applications ?? current.applications,
+          events: context.events === null ? current.events : Array.from(new Map([...(current.events ?? []), ...context.events].map((event) => [event.id, event])).values()),
+        })),
+      );
+      void queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
     } catch (error) {
       console.error(error);
       setErrorText(toUserMessage(error, 'Failed to save Ask VSA knowledge snippet.'));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleMarkReviewed() {
+    if (!selectedSnippet) return;
+    setReviewing(true);
+    setErrorText(null);
+    setSuccessText(null);
+    try {
+      const updated = await aiKnowledgeRepository.markReviewed(selectedSnippet);
+      setSnippets(current => current.map(snippet => (snippet.id === updated.id ? updated : snippet)));
+      // Only the review date moves: unsaved edits in the form stay as they are.
+      updateForm('last_verified_date', toDateInput(updated.last_verified_at));
+      setReviews(current => new Map(current).set(updated.id, { reviewedAt: updated.last_verified_at ?? new Date().toISOString(), reviewer: 'you' }));
+      void queryClient.invalidateQueries(ADMIN_HEALTH_QUERY_KEYS.all);
+      setSuccessText('Marked as reviewed. The text was not changed.');
+    } catch (error) {
+      console.error(error);
+      setErrorText(toUserMessage(error, 'Failed to mark this snippet as reviewed.'));
+    } finally {
+      setReviewing(false);
     }
   }
 
@@ -403,6 +533,7 @@ export default function AdminAiKnowledge() {
               </div>
 
               <div className="mt-4 space-y-3">
+                <FilterChips filters={FRESHNESS_FILTERS} counts={freshnessCounts} active={freshnessFilter} onChange={setFreshnessFilter} label="Filter by freshness" />
                 <label className="block">
                   <span className="sr-only">Search snippets</span>
                   <input
@@ -463,6 +594,7 @@ export default function AdminAiKnowledge() {
                     >
                       <option value="priority">Priority</option>
                       <option value="updated">Updated date</option>
+                      <option value="urgency">Most urgent first</option>
                     </select>
                   </label>
                 </div>
@@ -505,6 +637,7 @@ export default function AdminAiKnowledge() {
                                 {snippet.category}
                               </span>
                               <StatusBadge active={snippet.is_active} />
+                              <FreshnessBadge result={results.get(snippet.id)} />
                             </div>
                             <h3 className="mt-2 line-clamp-2 font-sans text-sm font-semibold leading-snug" style={{ color: 'var(--color-text)' }}>
                               {snippet.title}
@@ -514,9 +647,13 @@ export default function AdminAiKnowledge() {
                             {snippet.priority}
                           </span>
                         </div>
-                        <p className="mt-2 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                          {snippet.content}
-                        </p>
+                        {results.get(snippet.id)?.headline ? (
+                          <p className="mt-2 font-sans text-xs font-semibold leading-relaxed text-[var(--color-text)]">{results.get(snippet.id)?.headline}</p>
+                        ) : (
+                          <p className="mt-2 line-clamp-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                            {snippet.content}
+                          </p>
+                        )}
                         <div className="mt-3 flex flex-wrap gap-2 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
                           <span>Verified: {formatDate(snippet.last_verified_at)}</span>
                           <span>Updated: {formatDate(snippet.updated_at)}</span>
@@ -556,6 +693,17 @@ export default function AdminAiKnowledge() {
                 </div>
               </div>
             </div>
+
+            {selectedSnippet && (
+              <FreshnessCard
+                result={selectedResult}
+                lastVerifiedAt={selectedSnippet.last_verified_at}
+                reviewer={selectedReview?.reviewer ?? null}
+                validUntil={selectedSnippet.valid_until}
+                busy={reviewing}
+                onMarkReviewed={handleMarkReviewed}
+              />
+            )}
 
             <form onSubmit={handleSave} className="space-y-5 p-4 sm:p-5">
               {(errorText || successText || validationErrors.length > 0 || safetyWarnings.length > 0) && (
@@ -791,6 +939,61 @@ export default function AdminAiKnowledge() {
                     Optional expiry. After this date the snippet stays saved but retrieval skips it automatically.
                   </p>
                 </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    Refers to
+                  </span>
+                  <select
+                    value={form.linked_entity_type}
+                    onChange={event => setForm(current => ({ ...current, linked_entity_type: event.target.value as SnippetFormState['linked_entity_type'], linked_entity_key: '' }))}
+                    className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">Nothing in particular</option>
+                    <option value="application">An application window</option>
+                    <option value="event">A published event</option>
+                  </select>
+                  <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                    Optional. Lets Content Health flag this snippet when that window or event changes. It never copies anything from it.
+                  </p>
+                </label>
+
+                {form.linked_entity_type && (
+                  <label className="block">
+                    <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                      {form.linked_entity_type === 'application' ? 'Application window' : 'Event id'}
+                    </span>
+                    {form.linked_entity_type === 'application' ? (
+                      <select
+                        value={form.linked_entity_key}
+                        onChange={event => updateForm('linked_entity_key', event.target.value)}
+                        className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-sans text-sm outline-none focus:border-[var(--accent)]"
+                        style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                      >
+                        <option value="">Choose a window…</option>
+                        {APPLICATION_KEY_OPTIONS.map(option => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        value={form.linked_entity_key}
+                        onChange={event => updateForm('linked_entity_key', event.target.value)}
+                        className="w-full rounded-lg border bg-[var(--color-surface2)] px-3 py-2.5 font-mono text-xs outline-none focus:border-[var(--accent)]"
+                        style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                        placeholder="00000000-0000-0000-0000-000000000000"
+                      />
+                    )}
+                    {form.linked_entity_type === 'event' && (
+                      <p className="mt-1.5 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                        The event must be published. Ask VSA never describes a draft event.
+                      </p>
+                    )}
+                  </label>
+                )}
 
                 <label className="block md:col-span-2">
                   <span className="mb-1.5 block font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>

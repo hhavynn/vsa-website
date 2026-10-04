@@ -9,6 +9,7 @@
 // Pure: no I/O, so every number on the dashboard can be pinned by a unit test.
 import { AttentionSignals, EMPTY_ATTENTION_SIGNALS } from './adminAttention';
 import { getApplicationStatus } from './applicationLinks';
+import { ContentHealthReport, ContentHealthStateRow, buildContentHealthReport } from './contentHealth';
 import { ApplicationKey } from '../types';
 
 export interface OverviewStats {
@@ -109,10 +110,19 @@ export interface OverviewEventRow {
   location: string | null;
   check_in_form_url: string | null;
   academic_term_id: string | null;
+  // Read for Content Health (same request): which event, and when it last changed.
+  id?: string | null;
+  name?: string | null;
+  end_date?: string | null;
+  updated_at?: string | null;
 }
 export interface OverviewGalleryRow {
   cover_image_url: string | null;
   google_photos_url: string | null;
+  id?: string | null;
+  name?: string | null;
+  title?: string | null;
+  created_at?: string | null;
 }
 export interface OverviewCabinetRow {
   cabinet_year_id: string | null;
@@ -133,6 +143,16 @@ export interface OverviewVcnRow {
 export interface OverviewProgramContentRow {
   is_published: boolean | null;
   status: string | null;
+  id?: string | null;
+  page_key?: string | null;
+  section_key?: string | null;
+  title?: string | null;
+  body?: string | null;
+  primary_link_label?: string | null;
+  primary_link_url?: string | null;
+  secondary_link_label?: string | null;
+  secondary_link_url?: string | null;
+  updated_at?: string | null;
 }
 export interface OverviewFeedbackRow {
   status: string | null;
@@ -146,6 +166,16 @@ export interface OverviewAiRow {
   is_public: boolean | null;
   is_active: boolean | null;
   last_verified_at: string | null;
+  // Read for the freshness rules; never the snippet text.
+  id?: string;
+  title?: string;
+  source_type?: string | null;
+  freshness?: string | null;
+  academic_year?: string | null;
+  valid_until?: string | null;
+  created_at?: string | null;
+  linked_entity_type?: string | null;
+  linked_entity_key?: string | null;
 }
 export interface OverviewApplicationRow {
   application_key: ApplicationKey;
@@ -154,6 +184,7 @@ export interface OverviewApplicationRow {
   open_at: string;
   due_at: string;
   is_enabled: boolean;
+  updated_at?: string | null;
 }
 export interface OverviewImageRow {
   image_url?: string | null;
@@ -183,12 +214,16 @@ export interface OverviewSources {
   /** `null` = the table is missing / unreadable (pre-migration). */
   ai: OverviewAiRow[] | null;
   applications: OverviewApplicationRow[] | null;
+  /** Link-check results and acknowledgements, one request. `null` = table missing or unreadable. */
+  contentHealthState: ContentHealthStateRow[] | null;
 }
 
 export interface OverviewSnapshot {
   stats: OverviewStats;
   /** Count-only signals for the "what needs attention" queue. */
   attention: AttentionSignals;
+  /** The full Content Health report, computed from the same rows (no extra requests). The Overview shows only its counts. */
+  contentHealth: ContentHealthReport;
   /** Labels of sources that failed, so the page can say its numbers may be incomplete. */
   unavailable: string[];
 }
@@ -354,5 +389,20 @@ export function buildOverviewSnapshot(sources: OverviewSources, now: Date, fallb
     feedbackPending: sources.feedback ? sources.feedback.filter((f) => f.status === 'pending').length : null,
   };
 
-  return { stats, attention, unavailable };
+  // Content Health reuses the rows above. Only a missing year skips the year-based
+  // rules; a source that failed is reported as unchecked, never as healthy.
+  const contentHealth = buildContentHealthReport({
+    now,
+    currentAcademicYearStart: stats.housesCurrentYearStart,
+    events: sources.events,
+    gallery: sources.gallery,
+    programContent: sources.programContent,
+    ai: sources.ai ? sources.ai.filter((row): row is OverviewAiRow & { id: string; title: string } => !!row.id).map((row) => ({ ...row, title: row.title ?? '' })) : null,
+    applications: sources.applications ? sources.applications.map((row) => ({ application_key: row.application_key, due_at: row.due_at, updated_at: row.updated_at ?? null })) : null,
+    state: sources.contentHealthState,
+  });
+  const checkedAnything = !!(sources.events || sources.gallery || sources.programContent || sources.ai);
+  attention.contentHealth = !checkedAnything ? null : { issues: contentHealth.counts.total, urgent: contentHealth.counts.high };
+
+  return { stats, attention, contentHealth, unavailable };
 }

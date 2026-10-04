@@ -29,6 +29,11 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
       { to: '/admin', label: 'Dashboard', keywords: ['overview', 'home', 'operations', 'continue'] },
       { to: '/admin/recent-changes', label: 'Recent Changes', keywords: ['activity', 'history', 'log', 'undo', 'audit'] },
       { to: '/admin/content-calendar', label: 'Content Calendar' },
+      {
+        to: '/admin/content-health',
+        label: 'Content Health',
+        keywords: ['broken', 'dead link', 'stale', 'images', 'issues', 'maintenance', 'needs attention', 'drafts'],
+      },
     ],
   },
   {

@@ -32,11 +32,53 @@ describe('adminOverviewRepository.load', () => {
     const perTable = queries.reduce<Record<string, number>>((acc, q) => ({ ...acc, [q.table]: (acc[q.table] ?? 0) + 1 }), {});
 
     expect(Object.values(perTable).every((n) => n === 1)).toBe(true);
-    // 17 table reads here + 1 active-term lookup (mocked) = 18 requests, down from ~45.
-    // The attention queue's three counts replaced the old merge-exclusions count (net +2).
-    expect(queries).toHaveLength(17);
+    // 18 table reads here + 1 active-term lookup (mocked) = 19 requests, down from ~45.
+    // The attention queue's three counts replaced the old merge-exclusions count (net +2),
+    // and Content Health added exactly one: the content_health_state cache read.
+    expect(queries).toHaveLength(18);
     expect(snapshot.unavailable).toEqual([]);
     expect(queries.filter(isHeadCount).map((q) => q.table).sort()).toEqual(['academic_terms', 'ai_feedback', 'data_rights_requests', 'member_photo_requests', 'members']);
+  });
+
+  it('adds exactly one request for Content Health: a filtered read of the cache table that skips healthy links', async () => {
+    await adminOverviewRepository.load(NOW);
+
+    const reads = supabaseMock.queries().filter((q) => q.table === 'content_health_state');
+    expect(reads).toHaveLength(1);
+    const filters = reads[0].calls.filter((call) => call.method !== 'select');
+    expect(JSON.stringify(filters)).toContain('check_status.eq.failed');
+    expect(JSON.stringify(reads[0].calls)).not.toContain('"head":true');
+  });
+
+  it('treats a missing cache table (migration not applied) as "links not checked", quietly', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      supabaseMock.queueResult('content_health_state', { data: null, error: { code: 'PGRST205', message: 'Could not find the table' } });
+      const { contentHealth, unavailable } = await adminOverviewRepository.load(NOW);
+      expect(contentHealth.links.available).toBe(false);
+      expect(unavailable).toEqual([]);
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('retries the Ask VSA read without the entity-link columns when the migration is not applied yet', async () => {
+    supabaseMock.queueResult('ai_knowledge_base', { data: null, error: { code: '42703', message: 'column does not exist' } });
+    supabaseMock.queueResult('ai_knowledge_base', {
+      data: [{ id: 'k1', title: 'x', is_public: true, is_active: true, last_verified_at: null }],
+      error: null,
+      count: 1,
+    } as never);
+
+    const { stats } = await adminOverviewRepository.load(NOW);
+
+    const aiReads = supabaseMock.queries().filter((q) => q.table === 'ai_knowledge_base');
+    expect(aiReads).toHaveLength(2);
+    expect(JSON.stringify(aiReads[0].calls)).toContain('linked_entity_type');
+    expect(JSON.stringify(aiReads[1].calls)).not.toContain('linked_entity_type');
+    expect(stats.aiTableExists).toBe(true);
+    expect(stats.aiSnippetsActive).toBe(1);
   });
 
   it('is read-only', async () => {

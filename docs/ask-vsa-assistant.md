@@ -117,3 +117,7 @@ AI_QUOTA_TEST_DATABASE_URL=postgresql://... python3 supabase/functions/vsa-ai-as
 ```
 
 It never loads project environment files or defaults to a production connection.
+
+## 6. Knowledge freshness
+
+Knowledge rows are curated by people and never filled from other tables. `/admin/ai-knowledge` flags rows that need another look (expired `valid_until`, prior-year `academic_year`, review cadence overdue, a linked application window or event that changed or went away, a linked event that is not published), shows why, and lets an admin **Mark reviewed** without rewriting the text. Evergreen (`stable`) rows are never flagged for age. The same rules feed the Content Health page, the Admin Overview count, and the Launch Checklist. Rules, schema, and the reviewer log: [content-health.md](content-health.md).

@@ -6,6 +6,7 @@ import { adminOverviewRepository } from '../../data/repos/adminOverview';
 import { DEFAULT_OVERVIEW_STATS, OverviewSnapshot } from '../../lib/adminOverviewStats';
 import { EMPTY_ATTENTION_SIGNALS } from '../../lib/adminAttention';
 import { ADMIN_HEALTH_QUERY_KEYS } from '../../lib/adminHealthQuery';
+import { buildContentHealthReport } from '../../lib/contentHealth';
 
 jest.mock('../../data/repos/adminOverview', () => ({ adminOverviewRepository: { load: jest.fn() } }));
 jest.mock('../../components/features/admin/OperationsDashboard', () => ({ OperationsDashboard: () => null }));
@@ -20,6 +21,7 @@ function snapshot(overrides: Partial<OverviewSnapshot['stats']> = {}, unavailabl
   return {
     stats: { ...DEFAULT_OVERVIEW_STATS, members: 820, events: 44, eventsPublished: 40, eventsDraft: 4, aiTableExists: true, ...overrides },
     attention: { ...EMPTY_ATTENTION_SIGNALS, ...CLEAR_ATTENTION, ...attention },
+    contentHealth: buildContentHealthReport({ now: new Date('2026-10-02T12:00:00Z'), currentAcademicYearStart: 2026, events: [], gallery: [], programContent: [], ai: [], applications: [], state: [] }),
     unavailable,
   };
 }
@@ -116,6 +118,15 @@ describe('Admin Overview health scan', () => {
       expect(within(queue).getByRole('link', { name: /1 open data-rights request/ })).toHaveAttribute('href', '/admin/data-rights?filter=open');
       expect(within(queue).getByRole('link', { name: /1 unpublished event in the next 14 days/ })).toHaveAttribute('href', '/admin/events?filter=draft');
       expect(within(queue).queryByText('You’re all caught up')).not.toBeInTheDocument();
+    });
+
+    it('shows one aggregate content health count that links to the Health page, with no details', async () => {
+      load.mockResolvedValue(snapshot({}, [], { contentHealth: { issues: 6, urgent: 1 } }));
+      renderOverview();
+
+      const link = await screen.findByRole('link', { name: /6 content health issues/ });
+      expect(link).toHaveAttribute('href', '/admin/content-health');
+      expect(link).toHaveAttribute('data-attention-id', 'content-health');
     });
 
     it('says the admin is all caught up when nothing is waiting', async () => {

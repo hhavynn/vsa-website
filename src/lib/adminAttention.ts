@@ -35,7 +35,15 @@ export const ATTENTION_LINKS = {
   aiFeedback: '/admin/ai-feedback?filter=unresolved',
   feedback: '/admin/feedback?filter=pending',
   draftEvents: '/admin/events?filter=draft',
+  contentHealth: '/admin/content-health',
 } as const;
+
+/** The content-health report reduced to what the Overview may show: two counts, nothing about the content. */
+export interface ContentHealthSignal {
+  issues: number;
+  /** How many of them are high priority. */
+  urgent: number;
+}
 
 /** The signals the Overview read. A `null` means that source could not be read (never "zero"). */
 /** A window plus its link, read only to classify the window like /admin/applications does (never shown). */
@@ -49,6 +57,11 @@ export interface AttentionSignals {
   dataRightsOpen: number | null;
   aiFeedbackUnresolved: number | null;
   feedbackPending: number | null;
+  /**
+   * Computed from rows the Overview already read plus one cache-table read.
+   * `undefined` = not part of this check; `null` = nothing could be checked.
+   */
+  contentHealth?: ContentHealthSignal | null;
 }
 
 export const EMPTY_ATTENTION_SIGNALS: AttentionSignals = {
@@ -187,7 +200,19 @@ export function buildAttentionQueue(signals: AttentionSignals, now: Date = new D
     if (item) items.push(item);
   }
 
-  // Urgent first; otherwise keep the order above (applications, then queues, then events).
+  if (signals.contentHealth === null) unchecked.push('content health');
+  else if (signals.contentHealth && signals.contentHealth.issues > 0) {
+    const { issues, urgent } = signals.contentHealth;
+    items.push({
+      id: 'content-health',
+      count: issues,
+      label: issues === 1 ? 'content health issue' : 'content health issues',
+      to: ATTENTION_LINKS.contentHealth,
+      tone: urgent > 0 ? 'urgent' : 'attention',
+    });
+  }
+
+  // Urgent first; otherwise keep the order above (applications, then queues, then events, then content health).
   items.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'urgent' ? -1 : 1));
   return { items, unchecked };
 }

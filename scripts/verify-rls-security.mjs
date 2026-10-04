@@ -353,6 +353,22 @@ async function runTests() {
       }
     }
 
+    // content_health_state is admin-only (migration 20261004000000). A missing table means the
+    // migration is not applied yet, which is a skip, not a pass. Writes are covered by
+    // scripts/verify-content-health.sql on a local or staging database, not probed here.
+    {
+      const { data: chData, error: chError } = await anon.from('content_health_state').select('subject_key').limit(1);
+      if (chError && (chError.code === 'PGRST205' || chError.code === '42P01')) {
+        reportSkip('content_health_state is not present yet (migration 20261004000000 not applied)');
+      } else if (chError) {
+        reportPass(`anon cannot read content_health_state (${chError.message || chError.code})`);
+      } else if (chData && chData.length > 0) {
+        reportFail('anon read content_health_state successfully (returned rows)');
+      } else {
+        reportPass('anon cannot read content_health_state (returned empty list due to RLS)');
+      }
+    }
+
     // Call get_data_rights_dependency_preview RPC
     const { data: rpc1Data, error: rpc1Error } = await anon.rpc('get_data_rights_dependency_preview', { p_request_id: dummyUuid });
     if (rpc1Error && (rpc1Error.code === '42501' || rpc1Error.message.includes('permission denied') || rpc1Error.message.includes('dependency preview is unavailable'))) {

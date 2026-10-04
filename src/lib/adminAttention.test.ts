@@ -167,4 +167,27 @@ describe('seasonal suppression', () => {
     expect(warnsWhenNoUpcomingEvents(new Date('2026-10-01T16:00:00Z'))).toBe(true);
     expect(warnsWhenNoUpcomingEvents(new Date('2026-07-20T19:00:00Z'))).toBe(false);
   });
+
+  describe('content health', () => {
+    it('adds one count that links to the Health page, urgent only when something is high priority', () => {
+      const calm = byId(buildAttentionQueue(signals({ contentHealth: { issues: 6, urgent: 0 } }), NOW), 'content-health');
+      expect(calm).toMatchObject({ count: 6, label: 'content health issues', to: '/admin/content-health', tone: 'attention' });
+      const urgent = byId(buildAttentionQueue(signals({ contentHealth: { issues: 1, urgent: 1 } }), NOW), 'content-health');
+      expect(urgent).toMatchObject({ count: 1, label: 'content health issue', tone: 'urgent' });
+    });
+
+    it('stays out of the way when there are no issues or the signal is not part of the check', () => {
+      expect(byId(buildAttentionQueue(signals({ contentHealth: { issues: 0, urgent: 0 } }), NOW), 'content-health')).toBeUndefined();
+      expect(buildAttentionQueue(signals(), NOW)).toEqual({ items: [], unchecked: [] });
+    });
+
+    it('says it could not check, instead of implying all is well', () => {
+      expect(buildAttentionQueue(signals({ contentHealth: null }), NOW).unchecked).toEqual(['content health']);
+    });
+
+    it('carries counts only', () => {
+      const queue = buildAttentionQueue(signals({ contentHealth: { issues: 6, urgent: 2 } }), NOW);
+      expect(Object.keys(byId(queue, 'content-health') ?? {}).sort()).toEqual(['count', 'id', 'label', 'to', 'tone']);
+    });
+  });
 });
