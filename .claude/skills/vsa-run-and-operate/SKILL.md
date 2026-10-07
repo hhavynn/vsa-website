@@ -35,20 +35,22 @@ npx serve -s build               # quick local check of the prod bundle (optiona
 
 **Production is a static Vercel deployment of `build/`. Nothing else serves production.** Evidence trail:
 
-`vercel.json` configures an SPA fallback while relying on Vercel zero-config for the CRA build (verbatim, abridged):
+`vercel.json` configures security/cache headers and an SPA fallback while relying on Vercel zero-config for the CRA build (abridged; it uses the current `headers`/`rewrites` format, not the old `routes`):
 
 ```json
 {
   "version": 2,
-  "routes": [
-    { "src": "/static/(.*)", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "dest": "/static/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "headers": { "cache-control": "no-cache, no-store, must-revalidate" }, "dest": "/index.html" }
-  ]
+  "headers": [
+    { "source": "/static/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/((?!static/)[^.]*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+  ],
+  "rewrites": [{ "source": "/((?!static/).*)", "destination": "/index.html" }]
 }
 ```
 
-The `handle: filesystem` + final catch-all to `/index.html` is the SPA (single-page app) fallback: any URL that isn't a real file serves `index.html` so React Router can route it. Security headers (HSTS, X-Frame-Options DENY, nosniff) are applied to every route in the same file. `AGENTS.md` (line 13) confirms: "Deployed to: Vercel (zero-config CRA build, SPA fallback in `vercel.json`)".
+Rewrites run after the filesystem check, so real files are served first and any other URL serves `index.html` for React Router. The rewrite deliberately **excludes `/static/`**: a stale tab asking for a chunk a newer deploy removed must get a 404, not `200 text/html` (which surfaces as MIME/`Unexpected token '<'` errors). Security headers (HSTS, X-Frame-Options DENY, nosniff) apply to every route in the same file. `AGENTS.md` (line 13) confirms: "Deployed to: Vercel (zero-config CRA build, SPA fallback in `vercel.json`)".
+
+Re-verify: `cat vercel.json`
 
 ### What `.github/workflows/deploy.yml` actually does
 
