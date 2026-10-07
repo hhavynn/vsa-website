@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
@@ -143,26 +143,44 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
   const [newHouseDraft, setNewHouseDraft] = useState<HouseAssetDraft>(() => emptyDraft());
   const academicYearOptions = useMemo(() => buildAcademicYearOptions(terms), [terms]);
 
+  // Drafts follow the server per house, never over unsaved edits: a refetch that
+  // returns a changed row (another admin saved, a refocus revalidation) only
+  // replaces a house whose draft is untouched or that was just saved here.
+  // Selected image files likewise survive a refetch; they are dropped only when
+  // their house leaves the list (a different year) or the house is saved.
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
+  const baselineRef = useRef<Record<string, HouseAssetDraft>>({});
+  const justSavedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
+    const baseline: Record<string, HouseAssetDraft> = {};
     const nextDrafts: Record<string, HouseAssetDraft> = {};
     assets.forEach((asset) => {
-      nextDrafts[asset.id] = draftFromAsset(asset);
+      const fresh = draftFromAsset(asset);
+      baseline[asset.id] = fresh;
+      const current = draftsRef.current[asset.id];
+      const untouched =
+        !current ||
+        justSavedRef.current.has(asset.id) ||
+        JSON.stringify(current) === JSON.stringify(baselineRef.current[asset.id]);
+      nextDrafts[asset.id] = untouched ? fresh : current;
     });
+    baselineRef.current = baseline;
+    justSavedRef.current.clear();
     setDrafts(nextDrafts);
-    setFiles({});
-    setParentFiles({});
-    setPreviews((current) => {
-      Object.values(current).forEach((url) => {
-        if (url) URL.revokeObjectURL(url);
+
+    const keep = <T,>(current: Record<string, T>, revoke?: boolean) => {
+      const next: Record<string, T> = {};
+      Object.entries(current).forEach(([id, value]) => {
+        if (baseline[id]) next[id] = value;
+        else if (revoke && typeof value === 'string' && value) URL.revokeObjectURL(value);
       });
-      return {};
-    });
-    setParentPreviews((current) => {
-      Object.values(current).forEach((url) => {
-        if (url) URL.revokeObjectURL(url);
-      });
-      return {};
-    });
+      return next;
+    };
+    setFiles((current) => keep(current));
+    setParentFiles((current) => keep(current));
+    setPreviews((current) => keep(current, true));
+    setParentPreviews((current) => keep(current, true));
   }, [assets]);
 
   useEffect(() => {
@@ -327,6 +345,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       }
       setHouseFile(id, null);
       setHouseParentFile(id, null);
+      justSavedRef.current.add(id);
       toast.success(`${draft.display_name} saved.`);
       await refetch();
     } catch (err) {

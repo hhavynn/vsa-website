@@ -2,6 +2,10 @@ import { useQuery } from 'react-query';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { HousePageAsset } from '../types';
 
+// A shared empty list: a fresh `[]` default per render would re-fire effects
+// keyed on `assets` (the admin House images editor re-seeds its drafts from them).
+const NO_ASSETS: HousePageAsset[] = [];
+
 export function usePublishedHouseAssets(academicYearStart: number | null) {
   const {
     data: assets = [],
@@ -20,7 +24,7 @@ export function usePublishedHouseAssets(academicYearStart: number | null) {
 
 export function useAdminHouseAssets(academicYearStart: number | null) {
   const {
-    data: assets = [],
+    data: assets = NO_ASSETS,
     isLoading: loading,
     error,
     refetch,

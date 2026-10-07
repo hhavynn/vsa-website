@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { UseFormRegisterReturn, useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
@@ -193,16 +193,28 @@ export function DataRightsRequestTracker() {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<DataRightsRequestFormData>({
     resolver: zodResolver(DataRightsRequestFormSchema),
     defaultValues: emptyForm,
   });
 
+  // Load the form from the selected request when a different request is opened
+  // (or the first copy arrives). A background refetch that returns a changed
+  // row must not wipe edits in progress, so while the form is dirty the stale
+  // copy stays on screen until the admin saves or opens another request.
+  const dirtyRef = useRef(false);
+  dirtyRef.current = isDirty;
+  const seededId = useRef<string | null | undefined>(undefined);
+  const adoptNextRow = useRef(false);
   useEffect(() => {
+    const switched = seededId.current !== editingId;
+    if (!switched && dirtyRef.current && !adoptNextRow.current) return;
+    seededId.current = editingId;
+    adoptNextRow.current = false;
     reset(selectedRequest ? requestToForm(selectedRequest) : emptyForm);
     setSaveError(null);
-  }, [reset, selectedRequest]);
+  }, [reset, selectedRequest, editingId]);
 
   const saveMutation = useMutation(
     ({ id, input }: { id: string | null; input: DataRightsRequestInput }) =>
@@ -211,6 +223,8 @@ export function DataRightsRequestTracker() {
         : dataRightsRequestsRepository.createDataRightsRequest(input),
     {
       onSuccess: async (request) => {
+        // What was just saved is the new baseline: let the refetched row load.
+        adoptNextRow.current = true;
         setExportSuccess(null);
         setEditingId(request.id);
         setSaveError(null);
