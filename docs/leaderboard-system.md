@@ -12,7 +12,7 @@ See [the retirement decision and rollout](./member-account-retirement.md).
 |---|---|
 | Identity | `members.id`, independent of Supabase Auth |
 | Ledger | `member_event_attendance`, one member/event pair with `points_earned` |
-| Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members` |
+| Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members`, Historical Recovery (`admin_recover_import_row`) |
 | Recalculation | `sync_member_points` / `recalculate_member_points`; event edits use `sync_attendance_points_on_event_update` |
 | Readers | `/points`, `/leaderboard`, House standings, member cards/history, Wrapped, Admin Points |
 | Public projections | `member_yearly_points`, `house_member_yearly_points`, House aggregate views, `member_event_history`, `public_members` |
@@ -66,6 +66,10 @@ When importing attendance via CSV:
 - Audit rows record `manual_decision`, `suggested_member_id` and a `final_reason` (`skipped_by_admin`, `skipped_unresolved_review`, `invalid_row_no_name`) on `decision = 'review'` rows. To recover them, import the same sheet again: people already credited show as already recorded, and skipped rows return for a decision. Attendance upserts ignore existing member/event pairs, so repeating an import never doubles points.
 - If a write fails after members were created, a retry in the same session reuses those members instead of creating them again.
 - A matched member's profile `year` advances (never rewinds) when the CSV reports a higher standing. This applies to safe matches and to review rows an admin explicitly matched; email and college are only filled on safe matches. Review rows left unconfirmed are skipped entirely.
+
+### Historical Recovery
+
+Admin → Import → Historical Recovery fixes audited import rows one at a time: credit a confirmed existing member, create a separate member, correct a wrong match, dismiss, or hold for more information. Every write goes through the `admin_recover_import_row` database function in one transaction, inserts attendance with `ON CONFLICT DO NOTHING`, and leaves recalculation to `trg_sync_member_points`. A correction deletes and inserts rather than updating `member_id`, because the trigger only recalculates `NEW.member_id` on UPDATE. Details: [import-history-audit.md](./import-history-audit.md).
 
 ### Member Management
 

@@ -16,6 +16,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPanel';
+import { HistoricalRecoveryPanel } from '../../components/features/admin/HistoricalRecoveryPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
 import { AttendanceRowDecision, MemberIdentity } from '../../components/features/admin/AttendanceRowDecision';
@@ -1200,6 +1201,7 @@ export default function AdminImport() {
           )}
         </div>
         <ImportAuditPanel />
+        <HistoricalRecoveryPanel />
       </div>
     </div>
   );
