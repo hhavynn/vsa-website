@@ -212,6 +212,7 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
    ```bash
    supabase functions deploy trigger-event-image-migration
    ```
+   `supabase/config.toml` sets `verify_jwt = false` for this function (equivalent to `--no-verify-jwt`). It must stay off: the webhook sends no JWT, so a gateway JWT check would reject every call. Confirm with `supabase functions list` (or the dashboard), which must show JWT verification disabled.
 
 2. **Set Edge Function secrets** (Supabase Dashboard → Edge Functions → trigger-event-image-migration → Secrets):
    - `IMAGE_MIGRATION_WEBHOOK_SECRET` — any strong random string (e.g. `openssl rand -hex 32`)
@@ -234,10 +235,24 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
      ```
      https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration
      ```
-   - Headers:
+   - Headers — exactly these two, nothing else:
      ```
+     Content-type: application/json
      x-image-migration-secret: <same value as IMAGE_MIGRATION_WEBHOOK_SECRET>
      ```
+
+   > **Never add an `Authorization` header, and never click "Add auth header with service key".** The function authorizes only on `x-image-migration-secret` and is deployed with `verify_jwt = false`, so a bearer token buys nothing. Supabase stores webhook headers in plain text inside the trigger definition (`pg_trigger`, `pg_get_triggerdef`). A service-role JWT placed there is copied into every schema dump, `supabase db diff`, and SQL tool that reads trigger definitions, and it bypasses RLS on every table. This happened once in production; see `docs/edge-function-security-audit.md` § "Service-role key in image-migration webhooks". If a future change ever turns `verify_jwt` on, use the **anon/publishable** key, never the service role.
+
+   After saving, confirm no key is embedded (prints metadata only, never the values):
+   ```sql
+   select c.relname, tg.tgname,
+          pg_get_triggerdef(tg.oid) ~* 'authorization' as has_authorization_header,
+          pg_get_triggerdef(tg.oid) ~ 'eyJ[A-Za-z0-9_-]+\.eyJ' as has_jwt,
+          pg_get_triggerdef(tg.oid) ~ 'sb_secret_' as has_secret_key
+   from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
+   where tg.tgname in ('event-image-migration', 'house-event-image-migration');
+   ```
+   All three booleans must be `false`. Do not `select pg_get_triggerdef(...)` itself into a chat, issue, PR, or log: it contains the shared secret.
 
 5. **Test by uploading a new event image** in the admin dashboard. Check:
    - Edge Function logs (Supabase Dashboard → Edge Functions → Logs)
@@ -261,7 +276,7 @@ Repeat the setup steps for `house_events`:
     - Events: **INSERT**, **UPDATE**
     - Method: `POST`
     - URL: `https://<project-ref>.supabase.co/functions/v1/trigger-house-event-image-migration`
-    - Headers: `x-image-migration-secret: <your-secret>`
+    - Headers: `Content-type: application/json` and `x-image-migration-secret: <your-secret>` only — **no `Authorization` header** (same rule and verification query as step 4 above).
 
 ### What does NOT trigger dispatch
 

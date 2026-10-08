@@ -39,8 +39,70 @@ The production admin analytics page is expected to run on the production site or
 | `trigger-event-image-migration` | `IMAGE_MIGRATION_WEBHOOK_SECRET` (`trigger-event-image-migration/index.ts:36`); `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`, `GITHUB_DISPATCH_EVENT_TYPE` (`:86`-`:89`) | Dispatches a GitHub repository event using a server-side token (`trigger-event-image-migration/index.ts:97`-`:105`). | Server-to-server Supabase Database Webhook only. | Rejects non-POST requests (`trigger-event-image-migration/index.ts:31`-`:33`), then fails closed unless `x-image-migration-secret` matches `IMAGE_MIGRATION_WEBHOOK_SECRET` (`:36`-`:39`). | No CORS, correctly. This is not browser-facing. | No secret value is returned. Missing GitHub env vars return `Server misconfiguration` (`trigger-event-image-migration/index.ts:91`-`:93`); GitHub failures return status-only public messages (`:114`-`:119`). |
 | `trigger-house-event-image-migration` | `IMAGE_MIGRATION_WEBHOOK_SECRET` (`trigger-house-event-image-migration/index.ts:36`); `GITHUB_REPOSITORY`, `GITHUB_DISPATCH_TOKEN`, `GITHUB_DISPATCH_EVENT_TYPE_HOUSE` (`:86`-`:89`) | Dispatches a GitHub repository event using a server-side token (`trigger-house-event-image-migration/index.ts:98`-`:106`). | Server-to-server Supabase Database Webhook only. | Rejects non-POST requests (`trigger-house-event-image-migration/index.ts:31`-`:33`), then fails closed unless `x-image-migration-secret` matches `IMAGE_MIGRATION_WEBHOOK_SECRET` (`:36`-`:39`). | No CORS, correctly. This is not browser-facing. | No secret value is returned. Missing GitHub env vars return `Server misconfiguration` (`trigger-house-event-image-migration/index.ts:91`-`:93`); GitHub failures return status-only public messages (`:115`-`:120`). |
 
+## Service-role key in image-migration webhooks (2026-10-08)
+
+**Finding.** Both image-migration Database Webhooks in production embed the project's legacy `service_role` JWT in plain text. Status: **open**. Nothing in production has been changed yet; remediation waits on owner approval.
+
+### Evidence
+
+All checks were read-only SQL against project `sxephkrekdztmkptyzca` on 2026-10-08. The queries returned only metadata (the JWT's `role` claim, booleans, lengths) and never a key or secret value.
+
+| Trigger | Table | Fires | Target | `Authorization` header | Embedded JWT `role` / `ref` / `exp` | `x-image-migration-secret` |
+| --- | --- | --- | --- | --- | --- | --- |
+| `event-image-migration` | `public.events` | `AFTER INSERT OR UPDATE`, enabled | `supabase_functions.http_request` → `/functions/v1/trigger-event-image-migration` | yes, `Bearer <JWT>` | `service_role` / `sxephkrekdztmkptyzca` / 2035-06-11 | present, 64 chars |
+| `house-event-image-migration` | `public.house_events` | `AFTER INSERT OR UPDATE`, enabled | `supabase_functions.http_request` → `/functions/v1/trigger-house-event-image-migration` | yes, `Bearer <JWT>` | `service_role` / `sxephkrekdztmkptyzca` / 2035-06-11 | present, 64 chars |
+
+- These are the only two triggers carrying a JWT. No function body (`pg_proc.prosrc`) and no `cron.job` command (one job exists) contains a JWT or an `sb_secret_` key.
+- No JWT-shaped string exists in tracked files or anywhere in git history (`git log --all -G`). The repo's migrations never created these webhooks; they were made in the Dashboard. The Dashboard's "Add auth header with service key" button writes exactly this header, which is the likely origin.
+
+### Why the bearer token is unnecessary
+
+- Both functions are deployed with `verify_jwt: false` (confirmed in the live function list, 2026-10-08). The gateway ignores `Authorization` entirely.
+- The function code never reads `Authorization`. Its only gate is `x-image-migration-secret` compared with `IMAGE_MIGRATION_WEBHOOK_SECRET` (`trigger-event-image-migration/index.ts:36`-`:39`, `trigger-house-event-image-migration/index.ts:36`-`:39`). The shared contract test already proves `Authorization: Bearer <secret>` alone gets a 401 (`_shared/image-migration-webhook-contract.ts`).
+- The webhooks therefore need **no Authorization header at all**. The anon key would only matter if `verify_jwt` were ever turned on.
+- Until this change, `supabase/config.toml` did not pin `verify_jwt = false` for these two functions. A plain `supabase functions deploy` would then have defaulted to `verify_jwt = true`, and a header-less webhook would start failing with 401s. The same PR as this audit adds the pin.
+
+### Exposure assessment
+
+- **Who can read it.** Webhook headers live in the trigger definition (`pg_trigger.tgargs`, `pg_get_triggerdef`). Any database session can read `pg_catalog` (`anon` and `authenticated` hold `SELECT` on `pg_trigger`). There is no known path for `anon`/`authenticated` to run arbitrary SQL: `pg_catalog` is not a PostgREST-exposed schema by default, and no `plpgsql` function in `public`/`graphql_public` matched a dynamic-SQL (`EXECUTE <sql>`) pattern. The exposed-schema list is a Dashboard setting and could not be read from SQL, so confirm in the Dashboard's Data API settings that **Exposed schemas** is only `public` and `graphql_public`.
+- **Realistic leak paths.** Anyone or anything with database or Dashboard read access sees the key: schema dumps (`supabase db dump`, `pg_dump`), `supabase db diff` output, backups, SQL tooling and AI/MCP sessions that print trigger definitions, and screenshots of the Webhooks page. One dump pasted into an issue or committed to the repo would publish it.
+- **Impact if leaked.** The `service_role` JWT bypasses RLS on every table and Storage bucket, and it is valid until 2035. It cannot be revoked on its own (see below).
+- **Transient copies.** `pg_net` holds each queued request's headers in `net.http_request_queue` until they are sent (0 rows at audit time). `anon`/`authenticated` hold table `SELECT` and schema `USAGE` on `net` and `supabase_functions` (Supabase defaults), but neither schema is API-exposed. Removing the header removes this copy too.
+- **Residual after the fix.** `x-image-migration-secret` itself stays in plain text in the trigger definition; Database Webhooks have no other way to send a header. A leak of that value only lets someone fire a `repository_dispatch`. The workflow reads just `event_id`/`house_event_id`/`category` from the payload and re-reads the row from the database (`.github/workflows/migrate-event-images.yml:77`-`:79`), so the worst case is wasted runs. Rotate the secret anyway, because it has been co-located with the service-role key.
+
+### Remediation plan (owner approval required for every production step)
+
+**Phase A — remove the key from the webhooks and rotate the webhook secret (small, do first).**
+
+1. Merge the PR that pins `verify_jwt = false` in `supabase/config.toml`, so no redeploy can silently re-enable JWT checks.
+2. Generate a new secret locally (`openssl rand -hex 32`). Never paste it into chat, PRs, issues, or logs.
+3. `supabase secrets set IMAGE_MIGRATION_WEBHOOK_SECRET=<new>`. Secrets are project-wide, so this covers both functions.
+4. Right away, in **Database → Webhooks**, edit `event-image-migration` and `house-event-image-migration`. Delete the `Authorization` header, set `x-image-migration-secret` to the new value, and keep `Content-type: application/json`. Change nothing else.
+5. Run the metadata-only verification query from `docs/event-image-migration.md` (Phase 3, step 4). All booleans must be `false` for both triggers.
+6. Smoke test: a request with a wrong secret returns 401 (this also closes the open item below). The next real image upload logs `triggered: true` in the function logs and starts a `migrate-event-images.yml` run.
+
+Uploads that land between steps 3 and 4 get a 401 and stay on their Storage URL. That is harmless: the scheduled `migrate-images.yml` picks them up, or re-run `migrate-event-images.yml` for the affected row.
+
+**Phase B — retire the exposed `service_role` key.** A legacy `service_role` key is not independently rotatable: it is a JWT signed with the project's legacy JWT secret, the same secret that signs the `anon` key and every user session. Supabase no longer offers a direct "rotate JWT secret" for legacy keys; the supported path is to move to the new API keys and the JWT signing-keys system. Supabase also states that legacy `anon`/`service_role` keys only keep working until the end of 2026, so this migration is due regardless.
+
+1. **Create new keys** in **Settings → API Keys**: a publishable key (`sb_publishable_…`) and one secret key (`sb_secret_…`) per consumer, so each can be revoked alone. Suggested split: `github-actions-image-migration`, `github-actions-content-link-check`, `local-scripts`.
+2. **Move every service-role consumer** to a secret key:
+   - GitHub Actions secret `SUPABASE_SERVICE_ROLE_KEY`, used by `migrate-images.yml`, `migrate-event-images.yml`, `content-link-check.yml`. Scripts pass the value to `createClient`, which accepts `sb_secret_` keys; no script decodes the key as a JWT.
+   - Edge Functions `vsa-ai-assistant` (`index.ts:96`) and `member-photo-upload` (`index.ts:5`) read the auto-injected `SUPABASE_SERVICE_ROLE_KEY`. A code PR must switch them to the platform's `SUPABASE_SECRET_KEYS` before legacy keys are disabled.
+   - Local `.env.local` copies used by `scripts/*` (`migrate-supabase-images-to-public.ts`, `check-content-links.ts`, `audit-storage-backed-content.ts`, `audit-anon-exposure.mjs`, `cleanup-stale-photo-requests.mjs`), and the `RLS_TEST_*`/service-role env of anyone who runs `scripts/verify-rls-security.mjs`.
+   - Confirm that Vercel project env holds **no** service-role key (expected: only `REACT_APP_*`). Not verified in this audit.
+3. **Move every anon-key consumer** to the publishable key: Vercel `REACT_APP_SUPABASE_ANON_KEY` (rebuild and redeploy; the key is compiled into the bundle), the GitHub secret of the same name, and local `.env.local`.
+   - **Blocker to resolve first:** Ask VSA calls `vsa-ai-assistant` with `Authorization: Bearer <anon key>` (`src/components/features/ai/VsaAiAssistant.tsx:252`-`:258`), and that function runs with `verify_jwt: true`. A publishable key is not a JWT, so anonymous visitors would get a gateway 401. Before the switch, that function needs `verify_jwt = false` plus its own `apikey` check (Supabase's documented pattern), in a separate gated PR.
+4. **Disable the legacy `anon` and `service_role` API keys** (Settings → API Keys → Legacy). From then on, the leaked JWT is refused as an `apikey`.
+5. **Migrate to JWT signing keys and revoke the legacy JWT secret** (Settings → JWT Keys). Disabling the legacy API keys alone is not enough: while the legacy secret is still trusted, the leaked JWT stays cryptographically valid as a bearer token. Revoking the legacy secret ends every user session signed with it, so all signed-in users (mostly admins since #510) must sign in again. Schedule it outside any freeze window (`vsa-seasonal-operations`).
+
+Blast radius: steps 4 and 5 affect **every** consumer of the legacy keys at once, not only service-role users. That includes the production frontend, CI, scripts, Edge Functions, and live sessions, so every item in steps 2 and 3 must be done and verified first. Rollback: until step 5, re-enabling the legacy keys restores the old state. After step 5, a revoked key can be moved back to standby and rotated to, per Supabase's signing-keys docs.
+
+**Phase C — optional hardening.** Replace the two Dashboard webhooks with a small `AFTER INSERT OR UPDATE` trigger function that reads the webhook secret from Supabase Vault and calls `net.http_post`. The secret then never appears in `pg_trigger`. This is a gated migration; propose it separately.
+
 ## Open Items
 
+- **2026-10-08, open:** both image-migration webhooks embed the `service_role` JWT. Run Phase A of "Service-role key in image-migration webhooks" as soon as the owner approves, then schedule Phase B before the end-of-2026 legacy-key cutoff.
 - The live unauthenticated-call test against both `trigger-*` deployed functions has not been performed. Repository source shows the shared-secret check, but the issue criterion asks for live production requests.
 - `secure-ai`'s vestigial status is fully resolved. Source search found no callers, the directory was removed, and a direct production check on 2026-08-05 confirmed the function was never deployed. `OPENAI_API_KEY` has been unset from the project's secrets. The remaining incident-response steps for #353 are outside the repo and the Supabase project, and none should be skipped: revoke the exposed key in the OpenAI dashboard, review OpenAI usage for the exposure window, confirm the GitHub secret-scanning alert is closed as revoked (0 open alerts as of 2026-09-28), decide whether to rewrite git history, and scan history for other credentials.
 - This work should not close issue #229. It only resolves the repo-answerable CORS and response-body audit slice.
