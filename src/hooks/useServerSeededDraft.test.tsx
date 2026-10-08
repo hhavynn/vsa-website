@@ -46,14 +46,16 @@ describe('useServerSeededDraft', () => {
     expect(result.current.isDirty).toBe(false);
   });
 
-  it('lets the server copy in again once the draft is saved', () => {
+  it('keeps the saved draft over a server copy that predates the save, then takes newer data', () => {
     const { result, rerender } = setup('a', { title: 'one' });
     act(() => result.current.setDraft({ title: 'typed' }));
     rerender({ recordKey: 'a', server: { title: 'changed elsewhere' } });
     act(() => result.current.markSaved());
-    // The held-back copy is adopted straight away...
-    expect(result.current.draft).toEqual({ title: 'changed elsewhere' });
-    // ...and later server changes keep flowing in.
+    // The held-back row predates the save: not adopted, and a stale re-delivery is ignored.
+    expect(result.current.draft).toEqual({ title: 'typed' });
+    rerender({ recordKey: 'a', server: { title: 'changed elsewhere' } });
+    expect(result.current.draft).toEqual({ title: 'typed' });
+    // The refetch of the row that was just written does seed it.
     rerender({ recordKey: 'a', server: { title: 'normalized by save' } });
     expect(result.current.draft).toEqual({ title: 'normalized by save' });
     expect(result.current.isDirty).toBe(false);

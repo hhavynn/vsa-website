@@ -151,7 +151,9 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
   const baselineRef = useRef<Record<string, HouseAssetDraft>>({});
-  const justSavedRef = useRef<Set<string>>(new Set());
+  // Per house: the draft as it was when saved. A draft still equal to it has not
+  // been edited since, so the refetched row may replace it.
+  const savedSnapshotRef = useRef<Record<string, string>>({});
   useEffect(() => {
     const baseline: Record<string, HouseAssetDraft> = {};
     const nextDrafts: Record<string, HouseAssetDraft> = {};
@@ -159,14 +161,15 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       const fresh = draftFromAsset(asset);
       baseline[asset.id] = fresh;
       const current = draftsRef.current[asset.id];
+      const currentJson = current ? JSON.stringify(current) : null;
       const untouched =
         !current ||
-        justSavedRef.current.has(asset.id) ||
-        JSON.stringify(current) === JSON.stringify(baselineRef.current[asset.id]);
+        currentJson === savedSnapshotRef.current[asset.id] ||
+        currentJson === JSON.stringify(baselineRef.current[asset.id]);
       nextDrafts[asset.id] = untouched ? fresh : current;
     });
     baselineRef.current = baseline;
-    justSavedRef.current.clear();
+    savedSnapshotRef.current = {};
     setDrafts(nextDrafts);
 
     const keep = <T,>(current: Record<string, T>, revoke?: boolean) => {
@@ -345,7 +348,7 @@ export function HouseImagesManager({ selectedYear, onYearChange }: HouseImagesMa
       }
       setHouseFile(id, null);
       setHouseParentFile(id, null);
-      justSavedRef.current.add(id);
+      savedSnapshotRef.current[id] = JSON.stringify(draft);
       toast.success(`${draft.display_name} saved.`);
       await refetch();
     } catch (err) {

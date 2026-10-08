@@ -13,7 +13,7 @@ import { SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
  * - `recordKey` changes (a different record was opened): the draft is replaced.
  * - Server data changes while the draft is untouched: the draft follows it.
  * - Server data changes while the draft has unsaved edits: the draft is kept.
- *   The server's newer copy is held back until `markSaved` or `discard`.
+ *   The held-back copy is dropped by `markSaved` and shown by `discard`.
  *
  * `serverDraft` may be a fresh object every render; only its JSON matters.
  */
@@ -45,16 +45,15 @@ export function useServerSeededDraft<D>(recordKey: string, serverDraft: D) {
   }, []);
 
   /**
-   * The draft was saved. It is no longer "unsaved", so server data (including
-   * the row the save just wrote) may seed it again.
+   * The draft was saved. It stays on screen as the baseline: whatever server
+   * copy was held back predates the save and is dropped, and only data that
+   * arrives afterwards (the refetch of the row just written) seeds it again.
+   * If that refetch fails, the saved draft is still what is shown.
    */
   const markSaved = useCallback(() => {
     dirtyRef.current = false;
     setIsDirty(false);
-    if (JSON.stringify(latestRef.current) !== adoptedSignature.current) {
-      adoptedSignature.current = JSON.stringify(latestRef.current);
-      setDraftState(latestRef.current);
-    }
+    adoptedSignature.current = JSON.stringify(latestRef.current);
   }, []);
 
   /** Throw the edits away and show the server's current copy. */
