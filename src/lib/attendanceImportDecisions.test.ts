@@ -172,6 +172,32 @@ describe('multiple members sharing an email', () => {
   });
 });
 
+describe('a repeated email in one CSV', () => {
+  it('lets the later row be matched to the existing email owner', () => {
+    const owner = member('kim', 'Kim', 'Do', { email: 'kim@ucsd.edu' });
+    const { rows, plan, summary } = run(
+      [input(0, 'Zed Quinn', { csvEmail: 'kim@ucsd.edu' }), input(1, 'Kim Do', { csvEmail: 'kim@ucsd.edu' })],
+      [owner],
+      [],
+      { 'row-0': { kind: 'skip' }, 'row-1': { kind: 'match', memberId: 'kim' } },
+    );
+    expect(rows[0].status).toBe('review');
+    expect(summary.unresolved).toBe(0);
+    expect(plan.updates.map((u) => u.member.id)).toEqual(['kim']);
+  });
+
+  it('offers the email owner as a candidate on the later row', () => {
+    const owner = member('kim', 'Kim', 'Do', { email: 'kim@ucsd.edu' });
+    const rows = matchAttendanceImportRows(
+      [input(0, 'Kim Do', { csvEmail: 'kim@ucsd.edu' }), input(1, 'Someone Else', { csvEmail: 'kim@ucsd.edu' })],
+      [owner],
+      new Set(),
+    );
+    expect(rows[1]).toMatchObject({ status: 'review', reason: 'duplicate_email_conflict', canForceMatch: true });
+    expect(rows[1].candidateMemberIds).toEqual(['kim']);
+  });
+});
+
 describe('manual selection among candidates', () => {
   const members = [
     member('a', 'Sam', 'Le', { college: 'Muir' }),

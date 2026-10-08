@@ -520,12 +520,17 @@ export function matchAttendanceImportRows(
         if (previous.normalizedName === normalizedName) {
           return duplicateResult(row, 'Duplicate CSV row with the same email and name. Skipping this later row.', previous.rowId);
         }
+        // The later row may be the real existing member, so offer the email's owners and near names.
+        const owners = (maps.byEmail.get(normalizedEmail) ?? []).map((member) => candidateScore(row, member));
+        const ownerIds = new Set(owners.map((candidate) => candidate.member.id));
+        const nameCandidates = findBestNameCandidates(row, members).filter((candidate) => !ownerIds.has(candidate.member.id));
+        const candidates = [...owners, ...nameCandidates].slice(0, MAX_REVIEW_CANDIDATES);
         return reviewResult(
           row,
           'duplicate_email_conflict',
           'Another CSV row already used this email with a different name. Review before importing.',
-          [],
-          { canForceMatch: false, canMarkNew: true, emailAlreadyUsed: true },
+          candidates,
+          { canForceMatch: candidates.length > 0, canMarkNew: true, emailAlreadyUsed: true },
         );
       }
       seenEmails.set(normalizedEmail, { rowId: row.rowId, normalizedName });

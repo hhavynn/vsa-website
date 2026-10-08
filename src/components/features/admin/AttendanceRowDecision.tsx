@@ -66,7 +66,7 @@ export function AttendanceRowDecision({
   return (
     <div className="space-y-2 text-xs" aria-label={`Decision for ${rowLabel}`}>
       {needsDecision && !decision && note && (
-        <div className="text-amber-600 dark:text-amber-400">{note}</div>
+        <div className="font-medium text-text-secondary">{note}</div>
       )}
 
       {needsDecision && !decision && canMatch && candidates.length > 0 && (
@@ -78,7 +78,7 @@ export function AttendanceRowDecision({
                 type="button"
                 onClick={() => onDecide({ kind: 'match', memberId: candidate.id })}
                 aria-label={`Match existing member ${getMemberFullName(candidate)}`}
-                className={`${linkClass} rounded border border-green-600 px-2 py-0.5 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20`}
+                className={`${linkClass} rounded border border-brand-600 px-2 py-0.5 text-brand-600 hover:bg-[var(--color-surface2)] dark:border-brand-400 dark:text-brand-400`}
               >
                 Match Existing
               </button>
@@ -88,19 +88,19 @@ export function AttendanceRowDecision({
       )}
 
       {chosen && (
-        <div className="text-emerald-600 dark:text-emerald-400">
+        <div className="text-text-primary">
           Matched to <MemberIdentity member={chosen} />
           {status === 'already' && ' — attendance already recorded for this event'}
         </div>
       )}
       {decision?.kind === 'new' && (
-        <div className="text-blue-600 dark:text-blue-400">
+        <div className="text-text-primary">
           Confirmed as a different person. A new member will be created
           {emailTaken ? ' without the email (already on file)' : ''}.
         </div>
       )}
       {decision?.kind === 'skip' && (
-        <div className="text-zinc-500 dark:text-zinc-400">Skipped. No attendance will be recorded for this row.</div>
+        <div className="text-text-muted">Skipped. No attendance will be recorded for this row.</div>
       )}
 
       {decision?.kind !== 'new' && emailTaken && canCreateNew && (
@@ -115,7 +115,7 @@ export function AttendanceRowDecision({
             type="button"
             onClick={() => onDecide({ kind: 'new' })}
             aria-label={`Create new member for ${rowLabel}`}
-            className={`${linkClass} text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300`}
+            className={`${linkClass} text-brand-600 hover:text-brand-700 dark:text-brand-400`}
           >
             Create New Member
           </button>
@@ -125,7 +125,7 @@ export function AttendanceRowDecision({
             type="button"
             onClick={() => onDecide({ kind: 'skip' })}
             aria-label={`Skip ${rowLabel}`}
-            className={`${linkClass} text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white`}
+            className={`${linkClass} text-text-secondary hover:text-text-primary`}
           >
             Skip
           </button>
@@ -135,7 +135,7 @@ export function AttendanceRowDecision({
             type="button"
             onClick={() => onDecide(null)}
             aria-label={`Undo decision for ${rowLabel}`}
-            className={`${linkClass} text-gray-500 hover:text-gray-700 dark:hover:text-gray-200`}
+            className={`${linkClass} text-text-muted hover:text-text-primary`}
           >
             Undo
           </button>
