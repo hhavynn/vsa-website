@@ -24,10 +24,8 @@ const rewriteFor = (requestPath: string) =>
   config.rewrites.find(({ source }) => matches(source, requestPath))?.destination;
 
 describe('vercel.json deploy-safety policy', () => {
-  it('caches fingerprinted /static assets as immutable', () => {
-    const cacheControl = headersFor('/static/js/main.abc123.js')['cache-control'];
-    expect(cacheControl).toContain('immutable');
-    expect(cacheControl).toMatch(/max-age=31536000/);
+  it('sets no explicit cache header on /static, so a missing chunk 404 cannot be cached as immutable', () => {
+    expect(headersFor('/static/js/main.abc123.js')['cache-control']).toBeUndefined();
   });
 
   it.each(['/', '/events', '/admin/members', '/index.html'])('never lets %s go stale across deploys', (requestPath) => {

@@ -12,7 +12,7 @@ The production Vercel configuration applies a small set of browser security head
 | `X-Frame-Options` | `DENY` | Prevents the VSA site itself from being framed, reducing clickjacking risk. This does not prevent the site from embedding approved third-party media. |
 | `Strict-Transport-Security` | `max-age=0` | Intentionally disables HSTS so browsers clear cached policies instead of pinning HTTPS for this host. This preserves UCSD captive-portal Wi-Fi compatibility; `preload` is deliberately omitted. |
 
-The top-level `headers` rule applies these headers to `/(.*)`. A separate top-level `rewrites` rule sends `/(.*)` to `/index.html` for the single-page application fallback. The current configuration has no legacy `routes` array and does not define explicit static-asset or `index.html` caching rules.
+The top-level `headers` rule applies these headers to `/(.*)`. A second `headers` rule sets `Cache-Control: public, max-age=0, must-revalidate` on `/index.html` and on SPA routes (paths with no `.`, excluding `/static/`), so browsers revalidate the HTML shell after every deploy. A top-level `rewrites` rule sends `/((?!static/).*)` to `/index.html` for the single-page application fallback; it excludes `/static/` so a chunk removed by a newer deploy returns a 404 instead of `200 text/html`. The current configuration has no legacy `routes` array and deliberately sets **no** `Cache-Control` on `/static/**`: an explicit immutable header could also be applied to a 404 and pin the missing-chunk response for a year, so hashed assets rely on Vercel's built-in static caching. Verify on a deployment with `curl -I <url>/static/js/<missing>.js` (expect 404, no immutable) and `curl -I <url>/events` (expect `max-age=0, must-revalidate`).
 
 ## HSTS decision
 

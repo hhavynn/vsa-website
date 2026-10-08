@@ -41,7 +41,6 @@ npx serve -s build               # quick local check of the prod bundle (optiona
 {
   "version": 2,
   "headers": [
-    { "source": "/static/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
     { "source": "/((?!static/)[^.]*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
   ],
   "rewrites": [{ "source": "/((?!static/).*)", "destination": "/index.html" }]
