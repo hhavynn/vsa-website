@@ -54,7 +54,9 @@ export type Database = {
         Row: {
           id: string;
           request_id: string;
+          request_fingerprint: string;
           import_job_row_id: string;
+          import_job_id: string | null;
           previous_action_id: string | null;
           action: string;
           resulting_status: string;
@@ -65,13 +67,12 @@ export type Database = {
           created_member: boolean;
           attendance_id: string | null;
           points_awarded: number;
-          removed_attendance: Json | null;
           reason_code: string | null;
           note: string | null;
           actor_user_id: string | null;
           created_at: string;
         };
-        // Written only by admin_recover_import_row; no client insert/update grant.
+        // Written only by admin_recover_import_row; immutable (UPDATE/DELETE/TRUNCATE rejected).
         Insert: Record<string, never>;
         Update: Record<string, never>;
         Relationships: [];
@@ -3881,7 +3882,6 @@ export type Database = {
           p_member_id?: string | null;
           p_from_member_id?: string | null;
           p_new_member?: Json | null;
-          p_keep_original?: boolean;
           p_reason_code?: string | null;
           p_note?: string | null;
         };

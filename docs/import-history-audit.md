@@ -103,64 +103,107 @@ there is no bulk or automatic correction.
 |---|---|---|
 | Match existing member | Row credits nobody (skipped, unresolved, created-but-missing) | Inserts `member_event_attendance` for the chosen member with the event's points; `ON CONFLICT DO NOTHING` |
 | Create separate member | Same | Inserts a member (email only if no member holds it, case-insensitive), then their attendance |
-| Correct incorrect match | Row credits a member whose attendance exists | Inserts the correct member's attendance; with "Remove it", deletes the original row in the same transaction |
+| Correct incorrect match | Row credits a member whose attendance exists | Inserts the correct member's attendance. **Keeps the original credit** and moves the finding to "Original credit to investigate" |
+| Resolve investigation | Finding under investigation | History only, after the database checks the ledger: "did not attend" requires the original credit to be gone already (removed in Admin Members); "also attended" requires it to still exist |
 | Dismiss | Any open finding | History only: `intentional_skip`, `legitimate_duplicate`, or `not_actionable` (needs a note) |
 | Needs more information | Any open finding | History only, with a required note |
-| Reopen | Dismissed or on-hold findings | History only |
+| Reopen | Dismissed or on-hold findings, or a recovered finding whose recorded credit was later removed | History only |
 
-Before any write the dialog shows the original event and import reference, the stored source row, the
-current match or unresolved status, the selected member with email, college, year, totals and recent
-attendance, whether they already attended, and the exact database changes. Candidates are listed but never
-preselected. The admin must confirm identity (or, for Create, that the attendee differs from every
-suggestion) and then confirm the changes.
+Before any write the dialog shows:
+- the original event and import reference, and the stored source row
+- the current match or unresolved status
+- the selected member with email, college, year, totals and recent attendance, and whether they already attended
+- the exact database changes
 
-**Points.** Only `member_event_attendance` rows are written. The live `trg_sync_member_points` trigger
-recalculates cached totals for each member touched; yearly, House and leaderboard views read the ledger.
-A correction is DELETE + INSERT, never an UPDATE of `member_id`, because the trigger recalculates only
-`NEW.member_id` on UPDATE and would leave the wrongly credited member's total stale.
+Candidates are listed but never preselected. The admin must confirm identity (or, for Create, that the
+attendee differs from every suggestion, including same-name members the audit row did not list) and then
+confirm the changes. Identity actions stay disabled until every member lookup has loaded; a failed lookup
+shows an error and a retry, never an empty candidate list.
+
+**Recovery never deletes attendance.** Nothing in the data proves that an attendance row exists only
+because of one import row:
+- `member_event_attendance` has no provenance column.
+- The importer records `attendance_member_id` even when its upsert inserted nothing, and keeps only
+  per-job counts of what it inserted.
+- The Admin Members editor writes no audit trail.
+- Timestamps only correlate. On production, an import's own writes land about 2 s before its audit
+  record, but 8 matched rows point at credit that already existed.
+
+Even record-level provenance would not prove the original member was absent: their own sheet row may have
+been skipped, or recorded only as a duplicate or a candidate. An independent review reproduced exactly
+that deletion against an earlier "move" design. So a correction credits the right member and flags the
+original credit. If an officer confirms the original member did not attend, they remove that credit in
+Admin Members (the existing confirmed path; the dialog opens it), then resolve the finding here.
+
+**Points.** Only inserts into `member_event_attendance`. The live `trg_sync_member_points` trigger
+recalculates cached totals; yearly, House and leaderboard views read the ledger. The event row is read
+`FOR SHARE`, so a concurrent points edit either finishes first (recovery uses the new value) or waits and
+then cascades to the new row.
 
 **No double credit.** `UNIQUE(member_id, event_id)` plus `ON CONFLICT DO NOTHING`: a destination who
-already attended gets nothing ("already recorded"). A finding can be recovered once; a recovered finding
-is read-only here (change that attendance in Admin Members).
+already attended gets nothing ("already recorded"). A finding is recovered once. It can be reopened only
+if the credit it recorded no longer exists, which the panel flags.
 
 **Concurrency and retries.** The function:
 - locks the import row and rejects a caller whose view of the history is stale (the dialog keeps the
   state it opened with)
 - stores a client request id and a fingerprint of the parameters, so a retry returns the original result
   without writing and a reused id with different parameters is refused
-- takes an advisory lock per (member, event) on every attendance write, so a confirmation and a correction
-  for the same member never interleave
-- serializes new-member emails with another advisory lock. That lock covers this function only: the
-  importer and Admin Members do not take it, and `members.email` has no unique index.
+- takes an advisory lock per member before writing attendance. Two recoveries for one member, on any
+  events, then never compute that member's total from snapshots that miss each other's rows. Without the
+  lock, a two-session test left a member at 7 points / 1 event instead of 17 / 2.
+- serializes new-member emails with another advisory lock
 
-**Removing the original member's attendance** requires a written reason, and proof the credit came from
-this row alone. It is refused when:
-- the attendance row was not written within two minutes of this import's audit record. An import's own
-  writes land a median 1.5–2.3 s earlier; the 8 production matches pointing at older attendance were
-  credits that already existed.
-- another completed import row credits that member for the event
-- another recovered finding confirmed that member for the event
+These locks cover this function only. The importer and Admin Members take neither, and `members.email`
+has no unique index (see limitations).
 
-The default is to keep the original and only add the correct member. The removed row is saved in the
-history entry so it can be restored.
+**Audit.** `import_recovery_actions` is immutable:
+- Admins can read it, and only the function writes it. `service_role` cannot write it either.
+- A trigger rejects UPDATE, DELETE and TRUNCATE from any role, so changing that needs a reviewed migration.
+- Its ids are plain columns, not foreign keys, so deleting a member, event, user or import job never
+  rewrites or erases it.
 
-**Audit.** `import_recovery_actions` is append-only (admins can read it; only the function writes it). It
-keeps `import_job_row_id` and `import_job_id` as plain ids, so deleting an import job never erases it, and
-each action also writes `admin_activity_log` (`member.attendance_recovered`, `member.attendance_reassigned`,
-`member.recovery_dismissed`, `member.recovery_on_hold`, `member.recovery_reopened`). `import_job_rows` is
-never modified.
+Each action also writes `admin_activity_log` in the same transaction:
+- `member.attendance_recovered`
+- `member.recovery_credit_flagged`
+- `member.recovery_investigation_resolved`
+- `member.recovery_dismissed`
+- `member.recovery_on_hold`
+- `member.recovery_reopened`
+
+Admins can also insert into that log directly, so `import_recovery_actions` is the authoritative trail.
+`import_job_rows` is never modified.
+
+**Safe before the frontend.** The migration only adds objects and changes nothing existing. The current
+frontend does not reference them.
 
 **Verification.** `bash scripts/test-attendance-recovery.sh` runs the migration on a disposable local
-PostgreSQL cluster with the production trigger bodies and checks authorization, restore, similar and
-identical names, duplicate emails, already-credited destinations, corrections (including credit that
-predates the import or is confirmed elsewhere), dismissals, replays, stale and concurrent attempts
-(including a confirmation racing a correction), rollback, and that every cached total equals the ledger.
+PostgreSQL cluster. The cluster has the production bodies of `sync_member_points`,
+`recalculate_member_points` and `sync_attendance_points_on_event_update`, and Supabase's default grants.
+It checks:
+- authorization, including privileges after default grants
+- restore; similar and identical names; duplicate emails; already-credited destinations
+- non-destructive corrections and investigation resolution against the ledger
+- dismissals, reopen rules and history immutability
+- replays, and stale and concurrent attempts, including:
+  - the same member on two events
+  - a recovery racing an event points edit (mutation-tested: each fails without its lock)
+- rollback
+- that the function contains no DELETE, and that every cached total equals the ledger
 
 `scripts/audit-import-history.sql` does not read recovery history. After a recovery it still reports the
-row by its import-time state (for example, a moved match as `attendance_row_absent`). The Historical
-Recovery panel is the source of truth for recovery status.
+row by its import-time state. The Historical Recovery panel is the source of truth for recovery status.
 
 ## Remaining limitations
+
+- Pre-existing trigger race, not introduced here: `recalculate_member_points` computes the sum in the same
+  `UPDATE` that waits for the member row lock. A recovery that commits while the importer or the Admin
+  Members editor writes the same member's attendance on another event can leave that member's cached total
+  short until their next attendance change. Recovery-versus-recovery is serialized. The real fix is to lock
+  the member row in `sync_member_points` before recalculating, which is a protected trigger change needing
+  owner approval. Until then, do not run Historical Recovery while an import is in progress.
+- Admins can edit `import_job_rows` directly (RLS allows it), so the evidence a finding shows is only as
+  trustworthy as admin conduct. Recovery never deletes based on it.
 
 - Evidence queries use lower-case letters-and-spaces name comparison, slightly looser than the app's
   normalizer; they can over- or under-report "name exists".

@@ -17,9 +17,10 @@ import {
 import { HistoricalKind } from '../../../lib/importHistoryAudit';
 import { cn } from '../../../lib/utils';
 import { RecoveryFindingDialog } from './RecoveryFindingDialog';
+import { MemberAttendanceModal } from './MemberAttendanceModal';
 
 type Tab = RecoveryBucket | 'history';
-const TABS: Tab[] = ['unresolved', 'needs_info', 'recovered', 'dismissed', 'history'];
+const TABS: Tab[] = ['unresolved', 'investigate', 'needs_info', 'recovered', 'dismissed', 'history'];
 const selectCls =
   'rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs text-[var(--color-text)] focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600 dark:focus:border-brand-400 dark:focus:ring-brand-400';
 
@@ -52,6 +53,7 @@ export const RECOVERY_INVALIDATIONS: ReadonlyArray<readonly string[]> = [
   ['leaderboard-years'],
   ['individual-leaderboard'],
   ['house-detail', 'standings'],
+  ['home'],
 ];
 
 export function HistoricalRecoveryPanel() {
@@ -61,6 +63,8 @@ export function HistoricalRecoveryPanel() {
   const [tab, setTab] = useState<Tab>('unresolved');
   const [filters, setFilters] = useState<Omit<FindingFilters, 'bucket'>>({ eventId: '', importJobId: '', kind: '' });
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  // The Admin Members attendance editor, opened from a finding under investigation.
+  const [attendanceMemberId, setAttendanceMemberId] = useState<string | null>(null);
 
   const findings = useMemo(
     () => (records.data && actions.data ? buildFindings(records.data, actions.data) : []),
@@ -206,7 +210,6 @@ export function HistoricalRecoveryPanel() {
                   <p className="mt-0.5 text-xs text-[var(--color-text2)]">
                     {action.points_awarded > 0 ? `${action.points_awarded} points awarded` : 'No points awarded'}
                     {action.created_member ? ' · new member created' : ''}
-                    {action.removed_attendance ? ' · original attendance removed (kept in history)' : ''}
                     {action.reason_code ? ` · ${action.reason_code.replace(/_/g, ' ')}` : ''}
                     {action.note ? ` · “${action.note}”` : ''}
                   </p>
@@ -217,12 +220,20 @@ export function HistoricalRecoveryPanel() {
         )
       )}
 
-      {openFinding && (
+      {openFinding && !attendanceMemberId && (
         <RecoveryFindingDialog
           key={openFinding.record.row_id}
           finding={openFinding}
           onClose={() => setOpenRowId(null)}
           onRecovered={refreshAfterRecovery}
+          onOpenMemberAttendance={setAttendanceMemberId}
+        />
+      )}
+      {attendanceMemberId && (
+        <MemberAttendanceModal
+          memberId={attendanceMemberId}
+          onClose={() => setAttendanceMemberId(null)}
+          onChanged={() => client.invalidateQueries(['attendance-recovery'])}
         />
       )}
     </section>
@@ -243,6 +254,11 @@ function FindingRow({ finding, onOpen }: { finding: RecoveryFinding; onOpen: () 
           {record.event_name ?? 'Event'} · {formatDate(record.event_date)} · import {formatDate(record.job_created_at)} · row {finding.sheetRow}
           {record.csv_email ? ` · ${record.csv_email}` : ''}
         </p>
+        {record.recovered_credit_present === false && (
+          <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+            The credit recorded here was later removed in Admin Members. Review and reopen if needed.
+          </p>
+        )}
         {latestAction && (
           <p className="mt-0.5 text-xs text-[var(--color-text3)]">
             {OUTCOME_LABELS[latestAction.outcome]} {formatDate(latestAction.created_at)}{latestAction.note ? ` · “${latestAction.note}”` : ''}

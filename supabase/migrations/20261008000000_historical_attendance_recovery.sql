@@ -1,94 +1,99 @@
 -- Historical attendance recovery (follow-up to #518 and the #519 audit).
 --
 -- Lets an admin act on one flagged import_job_rows row at a time: credit the
--- confirmed existing member, create a separate member, move attendance that was
--- credited to the wrong member, dismiss the finding, or mark it as needing more
--- information. Nothing here runs automatically or in bulk, and nothing infers
--- identity from a name.
+-- confirmed existing member, create a separate member, credit the correct member
+-- for a row that was matched to the wrong one, dismiss the finding, or mark it as
+-- needing more information. Nothing here runs automatically or in bulk, nothing
+-- infers identity from a name, and NOTHING HERE DELETES ATTENDANCE.
 --
 -- Objects
---   import_recovery_actions            append-only history, one row per admin action
+--   import_recovery_actions            immutable history, one row per admin action
 --   admin_import_recovery_findings()   read-only evidence per audited import row
 --   admin_recover_import_row(...)      the only writer; one transaction per action
 --
 -- Access boundary: admin only. anon and non-admin users can neither read the
 -- history nor execute either function. Admins can read the history but cannot
--- insert, update or delete it directly: it is written only by
--- admin_recover_import_row, so every entry matches a completed database change.
+-- write it: it is written only by admin_recover_import_row, and a trigger rejects
+-- every UPDATE, DELETE and TRUNCATE, whoever runs it (service_role and SECURITY
+-- DEFINER code included). History columns hold plain ids, not foreign keys, so no
+-- cascade from deleting a member, event, user or import job can rewrite them.
 --
 -- Why SECURITY DEFINER for admin_recover_import_row: it must write the history
 -- table, which has no client write grant. It checks public.is_admin_user()
 -- before reading anything, pins search_path to '' and schema-qualifies every
 -- reference. The read function is SECURITY INVOKER and still checks admin.
 --
--- Points: attendance is inserted into member_event_attendance with the event's
--- current points, and the existing trg_sync_member_points trigger recalculates
--- cached member totals. A correction DELETEs the wrong row and INSERTs the
--- right one in the same transaction; it never UPDATEs member_id, because
--- sync_member_points only recalculates NEW.member_id on UPDATE and would leave
--- the wrongly credited member's cached total stale. No cached total is written
--- here. UNIQUE(member_id, event_id) plus ON CONFLICT DO NOTHING means a member
--- can never be credited twice for one event.
+-- Points: attendance is only ever inserted, into member_event_attendance with
+-- the event's current points (the event row is read FOR SHARE so a concurrent
+-- points edit cannot leave the new row at the old value). The existing
+-- trg_sync_member_points trigger recalculates cached totals; no cached total is
+-- written here. UNIQUE(member_id, event_id) plus ON CONFLICT DO NOTHING means a
+-- member can never be credited twice for one event.
+--
+-- Wrong matches are never corrected destructively. member_event_attendance has
+-- no provenance: the importer sets import_job_rows.attendance_member_id even when
+-- its upsert inserted nothing, records only per-job counts, and the Admin Members
+-- editor writes no audit trail. No timestamp or counter can prove that a given
+-- attendance row exists only because of the bad match, and even if it could, the
+-- originally credited member may have genuinely attended (their own sheet row may
+-- have been skipped). So "Correct incorrect match" credits the correct member,
+-- keeps the original credit, and puts the finding in an "investigating" state.
+-- An admin who confirms the original member did not attend removes that credit
+-- in Admin Members (the existing confirmed path), then resolves the
+-- investigation here; the resolution verifies the ledger matches what it records.
 --
 -- Concurrency and idempotency: the import row is locked FOR UPDATE, the caller
 -- must name the latest action it saw (stale callers are rejected), every call
 -- carries a client request id (a replay of the same request returns the
 -- original result without writing; a reused id with different parameters is
 -- refused), and the history enforces one successor per action. Every attendance
--- write takes a transaction advisory lock per (member, event), so a restore and
--- a correction touching the same member and event never interleave. New-member
--- emails are serialized by another advisory lock; that lock only covers this
--- function (the importer and Admin Members do not take it, and members.email
--- has no unique index).
---
--- Removing the original member's attendance ("move") needs proof it came from
--- this import row alone: the attendance row must have been inserted within two
--- minutes of the import's audit record (an import writes attendance, then its
--- audit, normally within seconds), no other completed import row may credit
--- that member for the event, and no other recovered finding may have confirmed
--- them. Otherwise only "add the correct member, keep the original" is allowed.
---
--- History survives deletion of import jobs: import_job_row_id is kept as a
--- plain id (no foreign key), with import_job_id beside it.
+-- insert takes a transaction advisory lock per member, so two recoveries for one
+-- member (on any events) never compute that member's total from snapshots that
+-- miss each other's rows. New-member emails are serialized by another advisory
+-- lock. Both locks cover this function only: the importer and Admin Members do
+-- not take them, and members.email has no unique index.
 --
 -- Additive only: no existing table, policy, grant, trigger or function changes.
--- import_job_rows is never modified. Apply manually after staging verification
--- (scripts/test-attendance-recovery.sh, MIGRATION_CHECKLIST.md).
+-- import_job_rows is never modified. Safe to apply before the frontend that uses
+-- it. Apply manually after staging verification (scripts/test-attendance-recovery.sh,
+-- MIGRATION_CHECKLIST.md).
 
 -- ─── History ────────────────────────────────────────────────────────────────
 
 create table if not exists public.import_recovery_actions (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null,
+  request_fingerprint text not null,
   import_job_row_id uuid not null,
   import_job_id uuid,
-  request_fingerprint text not null,
   previous_action_id uuid references public.import_recovery_actions(id),
   action text not null,
   resulting_status text not null,
   outcome text not null,
-  event_id uuid references public.events(id) on delete set null,
-  member_id uuid references public.members(id) on delete set null,
-  from_member_id uuid references public.members(id) on delete set null,
+  event_id uuid,
+  member_id uuid,
+  from_member_id uuid,
   created_member boolean not null default false,
   attendance_id uuid,
   points_awarded integer not null default 0,
-  removed_attendance jsonb,
   reason_code text,
   note text,
-  actor_user_id uuid default auth.uid() references auth.users(id) on delete set null,
+  actor_user_id uuid default auth.uid(),
   created_at timestamptz not null default now(),
   constraint import_recovery_actions_request_unique unique (request_id),
   constraint import_recovery_actions_one_successor unique nulls not distinct (import_job_row_id, previous_action_id),
   constraint import_recovery_actions_action_check
-    check (action in ('restore', 'create_member', 'reassign', 'dismiss', 'needs_info', 'reopen')),
+    check (action in ('restore', 'create_member', 'reassign', 'resolve_investigation', 'dismiss', 'needs_info', 'reopen')),
   constraint import_recovery_actions_status_check
-    check (resulting_status in ('recovered', 'dismissed', 'needs_info', 'open')),
+    check (resulting_status in ('recovered', 'investigating', 'dismissed', 'needs_info', 'open')),
   constraint import_recovery_actions_outcome_check
-    check (outcome in ('attendance_added', 'already_recorded', 'moved', 'added_kept_original', 'dismissed', 'needs_info', 'reopened')),
+    check (outcome in (
+      'attendance_added', 'already_recorded', 'correct_member_credited', 'correct_member_already_credited',
+      'original_removed', 'original_attended', 'dismissed', 'needs_info', 'reopened'
+    )),
   constraint import_recovery_actions_reason_check
     check (reason_code is null or reason_code in (
-      'identity_confirmed', 'different_person', 'wrong_member_credited',
+      'identity_confirmed', 'different_person', 'wrong_member_credited', 'original_removed', 'original_attended',
       'intentional_skip', 'legitimate_duplicate', 'not_actionable', 'more_info_needed', 'reopened'
     )),
   constraint import_recovery_actions_note_check check (note is null or char_length(note) <= 500)
@@ -98,11 +103,21 @@ create index if not exists import_recovery_actions_row_idx
   on public.import_recovery_actions (import_job_row_id, created_at);
 create index if not exists import_recovery_actions_created_idx
   on public.import_recovery_actions (created_at desc);
+create index if not exists import_recovery_actions_previous_idx
+  on public.import_recovery_actions (previous_action_id);
 
 alter table public.import_recovery_actions enable row level security;
 
 revoke all on public.import_recovery_actions from public, anon, authenticated;
 grant select on public.import_recovery_actions to authenticated;
+-- service_role keeps read access for scripts but cannot write history either.
+do $roles$
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    execute 'revoke insert, update, delete, truncate on public.import_recovery_actions from service_role';
+  end if;
+end
+$roles$;
 
 drop policy if exists "Admins can view import recovery actions" on public.import_recovery_actions;
 create policy "Admins can view import recovery actions"
@@ -111,10 +126,35 @@ create policy "Admins can view import recovery actions"
   to authenticated
   using (public.is_admin_user(auth.uid()));
 
+-- Immutable: corrections are new entries. Changing this requires a reviewed
+-- migration that drops these triggers, which is itself visible and auditable.
+create or replace function public.import_recovery_actions_immutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  raise exception 'Recovery history is append-only; record a new entry instead' using errcode = '42501';
+end;
+$$;
+
+revoke all on function public.import_recovery_actions_immutable() from public, anon, authenticated;
+
+drop trigger if exists import_recovery_actions_no_update_delete on public.import_recovery_actions;
+create trigger import_recovery_actions_no_update_delete
+  before update or delete on public.import_recovery_actions
+  for each row execute function public.import_recovery_actions_immutable();
+
+drop trigger if exists import_recovery_actions_no_truncate on public.import_recovery_actions;
+create trigger import_recovery_actions_no_truncate
+  before truncate on public.import_recovery_actions
+  for each statement execute function public.import_recovery_actions_immutable();
+
 -- ─── Findings (read only) ───────────────────────────────────────────────────
 -- Evidence per audited import row, with the same meaning as the evidence CTE in
--- scripts/audit-import-history.sql, plus one addition: a finding recovered to a
--- member who still has the attendance counts as identity evidence for other
+-- scripts/audit-import-history.sql, plus one addition: a finding recovered (or
+-- credited pending investigation) to a member who still has the attendance
+-- counts as identity evidence for other
 -- rows with the same email ("resolved_elsewhere"), so a twin row is not offered
 -- for a second credit. Classification happens in the client with the tested
 -- src/lib/importHistoryAudit.ts. Correlated per-member scans are rewritten as
@@ -173,7 +213,7 @@ begin
   latest_recovered as (
     select ra.import_job_row_id as row_id, ra.member_id
     from public.import_recovery_actions ra
-    where ra.resulting_status = 'recovered'
+    where ra.resulting_status in ('recovered', 'investigating')
       and not exists (select 1 from public.import_recovery_actions n where n.previous_action_id = ra.id)
   ),
   recovered_credit as (
@@ -211,6 +251,14 @@ begin
     cross join lateral jsonb_array_elements_text(
       case when jsonb_typeof(b.md -> 'candidate_member_ids') = 'array' then b.md -> 'candidate_member_ids' else '[]'::jsonb end) c(value)
     where c.value ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  ),
+  -- Latest history entry per row, and whether the member it credited still has
+  -- the attendance (an admin can remove it later in Admin Members).
+  latest_action as (
+    select ra.import_job_row_id as row_id, ra.member_id
+    from public.import_recovery_actions ra
+    where ra.resulting_status in ('recovered', 'investigating') and ra.member_id is not null
+      and not exists (select 1 from public.import_recovery_actions n where n.previous_action_id = ra.id)
   ),
   candidate_attended as (
     select ci.row_id from candidate_ids ci
@@ -257,7 +305,8 @@ begin
         and split_part(b.norm_email, '@', 2) ~ '(^|\.)ucsd\.edu$'
         and split_part(lower(trim(mm.email)), '@', 2) ~ '(^|\.)ucsd\.edu$', false),
       'year_differs', coalesce(b.norm_year <> '' and coalesce(mm.year, '') <> '' and lower(trim(mm.year)) <> b.norm_year, false),
-      'college_differs', coalesce(b.norm_college <> '' and coalesce(mm.college, '') <> '' and lower(trim(mm.college)) <> b.norm_college, false)
+      'college_differs', coalesce(b.norm_college <> '' and coalesce(mm.college, '') <> '' and lower(trim(mm.college)) <> b.norm_college, false),
+      'recovered_credit_present', case when la.row_id is null then null else lca.member_id is not null end
     ) order by b.job_created_at, b.import_job_id, b.source_row_index), '[]'::jsonb)
   into v_result
   from base b
@@ -271,7 +320,9 @@ begin
   left join twin_email te on te.row_id = b.row_id
   left join twin_name tn on tn.row_id = b.row_id
   left join member_emails me on b.norm_email <> '' and me.norm_email = b.norm_email
-  left join name_counts nc on b.norm_name <> '' and nc.norm_name = b.norm_name;
+  left join name_counts nc on b.norm_name <> '' and nc.norm_name = b.norm_name
+  left join latest_action la on la.row_id = b.row_id
+  left join public.member_event_attendance lca on lca.member_id = la.member_id and lca.event_id = b.event_id;
 
   return v_result;
 end;
@@ -282,14 +333,15 @@ grant execute on function public.admin_import_recovery_findings() to authenticat
 
 -- ─── Recovery (the only writer) ─────────────────────────────────────────────
 --
--- p_action          restore | create_member | reassign | dismiss | needs_info | reopen
+-- p_action          restore | create_member | reassign | resolve_investigation
+--                   | dismiss | needs_info | reopen
 -- p_expected_previous_action_id
 --                   the latest history entry the admin reviewed for this row (null if none)
 -- p_member_id       restore: confirmed existing member; reassign: correct member
--- p_from_member_id  reassign: the member the row currently credits
+-- p_from_member_id  reassign: the member the row currently credits (kept, flagged)
 -- p_new_member      create_member: {first_name, last_name, email?, college?, year?}
--- p_keep_original   reassign: true adds the correct member and leaves the original row
 -- p_reason_code     dismiss: intentional_skip | legitimate_duplicate | not_actionable
+--                   resolve_investigation: original_removed | original_attended
 
 create or replace function public.admin_recover_import_row(
   p_request_id uuid,
@@ -299,7 +351,6 @@ create or replace function public.admin_recover_import_row(
   p_member_id uuid default null,
   p_from_member_id uuid default null,
   p_new_member jsonb default null,
-  p_keep_original boolean default false,
   p_reason_code text default null,
   p_note text default null
 )
@@ -315,19 +366,17 @@ declare
   v_latest public.import_recovery_actions%rowtype;
   v_row public.import_job_rows%rowtype;
   v_job_status text;
-  v_job_created timestamptz;
-  v_fingerprint text;
-  v_event record;
   v_event_name text;
+  v_event_points integer := 0;
   v_status text;
   v_note text := nullif(trim(coalesce(p_note, '')), '');
+  v_fingerprint text;
   v_member_id uuid;
   v_member_name text;
+  v_from_id uuid;
   v_from_name text;
   v_created boolean := false;
   v_attendance_id uuid;
-  v_removed record;
-  v_removed_json jsonb;
   v_points integer := 0;
   v_outcome text;
   v_new_status text;
@@ -346,15 +395,14 @@ begin
   if p_request_id is null or p_row_id is null then
     raise exception 'A request id and an import row are required' using errcode = 'P0001';
   end if;
-  if p_action is null or p_action not in ('restore', 'create_member', 'reassign', 'dismiss', 'needs_info', 'reopen') then
+  if p_action is null or p_action not in ('restore', 'create_member', 'reassign', 'resolve_investigation', 'dismiss', 'needs_info', 'reopen') then
     raise exception 'Unknown recovery action' using errcode = 'P0001';
   end if;
-
   if char_length(coalesce(v_note, '')) > 500 then
     raise exception 'Notes are limited to 500 characters' using errcode = 'P0001';
   end if;
   v_fingerprint := md5(concat_ws('|', p_action, coalesce(p_member_id::text, ''), coalesce(p_from_member_id::text, ''),
-    coalesce(p_new_member::text, ''), coalesce(p_keep_original, false)::text, coalesce(p_reason_code, ''), coalesce(v_note, '')));
+    coalesce(p_new_member::text, ''), coalesce(p_reason_code, ''), coalesce(v_note, '')));
 
   -- Serialize every action on this finding.
   select * into v_row from public.import_job_rows where id = p_row_id for update;
@@ -386,27 +434,42 @@ begin
   v_status := coalesce(v_latest.resulting_status, 'open');
 
   if p_action in ('restore', 'create_member', 'reassign', 'dismiss', 'needs_info') and v_status not in ('open', 'needs_info') then
-    raise exception 'This finding is already %; reopen it before acting again', v_status
+    raise exception 'This finding is already %; it cannot be changed with this action', v_status
       using errcode = 'P0001', hint = 'finding_closed';
   end if;
-  if p_action = 'reopen' and v_status not in ('dismissed', 'needs_info') then
-    raise exception 'Only dismissed or on-hold findings can be reopened; recovered attendance is changed in Admin Members'
+  if p_action = 'resolve_investigation' and v_status <> 'investigating' then
+    raise exception 'Only a finding under investigation can be resolved' using errcode = 'P0001', hint = 'finding_closed';
+  end if;
+  -- A recovered (or investigating) finding reopens only when the ledger no longer
+  -- holds the credit it recorded, i.e. someone removed it in Admin Members. Then
+  -- the history would otherwise claim a credit that does not exist.
+  if p_action = 'reopen' and not (
+       v_status in ('dismissed', 'needs_info')
+       or (v_status in ('recovered', 'investigating') and v_latest.member_id is not null
+           and not exists (select 1 from public.member_event_attendance a
+                           where a.member_id = v_latest.member_id and a.event_id = v_row.event_id))) then
+    raise exception 'This finding cannot be reopened: its recorded credit is still in place. Change that attendance in Admin Members.'
       using errcode = 'P0001', hint = 'finding_closed';
   end if;
 
-  -- Data-changing actions need the event and a completed import job.
+  -- Attendance-writing actions need the event and a completed import job. The
+  -- event row is held FOR SHARE until commit, so a concurrent points edit either
+  -- finishes first (and we read its value) or waits and then cascades to our row.
   if p_action in ('restore', 'create_member', 'reassign') then
-    select status, created_at into v_job_status, v_job_created from public.import_jobs where id = v_row.import_job_id;
+    select status into v_job_status from public.import_jobs where id = v_row.import_job_id;
     if v_job_status is distinct from 'completed' then
       raise exception 'Rows from a failed import cannot be recovered here; re-run the import' using errcode = 'P0001';
     end if;
     if v_row.event_id is null then
       raise exception 'This row has no event, so attendance cannot be restored' using errcode = 'P0001';
     end if;
-    select id, name, coalesce(points, 0) as points into v_event from public.events where id = v_row.event_id;
+    select e.name, coalesce(e.points, 0) into v_event_name, v_event_points
+    from public.events e where e.id = v_row.event_id for share;
     if not found then
       raise exception 'The event for this row no longer exists' using errcode = 'P0001';
     end if;
+  else
+    select e.name into v_event_name from public.events e where e.id = v_row.event_id;
   end if;
 
   if p_action in ('restore', 'create_member')
@@ -421,12 +484,15 @@ begin
     if p_member_id is null then
       raise exception 'Choose the confirmed member' using errcode = 'P0001';
     end if;
+    -- Member lock first (see the insert below); never lock the members row here,
+    -- or the points trigger's UPDATE of that row would deadlock with a second
+    -- recovery for the same member.
+    perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || p_member_id::text, 0));
     select m.id, trim(m.first_name || ' ' || m.last_name) into v_member_id, v_member_name
-    from public.members m where m.id = p_member_id for share;
+    from public.members m where m.id = p_member_id;
     if not found then
       raise exception 'The selected member no longer exists' using errcode = 'P0001';
     end if;
-    perform pg_advisory_xact_lock(hashtextextended('vsa-attendance:' || v_member_id::text || ':' || v_row.event_id::text, 0));
     v_reason := 'identity_confirmed';
 
   elsif p_action = 'create_member' then
@@ -472,50 +538,45 @@ begin
       raise exception 'This row no longer credits the member you reviewed. Refresh and review it again.'
         using errcode = 'P0001', hint = 'stale_finding';
     end if;
-    -- Both (member, event) locks, in a fixed order so two corrections cannot deadlock.
-    perform pg_advisory_xact_lock(hashtextextended('vsa-attendance:' || least(p_from_member_id, p_member_id)::text || ':' || v_row.event_id::text, 0));
-    perform pg_advisory_xact_lock(hashtextextended('vsa-attendance:' || greatest(p_from_member_id, p_member_id)::text || ':' || v_row.event_id::text, 0));
-    select a.id, a.member_id, a.event_id, a.points_earned, a.imported_at into v_removed
-    from public.member_event_attendance a
-    where a.member_id = p_from_member_id and a.event_id = v_row.event_id
-    for update;
-    if not found then
-      raise exception 'The original attendance no longer exists, so there is nothing to correct'
+    if not exists (select 1 from public.member_event_attendance a
+                   where a.member_id = p_from_member_id and a.event_id = v_row.event_id) then
+      raise exception 'The original member no longer has this attendance, so this is not a wrong match any more. Use Match existing member instead.'
         using errcode = 'P0001', hint = 'original_missing';
     end if;
+    perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || p_member_id::text, 0));
     select m.id, trim(m.first_name || ' ' || m.last_name) into v_member_id, v_member_name
-    from public.members m where m.id = p_member_id for share;
+    from public.members m where m.id = p_member_id;
     if not found then
       raise exception 'The selected member no longer exists' using errcode = 'P0001';
     end if;
     select trim(m.first_name || ' ' || m.last_name) into v_from_name from public.members m where m.id = p_from_member_id;
-    if not coalesce(p_keep_original, false) then
-      if v_note is null then
-        raise exception 'Record why the original member did not attend before removing their attendance' using errcode = 'P0001';
-      end if;
-      -- The attendance must have been written by this import (an import writes
-      -- attendance, then its audit record, within seconds). Older attendance came
-      -- from somewhere else: a manual add, an earlier import, or a recovery.
-      if v_removed.imported_at < v_job_created - interval '2 minutes'
-         or v_removed.imported_at > v_job_created + interval '1 minute' then
-        raise exception 'The original member''s attendance was not written by this import, so it may be legitimate. Keep their attendance and only add the correct member.'
-          using errcode = 'P0001', hint = 'original_predates_import';
-      end if;
-      -- Another completed import row, or another recovered finding, crediting the
-      -- same member for this event is independent evidence they attended.
-      if exists (select 1 from public.import_job_rows r2
-                 join public.import_jobs j2 on j2.id = r2.import_job_id and j2.status = 'completed'
-                 where r2.id <> v_row.id and r2.event_id = v_row.event_id
-                   and r2.attendance_member_id = p_from_member_id)
-         or exists (select 1 from public.import_recovery_actions ra
-                    where ra.import_job_row_id <> v_row.id and ra.event_id = v_row.event_id
-                      and ra.member_id = p_from_member_id and ra.resulting_status = 'recovered'
-                      and not exists (select 1 from public.import_recovery_actions n where n.previous_action_id = ra.id)) then
-        raise exception 'Another import row or recovered finding also credits the original member for this event. Keep their attendance and only add the correct member.'
-          using errcode = 'P0001', hint = 'original_has_other_source';
-      end if;
-    end if;
+    v_from_id := p_from_member_id;
     v_reason := 'wrong_member_credited';
+
+  elsif p_action = 'resolve_investigation' then
+    if p_reason_code is null or p_reason_code not in ('original_removed', 'original_attended') then
+      raise exception 'Choose what the investigation found' using errcode = 'P0001';
+    end if;
+    if v_note is null then
+      raise exception 'Record the evidence for this decision' using errcode = 'P0001';
+    end if;
+    v_from_id := v_latest.from_member_id;
+    v_member_id := v_latest.member_id;
+    select trim(m.first_name || ' ' || m.last_name) into v_from_name from public.members m where m.id = v_from_id;
+    -- The entry must describe the ledger as it is, not as the admin believes it is.
+    if p_reason_code = 'original_removed' and exists (
+         select 1 from public.member_event_attendance a where a.member_id = v_from_id and a.event_id = v_row.event_id) then
+      raise exception 'The original member still has this attendance. Remove it in Admin Members first, then resolve.'
+        using errcode = 'P0001', hint = 'original_still_credited';
+    end if;
+    if p_reason_code = 'original_attended' and not exists (
+         select 1 from public.member_event_attendance a where a.member_id = v_from_id and a.event_id = v_row.event_id) then
+      raise exception 'The original member no longer has this attendance; record it as removed instead.'
+        using errcode = 'P0001', hint = 'original_missing';
+    end if;
+    v_reason := p_reason_code;
+    v_outcome := p_reason_code;
+    v_new_status := 'recovered';
 
   elsif p_action = 'dismiss' then
     if p_reason_code is null or p_reason_code not in ('intentional_skip', 'legitimate_duplicate', 'not_actionable') then
@@ -542,50 +603,47 @@ begin
     v_new_status := 'open';
   end if;
 
-  -- Attendance writes. The trigger recalculates cached totals for each member touched.
+  -- The only attendance write: an insert. Restore and reassign already hold the
+  -- per-member lock, so the trigger's total for this member includes every other
+  -- recovery's committed row (a brand-new member has no other rows).
   if p_action in ('restore', 'create_member', 'reassign') then
     insert into public.member_event_attendance (member_id, event_id, points_earned)
-    values (v_member_id, v_row.event_id, v_event.points)
+    values (v_member_id, v_row.event_id, v_event_points)
     on conflict (member_id, event_id) do nothing
     returning id into v_attendance_id;
-    v_points := case when v_attendance_id is null then 0 else v_event.points end;
-    v_new_status := 'recovered';
-
-    if p_action = 'reassign' and not coalesce(p_keep_original, false) then
-      delete from public.member_event_attendance where id = v_removed.id;
-      v_removed_json := jsonb_build_object(
-        'id', v_removed.id, 'member_id', v_removed.member_id, 'event_id', v_removed.event_id,
-        'points_earned', v_removed.points_earned, 'imported_at', v_removed.imported_at);
-      v_outcome := 'moved';
-    elsif p_action = 'reassign' then
-      v_outcome := case when v_attendance_id is null then 'already_recorded' else 'added_kept_original' end;
+    v_points := case when v_attendance_id is null then 0 else v_event_points end;
+    if p_action = 'reassign' then
+      v_outcome := case when v_attendance_id is null then 'correct_member_already_credited' else 'correct_member_credited' end;
+      v_new_status := 'investigating';
     else
       v_outcome := case when v_attendance_id is null then 'already_recorded' else 'attendance_added' end;
+      v_new_status := 'recovered';
     end if;
   end if;
 
   insert into public.import_recovery_actions (
     request_id, request_fingerprint, import_job_row_id, import_job_id, previous_action_id, action, resulting_status, outcome,
-    event_id, member_id, from_member_id, created_member, attendance_id, points_awarded,
-    removed_attendance, reason_code, note, actor_user_id)
+    event_id, member_id, from_member_id, created_member, attendance_id, points_awarded, reason_code, note, actor_user_id)
   values (
     p_request_id, v_fingerprint, p_row_id, v_row.import_job_id, v_latest.id, p_action, v_new_status, v_outcome,
-    v_row.event_id, v_member_id, case when p_action = 'reassign' then p_from_member_id end, v_created,
-    v_attendance_id, v_points, v_removed_json, v_reason, v_note, v_uid)
+    v_row.event_id, v_member_id, v_from_id, v_created, v_attendance_id, v_points, v_reason, v_note, v_uid)
   returning id into v_action_id;
 
-  select e.name into v_event_name from public.events e where e.id = v_row.event_id;
   v_activity := case p_action
-    when 'reassign' then 'member.attendance_reassigned'
+    when 'reassign' then 'member.recovery_credit_flagged'
+    when 'resolve_investigation' then 'member.recovery_investigation_resolved'
     when 'dismiss' then 'member.recovery_dismissed'
     when 'needs_info' then 'member.recovery_on_hold'
     when 'reopen' then 'member.recovery_reopened'
     else 'member.attendance_recovered' end;
   v_summary := case
-    when p_action = 'reassign' and v_outcome = 'moved' then
-      format('Moved attendance at %s from %s to %s (import row %s)', coalesce(v_event_name, 'an event'), coalesce(v_from_name, 'a member'), v_member_name, v_row.source_row_index + 2)
     when p_action = 'reassign' then
-      format('Credited %s at %s, kept %s (import row %s)', v_member_name, coalesce(v_event_name, 'an event'), coalesce(v_from_name, 'a member'), v_row.source_row_index + 2)
+      format('Credited %s at %s; kept %s''s credit for investigation (import row %s)',
+        v_member_name, coalesce(v_event_name, 'an event'), coalesce(v_from_name, 'a member'), v_row.source_row_index + 2)
+    when p_action = 'resolve_investigation' then
+      format('Investigation resolved: %s %s at %s (import row %s)', coalesce(v_from_name, 'the original member'),
+        case when p_reason_code = 'original_removed' then 'did not attend; credit was removed' else 'also attended; credit kept' end,
+        coalesce(v_event_name, 'an event'), v_row.source_row_index + 2)
     when p_action in ('restore', 'create_member') then
       format('%s %s at %s%s (import row %s)',
         case when v_outcome = 'already_recorded' then 'Confirmed existing attendance for' else 'Restored attendance for' end,
@@ -604,21 +662,20 @@ begin
     'import_job_id', v_row.import_job_id,
     'event_id', v_row.event_id,
     'member_id', v_member_id,
-    'from_member_id', case when p_action = 'reassign' then p_from_member_id end,
+    'from_member_id', v_from_id,
     'created_member', v_created,
     'attendance_id', v_attendance_id,
-    'removed_attendance_id', v_removed_json ->> 'id',
     'points_awarded', v_points,
     'outcome', v_outcome,
     'reason', v_reason));
 
   return jsonb_build_object(
     'action_id', v_action_id, 'status', v_new_status, 'outcome', v_outcome,
-    'member_id', v_member_id, 'from_member_id', case when p_action = 'reassign' then p_from_member_id end,
+    'member_id', v_member_id, 'from_member_id', v_from_id,
     'created_member', v_created, 'attendance_id', v_attendance_id,
     'points_awarded', v_points, 'replayed', false);
 end;
 $$;
 
-revoke all on function public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, boolean, text, text) from public, anon;
-grant execute on function public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, boolean, text, text) to authenticated;
+revoke all on function public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, text, text) from public, anon;
+grant execute on function public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, text, text) to authenticated;

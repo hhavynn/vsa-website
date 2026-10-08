@@ -86,6 +86,25 @@ $function$;
 create trigger trg_sync_member_points after insert or delete or update on public.member_event_attendance
   for each row execute function public.sync_member_points();
 
+-- Production definition (pg_get_functiondef), cascading event point edits.
+create function public.sync_attendance_points_on_event_update()
+returns trigger language plpgsql security definer set search_path to '' as $function$
+begin
+  if new.points is not distinct from old.points then
+    return new;
+  end if;
+  update public.member_event_attendance set points_earned = new.points where event_id = new.id;
+  update public.members m
+  set points = (select coalesce(sum(a.points_earned), 0) from public.member_event_attendance a where a.member_id = m.id),
+      events_attended = (select count(*)::int from public.member_event_attendance a where a.member_id = m.id),
+      updated_at = now()
+  where m.id in (select member_id from public.member_event_attendance where event_id = new.id);
+  return new;
+end;
+$function$;
+create trigger sync_attendance_points_on_event_update after update of points on public.events
+  for each row execute function public.sync_attendance_points_on_event_update();
+
 -- Supabase grants table privileges to API roles by default; RLS is the boundary.
 grant all on all tables in schema public to anon, authenticated;
 
@@ -101,3 +120,8 @@ create policy "Public read events" on public.events for select using (true);
 \ir ../../supabase/migrations/20260522010000_add_import_audit_logs.sql
 \ir ../../supabase/migrations/20261002040000_admin_activity_log_and_review_marks.sql
 grant all on public.import_jobs, public.import_job_rows to anon, authenticated;
+
+-- Supabase grants new tables and functions in public to the API roles by
+-- default. Emulate that so the migration's revoke-then-grant is what is tested.
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;

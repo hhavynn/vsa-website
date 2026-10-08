@@ -54,6 +54,7 @@ function record(overrides: Partial<RecoveryFindingRecord> = {}): RecoveryFinding
     email_conflict_both_school: false,
     year_differs: false,
     college_differs: false,
+    recovered_credit_present: null,
     ...overrides,
   };
 }
@@ -73,7 +74,6 @@ function action(overrides: Partial<RecoveryActionRecord> = {}): RecoveryActionRe
     created_member: false,
     attendance_id: 'att-1',
     points_awarded: 10,
-    removed_attendance: null,
     reason_code: 'identity_confirmed',
     note: null,
     actor_user_id: 'admin-1',
@@ -109,7 +109,24 @@ describe('buildFindings', () => {
       record({ row_id: 'cand', candidate_attended: true }),
       record({ row_id: 'held' }),
     ], [action({ import_job_row_id: 'held', action: 'needs_info', resulting_status: 'needs_info', outcome: 'needs_info' })]);
-    expect(countByBucket(findings)).toEqual({ unresolved: 0, needs_info: 2, recovered: 0, dismissed: 0 });
+    expect(countByBucket(findings)).toEqual({ unresolved: 0, investigate: 0, needs_info: 2, recovered: 0, dismissed: 0 });
+  });
+
+  it('returns a reopened insufficient-evidence finding to Unresolved', () => {
+    const chain = [
+      action({ id: 'a1', import_job_row_id: 'cand', action: 'needs_info', resulting_status: 'needs_info', outcome: 'needs_info' }),
+      action({ id: 'a2', import_job_row_id: 'cand', previous_action_id: 'a1', action: 'reopen', resulting_status: 'open', outcome: 'reopened' }),
+    ];
+    const [finding] = buildFindings([record({ row_id: 'cand', candidate_attended: true })], chain);
+    expect(finding.classification.category).toBe('insufficient_evidence');
+    expect(finding.bucket).toBe('unresolved');
+  });
+
+  it('lists a corrected match with a flagged original credit under investigation', () => {
+    const [finding] = buildFindings([record({ decision: 'matched', attendance_member_id: 'm1', attendance_exists: true })], [
+      action({ action: 'reassign', resulting_status: 'investigating', outcome: 'correct_member_credited', from_member_id: 'm1', member_id: 'm2' }),
+    ]);
+    expect(finding.bucket).toBe('investigate');
   });
 
   it('uses the latest entry of the history chain, not the first', () => {
@@ -147,6 +164,16 @@ describe('allowedActions', () => {
     expect(allowedActions(one(matched))).toEqual(['reassign', 'dismiss', 'needs_info']);
   });
 
+  it('only resolves a finding under investigation; never removes attendance', () => {
+    const investigating = action({ action: 'reassign', resulting_status: 'investigating', outcome: 'correct_member_credited' });
+    expect(allowedActions(one(record({ recovered_credit_present: true }), [investigating]))).toEqual(['resolve_investigation']);
+  });
+
+  it('lets a recovered finding reopen only once its recorded credit is gone from the ledger', () => {
+    expect(allowedActions(one(record({ recovered_credit_present: true }), [action()]))).toEqual([]);
+    expect(allowedActions(one(record({ recovered_credit_present: false }), [action()]))).toEqual(['reopen']);
+  });
+
   it('never writes for a recovered finding and only reopens a dismissed one', () => {
     expect(allowedActions(one(record(), [action()]))).toEqual([]);
     expect(allowedActions(one(record(), [action({ action: 'dismiss', resulting_status: 'dismissed', outcome: 'dismissed' })]))).toEqual(['reopen']);
@@ -172,20 +199,21 @@ describe('describeRecoveryPlan', () => {
     expect(lines.join(' ')).not.toMatch(/→/);
   });
 
-  it('describes a move as a removal and an addition that commit together', () => {
+  it('keeps and flags the original credit when correcting a match; nothing is removed', () => {
     const lines = describeRecoveryPlan({
-      action: 'reassign', from: member('m5', 'Kevin', 'Le', 10, 1), fromPointsEarned: 10, to: member('m6', 'Kevin', 'Lee', 0, 0), toAttended: false, keepOriginal: false, note: 'sheet says Lee',
+      action: 'reassign', from: member('m5', 'Kevin', 'Le', 10, 1), to: member('m6', 'Kevin', 'Lee', 0, 0), toAttended: false, note: '',
     }, 'Fall GBM', 10);
-    expect(lines[0]).toBe('Remove attendance: Kevin Le × Fall GBM (10 points). Their total recalculates by trigger: 10 → 0 points, 1 → 0 events.');
+    expect(lines[0]).toBe("Keep Kevin Le's attendance for Fall GBM and flag it for investigation. Nothing is removed.");
     expect(lines[1]).toBe('Add attendance: Kevin Lee × Fall GBM, 10 points.');
-    expect(lines).toContain('Both changes commit together or not at all.');
+    expect(lines.join(' ')).not.toMatch(/Remove attendance/);
   });
 
-  it('keeps the original when asked and only adds the correct member', () => {
+  it('describes resolving an investigation as a ledger check, not a write', () => {
     const lines = describeRecoveryPlan({
-      action: 'reassign', from: member('m3', 'Minh', 'Nguyen'), fromPointsEarned: 10, to: member('m4', 'Minh', 'Nguyen', 0, 0), toAttended: false, keepOriginal: true, note: '',
+      action: 'resolve_investigation', from: member('m5', 'Kevin', 'Le'), fromAttended: false, reason: 'original_removed', note: 'away',
     }, 'Fall GBM', 10);
-    expect(lines[0]).toBe("Keep Minh Nguyen's attendance for Fall GBM.");
+    expect(lines[0]).toMatch(/Kevin Le did not attend Fall GBM\. Their credit must already be gone/);
+    expect(lines).toContain('No attendance or member changes.');
   });
 
   it('shows a new member without an email explicitly', () => {
@@ -200,12 +228,15 @@ describe('describeRecoveryPlan', () => {
 });
 
 describe('validatePlan', () => {
-  it('requires evidence before removing the original member and a note for holds', () => {
+  it('checks corrections, investigation resolutions against the ledger, and notes for holds', () => {
     const from = member('m5', 'Kevin', 'Le');
     const to = member('m6', 'Kevin', 'Lee');
-    expect(validatePlan({ action: 'reassign', from, fromPointsEarned: 10, to, toAttended: false, keepOriginal: false, note: ' ' })).toMatch(/Record why/);
-    expect(validatePlan({ action: 'reassign', from, fromPointsEarned: 10, to, toAttended: false, keepOriginal: true, note: '' })).toBeNull();
-    expect(validatePlan({ action: 'reassign', from, fromPointsEarned: 10, to: from, toAttended: false, keepOriginal: true, note: '' })).toMatch(/different member/);
+    expect(validatePlan({ action: 'reassign', from, to, toAttended: false, note: '' })).toBeNull();
+    expect(validatePlan({ action: 'reassign', from, to: from, toAttended: false, note: '' })).toMatch(/different member/);
+    expect(validatePlan({ action: 'resolve_investigation', from, fromAttended: false, reason: 'original_removed', note: '' })).toMatch(/evidence/);
+    expect(validatePlan({ action: 'resolve_investigation', from, fromAttended: true, reason: 'original_removed', note: 'away' })).toMatch(/Remove it in Admin Members first/);
+    expect(validatePlan({ action: 'resolve_investigation', from, fromAttended: false, reason: 'original_attended', note: 'both' })).toMatch(/record it as removed/);
+    expect(validatePlan({ action: 'resolve_investigation', from, fromAttended: false, reason: 'original_removed', note: 'away' })).toBeNull();
     expect(validatePlan({ action: 'needs_info', note: '' })).toMatch(/Note what/);
     expect(validatePlan({ action: 'dismiss', reason: 'not_actionable', note: '' })).toMatch(/Explain/);
     expect(validatePlan({ action: 'dismiss', reason: 'intentional_skip', note: '' })).toBeNull();

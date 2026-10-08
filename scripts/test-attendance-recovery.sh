@@ -64,23 +64,25 @@ rtk psql "${psql_args[@]}" -d recovery -q <<'SQL'
 insert into auth.users (id) values ('00000000-0000-0000-0000-0000000000a1'), ('00000000-0000-0000-0000-0000000000a2');
 insert into public.user_profiles (id, is_admin) values
   ('00000000-0000-0000-0000-0000000000a1', true), ('00000000-0000-0000-0000-0000000000a2', true);
-insert into public.events (id, name, points) values ('80000000-0000-0000-0000-0000000000c1', 'Concurrency GBM', 10);
+insert into public.events (id, name, points) values
+  ('80000000-0000-0000-0000-0000000000c1', 'Concurrency GBM', 10),
+  ('80000000-0000-0000-0000-0000000000c2', 'Concurrency Social', 7),
+  ('80000000-0000-0000-0000-0000000000c3', 'Concurrency Retreat', 10);
 insert into public.members (id, first_name, last_name) values
   ('10000000-0000-0000-0000-0000000000c1', 'Ana', 'Bui'),
   ('10000000-0000-0000-0000-0000000000c2', 'Anh', 'Bui'),
   ('10000000-0000-0000-0000-0000000000c3', 'Duc', 'Ha');
 insert into public.import_jobs (id, event_id, status) values
-  ('20000000-0000-0000-0000-0000000000c1', '80000000-0000-0000-0000-0000000000c1', 'completed');
+  ('20000000-0000-0000-0000-0000000000c1', '80000000-0000-0000-0000-0000000000c1', 'completed'),
+  ('20000000-0000-0000-0000-0000000000c2', '80000000-0000-0000-0000-0000000000c2', 'completed'),
+  ('20000000-0000-0000-0000-0000000000c3', '80000000-0000-0000-0000-0000000000c3', 'completed');
 insert into public.import_job_rows (id, import_job_id, source_row_index, event_id, display_name, decision) values
   ('30000000-0000-0000-0000-0000000000c1', '20000000-0000-0000-0000-0000000000c1', 0, '80000000-0000-0000-0000-0000000000c1', 'Ana Bui', 'review'),
   ('30000000-0000-0000-0000-0000000000c2', '20000000-0000-0000-0000-0000000000c1', 1, '80000000-0000-0000-0000-0000000000c1', 'Quan Ho', 'review'),
   ('30000000-0000-0000-0000-0000000000c3', '20000000-0000-0000-0000-0000000000c1', 2, '80000000-0000-0000-0000-0000000000c1', 'Quan Ho', 'review'),
-  ('30000000-0000-0000-0000-0000000000c5', '20000000-0000-0000-0000-0000000000c1', 4, '80000000-0000-0000-0000-0000000000c1', 'Duc Ha', 'review');
-insert into public.member_event_attendance (member_id, event_id, points_earned) values
-  ('10000000-0000-0000-0000-0000000000c3', '80000000-0000-0000-0000-0000000000c1', 10);
-insert into public.import_job_rows (id, import_job_id, source_row_index, event_id, display_name, decision, matched_member_id, attendance_member_id) values
-  ('30000000-0000-0000-0000-0000000000c4', '20000000-0000-0000-0000-0000000000c1', 3, '80000000-0000-0000-0000-0000000000c1', 'Duc Hai', 'matched',
-   '10000000-0000-0000-0000-0000000000c3', '10000000-0000-0000-0000-0000000000c3');
+  ('30000000-0000-0000-0000-0000000000c5', '20000000-0000-0000-0000-0000000000c1', 4, '80000000-0000-0000-0000-0000000000c1', 'Duc Ha', 'review'),
+  ('30000000-0000-0000-0000-0000000000c6', '20000000-0000-0000-0000-0000000000c2', 0, '80000000-0000-0000-0000-0000000000c2', 'Duc Ha', 'review'),
+  ('30000000-0000-0000-0000-0000000000c7', '20000000-0000-0000-0000-0000000000c3', 0, '80000000-0000-0000-0000-0000000000c3', 'Anh Bui', 'review');
 SQL
 
 as_admin() {
@@ -115,17 +117,25 @@ sleep 0.4
 as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c3', 'create_member', null, null, null, '{\"first_name\": \"Quan\", \"last_name\": \"Ho\", \"email\": \"quan.ho@ucsd.edu\"}');" \
   >"$runtime_dir/e.out" &
 pid_e=$!
-# One admin confirms row c5 is Duc Ha (who already holds the credit through row
-# c4's fuzzy match) while another moves row c4's credit away from Duc Ha. The
-# move must wait for the confirmation, then refuse to remove the credit.
+# Two recoveries credit the same member on different events at once. Without a
+# per-member lock, the second trigger recalculates from a snapshot that misses
+# the first row, leaving the cached total short.
 as_admin 00000000-0000-0000-0000-0000000000a1 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c5', 'restore', null, '10000000-0000-0000-0000-0000000000c3'); select pg_sleep(1.5);" \
   >"$runtime_dir/f.out" &
 pid_f=$!
+# An admin edits an event's points while a recovery for that event runs. Without
+# the event read lock, the recovery inserts the old value after the cascade ran.
+rtk psql "${psql_args[@]}" -d recovery -qtA -v ON_ERROR_STOP=0 -c "begin; update public.events set points = 15 where id = '80000000-0000-0000-0000-0000000000c3'; select pg_sleep(1.5); commit;" \
+  >"$runtime_dir/h.out" 2>&1 &
+pid_h=$!
 sleep 0.4
-as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c4', 'reassign', null, '10000000-0000-0000-0000-0000000000c2', '10000000-0000-0000-0000-0000000000c3', null, false, null, 'sheet says Duc Hai');" \
+as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c6', 'restore', null, '10000000-0000-0000-0000-0000000000c3');" \
   >"$runtime_dir/g.out" &
 pid_g=$!
-wait "$pid_a" "$pid_b" "$pid_c" "$pid_d" "$pid_e" "$pid_f" "$pid_g"
+as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c7', 'restore', null, '10000000-0000-0000-0000-0000000000c2');" \
+  >"$runtime_dir/i.out" &
+pid_i=$!
+wait "$pid_a" "$pid_b" "$pid_c" "$pid_d" "$pid_e" "$pid_f" "$pid_g" "$pid_h" "$pid_i"
 
 check() {
   local label="$1" cond="$2"
@@ -133,7 +143,7 @@ check() {
     printf 'PASS: %s\n' "$label"
   else
     printf 'FAIL: %s\n' "$label" >&2
-    for f in a b c d e f g; do printf -- '--- %s\n' "$f" >&2; rtk cat "$runtime_dir/$f.out" >&2; done
+    for f in a b c d e f g h i; do printf -- '--- %s\n' "$f" >&2; rtk cat "$runtime_dir/$f.out" >&2; done
     exit 1
   fi
 }
@@ -149,10 +159,16 @@ check 'first concurrent create with a new email succeeds' "$d_ok"
 grep -q 'already has this email' "$runtime_dir/e.out" && e_ok=true || e_ok=false
 check 'a concurrent create with the same email is refused after waiting' "$e_ok"
 
-grep -q '"outcome": "already_recorded"' "$runtime_dir/f.out" && f_ok=true || f_ok=false
-check 'confirming an already-credited member during a concurrent move awards nothing' "$f_ok"
-grep -q 'recovered finding also credits the original member' "$runtime_dir/g.out" && g_ok=true || g_ok=false
-check 'a concurrent move waits for that confirmation and then keeps the credit' "$g_ok"
+totals="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "
+select
+  (select points || '/' || events_attended from public.members where id = '10000000-0000-0000-0000-0000000000c3') || '|' ||
+  (select points_earned from public.member_event_attendance
+    where member_id = '10000000-0000-0000-0000-0000000000c2' and event_id = '80000000-0000-0000-0000-0000000000c3') || '|' ||
+  (select points from public.members where id = '10000000-0000-0000-0000-0000000000c2')")"
+[ "${totals%%|*}" = "17/2" ] && f_ok=true || f_ok=false
+check "concurrent recoveries for one member on two events leave the right total (got ${totals%%|*}, want 17/2)" "$f_ok"
+[ "${totals#*|}" = "15|15" ] && h_ok=true || h_ok=false
+check "a recovery racing an event points edit stores the new value (got ${totals#*|}, want 15|15)" "$h_ok"
 
 result="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "
 select
@@ -160,9 +176,8 @@ select
   (select points from public.members where id = '10000000-0000-0000-0000-0000000000c1') || '|' ||
   (select points from public.members where id = '10000000-0000-0000-0000-0000000000c2') || '|' ||
   (select count(*) from public.import_recovery_actions where import_job_row_id = '30000000-0000-0000-0000-0000000000c1') || '|' ||
-  (select count(*) from public.members where email = 'quan.ho@ucsd.edu') || '|' ||
-  (select points from public.members where id = '10000000-0000-0000-0000-0000000000c3')")"
-[ "$result" = "3|10|0|1|1|10" ] && ledger_ok=true || ledger_ok=false
+  (select count(*) from public.members where email = 'quan.ho@ucsd.edu')")"
+[ "$result" = "3|10|15|1|1" ] && ledger_ok=true || ledger_ok=false
 check "concurrent attempts leave one credit per person, one history entry, one member per email (got $result)" "$ledger_ok"
 
 cleanup

@@ -31,7 +31,6 @@ it('sends every write through the single recovery function with the reviewed sta
     p_member_id: 'm1',
     p_from_member_id: null,
     p_new_member: null,
-    p_keep_original: false,
     p_reason_code: null,
     p_note: null,
   });

@@ -19,6 +19,14 @@ jest.mock('../../../data/repos/attendanceRecovery', () => ({
   },
 }));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
+jest.mock('./MemberAttendanceModal', () => ({
+  MemberAttendanceModal: ({ memberId, onClose }: { memberId: string; onClose: () => void }) => (
+    <div role="dialog" aria-label="Admin Members attendance">
+      Attendance editor for {memberId}
+      <button type="button" onClick={onClose}>Close editor</button>
+    </div>
+  ),
+}));
 
 const repo = attendanceRecoveryRepository as jest.Mocked<typeof attendanceRecoveryRepository>;
 
@@ -31,7 +39,7 @@ const base: RecoveryFindingRecord = {
   manual_decision: null, name_score: 88, candidate_count: 1, can_mark_new: false, has_csv_email: true, attendance_exists: null,
   matched_member_attended: false, email_member_attended: false, candidate_attended: false, resolved_elsewhere: false,
   duplicate_twin_attended: null, email_in_members: false, exact_name_members: 0, email_conflict: false,
-  email_conflict_both_school: false, year_differs: false, college_differs: false,
+  email_conflict_both_school: false, year_differs: false, college_differs: false, recovered_credit_present: null,
 };
 const wrongMatch: RecoveryFindingRecord = {
   ...base, row_id: 'row-wrong', source_row_index: 7, decision: 'matched', display_name: 'Kevin Lee', csv_email: 'kevlee@ucsd.edu',
@@ -39,7 +47,7 @@ const wrongMatch: RecoveryFindingRecord = {
   email_conflict: true, email_conflict_both_school: true,
 };
 const otherEvent: RecoveryFindingRecord = { ...base, row_id: 'row-other', event_id: 'event-2', event_name: 'Winter Social', import_job_id: 'job-2', display_name: 'Bao Vo' };
-const recovered: RecoveryFindingRecord = { ...base, row_id: 'row-done', display_name: 'Anna Pham', email_member_attended: true };
+const recovered: RecoveryFindingRecord = { ...base, row_id: 'row-done', display_name: 'Anna Pham', email_member_attended: true, recovered_credit_present: true };
 
 const member = (id: string, first: string, last: string, email: string, points = 20): MemberSnapshot => ({
   id, first_name: first, last_name: last, email, college: 'Revelle', year: '2nd', points, events_attended: 2,
@@ -53,7 +61,7 @@ const members = [linh, lynn, kevinLe, kevinLee];
 const doneAction: RecoveryActionRecord = {
   id: 'act-1', request_id: 'req-old', import_job_row_id: 'row-done', previous_action_id: null, action: 'restore',
   resulting_status: 'recovered', outcome: 'attendance_added', event_id: 'event-1', member_id: 'm-anna', from_member_id: null,
-  created_member: false, attendance_id: 'att-1', points_awarded: 10, removed_attendance: null, reason_code: 'identity_confirmed',
+  created_member: false, attendance_id: 'att-1', points_awarded: 10, reason_code: 'identity_confirmed',
   note: null, actor_user_id: 'admin-1', created_at: '2026-10-08T01:00:00Z',
 };
 
@@ -121,6 +129,7 @@ it('groups findings by status and filters by event and issue type', async () => 
 });
 
 it('restores a skipped attendee only after identity and change confirmation, then refreshes', async () => {
+  const invalidateSpy = jest.spyOn(QueryClient.prototype, 'invalidateQueries');
   renderPanel();
   const dialog = await openFinding('Linh Tran');
   expect(within(dialog).getByText(/Fall GBM · May 22, 2026/)).toBeInTheDocument();
@@ -156,6 +165,9 @@ it('restores a skipped attendee only after identity and change confirmation, the
   expect(repo.recover.mock.calls[0][0].requestId).toMatch(/^[0-9a-f-]{36}$/);
   await waitFor(() => expect(repo.listFindingRecords).toHaveBeenCalledTimes(2));
   expect(repo.listActions).toHaveBeenCalledTimes(2);
+  // Home's House standings preview and the leaderboards are refreshed too.
+  const invalidated = invalidateSpy.mock.calls.map(([key]) => JSON.stringify(key));
+  expect(invalidated).toEqual(expect.arrayContaining(['["home"]', '["individual-leaderboard"]', '["house-detail","standings"]', '["leaderboard-years"]']));
 });
 
 it('retries with the same request id after a lost response, so nothing is written twice', async () => {
@@ -212,7 +224,7 @@ it('creates a separate member only after confirming they differ from every sugge
   expect(await within(dialog).findByText('Create member: Linh Tran, no email (Revelle, 2nd).')).toBeInTheDocument();
 });
 
-it('corrects a wrong match by moving attendance only with recorded evidence', async () => {
+it('corrects a wrong match without removing the original credit, and flags it for investigation', async () => {
   renderPanel();
   const dialog = await openFinding('Kevin Lee');
   expect(await within(dialog).findByText('Credited to')).toBeInTheDocument();
@@ -220,23 +232,69 @@ it('corrects a wrong match by moving attendance only with recorded evidence', as
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Correct incorrect match' }));
   fireEvent.click(await within(dialog).findByRole('radio', { name: /Kevin Lee/ }));
-  fireEvent.click(within(dialog).getByRole('radio', { name: /Remove it/ }));
+  expect(within(dialog).queryByRole('radio', { name: /Remove it/ })).not.toBeInTheDocument();
+  expect(within(dialog).getByText(/keeps their attendance/)).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('checkbox', { name: /sheet row belongs/ }));
   fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Record why the original member did not attend');
-
-  fireEvent.change(within(dialog).getByLabelText(/Evidence the original member did not attend/), { target: { value: 'Sign-in sheet says Lee' } });
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
   await within(dialog).findByText('Exact database changes');
-  expect(within(dialog).getByText(/Remove attendance: Kevin Le × Fall GBM \(10 points\)/)).toBeInTheDocument();
+  expect(within(dialog).getByText("Keep Kevin Le's attendance for Fall GBM and flag it for investigation. Nothing is removed.")).toBeInTheDocument();
   expect(within(dialog).getByText('Add attendance: Kevin Lee × Fall GBM, 10 points.')).toBeInTheDocument();
+  expect(within(dialog).queryByText(/Remove attendance/)).not.toBeInTheDocument();
 
   fireEvent.click(within(dialog).getByRole('checkbox', { name: /reviewed these changes/ }));
   fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }));
   await waitFor(() => expect(repo.recover).toHaveBeenCalled());
-  expect(repo.recover.mock.calls[0][0]).toMatchObject({
-    action: 'reassign', memberId: 'm-lee', fromMemberId: 'm-le', keepOriginal: false, note: 'Sign-in sheet says Lee',
-  });
+  expect(repo.recover.mock.calls[0][0]).toMatchObject({ action: 'reassign', memberId: 'm-lee', fromMemberId: 'm-le' });
+  expect(repo.recover.mock.calls[0][0]).not.toHaveProperty('keepOriginal');
+});
+
+it('resolves an investigation only after the original credit is gone, via the Admin Members editor', async () => {
+  const flagged: RecoveryActionRecord = {
+    ...doneAction, id: 'act-flag', import_job_row_id: 'row-wrong', action: 'reassign', resulting_status: 'investigating',
+    outcome: 'correct_member_credited', member_id: 'm-lee', from_member_id: 'm-le', reason_code: 'wrong_member_credited',
+  };
+  repo.listActions.mockResolvedValue([doneAction, flagged]);
+  renderPanel();
+  fireEvent.click(await screen.findByRole('tab', { name: /Original credit to investigate 1/ }));
+  const dialog = await openFinding('Kevin Lee');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Resolve investigation' }));
+  fireEvent.click(within(dialog).getByRole('radio', { name: /original member did not attend/ }));
+  fireEvent.change(within(dialog).getByLabelText(/Evidence for this decision/), { target: { value: 'Kevin Le was away' } });
+  await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Review changes' })).toBeEnabled());
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
+  // The ledger still holds Kevin Le's credit (getEventAttendance mock), so the plan is refused.
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Remove it in Admin Members first');
+  expect(repo.recover).not.toHaveBeenCalled();
+
+  fireEvent.click(within(dialog).getByRole('button', { name: /Open Kevin Le's attendance in Admin Members/ }));
+  expect(await screen.findByRole('dialog', { name: 'Admin Members attendance' })).toHaveTextContent('m-le');
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Close editor' }));
+  expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+});
+
+it('blocks identity decisions until candidate lookups load, and on failure offers a retry', async () => {
+  let rejectMembers: (error: Error) => void = () => undefined;
+  repo.getMembers.mockImplementation(() => new Promise((_resolve, reject) => { rejectMembers = reject; }));
+  renderPanel();
+  const dialog = await openFinding('Linh Tran');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Create separate member' }));
+  expect(within(dialog).getByRole('button', { name: 'Review changes' })).toBeDisabled();
+  expect(within(dialog).getByText('Loading member details…')).toBeInTheDocument();
+
+  rejectMembers(new Error('network down'));
+  expect(await within(dialog).findByText(/identity cannot be checked/)).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Review changes' })).toBeDisabled();
+  expect(within(dialog).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  expect(repo.recover).not.toHaveBeenCalled();
+});
+
+it('dismissing does not wait for identity lookups', async () => {
+  repo.getMembers.mockImplementation(() => new Promise(() => undefined));
+  renderPanel();
+  const dialog = await openFinding('Linh Tran');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Dismiss finding' }));
+  expect(within(dialog).getByRole('button', { name: 'Review changes' })).toBeEnabled();
 });
 
 it('dismisses with a preserved reason', async () => {
@@ -254,6 +312,15 @@ it('dismisses with a preserved reason', async () => {
   fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }));
   await waitFor(() => expect(repo.recover).toHaveBeenCalled());
   expect(repo.recover.mock.calls[0][0]).toMatchObject({ action: 'dismiss', reasonCode: 'legitimate_duplicate' });
+});
+
+it('flags a recovered finding whose credit was later removed, and lets it reopen', async () => {
+  repo.listFindingRecords.mockResolvedValue([{ ...recovered, recovered_credit_present: false }]);
+  renderPanel();
+  fireEvent.click(await screen.findByRole('tab', { name: /Recovered 1/ }));
+  expect(screen.getByText(/later removed in Admin Members/)).toBeInTheDocument();
+  const dialog = await openFinding('Anna Pham');
+  expect(within(dialog).getByRole('button', { name: 'Reopen finding' })).toBeInTheDocument();
 });
 
 it('shows recovered findings read-only', async () => {

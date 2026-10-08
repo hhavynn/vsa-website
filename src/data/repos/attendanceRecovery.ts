@@ -9,12 +9,14 @@ import {
   RecoveryFindingRecord,
   RecoveryOutcome,
   RecoveryStatus,
+  ResolveReason,
 } from '../../lib/attendanceRecovery';
 import { Json } from '../../types/database';
 
 // Historical attendance recovery (migration 20261008000000). Reads are admin-only
 // by RLS and function checks. Every write goes through admin_recover_import_row,
-// which changes attendance, members and history in one transaction.
+// which inserts attendance (never deletes it), creates members and records
+// history in one transaction.
 
 const MEMBER_SELECT = 'id, first_name, last_name, email, college, year, points, events_attended' as const;
 const PAGE = 1000;
@@ -48,8 +50,7 @@ export interface RecoverRequest {
   memberId?: string | null;
   fromMemberId?: string | null;
   newMember?: NewMemberInput | null;
-  keepOriginal?: boolean;
-  reasonCode?: DismissReason | null;
+  reasonCode?: DismissReason | ResolveReason | null;
   note?: string | null;
 }
 
@@ -188,7 +189,6 @@ export class AttendanceRecoveryRepository {
         p_member_id: request.memberId ?? null,
         p_from_member_id: request.fromMemberId ?? null,
         p_new_member: (request.newMember ?? null) as unknown as Json,
-        p_keep_original: request.keepOriginal ?? false,
         p_reason_code: request.reasonCode ?? null,
         p_note: request.note?.trim() ? request.note.trim() : null,
       });

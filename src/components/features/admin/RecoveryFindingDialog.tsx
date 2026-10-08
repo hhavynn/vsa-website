@@ -10,9 +10,11 @@ import {
   MemberSnapshot,
   NewMemberInput,
   OUTCOME_LABELS,
+  RESOLVE_REASONS,
   RecoveryActionKind,
   RecoveryFinding,
   RecoveryPlan,
+  ResolveReason,
   allowedActions,
   describeRecoveryPlan,
   emailConflictMemberId,
@@ -143,10 +145,13 @@ export function RecoveryFindingDialog({
   finding,
   onClose,
   onRecovered,
+  onOpenMemberAttendance,
 }: {
   finding: RecoveryFinding;
   onClose: () => void;
   onRecovered: (result: RecoverResult) => void | Promise<void>;
+  /** Opens the Admin Members attendance editor, the only place attendance is removed. */
+  onOpenMemberAttendance?: (memberId: string) => void;
 }) {
   const uid = useId();
   const titleId = `${uid}-title`;
@@ -191,6 +196,18 @@ export function RecoveryFindingDialog({
   useEffect(() => {
     if (candidates.length) setExtraIds((ids) => Array.from(new Set([...ids, ...candidates.map((member) => member.id)])));
   }, [candidates]);
+  // Identity decisions wait for every lookup; a missing candidate list must never
+  // read as "no similar members".
+  const sameNameNeeded = record.exact_name_members > 0 && !!record.display_name;
+  const lookupsFailed = detail.isError || related.isError || (sameNameNeeded && sameName.isError) || eventAttendance.isError;
+  const lookupsReady = detail.isSuccess && related.isSuccess && (!sameNameNeeded || sameName.isSuccess)
+    && (!record.event_id || attendanceIds.length === 0 || eventAttendance.isSuccess);
+  const retryLookups = () => {
+    void detail.refetch();
+    void related.refetch();
+    if (sameNameNeeded) void sameName.refetch();
+    void eventAttendance.refetch();
+  };
 
   const [action, setAction] = useState<RecoveryActionKind | null>(null);
   const [member, setMember] = useState<MemberSnapshot | null>(null);
@@ -201,8 +218,8 @@ export function RecoveryFindingDialog({
     college: record.csv_college ?? '',
     year: record.csv_year ?? '',
   }));
-  const [keepOriginal, setKeepOriginal] = useState(true);
   const [reason, setReason] = useState<DismissReason>('intentional_skip');
+  const [resolveReason, setResolveReason] = useState<ResolveReason | null>(null);
   const [note, setNote] = useState('');
   const [step, setStep] = useState<Step>('plan');
   const [plan, setPlan] = useState<RecoveryPlan | null>(null);
@@ -250,9 +267,18 @@ export function RecoveryFindingDialog({
         const to = fresh.find((m) => m.id === member.id);
         if (!from || !to) { setError('A member no longer exists. Refresh and review again.'); return null; }
         const existing = await attendanceRecoveryRepository.getEventAttendance(record.event_id as string, [from.id, to.id]);
-        const fromRow = existing.find((row) => row.member_id === from.id);
-        if (!fromRow) { setError('The original attendance no longer exists, so there is nothing to correct.'); return null; }
-        return { action, from, fromPointsEarned: fromRow.points_earned, to, toAttended: existing.some((row) => row.member_id === to.id), keepOriginal, note };
+        if (!existing.some((row) => row.member_id === from.id)) {
+          setError('The original member no longer has this attendance, so this is not a wrong match any more. Use Match existing member instead.');
+          return null;
+        }
+        return { action, from, to, toAttended: existing.some((row) => row.member_id === to.id), note };
+      }
+      case 'resolve_investigation': {
+        if (!resolveReason) { setError('Choose what the investigation found.'); return null; }
+        const fromId = finding.latestAction?.from_member_id ?? record.attendance_member_id;
+        const [from] = fromId ? await attendanceRecoveryRepository.getMembers([fromId]) : [];
+        const existing = fromId && record.event_id ? await attendanceRecoveryRepository.getEventAttendance(record.event_id, [fromId]) : [];
+        return { action, from: from ?? null, fromAttended: existing.length > 0, reason: resolveReason, note };
       }
       case 'dismiss':
         return { action, reason, note };
@@ -265,6 +291,13 @@ export function RecoveryFindingDialog({
 
   const review = async () => {
     setError(null);
+    const needsIdentity = action === 'restore' || action === 'create_member' || action === 'reassign' || action === 'resolve_investigation';
+    if (needsIdentity && !lookupsReady) {
+      setError(lookupsFailed
+        ? 'Member details could not be loaded, so identity cannot be checked. Retry before continuing.'
+        : 'Still loading member details. Try again in a moment.');
+      return;
+    }
     if ((action === 'restore' || action === 'reassign') && !identityConfirmed) {
       setError('Confirm that you verified the identity before continuing.');
       return;
@@ -316,8 +349,7 @@ export function RecoveryFindingDialog({
         memberId: plan.action === 'restore' ? plan.member.id : plan.action === 'reassign' ? plan.to.id : null,
         fromMemberId: plan.action === 'reassign' ? plan.from.id : null,
         newMember: plan.action === 'create_member' ? plan.newMember : null,
-        keepOriginal: plan.action === 'reassign' ? plan.keepOriginal : false,
-        reasonCode: plan.action === 'dismiss' ? plan.reason : null,
+        reasonCode: plan.action === 'dismiss' || plan.action === 'resolve_investigation' ? plan.reason : null,
         note: 'note' in plan ? plan.note : null,
       });
       setResult(response);
@@ -429,7 +461,13 @@ export function RecoveryFindingDialog({
           )}
 
           <div className="mt-4 space-y-3">
-            {(detail.isLoading || related.isLoading) && <p className="text-xs text-[var(--color-text3)]">Loading members…</p>}
+            {!lookupsReady && !lookupsFailed && <p role="status" className="text-xs text-[var(--color-text3)]">Loading member details…</p>}
+            {lookupsFailed && (
+              <p role="alert" className="text-xs text-red-700 dark:text-red-300">
+                Member details could not be loaded, so identity cannot be checked.
+                <button type="button" className={cn(dialogBtnCls, 'ml-2 px-2 py-0.5 text-xs')} onClick={retryLookups}>Retry</button>
+              </p>
+            )}
 
             {action === 'restore' && (
               <>
@@ -504,22 +542,44 @@ export function RecoveryFindingDialog({
                     <div className="mt-1"><RecentAttendance memberId={member.id} /></div>
                   </div>
                 )}
-                <fieldset className="space-y-1 text-sm text-[var(--color-text)]">
-                  <legend className={labelCls}>Original member&apos;s attendance</legend>
-                  <label className="flex items-start gap-2">
-                    <input type="radio" className="mt-0.5" checked={keepOriginal} onChange={() => setKeepOriginal(true)} />
-                    Keep it. Only add the correct member (safest when the original may also have attended).
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input type="radio" className="mt-0.5" checked={!keepOriginal} onChange={() => setKeepOriginal(false)} />
-                    Remove it. I have independent evidence the original member did not attend.
-                  </label>
-                </fieldset>
+                <p className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-2.5 text-xs text-[var(--color-text2)]">
+                  {creditedMember ? memberName(creditedMember) : 'The original member'} keeps their attendance. The import cannot prove
+                  that credit came only from this row, and they may have attended too, so it is flagged for investigation instead
+                  of removed. If they did not attend, remove it in Admin Members, then resolve the finding here.
+                </p>
                 <label className="flex items-start gap-2 text-sm text-[var(--color-text)]">
                   <input type="checkbox" className="mt-0.5" checked={identityConfirmed} disabled={!member} onChange={(event) => setIdentityConfirmed(event.target.checked)} />
                   I verified the sheet row belongs to the member I selected.
                 </label>
               </>
+            )}
+
+            {action === 'resolve_investigation' && (
+              <div className="space-y-3">
+                <div className="rounded border border-[var(--color-border)] p-2.5">
+                  <p className={sectionLabel}>Flagged original credit</p>
+                  <div className="mt-1 text-sm">
+                    {creditedMember ? <MemberLine member={creditedMember} attended={attendanceOf(creditedMember.id)} /> : 'The original member could not be loaded.'}
+                  </div>
+                  {creditedMember && onOpenMemberAttendance && (
+                    <button type="button" className={cn(dialogBtnCls, 'mt-2 px-3 py-1 text-xs')} onClick={() => onOpenMemberAttendance(creditedMember.id)}>
+                      Open {memberName(creditedMember)}&apos;s attendance in Admin Members
+                    </button>
+                  )}
+                </div>
+                <fieldset className="space-y-1.5 text-sm text-[var(--color-text)]">
+                  <legend className={labelCls}>What did the investigation find?</legend>
+                  {RESOLVE_REASONS.map((option) => (
+                    <label key={option.value} className="flex items-start gap-2">
+                      <input type="radio" className="mt-0.5" checked={resolveReason === option.value} onChange={() => setResolveReason(option.value)} />
+                      <span>
+                        {option.label}
+                        <span className="block text-xs text-[var(--color-text2)]">{option.hint}</span>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              </div>
             )}
 
             {action === 'dismiss' && (
@@ -540,7 +600,7 @@ export function RecoveryFindingDialog({
             {action && action !== 'restore' && action !== 'create_member' && (
               <div>
                 <label className={labelCls} htmlFor={`${uid}-note`}>
-                  {action === 'reassign' ? (keepOriginal ? 'Note (optional)' : 'Evidence the original member did not attend (required)')
+                  {action === 'resolve_investigation' ? 'Evidence for this decision (required)'
                     : action === 'needs_info' ? 'What information is missing? (required)'
                     : action === 'dismiss' && reason === 'not_actionable' ? 'Why is this not actionable? (required)'
                     : 'Note (optional)'}
@@ -586,7 +646,8 @@ export function RecoveryFindingDialog({
         <div role="status" className="mt-4 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
           {OUTCOME_LABELS[result.outcome]}
           {result.points_awarded > 0 ? ` · ${result.points_awarded} points awarded` : ''}
-          {result.outcome === 'moved' && result.points_awarded === 0 ? ' · the correct member already had this attendance, so nothing was added for them' : ''}
+          {result.outcome === 'correct_member_already_credited' ? ' · the correct member already had this attendance, so nothing was added' : ''}
+          {result.status === 'investigating' ? ' · the original credit is kept and listed under "Original credit to investigate"' : ''}
           {result.replayed ? ' (already applied earlier; nothing written twice)' : ''}.
         </div>
       )}
@@ -608,14 +669,14 @@ export function RecoveryFindingDialog({
           {step === 'done' ? 'Close' : 'Cancel'}
         </button>
         {step === 'plan' && actions.length > 0 && (
-          <button type="button" className={dialogPrimaryCls(false)} disabled={!action || busy || detail.isLoading} onClick={review}>
+          <button type="button" className={dialogPrimaryCls(false)} disabled={!action || busy || ((action === 'restore' || action === 'create_member' || action === 'reassign' || action === 'resolve_investigation') && !lookupsReady)} onClick={review}>
             {busy ? 'Checking…' : 'Review changes'}
           </button>
         )}
         {step === 'confirm' && (
           <button
             type="button"
-            className={dialogPrimaryCls(plan?.action === 'reassign' && !plan.keepOriginal)}
+            className={dialogPrimaryCls(false)}
             disabled={!reviewed || busy || stale}
             onClick={apply}
           >

@@ -54,19 +54,32 @@ export interface RecoveryFindingRecord {
   email_conflict_both_school: boolean;
   year_differs: boolean;
   college_differs: boolean;
+  /** For recovered/investigating rows: whether the member the recovery credited still has the attendance. */
+  recovered_credit_present: boolean | null;
 }
 
-export type RecoveryActionKind = 'restore' | 'create_member' | 'reassign' | 'dismiss' | 'needs_info' | 'reopen';
-export type RecoveryStatus = 'open' | 'recovered' | 'dismissed' | 'needs_info';
+export type RecoveryActionKind =
+  | 'restore'
+  | 'create_member'
+  | 'reassign'
+  | 'resolve_investigation'
+  | 'dismiss'
+  | 'needs_info'
+  | 'reopen';
+/** `investigating`: the correct member was credited and the original credit is flagged, never removed here. */
+export type RecoveryStatus = 'open' | 'recovered' | 'investigating' | 'dismissed' | 'needs_info';
 export type RecoveryOutcome =
   | 'attendance_added'
   | 'already_recorded'
-  | 'moved'
-  | 'added_kept_original'
+  | 'correct_member_credited'
+  | 'correct_member_already_credited'
+  | 'original_removed'
+  | 'original_attended'
   | 'dismissed'
   | 'needs_info'
   | 'reopened';
 export type DismissReason = 'intentional_skip' | 'legitimate_duplicate' | 'not_actionable';
+export type ResolveReason = 'original_removed' | 'original_attended';
 
 /** One row of import_recovery_actions. */
 export interface RecoveryActionRecord {
@@ -83,14 +96,13 @@ export interface RecoveryActionRecord {
   created_member: boolean;
   attendance_id: string | null;
   points_awarded: number;
-  removed_attendance: unknown;
   reason_code: string | null;
   note: string | null;
   actor_user_id: string | null;
   created_at: string;
 }
 
-export type RecoveryBucket = 'unresolved' | 'needs_info' | 'recovered' | 'dismissed';
+export type RecoveryBucket = 'unresolved' | 'investigate' | 'needs_info' | 'recovered' | 'dismissed';
 
 export interface RecoveryFinding {
   record: RecoveryFindingRecord;
@@ -157,11 +169,14 @@ export function latestActionByRow(actions: readonly RecoveryActionRecord[]): Map
   return latest;
 }
 
-function bucketFor(status: RecoveryStatus, category: HistoricalCategory): RecoveryBucket {
+function bucketFor(status: RecoveryStatus, category: HistoricalCategory, hasHistory: boolean): RecoveryBucket {
   if (status === 'recovered') return 'recovered';
   if (status === 'dismissed') return 'dismissed';
-  if (status === 'needs_info' || category === 'insufficient_evidence') return 'needs_info';
-  return 'unresolved';
+  if (status === 'investigating') return 'investigate';
+  if (status === 'needs_info') return 'needs_info';
+  // An admin who reopened a finding sent it back to Unresolved on purpose.
+  if (hasHistory) return 'unresolved';
+  return category === 'insufficient_evidence' ? 'needs_info' : 'unresolved';
 }
 
 /**
@@ -183,7 +198,7 @@ export function buildFindings(
         classification,
         latestAction,
         status,
-        bucket: bucketFor(status, classification.category),
+        bucket: bucketFor(status, classification.category, latestAction !== null),
         sheetRow: record.source_row_index + 2,
       };
     })
@@ -215,7 +230,7 @@ export function filterFindings(findings: readonly RecoveryFinding[], filters: Fi
 }
 
 export function countByBucket(findings: readonly RecoveryFinding[]): Record<RecoveryBucket, number> {
-  const counts: Record<RecoveryBucket, number> = { unresolved: 0, needs_info: 0, recovered: 0, dismissed: 0 };
+  const counts: Record<RecoveryBucket, number> = { unresolved: 0, investigate: 0, needs_info: 0, recovered: 0, dismissed: 0 };
   findings.forEach((finding) => { counts[finding.bucket] += 1; });
   return counts;
 }
@@ -232,8 +247,12 @@ export function rowCreditsMember(record: RecoveryFindingRecord): boolean {
  * accept. The database checks them again; this is not the safety boundary.
  */
 export function allowedActions(finding: RecoveryFinding): RecoveryActionKind[] {
-  if (finding.status === 'recovered') return [];
+  // A recorded credit that was later removed in Admin Members leaves history
+  // claiming something the ledger no longer holds; the database allows reopening it.
+  const creditGone = finding.record.recovered_credit_present === false;
+  if (finding.status === 'recovered') return creditGone ? ['reopen'] : [];
   if (finding.status === 'dismissed') return ['reopen'];
+  if (finding.status === 'investigating') return creditGone ? ['resolve_investigation', 'reopen'] : ['resolve_investigation'];
   const { record } = finding;
   const canWrite = record.job_status === 'completed' && !!record.event_id;
   const actions: RecoveryActionKind[] = [];
@@ -250,6 +269,7 @@ export const ACTION_LABELS: Record<RecoveryActionKind, string> = {
   restore: 'Match existing member',
   create_member: 'Create separate member',
   reassign: 'Correct incorrect match',
+  resolve_investigation: 'Resolve investigation',
   dismiss: 'Dismiss finding',
   needs_info: 'Needs more information',
   reopen: 'Reopen finding',
@@ -261,8 +281,14 @@ export const DISMISS_REASONS: ReadonlyArray<{ value: DismissReason; label: strin
   { value: 'not_actionable', label: 'Not actionable', hint: 'Nothing can or should change. Explain why.' },
 ];
 
+export const RESOLVE_REASONS: ReadonlyArray<{ value: ResolveReason; label: string; hint: string }> = [
+  { value: 'original_removed', label: 'The original member did not attend', hint: 'You already removed their credit in Admin Members. The database checks that it is gone.' },
+  { value: 'original_attended', label: 'The original member also attended', hint: 'Their credit stays. The database checks that it still exists.' },
+];
+
 export const BUCKET_LABELS: Record<RecoveryBucket, string> = {
   unresolved: 'Unresolved',
+  investigate: 'Original credit to investigate',
   needs_info: 'Needs more information',
   recovered: 'Recovered',
   dismissed: 'Dismissed',
@@ -271,8 +297,10 @@ export const BUCKET_LABELS: Record<RecoveryBucket, string> = {
 export const OUTCOME_LABELS: Record<RecoveryOutcome, string> = {
   attendance_added: 'Attendance restored',
   already_recorded: 'Already recorded, nothing added',
-  moved: 'Attendance moved',
-  added_kept_original: 'Correct member added, original kept',
+  correct_member_credited: 'Correct member credited; original flagged',
+  correct_member_already_credited: 'Correct member already credited; original flagged',
+  original_removed: 'Investigated: original did not attend (credit removed)',
+  original_attended: 'Investigated: original also attended (credit kept)',
   dismissed: 'Dismissed',
   needs_info: 'On hold',
   reopened: 'Reopened',
@@ -323,7 +351,8 @@ export interface NewMemberInput {
 export type RecoveryPlan =
   | { action: 'restore'; member: MemberSnapshot; memberAttended: boolean }
   | { action: 'create_member'; newMember: NewMemberInput }
-  | { action: 'reassign'; from: MemberSnapshot; fromPointsEarned: number; to: MemberSnapshot; toAttended: boolean; keepOriginal: boolean; note: string }
+  | { action: 'reassign'; from: MemberSnapshot; to: MemberSnapshot; toAttended: boolean; note: string }
+  | { action: 'resolve_investigation'; from: MemberSnapshot | null; fromAttended: boolean; reason: ResolveReason; note: string }
   | { action: 'dismiss'; reason: DismissReason; note: string }
   | { action: 'needs_info'; note: string }
   | { action: 'reopen'; note: string };
@@ -367,17 +396,21 @@ export function describeRecoveryPlan(plan: RecoveryPlan, eventName: string, even
         'No existing member is changed or merged.',
       ];
     }
-    case 'reassign': {
-      const lines = plan.keepOriginal
-        ? [`Keep ${memberName(plan.from)}'s attendance for ${eventName}.`]
-        : [
-            `Remove attendance: ${memberName(plan.from)} × ${eventName} (${pts(plan.fromPointsEarned)}). Their total recalculates by trigger: ${plan.from.points} → ${Math.max(0, plan.from.points - plan.fromPointsEarned)} points, ${plan.from.events_attended} → ${Math.max(0, plan.from.events_attended - 1)} events.`,
-          ];
+    case 'reassign':
       return [
-        ...lines,
+        `Keep ${memberName(plan.from)}'s attendance for ${eventName} and flag it for investigation. Nothing is removed.`,
         ...creditLines(plan.to, eventName, eventPoints, plan.toAttended),
-        plan.keepOriginal ? history : `${history} The removed attendance is saved in the entry so it can be restored.`,
-        'Both changes commit together or not at all.',
+        history,
+        'If the investigation shows the original member did not attend, remove their credit in Admin Members, then resolve the finding here.',
+      ];
+    case 'resolve_investigation': {
+      const who = plan.from ? memberName(plan.from) : 'The original member';
+      return [
+        plan.reason === 'original_removed'
+          ? `Record that ${who} did not attend ${eventName}. Their credit must already be gone; the database checks this.`
+          : `Record that ${who} also attended ${eventName}. Their credit stays; the database checks it still exists.`,
+        'No attendance or member changes.',
+        history,
       ];
     }
     case 'dismiss':
@@ -406,7 +439,15 @@ export function validatePlan(plan: RecoveryPlan): string | null {
     }
     case 'reassign':
       if (plan.from.id === plan.to.id) return 'Choose a different member from the one currently credited.';
-      if (!plan.keepOriginal && !plan.note.trim()) return 'Record why the original member did not attend.';
+      return null;
+    case 'resolve_investigation':
+      if (!plan.note.trim()) return 'Record the evidence for this decision.';
+      if (plan.reason === 'original_removed' && plan.fromAttended) {
+        return 'The original member still has this attendance. Remove it in Admin Members first, then resolve.';
+      }
+      if (plan.reason === 'original_attended' && !plan.fromAttended) {
+        return 'The original member no longer has this attendance; record it as removed instead.';
+      }
       return null;
     case 'dismiss':
       if (plan.reason === 'not_actionable' && !plan.note.trim()) return 'Explain why this finding is not actionable.';

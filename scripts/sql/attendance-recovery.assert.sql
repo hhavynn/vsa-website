@@ -269,73 +269,88 @@ select pg_temp.check_true('a member who already has the attendance is not credit
   and pg_temp.points('10000000-0000-0000-0000-000000000007') = 10
   and pg_temp.attended('10000000-0000-0000-0000-000000000007') = 1);
 
--- Correct an incorrect match --------------------------------------------------
+-- Correct an incorrect match (never destructive) ------------------------------
 select pg_temp.check_true('restore refuses a row that already credits a member',
   (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'restore', null, '10000000-0000-0000-0000-000000000006')$q$) ->> 'hint') = 'row_already_credited');
-select pg_temp.check_true('moving attendance needs a recorded reason',
-  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'reassign', null,
-     '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000005')$q$) ->> 'message') like 'Record why%');
 select pg_temp.check_true('the original member must be the one the row credits',
   (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'reassign', null,
-     '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000008', null, false, null, 'wrong')$q$) ->> 'hint') = 'stale_finding');
-insert into r select 'move', pg_temp.admin($q$select public.admin_recover_import_row(
+     '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000008')$q$) ->> 'hint') = 'stale_finding');
+insert into r select 'credit', pg_temp.admin($q$select public.admin_recover_import_row(
   gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'reassign', null,
-  '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000005', null, false, null,
-  'Sign-in sheet row is Kevin Lee; Kevin Le was away that week')$q$);
-select pg_temp.check_true('a wrong match moves: original loses the points, correct member gains them',
-  (select v -> 'result' ->> 'outcome' from r where label = 'move') = 'moved'
-  and pg_temp.points('10000000-0000-0000-0000-000000000005') = 0
-  and pg_temp.attended('10000000-0000-0000-0000-000000000005') = 0
+  '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000005')$q$);
+select pg_temp.check_true('correcting a match credits the right member and keeps the original credit',
+  (select v -> 'result' ->> 'outcome' from r where label = 'credit') = 'correct_member_credited'
+  and (select v -> 'result' ->> 'status' from r where label = 'credit') = 'investigating'
   and pg_temp.points('10000000-0000-0000-0000-000000000006') = 10
-  and pg_temp.attended('10000000-0000-0000-0000-000000000006') = 1
-  and not pg_temp.has_att('10000000-0000-0000-0000-000000000005', '80000000-0000-0000-0000-000000000001'));
-select pg_temp.check_true('the removed attendance is kept in history for reversal',
-  (select removed_attendance ->> 'member_id' from public.import_recovery_actions
-   where id = (select (v -> 'result' ->> 'action_id')::uuid from r where label = 'move')) = '10000000-0000-0000-0000-000000000005'
-  and exists (select 1 from public.admin_activity_log where action = 'member.attendance_reassigned'));
+  and pg_temp.points('10000000-0000-0000-0000-000000000005') = 10
+  and pg_temp.has_att('10000000-0000-0000-0000-000000000005', '80000000-0000-0000-0000-000000000001')
+  and exists (select 1 from public.admin_activity_log where action = 'member.recovery_credit_flagged'));
+select pg_temp.check_true('a flagged finding cannot be dismissed, reopened or recovered again',
+  (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'dismiss', %L, null, null, null, 'not_actionable', 'x')$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000004'))) ->> 'hint') = 'finding_closed'
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'reopen', %L)$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000004'))) ->> 'hint') = 'finding_closed');
+select pg_temp.check_true('resolving as "removed" is refused while the original still has the credit',
+  (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'resolve_investigation', %L, null, null, null, 'original_removed', 'Kevin Le was away')$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000004'))) ->> 'hint') = 'original_still_credited'
+  and pg_temp.points('10000000-0000-0000-0000-000000000005') = 10);
+select pg_temp.check_true('resolving needs recorded evidence',
+  (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'resolve_investigation', %L, null, null, null, 'original_attended')$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000004'))) ->> 'message') like 'Record the evidence%');
+-- The admin removes the wrong credit through Admin Members (a direct, confirmed ledger delete).
+select pg_temp.check_true('the admin removes the wrong credit in Admin Members; the trigger recalculates',
+  (pg_temp.admin($q$delete from public.member_event_attendance where member_id = '10000000-0000-0000-0000-000000000005'
+     and event_id = '80000000-0000-0000-0000-000000000001' returning to_jsonb(id)$q$) ->> 'ok')::boolean
+  and pg_temp.points('10000000-0000-0000-0000-000000000005') = 0);
+insert into r select 'resolved_removed', pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000004', 'resolve_investigation', %L, null, null, null, 'original_removed', 'Sign-in sheet says Kevin Lee; Kevin Le confirmed he was away')$q$,
+  pg_temp.latest('30000000-0000-0000-0000-000000000004')));
+select pg_temp.check_true('the investigation then resolves as "removed" and the finding is recovered',
+  (select v -> 'result' ->> 'status' from r where label = 'resolved_removed') = 'recovered'
+  and (select v -> 'result' ->> 'outcome' from r where label = 'resolved_removed') = 'original_removed'
+  and exists (select 1 from public.admin_activity_log where action = 'member.recovery_investigation_resolved'));
 
-select pg_temp.check_true('attendance backed by another import row cannot be removed through this row',
-  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'reassign', null,
-     '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000003', null, false, null, 'not them')$q$) ->> 'hint') = 'original_has_other_source'
-  and pg_temp.points('10000000-0000-0000-0000-000000000003') = 10);
 insert into r select 'keep', pg_temp.admin($q$select public.admin_recover_import_row(
   gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'reassign', null,
-  '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000003', null, true)$q$);
-select pg_temp.check_true('crediting the correct member while keeping the original changes only the correct member',
-  (select v -> 'result' ->> 'outcome' from r where label = 'keep') = 'added_kept_original'
+  '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000003')$q$);
+select pg_temp.check_true('"original attended" is refused if the credit is gone, accepted while it exists',
+  (select v -> 'result' ->> 'outcome' from r where label = 'keep') = 'correct_member_credited'
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'resolve_investigation', %L, null, null, null, 'original_removed', 'x')$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000008'))) ->> 'hint') = 'original_still_credited'
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'resolve_investigation', %L, null, null, null, 'original_attended', 'Both Minhs signed in')$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000008'))) -> 'result' ->> 'outcome') = 'original_attended'
   and pg_temp.points('10000000-0000-0000-0000-000000000004') = 10
   and pg_temp.points('10000000-0000-0000-0000-000000000003') = 10);
 
-insert into r select 'move_to_attended', pg_temp.admin($q$select public.admin_recover_import_row(
+insert into r select 'already_dest', pg_temp.admin($q$select public.admin_recover_import_row(
   gen_random_uuid(), '30000000-0000-0000-0000-000000000012', 'reassign', null,
-  '10000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000009', null, false, null,
-  'Row is Anna Pham; Tom Do was matched on a weak name')$q$);
-select pg_temp.check_true('moving onto a member who already attended removes the wrong credit without a duplicate',
-  (select v -> 'result' ->> 'outcome' from r where label = 'move_to_attended') = 'moved'
-  and (select v -> 'result' ->> 'attendance_id' from r where label = 'move_to_attended') is null
-  and pg_temp.points('10000000-0000-0000-0000-000000000009') = 0
+  '10000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000009')$q$);
+select pg_temp.check_true('a correct member who already attended gets nothing, and the original keeps theirs',
+  (select v -> 'result' ->> 'outcome' from r where label = 'already_dest') = 'correct_member_already_credited'
+  and (select (v -> 'result' ->> 'points_awarded')::int from r where label = 'already_dest') = 0
   and pg_temp.points('10000000-0000-0000-0000-000000000007') = 10
-  and (select count(*) from public.member_event_attendance
-       where member_id = '10000000-0000-0000-0000-000000000007' and event_id = '80000000-0000-0000-0000-000000000001') = 1);
+  and pg_temp.points('10000000-0000-0000-0000-000000000009') = 10);
 
-select pg_temp.check_true('attendance that existed before the import cannot be removed through it',
-  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000015', 'reassign', null,
-     '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000008', null, false, null, 'not Bao')$q$) ->> 'hint') = 'original_predates_import'
+-- Credit that predates the import (row 15) and credit confirmed elsewhere (rows 13/14):
+-- correcting either never removes it.
+insert into r select 'predates', pg_temp.admin($q$select public.admin_recover_import_row(
+  gen_random_uuid(), '30000000-0000-0000-0000-000000000015', 'reassign', null,
+  '10000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000008')$q$);
+select pg_temp.check_true('pre-existing credit is kept when its row is corrected',
+  (select v -> 'result' ->> 'status' from r where label = 'predates') = 'investigating'
   and pg_temp.points('10000000-0000-0000-0000-000000000008') = 10
-  and pg_temp.latest('30000000-0000-0000-0000-000000000015') is null);
-
--- Row 14 (the real Duc Ha) is confirmed to member 10, who already had the credit
--- through row 13's fuzzy match. Moving row 13 away must not remove it.
+  and pg_temp.points('10000000-0000-0000-0000-000000000006') = 10);
 insert into r select 'confirm_duc', pg_temp.admin($q$select public.admin_recover_import_row(
   gen_random_uuid(), '30000000-0000-0000-0000-000000000014', 'restore', null, '10000000-0000-0000-0000-000000000010')$q$);
 select pg_temp.check_true('confirming a member who already holds the credit awards nothing',
   (select v -> 'result' ->> 'outcome' from r where label = 'confirm_duc') = 'already_recorded'
   and pg_temp.points('10000000-0000-0000-0000-000000000010') = 10);
-select pg_temp.check_true('attendance confirmed by another recovered finding cannot be removed',
+select pg_temp.check_true('correcting the other row of a confirmed member keeps the confirmed credit',
   (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000013', 'reassign', null,
-     '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000010', null, false, null, 'not Duc')$q$) ->> 'hint') = 'original_has_other_source'
+     '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000010')$q$) -> 'result' ->> 'status') = 'investigating'
   and pg_temp.points('10000000-0000-0000-0000-000000000010') = 10
-  and pg_temp.points('10000000-0000-0000-0000-000000000002') = 0);
+  and pg_temp.points('10000000-0000-0000-0000-000000000004') = 10);
+select pg_temp.check_true('the recovery function never deletes attendance',
+  (select prosrc from pg_proc where proname = 'admin_recover_import_row') !~* 'delete\s+from');
 insert into r select 'findings_after', pg_temp.admin('select public.admin_import_recovery_findings()');
 select pg_temp.check_true('a recovered finding counts as identity evidence for a same-email twin row',
   (select (f ->> 'resolved_elsewhere')::boolean from r, jsonb_array_elements(r.v -> 'result') f
@@ -349,13 +364,13 @@ select pg_temp.check_true('a recovered finding counts as identity evidence for a
 select pg_temp.check_true('dismissing needs a reason',
   (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'dismiss')$q$) ->> 'message') like 'Choose why%');
 select pg_temp.check_true('"not actionable" needs an explanation',
-  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'dismiss', null, null, null, null, false, 'not_actionable')$q$) ->> 'message') like 'Explain%');
+  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'dismiss', null, null, null, null, 'not_actionable')$q$) ->> 'message') like 'Explain%');
 insert into r select 'dismiss', pg_temp.admin($q$select public.admin_recover_import_row(
-  gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'dismiss', null, null, null, null, false, 'intentional_skip', 'Test entry by an officer')$q$);
+  gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'dismiss', null, null, null, null, 'intentional_skip', 'Test entry by an officer')$q$);
 select pg_temp.check_true('a dismissal keeps its reason and note and writes no attendance',
   (select reason_code || '|' || note from public.import_recovery_actions where id = (select (v -> 'result' ->> 'action_id')::uuid from r where label = 'dismiss'))
     = 'intentional_skip|Test entry by an officer'
-  and (select count(*) from public.member_event_attendance where event_id = '80000000-0000-0000-0000-000000000001') = 10);
+  and (select count(*) from public.member_event_attendance where event_id = '80000000-0000-0000-0000-000000000001') = 11);
 select pg_temp.check_true('a dismissed finding cannot be recovered until reopened',
   (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'restore', %L, '10000000-0000-0000-0000-000000000002')$q$,
      pg_temp.latest('30000000-0000-0000-0000-000000000007'))) ->> 'hint') = 'finding_closed');
@@ -364,7 +379,7 @@ select pg_temp.check_true('a dismissed finding can be reopened, then put on hold
      pg_temp.latest('30000000-0000-0000-0000-000000000007'))) -> 'result' ->> 'status') = 'open'
   and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'needs_info', %L)$q$,
      pg_temp.latest('30000000-0000-0000-0000-000000000007'))) ->> 'message') like 'Note what%'
-  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'needs_info', %L, null, null, null, false, null, 'Ask the events chair for the sheet')$q$,
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000007', 'needs_info', %L, null, null, null, null, 'Ask the events chair for the sheet')$q$,
      pg_temp.latest('30000000-0000-0000-0000-000000000007'))) -> 'result' ->> 'status') = 'needs_info');
 select pg_temp.check_true('history keeps every step in order',
   (select count(*) from public.import_recovery_actions where import_job_row_id = '30000000-0000-0000-0000-000000000007') = 3);
@@ -401,18 +416,50 @@ select pg_temp.check_true('final points match the expected ledger',
   and pg_temp.points('10000000-0000-0000-0000-000000000006') = 10
   and pg_temp.points('10000000-0000-0000-0000-000000000007') = 10
   and pg_temp.points('10000000-0000-0000-0000-000000000008') = 10
-  and pg_temp.points('10000000-0000-0000-0000-000000000009') = 0
+  and pg_temp.points('10000000-0000-0000-0000-000000000009') = 10
   and pg_temp.points('10000000-0000-0000-0000-000000000010') = 10);
 select pg_temp.check_true('import rows were never modified',
   (select count(*) from public.import_job_rows where decision = 'review') = 10
   and (select attendance_member_id from public.import_job_rows where id = '30000000-0000-0000-0000-000000000004') = '10000000-0000-0000-0000-000000000005');
 
+-- Findings stay accurate when a recovered credit is later removed --------------
+select pg_temp.check_true('a recovered finding cannot be reopened while its credit is in place',
+  (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000001', 'reopen', %L)$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000001'))) ->> 'hint') = 'finding_closed'
+  and (select (f ->> 'recovered_credit_present')::boolean from jsonb_array_elements(pg_temp.admin('select public.admin_import_recovery_findings()') -> 'result') f
+       where f ->> 'row_id' = '30000000-0000-0000-0000-000000000001') is true);
+select pg_temp.admin($q$delete from public.member_event_attendance where member_id = '10000000-0000-0000-0000-000000000001'
+  and event_id = '80000000-0000-0000-0000-000000000001' returning to_jsonb(id)$q$);
+select pg_temp.check_true('after the credit is removed in Admin Members, the finding shows it and can be reopened',
+  (select (f ->> 'recovered_credit_present')::boolean from jsonb_array_elements(pg_temp.admin('select public.admin_import_recovery_findings()') -> 'result') f
+       where f ->> 'row_id' = '30000000-0000-0000-0000-000000000001') is false
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000001', 'reopen', %L)$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000001'))) -> 'result' ->> 'status') = 'open'
+  and pg_temp.points('10000000-0000-0000-0000-000000000001') = 5);
+
+-- History is immutable --------------------------------------------------------
+select pg_temp.check_true('an admin has no write privilege on recovery history',
+  not has_table_privilege('authenticated', 'public.import_recovery_actions', 'insert')
+  and not has_table_privilege('authenticated', 'public.import_recovery_actions', 'update')
+  and not has_table_privilege('authenticated', 'public.import_recovery_actions', 'delete')
+  and not has_table_privilege('anon', 'public.import_recovery_actions', 'select')
+  and not has_function_privilege('anon', 'public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, text, text)', 'execute')
+  and not has_function_privilege('anon', 'public.admin_import_recovery_findings()', 'execute')
+  and not has_table_privilege('service_role', 'public.import_recovery_actions', 'insert')
+  and not has_table_privilege('service_role', 'public.import_recovery_actions', 'update')
+  and not has_table_privilege('service_role', 'public.import_recovery_actions', 'delete')
+  and has_table_privilege('service_role', 'public.import_recovery_actions', 'select'));
+select pg_temp.check_true('even the table owner cannot update, delete or truncate history',
+  (pg_temp.call_as('', 'none', $q$update public.import_recovery_actions set note = 'rewritten' returning to_jsonb(id)$q$) ->> 'message') like 'Recovery history is append-only%'
+  and (pg_temp.call_as('', 'none', $q$delete from public.import_recovery_actions returning to_jsonb(id)$q$) ->> 'message') like 'Recovery history is append-only%'
+  and (pg_temp.call_as('', 'none', $q$truncate public.import_recovery_actions$q$) ->> 'message') like 'Recovery history is append-only%');
+
 insert into r select 'delete_member', pg_temp.call_as('', 'none', $q$delete from public.members where id = '10000000-0000-0000-0000-000000000006' returning to_jsonb(id)$q$);
 insert into r select 'delete_job', pg_temp.call_as('', 'none', $q$delete from public.import_jobs where id = '20000000-0000-0000-0000-000000000001' returning to_jsonb(id)$q$);
-select pg_temp.check_true('deleting an import job or merging away a member keeps the recovery history',
+select pg_temp.check_true('deleting an import job or merging away a member leaves the history untouched',
   (select (v ->> 'ok')::boolean from r where label = 'delete_member')
   and (select (v ->> 'ok')::boolean from r where label = 'delete_job')
   and (select count(*) from public.import_recovery_actions where import_job_id = '20000000-0000-0000-0000-000000000001') >= 10
-  and exists (select 1 from public.import_recovery_actions where removed_attendance ->> 'member_id' = '10000000-0000-0000-0000-000000000005'));
+  and exists (select 1 from public.import_recovery_actions where member_id = '10000000-0000-0000-0000-000000000006'))
 
 rollback;

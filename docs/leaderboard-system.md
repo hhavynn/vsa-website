@@ -69,7 +69,7 @@ When importing attendance via CSV:
 
 ### Historical Recovery
 
-Admin → Import → Historical Recovery fixes audited import rows one at a time: credit a confirmed existing member, create a separate member, correct a wrong match, dismiss, or hold for more information. Every write goes through the `admin_recover_import_row` database function in one transaction, inserts attendance with `ON CONFLICT DO NOTHING`, and leaves recalculation to `trg_sync_member_points`. A correction deletes and inserts rather than updating `member_id`, because the trigger only recalculates `NEW.member_id` on UPDATE. Details: [import-history-audit.md](./import-history-audit.md).
+Admin → Import → Historical Recovery fixes audited import rows one at a time: credit a confirmed existing member, create a separate member, credit the correct member for a wrong match (the original credit is kept and flagged for investigation, never deleted), dismiss, or hold for more information. Every write goes through the `admin_recover_import_row` database function in one transaction. It only inserts attendance, with `ON CONFLICT DO NOTHING`, and leaves recalculation to `trg_sync_member_points`. A confirmed wrong credit is removed in Admin Members, then the finding is resolved. Details: [import-history-audit.md](./import-history-audit.md).
 
 ### Member Management
 
