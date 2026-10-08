@@ -205,4 +205,20 @@ describe('reviewAttendanceRows', () => {
     expect(reviewAttendanceRows([row({ effectiveStatus: 'review', reason: 'something_new', note: 'Custom note.' })])[0].reason).toBe('Custom note.');
     expect(reviewAttendanceRows([row({ effectiveStatus: 'review', reason: 'something_new', note: '' })])[0].reason).toBe('Needs a manual decision.');
   });
+
+  it('keeps admin-skipped rows in the problem list so they can be recovered', () => {
+    const [skipped, invalid] = reviewAttendanceRows([row({ effectiveStatus: 'skipped' }), row({ effectiveStatus: 'invalid', displayName: '' })]);
+    expect(skipped).toMatchObject({ category: 'needs_review' });
+    expect(skipped.reason).toMatch(/Skipped by an admin/);
+    expect(invalid).toMatchObject({ category: 'invalid' });
+  });
+
+  it('explains the identity-conflict reasons', () => {
+    const rows = reviewAttendanceRows([
+      row({ effectiveStatus: 'review', reason: 'identity_conflict' }),
+      row({ effectiveStatus: 'review', reason: 'member_claimed_by_earlier_row' }),
+    ]);
+    expect(rows[0].reason).toMatch(/may be a different person/);
+    expect(rows[1].reason).toMatch(/earlier row/);
+  });
 });

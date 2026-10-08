@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import toast from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
@@ -90,9 +90,11 @@ it("feeds a Google Form file into the existing matching, duplicate and import/au
     },
   });
   fireEvent.click(screen.getByRole("button", { name: "Load & Preview" }));
-  expect(
-    await screen.findByText(/duplicate CSV row skipped/),
-  ).toBeInTheDocument();
+  await screen.findByText("Duplicate rows skipped");
+  const duplicates = screen
+    .getAllByTestId("summary-stat")
+    .find((el) => within(el).queryByText("Duplicate rows skipped")) as HTMLElement;
+  expect(within(duplicates).getByRole("definition")).toHaveTextContent("1");
   expect(screen.getByRole("checkbox", { name: /full name/ })).toBeChecked();
   const importButton = screen.getByRole("button", {
     name: /Import \(1 update \+ 0 new\)/,

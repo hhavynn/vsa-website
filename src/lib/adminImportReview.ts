@@ -254,8 +254,8 @@ export interface AttendanceReviewInput {
   /** 0-based position in the CSV (the sheet row is this + 2, after the header). */
   originalIndex: number;
   displayName: string;
-  /** Status after any manual Force Match / Mark New override. */
-  effectiveStatus: 'match' | 'new' | 'already' | 'review' | 'duplicate';
+  /** Status after any manual Match Existing / Create New / Skip decision. */
+  effectiveStatus: 'match' | 'new' | 'already' | 'review' | 'duplicate' | 'skipped' | 'invalid';
   reason: string;
   note: string;
   invalidYear: boolean;
@@ -267,8 +267,13 @@ export interface AttendanceReviewInput {
 const ATTENDANCE_REASON: Record<string, (row: AttendanceReviewInput) => string> = {
   ambiguous_match: (row) =>
     row.candidateCount > 1 ? ambiguousNameReason(row.candidateCount) : 'More than one member could be this person. Choose one manually.',
-  fuzzy_name_match: () => 'Only a near name match. Force Match to confirm it, or mark the row as new.',
-  duplicate_email_conflict: () => 'This email belongs to more than one member. Choose one manually.',
+  fuzzy_name_match: (row) =>
+    row.candidateCount > 1
+      ? `${row.candidateCount} members have a similar name. Choose one, create a new member, or skip the row.`
+      : 'Only a near name match. Match the existing member, create a new member, or skip the row.',
+  identity_conflict: () => 'The name matches a member, but their email or college on file differs. It may be a different person.',
+  member_claimed_by_earlier_row: () => 'An earlier row in this file already matched this member. Skip it if it is a repeat, or create a new member.',
+  duplicate_email_conflict: () => 'This email belongs to more than one member, or another row in this file. Choose a member, create a new one, or skip.',
   email_name_conflict: () => 'The email matches a member with a different name. Check before linking.',
   duplicate_row: () => 'Duplicate of an earlier row in this file. It will be skipped.',
   skipped_unresolved_review: () => 'Still unresolved, so it will be skipped.',
@@ -284,6 +289,12 @@ export function reviewAttendanceRows(rows: readonly AttendanceReviewInput[]): Im
     const base = { index: row.originalIndex + 2, label: row.displayName || '(blank)', raw: row.csvRow };
     if (row.effectiveStatus === 'review') {
       return { ...base, category: 'needs_review', reason: (ATTENDANCE_REASON[row.reason]?.(row) ?? row.note) || 'Needs a manual decision.' };
+    }
+    if (row.effectiveStatus === 'skipped') {
+      return { ...base, category: 'needs_review', reason: 'Skipped by an admin. Not imported; import the same sheet again to resolve it later.' };
+    }
+    if (row.effectiveStatus === 'invalid') {
+      return { ...base, category: 'invalid', reason: 'This row has no name, so it cannot be imported.' };
     }
     if (row.effectiveStatus === 'duplicate') {
       return { ...base, category: 'needs_review', reason: ATTENDANCE_REASON.duplicate_row(row) };
