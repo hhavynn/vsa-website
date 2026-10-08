@@ -59,7 +59,13 @@ When importing attendance via CSV:
 - The event dropdown now shows the academic term for each event.
 - A warning is displayed if the selected event has no term assigned.
 - Points are automatically attributed to the correct year based on the event's term.
-- A matched member's profile `year` advances (never rewinds) when the CSV reports a higher standing. This applies to safe matches and to review rows an admin force-matched; email and college are only filled on safe matches. Review rows left unconfirmed are skipped entirely.
+- Matching proposes; an admin decides. Only two things match automatically: a unique email whose name is consistent, and a unique exact name with no conflicting email or college on file. Near-name matches (even with the same year or college), shared names, shared emails, conflicting emails, and a second row resolving to an already-matched member all wait in review.
+- Every review row offers **Match Existing** (pick one specific candidate, shown with college, year, email and points), **Create New Member** (confirms a different person, even with an identical name), and **Skip**. Decisions are reversible (Undo) until the import is confirmed, and nothing unresolved is ever turned into a match or a member.
+- A new member is never given an email another member already holds; they are created without it and the final summary counts them. An existing member's email, college and name are never overwritten by an uncertain match.
+- Before confirming, the preview shows valid rows, existing members credited, new members, already-recorded, duplicate rows, unresolved matches, and rows skipped. Unresolved rows require an explicit acknowledgment before a partial import; the final summary reports what was written and what was not.
+- Audit rows record `manual_decision`, `suggested_member_id` and a `final_reason` (`skipped_by_admin`, `skipped_unresolved_review`, `invalid_row_no_name`) on `decision = 'review'` rows. To recover them, import the same sheet again: people already credited show as already recorded, and skipped rows return for a decision. Attendance upserts ignore existing member/event pairs, so repeating an import never doubles points.
+- If a write fails after members were created, a retry in the same session reuses those members instead of creating them again.
+- A matched member's profile `year` advances (never rewinds) when the CSV reports a higher standing. This applies to safe matches and to review rows an admin explicitly matched; email and college are only filled on safe matches. Review rows left unconfirmed are skipped entirely.
 
 ### Member Management
 

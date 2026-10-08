@@ -79,8 +79,10 @@ describe('attendance import matching helpers', () => {
 
     expect(result.status).toBe('review');
     expect(result.reason).toBe('duplicate_email_conflict');
-    expect(result.canMarkNew).toBe(false);
-    expect(result.canForceMatch).toBe(false);
+    // The admin can pick the right record or confirm a different person.
+    expect(result.canMarkNew).toBe(true);
+    expect(result.canForceMatch).toBe(true);
+    expect(result.candidateMemberIds).toEqual(['m1', 'm2']);
   });
 
   test('email match with clearly different name becomes review', () => {
@@ -92,7 +94,7 @@ describe('attendance import matching helpers', () => {
 
     expect(result.status).toBe('review');
     expect(result.reason).toBe('email_name_conflict');
-    expect(result.canMarkNew).toBe(false);
+    expect(result.canMarkNew).toBe(true);
     expect(result.matchedMember?.id).toBe('m1');
   });
 
@@ -115,10 +117,10 @@ describe('attendance import matching helpers', () => {
     const result = matchOne(row({ displayName: 'Allex Nguyen', matchName: 'Allex Nguyen' }), members);
 
     expect(result.status).toBe('review');
-    expect(result.reason).toBe('ambiguous_match');
+    expect(result.canMarkNew).toBe(true);
   });
 
-  test('fuzzy name with same college and year matches only when unambiguous', () => {
+  test('fuzzy name with same college and year still goes to manual review', () => {
     const members = [
       member({ id: 'm1', first_name: 'Alexandra', last_name: 'Nguyen', college: 'Muir', year: 'Senior' }),
       member({ id: 'm2', first_name: 'Bao', last_name: 'Tran', college: 'Muir', year: 'Senior' }),
@@ -131,9 +133,11 @@ describe('attendance import matching helpers', () => {
       csvYear: 'Senior',
     }), members);
 
-    expect(result.status).toBe('match');
+    expect(result.status).toBe('review');
     expect(result.reason).toBe('fuzzy_name_match');
     expect(result.matchedMember?.id).toBe('m1');
+    expect(result.canForceMatch).toBe(true);
+    expect(result.canMarkNew).toBe(true);
   });
 
   test('multiple close fuzzy candidates become review', () => {
@@ -150,7 +154,7 @@ describe('attendance import matching helpers', () => {
     }), members);
 
     expect(result.status).toBe('review');
-    expect(result.reason).toBe('ambiguous_match');
+    expect(result.reason).toBe('fuzzy_name_match');
   });
 
   test('existing member email is not overwritten', () => {
@@ -216,7 +220,6 @@ describe('attendance import matching helpers', () => {
     const result = matchOne(row({ csvEmail: 'alex@ucsd.edu' }), members);
 
     expect(result.status).toBe('review');
-    expect(result.canMarkNew).toBe(false);
     expect(getSafeAttendanceMemberEnrichment(result, members)).toEqual({});
   });
 });

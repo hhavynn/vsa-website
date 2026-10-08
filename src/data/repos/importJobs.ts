@@ -38,7 +38,7 @@ export function decisionFromRowStatus(status: string): ImportRowDecision {
   if (status === 'match') return 'matched';
   if (status === 'new') return 'created';
   if (status === 'already' || status === 'duplicate') return 'skipped_duplicate';
-  if (status === 'review') return 'review';
+  if (status === 'review' || status === 'skipped' || status === 'invalid') return 'review';
   return 'error';
 }
 

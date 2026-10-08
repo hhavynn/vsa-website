@@ -4,7 +4,7 @@
 // and creates member rows; changes here directly affect points and event history for
 // real members. Do not modify import logic unless explicitly requested.
 // Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
@@ -18,10 +18,21 @@ import { Input } from '../../components/ui/Input';
 import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
+import { AttendanceRowDecision, MemberIdentity } from '../../components/features/admin/AttendanceRowDecision';
+import {
+  DecisionContext,
+  EffectiveStatus,
+  RowDecision,
+  hasImportableName,
+  planAttendanceWrites,
+  resolveRow,
+  summarizeAttendanceImport,
+} from '../../lib/attendanceImportDecisions';
 import {
   AttendanceMatchMethod,
   AttendanceMatchReason,
   AttendanceMatchResult,
+  buildMemberLookupMaps,
   getSafeAttendanceMemberEnrichment,
   planAttendanceMemberEnrichments,
   matchAttendanceImportRows,
@@ -57,81 +68,65 @@ interface Member {
 }
 
 type RowStatus = 'match' | 'new' | 'already' | 'review' | 'duplicate';
-type ManualOverride = 'force-match' | 'mark-new' | null;
 type SortMode = 'default' | 'review-first' | 'review-last';
 
 interface RowResult extends Omit<AttendanceMatchResult, 'matchedMember' | 'status' | 'method' | 'reason'> {
-  /** Existing member if matched or reviewed, null if new */
+  /** Best suggested existing member, or null. A suggestion is not a decision. */
   matchedMember: Member | null;
   status: RowStatus;
   method: AttendanceMatchMethod;
   reason: AttendanceMatchReason;
   selected: boolean;
-  manualOverride: ManualOverride;
+  /** The admin's explicit choice for this row; null leaves the matcher's verdict as is. */
+  decision: RowDecision | null;
 }
 
-type MemberEnrichment = Partial<Pick<Member, 'college' | 'year' | 'email'>>;
+interface ImportOutcome {
+  totalRows: number;
+  validRows: number;
+  creditedMembers: number;
+  attendanceInserted: number;
+  attendanceAlreadyPresent: number;
+  createdMembers: number;
+  emailsWithheld: number;
+  enrichedProfiles: number;
+  alreadyRecorded: number;
+  duplicatesSkipped: number;
+  skipped: number;
+  unresolved: number;
+  invalid: number;
+}
+
 const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
-
-function getEffectiveStatus(row: RowResult): RowStatus {
-  if (row.status === 'match' && row.manualOverride === 'mark-new' && row.canMarkNew) return 'new';
-  if (row.status !== 'review') return row.status;
-  if (row.manualOverride === 'force-match' && row.canForceMatch) return 'match';
-  if (row.manualOverride === 'mark-new' && row.canMarkNew) return 'new';
-  return 'review';
-}
 
 function getAcademicYearLabel(term: AcademicTerm | undefined): string {
   if (!term) return 'its assigned academic year';
   return `${term.academic_year_start}–${term.academic_year_end}`;
 }
 
-function canForceMatch(row: RowResult): boolean {
-  return row.status === 'review' && row.canForceMatch && !!row.matchedMember;
+function canMarkAsNew(row: RowResult, status: EffectiveStatus): boolean {
+  return row.canMarkNew && hasImportableName(row) && (row.status === 'review' || row.status === 'match' || row.status === 'already') && status !== 'duplicate';
 }
 
-/** Returns true for any row that can be manually overridden to "Create New" —
- *  both 75%+ confident matches AND 50–74% review rows. */
-function canMarkAsNew(row: RowResult): boolean {
-  return row.canMarkNew && (row.status === 'match' || row.status === 'review');
+function canSkipRow(row: RowResult): boolean {
+  return hasImportableName(row) && (row.status === 'review' || row.status === 'match' || row.status === 'new');
 }
 
-function isAdminConfirmed(row: RowResult): boolean {
-  return row.status === 'review' && row.manualOverride === 'force-match' && row.canForceMatch;
-}
-
-function buildMemberEnrichment(row: RowResult, members: Member[]): MemberEnrichment {
-  return getSafeAttendanceMemberEnrichment(row, members, { adminConfirmed: isAdminConfirmed(row) }) as MemberEnrichment;
-}
-
-function hasMemberEnrichment(row: RowResult, members: Member[]): boolean {
-  return Object.keys(buildMemberEnrichment(row, members)).length > 0;
-}
-
-function getActionLabel(row: RowResult): string {
-  const status = getEffectiveStatus(row);
-  if (status === 'match') return row.status === 'review' ? 'Forced Update' : 'Update';
-  if (status === 'new') return row.status === 'review' ? 'Create New' : 'Create';
-  if (status === 'review') return 'Review';
-  if (status === 'duplicate') return 'Skip';
+function getActionLabel(status: EffectiveStatus, row: RowResult): string {
+  if (status === 'match') return row.status === 'review' ? 'Matched (you chose)' : 'Update';
+  if (status === 'new') return row.status === 'new' ? 'Create' : 'Create New';
+  if (status === 'review') return 'Needs decision';
+  if (status === 'skipped') return 'Skipped';
+  if (status === 'invalid') return 'Invalid';
   return 'Skip';
 }
 
-function getSortPriority(row: RowResult, sortMode: SortMode): number {
-  const status = getEffectiveStatus(row);
-  const reviewFirstOrder: Record<RowStatus, number> = {
-    review: 0,
-    match: 1,
-    new: 2,
-    duplicate: 3,
-    already: 4,
+function getSortPriority(status: EffectiveStatus, row: RowResult, sortMode: SortMode): number {
+  const reviewFirstOrder: Record<EffectiveStatus, number> = {
+    review: 0, match: 1, new: 2, skipped: 3, invalid: 3, duplicate: 4, already: 5,
   };
-  const reviewLastOrder: Record<RowStatus, number> = {
-    already: 0,
-    duplicate: 1,
-    new: 2,
-    match: 3,
-    review: 4,
+  const reviewLastOrder: Record<EffectiveStatus, number> = {
+    already: 0, duplicate: 1, skipped: 2, invalid: 2, new: 3, match: 4, review: 5,
   };
 
   if (sortMode === 'review-first') return reviewFirstOrder[status];
@@ -196,6 +191,13 @@ function detectCol(headers: string[], hints: string[]): string {
   return headers.find(c => h.some(hint => c.toLowerCase().includes(hint))) ?? '';
 }
 
+/** Supabase errors are sometimes plain `{ message }` objects rather than Error instances. */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object' && 'message' in err && typeof err.message === 'string') return err.message;
+  return String(err);
+}
+
 function toCSVUrl(raw: string): string {
   const url = raw.trim();
   if (url.includes('docs.google.com/spreadsheets') && !url.includes('output=csv') && !url.includes('format=csv')) {
@@ -245,6 +247,12 @@ export default function AdminImport() {
   const [cachedParsed, setCachedParsed] = useState<Record<string, string>[]>([]);
   const [matchedMembersSnapshot, setMatchedMembersSnapshot] = useState<Member[]>([]);
   const [importing, setImporting] = useState(false);
+  const [alreadyMemberIds, setAlreadyMemberIds] = useState<Set<string>>(new Set());
+  const [ackPartial, setAckPartial] = useState(false);
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  // Members created by an attempt that then failed. A retry reuses them instead of creating duplicates.
+  const createdByRowIdRef = useRef<Record<string, string>>({});
+  const withheldEmailRowIdsRef = useRef<Set<string>>(new Set());
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   useEffect(() => {
@@ -280,12 +288,16 @@ export default function AdminImport() {
     });
   }
 
-  function applyManualOverrideToSelected(override: Exclude<ManualOverride, null>) {
+  function setRowDecision(rowId: string, decision: RowDecision | null) {
+    updateRow(rowId, row => ({ ...row, decision }));
+  }
+
+  function applyDecisionToSelected(kind: 'new' | 'skip' | 'clear') {
     setRows(current => current.map(row => {
       if (!row.selected) return row;
-      if (override === 'force-match' && !canForceMatch(row)) return row;
-      if (override === 'mark-new' && !canMarkAsNew(row)) return row;
-      return { ...row, manualOverride: override };
+      if (kind === 'clear') return { ...row, decision: null };
+      if (kind === 'new') return canMarkAsNew(row, row.status) ? { ...row, decision: { kind: 'new' } } : row;
+      return canSkipRow(row) ? { ...row, decision: { kind: 'skip' } } : row;
     }));
   }
 
@@ -373,6 +385,10 @@ export default function AdminImport() {
       .select('member_id')
       .eq('event_id', eventId);
     const alreadySet = new Set((existingAtt ?? []).map((r: { member_id: string }) => r.member_id));
+    setAlreadyMemberIds(alreadySet);
+    setAckPartial(false);
+    createdByRowIdRef.current = {};
+    withheldEmailRowIdsRef.current = new Set();
 
     const matchInputs = parsed.map((row, index) => {
       // Build display name (capitalised, shown in table)
@@ -405,7 +421,7 @@ export default function AdminImport() {
       ...result,
       matchedMember: result.matchedMember as Member | null,
       selected: false,
-      manualOverride: null,
+      decision: null,
     })) as RowResult[];
 
     setMatchedMembersSnapshot(allMembers);
@@ -424,21 +440,19 @@ export default function AdminImport() {
 
   // ── Confirm import ────────────────────────────────────────────────────────────
   async function handleImport() {
-    const toUpdate = rows.filter(r => getEffectiveStatus(r) === 'match');
-    const toCreate = rows.filter(r => {
-      const effectiveStatus = getEffectiveStatus(r);
-      return effectiveStatus === 'new' && r.displayName.trim();
-    });
-    const skippedReviewRows = rows.filter(r => getEffectiveStatus(r) === 'review');
-    const skippedDuplicateRows = rows.filter(r => getEffectiveStatus(r) === 'duplicate');
-
-    if (!toUpdate.length && !toCreate.length) {
-      toast.error(skippedReviewRows.length || skippedDuplicateRows.length ? 'No safe rows to import.' : 'Nothing to import.'); return;
+    if (summary.unresolved > 0 && !ackPartial) {
+      toast.error('Acknowledge the unresolved rows, or resolve them, before importing.');
+      return;
+    }
+    if (!summary.existingMembers && !summary.newMembers) {
+      toast.error(summary.unresolved || summary.duplicatesSkipped || summary.skipped ? 'No rows to import.' : 'Nothing to import.');
+      return;
     }
 
     setImporting(true);
     let importPoints = selectedEvent?.points ?? 0;
-    const createdMemberIdsByRowId: Record<string, string> = {};
+    const createdMemberIdsByRowId: Record<string, string> = { ...createdByRowIdRef.current };
+    const withheldEmailRowIds = new Set<string>(withheldEmailRowIdsRef.current);
     let createdAttendanceCount = 0;
 
     try {
@@ -454,44 +468,50 @@ export default function AdminImport() {
       const pts = event.points ?? 1;
       importPoints = pts;
 
-      const { data: latestMembersData } = await supabase
+      const { data: latestMembersData, error: latestMembersError } = await supabase
         .from('members')
         .select('id, first_name, last_name, college, year, points, events_attended, email');
+      if (latestMembersError) throw latestMembersError;
       const latestMembers = (latestMembersData ?? matchedMembersSnapshot) as Member[];
 
-      // 1. Create new member rows (points/events_attended computed by DB trigger)
-      const newNames = toCreate.map(r => {
-        const parts = r.displayName.trim().split(/\s+/);
-        const first = parts[0] ?? '';
-        const last  = parts.slice(1).join(' ') || '—';
-        return {
-          first_name: first,
-          last_name:  last,
-          college:    r.csvCollege || null,
-          year:       r.csvYear    || null,
-          email:      r.csvEmail   || null,
-          needs_review: r.status === 'review' && r.manualOverride !== 'mark-new',
-        };
-      });
+      // Plan from the latest member list so a new member never takes an email that has since been claimed.
+      const plan = planAttendanceWrites(rows, decisionContext, latestMembers);
 
-      let newMemberIds: string[] = [];
-      if (newNames.length) {
+      // 1. Create new member rows (points/events_attended computed by DB trigger).
+      //    Rows created by an earlier failed attempt are reused, never created twice.
+      const pendingCreates = plan.creates.filter(c => !createdMemberIdsByRowId[c.row.rowId]);
+      if (pendingCreates.length) {
         const { data: inserted, error } = await supabase
           .from('members')
-          .insert(newNames)
+          .insert(pendingCreates.map(c => ({
+            first_name: c.first_name,
+            last_name: c.last_name,
+            college: c.college,
+            year: c.year,
+            email: c.email,
+            needs_review: false,
+          })))
           .select('id');
         if (error) throw error;
-        newMemberIds = (inserted ?? []).map((m: { id: string }) => m.id);
-        toCreate.forEach((row, index) => {
-          const memberId = newMemberIds[index];
-          if (memberId) createdMemberIdsByRowId[row.rowId] = memberId;
+        const insertedIds = (inserted ?? []).map((m: { id: string }) => m.id);
+        if (insertedIds.length !== pendingCreates.length) {
+          throw new Error('Created members could not be matched back to their rows. Check Admin → Members before retrying.');
+        }
+        pendingCreates.forEach((c, index) => {
+          createdMemberIdsByRowId[c.row.rowId] = insertedIds[index];
+          createdByRowIdRef.current[c.row.rowId] = insertedIds[index];
+          if (c.emailWithheld) {
+            withheldEmailRowIds.add(c.row.rowId);
+            withheldEmailRowIdsRef.current.add(c.row.rowId);
+          }
         });
       }
 
-      // 2. Insert attendance records — DB trigger recalculates member points automatically
+      // 2. Insert attendance records — DB trigger recalculates member points automatically.
+      //    Existing member/event pairs are ignored, so repeating an import never doubles points.
       const attendanceRows = [
-        ...toUpdate.map(r => ({ member_id: r.matchedMember!.id, event_id: selectedEventId, points_earned: pts })),
-        ...newMemberIds.map(id => ({ member_id: id, event_id: selectedEventId, points_earned: pts })),
+        ...plan.updates.map(u => ({ member_id: u.member.id, event_id: selectedEventId, points_earned: pts })),
+        ...plan.creates.map(c => ({ member_id: createdMemberIdsByRowId[c.row.rowId], event_id: selectedEventId, points_earned: pts })),
       ];
 
       if (attendanceRows.length) {
@@ -506,13 +526,24 @@ export default function AdminImport() {
       // 3. Fill missing profile fields on matched members, and advance year
       //    when the CSV reports a higher standing than the one on record.
       //    One write per member, computed from the record refetched above.
+      //    A suggestion that an admin did not confirm never reaches this step.
       const toEnrich = planAttendanceMemberEnrichments(
-        toUpdate.map(r => ({ ...r, adminConfirmed: isAdminConfirmed(r) })),
+        plan.updates.map(({ row, member }) => ({
+          ...row,
+          matchedMember: member,
+          adminConfirmed: row.status === 'review',
+        })),
         latestMembers,
       );
+      // An email a new member in this import now holds is never also attached to a matched member.
+      const emailsOfNewMembers = new Set(plan.creates.map(c => c.email).filter(Boolean));
+      toEnrich.forEach(({ updates }) => {
+        if (updates.email && emailsOfNewMembers.has(updates.email)) delete updates.email;
+      });
+      const enrichPlans = toEnrich.filter(({ updates }) => Object.keys(updates).length > 0);
       let enrichedCount = 0;
       await runBulkWrites(async () => {
-        for (const { memberId, updates } of toEnrich) {
+        for (const { memberId, updates } of enrichPlans) {
           const { error } = await supabase
             .from('members')
             .update({ ...updates, updated_at: new Date().toISOString() })
@@ -528,21 +559,40 @@ export default function AdminImport() {
       });
       // Attendance is already recorded. Only updates confirmed written count as enriched;
       // failed or skipped ones are reported below, never announced as success.
-      const enrichFailedCount = toEnrich.length - enrichedCount;
+      const enrichFailedCount = enrichPlans.length - enrichedCount;
 
-      const skippedMsg = skippedReviewRows.length || skippedDuplicateRows.length
-        ? `, skipped ${skippedReviewRows.length + skippedDuplicateRows.length} unsafe/duplicate row${skippedReviewRows.length + skippedDuplicateRows.length !== 1 ? 's' : ''}`
-        : '';
-      const enrichMsg = enrichedCount ? `, enriched ${enrichedCount} profile${enrichedCount !== 1 ? 's' : ''}` : '';
-      await recordImportAudit({
+      const auditSaved = await recordImportAudit({
         status: 'completed',
         points: pts,
         createdMemberIdsByRowId,
-        createdMembersCount: newMemberIds.length,
+        withheldEmailRowIds,
         createdAttendanceCount,
         enrichedMembersCount: enrichedCount,
       });
-      toast.success(`Done! Updated ${toUpdate.length} member${toUpdate.length !== 1 ? 's' : ''}, created ${newMemberIds.length} new${enrichMsg}${skippedMsg}.`);
+      createdByRowIdRef.current = {};
+      withheldEmailRowIdsRef.current = new Set();
+      setOutcome({
+        totalRows: rows.length,
+        validRows: summary.validRows,
+        creditedMembers: plan.updates.length,
+        attendanceInserted: createdAttendanceCount,
+        attendanceAlreadyPresent: Math.max(0, attendanceRows.length - createdAttendanceCount),
+        createdMembers: plan.creates.length,
+        emailsWithheld: plan.creates.filter(c => withheldEmailRowIds.has(c.row.rowId)).length,
+        enrichedProfiles: enrichedCount,
+        alreadyRecorded: summary.alreadyRecorded,
+        duplicatesSkipped: summary.duplicatesSkipped,
+        skipped: summary.skipped,
+        unresolved: summary.unresolved,
+        invalid: summary.invalid,
+      });
+      const notImported = summary.unresolved + summary.skipped + summary.duplicatesSkipped;
+      const enrichMsg = enrichedCount ? `, enriched ${enrichedCount} profile${enrichedCount !== 1 ? 's' : ''}` : '';
+      const notImportedMsg = notImported ? `, not imported: ${notImported} row${notImported !== 1 ? 's' : ''}` : '';
+      toast.success(`Done! Updated ${plan.updates.length} member${plan.updates.length !== 1 ? 's' : ''}, created ${plan.creates.length} new${enrichMsg}${notImportedMsg}.`);
+      if (!auditSaved) {
+        toast.error('The import was applied, but its audit record could not be saved.', { duration: 10000 });
+      }
       if (enrichFailedCount > 0) {
         toast.error(
           `${enrichFailedCount} profile update${enrichFailedCount !== 1 ? 's' : ''} did not save. Attendance and points were recorded. Check those members' year, college and email in Admin → Members.`,
@@ -551,27 +601,32 @@ export default function AdminImport() {
       }
       setStep('done');
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorMessage = describeError(err);
       await recordImportAudit({
         status: 'failed',
         points: importPoints,
         createdMemberIdsByRowId,
-        createdMembersCount: Object.keys(createdMemberIdsByRowId).length,
+        withheldEmailRowIds,
         createdAttendanceCount,
         enrichedMembersCount: 0,
         errorMessage,
       });
-      toast.error(`Import failed: ${errorMessage}`);
+      const kept = Object.keys(createdByRowIdRef.current).length;
+      toast.error(
+        `Import failed: ${errorMessage}${kept ? ` ${kept} new member${kept !== 1 ? 's were' : ' was'} already created; retrying reuses ${kept !== 1 ? 'them' : 'it'} without duplicating.` : ''}`,
+        { duration: 10000 },
+      );
     } finally {
       setImporting(false);
     }
   }
 
+  /** Returns false when the audit record could not be saved. */
   async function recordImportAudit({
     status,
     points,
     createdMemberIdsByRowId,
-    createdMembersCount,
+    withheldEmailRowIds,
     createdAttendanceCount,
     enrichedMembersCount,
     errorMessage,
@@ -579,24 +634,33 @@ export default function AdminImport() {
     status: ImportJobStatus;
     points: number;
     createdMemberIdsByRowId: Record<string, string>;
-    createdMembersCount: number;
+    withheldEmailRowIds: ReadonlySet<string>;
     createdAttendanceCount: number;
     enrichedMembersCount: number;
     errorMessage?: string;
-  }) {
-    if (!selectedEventId || rows.length === 0) return;
+  }): Promise<boolean> {
+    if (!selectedEventId || rows.length === 0) return true;
 
     try {
       const { data: authData } = await supabase.auth.getUser();
-      const rowInserts = rows.map(row => {
-        const effectiveStatus = getEffectiveStatus(row);
-        const createdMemberId = createdMemberIdsByRowId[row.rowId] ?? null;
+      const resolvedRows = rows.map(row => ({ row, resolved: resolveRow(row, decisionContext) }));
+      // Rows that resolve to a member another row already credits write nothing of their own.
+      const crediting = new Set(planAttendanceWrites(rows, decisionContext, matchedMembersSnapshot).updates.map(u => u.row.rowId));
+      const rowInserts = resolvedRows.map(({ row, resolved }) => {
+        const effectiveStatus = resolved.status;
+        const createdMemberId = effectiveStatus === 'new' ? createdMemberIdsByRowId[row.rowId] ?? null : null;
         const attendanceMemberId =
-          effectiveStatus === 'match'
-            ? row.matchedMember?.id ?? null
-            : (effectiveStatus === 'new' || effectiveStatus === 'review')
+          effectiveStatus === 'match' && crediting.has(row.rowId)
+            ? resolved.member?.id ?? null
+            : effectiveStatus === 'new'
               ? createdMemberId
               : null;
+        const finalReason =
+          effectiveStatus === 'review' ? 'skipped_unresolved_review'
+            : effectiveStatus === 'skipped' ? 'skipped_by_admin'
+              : effectiveStatus === 'invalid' ? 'invalid_row_no_name'
+                : effectiveStatus === 'match' && !crediting.has(row.rowId) ? 'duplicate_member_in_file'
+                  : row.reason;
 
         return {
           source_row_index: row.originalIndex,
@@ -605,7 +669,7 @@ export default function AdminImport() {
           csv_email: row.csvEmail || null,
           csv_college: row.csvCollege || null,
           csv_year: row.csvYear || null,
-          matched_member_id: row.matchedMember?.id ?? null,
+          matched_member_id: resolved.member?.id ?? null,
           created_member_id: createdMemberId,
           event_id: selectedEventId,
           attendance_member_id: attendanceMemberId,
@@ -616,9 +680,11 @@ export default function AdminImport() {
           match_details: asJson({
             original_status: row.status,
             effective_status: effectiveStatus,
-            manual_override: row.manualOverride,
+            manual_decision: row.decision,
+            suggested_member_id: row.matchedMember?.id ?? null,
+            email_withheld: withheldEmailRowIds.has(row.rowId),
             match_reason: row.reason,
-            final_reason: effectiveStatus === 'review' ? 'skipped_unresolved_review' : row.reason,
+            final_reason: finalReason,
             match_method: row.method,
             note: row.note,
             match_name: row.matchName,
@@ -637,20 +703,19 @@ export default function AdminImport() {
           error_message: null,
         };
       });
+      const countOf = (...statuses: EffectiveStatus[]) =>
+        resolvedRows.filter(({ resolved }) => statuses.includes(resolved.status)).length;
 
       await importJobsRepository.createJob({
         event_id: selectedEventId,
         source_url: csvSource === 'file' ? null : csvUrl.trim() || null,
         source_type: csvSource === 'file' ? 'manual' : getImportSourceType(csvUrl),
         total_rows: rows.length,
-        matched_rows: rows.filter(row => getEffectiveStatus(row) === 'match').length,
-        created_members: createdMembersCount,
+        matched_rows: resolvedRows.filter(({ row, resolved }) => resolved.status === 'match' && crediting.has(row.rowId)).length,
+        created_members: Object.keys(createdMemberIdsByRowId).length,
         created_attendance_count: createdAttendanceCount,
-        skipped_duplicate_rows: rows.filter(row => {
-          const effectiveStatus = getEffectiveStatus(row);
-          return effectiveStatus === 'already' || effectiveStatus === 'duplicate';
-        }).length,
-        review_rows: rows.filter(row => getEffectiveStatus(row) === 'review').length,
+        skipped_duplicate_rows: countOf('already', 'duplicate'),
+        review_rows: countOf('review', 'skipped', 'invalid'),
         error_count: errorMessage ? rows.length : 0,
         error_message: errorMessage ?? null,
         created_by: authData.user?.id ?? null,
@@ -659,30 +724,38 @@ export default function AdminImport() {
         rows: rowInserts,
       });
       queryClient.invalidateQueries({ queryKey: ['import-jobs'] });
+      return true;
     } catch (auditError) {
       console.warn('Import audit logging failed', auditError);
+      return false;
     }
   }
 
   // ── Counts ────────────────────────────────────────────────────────────────────
+  const membersById = useMemo(() => new Map(matchedMembersSnapshot.map(m => [m.id, m])), [matchedMembersSnapshot]);
+  const membersByEmail = useMemo(() => buildMemberLookupMaps(matchedMembersSnapshot).byEmail, [matchedMembersSnapshot]);
+  const decisionContext: DecisionContext<Member> = useMemo(
+    () => ({ membersById, alreadyMemberIds }),
+    [membersById, alreadyMemberIds],
+  );
+  const resolved = (row: RowResult) => resolveRow(row, decisionContext);
   const displayedRows = [...rows].sort((a, b) => {
-    const priorityDiff = getSortPriority(a, sortMode) - getSortPriority(b, sortMode);
+    const priorityDiff = getSortPriority(resolved(a).status, a, sortMode) - getSortPriority(resolved(b).status, b, sortMode);
     return priorityDiff !== 0 ? priorityDiff : a.originalIndex - b.originalIndex;
   });
   const selectedRows = rows.filter(r => r.selected);
-  const selectedReviewRows = selectedRows.filter(r => canForceMatch(r));
-  const selectedOverridableRows = selectedRows.filter(r => canMarkAsNew(r));
   const allRowsSelected = rows.length > 0 && rows.every(r => r.selected);
-  const summary = {
-    match:    rows.filter(r => getEffectiveStatus(r) === 'match').length,
-    new:      rows.filter(r => getEffectiveStatus(r) === 'new').length,
-    already:  rows.filter(r => getEffectiveStatus(r) === 'already').length,
-    duplicate: rows.filter(r => getEffectiveStatus(r) === 'duplicate').length,
-    review:   rows.filter(r => getEffectiveStatus(r) === 'review').length,
+  const summary = summarizeAttendanceImport(rows, decisionContext);
+  const extras = {
     invalidYear: rows.filter(r => r.invalidYear).length,
-    enrich:   rows.filter(r => getEffectiveStatus(r) === 'match' && hasMemberEnrichment(r, matchedMembersSnapshot)).length,
+    enrich: rows.filter(r => {
+      const { status, member } = resolved(r);
+      return status === 'match' && !!member && Object.keys(getSafeAttendanceMemberEnrichment({ ...r, matchedMember: member }, matchedMembersSnapshot, { adminConfirmed: r.status === 'review' })).length > 0;
+    }).length,
   };
-  const totalNewMembers = summary.new;
+  const totalNewMembers = summary.newMembers;
+  // A changed unresolved count is a different decision to acknowledge.
+  useEffect(() => { setAckPartial(false); }, [summary.unresolved]);
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedTerm = selectedEvent?.academic_term_id ? terms[selectedEvent.academic_term_id] : undefined;
   const selectedEventMissingTerm = !!selectedEvent && !selectedEvent.academic_term_id;
@@ -831,7 +904,7 @@ export default function AdminImport() {
                 rows={reviewAttendanceRows(rows.map(r => ({
                   originalIndex: r.originalIndex,
                   displayName: r.displayName,
-                  effectiveStatus: getEffectiveStatus(r),
+                  effectiveStatus: resolved(r).status,
                   reason: r.reason,
                   note: r.note,
                   invalidYear: r.invalidYear,
@@ -844,42 +917,69 @@ export default function AdminImport() {
               />
 
               {/* Summary */}
-              <div className="flex flex-wrap gap-3">
-                <SummaryBadge color="green"  count={summary.match}    label="will update existing member"    plural="will update existing members" />
-                <SummaryBadge color="blue"   count={summary.new}      label="will be added as a new member"  plural="will be added as new members" />
-                <SummaryBadge color="amber"  count={summary.review}   label="needs review and will be skipped" plural="need review and will be skipped" />
-                <SummaryBadge color="gray"   count={summary.already}  label="already imported for this event" plural="already imported for this event" />
-                {summary.duplicate > 0 && (
-                  <SummaryBadge color="gray" count={summary.duplicate} label="duplicate CSV row skipped" plural="duplicate CSV rows skipped" />
-                )}
-                {summary.invalidYear > 0 && (
-                  <SummaryBadge color="red" count={summary.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
-                )}
-                {summary.enrich > 0 && (
-                  <SummaryBadge color="purple" count={summary.enrich} label="profile will be enriched" plural="profiles will be enriched" />
-                )}
-              </div>
+              <section aria-label="Import summary" className="rounded-md border border-[var(--color-border)] p-4">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-label text-[var(--color-text3)]">Before you confirm</h2>
+                <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                  <SummaryStat label="Valid source rows" value={summary.validRows} />
+                  <SummaryStat label="Existing members receiving attendance" value={summary.existingMembers} tone="green" />
+                  <SummaryStat label="New members being created" value={summary.newMembers} tone="blue" />
+                  <SummaryStat label="Already recorded" value={summary.alreadyRecorded} />
+                  <SummaryStat label="Duplicate rows skipped" value={summary.duplicatesSkipped} />
+                  <SummaryStat label="Unresolved identity matches" value={summary.unresolved} tone={summary.unresolved > 0 ? 'amber' : undefined} />
+                  <SummaryStat label="Skipped by you" value={summary.skipped} />
+                  {summary.invalid > 0 && <SummaryStat label="Rows without a name" value={summary.invalid} tone="red" />}
+                </dl>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {extras.invalidYear > 0 && (
+                    <SummaryBadge color="red" count={extras.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
+                  )}
+                  {extras.enrich > 0 && (
+                    <SummaryBadge color="purple" count={extras.enrich} label="profile will be enriched" plural="profiles will be enriched" />
+                  )}
+                </div>
+              </section>
+
+              {summary.unresolved > 0 && (
+                <div role="alert" className="rounded-md border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                  <p className="font-medium">
+                    {summary.unresolved} row{summary.unresolved !== 1 ? 's' : ''} still need{summary.unresolved === 1 ? 's' : ''} a decision. Choose Match Existing, Create New Member, or Skip for each.
+                  </p>
+                  <label className="mt-2 flex items-start gap-2">
+                    <input type="checkbox" checked={ackPartial} onChange={e => setAckPartial(e.target.checked)} className="mt-0.5 rounded" />
+                    <span>
+                      I understand {summary.unresolved} unresolved row{summary.unresolved !== 1 ? 's' : ''} will not be imported and no attendance or points will be recorded for them. They stay in the import audit so I can re-import the sheet later.
+                    </span>
+                  </label>
+                </div>
+              )}
 
               <div className="flex flex-col gap-3 rounded-md border border-[var(--color-border)] bg-zinc-50 dark:bg-zinc-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-zinc-600 dark:text-zinc-300">
                   {selectedRows.length === 0
-                    ? 'Select rows to apply manual match overrides.'
+                    ? 'Select rows to apply a decision to several at once. Matching an existing member is always chosen row by row.'
                     : `${selectedRows.length} row${selectedRows.length !== 1 ? 's' : ''} selected.`}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => applyManualOverrideToSelected('force-match')}
-                    disabled={selectedReviewRows.length === 0}
-                    className="inline-flex items-center gap-2 rounded bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Force Match Selected
-                  </button>
-                  <button
-                    onClick={() => applyManualOverrideToSelected('mark-new')}
-                    disabled={selectedOverridableRows.length === 0}
+                    onClick={() => applyDecisionToSelected('new')}
+                    disabled={selectedRows.length === 0}
                     className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Mark Selected as New
+                    Create New for Selected
+                  </button>
+                  <button
+                    onClick={() => applyDecisionToSelected('skip')}
+                    disabled={selectedRows.length === 0}
+                    className="inline-flex items-center gap-2 rounded border border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm font-medium text-[var(--color-text2)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Skip Selected
+                  </button>
+                  <button
+                    onClick={() => applyDecisionToSelected('clear')}
+                    disabled={selectedRows.length === 0}
+                    className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-[var(--color-text3)] transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Undo Selected
                   </button>
                 </div>
               </div>
@@ -932,21 +1032,23 @@ export default function AdminImport() {
                   </thead>
                   <tbody className="bg-[var(--color-surface)] divide-y divide-zinc-100 dark:divide-zinc-800">
                     {displayedRows.map((row) => {
-                      const effectiveStatus = getEffectiveStatus(row);
-                      const forcedMatch = row.status === 'review' && row.manualOverride === 'force-match';
-                      const forcedNew = row.status === 'review' && row.manualOverride === 'mark-new';
-                      const isHighConfidenceOverride = row.status === 'match' && row.manualOverride === 'mark-new';
+                      const { status: effectiveStatus, member: resolvedMember } = resolved(row);
+                      const candidates = row.candidateMemberIds
+                        .map(id => membersById.get(id))
+                        .filter((m): m is Member => !!m);
+                      const emailHolders = row.csvEmail ? (membersByEmail.get(row.csvEmail) ?? []) : [];
+                      const enrich = effectiveStatus === 'match' && !!resolvedMember && Object.keys(
+                        getSafeAttendanceMemberEnrichment({ ...row, matchedMember: resolvedMember }, matchedMembersSnapshot, { adminConfirmed: row.status === 'review' }),
+                      ).length > 0;
 
                       return (
                       <tr key={row.rowId} className={
-                        isHighConfidenceOverride     ? 'border-l-4 border-orange-400 bg-orange-50/40 dark:bg-orange-900/10' :
-                        forcedMatch                  ? 'bg-green-100/70 dark:bg-green-900/20' :
                         effectiveStatus === 'match' ? 'bg-green-50/40 dark:bg-green-900/10' :
                         effectiveStatus === 'new'   ? 'bg-blue-50/40 dark:bg-blue-900/10' :
                         effectiveStatus === 'review'? 'bg-amber-50/60 dark:bg-amber-900/10' :
                                                       'bg-zinc-50/60 dark:bg-zinc-900/20'
                       }>
-                        <td className="px-4 py-2.5 whitespace-nowrap">
+                        <td className="px-4 py-2.5 whitespace-nowrap align-top">
                           <input
                             type="checkbox"
                             checked={row.selected}
@@ -955,139 +1057,74 @@ export default function AdminImport() {
                             aria-label={`Select ${row.displayName || 'row'}`}
                           />
                         </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {effectiveStatus === 'match' && (
-                            <span className="inline-flex items-center gap-1">
-                              <ActionBadge color="green" label={getActionLabel(row)} />
-                              {hasMemberEnrichment(row, matchedMembersSnapshot) && (
-                                <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled, and year advanced, during import">✉</span>
-                              )}
-                            </span>
-                          )}
-                          {effectiveStatus === 'new' && (
-                            <span className="inline-flex items-center gap-1">
-                              <ActionBadge color="blue" label={getActionLabel(row)} />
-                              {isHighConfidenceOverride && (
-                                <span className="text-[11px] text-orange-500" title="High-confidence match overridden — double-check before importing">⚠️</span>
-                              )}
-                            </span>
-                          )}
-                          {effectiveStatus === 'already' && <ActionBadge color="gray"  label="Skip" />}
-                          {effectiveStatus === 'duplicate' && <ActionBadge color="gray" label="Duplicate" />}
-                          {effectiveStatus === 'review' && <ActionBadge color="amber" label="Review" />}
-                          {canForceMatch(row) && (
-                            <div className="mt-2 flex flex-col gap-1">
-                              {row.manualOverride !== 'force-match' && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'force-match' }))}
-                                  className="text-left text-[11px] font-medium text-green-700 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                >
-                                  Force Match
-                                </button>
-                              )}
-                              {canMarkAsNew(row) && row.manualOverride !== 'mark-new' && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'mark-new' }))}
-                                  className="text-left text-[11px] font-medium text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
-                                >
-                                  Mark as New
-                                </button>
-                              )}
-                              {row.manualOverride && (
-                                <button
-                                  type="button"
-                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
-                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:gray-200"
-                                >
-                                  Clear Override
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          {row.status === 'match' && canMarkAsNew(row) && (
-                            <div className="mt-2 flex flex-col gap-1">
-                              {row.manualOverride !== 'mark-new' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: 'mark-new' }))}
-                                  className="text-left text-[11px] font-medium text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300"
-                                >
-                                  Treat as New Member
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => updateRow(row.rowId, current => ({ ...current, manualOverride: null }))}
-                                  className="text-left text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:hover:gray-200"
-                                >
-                                  Restore Match
-                                </button>
-                              )}
-                            </div>
+                        <td className="px-4 py-2.5 whitespace-nowrap align-top">
+                          <ActionBadge
+                            color={effectiveStatus === 'match' ? 'green' : effectiveStatus === 'new' ? 'blue' : effectiveStatus === 'review' ? 'amber' : 'gray'}
+                            label={effectiveStatus === 'duplicate' ? 'Duplicate' : effectiveStatus === 'already' ? 'Skip' : getActionLabel(effectiveStatus, row)}
+                          />
+                          {enrich && (
+                            <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled, and year advanced, during import">✉</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 font-medium text-[var(--color-text)]">
+                        <td className="px-4 py-2.5 font-medium text-[var(--color-text)] align-top">
                           <div>{row.displayName || <span className="text-[var(--color-text3)] italic">—</span>}</div>
                           {row.matchName !== row.displayName && (
                             <div className="text-[10px] text-[var(--color-text3)] mt-0.5">matched as: {row.matchName}</div>
                           )}
+                          {row.csvEmail && <div className="text-[10px] text-[var(--color-text3)] mt-0.5">{row.csvEmail}</div>}
                         </td>
-                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs">{row.csvCollege || '—'}</td>
-                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs">
+                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs align-top">{row.csvCollege || '—'}</td>
+                        <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs align-top">
                           {row.csvYear || '—'}
                           {row.invalidYear && (
                             <span className="ml-1 text-[10px] text-red-500 font-medium" title="Unrecognized year format">!</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300">
-                          {row.matchedMember && !isHighConfidenceOverride ? (
-                            <span>
-                              {row.matchedMember.first_name} {row.matchedMember.last_name}
-                              {row.matchedMember.college && (
-                                <span className={`ml-1 text-xs ${row.collegeMatch ? 'text-emerald-500' : 'text-[var(--color-text3)]'}`}>
-                                  · {row.matchedMember.college}
-                                </span>
-                              )}
-                              {row.matchedMember.year && (
-                                <span className={`ml-1 text-xs ${row.yearMatch ? 'text-emerald-500' : 'text-[var(--color-text3)]'}`}>
-                                  · {row.matchedMember.year}
-                                </span>
-                              )}
-                              {effectiveStatus === 'review' && (
-                                <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">{row.note}</div>
-                              )}
-                              {forcedMatch && (
-                                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Forced match — will update existing member</div>
-                              )}
-                              {forcedNew && (
-                                <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Manual override — will create a new member</div>
-                              )}
-                              {effectiveStatus === 'match' && hasMemberEnrichment(row, matchedMembersSnapshot) && (
-                                <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Profile fields will be filled or year advanced during import</div>
-                              )}
-                            </span>
-                          ) : isHighConfidenceOverride ? (
-                            <span className="text-orange-500 dark:text-orange-400 text-xs italic">match ignored — will create new member</span>
-                          ) : effectiveStatus === 'review' ? (
-                            <span className="text-amber-600 dark:text-amber-400 text-xs italic">{row.note}</span>
-                          ) : effectiveStatus === 'duplicate' ? (
-                            <span className="text-zinc-500 dark:text-zinc-400 text-xs italic">{row.note}</span>
-                          ) : (
+                        <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300 align-top">
+                          {(row.status === 'match' || row.status === 'already') && row.matchedMember && (
+                            <div className={row.decision?.kind === 'new' ? 'line-through opacity-60' : undefined}>
+                              <MemberIdentity member={row.matchedMember} />
+                              {row.status === 'already' && <div className="text-[10px] text-[var(--color-text3)]">Attendance already recorded for this event.</div>}
+                              {enrich && <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Profile fields will be filled or year advanced during import</div>}
+                            </div>
+                          )}
+                          {row.status === 'new' && !row.decision && (
                             <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
                           )}
+                          {row.status === 'duplicate' && (
+                            <span className="text-zinc-500 dark:text-zinc-400 text-xs italic">{row.note}</span>
+                          )}
+                          {effectiveStatus === 'invalid' && (
+                            <span className="text-red-500 text-xs italic">No name — cannot be imported.</span>
+                          )}
+                          {row.status !== 'duplicate' && effectiveStatus !== 'invalid' && (
+                            <div className="mt-1">
+                              <AttendanceRowDecision
+                                rowLabel={row.displayName || `row ${row.originalIndex + 2}`}
+                                status={effectiveStatus}
+                                rowStatus={row.status}
+                                decision={row.decision}
+                                note={row.note}
+                                csvEmail={row.csvEmail}
+                                canMatch={row.canForceMatch}
+                                canCreateNew={canMarkAsNew(row, effectiveStatus)}
+                                candidates={candidates}
+                                emailHolders={emailHolders}
+                                onDecide={decision => setRowDecision(row.rowId, decision)}
+                              />
+                            </div>
+                          )}
                         </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {(effectiveStatus === 'match' || effectiveStatus === 'review') ? (
+                        <td className="px-4 py-2.5 whitespace-nowrap align-top">
+                          {(row.status === 'match' || row.status === 'review') ? (
                             <span className={`text-xs font-mono font-semibold ${
-                              effectiveStatus === 'review' ? 'text-amber-600 dark:text-amber-400' :
+                              row.status === 'review' ? 'text-amber-600 dark:text-amber-400' :
                               row.method === 'email' || row.method === 'exact_name' ? 'text-emerald-600 dark:text-emerald-400' :
                                                            'text-yellow-600 dark:text-yellow-400'
                             }`}>{row.score}%</span>
-                          ) : effectiveStatus === 'new' ? (
+                          ) : row.status === 'new' ? (
                             <span className="text-xs text-[var(--color-text3)]">—</span>
-                          ) : effectiveStatus === 'duplicate' ? (
+                          ) : row.status === 'duplicate' ? (
                             <span className="text-xs text-[var(--color-text3)]">duplicate row</span>
                           ) : (
                             <span className="text-xs text-[var(--color-text3)]">already done</span>
@@ -1100,19 +1137,19 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-[var(--color-text3)] dark:text-[var(--color-text3)]">
-                Email is checked first. Conflicts and ambiguous names stay in review and are skipped unless explicitly resolved.
+                Email is checked first. Near-name matches, conflicting emails and shared names always wait for your decision; nothing is matched or created for them automatically.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || selectedEventMissingTerm || (summary.match + totalNewMembers) === 0}
+                  disabled={importing || selectedEventMissingTerm || (summary.existingMembers + totalNewMembers) === 0 || (summary.unresolved > 0 && !ackPartial)}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
                     text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing
                     ? <><Spinner />Importing…</>
-                    : <><CheckIcon />Import ({summary.match} update{summary.match !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
+                    : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
                 </button>
-                <button onClick={() => { setStep('configure'); setRows([]); }}
+                <button onClick={() => { setStep('configure'); setRows([]); createdByRowIdRef.current = {}; withheldEmailRowIdsRef.current = new Set(); setAckPartial(false); }}
                   className="text-sm text-[var(--color-text3)] hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
                   ← Back
                 </button>
@@ -1127,9 +1164,35 @@ export default function AdminImport() {
                 <CheckIcon className="w-8 h-8 text-emerald-500" />
               </div>
               <h2 className="text-base font-semibold text-[var(--color-text)] mb-2">Import complete!</h2>
-              <p className="text-[var(--color-text3)] text-sm mb-8">Points and new members have been added to the leaderboard.</p>
+              <p className="text-[var(--color-text3)] text-sm mb-6">Points and new members have been added to the leaderboard.</p>
+              {outcome && (
+                <section aria-label="Final import summary" className="mx-auto mb-8 max-w-2xl rounded-md border border-[var(--color-border)] p-4 text-left">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-label text-[var(--color-text3)]">What was written</h3>
+                  <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                    <SummaryStat label="Existing members credited" value={outcome.creditedMembers} tone="green" />
+                    <SummaryStat label="New members created" value={outcome.createdMembers} tone="blue" />
+                    <SummaryStat label="Attendance records added" value={outcome.attendanceInserted} />
+                    <SummaryStat label="Attendance already present" value={outcome.attendanceAlreadyPresent} />
+                    <SummaryStat label="Profiles enriched" value={outcome.enrichedProfiles} />
+                    <SummaryStat label="New members without email" value={outcome.emailsWithheld} />
+                  </dl>
+                  <h3 className="mb-3 mt-5 text-xs font-semibold uppercase tracking-label text-[var(--color-text3)]">What was not written</h3>
+                  <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                    <SummaryStat label="Skipped by you" value={outcome.skipped} />
+                    <SummaryStat label="Unresolved, not imported" value={outcome.unresolved} tone={outcome.unresolved > 0 ? 'amber' : undefined} />
+                    <SummaryStat label="Already recorded before" value={outcome.alreadyRecorded} />
+                    <SummaryStat label="Duplicate rows" value={outcome.duplicatesSkipped} />
+                    {outcome.invalid > 0 && <SummaryStat label="Rows without a name" value={outcome.invalid} tone="red" />}
+                  </dl>
+                  {(outcome.skipped > 0 || outcome.unresolved > 0) && (
+                    <p className="mt-4 text-xs text-[var(--color-text3)]">
+                      Skipped and unresolved rows are saved in Recent Imports below. Import the same sheet again to resolve them; people already credited are recognized and not counted twice.
+                    </p>
+                  )}
+                </section>
+              )}
               <button
-                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setCsvFile(null); setSelectedEventId(''); setCachedParsed([]); }}
+                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setCsvFile(null); setSelectedEventId(''); setCachedParsed([]); setOutcome(null); createdByRowIdRef.current = {}; withheldEmailRowIdsRef.current = new Set(); }}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 Import another sheet
               </button>
@@ -1176,6 +1239,21 @@ function SummaryBadge({ color, count, label, plural }: { color: string; count: n
       <span className={`w-2 h-2 rounded-full inline-block ${dot[color]}`} />
       {count} {count === 1 ? label : plural}
     </span>
+  );
+}
+
+function SummaryStat({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'blue' | 'amber' | 'red' }) {
+  const color = {
+    green: 'text-green-700 dark:text-green-300',
+    blue: 'text-blue-700 dark:text-blue-300',
+    amber: 'text-amber-700 dark:text-amber-300',
+    red: 'text-red-700 dark:text-red-300',
+  };
+  return (
+    <div data-testid="summary-stat">
+      <dt className="text-xs text-[var(--color-text3)]">{label}</dt>
+      <dd className={`text-xl font-semibold ${tone ? color[tone] : 'text-[var(--color-text)]'}`}>{value}</dd>
+    </div>
   );
 }
 

@@ -157,6 +157,8 @@ export type AttendanceMatchReason =
   | 'exact_name_match'
   | 'fuzzy_name_match'
   | 'ambiguous_match'
+  | 'identity_conflict'
+  | 'member_claimed_by_earlier_row'
   | 'new_member_created'
   | 'duplicate_row'
   | 'already_imported'
@@ -193,9 +195,9 @@ type SeenRow = {
 const NAME_CONFLICT_THRESHOLD = 50;
 const STRONG_OTHER_NAME_THRESHOLD = 90;
 const EXACT_NAME_SCORE = 100;
-const FUZZY_AUTO_THRESHOLD = 92;
 const FUZZY_REVIEW_THRESHOLD = 80;
 const FUZZY_MIN_GAP = 8;
+const MAX_REVIEW_CANDIDATES = 5;
 
 export function normalizeCollegeForMatch(value: string | null | undefined): string {
   const v = (value ?? '').toLowerCase();
@@ -289,7 +291,7 @@ function reviewResult(
     emailIsSchoolEmail: isSchoolEmail(row.csvEmail),
     emailAlreadyUsed: options.emailAlreadyUsed ?? false,
     canForceMatch: options.canForceMatch ?? !!best,
-    canMarkNew: options.canMarkNew ?? false,
+    canMarkNew: options.canMarkNew ?? true,
     duplicateRowOf: null,
   };
 }
@@ -345,7 +347,7 @@ function safeResult(
     emailIsSchoolEmail: isSchoolEmail(row.csvEmail),
     emailAlreadyUsed: !!(row.csvEmail && member?.email && normalizeEmail(row.csvEmail) === normalizeEmail(member.email)),
     canForceMatch: false,
-    canMarkNew: status === 'match' && !row.csvEmail,
+    canMarkNew: status === 'match' || status === 'already',
     duplicateRowOf: null,
   };
 }
@@ -360,6 +362,21 @@ function findBestNameCandidates(row: AttendanceImportRowInput, members: Attendan
 function hasAmbiguousTopCandidate(candidates: ReturnType<typeof candidateScore>[]): boolean {
   if (candidates.length < 2) return false;
   return candidates[0].score - candidates[1].score < FUZZY_MIN_GAP;
+}
+
+/**
+ * Evidence on file that contradicts an otherwise exact name match: a different
+ * email, or a different residential college. Year is deliberately excluded
+ * because it legitimately changes between seasons.
+ */
+function findIdentityConflict(row: AttendanceImportRowInput, member: AttendanceImportMember): string | null {
+  const csvEmail = normalizeEmail(row.csvEmail);
+  const memberEmail = normalizeEmail(member.email);
+  if (csvEmail && memberEmail && csvEmail !== memberEmail) return 'the email on file is different';
+  const csvCollege = normalizeCollegeForMatch(row.csvCollege);
+  const memberCollege = normalizeCollegeForMatch(member.college);
+  if (csvCollege && memberCollege && csvCollege !== memberCollege) return 'the college on file is different';
+  return null;
 }
 
 function matchSingleRow(
@@ -380,7 +397,7 @@ function matchSingleRow(
         'duplicate_email_conflict',
         'This email is already attached to multiple members. Resolve the duplicate member records before importing this row.',
         candidates,
-        { canForceMatch: false, canMarkNew: false, emailAlreadyUsed: true },
+        { canForceMatch: true, canMarkNew: true, emailAlreadyUsed: true },
       );
     }
 
@@ -396,8 +413,8 @@ function matchSingleRow(
           row,
           'email_name_conflict',
           'The email matches an existing member, but the row name conflicts with that member. Review before awarding points.',
-          [emailCandidate, ...otherNameCandidates].slice(0, 3),
-          { canForceMatch: true, canMarkNew: false, emailAlreadyUsed: true },
+          [emailCandidate, ...otherNameCandidates].slice(0, MAX_REVIEW_CANDIDATES),
+          { canForceMatch: true, canMarkNew: true, emailAlreadyUsed: true },
         );
       }
 
@@ -419,6 +436,16 @@ function matchSingleRow(
     const exactNameMatches = maps.byName.get(normalizedName) ?? [];
     if (exactNameMatches.length === 1) {
       const member = exactNameMatches[0];
+      const conflict = findIdentityConflict(row, member);
+      if (conflict) {
+        return reviewResult(
+          row,
+          'identity_conflict',
+          `The name matches ${getMemberFullName(member)}, but ${conflict}. This may be a different person.`,
+          [candidateScore(row, member)],
+          { canForceMatch: true, canMarkNew: true },
+        );
+      }
       const status: AttendanceImportStatus = alreadyImportedMemberIds.has(member.id) ? 'already' : 'match';
       return safeResult(
         row,
@@ -439,39 +466,25 @@ function matchSingleRow(
         'ambiguous_match',
         'Multiple members share this exact normalized name. Review before awarding points.',
         candidates,
-        { canForceMatch: true, canMarkNew: false },
+        { canForceMatch: true, canMarkNew: true },
       );
     }
   }
 
+  // A near name match, even with a matching year or college, is never enough to
+  // establish identity: it always goes to an admin.
   const fuzzyCandidates = findBestNameCandidates(row, members);
-  const best = fuzzyCandidates[0];
 
-  if (best) {
+  if (fuzzyCandidates.length > 0) {
     const ambiguous = hasAmbiguousTopCandidate(fuzzyCandidates);
-    const hasContextSupport = best.collegeMatch || best.yearMatch;
-    if (!ambiguous && best.score >= FUZZY_AUTO_THRESHOLD && hasContextSupport) {
-      const status: AttendanceImportStatus = alreadyImportedMemberIds.has(best.member.id) ? 'already' : 'match';
-      return safeResult(
-        row,
-        best.member,
-        status,
-        'fuzzy_name',
-        status === 'already' ? 'already_imported' : 'fuzzy_name_match',
-        best.score,
-        best.nameScore,
-        status === 'already' ? 'This member already has attendance for this event.' : 'Matched by conservative fuzzy name scoring.',
-      );
-    }
-
     return reviewResult(
       row,
-      'ambiguous_match',
+      'fuzzy_name_match',
       ambiguous
-        ? 'Multiple members are close name matches. Review before awarding points.'
-        : 'The best name match is not confident enough to import automatically.',
-      fuzzyCandidates.slice(0, 3),
-      { canForceMatch: true, canMarkNew: !normalizedEmail },
+        ? 'Multiple members have a similar name. Choose the right one, or create a new member.'
+        : 'Only a near name match. Confirm it is the same person, or create a new member.',
+      fuzzyCandidates.slice(0, MAX_REVIEW_CANDIDATES),
+      { canForceMatch: true, canMarkNew: true },
     );
   }
 
@@ -495,6 +508,7 @@ export function matchAttendanceImportRows(
   const maps = buildMemberLookupMaps(members);
   const seenEmails = new Map<string, SeenRow>();
   const seenNoEmailKeys = new Map<string, SeenRow>();
+  const claimedMemberIds = new Set<string>();
 
   return rows.map((row) => {
     const normalizedEmail = normalizeEmail(row.csvEmail);
@@ -511,7 +525,7 @@ export function matchAttendanceImportRows(
           'duplicate_email_conflict',
           'Another CSV row already used this email with a different name. Review before importing.',
           [],
-          { canForceMatch: false, canMarkNew: false, emailAlreadyUsed: true },
+          { canForceMatch: false, canMarkNew: true, emailAlreadyUsed: true },
         );
       }
       seenEmails.set(normalizedEmail, { rowId: row.rowId, normalizedName });
@@ -528,7 +542,23 @@ export function matchAttendanceImportRows(
       seenNoEmailKeys.set(noEmailKey, { rowId: row.rowId, normalizedName });
     }
 
-    return matchSingleRow(row, members, maps, alreadyImportedMemberIds);
+    const result = matchSingleRow(row, members, maps, alreadyImportedMemberIds);
+    const member = result.matchedMember;
+    if ((result.status === 'match' || result.status === 'already') && member) {
+      // Two CSV rows resolving to one member would silently collapse into one
+      // attendance record, losing the second person if they are different.
+      if (claimedMemberIds.has(member.id)) {
+        return reviewResult(
+          row,
+          'member_claimed_by_earlier_row',
+          `An earlier row in this file already matched ${getMemberFullName(member)}. Skip this row if it is a repeat, or create a new member if it is a different person.`,
+          [candidateScore(row, member)],
+          { canForceMatch: true, canMarkNew: true },
+        );
+      }
+      claimedMemberIds.add(member.id);
+    }
+    return result;
   });
 }
 
@@ -603,7 +633,7 @@ export function getSafeAttendanceMemberEnrichment(
   if (!member || (row.status !== 'match' && !confirmedReviewRow)) return {};
 
   const updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> = {};
-  const safeHighConfidenceMatch = row.method === 'email' || row.method === 'exact_name' || (row.method === 'fuzzy_name' && row.score >= FUZZY_AUTO_THRESHOLD);
+  const safeHighConfidenceMatch = row.method === 'email' || row.method === 'exact_name';
 
   if (row.status === 'match' && !member.email && row.csvEmail) {
     const email = normalizeEmail(row.csvEmail);
