@@ -14,7 +14,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "clsx": "^2.1.1",
@@ -30,7 +30,7 @@
     "react-router-dom": "^7.18.4",
     "tailwind-merge": "^3.7.0",
     "typescript": "^4.9.5",
-    "web-vitals": "^6.2.2",
+    "web-vitals": "^6.2.3",
     "zod": "^3.25.76"
   },
   "scripts": {
@@ -85,7 +85,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.6.1",
-    "postcss": "^8.5.28",
+    "postcss": "^8.5.29",
     "prettier": "^3.9.9",
     "react-scripts": "^5.0.1",
     "sharp": "^0.35.5",
