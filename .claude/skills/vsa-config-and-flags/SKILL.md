@@ -115,10 +115,11 @@ Re-verify: `cat vercel.json`
 |---|---|---|
 | `version: 2` | — | Vercel platform v2 config schema |
 | `zero-config` | Vercel automatically detects CRA | Runs `npm run build` (CRA) and serves the static `build/` directory — this is a static SPA, no server functions on Vercel |
-| `routes[0]` (`/(.*)`, `continue: true`) | Security headers on every response | `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (denies camera/mic/geolocation/etc.), `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Do not weaken these |
-| `routes` `/static/(.*)` | `cache-control: public, max-age=31536000, immutable` | CRA emits content-hashed filenames, so static assets cache forever |
-| `routes` `/index.html` and final catch-all → `/index.html` | `cache-control: no-cache, no-store, must-revalidate` | HTML must never be cached (it references the hashed bundles); catch-all is the SPA fallback so React Router handles deep links |
-| `handle: filesystem` | — | Serve real files (images, manifest) before falling through to the SPA |
+| `headers` `/(.*)` | Security headers on every response | `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (denies camera/mic/geolocation/etc.), `X-Frame-Options: DENY`, `Strict-Transport-Security: max-age=31536000; includeSubDomains`. Do not weaken these |
+| `/static/**` | no explicit `Cache-Control` | Deliberate: an explicit immutable header could also be applied to a missing-chunk 404 and pin it for a year. Hashed assets use Vercel's built-in static caching |
+| `headers` SPA routes and `/index.html` | `Cache-Control: public, max-age=0, must-revalidate` | The HTML references the hashed bundles, so browsers must revalidate it on every navigation (matches Vercel's default; pinned so it cannot silently regress) |
+| `rewrites` `/((?!static/).*)` → `/index.html` | — | SPA fallback so React Router handles deep links. Excludes `/static/` so a missing chunk 404s instead of returning HTML. Rewrites run after the filesystem, so real files (images, manifest) are served first |
+| `src/utils/chunkLoadRecovery.ts` | One automatic reload per 60s on a stale-chunk error | Self-heals tabs opened before a deploy; guarded by `sessionStorage` so it cannot loop |
 
 ## 6. Database-resident config (admin-editable "flags")
 
