@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
+import { useServerSeededDraft } from '../../../hooks/useServerSeededDraft';
 import toast from 'react-hot-toast';
 import { programContentRepository } from '../../../data/repos/programContent';
 import { useAllProgramContent } from '../../../hooks/useProgramContent';
@@ -190,13 +191,18 @@ export function ProgramContentManager() {
       ),
     [content, selectedTarget.page_key, selectedTarget.section_key],
   );
-  const [form, setForm] = useState<FormState>(() => emptyForm(selectedTarget));
+  // Seeded from the saved row; a background refetch never overwrites unsaved
+  // edits, and switching to another target replaces the draft.
+  const {
+    draft: form,
+    setDraft: setForm,
+    markSaved,
+  } = useServerSeededDraft<FormState>(
+    `${selectedTarget.page_key}:${selectedTarget.section_key}`,
+    formFromContent(selectedContent, selectedTarget),
+  );
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-
-  useEffect(() => {
-    setForm(formFromContent(selectedContent, selectedTarget));
-  }, [selectedContent, selectedTarget]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -223,6 +229,7 @@ export function ProgramContentManager() {
         source_doc_url: nullable(form.source_doc_url),
         internal_notes: nullable(form.internal_notes),
       });
+      markSaved();
       await refetch();
       toast.success('Program content saved');
     } catch (err) {

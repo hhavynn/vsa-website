@@ -1,4 +1,5 @@
-import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
+import { ComponentType, FormEvent, useMemo, useState } from "react";
+import { useServerSeededDraft } from "../../hooks/useServerSeededDraft";
 import { useMutation, useQuery, useQueryClient } from "react-query";
 import toast from "react-hot-toast";
 import {
@@ -193,10 +194,6 @@ function settingsToInput(
 export default function AdminUVSASchools() {
   const queryClient = useQueryClient();
   const [schoolForm, setSchoolForm] = useState<SchoolForm>(emptySchoolForm);
-  const [settingsForm, setSettingsForm] =
-    useState<UVSANetworkPageSettingsInput>(
-      settingsToInput(DEFAULT_UVSA_NETWORK_PAGE_SETTINGS),
-    );
   const [isEditingSchool, setIsEditingSchool] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UVSASchool | null>(null);
 
@@ -207,11 +204,16 @@ export default function AdminUVSASchools() {
     uvsaNetworkSettingsRepository.getSettings(),
   );
 
-  useEffect(() => {
-    if (settingsQuery.data) {
-      setSettingsForm(settingsToInput(settingsQuery.data));
-    }
-  }, [settingsQuery.data]);
+  // Seeded from the saved settings; a background refetch never overwrites
+  // unsaved edits.
+  const {
+    draft: settingsForm,
+    setDraft: setSettingsForm,
+    markSaved: markSettingsSaved,
+  } = useServerSeededDraft<UVSANetworkPageSettingsInput>(
+    "settings",
+    settingsToInput(settingsQuery.data ?? DEFAULT_UVSA_NETWORK_PAGE_SETTINGS),
+  );
 
   const sortedSchools = useMemo(
     () =>
@@ -259,6 +261,7 @@ export default function AdminUVSASchools() {
       uvsaNetworkSettingsRepository.updateSettings(form),
     {
       onSuccess: () => {
+        markSettingsSaved();
         toast.success("UVSA network page copy saved");
         queryClient.invalidateQueries(settingsQueryKey);
       },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useServerSeededDraft } from '../../../hooks/useServerSeededDraft';
 import toast from 'react-hot-toast';
 import { Event } from '../../../types';
 import { EventRecapFormData } from '../../../data/repos/eventRecaps';
@@ -122,11 +122,13 @@ function TextArea({
 export function EventRecapEditor({ event }: { event: Event }) {
   const { user } = useAuth();
   const { recap, loading, error, saveRecap, saving } = useEventRecap(event.id);
-  const [form, setForm] = useState<EventRecapFormData>(emptyRecap);
-
-  useEffect(() => {
-    setForm(toFormData(recap));
-  }, [event.id, recap]);
+  // Seeded from the saved recap, but a background refetch never overwrites
+  // what the admin has typed since.
+  const {
+    draft: form,
+    setDraft: setForm,
+    markSaved,
+  } = useServerSeededDraft<EventRecapFormData>(event.id, toFormData(recap));
 
   const updateField = <K extends keyof EventRecapFormData>(key: K, value: EventRecapFormData[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -145,6 +147,7 @@ export function EventRecapEditor({ event }: { event: Event }) {
         userId: user.id,
         existingRecapId: recap?.id,
       });
+      markSaved();
       toast.success('Recap saved');
     } catch (saveError) {
       console.error(saveError);
