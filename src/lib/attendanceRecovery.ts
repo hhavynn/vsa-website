@@ -56,6 +56,10 @@ export interface RecoveryFindingRecord {
   college_differs: boolean;
   /** For recovered/investigating rows: whether the member the recovery credited still has the attendance. */
   recovered_credit_present: boolean | null;
+  /** For a finding resolved "original also attended": whether that kept credit still exists. */
+  original_credit_present: boolean | null;
+  created_member_id: string | null;
+  candidate_member_ids: string[];
 }
 
 export type RecoveryActionKind =
@@ -249,7 +253,7 @@ export function rowCreditsMember(record: RecoveryFindingRecord): boolean {
 export function allowedActions(finding: RecoveryFinding): RecoveryActionKind[] {
   // A recorded credit that was later removed in Admin Members leaves history
   // claiming something the ledger no longer holds; the database allows reopening it.
-  const creditGone = finding.record.recovered_credit_present === false;
+  const creditGone = finding.record.recovered_credit_present === false || finding.record.original_credit_present === false;
   if (finding.status === 'recovered') return creditGone ? ['reopen'] : [];
   if (finding.status === 'dismissed') return ['reopen'];
   if (finding.status === 'investigating') return creditGone ? ['resolve_investigation', 'reopen'] : ['resolve_investigation'];
@@ -511,4 +515,25 @@ export function relatedMemberIds(record: RecoveryFindingRecord, matchDetails: un
   if (record.matched_member_id) ids.add(record.matched_member_id);
   if (record.attendance_member_id) ids.add(record.attendance_member_id);
   return Array.from(ids);
+}
+
+/**
+ * Other audited rows for the same event that name this member as matched,
+ * created, credited or a candidate: counter-evidence that they may have
+ * attended, shown before anyone investigates or removes their credit.
+ */
+export function rowsNamingMember(
+  records: readonly RecoveryFindingRecord[],
+  eventId: string | null,
+  memberId: string | null,
+  excludeRowId: string,
+): RecoveryFindingRecord[] {
+  if (!eventId || !memberId) return [];
+  return records.filter((record) =>
+    record.row_id !== excludeRowId
+    && record.event_id === eventId
+    && (record.matched_member_id === memberId
+      || record.attendance_member_id === memberId
+      || record.created_member_id === memberId
+      || (record.candidate_member_ids ?? []).includes(memberId)));
 }

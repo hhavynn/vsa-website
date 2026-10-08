@@ -43,6 +43,7 @@ create role anon;
 create role authenticated;
 create role service_role bypassrls;
 create database recovery;
+create database recovery_draft;
 SQL
 
 migration="$repo_dir/supabase/migrations/20261008000000_historical_attendance_recovery.sql"
@@ -50,6 +51,17 @@ db=(rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = warn
 "${db[@]}" -f "$script_dir/sql/attendance-recovery.fixture.sql"
 "${db[@]}" -f "$migration" -f "$migration"
 printf 'PASS: migration applies cleanly and is repeatable.\n'
+
+# The guard refuses to run over the earlier destructive draft's table.
+rtk psql "${psql_args[@]}" -d recovery_draft -q -c 'set client_min_messages = warning' \
+  -f "$script_dir/sql/attendance-recovery.fixture.sql" >/dev/null
+rtk psql "${psql_args[@]}" -d recovery_draft -q -c 'create table public.import_recovery_actions (id uuid primary key, removed_attendance jsonb)'
+if rtk psql "${psql_args[@]}" -d recovery_draft -q -c 'set client_min_messages = warning' -f "$migration" >"$runtime_dir/draft.log" 2>&1; then
+  printf 'FAIL: migration applied over the earlier draft\n' >&2
+  exit 1
+fi
+rtk grep -q 'earlier draft of import_recovery_actions is present' "$runtime_dir/draft.log"
+printf 'PASS: migration refuses to apply over the earlier destructive draft.\n'
 
 assert_log="$runtime_dir/assert.log"
 if ! rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = notice' \
@@ -71,7 +83,8 @@ insert into public.events (id, name, points) values
 insert into public.members (id, first_name, last_name) values
   ('10000000-0000-0000-0000-0000000000c1', 'Ana', 'Bui'),
   ('10000000-0000-0000-0000-0000000000c2', 'Anh', 'Bui'),
-  ('10000000-0000-0000-0000-0000000000c3', 'Duc', 'Ha');
+  ('10000000-0000-0000-0000-0000000000c3', 'Duc', 'Ha'),
+  ('10000000-0000-0000-0000-0000000000c4', 'Lan', 'Vu');
 insert into public.import_jobs (id, event_id, status) values
   ('20000000-0000-0000-0000-0000000000c1', '80000000-0000-0000-0000-0000000000c1', 'completed'),
   ('20000000-0000-0000-0000-0000000000c2', '80000000-0000-0000-0000-0000000000c2', 'completed'),
@@ -82,7 +95,8 @@ insert into public.import_job_rows (id, import_job_id, source_row_index, event_i
   ('30000000-0000-0000-0000-0000000000c3', '20000000-0000-0000-0000-0000000000c1', 2, '80000000-0000-0000-0000-0000000000c1', 'Quan Ho', 'review'),
   ('30000000-0000-0000-0000-0000000000c5', '20000000-0000-0000-0000-0000000000c1', 4, '80000000-0000-0000-0000-0000000000c1', 'Duc Ha', 'review'),
   ('30000000-0000-0000-0000-0000000000c6', '20000000-0000-0000-0000-0000000000c2', 0, '80000000-0000-0000-0000-0000000000c2', 'Duc Ha', 'review'),
-  ('30000000-0000-0000-0000-0000000000c7', '20000000-0000-0000-0000-0000000000c3', 0, '80000000-0000-0000-0000-0000000000c3', 'Anh Bui', 'review');
+  ('30000000-0000-0000-0000-0000000000c7', '20000000-0000-0000-0000-0000000000c3', 0, '80000000-0000-0000-0000-0000000000c3', 'Anh Bui', 'review'),
+  ('30000000-0000-0000-0000-0000000000c8', '20000000-0000-0000-0000-0000000000c1', 5, '80000000-0000-0000-0000-0000000000c1', 'Lan Vu', 'review');
 SQL
 
 as_admin() {
@@ -135,7 +149,17 @@ pid_g=$!
 as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c7', 'restore', null, '10000000-0000-0000-0000-0000000000c2');" \
   >"$runtime_dir/i.out" &
 pid_i=$!
-wait "$pid_a" "$pid_b" "$pid_c" "$pid_d" "$pid_e" "$pid_f" "$pid_g" "$pid_h" "$pid_i"
+# Admin Members (or the importer) credits Lan Vu on another event and is still
+# committing when a recovery credits Lan Vu. The recovery must wait for it, or its
+# trigger recalculates from a snapshot without that row.
+rtk psql "${psql_args[@]}" -d recovery -qtA -v ON_ERROR_STOP=0 -c "begin; insert into public.member_event_attendance (member_id, event_id, points_earned) values ('10000000-0000-0000-0000-0000000000c4', '80000000-0000-0000-0000-0000000000c2', 7); select pg_sleep(1.5); commit;" \
+  >"$runtime_dir/j.out" 2>&1 &
+pid_j=$!
+sleep 0.4
+as_admin 00000000-0000-0000-0000-0000000000a1 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000c8', 'restore', null, '10000000-0000-0000-0000-0000000000c4');" \
+  >"$runtime_dir/k.out" &
+pid_k=$!
+wait "$pid_a" "$pid_b" "$pid_c" "$pid_d" "$pid_e" "$pid_f" "$pid_g" "$pid_h" "$pid_i" "$pid_j" "$pid_k"
 
 check() {
   local label="$1" cond="$2"
@@ -143,7 +167,7 @@ check() {
     printf 'PASS: %s\n' "$label"
   else
     printf 'FAIL: %s\n' "$label" >&2
-    for f in a b c d e f g h i; do printf -- '--- %s\n' "$f" >&2; rtk cat "$runtime_dir/$f.out" >&2; done
+    for f in a b c d e f g h i j k; do printf -- '--- %s\n' "$f" >&2; rtk cat "$runtime_dir/$f.out" >&2; done
     exit 1
   fi
 }
@@ -169,6 +193,9 @@ select
 check "concurrent recoveries for one member on two events leave the right total (got ${totals%%|*}, want 17/2)" "$f_ok"
 [ "${totals#*|}" = "15|15" ] && h_ok=true || h_ok=false
 check "a recovery racing an event points edit stores the new value (got ${totals#*|}, want 15|15)" "$h_ok"
+lan="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "select points || '/' || events_attended from public.members where id = '10000000-0000-0000-0000-0000000000c4'")"
+[ "$lan" = "17/2" ] && k_ok=true || k_ok=false
+check "a recovery that waits on another writer for the same member leaves the right total (got $lan, want 17/2)" "$k_ok"
 
 result="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "
 select
@@ -177,7 +204,7 @@ select
   (select points from public.members where id = '10000000-0000-0000-0000-0000000000c2') || '|' ||
   (select count(*) from public.import_recovery_actions where import_job_row_id = '30000000-0000-0000-0000-0000000000c1') || '|' ||
   (select count(*) from public.members where email = 'quan.ho@ucsd.edu')")"
-[ "$result" = "3|10|15|1|1" ] && ledger_ok=true || ledger_ok=false
+[ "$result" = "4|10|15|1|1" ] && ledger_ok=true || ledger_ok=false
 check "concurrent attempts leave one credit per person, one history entry, one member per email (got $result)" "$ledger_ok"
 
 cleanup

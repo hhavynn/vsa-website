@@ -58,6 +58,21 @@
 -- it. Apply manually after staging verification (scripts/test-attendance-recovery.sh,
 -- MIGRATION_CHECKLIST.md).
 
+-- ─── Guard against an earlier draft ─────────────────────────────────────────
+-- A first draft of this migration (never applied to production; checked
+-- 2026-10-08) had a destructive "move". If it is present anywhere, stop rather
+-- than leave its 10-argument writer callable beside this one.
+do $guard$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'import_recovery_actions'
+               and column_name = 'removed_attendance') then
+    raise exception 'An earlier draft of import_recovery_actions is present; reconcile it manually before applying this migration';
+  end if;
+end
+$guard$;
+drop function if exists public.admin_recover_import_row(uuid, uuid, text, uuid, uuid, uuid, jsonb, boolean, text, text);
+
 -- ─── History ────────────────────────────────────────────────────────────────
 
 create table if not exists public.import_recovery_actions (
@@ -179,7 +194,7 @@ begin
   with base as (
     select
       r.id as row_id, r.import_job_id, r.event_id, r.source_row_index, r.decision,
-      r.attendance_member_id, r.matched_member_id, r.display_name, r.csv_email, r.csv_college, r.csv_year,
+      r.attendance_member_id, r.matched_member_id, r.created_member_id, r.display_name, r.csv_email, r.csv_college, r.csv_year,
       r.match_details as md, j.status as job_status, j.created_at as job_created_at,
       lower(trim(regexp_replace(coalesce(r.display_name, ''), '[^A-Za-z ]', '', 'g'))) as norm_name,
       lower(trim(coalesce(r.csv_email, ''))) as norm_email,
@@ -255,7 +270,7 @@ begin
   -- Latest history entry per row, and whether the member it credited still has
   -- the attendance (an admin can remove it later in Admin Members).
   latest_action as (
-    select ra.import_job_row_id as row_id, ra.member_id
+    select ra.import_job_row_id as row_id, ra.member_id, ra.from_member_id, ra.outcome
     from public.import_recovery_actions ra
     where ra.resulting_status in ('recovered', 'investigating') and ra.member_id is not null
       and not exists (select 1 from public.import_recovery_actions n where n.previous_action_id = ra.id)
@@ -306,7 +321,11 @@ begin
         and split_part(lower(trim(mm.email)), '@', 2) ~ '(^|\.)ucsd\.edu$', false),
       'year_differs', coalesce(b.norm_year <> '' and coalesce(mm.year, '') <> '' and lower(trim(mm.year)) <> b.norm_year, false),
       'college_differs', coalesce(b.norm_college <> '' and coalesce(mm.college, '') <> '' and lower(trim(mm.college)) <> b.norm_college, false),
-      'recovered_credit_present', case when la.row_id is null then null else lca.member_id is not null end
+      'recovered_credit_present', case when la.row_id is null then null else lca.member_id is not null end,
+      -- An investigation resolved as "original also attended" claims that credit stays.
+      'original_credit_present', case when la.outcome = 'original_attended' then oca.member_id is not null end,
+      'created_member_id', b.created_member_id,
+      'candidate_member_ids', case when jsonb_typeof(b.md -> 'candidate_member_ids') = 'array' then b.md -> 'candidate_member_ids' else '[]'::jsonb end
     ) order by b.job_created_at, b.import_job_id, b.source_row_index), '[]'::jsonb)
   into v_result
   from base b
@@ -322,7 +341,8 @@ begin
   left join member_emails me on b.norm_email <> '' and me.norm_email = b.norm_email
   left join name_counts nc on b.norm_name <> '' and nc.norm_name = b.norm_name
   left join latest_action la on la.row_id = b.row_id
-  left join public.member_event_attendance lca on lca.member_id = la.member_id and lca.event_id = b.event_id;
+  left join public.member_event_attendance lca on lca.member_id = la.member_id and lca.event_id = b.event_id
+  left join public.member_event_attendance oca on oca.member_id = la.from_member_id and oca.event_id = b.event_id;
 
   return v_result;
 end;
@@ -443,11 +463,14 @@ begin
   -- A recovered (or investigating) finding reopens only when the ledger no longer
   -- holds the credit it recorded, i.e. someone removed it in Admin Members. Then
   -- the history would otherwise claim a credit that does not exist.
-  if p_action = 'reopen' and not (
+  if p_action = 'reopen' and not coalesce(
        v_status in ('dismissed', 'needs_info')
        or (v_status in ('recovered', 'investigating') and v_latest.member_id is not null
            and not exists (select 1 from public.member_event_attendance a
-                           where a.member_id = v_latest.member_id and a.event_id = v_row.event_id))) then
+                           where a.member_id = v_latest.member_id and a.event_id = v_row.event_id))
+       or (coalesce(v_latest.outcome, '') = 'original_attended'
+           and not exists (select 1 from public.member_event_attendance a
+                           where a.member_id = v_latest.from_member_id and a.event_id = v_row.event_id)), false) then
     raise exception 'This finding cannot be reopened: its recorded credit is still in place. Change that attendance in Admin Members.'
       using errcode = 'P0001', hint = 'finding_closed';
   end if;
@@ -484,12 +507,14 @@ begin
     if p_member_id is null then
       raise exception 'Choose the confirmed member' using errcode = 'P0001';
     end if;
-    -- Member lock first (see the insert below); never lock the members row here,
-    -- or the points trigger's UPDATE of that row would deadlock with a second
-    -- recovery for the same member.
+    -- Member advisory lock first, then the members row: two recoveries for one
+    -- member queue on the advisory lock and never deadlock on the row.
     perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || p_member_id::text, 0));
+    -- Then the members row itself: if another writer (importer, Admin Members)
+    -- has just changed this member's attendance, wait for it to commit, so the
+    -- points trigger below recalculates from a snapshot that includes it.
     select m.id, trim(m.first_name || ' ' || m.last_name) into v_member_id, v_member_name
-    from public.members m where m.id = p_member_id;
+    from public.members m where m.id = p_member_id for no key update;
     if not found then
       raise exception 'The selected member no longer exists' using errcode = 'P0001';
     end if;
@@ -544,8 +569,11 @@ begin
         using errcode = 'P0001', hint = 'original_missing';
     end if;
     perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || p_member_id::text, 0));
+    -- Then the members row itself: if another writer (importer, Admin Members)
+    -- has just changed this member's attendance, wait for it to commit, so the
+    -- points trigger below recalculates from a snapshot that includes it.
     select m.id, trim(m.first_name || ' ' || m.last_name) into v_member_id, v_member_name
-    from public.members m where m.id = p_member_id;
+    from public.members m where m.id = p_member_id for no key update;
     if not found then
       raise exception 'The selected member no longer exists' using errcode = 'P0001';
     end if;

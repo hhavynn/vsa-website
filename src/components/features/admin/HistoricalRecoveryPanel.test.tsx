@@ -40,6 +40,7 @@ const base: RecoveryFindingRecord = {
   matched_member_attended: false, email_member_attended: false, candidate_attended: false, resolved_elsewhere: false,
   duplicate_twin_attended: null, email_in_members: false, exact_name_members: 0, email_conflict: false,
   email_conflict_both_school: false, year_differs: false, college_differs: false, recovered_credit_present: null,
+  original_credit_present: null, created_member_id: null, candidate_member_ids: [],
 };
 const wrongMatch: RecoveryFindingRecord = {
   ...base, row_id: 'row-wrong', source_row_index: 7, decision: 'matched', display_name: 'Kevin Lee', csv_email: 'kevlee@ucsd.edu',
@@ -225,6 +226,9 @@ it('creates a separate member only after confirming they differ from every sugge
 });
 
 it('corrects a wrong match without removing the original credit, and flags it for investigation', async () => {
+  // Another row of the same import names Kevin Le as a duplicate: counter-evidence he attended.
+  const twin: RecoveryFindingRecord = { ...base, row_id: 'row-twin', source_row_index: 9, decision: 'skipped_duplicate', display_name: 'Kevin Le', matched_member_id: 'm-le' };
+  repo.listFindingRecords.mockResolvedValue([base, wrongMatch, otherEvent, recovered, twin]);
   renderPanel();
   const dialog = await openFinding('Kevin Lee');
   expect(await within(dialog).findByText('Credited to')).toBeInTheDocument();
@@ -234,6 +238,8 @@ it('corrects a wrong match without removing the original credit, and flags it fo
   fireEvent.click(await within(dialog).findByRole('radio', { name: /Kevin Lee/ }));
   expect(within(dialog).queryByRole('radio', { name: /Remove it/ })).not.toBeInTheDocument();
   expect(within(dialog).getByText(/keeps their attendance/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/Other import rows for this event also name Kevin Le/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/sheet row 11 · skipped duplicate/)).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('checkbox', { name: /sheet row belongs/ }));
   fireEvent.click(within(dialog).getByRole('button', { name: 'Review changes' }));
   await within(dialog).findByText('Exact database changes');

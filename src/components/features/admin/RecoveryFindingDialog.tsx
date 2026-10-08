@@ -22,7 +22,9 @@ import {
   kindLabel,
   memberName,
   newRequestId,
+  RecoveryFindingRecord,
   relatedMemberIds,
+  rowsNamingMember,
   splitDisplayName,
   validatePlan,
 } from '../../../lib/attendanceRecovery';
@@ -146,8 +148,11 @@ export function RecoveryFindingDialog({
   onClose,
   onRecovered,
   onOpenMemberAttendance,
+  allRecords = [],
 }: {
   finding: RecoveryFinding;
+  /** Every audited row, to show other rows that name the original member. */
+  allRecords?: readonly RecoveryFindingRecord[];
   onClose: () => void;
   onRecovered: (result: RecoverResult) => void | Promise<void>;
   /** Opens the Admin Members attendance editor, the only place attendance is removed. */
@@ -183,6 +188,22 @@ export function RecoveryFindingDialog({
     { enabled: record.exact_name_members > 0 && !!record.display_name, staleTime: 0 },
   );
   const creditedMember = related.data?.find((member) => member.id === record.attendance_member_id) ?? null;
+  const counterRows = useMemo(
+    () => rowsNamingMember(allRecords, record.event_id, record.attendance_member_id, record.row_id),
+    [allRecords, record.event_id, record.attendance_member_id, record.row_id],
+  );
+  const counterEvidence = counterRows.length > 0 && creditedMember && (
+    <div className="rounded border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+      <p className="font-medium">Other import rows for this event also name {memberName(creditedMember)}. They may have attended:</p>
+      <ul className="mt-1 list-disc pl-4">
+        {counterRows.map((row) => (
+          <li key={row.row_id}>
+            {row.display_name || 'Unnamed row'}{row.csv_email ? ` · ${row.csv_email}` : ''} · import {formatDate(row.job_created_at)}, sheet row {row.source_row_index + 2} · {row.decision.replace(/_/g, ' ')}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
   const candidates = useMemo(() => {
     const target = normalizedName(record.display_name);
     const seen = new Set<string>();
@@ -542,6 +563,7 @@ export function RecoveryFindingDialog({
                     <div className="mt-1"><RecentAttendance memberId={member.id} /></div>
                   </div>
                 )}
+                {counterEvidence}
                 <p className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-2.5 text-xs text-[var(--color-text2)]">
                   {creditedMember ? memberName(creditedMember) : 'The original member'} keeps their attendance. The import cannot prove
                   that credit came only from this row, and they may have attended too, so it is flagged for investigation instead
@@ -567,6 +589,7 @@ export function RecoveryFindingDialog({
                     </button>
                   )}
                 </div>
+                {counterEvidence}
                 <fieldset className="space-y-1.5 text-sm text-[var(--color-text)]">
                   <legend className={labelCls}>What did the investigation find?</legend>
                   {RESOLVE_REASONS.map((option) => (

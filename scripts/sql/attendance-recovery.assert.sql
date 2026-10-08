@@ -422,6 +422,26 @@ select pg_temp.check_true('import rows were never modified',
   (select count(*) from public.import_job_rows where decision = 'review') = 10
   and (select attendance_member_id from public.import_job_rows where id = '30000000-0000-0000-0000-000000000004') = '10000000-0000-0000-0000-000000000005');
 
+select pg_temp.check_true('an open finding with no history cannot be "reopened"',
+  (pg_temp.admin($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000010', 'reopen')$q$) ->> 'hint') = 'finding_closed');
+-- Row 8 was resolved "original attended" (member 3 kept the credit). If that credit
+-- is removed later, the finding says so and may reopen.
+select pg_temp.check_true('an "original attended" resolution cannot reopen while that credit exists',
+  (select (f ->> 'original_credit_present')::boolean from jsonb_array_elements(pg_temp.admin('select public.admin_import_recovery_findings()') -> 'result') f
+       where f ->> 'row_id' = '30000000-0000-0000-0000-000000000008') is true
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'reopen', %L)$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000008'))) ->> 'hint') = 'finding_closed');
+select pg_temp.admin($q$delete from public.member_event_attendance where member_id = '10000000-0000-0000-0000-000000000003'
+  and event_id = '80000000-0000-0000-0000-000000000001' returning to_jsonb(id)$q$);
+select pg_temp.check_true('once the kept original credit is removed, the finding flags it and may reopen',
+  (select (f ->> 'original_credit_present')::boolean from jsonb_array_elements(pg_temp.admin('select public.admin_import_recovery_findings()') -> 'result') f
+       where f ->> 'row_id' = '30000000-0000-0000-0000-000000000008') is false
+  and (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000008', 'reopen', %L)$q$,
+     pg_temp.latest('30000000-0000-0000-0000-000000000008'))) -> 'result' ->> 'status') = 'open');
+select pg_temp.check_true('findings expose candidate and created member ids for counter-evidence',
+  (select f -> 'candidate_member_ids' from jsonb_array_elements(pg_temp.admin('select public.admin_import_recovery_findings()') -> 'result') f
+       where f ->> 'row_id' = '30000000-0000-0000-0000-000000000001') = '["10000000-0000-0000-0000-000000000001", "10000000-0000-0000-0000-000000000002"]'::jsonb);
+
 -- Findings stay accurate when a recovered credit is later removed --------------
 select pg_temp.check_true('a recovered finding cannot be reopened while its credit is in place',
   (pg_temp.admin(format($q$select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-000000000001', 'reopen', %L)$q$,

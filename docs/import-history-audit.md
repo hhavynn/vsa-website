@@ -115,6 +115,10 @@ Before any write the dialog shows:
 - the selected member with email, college, year, totals and recent attendance, and whether they already attended
 - the exact database changes
 
+When correcting a match or resolving an investigation, the dialog also lists every other audited row
+for the event that names the originally credited member: matched, created, credited, a duplicate, or a
+candidate. That is evidence they may have attended.
+
 Candidates are listed but never preselected. The admin must confirm identity (or, for Create, that the
 attendee differs from every suggestion, including same-name members the audit row did not list) and then
 confirm the changes. Identity actions stay disabled until every member lookup has loaded; a failed lookup
@@ -142,16 +146,21 @@ then cascades to the new row.
 
 **No double credit.** `UNIQUE(member_id, event_id)` plus `ON CONFLICT DO NOTHING`: a destination who
 already attended gets nothing ("already recorded"). A finding is recovered once. It can be reopened only
-if the credit it recorded no longer exists, which the panel flags.
+if the ledger no longer matches what it recorded, which the panel flags:
+- the credit it added was later removed, or
+- an investigation resolved as "original also attended" and that original credit was later removed.
 
 **Concurrency and retries.** The function:
 - locks the import row and rejects a caller whose view of the history is stale (the dialog keeps the
   state it opened with)
 - stores a client request id and a fingerprint of the parameters, so a retry returns the original result
   without writing and a reused id with different parameters is refused
-- takes an advisory lock per member before writing attendance. Two recoveries for one member, on any
-  events, then never compute that member's total from snapshots that miss each other's rows. Without the
-  lock, a two-session test left a member at 7 points / 1 event instead of 17 / 2.
+- takes an advisory lock per member, then locks that member's row, before writing attendance:
+  - Two recoveries for one member, on any events, queue on the advisory lock and never compute the total
+    from snapshots that miss each other's rows. Without it, a two-session test left a member at
+    7 points / 1 event instead of 17 / 2.
+  - A recovery that starts while the importer or Admin Members is writing the same member waits for that
+    write to commit. Without the row lock: 10 / 1 instead of 17 / 2.
 - serializes new-member emails with another advisory lock
 
 These locks cover this function only. The importer and Admin Members take neither, and `members.email`
@@ -175,7 +184,9 @@ Admins can also insert into that log directly, so `import_recovery_actions` is t
 `import_job_rows` is never modified.
 
 **Safe before the frontend.** The migration only adds objects and changes nothing existing. The current
-frontend does not reference them.
+frontend does not reference them. It refuses to run if an earlier draft's table (the destructive
+`removed_attendance` shape) exists, and drops that draft's 10-argument function if present. Production had
+neither as of 2026-10-08 (read-only check).
 
 **Verification.** `bash scripts/test-attendance-recovery.sh` runs the migration on a disposable local
 PostgreSQL cluster. The cluster has the production bodies of `sync_member_points`,
@@ -196,12 +207,21 @@ row by its import-time state. The Historical Recovery panel is the source of tru
 
 ## Remaining limitations
 
-- Pre-existing trigger race, not introduced here: `recalculate_member_points` computes the sum in the same
-  `UPDATE` that waits for the member row lock. A recovery that commits while the importer or the Admin
-  Members editor writes the same member's attendance on another event can leave that member's cached total
-  short until their next attendance change. Recovery-versus-recovery is serialized. The real fix is to lock
-  the member row in `sync_member_points` before recalculating, which is a protected trigger change needing
-  owner approval. Until then, do not run Historical Recovery while an import is in progress.
+- Pre-existing trigger race, not introduced here: `recalculate_member_points` computes the sum inside the
+  same `UPDATE` that waits for the member row lock. Recovery now waits for earlier writers, and other
+  recoveries wait for it. In one direction it still applies: the importer or Admin Members writes a member
+  on another event while a recovery for that member is committing. That writer's own trigger can then
+  leave the cached total short, until that member's next attendance change.
+
+  The real fix is to lock the member row in `sync_member_points` before recalculating. That is a protected
+  trigger change needing owner approval. Until then, do not run Historical Recovery while an import is in
+  progress. Detect drift (read-only) with:
+
+  ```sql
+  select m.id, m.points, m.events_attended, coalesce(sum(a.points_earned), 0) as ledger_points, count(a.id) as ledger_events
+  from public.members m left join public.member_event_attendance a on a.member_id = m.id
+  group by m.id having m.points <> coalesce(sum(a.points_earned), 0) or m.events_attended <> count(a.id);
+  ```
 - Admins can edit `import_job_rows` directly (RLS allows it), so the evidence a finding shows is only as
   trustworthy as admin conduct. Recovery never deletes based on it.
 

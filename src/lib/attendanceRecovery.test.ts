@@ -12,6 +12,7 @@ import {
   latestActionByRow,
   newRequestId,
   relatedMemberIds,
+  rowsNamingMember,
   splitDisplayName,
   validatePlan,
 } from './attendanceRecovery';
@@ -55,6 +56,9 @@ function record(overrides: Partial<RecoveryFindingRecord> = {}): RecoveryFinding
     year_differs: false,
     college_differs: false,
     recovered_credit_present: null,
+    original_credit_present: null,
+    created_member_id: null,
+    candidate_member_ids: [],
     ...overrides,
   };
 }
@@ -167,6 +171,12 @@ describe('allowedActions', () => {
   it('only resolves a finding under investigation; never removes attendance', () => {
     const investigating = action({ action: 'reassign', resulting_status: 'investigating', outcome: 'correct_member_credited' });
     expect(allowedActions(one(record({ recovered_credit_present: true }), [investigating]))).toEqual(['resolve_investigation']);
+  });
+
+  it('lets an "original also attended" resolution reopen once that kept credit is gone', () => {
+    const resolved = action({ action: 'resolve_investigation', outcome: 'original_attended', from_member_id: 'm1', member_id: 'm2' });
+    expect(allowedActions(one(record({ recovered_credit_present: true, original_credit_present: true }), [resolved]))).toEqual([]);
+    expect(allowedActions(one(record({ recovered_credit_present: true, original_credit_present: false }), [resolved]))).toEqual(['reopen']);
   });
 
   it('lets a recovered finding reopen only once its recorded credit is gone from the ledger', () => {
@@ -282,5 +292,20 @@ describe('helpers', () => {
       record({ matched_member_id: 'm1', attendance_member_id: 'm1' }),
       { candidate_member_ids: ['m1', 'm2'], suggested_member_id: 'm3' },
     )).toEqual(['m1', 'm2', 'm3']);
+  });
+});
+
+describe('rowsNamingMember', () => {
+  it('finds other rows for the event that name the member in any role, including duplicates and candidates', () => {
+    const records = [
+      record({ row_id: 'wrong', attendance_member_id: 'm-bao', matched_member_id: 'm-bao', decision: 'matched' }),
+      record({ row_id: 'dup', decision: 'skipped_duplicate', matched_member_id: 'm-bao' }),
+      record({ row_id: 'cand', candidate_member_ids: ['m-x', 'm-bao'] }),
+      record({ row_id: 'created', created_member_id: 'm-bao', decision: 'created' }),
+      record({ row_id: 'other-event', event_id: 'event-2', matched_member_id: 'm-bao' }),
+      record({ row_id: 'unrelated', matched_member_id: 'm-y' }),
+    ];
+    expect(rowsNamingMember(records, 'event-1', 'm-bao', 'wrong').map((r) => r.row_id)).toEqual(['dup', 'cand', 'created']);
+    expect(rowsNamingMember(records, null, 'm-bao', 'wrong')).toEqual([]);
   });
 });

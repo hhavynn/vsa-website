@@ -227,6 +227,7 @@ export function HistoricalRecoveryPanel() {
           onClose={() => setOpenRowId(null)}
           onRecovered={refreshAfterRecovery}
           onOpenMemberAttendance={setAttendanceMemberId}
+          allRecords={records.data}
         />
       )}
       {attendanceMemberId && (
@@ -254,6 +255,11 @@ function FindingRow({ finding, onOpen }: { finding: RecoveryFinding; onOpen: () 
           {record.event_name ?? 'Event'} · {formatDate(record.event_date)} · import {formatDate(record.job_created_at)} · row {finding.sheetRow}
           {record.csv_email ? ` · ${record.csv_email}` : ''}
         </p>
+        {record.original_credit_present === false && (
+          <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+            The original credit this investigation kept was later removed in Admin Members. Review and reopen if needed.
+          </p>
+        )}
         {record.recovered_credit_present === false && (
           <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
             The credit recorded here was later removed in Admin Members. Review and reopen if needed.
