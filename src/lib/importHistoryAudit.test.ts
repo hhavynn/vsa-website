@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import {
   buildReconciliationReport,
+  manualDecisionFromDetails,
   classifyHistoricalRow,
   flaggedRowsToCsv,
   HistoricalJobSummary,
@@ -19,20 +20,24 @@ function row(overrides: Partial<HistoricalRowEvidence> = {}): HistoricalRowEvide
     sourceRowIndex: seq,
     decision: 'review',
     matchReason: 'ambiguous_match',
+    finalReason: 'skipped_unresolved_review',
     matchMethod: 'fuzzy_name',
-    manualOverride: null,
+    manualDecision: null,
     nameScore: 85,
     candidateCount: 1,
     canMarkNew: false,
     hasCsvEmail: true,
     attendanceMemberId: null,
     attendanceRecordExists: null,
+    matchedMemberAttended: false,
     emailMemberAttended: false,
     candidateAttended: false,
     resolvedElsewhere: false,
+    duplicateTwinAttended: null,
     emailInMembers: false,
     exactNameMembers: 0,
     emailConflictWithMatched: false,
+    emailConflictBothSchool: false,
     yearDiffers: false,
     collegeDiffers: false,
     ...overrides,
@@ -53,13 +58,28 @@ describe('classifyHistoricalRow', () => {
     expect(result.reason).not.toMatch(/confirmed/i);
   });
 
-  it('treats a skipped duplicate row as legitimate', () => {
-    const result = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'duplicate_row' }));
-    expect(result).toMatchObject({ category: 'legitimate', kind: 'duplicate_row' });
+  it('treats a skipped duplicate row as legitimate only when its twin left attendance by email', () => {
+    const byEmail = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'duplicate_row', duplicateTwinAttended: 'email' }));
+    expect(byEmail).toMatchObject({ category: 'legitimate', kind: 'duplicate_row' });
+    const byName = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'duplicate_row', duplicateTwinAttended: 'name' }));
+    expect(byName).toMatchObject({ category: 'insufficient_evidence', kind: 'duplicate_name_only' });
+    const neither = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'duplicate_row' }));
+    expect(neither).toMatchObject({ category: 'insufficient_evidence', kind: 'skipped_without_attendance' });
+  });
+
+  it('treats an explicit admin skip as intentional, in either audit format', () => {
+    expect(classifyHistoricalRow(row({ finalReason: 'skipped_by_admin' }))).toMatchObject({ category: 'legitimate', kind: 'intentional_skip' });
+    expect(classifyHistoricalRow(row({ manualDecision: 'skip' }))).toMatchObject({ category: 'legitimate', kind: 'intentional_skip' });
+  });
+
+  it('does not treat a same-name or uncredited row elsewhere as resolution', () => {
+    // resolvedElsewhere is email + ledger only; without it a name twin proves nothing.
+    expect(classifyHistoricalRow(row({ resolvedElsewhere: false })).category).toBe('suspected_missing');
+    expect(classifyHistoricalRow(row({ resolvedElsewhere: true }))).toMatchObject({ category: 'legitimate', kind: 'already_recorded' });
   });
 
   it('treats a skipped row whose member already has attendance as already recorded', () => {
-    const skipped = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'already_imported' }));
+    const skipped = classifyHistoricalRow(row({ decision: 'skipped_duplicate', matchReason: 'already_imported', matchedMemberAttended: true }));
     expect(skipped).toMatchObject({ category: 'legitimate', kind: 'already_recorded' });
     const unresolved = classifyHistoricalRow(row({ emailMemberAttended: true }));
     expect(unresolved).toMatchObject({ category: 'legitimate', kind: 'already_recorded' });
@@ -90,7 +110,7 @@ describe('classifyHistoricalRow', () => {
   it('flags a fuzzy match with a conflicting email as a possible incorrect match, high priority', () => {
     const result = classifyHistoricalRow(row({
       decision: 'matched', matchMethod: 'fuzzy_name', attendanceMemberId: 'm-1', attendanceRecordExists: true,
-      emailConflictWithMatched: true, nameScore: 95,
+      emailConflictWithMatched: true, emailConflictBothSchool: true, nameScore: 95,
     }));
     expect(result).toMatchObject({ category: 'possible_incorrect_match', kind: 'email_conflict_match', priority: 'high' });
     expect(result.reason).toMatch(/not proof/i);
@@ -98,13 +118,56 @@ describe('classifyHistoricalRow', () => {
 
   it('flags a weak-name force match at medium and leaves a clean match alone', () => {
     const weak = classifyHistoricalRow(row({
-      decision: 'matched', manualOverride: 'force-match', attendanceMemberId: 'm-1', attendanceRecordExists: true, nameScore: 82,
+      decision: 'matched', manualDecision: 'match', attendanceMemberId: 'm-1', attendanceRecordExists: true, nameScore: 82,
     }));
     expect(weak).toMatchObject({ category: 'possible_incorrect_match', kind: 'weak_name_match', priority: 'medium' });
     const clean = classifyHistoricalRow(row({
       decision: 'matched', matchMethod: 'email', attendanceMemberId: 'm-1', attendanceRecordExists: true, nameScore: 100,
     }));
     expect(clean.category).toBe('no_issue');
+  });
+
+  it('scores a legacy exact-name match whose email or college disagrees', () => {
+    const base = { decision: 'matched' as const, matchMethod: 'exact_name', nameScore: 100, attendanceMemberId: 'm-1', attendanceRecordExists: true };
+    expect(classifyHistoricalRow(row({ ...base, emailConflictWithMatched: true, emailConflictBothSchool: true }))).toMatchObject({
+      category: 'possible_incorrect_match', kind: 'email_conflict_match', priority: 'high',
+    });
+    // School vs personal address: usually one student with two emails, so lower priority.
+    expect(classifyHistoricalRow(row({ ...base, emailConflictWithMatched: true }))).toMatchObject({
+      category: 'possible_incorrect_match', kind: 'email_conflict_match', priority: 'medium',
+    });
+    expect(classifyHistoricalRow(row({ ...base, collegeDiffers: true }))).toMatchObject({
+      category: 'possible_incorrect_match', kind: 'context_mismatch_match', priority: 'low',
+    });
+    // A changed year alone is normal for a returning student matched by exact name.
+    expect(classifyHistoricalRow(row({ ...base, yearDiffers: true })).category).toBe('no_issue');
+  });
+
+  it('scores a post-#518 admin match among several candidates', () => {
+    const result = classifyHistoricalRow(row({
+      decision: 'matched', matchMethod: 'fuzzy_name', manualDecision: 'match', nameScore: 95, candidateCount: 3,
+      attendanceMemberId: 'm-1', attendanceRecordExists: true,
+    }));
+    expect(result).toMatchObject({ category: 'possible_incorrect_match', priority: 'low' });
+    expect(result.reason).toMatch(/admin-chosen/);
+  });
+
+  it('accepts a matched row that credits nothing only when the member has ledger attendance', () => {
+    const base = { decision: 'matched' as const, matchMethod: 'email', finalReason: 'duplicate_member_in_file', attendanceMemberId: null };
+    expect(classifyHistoricalRow(row({ ...base, matchedMemberAttended: true }))).toMatchObject({ category: 'legitimate', kind: 'duplicate_row' });
+    expect(classifyHistoricalRow(row({ ...base, matchedMemberAttended: false }))).toMatchObject({ category: 'confirmed_missing', kind: 'attendance_row_absent' });
+  });
+});
+
+describe('manualDecisionFromDetails', () => {
+  it('reads the current manual_decision object and the legacy manual_override string', () => {
+    expect(manualDecisionFromDetails({ manual_decision: { kind: 'match', memberId: 'm-1' } })).toBe('match');
+    expect(manualDecisionFromDetails({ manual_decision: { kind: 'skip' } })).toBe('skip');
+    expect(manualDecisionFromDetails({ manual_decision: null, manual_override: 'force-match' })).toBe('match');
+    expect(manualDecisionFromDetails({ manual_override: 'mark-new' })).toBe('new');
+    expect(manualDecisionFromDetails({ manual_override: null })).toBeNull();
+    expect(manualDecisionFromDetails(null)).toBeNull();
+    expect(manualDecisionFromDetails([])).toBeNull();
   });
 });
 
@@ -116,7 +179,7 @@ describe('buildReconciliationReport', () => {
   ];
   const rows = [
     row({ importJobId: 'job-1' }),
-    row({ importJobId: 'job-1', decision: 'skipped_duplicate', matchReason: 'duplicate_row' }),
+    row({ importJobId: 'job-1', decision: 'skipped_duplicate', matchReason: 'duplicate_row', duplicateTwinAttended: 'email' }),
     row({ importJobId: 'job-2', decision: 'matched', matchMethod: 'email', attendanceMemberId: 'm-2', attendanceRecordExists: true, nameScore: 100 }),
     row({ importJobId: 'job-2', matchReason: null }),
   ];

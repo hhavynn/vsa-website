@@ -28,11 +28,36 @@ export type HistoricalKind =
   | 'candidate_already_attended'
   | 'already_recorded'
   | 'duplicate_row'
+  | 'duplicate_name_only'
+  | 'skipped_without_attendance'
+  | 'intentional_skip'
+  | 'invalid_row'
   | 'email_conflict_match'
   | 'weak_name_match'
   | 'context_mismatch_match'
   | 'missing_audit_metadata'
   | 'ok';
+
+/** An admin's explicit per-row choice, from either audit format. */
+export type ManualDecision = 'match' | 'new' | 'skip';
+
+/**
+ * Reads the admin decision from match_details. Rows written since #518 carry
+ * `manual_decision: { kind: 'match' | 'new' | 'skip' }`; older rows carry
+ * `manual_override: 'force-match' | 'mark-new'`.
+ */
+export function manualDecisionFromDetails(details: unknown): ManualDecision | null {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return null;
+  const record = details as Record<string, unknown>;
+  const current = record.manual_decision;
+  if (current && typeof current === 'object' && !Array.isArray(current)) {
+    const kind = (current as Record<string, unknown>).kind;
+    if (kind === 'match' || kind === 'new' || kind === 'skip') return kind;
+  }
+  if (record.manual_override === 'force-match') return 'match';
+  if (record.manual_override === 'mark-new') return 'new';
+  return null;
+}
 
 /** One audit row plus the evidence the SQL/DB lookup gathered. Booleans only; no PII. */
 export interface HistoricalRowEvidence {
@@ -43,28 +68,39 @@ export interface HistoricalRowEvidence {
   decision: 'matched' | 'created' | 'skipped_duplicate' | 'review' | 'error';
   /** match_details.match_reason; null on the earliest audit rows. */
   matchReason: string | null;
+  /** match_details.final_reason, e.g. skipped_by_admin, duplicate_member_in_file (since #518). */
+  finalReason: string | null;
   matchMethod: string | null;
-  manualOverride: 'force-match' | 'mark-new' | null;
+  manualDecision: ManualDecision | null;
   nameScore: number | null;
   candidateCount: number;
   /** match_details.can_mark_new; null when not recorded. */
   canMarkNew: boolean | null;
   hasCsvEmail: boolean;
   attendanceMemberId: string | null;
-  /** For matched/created rows: does member_event_attendance still hold that pair? null = not applicable. */
+  /** For rows that credited a member: does member_event_attendance still hold that pair? null = not applicable. */
   attendanceRecordExists: boolean | null;
-  /** Some member with this row's email has attendance for the event. */
+  /** The member the importer resolved this row to has attendance for the event in the ledger. */
+  matchedMemberAttended: boolean;
+  /** Some member whose stored email equals this row's email has attendance for the event. */
   emailMemberAttended: boolean;
-  /** A candidate / best-match member has attendance for the event. */
+  /** A near-name candidate (or the suggested member) has attendance. Similarity only; not identity. */
   candidateAttended: boolean;
-  /** Another audit row for the same event resolved the same email or name. */
+  /**
+   * Another row for the same event, in a completed job, with the SAME EMAIL, credited a member who
+   * still has attendance in the ledger. Names alone never count: two people can share one.
+   */
   resolvedElsewhere: boolean;
+  /** For skipped duplicates: an earlier row of the same file with ledger attendance, matched by email or by name only. */
+  duplicateTwinAttended: 'email' | 'name' | null;
   /** Some member already carries this row's email. */
   emailInMembers: boolean;
   /** Members whose normalized full name equals this row's name. */
   exactNameMembers: number;
   /** Matched member's stored email differs from the row's. */
   emailConflictWithMatched: boolean;
+  /** Both differing emails are UCSD addresses: one person rarely has two, so this is the stronger signal. */
+  emailConflictBothSchool: boolean;
   yearDiffers: boolean;
   collegeDiffers: boolean;
 }
@@ -114,16 +150,37 @@ function result(
   };
 }
 
+/** Identity-strong evidence that this person's attendance is already in the ledger. */
+function personAlreadyRecorded(row: HistoricalRowEvidence): boolean {
+  return row.emailMemberAttended || row.resolvedElsewhere;
+}
+
+function matchBasis(row: HistoricalRowEvidence): string {
+  if (row.manualDecision === 'match') return 'an admin-chosen match';
+  if (row.matchMethod === 'exact_name') return 'an automatic exact-name match';
+  return 'a fuzzy match';
+}
+
 function classifyRecorded(row: HistoricalRowEvidence): ClassifiedRow {
   if (row.decision === 'created' && !row.attendanceMemberId) {
-    if (row.emailMemberAttended || row.resolvedElsewhere) {
+    if (personAlreadyRecorded(row)) {
       return result(row, 'legitimate', 'already_recorded', 'low',
-        'Row was meant to create a member but nothing was linked; the same person has attendance for this event from another row.',
+        'Row was meant to create a member but nothing was linked; a member with this email has attendance for the event.',
         'None.');
     }
     return result(row, 'confirmed_missing', 'created_row_without_member', 'high',
-      'Row was recorded as a new member, but no member or attendance was linked and no member with this email or name has attendance for the event.',
+      'Row was recorded as a new member, but no member or attendance was linked and no member with this email has attendance for the event.',
       'Review the stored source row, then create the member (or link an existing one) and add attendance once.');
+  }
+  if (row.decision === 'matched' && !row.attendanceMemberId) {
+    // Since #518: a second row resolving to a member another row already credits writes nothing itself.
+    if (row.matchedMemberAttended) {
+      return result(row, 'legitimate', 'duplicate_row', 'low',
+        'Another row in this file credited the same member, who has attendance for the event.', 'None.');
+    }
+    return result(row, 'confirmed_missing', 'attendance_row_absent', 'high',
+      'The row resolved to a member, but neither it nor any other row left attendance for that member in the ledger.',
+      'Check Admin Members history for deletion or merge before restoring.');
   }
   if (row.attendanceMemberId && row.attendanceRecordExists === false) {
     return result(row, 'confirmed_missing', 'attendance_row_absent', 'high',
@@ -131,35 +188,65 @@ function classifyRecorded(row: HistoricalRowEvidence): ClassifiedRow {
       'Check Admin Members history for deletion or merge before restoring.');
   }
 
+  // Only rows the importer did not resolve by a unique email can carry identity risk. Before #518 a
+  // unique exact name auto-matched even when the email or college disagreed, so those are scored too.
+  const guessed = row.matchMethod === 'fuzzy_name' || row.manualDecision === 'match';
+  const nameBased = guessed || row.matchMethod === 'exact_name';
   let score = 0;
   const notes: string[] = [];
-  const guessed = row.matchMethod === 'fuzzy_name' || row.manualOverride === 'force-match';
-  if (guessed && row.emailConflictWithMatched) { score += 3; notes.push("the row's email differs from the matched member's email"); }
+  if (nameBased && row.emailConflictWithMatched) {
+    // A school address against a personal one is usually the same student; two school addresses rarely are.
+    score += row.emailConflictBothSchool ? 3 : 2;
+    notes.push(row.emailConflictBothSchool ? "the row's school email differs from the matched member's school email" : "the row's email differs from the matched member's email");
+  }
   if (guessed && row.nameScore !== null && row.nameScore < HIGH_NAME_SCORE) { score += 2; notes.push('the name similarity was weak'); }
   if (guessed && row.yearDiffers) { score += 1; notes.push('the academic year differs'); }
-  if (guessed && row.collegeDiffers) { score += 1; notes.push('the college differs'); }
-  if (row.manualOverride === 'force-match' && row.candidateCount > 1) { score += 1; notes.push('several members were candidates'); }
+  if (nameBased && row.collegeDiffers) { score += 1; notes.push('the college differs'); }
+  if (row.manualDecision === 'match' && row.candidateCount > 1) { score += 1; notes.push('several members were candidates'); }
 
   if (score === 0) return result(row, 'no_issue', 'ok', 'low', 'No conflicting identity evidence.', 'None.');
 
-  const kind: HistoricalKind = row.emailConflictWithMatched ? 'email_conflict_match'
-    : row.nameScore !== null && row.nameScore < HIGH_NAME_SCORE ? 'weak_name_match'
+  const kind: HistoricalKind = nameBased && row.emailConflictWithMatched ? 'email_conflict_match'
+    : guessed && row.nameScore !== null && row.nameScore < HIGH_NAME_SCORE ? 'weak_name_match'
     : 'context_mismatch_match';
   const priority: HistoricalPriority = score >= 3 ? 'high' : score === 2 ? 'medium' : 'low';
   return result(row, 'possible_incorrect_match', kind, priority,
-    `Attendance went to an existing member on a ${row.manualOverride === 'force-match' ? 'manual force match' : 'fuzzy match'}, and ${notes.join('; ')}. This is not proof of a wrong match.`,
+    `Attendance went to an existing member on ${matchBasis(row)}, and ${notes.join('; ')}. This is not proof of a wrong match.`,
     'Compare the stored source row with the member profile; correct only if they are clearly different people.');
 }
 
+function classifySkippedDuplicate(row: HistoricalRowEvidence): ClassifiedRow {
+  if (row.matchedMemberAttended || personAlreadyRecorded(row) || row.duplicateTwinAttended === 'email') {
+    return result(row, 'legitimate', row.matchReason === 'duplicate_row' ? 'duplicate_row' : 'already_recorded', 'low',
+      'Skipped as a duplicate, and the same person has attendance for the event in the ledger.', 'None.');
+  }
+  if (row.duplicateTwinAttended === 'name') {
+    return result(row, 'insufficient_evidence', 'duplicate_name_only', 'low',
+      'Skipped because an earlier row in the same file had the same name. That row has attendance, but a shared name does not prove it is the same person.',
+      'Compare the two stored source rows; add attendance only if they are different people.');
+  }
+  return result(row, 'insufficient_evidence', 'skipped_without_attendance', 'medium',
+    'Skipped as a duplicate, but no attendance for this person exists in the ledger.',
+    'Find the row it duplicated; if that row was also skipped, review both together.');
+}
+
 function classifyUnresolved(row: HistoricalRowEvidence): ClassifiedRow {
+  if (row.finalReason === 'skipped_by_admin' || row.manualDecision === 'skip') {
+    return result(row, 'legitimate', 'intentional_skip', 'low',
+      'An admin explicitly chose to skip this row.', 'None, unless the admin’s reason is in doubt.');
+  }
+  if (row.finalReason === 'invalid_row_no_name') {
+    return result(row, 'insufficient_evidence', 'invalid_row', 'low',
+      'The row had no name, so the importer could not use it.', 'Check the stored source row for an email; otherwise nothing is recoverable.');
+  }
   if (row.matchReason === null) {
     return result(row, 'insufficient_evidence', 'missing_audit_metadata', 'medium',
       'This skipped row has no recorded match reason, so the importer’s reasoning cannot be reconstructed.',
       'Use the stored source row only; confirm identity manually.');
   }
-  if (row.emailMemberAttended || row.resolvedElsewhere) {
+  if (personAlreadyRecorded(row)) {
     return result(row, 'legitimate', 'already_recorded', 'low',
-      'The same person (by email, or by another row of this event) already has attendance for the event.',
+      'A member with this email has attendance for the event in the ledger.',
       'None.');
   }
   if (row.candidateAttended) {
@@ -193,8 +280,7 @@ export function classifyHistoricalRow(row: HistoricalRowEvidence): ClassifiedRow
     case 'created':
       return classifyRecorded(row);
     case 'skipped_duplicate':
-      return result(row, 'legitimate', row.matchReason === 'duplicate_row' ? 'duplicate_row' : 'already_recorded', 'low',
-        'Skipped because it duplicated an earlier row or the member already had attendance for the event.', 'None.');
+      return classifySkippedDuplicate(row);
     case 'review':
       return classifyUnresolved(row);
     default:
