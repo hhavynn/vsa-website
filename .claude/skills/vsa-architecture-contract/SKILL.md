@@ -30,7 +30,7 @@ Browser
        │     Edge Functions: analytics-proxy, trigger-event-image-migration,
        │                     trigger-house-event-image-migration, vsa-ai-assistant
        └─ served by → Vercel static hosting (zero-config CRA build)
-             vercel.json: security headers on all routes, immutable cache for /static,
+             vercel.json: security headers on all routes, revalidated SPA HTML,
              no-cache for index.html, SPA fallback (everything else → /index.html)
 ```
 

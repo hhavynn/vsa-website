@@ -1,6 +1,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { PageError } from "./PageError";
+import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkLoadRecovery";
 
 interface Props {
   children: ReactNode;
@@ -11,6 +12,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  reloading?: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -23,21 +25,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // ChunkLoadError = browser cached old index.html after a new deploy.
-    // Auto-reload once to fetch the fresh bundle — clears itself silently.
-    const isChunkError =
-      error.name === 'ChunkLoadError' ||
-      error.message?.includes('Loading chunk') ||
-      error.message?.includes('Failed to fetch dynamically imported module');
-
-    if (isChunkError) {
-      // Guard against reload loops: only reload if we haven't just done so
-      const lastReload = Number(sessionStorage.getItem('chunkReloadAt') ?? 0);
-      if (Date.now() - lastReload > 10_000) {
-        sessionStorage.setItem('chunkReloadAt', String(Date.now()));
-        window.location.reload();
-        return;
-      }
+    // A stale tab asking for a chunk that a newer deploy removed: reload once
+    // for the fresh bundle. A repeat inside the window falls through to the UI.
+    if (isChunkLoadError(error) && reloadOnceForChunkError()) {
+      this.setState({ reloading: true });
+      return;
     }
 
     console.error('Uncaught error:', error, errorInfo);
@@ -52,21 +44,36 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReset = () => {
+    // A rejected React.lazy import is cached, so re-rendering can never succeed.
+    if (isChunkLoadError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: undefined });
   };
 
   public render() {
     if (this.state.hasError) {
+      if (this.state.reloading) {
+        return null;
+      }
+
       if (this.props.fallback) {
         return this.props.fallback;
       }
+
+      const chunkError = isChunkLoadError(this.state.error);
 
       return (
         <PageError
           error={this.state.error}
           resetError={this.handleReset}
-          title="Application Error"
-          message="Something went wrong. Please try refreshing the page or contact support if the problem persists."
+          title={chunkError ? "Page update needed" : "Application Error"}
+          message={
+            chunkError
+              ? "The site was updated while this page was open. Reload to get the latest version."
+              : "Something went wrong. Please try refreshing the page or contact support if the problem persists."
+          }
         />
       );
     }
