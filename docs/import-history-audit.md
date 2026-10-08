@@ -1,7 +1,7 @@
 # Historical attendance import audit
 
 Read-only audit of whether past attendance imports skipped or mis-assigned legitimate attendees,
-and a safe path to correcting them. Nothing in this audit writes to production. Figures below are
+and the admin recovery workflow built on it. The audit itself writes nothing. Figures below are
 aggregate counts from a read-only query run on 2026-10-07; they contain no names, emails or raw rows.
 
 ## Tools
@@ -89,40 +89,141 @@ candidates, or exact-name matches whose college differs.
 - **Incorrect matches: yes, can be investigated**, comparing stored source row against the member profile.
   They cannot be settled automatically, and the audit never infers identity from name similarity alone.
 
-## Proposed recovery workflow (not implemented)
+## Recovery workflow (Admin → Import → Historical Recovery)
 
-Integrate into the existing Admin Import audit panel (`ImportAuditPanel`) rather than a new surface.
+Implemented by migration `20261008000000_historical_attendance_recovery.sql`, which must be applied to
+production manually before the panel works (until then it shows a load error and changes nothing).
+Findings come from `admin_import_recovery_findings()` classified by `importHistoryAudit.ts` in the
+browser. It returns the same evidence as Query B (checked on production data: 0 differences across all
+1,320 rows) in about 0.2 s instead of 4.2 s, plus one addition: a recovered finding whose member still
+has the attendance counts as identity evidence for other rows with the same email. Every change is one admin-confirmed action on one import row;
+there is no bulk or automatic correction.
 
-1. **Review.** Add a "Needs follow-up" filter to the panel, fed by Query B's classification (the TS
-   classifier is ready to drive it client-side from the same rows the panel already loads). Show category,
-   priority, reason and next action; keep names admin-only as today.
-2. **Decide identity.** Open the flagged row in the #518 per-row dialog (Match Existing / Create New Member /
-   Skip) pre-filled from `raw_row` and the candidate ids. Never default to the best name match.
-3. **Check existing attendance.** Before any write, look up `(member_id, event_id)` in
-   `member_event_attendance` and show it. Existing attendance means "already recorded": no write.
-4. **Restore without duplicate points.** Reuse the importer's write path: insert with
-   `upsert … onConflict: member_id,event_id, ignoreDuplicates`, `points_earned` read from the event, and let
-   the `sync_member_points` trigger recompute totals. Never write `members` totals or `user_points`.
-   Re-running the same recovery is therefore idempotent.
-5. **Correct a wrong assignment: add first, delete only on independent proof.** `member_event_attendance`
-   records no provenance, so neither this audit nor the attendance editor can show that the wrong member's
-   row came from the bad match rather than from the person genuinely attending (another import, a manual
-   add). Default: add the correct person's attendance (step 4) and **leave the existing row in place**.
-   Remove the wrongly credited member's row only when it is independently verified that they did not attend
-   (the event's sign-in source does not list them, or they confirm it), and record that evidence in the audit
-   entry (step 6). Use the Admin Members attendance editor (`adminMembers.ts`), which confirms removal and
-   relies on triggers. Never merge or split members to fix a single attendance.
-6. **Audit trail.** Write one `import_jobs` row per recovery batch (tagged in `match_details`, e.g.
-   `recovered_from_row_id`, since `source_type` is check-constrained) and an entry in the append-only
-   `admin_activity_log`. Record before/after attendance ids so the action can be reversed.
-7. **Permissions.** Admin-only via existing RLS; any server-side batch RPC must be SECURITY DEFINER with an
-   `is_admin` check, follow the revoke-then-grant convention, and be applied to production manually after
-   review. None is proposed in this PR.
+| Action | Offered when | Writes (one transaction) |
+|---|---|---|
+| Match existing member | Row credits nobody (skipped, unresolved, created-but-missing) | Inserts `member_event_attendance` for the chosen member with the event's points; `ON CONFLICT DO NOTHING` |
+| Create separate member | Same | Inserts a member (email only if no member holds it, case-insensitive), then their attendance |
+| Correct incorrect match | Row credits a member whose attendance exists | Inserts the correct member's attendance. **Keeps the original credit** and moves the finding to "Original credit to investigate" |
+| Resolve investigation | Finding under investigation | History only, after the database checks the ledger: "did not attend" requires the original credit to be gone already (removed in Admin Members); "also attended" requires it to still exist |
+| Dismiss | Any open finding | History only: `intentional_skip`, `legitimate_duplicate`, or `not_actionable` (needs a note) |
+| Needs more information | Any open finding | History only, with a required note |
+| Reopen | Dismissed or on-hold findings, or a recovered finding whose recorded credit was later removed | History only |
 
-A migration is *not* required for steps 1–5. Only a batch RPC or a new `source_type` value would need one,
-which needs separate approval.
+Before any write the dialog shows:
+- the original event and import reference, and the stored source row
+- the current match or unresolved status
+- the selected member with email, college, year, totals and recent attendance, and whether they already attended
+- the exact database changes
+
+When correcting a match or resolving an investigation, the dialog also lists every other audited row
+for the event that names the originally credited member: matched, created, credited, a duplicate, or a
+candidate. That is evidence they may have attended.
+
+Candidates are listed but never preselected. The admin must confirm identity (or, for Create, that the
+attendee differs from every suggestion, including same-name members the audit row did not list) and then
+confirm the changes. Identity actions stay disabled until every member lookup has loaded; a failed lookup
+shows an error and a retry, never an empty candidate list.
+
+**Recovery never deletes attendance.** Nothing in the data proves that an attendance row exists only
+because of one import row:
+- `member_event_attendance` has no provenance column.
+- The importer records `attendance_member_id` even when its upsert inserted nothing, and keeps only
+  per-job counts of what it inserted.
+- The Admin Members editor writes no audit trail.
+- Timestamps only correlate. On production, an import's own writes land about 2 s before its audit
+  record, but 8 matched rows point at credit that already existed.
+
+Even record-level provenance would not prove the original member was absent: their own sheet row may have
+been skipped, or recorded only as a duplicate or a candidate. An independent review reproduced exactly
+that deletion against an earlier "move" design. So a correction credits the right member and flags the
+original credit. If an officer confirms the original member did not attend, they remove that credit in
+Admin Members (the existing confirmed path; the dialog opens it), then resolve the finding here.
+
+**Points.** Only inserts into `member_event_attendance`. The live `trg_sync_member_points` trigger
+recalculates cached totals; yearly, House and leaderboard views read the ledger. The event row is read
+`FOR SHARE`, so a concurrent points edit either finishes first (recovery uses the new value) or waits and
+then cascades to the new row.
+
+**No double credit.** `UNIQUE(member_id, event_id)` plus `ON CONFLICT DO NOTHING`: a destination who
+already attended gets nothing ("already recorded"). A finding is recovered once. It can be reopened only
+if the ledger no longer matches what it recorded, which the panel flags:
+- the credit it added was later removed, or
+- an investigation resolved as "original also attended" and that original credit was later removed.
+
+**Concurrency and retries.** The function:
+- locks the import row and rejects a caller whose view of the history is stale (the dialog keeps the
+  state it opened with)
+- stores a client request id and a fingerprint of the parameters, so a retry returns the original result
+  without writing and a reused id with different parameters is refused
+- takes an advisory lock per member, then locks that member's row, before writing attendance:
+  - Two recoveries for one member, on any events, queue on the advisory lock and never compute the total
+    from snapshots that miss each other's rows. Without it, a two-session test left a member at
+    7 points / 1 event instead of 17 / 2.
+  - A recovery that starts while the importer or Admin Members is writing the same member waits for that
+    write to commit. Without the row lock: 10 / 1 instead of 17 / 2.
+- serializes new-member emails with another advisory lock
+
+These locks cover this function only. The importer and Admin Members take neither, and `members.email`
+has no unique index (see limitations).
+
+**Audit.** `import_recovery_actions` is immutable:
+- Admins can read it, and only the function writes it. `service_role` cannot write it either.
+- A trigger rejects UPDATE, DELETE and TRUNCATE from any role, so changing that needs a reviewed migration.
+- Its ids are plain columns, not foreign keys, so deleting a member, event, user or import job never
+  rewrites or erases it.
+
+Each action also writes `admin_activity_log` in the same transaction:
+- `member.attendance_recovered`
+- `member.recovery_credit_flagged`
+- `member.recovery_investigation_resolved`
+- `member.recovery_dismissed`
+- `member.recovery_on_hold`
+- `member.recovery_reopened`
+
+Admins can also insert into that log directly, so `import_recovery_actions` is the authoritative trail.
+`import_job_rows` is never modified.
+
+**Safe before the frontend.** The migration only adds objects and changes nothing existing. The current
+frontend does not reference them. It refuses to run if an earlier draft's table (the destructive
+`removed_attendance` shape) exists, and drops that draft's 10-argument function if present. Production had
+neither as of 2026-10-08 (read-only check).
+
+**Verification.** `bash scripts/test-attendance-recovery.sh` runs the migration on a disposable local
+PostgreSQL cluster. The cluster has the production bodies of `sync_member_points`,
+`recalculate_member_points` and `sync_attendance_points_on_event_update`, and Supabase's default grants.
+It checks:
+- authorization, including privileges after default grants
+- restore; similar and identical names; duplicate emails; already-credited destinations
+- non-destructive corrections and investigation resolution against the ledger
+- dismissals, reopen rules and history immutability
+- replays, and stale and concurrent attempts, including:
+  - the same member on two events
+  - a recovery racing an event points edit (mutation-tested: each fails without its lock)
+- rollback
+- that the function contains no DELETE, and that every cached total equals the ledger
+
+`scripts/audit-import-history.sql` does not read recovery history. After a recovery it still reports the
+row by its import-time state. The Historical Recovery panel is the source of truth for recovery status.
 
 ## Remaining limitations
+
+- Pre-existing trigger race, not introduced here: `recalculate_member_points` computes the sum inside the
+  same `UPDATE` that waits for the member row lock. Recovery now waits for earlier writers, and other
+  recoveries wait for it. In one direction it still applies: the importer or Admin Members writes a member
+  on another event while a recovery for that member is committing. That writer's own trigger can then
+  leave the cached total short, until that member's next attendance change.
+
+  The real fix is to lock the member row in `sync_member_points` before recalculating. That is a protected
+  trigger change needing owner approval. Until then, do not run Historical Recovery while an import is in
+  progress. Detect drift (read-only) with:
+
+  ```sql
+  select m.id, m.points, m.events_attended, coalesce(sum(a.points_earned), 0) as ledger_points, count(a.id) as ledger_events
+  from public.members m left join public.member_event_attendance a on a.member_id = m.id
+  group by m.id having m.points <> coalesce(sum(a.points_earned), 0) or m.events_attended <> count(a.id);
+  ```
+- Admins can edit `import_job_rows` directly (RLS allows it), so the evidence a finding shows is only as
+  trustworthy as admin conduct. Recovery never deletes based on it.
 
 - Evidence queries use lower-case letters-and-spaces name comparison, slightly looser than the app's
   normalizer; they can over- or under-report "name exists".

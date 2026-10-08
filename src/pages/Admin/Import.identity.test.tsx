@@ -13,6 +13,9 @@ jest.mock("../../lib/supabase", () => ({
 jest.mock("../../components/features/admin/ImportAuditPanel", () => ({
   ImportAuditPanel: () => null,
 }));
+jest.mock("../../components/features/admin/HistoricalRecoveryPanel", () => ({
+  HistoricalRecoveryPanel: () => null,
+}));
 const mockAudit = jest.fn().mockResolvedValue(undefined);
 jest.mock("../../data/repos/importJobs", () => ({
   ...jest.requireActual("../../data/repos/importJobs"),

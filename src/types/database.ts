@@ -50,6 +50,33 @@ export type Database = {
         Update: Record<string, never>;
         Relationships: [];
       };
+      import_recovery_actions: {
+        Row: {
+          id: string;
+          request_id: string;
+          request_fingerprint: string;
+          import_job_row_id: string;
+          import_job_id: string | null;
+          previous_action_id: string | null;
+          action: string;
+          resulting_status: string;
+          outcome: string;
+          event_id: string | null;
+          member_id: string | null;
+          from_member_id: string | null;
+          created_member: boolean;
+          attendance_id: string | null;
+          points_awarded: number;
+          reason_code: string | null;
+          note: string | null;
+          actor_user_id: string | null;
+          created_at: string;
+        };
+        // Written only by admin_recover_import_row; immutable (UPDATE/DELETE/TRUNCATE rejected).
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       admin_review_marks: {
         Row: {
           id: string;
@@ -3842,6 +3869,24 @@ export type Database = {
       };
     };
     Functions: {
+      admin_import_recovery_findings: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      admin_recover_import_row: {
+        Args: {
+          p_request_id: string;
+          p_row_id: string;
+          p_action: string;
+          p_expected_previous_action_id?: string | null;
+          p_member_id?: string | null;
+          p_from_member_id?: string | null;
+          p_new_member?: Json | null;
+          p_reason_code?: string | null;
+          p_note?: string | null;
+        };
+        Returns: Json;
+      };
       publish_ace_assignment_cycle: {
         Args: { p_cycle_id: string };
         Returns: Json;

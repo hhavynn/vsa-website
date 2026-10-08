@@ -175,13 +175,16 @@ describe("anon column allowlists stay closed", () => {
   });
 
   it("the repos directory has no stray raw-ledger read outside admin pages", () => {
+    // Repositories used only behind AdminRoute; RLS also limits the raw ledger to admins.
+    const adminOnlyLedgerRepos = ["adminMembers.ts", "attendanceRecovery.ts"];
     const offenders = fs
       .readdirSync(reposDir)
       .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+      .filter((f) => !adminOnlyLedgerRepos.includes(f))
       .filter((f) =>
-        fs
-          .readFileSync(path.join(reposDir, f), "utf8")
-          .includes("from('member_event_attendance')")
+        /from\(\s*['"`]member_event_attendance['"`]\s*\)/.test(
+          fs.readFileSync(path.join(reposDir, f), "utf8")
+        )
       );
 
     expect(offenders).toEqual([]);
