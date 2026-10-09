@@ -51,4 +51,5 @@ Use this checklist before writing or reviewing any migration in this directory. 
 - [ ] Follow [`docs/rls-verification-checklist.md`](../../docs/rls-verification-checklist.md) against staging and record the exact result or blocker in the PR. Do not duplicate that runbook here.
 - [ ] Test the old-frontend/new-schema and new-frontend/old-schema mismatch windows when a frontend change ships with the migration.
 - [ ] Confirm the PR does not apply the migration to production.
+- [ ] If the owner later approves a production apply, use the per-file path in `.claude/skills/vsa-run-and-operate/SKILL.md` §3. Apply the file with `apply_migration`, then rename it to the recorded `schema_migrations` version. Never use `supabase db push` against production, because its migration history has drifted from this directory.
 - [ ] Request review from a maintainer who has previously authored or applied a migration in this repository.
