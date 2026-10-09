@@ -240,6 +240,8 @@ export interface ReviewItem {
   from: MemberSnapshot | null;
   /** Existing members whose name could be the new member's. */
   similar: MemberSnapshot[];
+  /** A new attendance row will be inserted (even for a 0-point event). */
+  addsAttendance: boolean;
   /** Expected points: the server reads the event's points at apply time. */
   points: number;
 }
@@ -313,7 +315,8 @@ function reviewOne(decision: StagedDecision, ctx: ReviewContext): ReviewItem {
   if (decision.issue?.status === 'unknown') warnings.push('The last attempt got no answer. Applying again replays it safely.');
 
   const alreadyHas = !!targetId && attended(ctx, eventId, targetId);
-  const points = writes(decision.kind) && !alreadyHas && eventId ? ctx.eventPoints.get(eventId) ?? 0 : 0;
+  const addsAttendance = writes(decision.kind) && !alreadyHas;
+  const points = addsAttendance && eventId ? ctx.eventPoints.get(eventId) ?? 0 : 0;
   const group: ReviewGroup = decision.kind === 'restore' ? (alreadyHas ? 'already_recorded' : 'credit')
     : decision.kind === 'create_member' ? 'create'
     : decision.kind === 'reassign' ? 'investigate'
@@ -321,7 +324,7 @@ function reviewOne(decision: StagedDecision, ctx: ReviewContext): ReviewItem {
   if (decision.kind === 'reassign' && alreadyHas) warnings.push('The correct member already has this attendance, so nothing is added; the original is still flagged.');
   return {
     decision, finding, group, blockers, warnings, needsReconfirm,
-    requiresAck: group === 'already_recorded', member, from, similar, points,
+    requiresAck: group === 'already_recorded', member, from, similar, addsAttendance, points,
   };
 }
 
@@ -451,8 +454,7 @@ export function summarizeLedger(items: readonly ReviewItem[], excluded: Readonly
     if (item.group === 'investigate') summary.originalsFlagged += 1;
     if (item.group === 'dismiss') summary.dismissed += 1;
     if (item.group === 'needs_info') summary.onHold += 1;
-    const adds = item.group === 'credit' || item.group === 'create' || (item.group === 'investigate' && item.points > 0);
-    if (!adds) return;
+    if (!item.addsAttendance) return;
     summary.attendanceAdded += 1;
     summary.pointsAdded += item.points;
     if (item.member) {
@@ -488,7 +490,7 @@ export function describeItem(item: ReviewItem, eventName: string): string[] {
     case 'reassign':
       return [
         `Keep ${item.from ? memberName(item.from) : 'the original member'}'s attendance and flag it for investigation. Nothing is removed.`,
-        item.points > 0
+        item.addsAttendance
           ? `Add attendance: ${item.member ? memberName(item.member) : 'the member'} × ${eventName}, ${pts(item.points)} (expected).`
           : `${item.member ? memberName(item.member) : 'The member'} already has ${eventName}; nothing added.`,
         history,
@@ -511,7 +513,7 @@ export interface ApplyItemResult {
   message: string;
 }
 
-/** Hard cap per batch; each item is one request. */
+/** Hard cap per batch; each item is one request. Larger reviews must be split by the admin, never truncated. */
 export const MAX_BATCH = 200;
 
 const CONFLICT_HINTS = new Set(['stale_finding', 'finding_closed', 'row_already_credited', 'original_missing', 'original_still_credited']);
@@ -553,15 +555,20 @@ export function committedRowIds(
 /**
  * Applies decisions with bounded concurrency. Decisions crediting the same
  * member run in one lane, one after another, so a batch never queues on its
- * own member lock. Never throws; every row gets a result.
+ * own member lock. Every row gets a result; per-row failures never throw.
+ * More than MAX_BATCH decisions is refused outright (nothing is sent), so a
+ * confirmed batch is never silently cut short.
  */
 export async function applyBatch(
   decisions: readonly StagedDecision[],
   recover: (request: RecoverRequest) => Promise<RecoverResult>,
   options: { concurrency?: number; onProgress?: (done: number, total: number) => void } = {},
 ): Promise<ApplyItemResult[]> {
+  if (decisions.length > MAX_BATCH) {
+    throw new Error(`A batch can apply at most ${MAX_BATCH} changes; this one has ${decisions.length}. Nothing was sent.`);
+  }
   const lanes = new Map<string, StagedDecision[]>();
-  decisions.slice(0, MAX_BATCH).forEach((decision) => {
+  decisions.forEach((decision) => {
     const key = creditedMemberId(decision) ?? `row:${decision.rowId}`;
     lanes.set(key, [...(lanes.get(key) ?? []), decision]);
   });

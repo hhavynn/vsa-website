@@ -17,6 +17,8 @@ import {
   summarizeLedger,
   summarizeResults,
   toRecoverRequest,
+  describeItem,
+  MAX_BATCH,
   UNKNOWN_GRACE_MS,
   unlockableUnknown,
 } from './recoveryWorkspace';
@@ -209,6 +211,18 @@ describe('batch review', () => {
     expect(item.blockers[0]).toMatch(/does not match the request/);
   });
 
+  it('counts a correction on a 0-point event as an attendance addition (Codex review)', () => {
+    const f = findingsOf([rec('r1', { decision: 'matched', attendance_member_id: 'm-le', matched_member_id: 'm-le', attendance_exists: true, match_method: 'fuzzy_name', name_score: 60 })]);
+    const decision = stageDecision(f.get('r1') as RecoveryFinding, { kind: 'reassign', member: bao, note: '' });
+    const [item] = buildBatchReview([decision], ctx(f, { attendance: new Map([['ev-1', new Set(['m-le'])]]), eventPoints: new Map([['ev-1', 0]]) }));
+    expect(item).toMatchObject({ group: 'investigate', addsAttendance: true, points: 0 });
+    expect(summarizeLedger([item])).toMatchObject({ attendanceAdded: 1, pointsAdded: 0 });
+    expect(summarizeLedger([item]).memberTotals).toEqual([expect.objectContaining({ eventsBefore: 1, eventsAfter: 2, pointsAfter: 5 })]);
+    expect(describeItem(item, 'Fall GBM')[1]).toBe('Add attendance: Bao Vo × Fall GBM, 0 points (expected).');
+    const [restore] = buildBatchReview([stageDecision(findingsOf([rec('r2')]).get('r2') as RecoveryFinding, { kind: 'restore', member: linh })], ctx(findingsOf([rec('r2')]), { eventPoints: new Map([['ev-1', 0]]) }));
+    expect(summarizeLedger([restore])).toMatchObject({ attendanceAdded: 1, pointsAdded: 0 });
+  });
+
   it('keeps a wrong match risky-but-safe: the original stays credited and nothing is removed', () => {
     const f = findingsOf([rec('r1', { decision: 'matched', attendance_member_id: 'm-le', matched_member_id: 'm-le', attendance_exists: true, match_method: 'fuzzy_name', name_score: 60 })]);
     const decision = stageDecision(f.get('r1') as RecoveryFinding, { kind: 'reassign', member: bao, note: '' });
@@ -274,6 +288,15 @@ describe('execution', () => {
     expect(peak).toBeLessThanOrEqual(2);
     expect(Math.max(...linhInFlight)).toBe(1);
     expect(progress[progress.length - 1]).toBe(12);
+  });
+
+  it('refuses a batch over the cap instead of silently sending only part of it (Codex review)', async () => {
+    const f = findingsOf(Array.from({ length: MAX_BATCH + 1 }, (_, i) => rec(`r${i}`)));
+    const decisions = Array.from(f.values()).map((finding) => stageDecision(finding, { kind: 'needs_info', note: 'x' }));
+    const recover = jest.fn(async () => result());
+    await expect(applyBatch(decisions, recover)).rejects.toThrow(/at most 200 changes; this one has 201\. Nothing was sent/);
+    expect(recover).not.toHaveBeenCalled();
+    await expect(applyBatch(decisions.slice(0, MAX_BATCH), recover)).resolves.toHaveLength(MAX_BATCH);
   });
 
   it('unlocks an unanswered row only when the history lacks it and the attempt can no longer be running (guardian M2)', () => {
