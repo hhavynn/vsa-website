@@ -317,3 +317,12 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Public metadata broker; service-only RPC admission enforces upload capacity.
 [functions.member-photo-upload]
 verify_jwt = false
+
+# Database Webhook receivers. The x-image-migration-secret header is their only
+# authorization, so the webhooks send no Authorization header and never the
+# service-role key (docs/event-image-migration.md, Phase 3).
+[functions.trigger-event-image-migration]
+verify_jwt = false
+
+[functions.trigger-house-event-image-migration]
+verify_jwt = false
