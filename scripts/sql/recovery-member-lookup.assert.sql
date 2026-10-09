@@ -1,4 +1,4 @@
--- Assertions for migration 20261011000000_admin_member_lookup_rpcs.sql.
+-- Assertions for migration 20261009232329_admin_member_lookup_rpcs.sql.
 -- Run by scripts/test-attendance-recovery.sh against a disposable local cluster,
 -- after Supabase-style default privileges (EXECUTE to anon and authenticated on
 -- new functions) were in effect when the migration ran. Synthetic people only.

@@ -121,11 +121,11 @@ Rollout order: merge, apply the migration, run the **RLS verification** workflow
 
 ### Member lookup phase
 
-`RLS_MEMBER_LOOKUP_PHASE` does the same for the admin member lookup RPCs (`admin_lookup_members`, `admin_search_members`, migration `20261011000000_admin_member_lookup_rpcs.sql`), which Historical Recovery depends on:
+`RLS_MEMBER_LOOKUP_PHASE` does the same for the admin member lookup RPCs (`admin_lookup_members`, `admin_search_members`, migration `20261009232329_admin_member_lookup_rpcs.sql`), which Historical Recovery depends on:
 
 | Phase | When | Lookup RPCs |
 |---|---|---|
-| `pre-migration` (default) | Production has not had `20261011000000` applied | A missing function is a SKIP; a present one is checked as below |
+| `pre-migration` (default) | Production has not had `20261009232329` applied | A missing function is a SKIP; a present one is checked as below |
 | `post-migration` | After the migration is applied | A missing function is a FAIL for anon, ordinary users and admins; both test accounts are required (fails closed, never SKIP) |
 
 In both phases: anon must get `42501`. An ordinary user must get the function's own refusal (`Only admins can look up members`), because a bare `permission denied for function` means `authenticated` lost EXECUTE and admins are locked out too. The admin must get a JSON array back. Probes use synthetic values only. An unknown value exits non-zero. The migration-level proof is offline: `bash scripts/test-attendance-recovery.sh`.

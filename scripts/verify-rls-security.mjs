@@ -60,7 +60,7 @@ if (!RETIREMENT_PHASES.includes(retirementPhase)) {
 const retired = retirementPhase === 'post-migration';
 
 // Rollout phase of the admin member lookup RPCs
-// (supabase/migrations/20261011000000_admin_member_lookup_rpcs.sql), applied
+// (supabase/migrations/20261009232329_admin_member_lookup_rpcs.sql), applied
 // to production by hand after merge, like the retirement migration above:
 //   pre-migration  (default) admin_lookup_members / admin_search_members may be
 //                  absent; a missing function is a SKIP. Present ones are
@@ -163,14 +163,14 @@ async function runTests() {
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
   // Synthetic probe values only; never a real member's email or name.
   const memberLookupRpcs = [
-    ['admin_lookup_members', { p_emails: ['rls-verify-probe@example.invalid'], p_surnames: ['rlsverifyprobe'] }, '20261011000000'],
-    ['admin_search_members', { p_query: 'rls-verify-probe', p_limit: 1 }, '20261011000000'],
+    ['admin_lookup_members', { p_emails: ['rls-verify-probe@example.invalid'], p_surnames: ['rlsverifyprobe'] }, '20261009232329'],
+    ['admin_search_members', { p_query: 'rls-verify-probe', p_limit: 1 }, '20261009232329'],
   ];
   const isMissingFunction = (error) => !!error && (error.code === 'PGRST202' || error.code === '42883');
   // Absent before the migration is expected; absent after it breaks Historical Recovery.
   const reportMissingLookup = (fn, who) => {
-    if (lookupsRequired) reportFail(`${fn} is missing for ${who} after the member lookup migration (20261011000000); Historical Recovery lookups fail`);
-    else reportSkip(`${fn} is not present yet (migration 20261011000000 not applied)`);
+    if (lookupsRequired) reportFail(`${fn} is missing for ${who} after the member lookup migration (20261009232329); Historical Recovery lookups fail`);
+    else reportSkip(`${fn} is not present yet (migration 20261009232329 not applied)`);
   };
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
@@ -422,7 +422,7 @@ async function runTests() {
       ];
       for (const [fn, args, migration] of recoveryRpcs) {
         const { data: rData, error: rError } = await anon.rpc(fn, args);
-        if (isMissingFunction(rError) && migration === '20261011000000') {
+        if (isMissingFunction(rError) && migration === '20261009232329') {
           reportMissingLookup(fn, 'anon');
         } else if (isMissingFunction(rError)) {
           reportSkip(`${fn} is not present yet (migration ${migration} not applied)`);

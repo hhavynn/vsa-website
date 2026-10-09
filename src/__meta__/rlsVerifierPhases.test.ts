@@ -137,7 +137,7 @@ describe("RLS verifier retirement phases", () => {
   });
 });
 
-// Same rollout design for 20261011000000_admin_member_lookup_rpcs.sql. After
+// Same rollout design for 20261009232329_admin_member_lookup_rpcs.sql. After
 // the migration a missing lookup RPC must fail the run, and "protected" must
 // mean the function's own admin check, with admins proven able to call it.
 describe("RLS verifier member lookup phases", () => {

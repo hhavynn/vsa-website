@@ -25,7 +25,7 @@ name: RLS verification
 # follow. See docs/member-account-retirement.md.
 #
 # Member lookup rollout phase: the same sequence for
-# 20261011000000_admin_member_lookup_rpcs.sql. RLS_MEMBER_LOOKUP_PHASE
+# 20261009232329_admin_member_lookup_rpcs.sql. RLS_MEMBER_LOOKUP_PHASE
 # defaults to pre-migration (admin_lookup_members / admin_search_members may be
 # absent). post-migration makes them mandatory for anon, ordinary users and
 # admins (missing is a failure) and requires both test accounts. Sequence:

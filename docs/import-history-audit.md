@@ -192,7 +192,8 @@ neither as of 2026-10-08 (read-only check).
 
 **Member lookups stay out of request URLs.** Recovery looks members up by attendee email, surname and
 typeahead text through `admin_lookup_members(p_emails, p_surnames)` and
-`admin_search_members(p_query, p_limit)` (migration `20261011000000_admin_member_lookup_rpcs.sql`), not
+`admin_search_members(p_query, p_limit)` (migration `20261009232329_admin_member_lookup_rpcs.sql`, applied to production on 2026-10-09 with owner
+approval and recorded under that version), not
 through `members?or=(email.ilike…)` filters. supabase-js sends `rpc()` arguments in a POST body, so emails
 and names no longer appear in Supabase API logs; both functions refuse GET and HEAD. They are SECURITY INVOKER
 (the admin-only `members` RLS still applies), check `is_admin_user(auth.uid())` first, pin `search_path`
