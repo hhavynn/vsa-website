@@ -15,6 +15,7 @@ import {
   ApplyItemResult,
   GROUP_LABELS,
   GROUP_ORDER,
+  MAX_BATCH,
   ReviewContext,
   ReviewItem,
   StagedDecision,
@@ -32,7 +33,7 @@ import {
   unlockableUnknown,
 } from '../../../../lib/recoveryWorkspace';
 import { cn } from '../../../../lib/utils';
-import { MemberIdentity, errorBox, formatTime, sectionLabel, smallBtn, warnBox } from './recoveryUi';
+import { MemberIdentity, PROGRESS_CLS, errorBox, formatTime, sectionLabel, smallBtn, warnBox } from './recoveryUi';
 
 type Phase = 'checking' | 'error' | 'review' | 'running' | 'done';
 
@@ -178,6 +179,13 @@ export function BatchReviewDialog({
   const sending = useMemo(() => applicableItems(items, excluded, acknowledged), [items, excluded, acknowledged]);
   const unacknowledged = items.filter((item) => item.requiresAck && item.group !== 'blocked' && !excluded.has(item.decision.rowId) && !acknowledged.has(item.decision.rowId)).length;
   const reviewStale = phase === 'review' && now - checkedAt > REVIEW_MAX_AGE_MS;
+  const oversized = sending.length > MAX_BATCH;
+  /** Keeps the first MAX_BATCH sendable rows (in review order) and excludes the rest; they stay staged. */
+  const limitToMax = () => setExcluded((current) => {
+    const next = new Set(current);
+    sending.slice(MAX_BATCH).forEach((item) => next.add(item.decision.rowId));
+    return next;
+  });
 
   const toggle = (setter: typeof setExcluded, rowId: string) => setter((current) => {
     const next = new Set(current);
@@ -187,7 +195,7 @@ export function BatchReviewDialog({
   });
 
   const apply = async () => {
-    if (phase !== 'review' || !reviewed || sending.length === 0 || reviewStale) return;
+    if (phase !== 'review' || !reviewed || sending.length === 0 || reviewStale || oversized) return;
     const decisions = sending.map((item) => item.decision);
     setPhase('running');
     setProgress({ done: 0, total: decisions.length });
@@ -248,6 +256,15 @@ export function BatchReviewDialog({
             </p>
           )}
           {reviewStale && <p role="alert" className={warnBox}>This check is more than 10 minutes old. Re-check before applying.</p>}
+          {oversized && (
+            <div role="alert" className={warnBox}>
+              <p>
+                {sending.length} changes are selected, but one batch applies at most {MAX_BATCH}. Nothing is cut short silently:
+                exclude rows, or apply the first {MAX_BATCH} now and the rest in the next batch (they stay staged).
+              </p>
+              <button type="button" className={cn(smallBtn, 'mt-1.5')} onClick={limitToMax}>Apply the first {MAX_BATCH} now, keep the rest staged</button>
+            </div>
+          )}
 
           <section aria-labelledby={`${uid}-ledger`} className="rounded border border-[var(--color-border)] p-3">
             <h3 id={`${uid}-ledger`} className={sectionLabel}>Exact effects on the attendance ledger</h3>
@@ -355,16 +372,12 @@ export function BatchReviewDialog({
       {phase === 'running' && (
         <div className="mt-4 space-y-2" role="status" aria-live="polite">
           <p className="text-sm text-[var(--color-text)]">Applying {progress.done} of {progress.total}… At most {APPLY_CONCURRENCY} at a time; keep this tab open.</p>
-          <div
-            role="progressbar"
+          <progress
             aria-label="Batch progress"
-            aria-valuemin={0}
-            aria-valuemax={progress.total}
-            aria-valuenow={progress.done}
-            className="h-2 overflow-hidden rounded bg-[var(--color-surface2)]"
-          >
-            <div className="h-full bg-brand-600 transition-all dark:bg-brand-400" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
-          </div>
+            value={progress.done}
+            max={Math.max(progress.total, 1)}
+            className={cn(PROGRESS_CLS, 'h-2 [&::-webkit-progress-value]:bg-brand-600 dark:[&::-webkit-progress-value]:bg-brand-400 [&::-moz-progress-bar]:bg-brand-600 dark:[&::-moz-progress-bar]:bg-brand-400')}
+          />
         </div>
       )}
 
@@ -416,7 +429,7 @@ export function BatchReviewDialog({
           </button>
         )}
         {phase === 'review' && (
-          <button type="button" className={dialogPrimaryCls(false)} disabled={!reviewed || sending.length === 0 || reviewStale} onClick={() => void apply()}>
+          <button type="button" className={dialogPrimaryCls(false)} disabled={!reviewed || sending.length === 0 || reviewStale || oversized} onClick={() => void apply()}>
             Apply {sending.length} change{sending.length === 1 ? '' : 's'}
           </button>
         )}

@@ -6,7 +6,9 @@ import {
   candidatesFor,
   countScope,
   editDistance,
+  eventKeyOf,
   eventProgress,
+  NO_EVENT_ID,
   filterInsights,
   foldName,
   hasDuplicateEvidence,
@@ -141,6 +143,14 @@ describe('filters, sort, counts, progress', () => {
     expect(sortInsights(insights, 'source').map((i) => i.finding.record.row_id)).toEqual(['b', 'c', 'a']);
     expect(sortInsights(insights, 'easiest')[2].finding.record.row_id).toBe('b');
     expect(sortInsights(insights, 'name').map((i) => i.finding.record.row_id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('keeps findings whose event was deleted reviewable in their own group (Codex review)', () => {
+    const orphan = finding({ row_id: 'orphan', event_id: null, event_name: null, event_date: null });
+    const progress = eventProgress([...rows, orphan], new Set());
+    const group = progress.find((p) => p.eventId === NO_EVENT_ID);
+    expect(group).toMatchObject({ name: 'Findings whose event was deleted', total: 1, open: 1, date: null });
+    expect(eventKeyOf(orphan)).toBe(NO_EVENT_ID);
   });
 
   it('counts the scope and per-event progress, and finds the next unfinished event', () => {

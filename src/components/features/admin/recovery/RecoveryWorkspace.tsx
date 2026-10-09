@@ -33,6 +33,7 @@ import {
   WorkspaceFilters,
   bulkEligibility,
   countScope,
+  eventKeyOf,
   eventProgress,
   filterInsights,
   insightFor,
@@ -57,7 +58,7 @@ import { BatchReviewDialog } from './BatchReviewDialog';
 import { BatchToolbar } from './BatchToolbar';
 import { EditorKind, RecoveryRow } from './RecoveryRow';
 import { RecoveryHistoryList } from './RecoveryHistoryList';
-import { chip, formatDate, formatTime, inputCls, selectCls, smallBtn } from './recoveryUi';
+import { PROGRESS_CLS, chip, formatDate, formatTime, inputCls, selectCls, smallBtn } from './recoveryUi';
 
 /**
  * Every cached query a recovery can make stale: findings, history, imports, member
@@ -152,7 +153,7 @@ export function RecoveryWorkspace() {
     setEventId(resume?.eventId ?? null);
   }, [progress, eventId]);
 
-  const eventFindings = useMemo(() => findings.filter((f) => f.record.event_id === eventId), [findings, eventId]);
+  const eventFindings = useMemo(() => findings.filter((f) => eventKeyOf(f) === eventId), [findings, eventId]);
   const { lookup, loading: lookupsLoading, error: lookupError, refetch: refetchLookups } = useRecoveryLookups(eventFindings, eventId);
   const insights = useMemo(() => eventFindings.map((f) => insightFor(f, lookup)), [eventFindings, lookup]);
   const counts = useMemo(() => countScope(insights, staging.ids), [insights, staging.ids]);
@@ -426,17 +427,13 @@ export function RecoveryWorkspace() {
               <span><strong className="tabular-nums text-[var(--color-text)]">{counts.investigate}</strong> investigating</span>
               <span><strong className="tabular-nums text-[var(--color-text)]">{counts.ambiguous}</strong> ambiguous left</span>
             </div>
-            <div
-              role="progressbar"
+            <progress
               aria-label={`${current.name} completion`}
-              aria-valuemin={0}
-              aria-valuemax={current.total}
-              aria-valuenow={current.done}
               aria-valuetext={`${current.done} of ${current.total} findings recovered or dismissed`}
-              className="mt-2 h-1.5 overflow-hidden rounded bg-[var(--color-surface2)]"
-            >
-              <div className="h-full bg-emerald-600 transition-all dark:bg-emerald-400" style={{ width: `${current.total ? (current.done / current.total) * 100 : 0}%` }} />
-            </div>
+              value={current.done}
+              max={Math.max(current.total, 1)}
+              className={cn(PROGRESS_CLS, 'mt-2 h-1.5 [&::-webkit-progress-value]:bg-emerald-600 dark:[&::-webkit-progress-value]:bg-emerald-400 [&::-moz-progress-bar]:bg-emerald-600 dark:[&::-moz-progress-bar]:bg-emerald-400')}
+            />
           </div>
         )}
 

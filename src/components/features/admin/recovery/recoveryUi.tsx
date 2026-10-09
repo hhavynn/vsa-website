@@ -30,6 +30,10 @@ export const TIER_CHIP: Record<TriageTier, string> = {
 
 export const chip = 'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium';
 
+/** Base for native <progress> bars, styled with Tailwind only (no inline widths). Add a height and value color. */
+export const PROGRESS_CLS =
+  'block w-full appearance-none overflow-hidden rounded border-0 bg-[var(--color-surface2)] [&::-webkit-progress-bar]:bg-[var(--color-surface2)]';
+
 export function formatDate(value: string | null | undefined): string {
   if (!value) return 'Date unknown';
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

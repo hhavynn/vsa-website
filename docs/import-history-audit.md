@@ -227,6 +227,8 @@ The panel is an event-scoped review table (`src/components/features/admin/recove
 dialog above stays available on every row as Details / Full review, and is the only path for resolving an
 investigation or reopening.
 
+- **Events.** Rows whose event was deleted (`event_id` set to null) are grouped under "Findings whose
+  event was deleted". They can only be dismissed or put on hold.
 - **Triage.** Each row is placed in one of five groups: safe or already resolved; straightforward,
   confirm; ambiguous identity; possible incorrect original match; insufficient evidence. The table
   suggests crediting an existing member only when the row's email equals that member's stored email.
@@ -258,6 +260,8 @@ investigation or reopening.
   acknowledgement. The ledger summary always shows 0 attendance removed.
 - **Apply.** Calls `admin_recover_import_row` once per row, at most 2 at a time, with one member's rows
   in one lane. Each row reports applied, already applied, conflict, failed (rolled back) or no answer.
+  - One batch applies at most 200 rows. A larger review is refused, never truncated; the admin can
+    apply the first 200 and keep the rest staged.
   - Applied rows leave staging. The others stay, with their request kept.
   - A row with no answer is locked until the next review. If the history holds its request id, it
     counts as applied. If not, it never committed, and applying again sends the identical request.

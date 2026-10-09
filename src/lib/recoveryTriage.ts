@@ -455,6 +455,12 @@ export function countScope(insights: readonly RowInsight[], stagedIds: ReadonlyS
   return counts;
 }
 
+/** Groups findings whose event was deleted (import rows keep `event_id = null`). */
+export const NO_EVENT_ID = 'no-event';
+
+/** The event a finding is reviewed under; eventless findings share one group. */
+export const eventKeyOf = (finding: RecoveryFinding): string => finding.record.event_id ?? NO_EVENT_ID;
+
 export interface EventProgress {
   eventId: string;
   name: string;
@@ -470,15 +476,18 @@ export function eventProgress(findings: readonly RecoveryFinding[], stagedIds: R
   const map = new Map<string, EventProgress>();
   findings.forEach((finding) => {
     const { record } = finding;
-    if (!record.event_id) return;
-    const entry = map.get(record.event_id) ?? {
-      eventId: record.event_id, name: record.event_name ?? 'Event', date: record.event_date, total: 0, done: 0, open: 0, staged: 0,
+    const key = eventKeyOf(finding);
+    const entry = map.get(key) ?? {
+      eventId: key,
+      name: record.event_id ? record.event_name ?? 'Event' : 'Findings whose event was deleted',
+      date: record.event_id ? record.event_date : null,
+      total: 0, done: 0, open: 0, staged: 0,
     };
     entry.total += 1;
     if (finding.bucket === 'recovered' || finding.bucket === 'dismissed') entry.done += 1;
     else entry.open += 1;
     if (stagedIds.has(record.row_id)) entry.staged += 1;
-    map.set(record.event_id, entry);
+    map.set(key, entry);
   });
   return Array.from(map.values()).sort((a, b) =>
     Number(b.open > 0) - Number(a.open > 0) || (b.date ?? '').localeCompare(a.date ?? '') || a.name.localeCompare(b.name));

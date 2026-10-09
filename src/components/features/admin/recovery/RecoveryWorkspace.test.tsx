@@ -479,7 +479,7 @@ it('keeps progress counters accurate and shows the applied changes in recovery h
   // Insufficient-evidence rows (Kim Ho) start under "needs more information".
   expect(counts).toHaveTextContent('4 unresolved');
   expect(counts).toHaveTextContent('1 need info');
-  expect(screen.getByRole('progressbar', { name: 'Fall GBM completion' })).toHaveAttribute('aria-valuenow', '0');
+  expect(screen.getByRole('progressbar', { name: 'Fall GBM completion' })).toHaveAttribute('value', '0');
   await stageHold('Anna Pham');
   expect(counts).toHaveTextContent('1 staged');
 
@@ -500,6 +500,44 @@ it('keeps progress counters accurate and shows the applied changes in recovery h
   expect(screen.getByLabelText('Counts for this event')).toHaveTextContent('0 staged');
   fireEvent.click(screen.getByRole('tab', { name: 'Recovery history' }));
   expect(screen.getByRole('list', { name: 'Recovery history' })).toHaveTextContent(/On hold · Anna Pham · Fall GBM · row 5/);
+});
+
+it('keeps findings whose event was deleted reachable, and lets them be put on hold (Codex review)', async () => {
+  records = [...rows, { ...base, row_id: 'r-orphan', import_job_id: 'job-3', event_id: null, event_name: null, event_date: null, display_name: 'Orphan Row', csv_email: 'orphan@x.com', candidate_member_ids: [], candidate_count: 0, email_in_members: false, exact_name_members: 0 }];
+  renderWorkspace();
+  await waitForLookups();
+  fireEvent.change(screen.getByLabelText('Event'), { target: { value: 'no-event' } });
+  const orphan = await findRow('Orphan Row');
+  expect(within(orphan).queryByRole('button', { name: 'Match…' })).not.toBeInTheDocument();
+  expect(within(orphan).queryByRole('button', { name: 'New member…' })).not.toBeInTheDocument();
+  await stageHold('Orphan Row');
+  expect(toolbar()).toHaveTextContent('1 staged');
+  expect(repo.getEventAttendanceMemberIds).not.toHaveBeenCalledWith('no-event');
+  const dialog = await openReview();
+  await applyReview(dialog);
+  expect(repo.recover).toHaveBeenCalledWith(expect.objectContaining({ rowId: 'r-orphan', action: 'needs_info' }));
+});
+
+it('refuses to silently cut a batch above 200 rows and offers to apply the first 200 (Codex review)', async () => {
+  records = Array.from({ length: 201 }, (_, i) => ({
+    ...base, row_id: `big-${i}`, source_row_index: i, display_name: `Person ${i} Nguyen`, csv_email: `p${i}@gmail.com`,
+    candidate_member_ids: [], candidate_count: 0, email_in_members: false, exact_name_members: 0,
+  }));
+  renderWorkspace();
+  await screen.findByText('Rows 1–50 of 201');
+  fireEvent.click(within(toolbar()).getByRole('button', { name: 'Select visible (50)' }));
+  fireEvent.click(within(toolbar()).getByRole('button', { name: 'Select all 201 matching' }));
+  fireEvent.click(within(toolbar()).getByRole('button', { name: 'Hold…' }));
+  fireEvent.change(within(toolbar()).getByLabelText(/What is missing/), { target: { value: 'Need the sheet' } });
+  fireEvent.click(within(toolbar()).getByRole('button', { name: 'Stage for 201 rows' }));
+  expect(toolbar()).toHaveTextContent('201 staged');
+  const dialog = await openReview();
+  expect(within(dialog).getByText(/201 changes are selected, but one batch applies at most 200/)).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: /reviewed these/ }));
+  expect(within(dialog).getByRole('button', { name: 'Apply 201 changes' })).toBeDisabled();
+  fireEvent.click(within(dialog).getByRole('button', { name: /Apply the first 200 now/ }));
+  expect(within(dialog).getByRole('button', { name: 'Apply 200 changes' })).toBeEnabled();
+  expect(repo.recover).not.toHaveBeenCalled();
 });
 
 it('stages homogeneous bulk decisions only for qualifying rows and says why others were skipped', async () => {

@@ -24,7 +24,10 @@ export function useStagedRecovery(userId: string | null) {
   const previousUser = useRef(userId);
 
   useEffect(() => {
-    if (previousUser.current === userId) return;
+    // No user means the session ended and AdminRoute is holding this page
+    // behind the re-authentication prompt (a deliberate sign-out unmounts it
+    // instead): keep the work for whoever resumes.
+    if (userId === null || previousUser.current === userId) return;
     if (previousUser.current) clearStaged(previousUser.current);
     previousUser.current = userId;
     undo.current = [];

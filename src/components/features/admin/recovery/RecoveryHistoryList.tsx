@@ -1,4 +1,5 @@
 import { OUTCOME_LABELS, RecoveryActionRecord, RecoveryFinding } from '../../../../lib/attendanceRecovery';
+import { eventKeyOf } from '../../../../lib/recoveryTriage';
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -20,7 +21,7 @@ export function RecoveryHistoryList({
     .filter((action) => {
       const finding = findingByRow.get(action.import_job_row_id);
       if (!finding) return !eventId && !importJobId;
-      return (!eventId || finding.record.event_id === eventId) && (!importJobId || finding.record.import_job_id === importJobId);
+      return (!eventId || eventKeyOf(finding) === eventId) && (!importJobId || finding.record.import_job_id === importJobId);
     })
     .slice(0, 200);
   if (rows.length === 0) return <div className="px-5 py-8 text-sm text-[var(--color-text3)]">No recovery actions yet for this scope.</div>;

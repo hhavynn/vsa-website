@@ -143,7 +143,7 @@ export function BatchToolbar({
           <button type="button" className={smallBtn} onClick={allOnPage ? onClearSelection : onSelectPage} disabled={pageCount === 0}>
             {allOnPage ? 'Clear selection' : `Select visible (${pageCount})`}
           </button>
-          {canSelectAllMatching && !allOnPage && selectedCount > 0 && (
+          {canSelectAllMatching && selectedCount > 0 && selectedCount < totalMatching && (
             <button type="button" className={smallBtn} onClick={onSelectAllMatching}>Select all {totalMatching} matching</button>
           )}
           {selectedCount > 0 && !allOnPage && <button type="button" className={smallBtn} onClick={onClearSelection}>Clear selection</button>}
