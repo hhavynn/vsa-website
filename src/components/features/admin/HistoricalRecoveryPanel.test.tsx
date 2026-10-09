@@ -16,8 +16,15 @@ jest.mock('../../../data/repos/attendanceRecovery', () => ({
     getRecentAttendance: jest.fn(),
     getEventPoints: jest.fn(),
     recover: jest.fn(),
+    findMembersBySurnames: jest.fn(),
+    getMembersByEmails: jest.fn(),
+    listRoster: jest.fn(),
+    getEventAttendanceMemberIds: jest.fn(),
+    getAttendanceForMembers: jest.fn(),
+    getEventsPoints: jest.fn(),
   },
 }));
+jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin-1' } }) }));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('./MemberAttendanceModal', () => ({
   MemberAttendanceModal: ({ memberId, onClose }: { memberId: string; onClose: () => void }) => (
@@ -68,6 +75,13 @@ const doneAction: RecoveryActionRecord = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.sessionStorage.clear();
+  repo.findMembersBySurnames.mockResolvedValue([]);
+  repo.getMembersByEmails.mockResolvedValue([]);
+  repo.listRoster.mockResolvedValue(members);
+  repo.getEventAttendanceMemberIds.mockImplementation(async (eventId) => (eventId === 'event-1' ? ['m-le'] : []));
+  repo.getAttendanceForMembers.mockResolvedValue([]);
+  repo.getEventsPoints.mockResolvedValue(new Map([['event-1', 10], ['event-2', 10]]));
   repo.listFindingRecords.mockResolvedValue([base, wrongMatch, otherEvent, recovered]);
   repo.listActions.mockResolvedValue([doneAction]);
   repo.getRowDetail.mockImplementation(async (id) => ({
@@ -90,10 +104,15 @@ function renderPanel() {
   render(<QueryClientProvider client={client}><HistoricalRecoveryPanel /></QueryClientProvider>);
 }
 
+/** Every row keeps the single-row dialog as Details / Full review. */
 async function openFinding(name: string) {
-  const row = await screen.findByRole('listitem', { name });
-  fireEvent.click(within(row).getByRole('button', { name: /Review|View/ }));
+  const row = await screen.findByRole('row', { name: new RegExp(`^${name},`) });
+  fireEvent.click(within(row).getByRole('button', { name: /Details|Full review/ }));
   return screen.findByRole('alertdialog');
+}
+
+function showStatus(value: string) {
+  fireEvent.change(screen.getByLabelText('Status'), { target: { value } });
 }
 
 async function chooseRestoreTo(dialog: HTMLElement, memberLabel: RegExp) {
@@ -105,25 +124,25 @@ async function chooseRestoreTo(dialog: HTMLElement, memberLabel: RegExp) {
   await within(dialog).findByText('Exact database changes');
 }
 
-it('groups findings by status and filters by event and issue type', async () => {
+it('scopes the table to one event and filters by status and issue type', async () => {
   renderPanel();
-  expect(await screen.findByRole('tab', { name: /Unresolved 3/ })).toHaveAttribute('aria-selected', 'true');
-  expect(screen.getByRole('tab', { name: /Recovered 1/ })).toBeInTheDocument();
-  expect(screen.getByText('Linh Tran')).toBeInTheDocument();
-  expect(screen.queryByText('Anna Pham')).not.toBeInTheDocument();
+  expect(await screen.findByRole('row', { name: /^Linh Tran,/ })).toBeInTheDocument();
+  expect(screen.getByRole('row', { name: /^Kevin Lee,/ })).toBeInTheDocument();
+  expect(screen.queryByRole('row', { name: /^Anna Pham,/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('row', { name: /^Bao Vo,/ })).not.toBeInTheDocument();
 
   fireEvent.change(screen.getByLabelText('Event'), { target: { value: 'event-2' } });
-  expect(screen.getByText('Bao Vo')).toBeInTheDocument();
-  expect(screen.queryByText('Linh Tran')).not.toBeInTheDocument();
+  expect(await screen.findByRole('row', { name: /^Bao Vo,/ })).toBeInTheDocument();
+  expect(screen.queryByRole('row', { name: /^Linh Tran,/ })).not.toBeInTheDocument();
 
-  fireEvent.change(screen.getByLabelText('Event'), { target: { value: '' } });
-  fireEvent.change(screen.getByLabelText('Issue type'), { target: { value: 'email_conflict_match' } });
-  expect(screen.getByText('Kevin Lee')).toBeInTheDocument();
-  expect(screen.queryByText('Linh Tran')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Event'), { target: { value: 'event-1' } });
+  fireEvent.change(await screen.findByLabelText('Issue type'), { target: { value: 'email_conflict_match' } });
+  expect(screen.getByRole('row', { name: /^Kevin Lee,/ })).toBeInTheDocument();
+  expect(screen.queryByRole('row', { name: /^Linh Tran,/ })).not.toBeInTheDocument();
 
   fireEvent.change(screen.getByLabelText('Issue type'), { target: { value: '' } });
-  fireEvent.click(screen.getByRole('tab', { name: /Recovered 1/ }));
-  expect(screen.getByText('Anna Pham')).toBeInTheDocument();
+  showStatus('recovered');
+  expect(screen.getByRole('row', { name: /^Anna Pham,/ })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('tab', { name: 'Recovery history' }));
   expect(screen.getByText(/Attendance restored/)).toBeInTheDocument();
   expect(screen.getByText(/10 points awarded/)).toBeInTheDocument();
@@ -261,7 +280,8 @@ it('resolves an investigation only after the original credit is gone, via the Ad
   };
   repo.listActions.mockResolvedValue([doneAction, flagged]);
   renderPanel();
-  fireEvent.click(await screen.findByRole('tab', { name: /Original credit to investigate 1/ }));
+  await screen.findByLabelText('Status');
+  showStatus('investigate');
   const dialog = await openFinding('Kevin Lee');
   fireEvent.click(within(dialog).getByRole('button', { name: 'Resolve investigation' }));
   fireEvent.click(within(dialog).getByRole('radio', { name: /original member did not attend/ }));
@@ -323,15 +343,18 @@ it('dismisses with a preserved reason', async () => {
 it('flags a recovered finding whose credit was later removed, and lets it reopen', async () => {
   repo.listFindingRecords.mockResolvedValue([{ ...recovered, recovered_credit_present: false }]);
   renderPanel();
-  fireEvent.click(await screen.findByRole('tab', { name: /Recovered 1/ }));
-  expect(screen.getByText(/later removed in Admin Members/)).toBeInTheDocument();
+  await screen.findByLabelText('Status');
+  showStatus('recovered');
+  const row = await screen.findByRole('row', { name: /^Anna Pham,/ });
+  expect(within(row).getByText('Recorded credit was removed')).toBeInTheDocument();
   const dialog = await openFinding('Anna Pham');
   expect(within(dialog).getByRole('button', { name: 'Reopen finding' })).toBeInTheDocument();
 });
 
 it('shows recovered findings read-only', async () => {
   renderPanel();
-  fireEvent.click(await screen.findByRole('tab', { name: /Recovered 1/ }));
+  await screen.findByLabelText('Status');
+  showStatus('recovered');
   const dialog = await openFinding('Anna Pham');
   expect(within(dialog).getByText(/This finding is recovered/)).toBeInTheDocument();
   expect(within(dialog).queryByRole('button', { name: 'Review changes' })).not.toBeInTheDocument();
