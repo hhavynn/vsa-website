@@ -119,6 +119,26 @@ describe('deliberate sign-out', () => {
     expect(client.getQueryData(['admin-status', 'admin-1'])).toBeUndefined();
     expect(auth.sessionExpired).toBe(false);
   });
+
+  it.each([
+    ['succeeds', null],
+    ['is refused by the server', { message: 'network down' }],
+  ])('clears every admin’s staged recovery work in this tab when sign-out %s', async (_, error) => {
+    await signedInAs('admin-1');
+    supabaseMock.setSignOutError(error);
+    window.sessionStorage.setItem('vsa.recovery-staging.v1.admin-1', '{"savedAt":1,"decisions":[]}');
+    window.sessionStorage.setItem('vsa.recovery-staging.v1.admin-2', '{"savedAt":1,"decisions":[]}');
+    window.sessionStorage.setItem('unrelated', 'kept');
+
+    await act(async () => {
+      await auth.signOut();
+    });
+
+    expect(window.sessionStorage.getItem('vsa.recovery-staging.v1.admin-1')).toBeNull();
+    expect(window.sessionStorage.getItem('vsa.recovery-staging.v1.admin-2')).toBeNull();
+    expect(window.sessionStorage.getItem('unrelated')).toBe('kept');
+    window.sessionStorage.clear();
+  });
 });
 
 describe('session ends unprompted (refresh rejected, expired, signed out in another tab)', () => {

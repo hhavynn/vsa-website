@@ -2,6 +2,7 @@ import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "react-query";
 import { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { clearStaged } from "../lib/recoveryStagingStore";
 
 type AuthContextType = {
   user: User | null;
@@ -202,7 +203,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Sign out error:", error);
     } finally {
       // Clear local state regardless of the server response: a failed request
-      // must not leave an admin looking signed in.
+      // must not leave an admin looking signed in. Staged recovery work
+      // (names, emails, notes) must not outlive the session in this tab.
+      clearStaged();
       endSession(false);
       signingOutRef.current = false;
     }
