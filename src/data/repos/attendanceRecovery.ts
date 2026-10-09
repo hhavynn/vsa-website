@@ -22,8 +22,8 @@ const MEMBER_SELECT = 'id, first_name, last_name, email, college, year, points, 
 const PAGE = 1000;
 /** Ids per `.in()` request, so URLs stay well under PostgREST limits. */
 const ID_CHUNK = 100;
-/** Terms per `.or()` request. */
-const OR_CHUNK = 25;
+/** Values per admin_lookup_members call; the function accepts at most 1000 of each. */
+const LOOKUP_CHUNK = 500;
 
 function chunks<T>(items: readonly T[], size: number): T[][] {
   const out: T[][] = [];
@@ -31,10 +31,12 @@ function chunks<T>(items: readonly T[], size: number): T[][] {
   return out;
 }
 
-/** A value safe inside a PostgREST `.or()` ilike term, or null. `_` stays a wildcard; callers filter exactly. */
-function orSafe(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed && !/[,()%*\\":]/.test(trimmed) ? trimmed : null;
+function distinctLower(values: readonly string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean)));
+}
+
+function memberRows(data: unknown): MemberSnapshot[] {
+  return (Array.isArray(data) ? data : []) as MemberSnapshot[];
 }
 
 export interface ImportRowDetail {
@@ -82,7 +84,7 @@ export interface RecoverResult {
   replayed: boolean;
 }
 
-/** Strips PostgREST filter metacharacters so a term cannot malform `.or()`. */
+/** The same tokens admin_search_members uses, to skip a call that would return nothing. */
 function searchTokens(query: string): string[] {
   return query.replace(/[,()%*\\]/g, ' ').trim().split(/\s+/).filter(Boolean);
 }
@@ -145,45 +147,33 @@ export class AttendanceRecoveryRepository {
    * compare full names exactly; this only narrows the set.
    */
   async findMembersBySurnames(surnames: readonly string[]): Promise<MemberSnapshot[]> {
-    const terms = Array.from(new Set(surnames.map((name) => orSafe(name)?.toLowerCase()).filter((name): name is string => !!name)));
-    if (terms.length === 0) return [];
-    return withErrorHandling(async () => {
-      const members: MemberSnapshot[] = [];
-      for (const part of chunks(terms, OR_CHUNK)) {
-        for (let from = 0; ; from += PAGE) {
-          const { data, error } = await supabase
-            .from('members')
-            .select(MEMBER_SELECT)
-            .or(part.map((term) => `last_name.ilike.%${term}`).join(','))
-            .order('id', { ascending: true })
-            .range(from, from + PAGE - 1);
-          if (error) throw error;
-          members.push(...((data ?? []) as MemberSnapshot[]));
-          if (!data || data.length < PAGE) break;
-        }
-      }
-      return members;
-    }, 'Failed to look up members by name');
+    return this.lookupMembers([], distinctLower(surnames), 'Failed to look up members by name');
   }
 
   /** Members whose stored email equals one of these (case-insensitive, exact). */
   async getMembersByEmails(emails: readonly string[]): Promise<MemberSnapshot[]> {
-    const wanted = new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean));
-    const terms = Array.from(wanted).map(orSafe).filter((email): email is string => !!email);
-    if (terms.length === 0) return [];
+    return this.lookupMembers(distinctLower(emails), [], 'Failed to look up members by email');
+  }
+
+  /**
+   * Attendee emails and names go in the POST body of admin_lookup_members, never
+   * in a GET query string, where Supabase API logs would record them.
+   */
+  private async lookupMembers(emails: string[], surnames: string[], failure: string): Promise<MemberSnapshot[]> {
+    if (emails.length === 0 && surnames.length === 0) return [];
     return withErrorHandling(async () => {
       const members: MemberSnapshot[] = [];
-      for (const part of chunks(terms, OR_CHUNK)) {
-        const { data, error } = await supabase
-          .from('members')
-          .select(MEMBER_SELECT)
-          .or(part.map((email) => `email.ilike.${email}`).join(','))
-          .limit(PAGE);
+      const calls = Math.max(Math.ceil(emails.length / LOOKUP_CHUNK), Math.ceil(surnames.length / LOOKUP_CHUNK));
+      for (let i = 0; i < calls; i += 1) {
+        const { data, error } = await supabase.rpc('admin_lookup_members', {
+          p_emails: emails.slice(i * LOOKUP_CHUNK, (i + 1) * LOOKUP_CHUNK),
+          p_surnames: surnames.slice(i * LOOKUP_CHUNK, (i + 1) * LOOKUP_CHUNK),
+        });
         if (error) throw error;
-        members.push(...((data ?? []) as MemberSnapshot[]).filter((m) => wanted.has((m.email ?? '').trim().toLowerCase())));
+        members.push(...memberRows(data));
       }
-      return members;
-    }, 'Failed to look up members by email');
+      return Array.from(new Map(members.map((member) => [member.id, member])).values());
+    }, failure);
   }
 
   /** Every member, for the similar-name check before creating members in a batch. */
@@ -259,27 +249,13 @@ export class AttendanceRecoveryRepository {
     }, 'Failed to load events');
   }
 
-  /** Name or email search over raw members (admin-only by RLS). */
+  /** Name or email search over raw members (admin-only), sent in a POST body. */
   async searchMembers(query: string, limit = 10): Promise<MemberSnapshot[]> {
     return withErrorHandling(async () => {
-      const tokens = searchTokens(query);
-      if (tokens.join('').length < 2) return [];
-      let request = supabase.from('members').select(MEMBER_SELECT);
-      if (tokens.length === 1 && tokens[0].includes('@')) {
-        request = request.ilike('email', `%${tokens[0]}%`);
-      } else {
-        const names = searchTokens(query.replace(/\./g, ' '));
-        if (names.length === 0) return [];
-        request = names.length === 1
-          ? request.or(`first_name.ilike.%${names[0]}%,last_name.ilike.%${names[0]}%`)
-          : request.ilike('first_name', `%${names[0]}%`).ilike('last_name', `%${names[names.length - 1]}%`);
-      }
-      const { data, error } = await request
-        .order('last_name', { ascending: true })
-        .order('first_name', { ascending: true })
-        .limit(limit);
+      if (searchTokens(query).join('').length < 2) return [];
+      const { data, error } = await supabase.rpc('admin_search_members', { p_query: query, p_limit: limit });
       if (error) throw error;
-      return (data ?? []) as MemberSnapshot[];
+      return memberRows(data);
     }, 'Failed to search members');
   }
 

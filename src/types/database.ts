@@ -3873,6 +3873,14 @@ export type Database = {
         Args: Record<string, never>;
         Returns: Json;
       };
+      admin_lookup_members: {
+        Args: { p_emails?: string[] | null; p_surnames?: string[] | null };
+        Returns: Json;
+      };
+      admin_search_members: {
+        Args: { p_query: string; p_limit?: number };
+        Returns: Json;
+      };
       admin_recover_import_row: {
         Args: {
           p_request_id: string;

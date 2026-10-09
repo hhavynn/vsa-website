@@ -136,3 +136,65 @@ describe("RLS verifier retirement phases", () => {
     expect(yaml).toMatch(/retirement_phase:[\s\S]*post-migration/);
   });
 });
+
+// Same rollout design for 20261009232329_admin_member_lookup_rpcs.sql. After
+// the migration a missing lookup RPC must fail the run, and "protected" must
+// mean the function's own admin check, with admins proven able to call it.
+describe("RLS verifier member lookup phases", () => {
+  const CREDENTIALS = ["RLS_TEST_USER_EMAIL", "RLS_TEST_USER_PASSWORD", "RLS_TEST_ADMIN_EMAIL", "RLS_TEST_ADMIN_PASSWORD"];
+
+  // Unreachable host: these runs must end before any request is attempted.
+  function run(phase: string) {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const name of CREDENTIALS) delete env[name];
+    return spawnSync(process.execPath, [script], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: 15000,
+      env: {
+        ...env,
+        REACT_APP_SUPABASE_URL: "http://127.0.0.1:9",
+        REACT_APP_SUPABASE_ANON_KEY: "not-a-real-key",
+        RLS_RETIREMENT_PHASE: "pre-migration",
+        RLS_MEMBER_LOOKUP_PHASE: phase,
+      },
+    });
+  }
+
+  it("rejects an unknown phase before touching the network", () => {
+    const result = run("someday");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("RLS_MEMBER_LOOKUP_PHASE must be one of");
+  });
+
+  it("post-migration fails, rather than skips, without both signed-in accounts", () => {
+    const result = run("post-migration");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("requires an existing ordinary authenticated test account AND an approved admin account");
+    expect(result.stdout).not.toContain("SKIP");
+  });
+
+  it("defaults to pre-migration and only skips a missing lookup RPC in that phase", () => {
+    const source = fs.readFileSync(script, "utf8");
+    expect(source).toMatch(/process\.env\.RLS_MEMBER_LOOKUP_PHASE \|\| 'pre-migration'/);
+    expect(source).toMatch(/if \(lookupsRequired\) reportFail\([\s\S]*?\);\s*else reportSkip\(/);
+    expect(source).toContain("if (retired || lookupsRequired) {");
+    for (const who of ["'anon'", "'ordinary user'", "'admin'"]) {
+      expect(source).toContain(`reportMissingLookup(fn, ${who})`);
+    }
+  });
+
+  it("accepts only the function's own refusal for an ordinary user, and requires admins to succeed", () => {
+    const source = fs.readFileSync(script, "utf8");
+    expect(source).toContain("uError.message === 'Only admins can look up members'");
+    expect(source).toContain("authenticated may have lost EXECUTE");
+    expect(source).toMatch(/adminClient\.rpc\(fn, args\)[\s\S]*?Array\.isArray\(aData\)/);
+  });
+
+  it("lets the workflow follow the rollout and fail closed without a code change", () => {
+    const yaml = fs.readFileSync(workflow, "utf8");
+    expect(yaml).toMatch(/RLS_MEMBER_LOOKUP_PHASE: \$\{\{ inputs\.member_lookup_phase \|\| vars\.RLS_MEMBER_LOOKUP_PHASE \}\}/);
+    expect(yaml).toMatch(/member_lookup_phase:[\s\S]*post-migration/);
+    expect(yaml).toMatch(/\(inputs\.member_lookup_phase \|\| vars\.RLS_MEMBER_LOOKUP_PHASE\) == 'post-migration'/);
+  });
+});

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Offline only: verifies migration 20261009000026_historical_attendance_recovery.sql
-# on a disposable local cluster with no TCP listener and no app env. Never
-# touches a hosted Supabase project. Synthetic people only.
+# Offline only: verifies migrations 20261009000026_historical_attendance_recovery.sql
+# and 20261009232329_admin_member_lookup_rpcs.sql on a disposable local cluster
+# with no TCP listener and no app env. Never touches a hosted Supabase project.
+# Synthetic people only.
 set -euo pipefail
 
 # macOS postmaster aborts ("became multithreaded during startup") without a
@@ -76,6 +77,21 @@ if ! rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = not
   exit 1
 fi
 rtk sed -n 's/^.*NOTICE:  //p' "$assert_log"
+
+# ── Member lookup RPCs (20261009232329) ───────────────────────────────────────
+# Supabase grants EXECUTE on new functions to the API roles by default. Model
+# that, so the migration's revoke is what keeps anon out.
+lookup_migration="$repo_dir/supabase/migrations/20261009232329_admin_member_lookup_rpcs.sql"
+"${db[@]}" -c 'alter default privileges in schema public grant execute on functions to anon, authenticated, service_role'
+"${db[@]}" -f "$lookup_migration" -f "$lookup_migration"
+printf 'PASS: member lookup migration applies cleanly and is repeatable.\n'
+lookup_log="$runtime_dir/lookup.log"
+if ! rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = notice' \
+  -f "$script_dir/sql/recovery-member-lookup.assert.sql" >"$lookup_log" 2>&1; then
+  rtk cat "$lookup_log" >&2
+  exit 1
+fi
+rtk sed -n 's/^.*NOTICE:  //p' "$lookup_log"
 
 # ── Concurrency: two admins, separate sessions, committed data ─────────────────
 rtk psql "${psql_args[@]}" -d recovery -q <<'SQL'

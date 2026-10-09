@@ -59,12 +59,32 @@ if (!RETIREMENT_PHASES.includes(retirementPhase)) {
 }
 const retired = retirementPhase === 'post-migration';
 
+// Rollout phase of the admin member lookup RPCs
+// (supabase/migrations/20261009232329_admin_member_lookup_rpcs.sql), applied
+// to production by hand after merge, like the retirement migration above:
+//   pre-migration  (default) admin_lookup_members / admin_search_members may be
+//                  absent; a missing function is a SKIP. Present ones are
+//                  checked exactly as in post-migration.
+//   post-migration both functions are REQUIRED for every audience: missing is
+//                  a FAIL, and the ordinary-user and admin credentials are
+//                  required (Historical Recovery is unusable without them, so
+//                  "admins can call them" has to be proven, not skipped).
+// Flip the phase (repo variable RLS_MEMBER_LOOKUP_PHASE) only after the
+// migration is applied; see docs/rls-verification-checklist.md.
+const lookupPhase = process.env.RLS_MEMBER_LOOKUP_PHASE || 'pre-migration';
+if (!RETIREMENT_PHASES.includes(lookupPhase)) {
+  console.error(`\x1b[31mError:\x1b[0m RLS_MEMBER_LOOKUP_PHASE must be one of ${RETIREMENT_PHASES.join(', ')} (got "${lookupPhase}").`);
+  process.exit(1);
+}
+const lookupsRequired = lookupPhase === 'post-migration';
+
 // Fail closed. Before the migration the signed-in sections are optional (they
 // SKIP without credentials). After it, "the archives are closed" has to be
 // proven for every API audience, so an existing ordinary account and an
 // approved admin account are both required: a run that skipped either would
-// pass without having tested it. Never create a public member account for this.
-if (retired) {
+// pass without having tested it. The same holds once the member lookup RPCs
+// are required. Never create a public member account for this.
+if (retired || lookupsRequired) {
   const requiredCredentials = [
     'RLS_TEST_USER_EMAIL',
     'RLS_TEST_USER_PASSWORD',
@@ -141,6 +161,17 @@ async function runTests() {
   console.log('============================================================\n');
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
+  // Synthetic probe values only; never a real member's email or name.
+  const memberLookupRpcs = [
+    ['admin_lookup_members', { p_emails: ['rls-verify-probe@example.invalid'], p_surnames: ['rlsverifyprobe'] }, '20261009232329'],
+    ['admin_search_members', { p_query: 'rls-verify-probe', p_limit: 1 }, '20261009232329'],
+  ];
+  const isMissingFunction = (error) => !!error && (error.code === 'PGRST202' || error.code === '42883');
+  // Absent before the migration is expected; absent after it breaks Historical Recovery.
+  const reportMissingLookup = (fn, who) => {
+    if (lookupsRequired) reportFail(`${fn} is missing for ${who} after the member lookup migration (20261009232329); Historical Recovery lookups fail`);
+    else reportSkip(`${fn} is not present yet (migration 20261009232329 not applied)`);
+  };
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
 
@@ -385,13 +416,16 @@ async function runTests() {
       }
 
       const recoveryRpcs = [
-        ['admin_import_recovery_findings', {}],
-        ['admin_recover_import_row', { p_request_id: dummyUuid, p_row_id: dummyUuid, p_action: 'dismiss', p_reason_code: 'not_actionable', p_note: 'RLS verify probe' }],
+        ['admin_import_recovery_findings', {}, '20261009000026'],
+        ['admin_recover_import_row', { p_request_id: dummyUuid, p_row_id: dummyUuid, p_action: 'dismiss', p_reason_code: 'not_actionable', p_note: 'RLS verify probe' }, '20261009000026'],
+        ...memberLookupRpcs,
       ];
-      for (const [fn, args] of recoveryRpcs) {
+      for (const [fn, args, migration] of recoveryRpcs) {
         const { data: rData, error: rError } = await anon.rpc(fn, args);
-        if (rError && (rError.code === 'PGRST202' || rError.code === '42883')) {
-          reportSkip(`${fn} is not present yet (migration 20261009000026 not applied)`);
+        if (isMissingFunction(rError) && migration === '20261009232329') {
+          reportMissingLookup(fn, 'anon');
+        } else if (isMissingFunction(rError)) {
+          reportSkip(`${fn} is not present yet (migration ${migration} not applied)`);
         } else if (rError && (rError.code === '42501' || rError.message.includes('permission denied'))) {
           reportPass(`anon cannot call ${fn} (${rError.message})`);
         } else {
@@ -671,6 +705,22 @@ async function runTests() {
       } else {
         reportFail(`ordinary user could call generate_data_rights_export or got unexpected error: ${JSON.stringify(uRpc2Error || uRpc2Data)}`);
       }
+
+      // Only the function's own refusal proves both halves: authenticated still
+      // has EXECUTE (admins depend on it) and the admin check rejected this user.
+      // A bare "permission denied for function" means the grant was lost.
+      for (const [fn, args] of memberLookupRpcs) {
+        const { data: uData, error: uError } = await userClient.rpc(fn, args);
+        if (isMissingFunction(uError)) {
+          reportMissingLookup(fn, 'ordinary user');
+        } else if (uError && uError.code === '42501' && uError.message === 'Only admins can look up members') {
+          reportPass(`ordinary user is refused by ${fn}'s admin check (${uError.message})`);
+        } else if (uError && uError.code === '42501') {
+          reportFail(`ordinary user was refused by ${fn} before its admin check ran; authenticated may have lost EXECUTE: ${uError.message}`);
+        } else {
+          reportFail(`ordinary user could call ${fn} or got unexpected error: ${JSON.stringify(uError || uData)}`);
+        }
+      }
     }
   } catch (err) {
     reportFail(`Unexpected error during ordinary user checks: ${err.message}`);
@@ -718,6 +768,20 @@ async function runTests() {
         reportFail(`admin cannot read data_rights_requests: ${adminReqError.message}`);
       } else {
         reportPass('admin can read data_rights_requests');
+      }
+
+      // Read-only; synthetic values, sent in the POST body.
+      for (const [fn, args] of memberLookupRpcs) {
+        const { data: aData, error: aError } = await adminClient.rpc(fn, args);
+        if (isMissingFunction(aError)) {
+          reportMissingLookup(fn, 'admin');
+        } else if (aError) {
+          reportFail(`admin cannot call ${fn}; Historical Recovery lookups fail: ${aError.code} ${aError.message}`);
+        } else if (!Array.isArray(aData)) {
+          reportFail(`admin call to ${fn} did not return a JSON array: ${JSON.stringify(aData)}`);
+        } else {
+          reportPass(`admin can call ${fn} (returned an array)`);
+        }
       }
 
       // Exports append an audit event for a real request. The default read-only
