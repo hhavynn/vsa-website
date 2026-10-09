@@ -91,8 +91,8 @@ candidates, or exact-name matches whose college differs.
 
 ## Recovery workflow (Admin → Import → Historical Recovery)
 
-Implemented by migration `20261008000000_historical_attendance_recovery.sql`, which must be applied to
-production manually before the panel works (until then it shows a load error and changes nothing).
+Implemented by migration `20261009000026_historical_attendance_recovery.sql`, applied to production on
+2026-10-09 (the file was renamed to the version Supabase recorded).
 Findings come from `admin_import_recovery_findings()` classified by `importHistoryAudit.ts` in the
 browser. It returns the same evidence as Query B (checked on production data: 0 differences across all
 1,320 rows) in about 0.2 s instead of 4.2 s, plus one addition: a recovered finding whose member still
