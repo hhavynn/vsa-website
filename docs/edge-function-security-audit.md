@@ -41,7 +41,7 @@ The production admin analytics page is expected to run on the production site or
 
 ## Service-role key in image-migration webhooks (2026-10-08)
 
-**Finding.** Both image-migration Database Webhooks in production embed the project's legacy `service_role` JWT in plain text. Status: **open**. Nothing in production has been changed yet; remediation waits on owner approval.
+**Finding.** Both image-migration Database Webhooks in production embed the project's legacy `service_role` JWT in plain text. Status: **open**. Nothing in production has been changed yet; remediation waits on owner approval. The fix is prepared in `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql`, and the owner's step-by-step procedure is [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md).
 
 ### Evidence
 
@@ -54,6 +54,17 @@ All checks were read-only SQL against project `sxephkrekdztmkptyzca` on 2026-10-
 
 - These are the only two triggers carrying a JWT. No function body (`pg_proc.prosrc`) and no `cron.job` command (one job exists) contains a JWT or an `sb_secret_` key.
 - No JWT-shaped string exists in tracked files or anywhere in git history (`git log --all -G`). The repo's migrations never created these webhooks; they were made in the Dashboard. The Dashboard's "Add auth header with service key" button writes exactly this header, which is the likely origin.
+
+**Re-check later on 2026-10-08 (read-only, metadata only):**
+
+- Both triggers were unchanged: enabled, `supabase_functions.http_request`, five arguments, with an `Authorization` header, a JWT, and the `x-image-migration-secret` header.
+- None of the 41 versions recorded in `supabase_migrations.schema_migrations` mentions `image-migration` or `supabase_functions.http_request`. That confirms the webhooks are Dashboard-created and untracked.
+- `pg_catalog.pg_trigger` carries the ACL entry `=r/supabase_admin`, which is `SELECT` for `PUBLIC`.
+- `anon` and `authenticated` both hold `SELECT` on `pg_trigger` and `EXECUTE` on `pg_get_triggerdef(oid)` and `pg_get_triggerdef(oid, boolean)`, as does `authenticator`.
+- They also hold `USAGE` on `supabase_functions` and `net`, plus `SELECT` on `supabase_functions.hooks` and `net.http_request_queue`. `hooks` stores only ids and names (173 rows), and the queue was empty.
+- Vault (`supabase_vault` 0.3.1) and `pg_net` 0.19.5 are installed. Vault held 0 secrets.
+- `anon` and `authenticated` have no `USAGE` on `vault` and no `SELECT` on `vault.decrypted_secrets`. Only `postgres`, `service_role` and `supabase_admin` do.
+- The Data API exposed-schemas setting still could not be read from SQL. A planned HTTP probe with the publishable key was not run. The runbook's stage 0 asks the owner to check it in the Dashboard.
 
 ### Why the bearer token is unnecessary
 
@@ -104,11 +115,28 @@ Uploads that land between steps 3 and 4 get a 401 and stay on their Storage URL.
 
 Blast radius: steps 4 and 5 affect **every** consumer of the legacy keys at once, not only service-role users. That includes the production frontend, CI, scripts, and Edge Functions (`vsa-ai-assistant`, `member-photo-upload`, `analytics-proxy`), so every item in steps 2 and 3 must be done and verified first. Rollback: until step 5, re-enabling the legacy keys restores the old state. After step 5, a revoked key can be moved back to standby and rotated to, per Supabase's signing-keys docs.
 
-**Phase C — optional hardening.** Replace the two Dashboard webhooks with a small `AFTER INSERT OR UPDATE` trigger function that reads the webhook secret from Supabase Vault and calls `net.http_post`. The secret then never appears in `pg_trigger`. This is a gated migration; propose it separately.
+**Phase C — replace the Dashboard webhooks with tracked, Vault-backed triggers (prepared, not applied).** `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql` does three things:
+
+- It adds `private.request_image_migration()`. This `SECURITY DEFINER` trigger function, with `search_path = ''`, reads `image_migration_functions_url` and `image_migration_webhook_secret` from Vault at fire time and queues one `net.http_post` with only `Content-Type` and `x-image-migration-secret`.
+- It drops both Dashboard webhooks.
+- It creates `request_event_image_migration` and `request_house_event_image_migration` (`AFTER INSERT OR UPDATE OF image_url`).
+
+After it is applied, `pg_trigger` holds only a function name and `pg_proc.prosrc` holds only Vault secret *names*. Supabase's own API-key migration guide recommends this pattern: store `pg_net`/webhook credentials in Vault, never inline.
+
+How it behaves:
+
+- **Unconfigured production:** it aborts if the Dashboard webhooks exist but the Vault secrets do not, so a working webhook is never replaced by a no-op.
+- **Never blocks a write:** missing secrets or a `pg_net` error become a `WARNING` with SQLSTATE only.
+- **Same payload:** the Edge Functions receive the payload shape they already parse, so the functions are unchanged and need no redeploy.
+
+Verified against a synthetic stub database (`scripts/sql/image-migration-triggers.test.sh`, 37 checks), not against a hosted Supabase project.
+
+This replaces Phase A's Dashboard edit: Phase A steps 2–3 (new secret) still apply, but instead of step 4 the owner applies this migration. The runbook combines both. Phase B is unchanged and is still what invalidates the leaked JWT.
 
 ## Open Items
 
-- **2026-10-08, open:** both image-migration webhooks embed the `service_role` JWT. Run Phase A of "Service-role key in image-migration webhooks" as soon as the owner approves, then schedule Phase B before the end-of-2026 legacy-key cutoff.
+- **2026-10-08, open:** both image-migration webhooks embed the `service_role` JWT (re-confirmed later the same day). As soon as the owner approves, run stage 1 of [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md): Vault secrets, new webhook secret, then migration `20261010120000`. Then schedule stage 2 (Phase B) before the end-of-2026 legacy-key cutoff.
+- **2026-10-08, open:** confirm in the Dashboard that the Data API exposes only `public` and `graphql_public` (runbook stage 0, step 4).
 - The live unauthenticated-call test against both `trigger-*` deployed functions has not been performed. Repository source shows the shared-secret check, but the issue criterion asks for live production requests.
 - `secure-ai`'s vestigial status is fully resolved. Source search found no callers, the directory was removed, and a direct production check on 2026-08-05 confirmed the function was never deployed. `OPENAI_API_KEY` has been unset from the project's secrets. The remaining incident-response steps for #353 are outside the repo and the Supabase project, and none should be skipped: revoke the exposed key in the OpenAI dashboard, review OpenAI usage for the exposure window, confirm the GitHub secret-scanning alert is closed as revoked (0 open alerts as of 2026-09-28), decide whether to rewrite git history, and scan history for other credentials.
 - This work should not close issue #229. It only resolves the repo-answerable CORS and response-body audit slice.

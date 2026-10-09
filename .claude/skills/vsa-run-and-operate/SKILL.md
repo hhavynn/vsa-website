@@ -151,7 +151,7 @@ Both need GitHub secrets `REACT_APP_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY
 
 ### End-to-end automatic flow (Phase 3, live per docs)
 
-Admin uploads image → Supabase Storage + DB row updated → Database Webhook (Dashboard → Database → Webhooks, header `x-image-migration-secret`) → Edge Function `trigger-event-image-migration` (validates secret, only dispatches when `image_url` is new AND a Supabase Storage URL) → `repository_dispatch` → `migrate-event-images.yml` applies for that one event → commit to `main` → Vercel redeploys → image served from `/images/events/<slug>_<date>.webp` (+ `_thumb.webp`). Full webhook/PAT setup steps: `docs/event-image-migration.md` §Phase 3.
+Admin uploads image → Supabase Storage + DB row updated → tracked trigger `request_event_image_migration` (`private.request_image_migration()`, migration `20261010120000`; reads the URL and `x-image-migration-secret` from Vault and posts via `pg_net`; replaces the old Dashboard webhook, which stored the secret in plain text) → Edge Function `trigger-event-image-migration` (validates secret, only dispatches when `image_url` is new AND a Supabase Storage URL) → `repository_dispatch` → `migrate-event-images.yml` applies for that one event → commit to `main` → Vercel redeploys → image served from `/images/events/<slug>_<date>.webp` (+ `_thumb.webp`). Full webhook/PAT setup steps: `docs/event-image-migration.md` §Phase 3.
 
 **Standard operating procedure for a manual run:** dry run first (Actions → "Migrate event images to static assets" → `apply=false`), read the printed plan, then re-run with `apply=true` from `main`, wait for the Vercel deploy, verify `/events` serves `/images/events/...` URLs.
 

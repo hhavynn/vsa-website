@@ -318,8 +318,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.member-photo-upload]
 verify_jwt = false
 
-# Database Webhook receivers. The x-image-migration-secret header is their only
-# authorization, so the webhooks send no Authorization header and never the
+# Called by the image-migration triggers (private.request_image_migration, which
+# reads the secret from Vault). The x-image-migration-secret header is their only
+# authorization, so callers send no Authorization header and never the
 # service-role key (docs/event-image-migration.md, Phase 3).
 [functions.trigger-event-image-migration]
 verify_jwt = false
