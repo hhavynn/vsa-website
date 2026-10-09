@@ -17,6 +17,7 @@ export function DialogFrame({
   locked = false,
   initialFocusRef,
   wide = false,
+  panelClassName,
   children,
 }: {
   titleId: string;
@@ -25,6 +26,8 @@ export function DialogFrame({
   locked?: boolean;
   initialFocusRef?: RefObject<HTMLElement>;
   wide?: boolean;
+  /** Extra panel classes, e.g. a larger max width for a review screen. */
+  panelClassName?: string;
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -82,7 +85,7 @@ export function DialogFrame({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className={cn('bg-surface border-border-strong text-text-primary', 'max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-2xl', wide ? 'max-w-xl' : 'max-w-md')}
+        className={cn('bg-surface border-border-strong text-text-primary', 'max-h-[90vh] w-full overflow-y-auto rounded-lg border p-5 shadow-2xl', wide ? 'max-w-xl' : 'max-w-md', panelClassName)}
       >
         {children}
       </div>

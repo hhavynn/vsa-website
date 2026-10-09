@@ -96,8 +96,10 @@ Implemented by migration `20261009000026_historical_attendance_recovery.sql`, ap
 Findings come from `admin_import_recovery_findings()` classified by `importHistoryAudit.ts` in the
 browser. It returns the same evidence as Query B (checked on production data: 0 differences across all
 1,320 rows) in about 0.2 s instead of 4.2 s, plus one addition: a recovered finding whose member still
-has the attendance counts as identity evidence for other rows with the same email. Every change is one admin-confirmed action on one import row;
-there is no bulk or automatic correction.
+has the attendance counts as identity evidence for other rows with the same email. Every change is one
+admin-confirmed action on one import row, applied through `admin_recover_import_row`. Admins can review
+and apply many such actions together (see "Bulk reconciliation workspace" below), but nothing is ever
+decided or applied automatically.
 
 | Action | Offered when | Writes (one transaction) |
 |---|---|---|
@@ -199,8 +201,53 @@ It checks:
 - replays, and stale and concurrent attempts, including:
   - the same member on two events
   - a recovery racing an event points edit (mutation-tested: each fails without its lock)
+  - the workspace's two-lane batch, and a retry after a lost response. An equivalent payload replays;
+    a changed payload, or a request id reused on another row, is refused.
 - rollback
 - that the function contains no DELETE, and that every cached total equals the ledger
+
+### Bulk reconciliation workspace
+
+The panel is an event-scoped review table (`src/components/features/admin/recovery/`). The single-row
+dialog above stays available on every row as Details / Full review, and is the only path for resolving an
+investigation or reopening.
+
+- **Triage.** Each row is placed in one of five groups: safe or already resolved; straightforward,
+  confirm; ambiguous identity; possible incorrect original match; insufficient evidence. The table
+  suggests crediting an existing member only when the row's email equals that member's stored email.
+  Similar names produce "compare these", never a suggestion. A new member is suggested only when no
+  member has the email or the name and no similar member attended. Suggestions are never preselected
+  or staged.
+- **Staging.** Match, Create, Credit correct member, Dismiss and Needs more information are staged
+  inline. Nothing is written until Apply.
+  - Staged decisions survive event switches and page navigation in this tab only: sessionStorage, keyed
+    by admin, with a 4-hour TTL. Other admins' staged work is removed on load. Leaving the page with
+    staged work prompts first.
+  - Each decision freezes its exact request, including the request id and the history entry it was
+    staged against.
+- **Bulk staging** applies only to homogeneous cases and lists the rows it skips and why:
+  - Needs more information, with one shared note.
+  - Dismiss, with one shared reason. "Legitimate duplicate" needs ledger evidence on each row.
+  - New members, only for rows that have an email and no possible existing identity, once per person.
+  - Bulk never matches anyone to an existing member.
+- **Review.** One confirmation re-reads findings, history, members, attendance, event points, email
+  holders and, when members are created, the whole roster. It blocks:
+  - a finding that changed since staging
+  - a member whose details changed (the admin re-confirms)
+  - one member credited twice for one event
+  - rows that look like the same person sent to different members
+  - a new-member email that is duplicated or already held
+  - similar names on bulk-created members
+
+  A restore whose member already attended adds nothing and cannot be reopened, so it needs a per-row
+  acknowledgement. The ledger summary always shows 0 attendance removed.
+- **Apply.** Calls `admin_recover_import_row` once per row, at most 2 at a time, with one member's rows
+  in one lane. Each row reports applied, already applied, conflict, failed (rolled back) or no answer.
+  - Applied rows leave staging. The others stay, with their request kept.
+  - A row with no answer is locked until the next review. If the history holds its request id, it
+    counts as applied. If not, it never committed, and applying again sends the identical request.
+  - After a run, a read-only check compares the affected members' cached totals with their attendance
+    and reports any difference. It never writes totals.
 
 `scripts/audit-import-history.sql` does not read recovery history. After a recovery it still reports the
 row by its import-time state. The Historical Recovery panel is the source of truth for recovery status.

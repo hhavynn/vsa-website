@@ -207,6 +207,79 @@ select
 [ "$result" = "4|10|15|1|1" ] && ledger_ok=true || ledger_ok=false
 check "concurrent attempts leave one credit per person, one history entry, one member per email (got $result)" "$ledger_ok"
 
+# ── Batch submission (the reconciliation workspace) ───────────────────────────
+# The workspace applies staged rows through this same function, two lanes at a
+# time, one member per lane. Model that: lane 1 credits Mai on three events,
+# lane 2 credits Tuan on two and creates Hoa, both lanes at once. Then replay
+# Hoa's request after a "lost response": an equivalent payload (keys reordered)
+# replays; a changed payload (keys missing) or another row is refused.
+rtk psql "${psql_args[@]}" -d recovery -q <<'SQL'
+insert into public.events (id, name, points) values
+  ('80000000-0000-0000-0000-0000000000d1', 'Batch GBM', 10),
+  ('80000000-0000-0000-0000-0000000000d2', 'Batch Social', 5),
+  ('80000000-0000-0000-0000-0000000000d3', 'Batch Retreat', 8);
+insert into public.members (id, first_name, last_name) values
+  ('10000000-0000-0000-0000-0000000000d1', 'Mai', 'Le'),
+  ('10000000-0000-0000-0000-0000000000d2', 'Tuan', 'Ngo');
+insert into public.import_jobs (id, event_id, status) values
+  ('20000000-0000-0000-0000-0000000000d1', '80000000-0000-0000-0000-0000000000d1', 'completed'),
+  ('20000000-0000-0000-0000-0000000000d2', '80000000-0000-0000-0000-0000000000d2', 'completed'),
+  ('20000000-0000-0000-0000-0000000000d3', '80000000-0000-0000-0000-0000000000d3', 'completed');
+insert into public.import_job_rows (id, import_job_id, source_row_index, event_id, display_name, decision) values
+  ('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000d1', 0, '80000000-0000-0000-0000-0000000000d1', 'Mai Le', 'review'),
+  ('30000000-0000-0000-0000-0000000000d2', '20000000-0000-0000-0000-0000000000d2', 0, '80000000-0000-0000-0000-0000000000d2', 'Mai Le', 'review'),
+  ('30000000-0000-0000-0000-0000000000d3', '20000000-0000-0000-0000-0000000000d3', 0, '80000000-0000-0000-0000-0000000000d3', 'Mai Le', 'review'),
+  ('30000000-0000-0000-0000-0000000000d4', '20000000-0000-0000-0000-0000000000d1', 1, '80000000-0000-0000-0000-0000000000d1', 'Tuan Ngo', 'review'),
+  ('30000000-0000-0000-0000-0000000000d5', '20000000-0000-0000-0000-0000000000d2', 1, '80000000-0000-0000-0000-0000000000d2', 'Tuan Ngo', 'review'),
+  ('30000000-0000-0000-0000-0000000000d6', '20000000-0000-0000-0000-0000000000d1', 2, '80000000-0000-0000-0000-0000000000d1', 'Hoa Pham', 'review');
+SQL
+
+hoa_payload='{"first_name": "Hoa", "last_name": "Pham", "email": "hoa.pham@ucsd.edu", "college": "", "year": ""}'
+(
+  for row in d1 d2 d3; do
+    as_admin 00000000-0000-0000-0000-0000000000a1 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000$row', 'restore', null, '10000000-0000-0000-0000-0000000000d1');"
+  done
+) >"$runtime_dir/lane1.out" &
+pid_l1=$!
+(
+  for row in d4 d5; do
+    as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row(gen_random_uuid(), '30000000-0000-0000-0000-0000000000$row', 'restore', null, '10000000-0000-0000-0000-0000000000d2');"
+  done
+  as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row('40000000-0000-0000-0000-0000000000d6', '30000000-0000-0000-0000-0000000000d6', 'create_member', null, null, null, '$hoa_payload');"
+) >"$runtime_dir/lane2.out" &
+pid_l2=$!
+wait "$pid_l1" "$pid_l2"
+
+replay_same="$(as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row('40000000-0000-0000-0000-0000000000d6', '30000000-0000-0000-0000-0000000000d6', 'create_member', null, null, null, '{\"year\": \"\", \"college\": \"\", \"email\": \"hoa.pham@ucsd.edu\", \"last_name\": \"Pham\", \"first_name\": \"Hoa\"}');")"
+replay_changed="$(as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row('40000000-0000-0000-0000-0000000000d6', '30000000-0000-0000-0000-0000000000d6', 'create_member', null, null, null, '{\"first_name\": \"Hoa\", \"last_name\": \"Pham\", \"email\": \"hoa.pham@ucsd.edu\"}');")"
+replay_other_row="$(as_admin 00000000-0000-0000-0000-0000000000a2 "select public.admin_recover_import_row('40000000-0000-0000-0000-0000000000d6', '30000000-0000-0000-0000-0000000000d5', 'create_member', null, null, null, '$hoa_payload');")"
+
+lanes_ok=false
+added="$(cat "$runtime_dir/lane1.out" "$runtime_dir/lane2.out" | grep -o '"outcome": "attendance_added"' | wc -l | tr -d ' ')"
+if ! grep -q 'ERROR' "$runtime_dir/lane1.out" "$runtime_dir/lane2.out" && [ "$added" = "6" ]; then
+  lanes_ok=true
+fi
+check "a two-lane batch applies every row once (got $added of 6)" "$lanes_ok"
+batch_totals="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "
+select string_agg(m.points || '/' || m.events_attended || '=' || coalesce(s.points, 0) || '/' || coalesce(s.events, 0), '|' order by m.first_name)
+from public.members m
+left join (select member_id, sum(points_earned) as points, count(*) as events from public.member_event_attendance group by member_id) s on s.member_id = m.id
+where m.id in ('10000000-0000-0000-0000-0000000000d1', '10000000-0000-0000-0000-0000000000d2')
+   or m.email = 'hoa.pham@ucsd.edu'")"
+[ "$batch_totals" = "10/1=10/1|23/3=23/3|15/2=15/2" ] && totals_ok=true || totals_ok=false
+check "batched totals equal the attendance sums (got $batch_totals, want Hoa 10/1, Mai 23/3, Tuan 15/2)" "$totals_ok"
+printf '%s' "$replay_same" | grep -q '"replayed": true' && same_ok=true || same_ok=false
+check 'a retry after a lost response with an equivalent payload replays without writing' "$same_ok"
+printf '%s' "$replay_changed" | grep -q 'already used for a different recovery' && changed_ok=true || changed_ok=false
+check 'a retry whose payload changed (missing keys) is refused, not applied' "$changed_ok"
+printf '%s' "$replay_other_row" | grep -q 'already used for a different recovery' && other_ok=true || other_ok=false
+check 'a request id reused on another row is refused' "$other_ok"
+hoa="$(rtk psql "${psql_args[@]}" -d recovery -qtA -c "
+select (select count(*) from public.members where email = 'hoa.pham@ucsd.edu') || '|' ||
+       (select count(*) from public.import_recovery_actions where import_job_row_id in ('30000000-0000-0000-0000-0000000000d5', '30000000-0000-0000-0000-0000000000d6'))")"
+[ "$hoa" = "1|2" ] && hoa_ok=true || hoa_ok=false
+check "replays create no second member and no extra history (got $hoa, want 1|2)" "$hoa_ok"
+
 cleanup
 trap - EXIT
 printf 'PASS: offline PostgreSQL cluster stopped and removed on exit.\n'

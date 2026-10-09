@@ -20,6 +20,22 @@ import { Json } from '../../types/database';
 
 const MEMBER_SELECT = 'id, first_name, last_name, email, college, year, points, events_attended' as const;
 const PAGE = 1000;
+/** Ids per `.in()` request, so URLs stay well under PostgREST limits. */
+const ID_CHUNK = 100;
+/** Terms per `.or()` request. */
+const OR_CHUNK = 25;
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** A value safe inside a PostgREST `.or()` ilike term, or null. `_` stays a wildcard; callers filter exactly. */
+function orSafe(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed && !/[,()%*\\":]/.test(trimmed) ? trimmed : null;
+}
 
 export interface ImportRowDetail {
   id: string;
@@ -113,10 +129,134 @@ export class AttendanceRecoveryRepository {
     const ids = Array.from(new Set(memberIds.filter(Boolean)));
     if (ids.length === 0) return [];
     return withErrorHandling(async () => {
-      const { data, error } = await supabase.from('members').select(MEMBER_SELECT).in('id', ids);
-      if (error) throw error;
-      return (data ?? []) as MemberSnapshot[];
+      const members: MemberSnapshot[] = [];
+      for (const part of chunks(ids, ID_CHUNK)) {
+        const { data, error } = await supabase.from('members').select(MEMBER_SELECT).in('id', part);
+        if (error) throw error;
+        members.push(...((data ?? []) as MemberSnapshot[]));
+      }
+      return members;
     }, 'Failed to load members');
+  }
+
+  /**
+   * Members whose last name ends with one of these surnames (case-insensitive),
+   * for same-name candidates across a whole event in a few requests. Callers
+   * compare full names exactly; this only narrows the set.
+   */
+  async findMembersBySurnames(surnames: readonly string[]): Promise<MemberSnapshot[]> {
+    const terms = Array.from(new Set(surnames.map((name) => orSafe(name)?.toLowerCase()).filter((name): name is string => !!name)));
+    if (terms.length === 0) return [];
+    return withErrorHandling(async () => {
+      const members: MemberSnapshot[] = [];
+      for (const part of chunks(terms, OR_CHUNK)) {
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from('members')
+            .select(MEMBER_SELECT)
+            .or(part.map((term) => `last_name.ilike.%${term}`).join(','))
+            .order('id', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          members.push(...((data ?? []) as MemberSnapshot[]));
+          if (!data || data.length < PAGE) break;
+        }
+      }
+      return members;
+    }, 'Failed to look up members by name');
+  }
+
+  /** Members whose stored email equals one of these (case-insensitive, exact). */
+  async getMembersByEmails(emails: readonly string[]): Promise<MemberSnapshot[]> {
+    const wanted = new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean));
+    const terms = Array.from(wanted).map(orSafe).filter((email): email is string => !!email);
+    if (terms.length === 0) return [];
+    return withErrorHandling(async () => {
+      const members: MemberSnapshot[] = [];
+      for (const part of chunks(terms, OR_CHUNK)) {
+        const { data, error } = await supabase
+          .from('members')
+          .select(MEMBER_SELECT)
+          .or(part.map((email) => `email.ilike.${email}`).join(','))
+          .limit(PAGE);
+        if (error) throw error;
+        members.push(...((data ?? []) as MemberSnapshot[]).filter((m) => wanted.has((m.email ?? '').trim().toLowerCase())));
+      }
+      return members;
+    }, 'Failed to look up members by email');
+  }
+
+  /** Every member, for the similar-name check before creating members in a batch. */
+  async listRoster(): Promise<MemberSnapshot[]> {
+    return withErrorHandling(async () => {
+      const members: MemberSnapshot[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from('members')
+          .select(MEMBER_SELECT)
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        members.push(...((data ?? []) as MemberSnapshot[]));
+        if (!data || data.length < PAGE) return members;
+      }
+    }, 'Failed to load members');
+  }
+
+  /** Ids of every member with attendance for the event. */
+  async getEventAttendanceMemberIds(eventId: string): Promise<string[]> {
+    return withErrorHandling(async () => {
+      const ids: string[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from('member_event_attendance')
+          .select('member_id')
+          .eq('event_id', eventId)
+          .order('member_id', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        ids.push(...((data ?? []) as Array<{ member_id: string }>).map((row) => row.member_id));
+        if (!data || data.length < PAGE) return ids;
+      }
+    }, 'Failed to check existing attendance');
+  }
+
+  /** Every attendance row (member, event, points) for these members. */
+  async getAttendanceForMembers(memberIds: readonly string[]): Promise<Array<{ member_id: string; event_id: string; points_earned: number }>> {
+    const ids = Array.from(new Set(memberIds.filter(Boolean)));
+    if (ids.length === 0) return [];
+    return withErrorHandling(async () => {
+      const rows: Array<{ member_id: string; event_id: string; points_earned: number }> = [];
+      for (const part of chunks(ids, ID_CHUNK)) {
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from('member_event_attendance')
+            .select('member_id, event_id, points_earned')
+            .in('member_id', part)
+            .order('id', { ascending: true })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          rows.push(...((data ?? []) as Array<{ member_id: string; event_id: string; points_earned: number }>));
+          if (!data || data.length < PAGE) break;
+        }
+      }
+      return rows;
+    }, 'Failed to load attendance');
+  }
+
+  /** Current point values for these events. */
+  async getEventsPoints(eventIds: readonly string[]): Promise<Map<string, number>> {
+    const ids = Array.from(new Set(eventIds.filter(Boolean)));
+    if (ids.length === 0) return new Map();
+    return withErrorHandling(async () => {
+      const points = new Map<string, number>();
+      for (const part of chunks(ids, ID_CHUNK)) {
+        const { data, error } = await supabase.from('events').select('id, points').in('id', part);
+        if (error) throw error;
+        ((data ?? []) as Array<{ id: string; points: number | null }>).forEach((row) => points.set(row.id, row.points ?? 0));
+      }
+      return points;
+    }, 'Failed to load events');
   }
 
   /** Name or email search over raw members (admin-only by RLS). */
