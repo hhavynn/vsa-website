@@ -72,13 +72,26 @@ openssl rand -hex 32
 | `image_migration_functions_url` | `https://sxephkrekdztmkptyzca.supabase.co/functions/v1` |
 | `image_migration_webhook_secret` | the value from 1.2 |
 
-Alternative with `psql`: pass the value as a variable through stdin. Do not use `-c`, because `psql -c` does not interpolate variables:
+Alternative with `psql`. The secret must never appear in a process's arguments, where other local processes can read it. So:
+
+- It is not passed with `-v`/`--set` (a command-line option), nor on any other command's command line.
+- `printf` is a shell builtin in bash and zsh, so the value travels only through the pipe.
+- Connect with `PGHOST`/`PGPORT`/`PGUSER`/`PGDATABASE` and `~/.pgpass`, so the database password stays out of the arguments too.
 
 ```bash
-read -rs IMG_SECRET   # paste the value; nothing is echoed
-printf "select vault.create_secret(:'s', 'image_migration_webhook_secret', 'x-image-migration-secret for the image-migration triggers');\n" \
-  | psql "$PROD_DB_URL" -v s="$IMG_SECRET"
+read -rs IMG_SECRET   # paste the value from 1.2; nothing is echoed
+# Only a 64-character hex value is sent, so it cannot break the SQL quoting.
+if [[ $IMG_SECRET =~ ^[0-9a-f]{64}$ ]]; then
+  printf "%s\n" \
+    "select vault.create_secret('https://sxephkrekdztmkptyzca.supabase.co/functions/v1', 'image_migration_functions_url', 'Edge Functions base URL for the image-migration triggers');" \
+    "select vault.create_secret('$IMG_SECRET', 'image_migration_webhook_secret', 'x-image-migration-secret for the image-migration triggers');" \
+    | psql -X -q -v ON_ERROR_STOP=1 >/dev/null
+else
+  echo "Not the 64-character hex value from 1.2; nothing was sent."
+fi
 ```
+
+Keep `IMG_SECRET` set for 1.4.
 
 Verify (lengths only):
 
@@ -89,12 +102,16 @@ where name in ('image_migration_functions_url', 'image_migration_webhook_secret'
 -- expect two rows: functions_url len 53, webhook_secret len 64
 ```
 
-**1.4 Set the Edge Function secret** to the same value. Do this in **Edge Functions → Secrets** in the Dashboard (key `IMAGE_MIGRATION_WEBHOOK_SECRET`), or:
+**1.4 Set the Edge Function secret** to the same value. Do this in **Edge Functions → Secrets** in the Dashboard (key `IMAGE_MIGRATION_WEBHOOK_SECRET`). That is the preferred path.
+
+Or use the CLI with an env file, never `KEY=value` on the command line, which would put the secret in the process's arguments. `mktemp` creates the file readable only by you:
 
 ```bash
-read -rs IMG_SECRET
-supabase secrets set --project-ref sxephkrekdztmkptyzca IMAGE_MIGRATION_WEBHOOK_SECRET="$IMG_SECRET"
-unset IMG_SECRET
+ENV_FILE="$(mktemp)"
+printf 'IMAGE_MIGRATION_WEBHOOK_SECRET=%s\n' "$IMG_SECRET" > "$ENV_FILE"   # builtin printf: no argv exposure
+supabase secrets set --project-ref sxephkrekdztmkptyzca --env-file "$ENV_FILE"
+rm -f "$ENV_FILE"
+unset IMG_SECRET ENV_FILE
 ```
 
 Secrets are project-wide, so this covers both functions. No redeploy is needed: Supabase makes secrets available to functions immediately.
