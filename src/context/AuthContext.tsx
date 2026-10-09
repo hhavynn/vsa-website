@@ -126,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (expiredId === userId) {
         void queryClient.invalidateQueries();
       } else {
+        clearStaged(expiredId);
         queryClient.clear();
       }
     },
@@ -135,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const discardExpiredSession = useCallback(() => {
     expiredUserIdRef.current = null;
     setSessionExpired(false);
+    clearStaged();
     queryClient.clear();
   }, [queryClient]);
 
@@ -195,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    const signingOutId = userIdRef.current;
     signingOutRef.current = true;
     try {
       const { error } = await supabase.auth.signOut();
@@ -204,8 +207,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       // Clear local state regardless of the server response: a failed request
       // must not leave an admin looking signed in. Staged recovery work
-      // (names, emails, notes) must not outlive the session in this tab.
-      clearStaged();
+      // (names, emails, notes) must not outlive the session in this tab,
+      // except the expired admin's while the expiry prompt waits for them.
+      const expiredId = expiredUserIdRef.current;
+      if (expiredId === null) clearStaged();
+      else if (signingOutId !== null && signingOutId !== expiredId) clearStaged(signingOutId);
       endSession(false);
       signingOutRef.current = false;
     }

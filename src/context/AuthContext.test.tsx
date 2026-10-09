@@ -240,6 +240,59 @@ describe('session ends unprompted (refresh rejected, expired, signed out in anot
   });
 });
 
+const STAGING = 'vsa.recovery-staging.v1.';
+const stage = (...ids: string[]) =>
+  ids.forEach((id) => window.sessionStorage.setItem(STAGING + id, '{"savedAt":1,"decisions":[]}'));
+const isStaged = (id: string) => window.sessionStorage.getItem(STAGING + id) !== null;
+
+describe('staged recovery work while a session-expiry prompt is open', () => {
+  afterEach(() => window.sessionStorage.clear());
+
+  it.each([
+    ['a different account is turned away', 'someone-else'],
+    ['the same admin’s admin check fails', 'admin-1'],
+  ])('keeps the expired admin’s staged work when %s', async (_, replacement) => {
+    await signedInAs('admin-1');
+    await emit('SIGNED_OUT', null);
+    stage('admin-1', 'someone-else');
+    await emit('SIGNED_IN', sessionFor(replacement));
+
+    await act(async () => {
+      await auth.signOut();
+    });
+
+    expect(auth.sessionExpired).toBe(true);
+    expect(isStaged('admin-1')).toBe(true);
+    // Only a different account that was turned away loses its own staged work.
+    expect(isStaged('someone-else')).toBe(replacement !== 'someone-else');
+  });
+
+  it('clears all staged work when the expired session is discarded', async () => {
+    await signedInAs('admin-1');
+    await emit('SIGNED_OUT', null);
+    stage('admin-1', 'admin-2');
+
+    act(() => auth.discardExpiredSession());
+
+    expect(isStaged('admin-1')).toBe(false);
+    expect(isStaged('admin-2')).toBe(false);
+  });
+
+  it('keeps it when the same admin resumes, and clears it when a different account resolves', async () => {
+    await signedInAs('admin-1');
+    await emit('SIGNED_OUT', null);
+    stage('admin-1');
+    await emit('SIGNED_IN', sessionFor('admin-1'));
+    act(() => auth.resolveExpiredSession('admin-1'));
+    expect(isStaged('admin-1')).toBe(true);
+
+    await emit('SIGNED_OUT', null);
+    await emit('SIGNED_IN', sessionFor('admin-2'));
+    act(() => auth.resolveExpiredSession('admin-2'));
+    expect(isStaged('admin-1')).toBe(false);
+  });
+});
+
 describe('token refresh and repeated sign-in events', () => {
   it('keeps the cache and does not flag expiry on TOKEN_REFRESHED', async () => {
     const { client } = await signedInAs('admin-1');
