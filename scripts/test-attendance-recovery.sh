@@ -52,6 +52,12 @@ db=(rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = warn
 "${db[@]}" -f "$script_dir/sql/attendance-recovery.fixture.sql"
 "${db[@]}" -f "$migration" -f "$migration"
 printf 'PASS: migration applies cleanly and is repeatable.\n'
+# Later migrations to run the same checks against (space-separated paths), e.g.
+# scripts/test-points-concurrency.sh passes the points recalculation migration.
+for extra in ${VSA_EXTRA_MIGRATIONS:-}; do
+  "${db[@]}" -f "$extra"
+  printf 'PASS: also applied %s\n' "$(rtk basename "$extra")"
+done
 
 # The guard refuses to run over the earlier destructive draft's table.
 rtk psql "${psql_args[@]}" -d recovery_draft -q -c 'set client_min_messages = warning' \

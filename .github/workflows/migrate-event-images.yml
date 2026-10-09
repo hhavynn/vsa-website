@@ -63,28 +63,63 @@ jobs:
       - name: Guard — apply mode must run on main
         # repository_dispatch always runs in apply mode; manual apply= true also guarded here.
         if: ${{ (inputs.apply == 'true' || github.event_name == 'repository_dispatch') && github.ref != 'refs/heads/main' }}
+        env:
+          CURRENT_REF: ${{ github.ref }}
         run: |
           echo "ERROR: Apply mode is only allowed on the main branch."
-          echo "Current ref: ${{ github.ref }}"
+          echo "Current ref: $CURRENT_REF"
           echo "Apply commits files to the current branch and relinks rows to what"
           echo "main serves; only main's deploy is what production serves."
           exit 1
 
+      # client_payload comes from the webhook Edge Function and inputs from a human;
+      # both are untrusted text. They reach the shell only through env (never inline
+      # ${{ }} expansion, which would execute an injected `"; cmd; #`) and must pass
+      # the allowlists below before any later step uses the outputs.
       - name: Build migration args
         id: args
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PAYLOAD_CATEGORY: ${{ github.event.client_payload.category }}
+          PAYLOAD_EVENT_ID: ${{ github.event.client_payload.event_id }}
+          PAYLOAD_HOUSE_EVENT_ID: ${{ github.event.client_payload.house_event_id }}
+          INPUT_CATEGORY: ${{ inputs.category }}
+          INPUT_EVENT_ID: ${{ inputs.event_id }}
+          INPUT_HOUSE_EVENT_ID: ${{ inputs.house_event_id }}
+          INPUT_APPLY: ${{ inputs.apply }}
+          INPUT_LIMIT: ${{ inputs.limit }}
         run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            CATEGORY="${{ github.event.client_payload.category || 'events' }}"
-            EVENT_ID="${{ github.event.client_payload.event_id }}"
-            HOUSE_EVENT_ID="${{ github.event.client_payload.house_event_id }}"
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            CATEGORY="${PAYLOAD_CATEGORY:-events}"
+            EVENT_ID="$PAYLOAD_EVENT_ID"
+            HOUSE_EVENT_ID="$PAYLOAD_HOUSE_EVENT_ID"
             APPLY_MODE="true"
             LIMIT="1"
           else
-            CATEGORY="${{ inputs.category }}"
-            EVENT_ID="${{ inputs.event_id }}"
-            HOUSE_EVENT_ID="${{ inputs.house_event_id }}"
-            APPLY_MODE="${{ inputs.apply }}"
-            LIMIT="${{ inputs.limit || '20' }}"
+            CATEGORY="$INPUT_CATEGORY"
+            EVENT_ID="$INPUT_EVENT_ID"
+            HOUSE_EVENT_ID="$INPUT_HOUSE_EVENT_ID"
+            APPLY_MODE="$INPUT_APPLY"
+            LIMIT="${INPUT_LIMIT:-20}"
+          fi
+
+          UUID_RE='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          case "$CATEGORY" in
+            events|house-events) ;;
+            *) echo "::error::Unsupported category"; exit 1 ;;
+          esac
+          case "$APPLY_MODE" in
+            true|false) ;;
+            *) echo "::error::apply must be true or false"; exit 1 ;;
+          esac
+          if [ -n "$EVENT_ID" ] && ! [[ "$EVENT_ID" =~ $UUID_RE ]]; then
+            echo "::error::event_id must be a UUID"; exit 1
+          fi
+          if [ -n "$HOUSE_EVENT_ID" ] && ! [[ "$HOUSE_EVENT_ID" =~ $UUID_RE ]]; then
+            echo "::error::house_event_id must be a UUID"; exit 1
+          fi
+          if ! [[ "$LIMIT" =~ ^[0-9]+$ ]]; then
+            echo "::error::limit must be a whole number"; exit 1
           fi
 
           ARGS="--category $CATEGORY"
@@ -111,17 +146,21 @@ jobs:
         env:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npx tsx scripts/migrate-supabase-images-to-public.ts ${{ steps.args.outputs.MIGRATION_ARGS }} --plan-out "$RUNNER_TEMP/image-relink-plan.json"
+          MIGRATION_ARGS: ${{ steps.args.outputs.MIGRATION_ARGS }}
+        # MIGRATION_ARGS is unquoted on purpose: it holds several validated flags.
+        run: npx tsx scripts/migrate-supabase-images-to-public.ts $MIGRATION_ARGS --plan-out "$RUNNER_TEMP/image-relink-plan.json"
 
       - name: Commit and push migrated images
         id: commit
         if: ${{ steps.args.outputs.APPLY_MODE == 'true' }}
+        env:
+          CATEGORY: ${{ steps.args.outputs.CATEGORY }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage specific category directory
-          if [ "${{ steps.args.outputs.CATEGORY }}" = "house-events" ]; then
+          if [ "$CATEGORY" = "house-events" ]; then
             git add public/images/house-events/
           else
             git add public/images/events/
@@ -130,7 +169,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new image files to commit."
           else
-            git commit -m "chore: migrate ${{ steps.args.outputs.CATEGORY }} images to static assets"
+            git commit -m "chore: migrate $CATEGORY images to static assets"
             # A failed push fails the job here, so the relink step below never runs
             # and no row is pointed at a file that did not ship.
             for attempt in 1 2 3; do

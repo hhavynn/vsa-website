@@ -175,7 +175,8 @@ When Phase 3 is enabled, uploading or changing an event image in the admin dashb
 Admin uploads event image
   → image lands in Supabase Storage
   → DB row updated (image_url = Supabase Storage URL)
-  → Supabase Database Webhook fires
+  → tracked trigger (request_event_image_migration) queues a pg_net POST,
+    reading the URL and shared secret from Supabase Vault
   → Edge Function: trigger-event-image-migration
       → verifies shared secret
       → checks image URL changed + is Supabase Storage
@@ -194,7 +195,7 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
 
 | Secret | Purpose |
 |---|---|
-| `IMAGE_MIGRATION_WEBHOOK_SECRET` | Shared secret between the DB webhook and the Edge Function |
+| `IMAGE_MIGRATION_WEBHOOK_SECRET` | Shared secret between the database trigger and the Edge Function. Must equal the Vault secret `image_migration_webhook_secret` |
 | `GITHUB_REPOSITORY` | Repo in `owner/repo` format, e.g. `hhavynn/vsa-website` |
 | `GITHUB_DISPATCH_TOKEN` | Fine-grained PAT with `contents: write` on this repo (to trigger `repository_dispatch`) |
 | `GITHUB_DISPATCH_EVENT_TYPE` | Optional. Default: `event-image-migration-requested` |
@@ -212,6 +213,7 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
    ```bash
    supabase functions deploy trigger-event-image-migration
    ```
+   `supabase/config.toml` sets `verify_jwt = false` for this function (equivalent to `--no-verify-jwt`). It must stay off: the webhook sends no JWT, so a gateway JWT check would reject every call. Confirm with `supabase functions list` (or the dashboard), which must show JWT verification disabled.
 
 2. **Set Edge Function secrets** (Supabase Dashboard → Edge Functions → trigger-event-image-migration → Secrets):
    - `IMAGE_MIGRATION_WEBHOOK_SECRET` — any strong random string (e.g. `openssl rand -hex 32`)
@@ -225,24 +227,28 @@ Set these in the Supabase Dashboard under **Project Settings → Edge Functions*
    - Permissions: **Contents → Read and write** (required for `repository_dispatch`)
    - Copy the token and set as `GITHUB_DISPATCH_TOKEN` in step 2
 
-4. **Create Database Webhook** (Supabase Dashboard → Database → Webhooks → Create new webhook):
-   - Name: `event-image-migration`
-   - Table: `events`
-   - Events: **INSERT**, **UPDATE**
-   - Method: `POST`
-   - URL: your Edge Function endpoint
-     ```
-     https://<project-ref>.supabase.co/functions/v1/trigger-event-image-migration
-     ```
-   - Headers:
-     ```
-     x-image-migration-secret: <same value as IMAGE_MIGRATION_WEBHOOK_SECRET>
-     ```
+4. **Create the Vault secrets, then apply the trigger migration.** The database side is tracked in `supabase/migrations/20261010120000_vault_backed_image_migration_triggers.sql`; it is not a Dashboard webhook. In **Vault** (Dashboard → Integrations → Vault), create:
+   - `image_migration_functions_url` — `https://<project-ref>.supabase.co/functions/v1`
+   - `image_migration_webhook_secret` — the same value as `IMAGE_MIGRATION_WEBHOOK_SECRET`
+
+   Then apply the migration manually (never `supabase db push` against production; see the runbook). It creates `request_event_image_migration` on `events` and `request_house_event_image_migration` on `house_events`. Both fire `AFTER INSERT OR UPDATE OF image_url` and call `private.request_image_migration()`, which reads both values from Vault at fire time and sends only `Content-Type` and `x-image-migration-secret`. If a secret is missing, the trigger skips with a warning and the row still saves. Exact steps and read-only verification queries: [`image-migration-webhook-credential-rotation.md`](image-migration-webhook-credential-rotation.md), stage 1.
+
+   > **Do not create Database Webhooks for this in the Dashboard** (Database → Webhooks). A Dashboard webhook stores its headers in plain text in the trigger definition (`pg_trigger`, `pg_get_triggerdef`), which every database role can read, `anon` and `authenticated` included. Its "Add auth header with service key" button also writes the service-role JWT there. That happened in production; see `docs/edge-function-security-audit.md` § "Service-role key in image-migration webhooks". The functions authorize only on `x-image-migration-secret` and run with `verify_jwt = false`, so no `Authorization` header is ever needed. Database → Webhooks is expected to list nothing.
+
+   To confirm no credential is in any trigger definition (prints counts only, never values):
+   ```sql
+   select count(*) as triggers_with_credentials
+   from pg_trigger t
+   where not t.tgisinternal
+     and (pg_get_triggerdef(t.oid) ~* 'authorization|x-image-migration-secret'
+          or pg_get_triggerdef(t.oid) ~ 'eyJ[A-Za-z0-9_-]+\.eyJ|sb_secret_');
+   ```
+   It must return `0`. Do not `select pg_get_triggerdef(...)` itself into a chat, issue, PR, or log.
 
 5. **Test by uploading a new event image** in the admin dashboard. Check:
    - Edge Function logs (Supabase Dashboard → Edge Functions → Logs)
    - GitHub Actions run (repository → Actions → Migrate event images to static assets)
-   - Confirm `triggered: true` in function response
+   - Confirm `triggered: true` in the function response (`select status_code, content from net._http_response order by id desc limit 5`; responses are kept for about 6 hours)
    - Confirm migration run completed on main
    - Confirm `/images/events/...` URL appears in DB
 
@@ -255,13 +261,7 @@ Repeat the setup steps for `house_events`:
     supabase functions deploy trigger-house-event-image-migration
     ```
 2.  **Set Edge Function secrets** (same as above, but for `trigger-house-event-image-migration`).
-3.  **Create Database Webhook**:
-    - Name: `house-event-image-migration`
-    - Table: `house_events`
-    - Events: **INSERT**, **UPDATE**
-    - Method: `POST`
-    - URL: `https://<project-ref>.supabase.co/functions/v1/trigger-house-event-image-migration`
-    - Headers: `x-image-migration-secret: <your-secret>`
+3.  **Nothing else to create.** The same migration (step 4 above) adds `request_house_event_image_migration` on `house_events`, which posts to `trigger-house-event-image-migration` with the same Vault secret.
 
 ### What does NOT trigger dispatch
 
