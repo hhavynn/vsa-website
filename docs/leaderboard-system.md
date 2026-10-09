@@ -13,7 +13,7 @@ See [the retirement decision and rollout](./member-account-retirement.md).
 | Identity | `members.id`, independent of Supabase Auth |
 | Ledger | `member_event_attendance`, one member/event pair with `points_earned` |
 | Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members`, Historical Recovery (`admin_recover_import_row`) |
-| Recalculation | `sync_member_points` / `recalculate_member_points`; event edits use `sync_attendance_points_on_event_update` |
+| Recalculation | Statement triggers `trg_sync_member_points_{insert,update,delete}` → `recalculate_members_points` (locks members, then recalculates); `trg_attendance_points_from_event` stores the event's current points; event edits use `sync_attendance_points_on_event_update` |
 | Readers | `/points`, `/leaderboard`, House standings, member cards/history, Wrapped, Admin Points |
 | Public projections | `member_yearly_points`, `house_member_yearly_points`, House aggregate views, `member_event_history`, `public_members` |
 | Authentication | Existing/invited approved admins only; students use public lookup without accounts |
@@ -85,6 +85,46 @@ The Member History modal includes:
 
 - **Auto-Term Assignment**: New events should automatically be assigned to the current active term to ensure data consistency.
 
-### Live verification limitation
+### Points integrity and concurrency
 
-The existing `sync_member_points` / `recalculate_member_points` bodies and attendance trigger registration are not present in tracked migrations. Before merging attendance-removal changes, verify in a non-production admin session that both INSERT and DELETE refresh cached member totals and yearly/House standings. Frontend/repository mock tests cannot certify those live trigger effects; never repair a failure by manually writing cached totals.
+`members.points` and `members.events_attended` are a cache of the ledger
+(`member_event_attendance`). House and yearly standings are live views over
+the ledger and never drift. Migration
+`20261010000000_serialize_member_points_recalculation.sql` makes the cache safe
+under concurrent writers:
+
+- Every statement that changes attendance recalculates its affected members
+  once, from statement-level triggers (old and new owners on update, FK
+  cascades included). The recalculation first locks those `members` rows
+  `FOR NO KEY UPDATE` in id order, then sums the ledger in a separate statement,
+  whose fresh snapshot includes every writer that committed before it.
+  Before this, two writers for one member could leave a total that missed the
+  other's credit.
+- Inserting a credit (or moving it to another event) locks the event row
+  `FOR SHARE` and stores the event's current points, so a concurrent points
+  edit either lands first or cascades to the new credit.
+- Within a statement, members are locked in ascending id, so two imports can
+  no longer deadlock on members. Writers for different members never wait for
+  each other. The migration header lists each writer's lock order. The deadlocks
+  that remain need two multi-step transactions crossing those orders (for
+  example, a merge racing a points edit on an event both members attended).
+  PostgreSQL detects them and rolls one transaction back whole, so they surface
+  as a retryable error, never as wrong totals.
+- Rule: a credit is stored at its event's current points, whatever the writer
+  sends. The importer, Admin Members and Historical Recovery already send that
+  value. `smart_merge_members` copies the source's stored value, so a source
+  credit stored off its event's value is stored at the event's value on the
+  merged member.
+- Rollback: `scripts/sql/points-recalculation-rollback.sql` (one transaction;
+  keeps the locking recalculation, restores the row trigger).
+
+Proof is offline: `bash scripts/test-points-concurrency.sh` (production
+trigger bodies as the baseline, which must reproduce each race; the fixed
+schema, which must pass every round; and mutants with one protection removed,
+which must fail). It also runs `scripts/test-attendance-recovery.sh` with the
+migration applied.
+
+Read-only check, safe against production: `scripts/sql/points-integrity-check.sql`
+reports members whose cached totals differ from the ledger, and credits whose
+stored value differs from the event's current points. Never repair a finding by
+writing cached totals; fix the ledger and let the triggers recalculate.
