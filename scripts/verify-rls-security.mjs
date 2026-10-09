@@ -141,6 +141,11 @@ async function runTests() {
   console.log('============================================================\n');
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
+  // Synthetic probe values only; never a real member's email or name.
+  const memberLookupRpcs = [
+    ['admin_lookup_members', { p_emails: ['rls-verify-probe@example.invalid'], p_surnames: ['rlsverifyprobe'] }, '20261011000000'],
+    ['admin_search_members', { p_query: 'rls-verify-probe', p_limit: 1 }, '20261011000000'],
+  ];
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
 
@@ -385,13 +390,14 @@ async function runTests() {
       }
 
       const recoveryRpcs = [
-        ['admin_import_recovery_findings', {}],
-        ['admin_recover_import_row', { p_request_id: dummyUuid, p_row_id: dummyUuid, p_action: 'dismiss', p_reason_code: 'not_actionable', p_note: 'RLS verify probe' }],
+        ['admin_import_recovery_findings', {}, '20261009000026'],
+        ['admin_recover_import_row', { p_request_id: dummyUuid, p_row_id: dummyUuid, p_action: 'dismiss', p_reason_code: 'not_actionable', p_note: 'RLS verify probe' }, '20261009000026'],
+        ...memberLookupRpcs,
       ];
-      for (const [fn, args] of recoveryRpcs) {
+      for (const [fn, args, migration] of recoveryRpcs) {
         const { data: rData, error: rError } = await anon.rpc(fn, args);
         if (rError && (rError.code === 'PGRST202' || rError.code === '42883')) {
-          reportSkip(`${fn} is not present yet (migration 20261009000026 not applied)`);
+          reportSkip(`${fn} is not present yet (migration ${migration} not applied)`);
         } else if (rError && (rError.code === '42501' || rError.message.includes('permission denied'))) {
           reportPass(`anon cannot call ${fn} (${rError.message})`);
         } else {
@@ -670,6 +676,17 @@ async function runTests() {
         reportPass(`ordinary user cannot call generate_data_rights_export (${uRpc2Error.message})`);
       } else {
         reportFail(`ordinary user could call generate_data_rights_export or got unexpected error: ${JSON.stringify(uRpc2Error || uRpc2Data)}`);
+      }
+
+      for (const [fn, args, migration] of memberLookupRpcs) {
+        const { data: uData, error: uError } = await userClient.rpc(fn, args);
+        if (uError && (uError.code === 'PGRST202' || uError.code === '42883')) {
+          reportSkip(`${fn} is not present yet (migration ${migration} not applied)`);
+        } else if (uError && uError.code === '42501') {
+          reportPass(`ordinary user cannot call ${fn} (${uError.message})`);
+        } else {
+          reportFail(`ordinary user could call ${fn} or got unexpected error: ${JSON.stringify(uError || uData)}`);
+        }
       }
     }
   } catch (err) {

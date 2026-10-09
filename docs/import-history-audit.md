@@ -190,6 +190,16 @@ frontend does not reference them. It refuses to run if an earlier draft's table 
 `removed_attendance` shape) exists, and drops that draft's 10-argument function if present. Production had
 neither as of 2026-10-08 (read-only check).
 
+**Member lookups stay out of request URLs.** Recovery looks members up by attendee email, surname and
+typeahead text through `admin_lookup_members(p_emails, p_surnames)` and
+`admin_search_members(p_query, p_limit)` (migration `20261011000000_admin_member_lookup_rpcs.sql`), not
+through `members?or=(email.ilike…)` filters. supabase-js sends `rpc()` arguments in a POST body, so emails
+and names no longer appear in Supabase API logs; both functions refuse GET and HEAD. They are SECURITY INVOKER
+(the admin-only `members` RLS still applies), check `is_admin_user(auth.uid())` first, pin `search_path`
+to `''`, revoke EXECUTE from PUBLIC and anon, and return a jsonb array so the row cap cannot truncate a
+common surname. Matching is literal (`_` and `%` are not wildcards). **Deploy order:** apply this
+migration before the frontend that calls it; until then Historical Recovery lookups fail.
+
 **Verification.** `bash scripts/test-attendance-recovery.sh` runs the migration on a disposable local
 PostgreSQL cluster. The cluster has the production bodies of `sync_member_points`,
 `recalculate_member_points` and `sync_attendance_points_on_event_update`, and Supabase's default grants.
@@ -203,6 +213,8 @@ It checks:
   - a recovery racing an event points edit (mutation-tested: each fails without its lock)
   - the workspace's two-lane batch, and a retry after a lost response. An equivalent payload replays;
     a changed payload, or a request id reused on another row, is refused.
+- the member lookup functions: no EXECUTE for anon or PUBLIC under default grants, INVOKER with an empty
+  search_path, non-admin and GET refused, exact/literal matching, the 1000-value cap and the search limit
 - rollback
 - that the function contains no DELETE, and that every cached total equals the ledger
 

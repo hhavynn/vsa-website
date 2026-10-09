@@ -66,14 +66,62 @@ it('pages recovery history past the row cap', async () => {
   expect(supabaseMock.queriesFor('import_recovery_actions')).toHaveLength(2);
 });
 
-it('searches by email or by name without letting the term malform the filter', async () => {
-  supabaseMock.setDefault('members', { data: [], error: null });
-  await attendanceRecoveryRepository.searchMembers('Kevin.Le@ucsd.edu');
-  await attendanceRecoveryRepository.searchMembers('Le,(x)');
-  const [byEmail, byName] = supabaseMock.queriesFor('members');
-  expect(byEmail.calls).toContainEqual({ method: 'ilike', args: ['email', '%Kevin.Le@ucsd.edu%'] });
-  expect(byName.calls).toContainEqual({ method: 'ilike', args: ['first_name', '%Le%'] });
-  expect(byName.calls.some((call) => call.method === 'or')).toBe(false);
+// Attendee emails and names must travel in a POST body (supabase.rpc), never in
+// a GET filter on members, where they would land in the Supabase API logs.
+function rpcArgs(fn: string): unknown[] {
+  return supabaseMock.queriesFor(`rpc:${fn}`).map((query) => query.calls[0].args[0]);
+}
+
+it('looks members up by email through the POST lookup function, normalized and de-duplicated', async () => {
+  const kevin = { id: 'm1', first_name: 'Kevin', last_name: 'Le', email: 'kevin.le@ucsd.edu' };
+  supabaseMock.setDefault('rpc:admin_lookup_members', { data: [kevin], error: null });
+  await expect(attendanceRecoveryRepository.getMembersByEmails([' Kevin.Le@UCSD.edu ', 'kevin.le@ucsd.edu', 'a_b,(c)@x.edu', ''])).resolves.toEqual([kevin]);
+  expect(rpcArgs('admin_lookup_members')).toEqual([{ p_emails: ['kevin.le@ucsd.edu', 'a_b,(c)@x.edu'], p_surnames: [] }]);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});
+
+it('looks members up by surname through the POST lookup function', async () => {
+  supabaseMock.setDefault('rpc:admin_lookup_members', { data: [], error: null });
+  await attendanceRecoveryRepository.findMembersBySurnames(['Nguyen', ' nguyen', 'Tran%', '']);
+  expect(rpcArgs('admin_lookup_members')).toEqual([{ p_emails: [], p_surnames: ['nguyen', 'tran%'] }]);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});
+
+it('splits large lookups under the function cap and returns each member once', async () => {
+  const shared = { id: 'm1', first_name: 'An', last_name: 'Nguyen', email: null };
+  supabaseMock.queueResult('rpc:admin_lookup_members', { data: [shared], error: null });
+  supabaseMock.queueResult('rpc:admin_lookup_members', { data: [shared, { ...shared, id: 'm2' }], error: null });
+  const surnames = Array.from({ length: 501 }, (_, i) => `name${i}`);
+  await expect(attendanceRecoveryRepository.findMembersBySurnames(surnames)).resolves.toHaveLength(2);
+  const calls = rpcArgs('admin_lookup_members') as Array<{ p_surnames: string[] }>;
+  expect(calls.map((args) => args.p_surnames.length)).toEqual([500, 1]);
+});
+
+it('skips the lookup call when there is nothing to look up', async () => {
+  await expect(attendanceRecoveryRepository.getMembersByEmails(['  '])).resolves.toEqual([]);
+  await expect(attendanceRecoveryRepository.findMembersBySurnames([])).resolves.toEqual([]);
+  expect(supabaseMock.queriesFor('rpc:admin_lookup_members')).toHaveLength(0);
+});
+
+it('surfaces a refused lookup as a database error instead of an empty result', async () => {
+  supabaseMock.setDefault('rpc:admin_lookup_members', { data: null, error: postgrestError('Only admins can look up members', '42501') });
+  await expect(attendanceRecoveryRepository.getMembersByEmails(['kevin.le@ucsd.edu'])).rejects.toBeInstanceOf(DatabaseError);
+});
+
+it('searches by email or by name through the POST search function', async () => {
+  supabaseMock.setDefault('rpc:admin_search_members', { data: [{ id: 'm1' }], error: null });
+  await expect(attendanceRecoveryRepository.searchMembers('Kevin.Le@ucsd.edu')).resolves.toEqual([{ id: 'm1' }]);
+  await attendanceRecoveryRepository.searchMembers('Le,(x)', 25);
+  expect(rpcArgs('admin_search_members')).toEqual([
+    { p_query: 'Kevin.Le@ucsd.edu', p_limit: 10 },
+    { p_query: 'Le,(x)', p_limit: 25 },
+  ]);
+  expect(supabaseMock.queriesFor('members')).toHaveLength(0);
+});
+
+it('does not call search for a query under two characters', async () => {
+  await expect(attendanceRecoveryRepository.searchMembers(' a,( ')).resolves.toEqual([]);
+  expect(supabaseMock.queriesFor('rpc:admin_search_members')).toHaveLength(0);
 });
 
 it('checks existing attendance for exactly the event and members shown', async () => {
