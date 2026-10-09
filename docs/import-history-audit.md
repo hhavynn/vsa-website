@@ -198,7 +198,9 @@ and names no longer appear in Supabase API logs; both functions refuse GET and H
 (the admin-only `members` RLS still applies), check `is_admin_user(auth.uid())` first, pin `search_path`
 to `''`, revoke EXECUTE from PUBLIC and anon, and return a jsonb array so the row cap cannot truncate a
 common surname. Matching is literal (`_` and `%` are not wildcards). **Deploy order:** apply this
-migration before the frontend that calls it; until then Historical Recovery lookups fail.
+migration before the frontend that calls it; until then Historical Recovery lookups fail. After applying,
+run the RLS verification workflow with `member_lookup_phase=post-migration`, then set the repository variable
+`RLS_MEMBER_LOOKUP_PHASE=post-migration` so a later missing or broken lookup function fails CI.
 
 **Verification.** `bash scripts/test-attendance-recovery.sh` runs the migration on a disposable local
 PostgreSQL cluster. The cluster has the production bodies of `sync_member_points`,

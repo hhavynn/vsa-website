@@ -119,6 +119,23 @@ The `post-migration` phase **fails closed**: it requires an existing ordinary au
 
 Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `retirement_phase=post-migration`, and once it is green set the repository variable `RLS_RETIREMENT_PHASE=post-migration`. Hosted public email signup must also be verified disabled (`GET /auth/v1/settings` returns `"disable_signup": true`); see the completion gates in [the retirement runbook](member-account-retirement.md). Until the variable is set, scheduled/PR/push runs keep verifying `pre-migration`, which fails loudly after the migration (admins can no longer read the archives); that failure is the reminder to flip the variable.
 
+### Member lookup phase
+
+`RLS_MEMBER_LOOKUP_PHASE` does the same for the admin member lookup RPCs (`admin_lookup_members`, `admin_search_members`, migration `20261011000000_admin_member_lookup_rpcs.sql`), which Historical Recovery depends on:
+
+| Phase | When | Lookup RPCs |
+|---|---|---|
+| `pre-migration` (default) | Production has not had `20261011000000` applied | A missing function is a SKIP; a present one is checked as below |
+| `post-migration` | After the migration is applied | A missing function is a FAIL for anon, ordinary users and admins; both test accounts are required (fails closed, never SKIP) |
+
+In both phases: anon must get `42501`. An ordinary user must get the function's own refusal (`Only admins can look up members`), because a bare `permission denied for function` means `authenticated` lost EXECUTE and admins are locked out too. The admin must get a JSON array back. Probes use synthetic values only. An unknown value exits non-zero. The migration-level proof is offline: `bash scripts/test-attendance-recovery.sh`.
+
+```bash
+RLS_MEMBER_LOOKUP_PHASE=post-migration node scripts/verify-rls-security.mjs
+```
+
+Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `member_lookup_phase=post-migration`, and once it is green set the repository variable `RLS_MEMBER_LOOKUP_PHASE=post-migration`.
+
 ### In CI
 
 `.github/workflows/rls-verify.yml` runs this script on PRs to `main`, on every push to `main`, and daily on a schedule, against production (the only Supabase project). The daily run matters most: past RLS regressions (#422, #423) came from policies created in the dashboard, which no PR would trigger.

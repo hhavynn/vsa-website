@@ -24,6 +24,15 @@ name: RLS verification
 # variable RLS_RETIREMENT_PHASE=post-migration so PR, push and scheduled runs
 # follow. See docs/member-account-retirement.md.
 #
+# Member lookup rollout phase: the same sequence for
+# 20261011000000_admin_member_lookup_rpcs.sql. RLS_MEMBER_LOOKUP_PHASE
+# defaults to pre-migration (admin_lookup_members / admin_search_members may be
+# absent). post-migration makes them mandatory for anon, ordinary users and
+# admins (missing is a failure) and requires both test accounts. Sequence:
+# merge, apply the migration, run this workflow manually with
+# member_lookup_phase=post-migration, then set the repository variable
+# RLS_MEMBER_LOOKUP_PHASE=post-migration. See docs/rls-verification-checklist.md.
+#
 # Why a schedule as well as PRs: RLS regressions here have come from database
 # changes made outside PRs (#422, #423 found dashboard-created policies), which
 # no code change would trigger. The daily run catches those.
@@ -43,6 +52,14 @@ on:
     inputs:
       retirement_phase:
         description: 'Retirement migration phase to verify (default: repository variable RLS_RETIREMENT_PHASE, else pre-migration)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - pre-migration
+          - post-migration
+      member_lookup_phase:
+        description: 'Member lookup RPC migration phase to verify (default: repository variable RLS_MEMBER_LOOKUP_PHASE, else pre-migration)'
         required: false
         type: choice
         options:
@@ -80,12 +97,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Fail closed after the retirement migration: "retired archives are closed
-      # to anon, ordinary users AND admins" cannot be shown by a run whose
-      # signed-in sections were skipped. Existing accounts only; never create a
+      # Fail closed after the retirement or member lookup migration: "retired
+      # archives are closed to anon, ordinary users AND admins" and "admins can
+      # use the lookup RPCs, ordinary users are refused" cannot be shown by a
+      # run whose signed-in sections were skipped. Existing accounts only; never create a
       # public member account for this check.
       - name: Require signed-in test accounts for post-migration verification
-        if: ${{ (inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE) == 'post-migration' }}
+        if: ${{ (inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE) == 'post-migration' || (inputs.member_lookup_phase || vars.RLS_MEMBER_LOOKUP_PHASE) == 'post-migration' }}
         run: |
           missing=""
           for name in RLS_TEST_USER_EMAIL RLS_TEST_USER_PASSWORD RLS_TEST_ADMIN_EMAIL RLS_TEST_ADMIN_PASSWORD; do
@@ -114,3 +132,4 @@ jobs:
           RLS_TEST_EVENT_ID: ${{ secrets.RLS_TEST_EVENT_ID }}
           RLS_TEST_MEMBER_ID: ${{ secrets.RLS_TEST_MEMBER_ID }}
           RLS_RETIREMENT_PHASE: ${{ inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE }}
+          RLS_MEMBER_LOOKUP_PHASE: ${{ inputs.member_lookup_phase || vars.RLS_MEMBER_LOOKUP_PHASE }}
