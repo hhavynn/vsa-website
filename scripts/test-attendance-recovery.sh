@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline only: verifies migration 20261008000000_historical_attendance_recovery.sql
+# Offline only: verifies migration 20261009000026_historical_attendance_recovery.sql
 # on a disposable local cluster with no TCP listener and no app env. Never
 # touches a hosted Supabase project. Synthetic people only.
 set -euo pipefail
@@ -46,7 +46,7 @@ create database recovery;
 create database recovery_draft;
 SQL
 
-migration="$repo_dir/supabase/migrations/20261008000000_historical_attendance_recovery.sql"
+migration="$repo_dir/supabase/migrations/20261009000026_historical_attendance_recovery.sql"
 db=(rtk psql "${psql_args[@]}" -d recovery -q -c 'set client_min_messages = warning')
 "${db[@]}" -f "$script_dir/sql/attendance-recovery.fixture.sql"
 "${db[@]}" -f "$migration" -f "$migration"

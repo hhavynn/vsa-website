@@ -1,4 +1,4 @@
--- Assertions for migration 20261008000000_historical_attendance_recovery.sql.
+-- Assertions for migration 20261009000026_historical_attendance_recovery.sql.
 -- Run by scripts/test-attendance-recovery.sh against a disposable local cluster.
 -- Synthetic people only. One transaction, rolled back. Prints "PASS: ..." per
 -- check and aborts on the first failure. Concurrency runs separately in the

@@ -369,13 +369,13 @@ async function runTests() {
       }
     }
 
-    // Historical attendance recovery (migration 20261008000000) is admin-only. A missing table or
+    // Historical attendance recovery (migration 20261009000026) is admin-only. A missing table or
     // function means the migration is not applied yet: a skip, not a pass. Writes, rollback and
     // concurrency are covered offline by scripts/test-attendance-recovery.sh, not probed here.
     {
       const { data: raData, error: raError } = await anon.from('import_recovery_actions').select('id').limit(1);
       if (raError && (raError.code === 'PGRST205' || raError.code === '42P01')) {
-        reportSkip('import_recovery_actions is not present yet (migration 20261008000000 not applied)');
+        reportSkip('import_recovery_actions is not present yet (migration 20261009000026 not applied)');
       } else if (raError) {
         reportPass(`anon cannot read import_recovery_actions (${raError.message || raError.code})`);
       } else if (raData && raData.length > 0) {
@@ -391,7 +391,7 @@ async function runTests() {
       for (const [fn, args] of recoveryRpcs) {
         const { data: rData, error: rError } = await anon.rpc(fn, args);
         if (rError && (rError.code === 'PGRST202' || rError.code === '42883')) {
-          reportSkip(`${fn} is not present yet (migration 20261008000000 not applied)`);
+          reportSkip(`${fn} is not present yet (migration 20261009000026 not applied)`);
         } else if (rError && (rError.code === '42501' || rError.message.includes('permission denied'))) {
           reportPass(`anon cannot call ${fn} (${rError.message})`);
         } else {

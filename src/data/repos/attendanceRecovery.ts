@@ -13,7 +13,7 @@ import {
 } from '../../lib/attendanceRecovery';
 import { Json } from '../../types/database';
 
-// Historical attendance recovery (migration 20261008000000). Reads are admin-only
+// Historical attendance recovery (migration 20261009000026). Reads are admin-only
 // by RLS and function checks. Every write goes through admin_recover_import_row,
 // which inserts attendance (never deletes it), creates members and records
 // history in one transaction.
