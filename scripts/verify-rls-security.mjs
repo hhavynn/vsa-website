@@ -1,6 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import {
+  checkAdminReadsUserProfiles,
+  checkAnonCannotReadMemberPii,
+  checkEventsHaveNoReadableCheckInCode,
+  checkIsAdminUserHelper,
+  checkNoRowsFromProtectedTable,
+  checkOrdinaryUserRefusedBySmartMerge,
+  checkPublicViewsOmitAuthUserId,
+  checkRpcDeniedAtGrant,
+  checkUserCannotWriteEventAttendance,
+  checkUserCannotWriteUserPoints,
+  checkUserProfilesNoRecursion,
+  checkUserSeesOnlyOwnRows,
+  classifyNoRowsUpdated,
+  FAIL,
+  PASS,
+} from './lib/rlsIncidentChecks.mjs';
 
 // Load environment variables from .env.local or .env if present
 function loadEnv() {
@@ -113,6 +130,16 @@ function reportFail(message) {
 
 function reportSkip(message) {
   console.log(`\x1b[33mSKIP\x1b[0m ${message}`);
+}
+
+// Incident regression checks (#227) live in scripts/lib/rlsIncidentChecks.mjs as
+// pure functions that return results; this prints them.
+function reportResults(results) {
+  for (const { outcome, message } of results) {
+    if (outcome === PASS) reportPass(message);
+    else if (outcome === FAIL) reportFail(message);
+    else reportSkip(message);
+  }
 }
 
 function createAnonClient() {
@@ -321,28 +348,10 @@ async function runTests() {
   try {
     const anon = createAnonClient();
 
-    // Query members table - attempt to select sensitive fields
-    const { data: memSensData, error: memSensError } = await anon
-      .from('members')
-      .select('id, user_id, email')
-      .limit(1);
-
-    if (memSensError) {
-      if (memSensError.code === '42501') {
-        reportPass('anon cannot select members.user_id or members.email (access denied)');
-      } else {
-        reportFail(`anon select members failed with unexpected error code ${memSensError.code}: ${memSensError.message}`);
-      }
-    } else if (memSensData && memSensData.length > 0) {
-      const row = memSensData[0];
-      if ('user_id' in row || 'email' in row) {
-        reportFail('anon could select members with sensitive fields present (values omitted)');
-      } else {
-        reportPass('anon cannot select members.user_id or members.email (columns omitted or filtered)');
-      }
-    } else {
-      reportFail('anon select sensitive fields on members succeeded without error but returned empty (unconfirmed privilege state)');
-    }
+    // Incident #227, 20260619040000_minimize_public_member_exposure.sql: anon read
+    // every member's email and auth user_id from members. Each sensitive column
+    // is probed on its own; the safe public projection is asserted readable below.
+    reportResults(await checkAnonCannotReadMemberPii(anon));
 
     // Query members table - attempt to select safe public fields
     const { data: memSafeData, error: memSafeError } = await anon
@@ -369,19 +378,59 @@ async function runTests() {
     if (retired) {
       await expectRetiredArchivesDenied(anon, 'anon');
     } else {
-      // Query event_check_in_secrets
-      const { data: secData, error: secError } = await anon
-        .from('event_check_in_secrets')
-        .select('*')
-        .limit(1);
+      // Incident #227, 20260619050000_check_in_code_secrets.sql and
+      // 20260620000000_move_check_in_code_to_secrets_table.sql: check-in codes
+      // moved into an admin-only table. Anon must get no rows from it.
+      reportResults(await checkNoRowsFromProtectedTable(anon, {
+        table: 'event_check_in_secrets', columns: 'event_id', who: 'anon',
+      }));
+    }
 
-      if (secError) {
-        reportPass(`anon cannot read event_check_in_secrets (${secError.message || secError.code})`);
-      } else if (secData && secData.length > 0) {
-        reportFail('anon read event_check_in_secrets successfully (returned rows)');
-      } else {
-        reportPass('anon cannot read event_check_in_secrets (returned empty list due to RLS)');
-      }
+    // Incident #227, 20260619040000_minimize_public_member_exposure.sql: the
+    // public member/House views carried auth user_id. They must not resolve it.
+    reportResults(await checkPublicViewsOmitAuthUserId(anon, { who: 'anon' }));
+
+    // Incident #227, 20260620000000_move_check_in_code_to_secrets_table.sql
+    // (after 20260619000000 section C): check-in codes were readable from the
+    // events row. The column must not be selectable by anon.
+    reportResults(await checkEventsHaveNoReadableCheckInCode(anon, { who: 'anon' }));
+
+    // Incident #227, 20260619000000_emergency_security_hardening.sql (section A):
+    // user_profiles carried every email and is_admin flag. Anon gets no rows.
+    reportResults(await checkNoRowsFromProtectedTable(anon, {
+      table: 'user_profiles', columns: 'id', who: 'anon',
+    }));
+
+    // Incident #227, 20260620020000_fix_user_profiles_rls_recursion.sql: the admin
+    // policy queried user_profiles from inside user_profiles ("infinite recursion",
+    // 42P17). Anon evaluates the same policies and must not hit it.
+    reportResults(await checkUserProfilesNoRecursion(anon, { who: 'anon', mustRead: false }));
+
+    // Incident #227, 20260619000000_emergency_security_hardening.sql (section B)
+    // and 20260620020000_fix_user_profiles_rls_recursion.sql: neither function is
+    // executable by anon. Nil UUID arguments, so a regressed grant finds nothing.
+    reportResults(await checkRpcDeniedAtGrant(anon, {
+      fn: 'smart_merge_members', args: { p_source_id: dummyUuid, p_target_id: dummyUuid }, who: 'anon',
+    }));
+    reportResults(await checkRpcDeniedAtGrant(anon, {
+      fn: 'is_admin_user', args: { p_user_id: dummyUuid }, who: 'anon',
+    }));
+
+    // Legacy archives before the retirement migration. Post-migration the strict
+    // 42501 head reads in expectRetiredArchivesDenied replace these.
+    if (!retired) {
+      // Incident #227, 20260619000000_emergency_security_hardening.sql (section E)
+      // and 20260620010000_harden_attendance_rls.sql: event_attendance was
+      // "viewable by everyone" (every user UUID and points total); user_points
+      // had direct client writes. Anon reads neither. A filtered anon write
+      // cannot probe the grant (the filter itself needs SELECT), so the write
+      // half is the mutation-gated signed-in probe below.
+      reportResults(await checkNoRowsFromProtectedTable(anon, {
+        table: 'event_attendance', columns: 'id', who: 'anon',
+      }));
+      reportResults(await checkNoRowsFromProtectedTable(anon, {
+        table: 'user_points', columns: 'user_id', who: 'anon',
+      }));
     }
 
     // content_health_state is admin-only (migration 20261004000000). A missing table means the
@@ -560,81 +609,19 @@ async function runTests() {
       // checked after RLS (unknown event -> 23503, existing row -> 23505), and
       // updates write a row's current values back with .select() so the
       // affected-row count is visible.
-      const expectInsertDenied = (label, error) => {
-        if (error?.code === '42501') {
-          reportPass(`ordinary user cannot insert ${label} (RLS)`);
-        } else if (error?.code === '23503' || error?.code === '23505') {
-          reportFail(`ordinary user passed RLS inserting ${label}; only a constraint stopped it (${error.code})`);
-        } else {
-          reportFail(`ordinary user insert into ${label} gave unexpected result: ${JSON.stringify(error)}`);
-        }
-      };
       const expectNoRowsUpdated = (label, data, error) => {
-        // Only an authorization error proves RLS/grants rejected the write. Any
-        // other error (schema cache, constraint, trigger, network) means the
-        // probe never reached the policy, so it can't count as a pass.
-        if (error && error.code === '42501') {
-          reportPass(`ordinary user cannot update ${label} (${error.message || error.code})`);
-        } else if (error) {
-          reportFail(`ordinary user update of ${label} failed for a non-authorization reason, so RLS was not verified: ${JSON.stringify(error)}`);
-        } else if (data && data.length > 0) {
-          reportFail(`ordinary user updated ${data.length} ${label} row(s) directly (no-op values; nothing changed)`);
-        } else {
-          reportPass(`ordinary user cannot update ${label} (0 rows updated due to RLS)`);
-        }
+        reportResults([classifyNoRowsUpdated('ordinary user', label, data, error)]);
       };
 
       // Legacy archive write probes; post-migration the head-read check above
       // already proves the grants are gone.
       if (!retired) {
-        const { error: attInsError } = await userClient
-          .from('event_attendance')
-          .insert([{ event_id: dummyUuid, user_id: authUser.id, points_earned: 0, check_in_type: 'code' }]);
-        expectInsertDenied('event_attendance', attInsError);
-
-        const { data: ownAttendance } = await userClient
-          .from('event_attendance')
-          .select('id, points_earned')
-          .eq('user_id', authUser.id)
-          .limit(1);
-        if (!ownAttendance || ownAttendance.length === 0) {
-          reportSkip('ordinary user event_attendance update probe (test user has no attendance rows)');
-        } else {
-          const { data, error } = await userClient
-            .from('event_attendance')
-            .update({ points_earned: ownAttendance[0].points_earned })
-            .eq('id', ownAttendance[0].id)
-            .select('id');
-          expectNoRowsUpdated('event_attendance', data, error);
-        }
-
-        // Read the caller's own row first. The insert probe is only
-        // non-destructive when that row exists: then an RLS bypass hits the
-        // primary key (23505) instead of creating a points row.
-        const { data: ownPoints } = await userClient
-          .from('user_points')
-          .select('points')
-          .eq('user_id', authUser.id)
-          .maybeSingle();
-        if (!ownPoints) {
-          reportSkip('ordinary user user_points insert probe (no existing row, so the probe could create one)');
-        } else {
-          const { error: ptsInsError } = await userClient
-            .from('user_points')
-            .insert([{ user_id: authUser.id, points: 0 }]);
-          expectInsertDenied('user_points', ptsInsError);
-        }
-
-        if (!ownPoints) {
-          reportSkip('ordinary user user_points update probe (test user has no user_points row)');
-        } else {
-          const { data, error } = await userClient
-            .from('user_points')
-            .update({ points: ownPoints.points })
-            .eq('user_id', authUser.id)
-            .select('user_id');
-          expectNoRowsUpdated('user_points', data, error);
-        }
+        // Incident #227, 20260619000000_emergency_security_hardening.sql (section D),
+        // 20260620000000_move_check_in_code_to_secrets_table.sql and
+        // 20260620010000_harden_attendance_rls.sql: users could write their own
+        // attendance and points directly, bypassing check_in_to_event.
+        reportResults(await checkUserCannotWriteEventAttendance(userClient, { userId: authUser.id, nilId: dummyUuid }));
+        reportResults(await checkUserCannotWriteUserPoints(userClient, { userId: authUser.id }));
       }
 
       // Public tables: readable by everyone, writable only by admins.
@@ -661,21 +648,37 @@ async function runTests() {
 
       }
 
+      // Incident #227, 20260619050000_check_in_code_secrets.sql and
+      // 20260620000000_move_check_in_code_to_secrets_table.sql: check-in codes
+      // must be unreachable by authenticated non-admins as well as by anon.
+      // Post-migration the archive is revoked outright (head read above).
       if (!retired) {
-        // Attempt to read event_check_in_secrets
-        const { data: userSecData, error: userSecError } = await userClient
-          .from('event_check_in_secrets')
-          .select('*')
-          .limit(1);
-
-        if (userSecError) {
-          reportPass(`ordinary user cannot read event_check_in_secrets (${userSecError.message || userSecError.code})`);
-        } else if (userSecData && userSecData.length > 0) {
-          reportFail('ordinary user read event_check_in_secrets successfully!');
-        } else {
-          reportPass('ordinary user cannot read event_check_in_secrets (returned empty list due to RLS)');
-        }
+        reportResults(await checkNoRowsFromProtectedTable(userClient, {
+          table: 'event_check_in_secrets', columns: 'event_id', who: 'ordinary user',
+        }));
       }
+
+      // Incident #227, 20260620000000 (section D): a signed-in user could read
+      // live codes from events.check_in_code after only anon was revoked.
+      reportResults(await checkEventsHaveNoReadableCheckInCode(userClient, { who: 'ordinary user' }));
+
+      // Incident #227, 20260619000000_emergency_security_hardening.sql (sections A
+      // and E) and 20260620010000_harden_attendance_rls.sql: ordinary users see
+      // only their own profile, attendance and points rows.
+      reportResults(await checkUserSeesOnlyOwnRows(userClient, { table: 'user_profiles', ownerColumn: 'id', userId: authUser.id }));
+      if (!retired) {
+        reportResults(await checkUserSeesOnlyOwnRows(userClient, { table: 'event_attendance', ownerColumn: 'user_id', userId: authUser.id }));
+        reportResults(await checkUserSeesOnlyOwnRows(userClient, { table: 'user_points', ownerColumn: 'user_id', userId: authUser.id }));
+      }
+
+      // Incident #227, 20260620020000_fix_user_profiles_rls_recursion.sql: policy
+      // evaluation must not recurse, and is_admin_user() answers false for them.
+      reportResults(await checkUserProfilesNoRecursion(userClient, { who: 'ordinary user', mustRead: true }));
+      reportResults(await checkIsAdminUserHelper(userClient, { who: 'ordinary user', expected: false }));
+
+      // Incident #227, 20260619000000_emergency_security_hardening.sql (section B):
+      // smart_merge_members must refuse a non-admin. Nil ids; never real members.
+      reportResults(await checkOrdinaryUserRefusedBySmartMerge(userClient, { nilId: dummyUuid }));
 
       // Attempt to read data-rights request rows
       const { data: userReqData, error: userReqError } = await userClient
@@ -741,6 +744,13 @@ async function runTests() {
         if (error) reportFail(`admin cannot read raw ${table}: ${error.code}`);
         else reportPass(`admin retains raw ${table} read privileges`);
       }
+
+      // Incident #227, 20260620020000_fix_user_profiles_rls_recursion.sql: the
+      // admin policy on user_profiles must evaluate (no 42P17) and the
+      // is_admin_user() helper behind it must answer true for an admin.
+      reportResults(await checkAdminReadsUserProfiles(adminClient));
+      reportResults(await checkUserProfilesNoRecursion(adminClient, { who: 'admin', mustRead: true }));
+      reportResults(await checkIsAdminUserHelper(adminClient, { who: 'admin', expected: true }));
 
       if (retired) {
         await expectRetiredArchivesDenied(adminClient, 'admin');
