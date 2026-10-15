@@ -3,7 +3,7 @@
  * OK", the Quick Search deep link, and unsaved-change protection in the editor.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -97,13 +97,41 @@ it('keeps Save disabled until something changes, then shows Unsaved changes', as
   expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
 });
 
-it('asks before discarding unsaved edits when the editor is cancelled', async () => {
-  renderMembers('/admin/members?member=m-cam');
-  await screen.findByRole('heading', { name: 'Edit Member' });
-  fireEvent.change(screen.getByDisplayValue('Cam'), { target: { value: 'Cameron' } });
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
-  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-  expect(confirm).toHaveBeenCalled();
-  expect(screen.getByRole('heading', { name: 'Edit Member' })).toBeInTheDocument();
-  confirm.mockRestore();
+describe('discarding unsaved edits', () => {
+  async function editedCam() {
+    renderMembers('/admin/members?member=m-cam');
+    await screen.findByRole('heading', { name: 'Edit Member' });
+    fireEvent.change(screen.getByDisplayValue('Cam'), { target: { value: 'Cameron' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    return screen.findByRole('alertdialog', { name: 'Discard your edits?' });
+  }
+
+  it('asks in a dialog that names what is lost, and Keep editing leaves the edit untouched', async () => {
+    const nativeConfirm = jest.spyOn(window, 'confirm');
+    const dialog = await editedCam();
+    expect(within(dialog).getByText(/unsaved changes to Cam Test/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Member' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Cameron')).toBeInTheDocument();
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    nativeConfirm.mockRestore();
+  });
+
+  it('closes the editor only after Discard changes', async () => {
+    const dialog = await editedCam();
+    expect(screen.getByRole('heading', { name: 'Edit Member' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Edit Member' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('does not ask when nothing changed', async () => {
+    renderMembers('/admin/members?member=m-cam');
+    await screen.findByRole('heading', { name: 'Edit Member' });
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Edit Member' })).not.toBeInTheDocument();
+  });
 });

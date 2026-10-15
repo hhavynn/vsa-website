@@ -562,3 +562,42 @@ it('stages homogeneous bulk decisions only for qualifying rows and says why othe
   expect(toolbar()).toHaveTextContent('5 staged');
   expect(repo.recover).not.toHaveBeenCalled();
 });
+
+describe('Clear staged', () => {
+  async function stageTwoAndAskToClear() {
+    renderWorkspace();
+    await waitForLookups();
+    await stageCreate('Bao Vo');
+    await stageHold('Kim Ho');
+    expect(toolbar()).toHaveTextContent('2 staged');
+    fireEvent.click(within(toolbar()).getByRole('button', { name: 'Clear staged' }));
+    return screen.findByRole('alertdialog', { name: 'Clear 2 staged decisions?' });
+  }
+
+  it('asks in a dialog that says nothing has been written, and Keep staged leaves everything as it was', async () => {
+    const nativeConfirm = jest.spyOn(window, 'confirm');
+    const dialog = await stageTwoAndAskToClear();
+    expect(within(dialog).getByText(/Nothing has been written/)).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep staged' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog', { name: /Clear 2 staged/ })).not.toBeInTheDocument());
+    expect(toolbar()).toHaveTextContent('2 staged');
+    expect(within(await findRow('Bao Vo')).getByText('New member: Bao Vo')).toBeInTheDocument();
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    expect(repo.recover).not.toHaveBeenCalled();
+    nativeConfirm.mockRestore();
+  });
+
+  it('clears only the staged decisions on confirm, writes nothing, and Undo last brings them back', async () => {
+    const dialog = await stageTwoAndAskToClear();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Clear staged' }));
+    await waitFor(() => expect(toolbar()).toHaveTextContent('0 staged'));
+    expect(screen.queryByRole('alertdialog', { name: /Clear 2 staged/ })).not.toBeInTheDocument();
+    expect(within(await findRow('Bao Vo')).queryByText('New member: Bao Vo')).not.toBeInTheDocument();
+    expect(repo.recover).not.toHaveBeenCalled();
+
+    fireEvent.click(within(toolbar()).getByRole('button', { name: 'Undo last' }));
+    expect(toolbar()).toHaveTextContent('2 staged');
+    expect(within(await findRow('Bao Vo')).getByText('New member: Bao Vo')).toBeInTheDocument();
+  });
+});

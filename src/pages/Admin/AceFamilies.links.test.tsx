@@ -156,6 +156,52 @@ it('bulk-links only the exact unique matches from Review Unlinked', async () => 
   expect(update.calls).toContainEqual({ method: 'is', args: ['member_id', null] });
 });
 
+describe('linking someone who is already linked elsewhere', () => {
+  // Andy Tran's node is already linked to Tommy Tran's member record.
+  const linkedElsewhere = nodes.map((n) => (n.id === 'n-andy' ? { ...n, member_id: 'm-tommy' } : n));
+
+  async function openWithDuplicate() {
+    supabaseMock.setDefault('ace_family_members', { data: linkedElsewhere, error: null });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AdminAceFamilies />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Moon/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Link to Tommy Tran · Sixth · Third Year' }));
+    return screen.findByRole('alertdialog', { name: 'Link Tommy Tran again?' });
+  }
+
+  it('asks first, names the existing link, and writes nothing until confirmed', async () => {
+    const nativeConfirm = jest.spyOn(window, 'confirm');
+    const dialog = await openWithDuplicate();
+    expect(within(dialog).getByText(/Tommy Tran is already linked to/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Andy Tran/)).toBeInTheDocument();
+    expect(linkUpdates()).toHaveLength(0);
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    nativeConfirm.mockRestore();
+  });
+
+  it("Don't link closes the dialog and leaves the node unlinked", async () => {
+    const dialog = await openWithDuplicate();
+    fireEvent.click(within(dialog).getByRole('button', { name: "Don't link" }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(linkUpdates()).toHaveLength(0);
+  });
+
+  it('Link anyway performs the pending link for that node and person', async () => {
+    const dialog = await openWithDuplicate();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Link anyway' }));
+    await waitFor(() => expect(linkUpdates()).toHaveLength(1));
+    expect(linkUpdates()[0].payload).toEqual(expect.objectContaining({ member_id: 'm-tommy' }));
+    expect(linkUpdates()[0].calls).toContainEqual({ method: 'eq', args: ['id', 'n-tommy'] });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+  });
+});
+
 describe('filters, history, and unsaved changes', () => {
   const { logAdminActivity } = jest.requireMock('../../data/repos/adminActivity');
 

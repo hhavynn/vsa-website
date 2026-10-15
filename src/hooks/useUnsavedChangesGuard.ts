@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { UNSAVED_MESSAGE, isLeavingNavigation, shouldWarnOnLeave } from '../lib/adminDirty';
 
+// The one place src/ may still call the browser's blocking confirm (allowlisted in
+// src/lib/adminDestructiveGuard.test.ts). The leave-page prompt cannot be a
+// <ConfirmDialog>: `beforeunload` only ever shows the native prompt, the link-click
+// handler must cancel the click synchronously, and `confirmDiscard` /
+// `confirmLeaveIfUnsaved` return a boolean to callers across useAdminForm,
+// AdminQuickSearch and AdminRoute, so making them async would ripple through all of
+// those. In-page discard prompts (switch record, close editor) use useDiscardConfirm.
+
 // Every mounted guard that currently has unsaved work. Programmatic navigation
 // (Quick Search, a button that calls navigate()) never produces a link click,
 // so it asks this registry instead.

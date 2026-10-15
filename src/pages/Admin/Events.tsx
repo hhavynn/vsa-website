@@ -43,6 +43,7 @@ import {
   planExternalSync,
   validateExternalDetails,
 } from '../../lib/externalEventLinking';
+import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useRowSelection } from '../../hooks/useRowSelection';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
@@ -227,6 +228,7 @@ export default function AdminEvents() {
   const showsTypeAwayWarning =
     !!selectedEvent && !!selectedListing && selectedListing.status !== 'draft' && !isExternalEventType(selectedEvent.event_type);
   useUnsavedChangesGuard(createDirty || editDirty, uploading || editUploading);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
 
   // Event days and times are San Diego wall-clock values; never read them in
   // the admin's device timezone.
@@ -697,22 +699,30 @@ export default function AdminEvents() {
   };
 
   function openEditor(event: Event) {
-    if (editDirty && !window.confirm('You have unsaved changes to another event. Discard them?')) return;
-    const suggestedTerm = findTermForDate(event.date, terms);
-    const opened = {
-      ...event,
-      academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
-    };
-    const externalDetails = detailsFromListing(listingByEventId.get(event.id));
-    setSelectedEvent(opened);
-    setSelectedEventBaseline(opened);
-    setSelectedExternal(externalDetails);
-    setSelectedExternalBaseline(externalDetails);
-    setSelectedEventOriginalImageUrl(event.image_url ?? null);
-    setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
-    setSelectedEventOriginalPoints(event.points ?? 0);
-    setEditImageFile(null);
-    setEditImagePreview(null);
+    requestDiscard(
+      editDirty,
+      {
+        title: 'Discard your edits?',
+        description: `You have unsaved changes to ${selectedEvent?.name || 'this event'}. Opening ${event.name} discards them.`,
+      },
+      () => {
+        const suggestedTerm = findTermForDate(event.date, terms);
+        const opened = {
+          ...event,
+          academic_term_id: event.academic_term_id ?? suggestedTerm?.id ?? null,
+        };
+        const externalDetails = detailsFromListing(listingByEventId.get(event.id));
+        setSelectedEvent(opened);
+        setSelectedEventBaseline(opened);
+        setSelectedExternal(externalDetails);
+        setSelectedExternalBaseline(externalDetails);
+        setSelectedEventOriginalImageUrl(event.image_url ?? null);
+        setSelectedEventOriginalThumbnailUrl(event.thumbnail_url ?? null);
+        setSelectedEventOriginalPoints(event.points ?? 0);
+        setEditImageFile(null);
+        setEditImagePreview(null);
+      },
+    );
   }
 
   /**
@@ -721,15 +731,24 @@ export default function AdminEvents() {
    * date, and carries no attendance, image, or RSVP counts.
    */
   function duplicateEvent(event: Event) {
-    if (createDirty && !window.confirm('The Create form has unsaved changes. Replace them with the duplicate?')) return;
-    setNewEvent({ ...EMPTY_EVENT, ...buildDuplicateEventDraft(event) });
-    // The copy keeps its host and links; the admin only has to pick a new date.
-    setNewExternal(detailsFromListing(listingByEventId.get(event.id)));
-    setImageFile(null);
-    setImagePreview(null);
-    setDuplicatedFrom(event.name);
-    setActiveTab('create');
-    toast.success('Duplicated as a Draft. Pick a new date to create it.');
+    requestDiscard(
+      createDirty,
+      {
+        title: 'Replace the Create form?',
+        description: `The Create form has unsaved changes${newEvent.name?.trim() ? ` to “${newEvent.name.trim()}”` : ''}. Duplicating ${event.name} replaces them.`,
+        confirmLabel: 'Replace form',
+      },
+      () => {
+        setNewEvent({ ...EMPTY_EVENT, ...buildDuplicateEventDraft(event) });
+        // The copy keeps its host and links; the admin only has to pick a new date.
+        setNewExternal(detailsFromListing(listingByEventId.get(event.id)));
+        setImageFile(null);
+        setImagePreview(null);
+        setDuplicatedFrom(event.name);
+        setActiveTab('create');
+        toast.success('Duplicated as a Draft. Pick a new date to create it.');
+      },
+    );
   }
 
   // Quick Search deep link: ?event=<id> opens that event's editor once.
@@ -1173,7 +1192,7 @@ export default function AdminEvents() {
                   <button type="submit" disabled={editUploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">
                     {editUploading ? 'Saving...' : 'Save Changes'}
                   </button>
-                  <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedEvent(null); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
+                  <button type="button" onClick={() => requestDiscard(editDirty, { title: 'Discard your edits?', description: `You have unsaved changes to ${selectedEvent?.name || 'this event'}. Closing the editor discards them.` }, () => setSelectedEvent(null))} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
                     Cancel
                   </button>
                   <PreviewAsPublicButton
@@ -1200,6 +1219,8 @@ export default function AdminEvents() {
             onClose={() => setPreviewTarget(null)}
           />
         )}
+
+        {discardDialog}
 
         {/* Delete Confirmation: typed tier, because deleting an event cascades. */}
         <ConfirmDialog

@@ -4,7 +4,7 @@
  * submits the form.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -83,12 +83,39 @@ it('cannot be created without choosing a new date', async () => {
   expect(mockInsert).not.toHaveBeenCalled();
 });
 
-it('warns before replacing unsaved Create-form work with a duplicate', async () => {
-  renderEvents();
-  await userEvent.type(screen.getByPlaceholderText('Spring GBM'), 'Half-typed');
-  await userEvent.click(screen.getByRole('button', { name: /Manage/i }));
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
-  await userEvent.click(await screen.findByRole('button', { name: 'Duplicate' }));
-  expect(confirm).toHaveBeenCalled();
-  confirm.mockRestore();
+describe('replacing unsaved Create-form work with a duplicate', () => {
+  async function askToReplace() {
+    renderEvents();
+    await userEvent.type(screen.getByPlaceholderText('Spring GBM'), 'Half-typed');
+    await userEvent.click(screen.getByRole('button', { name: /Manage/i }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Duplicate' }));
+    return screen.findByRole('alertdialog', { name: 'Replace the Create form?' });
+  }
+
+  it('asks in a dialog that names what is replaced, without touching the form yet', async () => {
+    const nativeConfirm = jest.spyOn(window, 'confirm');
+    const dialog = await askToReplace();
+    expect(within(dialog).getByText(/unsaved changes to “Half-typed”\. Duplicating GBM 1 replaces them/)).toBeInTheDocument();
+    expect(screen.queryByText(/Duplicated from “GBM 1”/)).not.toBeInTheDocument();
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    nativeConfirm.mockRestore();
+  });
+
+  it('Cancel keeps the half-typed form exactly as it was', async () => {
+    const dialog = await askToReplace();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Create/i }));
+    expect(screen.getByDisplayValue('Half-typed')).toBeInTheDocument();
+    expect(screen.queryByText(/Duplicated from “GBM 1”/)).not.toBeInTheDocument();
+  });
+
+  it('Replace form applies the duplicate to the Create form', async () => {
+    const dialog = await askToReplace();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Replace form' }));
+    expect(await screen.findByDisplayValue('GBM 1 (copy)')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Half-typed')).not.toBeInTheDocument();
+    expect(screen.getByText(/Duplicated from “GBM 1” as a Draft/)).toBeInTheDocument();
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });

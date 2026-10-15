@@ -27,6 +27,7 @@ import { toUserMessage } from '../../data/errors';
 import { MEMBER_AVATARS_QUERY_KEY, useMemberAvatars } from '../../hooks/useMemberAvatars';
 import { BulkActionBar, FilterChips, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
+import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { useUrlFilter } from '../../hooks/useUrlFilter';
 import { ACTIVITY_ACTIONS, activitySummary } from '../../lib/adminActivity';
@@ -154,6 +155,7 @@ export default function AdminMembers() {
   const [mergeSearch, setMergeSearch] = useState('');
   const [mergeConfirming, setMergeConfirming] = useState(false);
   const [mergeExecuting, setMergeExecuting] = useState(false);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
 
   // ── Load ─────────────────────────────────────────────────────────────────────
   async function load() {
@@ -271,8 +273,14 @@ export default function AdminMembers() {
   // let a second editor open, which the first save would then close.
   function requestCloseEdit() {
     if (saving !== null) return;
-    if (editHasChanges && !window.confirm('You have unsaved changes. Discard them?')) return;
-    closeEdit();
+    requestDiscard(
+      editHasChanges,
+      {
+        title: 'Discard your edits?',
+        description: `You have unsaved changes to ${editing ? `${editing.first_name} ${editing.last_name}`.trim() : 'this member'}. Closing the editor discards them.`,
+      },
+      closeEdit,
+    );
   }
 
   function clearPhoto() {
@@ -887,6 +895,7 @@ export default function AdminMembers() {
         </Modal>
       )}
       </div>
+      {discardDialog}
     </>
   );
 }

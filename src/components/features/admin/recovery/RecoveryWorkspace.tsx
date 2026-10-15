@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
 import { attendanceRecoveryRepository, RecoverResult } from '../../../../data/repos/attendanceRecovery';
 import { toUserMessage } from '../../../../data/errors';
+import { ConfirmDialog } from '../../../common/ConfirmDialog';
 import { useAuth } from '../../../../hooks/useAuth';
 import { useRecoveryLookups } from '../../../../hooks/useRecoveryLookups';
 import { useRowSelection } from '../../../../hooks/useRowSelection';
@@ -142,6 +143,8 @@ export function RecoveryWorkspace() {
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   const [attendanceMemberId, setAttendanceMemberId] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // The count when the dialog opened, so its title does not change while clearing.
+  const [clearStagedCount, setClearStagedCount] = useState<number | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
@@ -301,9 +304,16 @@ export function RecoveryWorkspace() {
     selection.clear();
   };
 
+  // Standard-tier ConfirmDialog rather than useUndoableAction: that hook defers a
+  // real write behind an Undo toast, and clearing staged work has no write to
+  // defer. Staging already keeps its own undo stack ("Undo last" restores a
+  // clear exactly), so a second, toast-driven undo would be a duplicate.
   const onClearStaged = () => {
     if (staging.count === 0) return;
-    if (!window.confirm(`Clear ${staging.count} staged decision${staging.count === 1 ? '' : 's'}? Nothing has been written; this only discards your staged work.`)) return;
+    setClearStagedCount(staging.count);
+  };
+
+  const confirmClearStaged = () => {
     staging.clearAll();
     setAnnouncement('Staged decisions cleared.');
   };
@@ -595,6 +605,17 @@ export function RecoveryWorkspace() {
           onBulkStage={onBulkStage}
         />
       )}
+
+      <ConfirmDialog
+        open={clearStagedCount !== null}
+        title={`Clear ${clearStagedCount ?? 0} staged decision${clearStagedCount === 1 ? '' : 's'}?`}
+        description="Nothing has been written. This only discards the decisions you have staged in this tab."
+        consequences={['"Undo last" restores them right after.']}
+        confirmLabel="Clear staged"
+        cancelLabel="Keep staged"
+        onConfirm={confirmClearStaged}
+        onClose={() => setClearStagedCount(null)}
+      />
 
       {reviewOpen && (
         <BatchReviewDialog
