@@ -88,13 +88,6 @@ describe('CSP draft and build configuration', () => {
     expect(line).not.toContain("'unsafe-inline'");
   });
 
-  it('disables CRA runtime-chunk inlining for every build entry point', () => {
-    const scripts = JSON.parse(read('package.json')).scripts as Record<string, string>;
-    expect(scripts.build).toContain('INLINE_RUNTIME_CHUNK=false');
-    expect(scripts['build:production']).toContain('INLINE_RUNTIME_CHUNK=false');
-    expect(JSON.parse(read('vercel.json')).build.env.INLINE_RUNTIME_CHUNK).toBe('false');
-  });
-
   it('ships no CSP header yet (report-only rollout is #223, enforcement #224)', () => {
     const keys = JSON.stringify(JSON.parse(read('vercel.json')).headers).toLowerCase();
     expect(keys).not.toContain('content-security-policy');

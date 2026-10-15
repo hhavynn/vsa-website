@@ -35,8 +35,8 @@
   },
   "scripts": {
     "start": "node scripts/start-dev.cjs",
-    "build": "INLINE_RUNTIME_CHUNK=false node ./node_modules/react-scripts/bin/react-scripts.js build",
-    "build:production": "INLINE_RUNTIME_CHUNK=false node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",

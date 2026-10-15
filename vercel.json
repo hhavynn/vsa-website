@@ -1,11 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "build": {
-    "env": {
-      "INLINE_RUNTIME_CHUNK": "false"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
