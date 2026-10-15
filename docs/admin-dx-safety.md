@@ -30,9 +30,9 @@ Covers the shared building blocks every admin page should use, and the inventory
 | **standard** | Ordinary deletes | Names the item and what happens, lists real cascading effects, Cancel focused, errors keep the dialog open |
 | **typed** | Severe / hard to reverse / cascading (cabinet records, fams with members, events with attendance, year-wide resets, bulk of ≥5) | Admin must type the item's name (`requireText`); case, spacing and dash style are ignored |
 
-Do not overuse typed — it stops meaning anything. `src/lib/adminDestructiveGuard.test.ts` fails if a bare `window.confirm` reappears on an admin surface (discard-unsaved prompts excepted).
+Do not overuse typed — it stops meaning anything. `src/lib/adminDestructiveGuard.test.ts` fails if a bare `window.confirm` appears anywhere in non-test `src/` code, except in one allowlisted file (`useUnsavedChangesGuard.ts`, see below). Prompts that only discard local, unsaved state use the standard tier through `useDiscardConfirm` (`hooks/useDiscardConfirm.tsx`): it parks the pending action (the record being opened, the duplicate to apply) and runs it only on Confirm, so Cancel leaves the page exactly as it was.
 
-**Undo:** the chosen approach is *deferred commit* (`useUndoableAction`, `lib/undoableAction.ts`): hide the row, show an Undo toast, run the real delete after ~7s, commit immediately if the admin leaves the page. It needs no schema change and cannot leak "deleted" rows through public reads. Soft delete was deliberately **not** added: every public read path would need to filter it, and a missed filter republishes deleted content. Reversible alternatives that already exist are used instead (Resources → Archive). `useUndoableAction` ships as a primitive; no surface uses it yet because each current delete either cascades, touches storage, or benefits from explanatory copy.
+**Undo:** the chosen approach is *deferred commit* (`useUndoableAction`, `lib/undoableAction.ts`): hide the row, show an Undo toast, run the real delete after ~7s, commit immediately if the admin leaves the page. It needs no schema change and cannot leak "deleted" rows through public reads. Soft delete was deliberately **not** added: every public read path would need to filter it, and a missed filter republishes deleted content. Reversible alternatives that already exist are used instead (Resources → Archive). `useUndoableAction` ships as a primitive; no surface uses it yet because each current delete either cascades, touches storage, or benefits from explanatory copy. It also does not fit the Recovery "Clear staged" action, the one reversible candidate: the hook defers a real write behind an Undo toast, and clearing staged work has no write to defer. Recovery staging already has its own undo stack ("Undo last" restores a clear), so that action uses the standard `ConfirmDialog`.
 
 ### Inventory (as of this change)
 
@@ -56,10 +56,16 @@ Do not overuse typed — it stops meaning anything. `src/lib/adminDestructiveGua
 | Photo Requests | Remove approved photo | standard | Clears avatar (if still this photo), deletes thumbnail + upload, member must resubmit. |
 | House drafts | Delete draft | standard | Draft only; published assignments unaffected. |
 | Members | — | — | Member deletion is already disabled on the page. |
+| Recovery | Clear staged decisions | standard | Local staged work only; nothing was written. Dialog says so and points at "Undo last", which restores a clear. |
+| Members | Close editor with unsaved edits | standard (discard) | Names the member; Keep editing leaves the edit untouched. |
+| Events | Open another event / close editor with unsaved edits | standard (discard) | Names the event being edited and the one being opened. |
+| Events | Duplicate over an unsaved Create form | standard (discard) | Names the half-typed event; Cancel keeps the form. |
+| Cabinet | Open another member / close editor with unsaved edits | standard (discard) | Names the member being edited and the one being opened. |
+| ACE Families | Link a person who is already linked elsewhere | standard (non-danger) | Names the person and every node they are linked to; nothing is written until "Link anyway". |
 
-Not migrated (intentional): the AceFamilies "already linked — link to same person too?" prompt (a duplicate-link question, not a delete, inside link logic); the discard-unsaved prompts.
+**Remaining `window.confirm` (documented exception):** only `src/hooks/useUnsavedChangesGuard.ts`, the leave-page guard. `beforeunload` can only ever show the browser's native prompt; the link-click handler has to cancel the click synchronously; and `confirmDiscard` / `confirmLeaveIfUnsaved` return a boolean to callers in `useAdminForm` (Add Member modal), the ACE Families page, Applications, `AdminQuickSearch` and `AdminRoute`. Converting them would mean an async refactor of all of those, so they stay native and are the only entry in the guard test's allowlist. Do not add to that list; use `useDiscardConfirm` for in-page transitions.
 
-**Out of scope / protected:** points, attendance, imports, merges and House membership flows were not changed (UI confirmation swap only on House draft delete). Event delete cascades into attendance by design of the schema — the dialog now says so.
+**Out of scope / protected:** points, attendance, imports, merges and House membership flows were not changed (UI confirmation swap only on House draft delete and Recovery "Clear staged"; what gets staged or written is untouched). Event delete cascades into attendance by design of the schema — the dialog now says so.
 
 ## Bulk actions
 

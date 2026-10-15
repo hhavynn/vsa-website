@@ -12,6 +12,7 @@ import { COLLEGE_OPTIONS, YEAR_OPTIONS } from '../../constants/cabinetOptions';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../lib/imageUpload';
 import { isRenamed } from '../../lib/memberPhotos';
 import { isDirty } from '../../lib/adminDirty';
+import { useDiscardConfirm } from '../../hooks/useDiscardConfirm';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { AdminCabinetRoleDescriptions } from '../../components/features/cabinet/AdminCabinetRoleDescriptions';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
@@ -203,14 +204,23 @@ export default function AdminCabinet() {
   const createDirty = isDirty({ ...EMPTY_MEMBER, cabinet_year_id: selectedAdminYearId }, newMember) || !!imageFile;
   const editDirty = !!selectedMember && (isDirty(selectedMemberBaseline, selectedMember) || !!editImageFile);
   useUnsavedChangesGuard(createDirty || editDirty, uploading);
+  const { requestDiscard, discardDialog } = useDiscardConfirm();
 
   function openMemberEditor(m: CabinetMember) {
-    if (editDirty && !window.confirm('You have unsaved changes to another member. Discard them?')) return;
-    const opened = { ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) };
-    setSelectedMember(opened);
-    setSelectedMemberBaseline(opened);
-    setSelectedMemberOriginalImageUrl(m.image_url ?? null);
-    setSelectedMemberOriginalThumbnailUrl(m.thumbnail_url ?? null);
+    requestDiscard(
+      editDirty,
+      {
+        title: 'Discard your edits?',
+        description: `You have unsaved changes to ${selectedMember?.name || 'this member'}. Opening ${m.name} discards them.`,
+      },
+      () => {
+        const opened = { ...m, cabinet_year_id: resolveCabinetYearId(m.cabinet_year_id) };
+        setSelectedMember(opened);
+        setSelectedMemberBaseline(opened);
+        setSelectedMemberOriginalImageUrl(m.image_url ?? null);
+        setSelectedMemberOriginalThumbnailUrl(m.thumbnail_url ?? null);
+      },
+    );
   }
 
   // Quick Search deep link: ?member=<id> opens that person's editor once.
@@ -787,7 +797,7 @@ export default function AdminCabinet() {
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row-reverse sm:justify-start">
                 <button type="submit" disabled={uploading || !editDirty} className="vsa-btn-primary sm:px-8 disabled:opacity-50">Save Changes</button>
-                <button type="button" onClick={() => { if (editDirty && !window.confirm('You have unsaved changes. Discard them?')) return; setSelectedMember(null); }} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+                <button type="button" onClick={() => requestDiscard(editDirty, { title: 'Discard your edits?', description: `You have unsaved changes to ${selectedMember?.name || 'this member'}. Closing the editor discards them.` }, () => setSelectedMember(null))} className="rounded border bg-transparent px-6 py-2.5 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
                 <PreviewAsPublicButton onClick={() => setPreviewTarget('edit')} className="sm:mr-auto" />
                 <p role="status" aria-live="polite" className="self-center font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-400">
                   {editDirty ? 'Unsaved changes' : ''}
@@ -807,6 +817,8 @@ export default function AdminCabinet() {
           onClose={() => setPreviewTarget(null)}
         />
       )}
+
+      {discardDialog}
 
       {/* Delete Confirmation (typed: this is a cabinet record) */}
       <ConfirmDialog

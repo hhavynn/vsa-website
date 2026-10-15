@@ -509,6 +509,7 @@ export default function AdminAceFamilies() {
   const [newMemberName, setNewMemberName] = useState('');
   const [deleteFamilyOpen, setDeleteFamilyOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<AceFamilyMember | null>(null);
+  const [pendingDuplicateLink, setPendingDuplicateLink] = useState<{ nodeId: string; option: MemberOption; elsewhere: string } | null>(null);
 
   // ── Import JSON state ──────────────────────────────────────
   const [importOpen, setImportOpen] = useState(false);
@@ -632,18 +633,20 @@ export default function AdminAceFamilies() {
     await invalidateLists();
   };
 
-  const handleLinkChange = async (nodeId: string, option: MemberOption | null) => {
+  // Linking a person who is already linked elsewhere needs a yes first. The dialog
+  // is async, so the pending link waits here and only runs on Confirm.
+  const handleLinkChange = (nodeId: string, option: MemberOption | null) => {
     if (option) {
       const elsewhere = allMemberLinks.filter((link) => link.memberId === option.id && link.nodeId !== nodeId);
-      if (
-        elsewhere.length > 0 &&
-        !window.confirm(
-          `${option.fullName} is already linked to ${elsewhere.map(describeLinkRef).join(', ')}. Link this node to the same person too?`,
-        )
-      ) {
+      if (elsewhere.length > 0) {
+        setPendingDuplicateLink({ nodeId, option, elsewhere: elsewhere.map(describeLinkRef).join(', ') });
         return;
       }
     }
+    void applyLinkChange(nodeId, option);
+  };
+
+  const applyLinkChange = async (nodeId: string, option: MemberOption | null) => {
     try {
       setSavingMemberId(nodeId);
       const node = membersById.get(nodeId);
@@ -1590,6 +1593,17 @@ export default function AdminAceFamilies() {
           onClose={() => setDeleteFamilyOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDuplicateLink !== null}
+        title={`Link ${pendingDuplicateLink?.option.fullName ?? 'this person'} again?`}
+        description={`${pendingDuplicateLink?.option.fullName ?? 'This person'} is already linked to ${pendingDuplicateLink?.elsewhere ?? 'another node'}. Link this node to the same person too?`}
+        confirmLabel="Link anyway"
+        cancelLabel="Don't link"
+        danger={false}
+        onConfirm={() => (pendingDuplicateLink ? applyLinkChange(pendingDuplicateLink.nodeId, pendingDuplicateLink.option) : undefined)}
+        onClose={() => setPendingDuplicateLink(null)}
+      />
 
       <ConfirmDialog
         open={memberToRemove !== null}
