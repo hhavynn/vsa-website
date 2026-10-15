@@ -1,0 +1,9 @@
+{
+  "$comment": "Single source of truth for CSP script-src hashes of inline <script>s (#222). Checked against build/index.html by scripts/check-csp-inline-hashes.mjs; the draft policy in docs/security-headers-and-csp.md must name the same hashes.",
+  "hashes": [
+    {
+      "hash": "sha256-Ly1WRgypBlCo+zVJxALqOhWaWZTLVdAzid4xLq3bnBk=",
+      "description": "Theme bootstrap in public/index.html (FOUC prevention), as minified by CRA into build/index.html."
+    }
+  ]
+}
