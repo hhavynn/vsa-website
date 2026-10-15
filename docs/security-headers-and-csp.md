@@ -26,9 +26,28 @@ Revisit this only after proving that captive-portal detection still works, for e
 
 CSP is deferred in this change: neither an enforced `Content-Security-Policy` nor a `Content-Security-Policy-Report-Only` header is sent yet.
 
-The application currently has an inline theme bootstrap script, loads Google Fonts, injects Google Analytics only after consent, connects to an environment-selected Supabase project, loads user-managed image URLs, embeds approved video URLs, and lets administrators fetch or link approved Google resources. A guessed policy could silently break login, Ask VSA, media, analytics consent behavior, or admin workflows. A report-only policy without a configured reporting endpoint would provide no actionable telemetry and may create misleading console noise.
+The application has one inline theme bootstrap script (hashed, see below), loads Google Fonts, injects Google Analytics only after consent, connects to an environment-selected Supabase project, loads user-managed image URLs, embeds approved video URLs, and lets administrators fetch or link approved Google resources. A guessed policy could silently break login, Ask VSA, media, analytics consent behavior, or admin workflows. A report-only policy without a configured reporting endpoint would provide no actionable telemetry and may create misleading console noise.
 
-Before enforcement, deploy a report collector with a documented retention and access policy, inventory production violations, narrow the allowlist, and remove or nonce/hash the inline theme bootstrap. Test the report-only policy on a Vercel preview before promoting it to production.
+Before enforcement, deploy a report collector with a documented retention and access policy, inventory production violations, narrow the allowlist, and hash the inline theme bootstrap (done, see below). Test the report-only policy on a Vercel preview before promoting it to production.
+
+## Inline script hash (#222)
+
+`public/index.html` has one inline `<script>` in `<head>` that adds `light` or `dark` to `<html>` before first paint, so the page never flashes the wrong theme. A policy without `'unsafe-inline'` allows it by hash, so the draft `script-src` above names `'sha256-Ly1WRgypBlCo+zVJxALqOhWaWZTLVdAzid4xLq3bnBk='` instead.
+
+- **Hash the built file.** CRA minifies the inline script into `build/index.html`, and browsers hash the bytes they are served, so the hash of `public/index.html` is wrong.
+- **Single source of truth:** `config/csp-script-hashes.json`. The draft `script-src` line in this doc must name exactly the same hashes.
+- **Guard:** `npm run check:csp-hashes` (`scripts/check-csp-inline-hashes.mjs`) runs after `npm run build` in `.github/workflows/deploy.yml`. It fails if `build/index.html` has an inline script that is not allowlisted, if an allowlisted hash matches no inline script (stale), or if this doc's `script-src` disagrees with the allowlist. `src/lib/cspInlineHashes.test.ts` pins the hashing and parsing, and the doc/allowlist agreement.
+- **Regenerate** after any change to the inline script: `npm run build && npm run check:csp-hashes`. The failure prints the actual hash. Put it in `config/csp-script-hashes.json` and in the `script-src` line above, then rerun the check.
+- **No runtime chunk.** CRA 5 does not inline a runtime chunk, and `npm run check:csp-hashes` fails if any unlisted inline script ever appears.
+
+## Runtime script inventory for a future enforced policy
+
+Recorded for #223/#224; nothing here is changed by #222.
+
+- Inline `<script>`: only the theme bootstrap, covered by the hash.
+- External scripts: the CRA bundle (`/static/js/*`, `'self'`) and the consent-gated GA4 loader. `src/lib/analytics.ts` injects `https://www.googletagmanager.com/gtag/js?id=...` with `document.createElement('script')`; this is covered by the `https://www.googletagmanager.com` source (no inline code, no nonce needed). GA4 then sends data to the `google-analytics.com` collection hosts (`connect-src`/`img-src`).
+- No `eval`, `new Function`, string `setTimeout`, `javascript:` URLs, Web Workers, service workers or `importScripts` in `src/` or `public/`; no inline event-handler attributes in `public/index.html`. So `'unsafe-eval'` is not needed for production bundles (CRA production uses `source-map`, not an `eval` devtool).
+- Not scripts but needed by the same policy: React `style={...}` props and `el.style.setProperty` (CSSOM, allowed) mean `style-src 'unsafe-inline'` stays until inline style attributes are removed; Google Fonts CSS needs `style-src https://fonts.googleapis.com`.
 
 ## External services to account for
 
@@ -49,7 +68,7 @@ default-src 'self';
 base-uri 'self';
 object-src 'none';
 frame-ancestors 'none';
-script-src 'self' 'unsafe-inline' https://www.googletagmanager.com;
+script-src 'self' 'sha256-Ly1WRgypBlCo+zVJxALqOhWaWZTLVdAzid4xLq3bnBk=' https://www.googletagmanager.com;
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src 'self' https://fonts.gstatic.com data:;
 img-src 'self' data: blob: https:;
@@ -58,7 +77,7 @@ frame-src https://www.youtube.com https://www.youtube-nocookie.com;
 manifest-src 'self';
 ```
 
-The broad `https:` image source and `'unsafe-inline'` values are migration scaffolding, not the desired final state. Tighten them after production inventory. Keep analytics sources in the CSP even though application consent remains the control that decides whether GA loads.
+The broad `https:` image source and the `style-src 'unsafe-inline'` value are migration scaffolding, not the desired final state. Tighten them after production inventory. Keep analytics sources in the CSP even though application consent remains the control that decides whether GA loads.
 
 ## Manual QA
 

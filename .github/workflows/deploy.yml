@@ -63,6 +63,13 @@ jobs:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
 
+      - name: Check CSP inline-script hashes
+        # build/index.html must contain exactly the inline scripts allowlisted in
+        # config/csp-script-hashes.json (and the doc's draft script-src must name
+        # the same hashes), so a future enforced CSP cannot silently break the
+        # theme bootstrap or admit a new inline script (#222).
+        run: npm run check:csp-hashes
+
   # Edge Functions (Deno): type-check and unit tests (#296)
   #
   # Nothing here can reach production. The tests replace `fetch`, point
