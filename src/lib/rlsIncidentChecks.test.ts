@@ -28,6 +28,7 @@ import {
 interface Request {
   kind: 'select' | 'insert' | 'update' | 'delete' | 'rpc';
   table?: string;
+  filter?: string;
   columns?: string;
   fn?: string;
   args?: unknown;
@@ -60,6 +61,7 @@ function fakeClient(answer: (request: Request) => Answer) {
       update() { request.kind = 'update'; started = true; return api; },
       delete() { request.kind = 'delete'; started = true; return api; },
       eq() { return api; },
+      or(filter: string) { request.filter = filter; return api; },
       limit() { return api; },
       maybeSingle() { return api; },
       then(onFulfilled: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) {
@@ -213,16 +215,23 @@ describe('20260620020000: user_profiles policies do not recurse', () => {
 describe('20260619000000 (A, E) + 20260620010000: callers see only their own rows', () => {
   const own = (table: string, ownerColumn: string) => ({ table, ownerColumn, userId: ME });
 
-  it('passes when only own rows (or none, or a revoked table) come back', async () => {
-    expect(outcomes(await checkUserSeesOnlyOwnRows(fakeClient(() => ({ data: [{ user_id: ME }, { user_id: ME }] })), own('event_attendance', 'user_id')))).toEqual(['pass']);
+  it('asks the database for foreign-owned rows only, so a page of own rows cannot hide a leak', async () => {
+    const client = fakeClient(() => ({ data: [] }));
+    await checkUserSeesOnlyOwnRows(client, own('event_attendance', 'user_id'));
+    expect(client.requests).toEqual([
+      { kind: 'select', table: 'event_attendance', columns: 'user_id', filter: `user_id.neq.${ME},user_id.is.null` },
+    ]);
+  });
+
+  it('passes when no foreign row comes back, or the table is revoked', async () => {
     expect(outcomes(await checkUserSeesOnlyOwnRows(fakeClient(() => ({ data: [] })), own('user_points', 'user_id')))).toEqual(['pass']);
     expect(outcomes(await checkUserSeesOnlyOwnRows(fakeClient(() => denied), own('event_attendance', 'user_id')))).toEqual(['pass']);
   });
 
   it('fails when another user\'s row is visible (the "viewable by everyone" shape)', async () => {
-    const leaky = fakeClient(() => ({ data: [{ user_id: ME }, { user_id: OTHER }] }));
+    const leaky = fakeClient(() => ({ data: [{ user_id: OTHER }] }));
     expect(outcomes(await checkUserSeesOnlyOwnRows(leaky, own('event_attendance', 'user_id')))).toEqual(['fail']);
-    const profiles = fakeClient(() => ({ data: [{ id: ME }, { id: OTHER }] }));
+    const profiles = fakeClient(() => ({ data: [{ id: OTHER }] }));
     expect(outcomes(await checkUserSeesOnlyOwnRows(profiles, own('user_profiles', 'id')))).toEqual(['fail']);
   });
 
@@ -266,6 +275,11 @@ describe('20260619000000 (B) + 20260620020000: privileged RPCs are not executabl
     expect(outcomes(await checkOrdinaryUserRefusedBySmartMerge(fakeClient(() => ({ data: null })), { nilId: NIL }))).toEqual(['fail']);
   });
 
+  it('a lost EXECUTE grant is not the guard: 42501 at the grant fails', async () => {
+    const grantRevoked = fakeClient(() => ({ error: { code: '42501', message: 'permission denied for function smart_merge_members' } }));
+    expect(outcomes(await checkOrdinaryUserRefusedBySmartMerge(grantRevoked, { nilId: NIL }))).toEqual(['fail']);
+  });
+
   it('only ever calls smart_merge_members with the nil id', async () => {
     const client = fakeClient(() => ({ error: { code: 'P0001', message: 'admin access required' } }));
     await checkOrdinaryUserRefusedBySmartMerge(client, { nilId: NIL });
@@ -288,8 +302,11 @@ describe('20260619000000 (D) + 20260620010000: ordinary users cannot write atten
     expect(classifyNoRowsUpdated('ordinary user', 't', null, { code: '23514' }).outcome).toBe('fail');
   });
 
-  // The hardened database: inserts and updates are refused with 42501. Own
-  // rows exist, so every probe actually runs.
+  // The hardened database as production is today: inserts and updates are
+  // refused with 42501. 20260620010000 once allowed a zero-point self insert;
+  // production has no such policy now, and 20261003000000 (#510) revokes the
+  // table from authenticated, so no client write passes. Own rows exist, so
+  // every probe actually runs.
   const hardened = () =>
     fakeClient((r) => {
       if (r.kind === 'select') return { data: r.table === 'user_points' ? { points: 3 } : [{ id: 'a1', points_earned: 3 }] };

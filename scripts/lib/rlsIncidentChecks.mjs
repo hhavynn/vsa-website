@@ -77,14 +77,19 @@ export async function checkNoRowsFromProtectedTable(client, { table, columns, wh
  * Needs RLS_TEST_USER_*; the signed-in sections skip without them.
  */
 export async function checkUserSeesOnlyOwnRows(client, { table, ownerColumn, userId, who = 'ordinary user' }) {
-  const { data, error } = await client.from(table).select(ownerColumn).limit(50);
+  // Ask only for rows owned by someone else (or by no one). Sampling rows and
+  // filtering here could return a page of the caller's own rows and miss a leak.
+  const { data, error } = await client
+    .from(table)
+    .select(ownerColumn)
+    .or(`${ownerColumn}.neq.${userId},${ownerColumn}.is.null`)
+    .limit(1);
   if (isMissingRelation(error)) return [skip(`${who} own-rows check on ${table} (table absent from this database)`)];
   if (isRecursion(error)) return [fail(`${who} read of ${table} hit RLS policy recursion (${describe(error)}) (#227)`)];
   if (isDenied(error)) return [pass(`${who} cannot read ${table} at all (permission denied, #227)`)];
   if (error) return [fail(`${who} own-rows check on ${table} failed for a non-authorization reason: ${describe(error)} (#227)`)];
-  const foreign = (data ?? []).filter((row) => row[ownerColumn] !== userId).length;
-  if (foreign > 0) {
-    return [fail(`${who} can read ${foreign} ${table} row(s) owned by someone else (values omitted) (#227)`)];
+  if ((data ?? []).length > 0) {
+    return [fail(`${who} can read ${table} rows owned by someone else (values omitted) (#227)`)];
   }
   return [pass(`${who} sees only their own ${table} rows (#227)`)];
 }
@@ -142,8 +147,14 @@ export async function checkOrdinaryUserRefusedBySmartMerge(client, { nilId }) {
   if (/not found/i.test(message)) {
     return [fail('ordinary user got past the smart_merge_members admin guard and reached member lookup (#227)')];
   }
-  if (isDenied(error) || /admin|permission|not authorized|forbidden/i.test(message)) {
-    return [pass('ordinary user is refused by smart_merge_members (#227)')];
+  // The guard's own exception (20260619000000 section B). A grant-level 42501
+  // ("permission denied for function") never reaches the guard, and it would
+  // also break the admin merge callers, so it is not a pass.
+  if (/admin access required/i.test(message)) {
+    return [pass('ordinary user is refused by the smart_merge_members admin guard (#227)')];
+  }
+  if (isDenied(error)) {
+    return [fail('authenticated has lost EXECUTE on smart_merge_members: the admin guard was not reached, and admin merges break too (#227)')];
   }
   return [fail(`ordinary user smart_merge_members call failed for an unexpected reason: ${describe(error)} (#227)`)];
 }
@@ -340,7 +351,11 @@ export async function checkUserCannotWriteEventAttendance(client, { userId, nilI
  *
  * Incident (#227): 20260619000000 section D dropped "Users can update their own
  * points" (any user could set their own total); 20260620010000 pinned the
- * insert policy to zero points.
+ * insert policy to zero points. Production no longer has that policy, and the
+ * member-account retirement (20261003000000, #510) revokes the table from
+ * authenticated outright (both checked 2026-10-15). The pass shape is that
+ * current state: any insert is refused, so a zero-point insert reaching 23505
+ * is a regression too.
  */
 export async function checkUserCannotWriteUserPoints(client, { userId, who = 'ordinary user' }) {
   const results = [];
