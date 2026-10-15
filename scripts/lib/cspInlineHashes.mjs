@@ -12,12 +12,16 @@
  */
 import { createHash } from 'node:crypto';
 
-// script `type` values the browser executes as classic or module JavaScript.
-// Anything else (application/json, application/ld+json, a template MIME type)
-// is a data block: it is never run, so CSP script-src does not apply to it.
-const EXECUTABLE_TYPES = new Set([
+// script `type` values whose inline content HTML runs through CSP's inline
+// script check: classic and module JavaScript, plus import maps and
+// speculation rules (both subject to script-src). Anything else
+// (application/json, application/ld+json, a template MIME type) is a data
+// block: it is never processed, so CSP script-src does not apply to it.
+const CSP_GOVERNED_TYPES = new Set([
   '',
   'module',
+  'importmap',
+  'speculationrules',
   'text/javascript',
   'application/javascript',
   'application/x-javascript',
@@ -45,19 +49,26 @@ export function hashInlineScript(text) {
 }
 
 /**
- * Every executable inline `<script>` (no `src`) in an HTML document, in order.
+ * Every CSP-governed inline `<script>` (no `src`) in an HTML document, in order.
  * HTML comments are ignored (they are not scripts).
  */
 export function findInlineScripts(html) {
-  const withoutComments = html.replace(/<!--[\s\S]*?-->/g, '');
+  // Strip until stable, so removing one comment cannot splice a new `<!--` together.
+  let withoutComments = html;
+  let previous;
+  do {
+    previous = withoutComments;
+    withoutComments = withoutComments.replace(/<!--[\s\S]*?-->/g, '');
+  } while (withoutComments !== previous);
   const scripts = [];
-  const pattern = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  // End tags may carry whitespace or junk before `>` (`</script\t\n bar>`), as in HTML.
+  const pattern = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
   let match;
   while ((match = pattern.exec(withoutComments)) !== null) {
     const attributes = match[1];
     if (readAttribute(attributes, 'src') !== null) continue;
     const type = (readAttribute(attributes, 'type') ?? '').trim().toLowerCase();
-    if (!EXECUTABLE_TYPES.has(type)) continue;
+    if (!CSP_GOVERNED_TYPES.has(type)) continue;
     scripts.push({ text: match[2], hash: hashInlineScript(match[2]) });
   }
   return scripts;

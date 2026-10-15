@@ -44,6 +44,23 @@ describe('findInlineScripts', () => {
     expect(findInlineScripts(html)[0].hash).toBe(ALERT_1_HASH);
   });
 
+  it('includes import maps and speculation rules, which CSP script-src also governs', () => {
+    const html = `
+      <script type="importmap">{"imports":{}}</script>
+      <script type="speculationrules">{"prerender":[]}</script>
+      <script type="application/json">{"data":1}</script>
+    `;
+    expect(findInlineScripts(html).map(script => script.text)).toEqual(['{"imports":{}}', '{"prerender":[]}']);
+  });
+
+  it('matches end tags with trailing whitespace or junk, as HTML does', () => {
+    expect(findInlineScripts('<script>alert(1)</script\t\n bar>').map(script => script.text)).toEqual(['alert(1)']);
+  });
+
+  it('does not let stripping one comment splice a script back together', () => {
+    expect(findInlineScripts('<!<!-- x -->-- <script>hidden()</script> -->')).toEqual([]);
+  });
+
   it('finds nothing in a page with only external scripts', () => {
     expect(findInlineScripts('<script defer src="/a.js"></script>')).toEqual([]);
   });
