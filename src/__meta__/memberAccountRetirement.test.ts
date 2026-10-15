@@ -24,6 +24,8 @@ export const ALLOWED: Record<string, string> = {
     "generated from the live schema, which still physically contains the preserved objects",
   "scripts/verify-rls-security.mjs":
     "hosted verifier asserts the legacy archives' pre- and post-retirement grants",
+  "scripts/lib/rlsIncidentChecks.mjs":
+    "pure checks the hosted verifier runs for the 2026-06 incident migrations; they read the legacy archives only to assert no rows reach anon or ordinary users",
   "scripts/sql/retired-member-check-in.fixture.sql":
     "offline migration fixture reproducing the pre-retirement schema",
   "scripts/sql/retired-member-check-in.assert.sql":
