@@ -429,4 +429,14 @@ describe('personal email upgraded to UCSD email', () => {
     const plan = planAttendanceMemberEnrichments([{ ...ucsdRow(), adminConfirmed: true }], [gmailMember]);
     expect(plan).toEqual([{ memberId: 'm1', updates: { email: 'kan075@ucsd.edu' } }]);
   });
+
+  test('one UCSD email planned for two members goes only to the first', () => {
+    const other = member({ id: 'm2', first_name: 'Kayla', last_name: 'Nguyen', email: 'kaylanguyen@yahoo.com' });
+    const rows = [
+      { ...ucsdRow(), rowId: 'r1', matchedMember: gmailMember, adminConfirmed: true },
+      { ...ucsdRow(), rowId: 'r2', matchedMember: other, adminConfirmed: true },
+    ];
+    const plan = planAttendanceMemberEnrichments(rows, [gmailMember, other]);
+    expect(plan).toEqual([{ memberId: 'm1', updates: { email: 'kan075@ucsd.edu' } }]);
+  });
 });

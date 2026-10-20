@@ -705,9 +705,11 @@ export function planAttendanceMemberEnrichments(
     if (!row.matchedMember) continue;
     const id = row.matchedMember.id;
     const latest = current.get(id) ?? row.matchedMember;
+    // Checked against the members as earlier rows already left them, so an
+    // email planned for one member counts as taken for every later row.
     const updates = getSafeAttendanceMemberEnrichment(
       { ...row, matchedMember: latest },
-      latestMembers,
+      Array.from(current.values()),
       { adminConfirmed: row.adminConfirmed },
     );
     if (Object.keys(updates).length === 0) continue;
