@@ -379,3 +379,54 @@ describe('planAttendanceMemberEnrichments', () => {
     expect(planAttendanceMemberEnrichments([unconfirmed], [stored, other])).toEqual([]);
   });
 });
+
+describe('personal email upgraded to UCSD email', () => {
+  const gmailMember = member({ id: 'm1', first_name: 'Kayla', last_name: 'Nguyen', email: 'kaylan@gmail.com' });
+  const ucsdRow = () => matchOne(row({ displayName: 'Kayla Nguyen', csvEmail: 'kan075@UCSD.edu' }), [gmailMember]);
+
+  test('the same name with a UCSD email goes to review, explaining the switch', () => {
+    const result = ucsdRow();
+    expect(result.status).toBe('review');
+    expect(result.reason).toBe('identity_conflict');
+    expect(result.note).toContain('force match to switch them to the UCSD email');
+  });
+
+  test('an unconfirmed review row keeps the personal email', () => {
+    expect(getSafeAttendanceMemberEnrichment(ucsdRow(), [gmailMember]).email).toBeUndefined();
+  });
+
+  test('a force-matched row replaces the personal email with the UCSD one', () => {
+    const updates = getSafeAttendanceMemberEnrichment(ucsdRow(), [gmailMember], { adminConfirmed: true });
+    expect(updates.email).toBe('kan075@ucsd.edu');
+  });
+
+  test('an exact-name match against a refetched personal email upgrades too', () => {
+    const noEmailYet = { ...gmailMember, email: null };
+    const result = matchOne(row({ displayName: 'Kayla Nguyen', csvEmail: 'kan075@ucsd.edu' }), [noEmailYet]);
+    expect(result.status).toBe('match');
+    const updates = getSafeAttendanceMemberEnrichment({ ...result, matchedMember: gmailMember }, [gmailMember]);
+    expect(updates.email).toBe('kan075@ucsd.edu');
+  });
+
+  test('a UCSD email on file is never replaced', () => {
+    const ucsdMember = { ...gmailMember, email: 'knguyen@ucsd.edu' };
+    const result = matchOne(row({ displayName: 'Kayla Nguyen', csvEmail: 'kan075@ucsd.edu' }), [ucsdMember]);
+    expect(getSafeAttendanceMemberEnrichment(result, [ucsdMember], { adminConfirmed: true }).email).toBeUndefined();
+  });
+
+  test('a personal email on the row never replaces the one on file', () => {
+    const result = matchOne(row({ displayName: 'Kayla Nguyen', csvEmail: 'kayla.other@gmail.com' }), [gmailMember]);
+    expect(getSafeAttendanceMemberEnrichment(result, [gmailMember], { adminConfirmed: true }).email).toBeUndefined();
+  });
+
+  test('a UCSD email already held by another member is not taken', () => {
+    const holder = member({ id: 'm2', first_name: 'Kaly', last_name: 'Nguyen', email: 'kan075@ucsd.edu' });
+    const result = { ...ucsdRow(), matchedMember: gmailMember };
+    expect(getSafeAttendanceMemberEnrichment(result, [gmailMember, holder], { adminConfirmed: true }).email).toBeUndefined();
+  });
+
+  test('the import plan writes the upgrade once per member', () => {
+    const plan = planAttendanceMemberEnrichments([{ ...ucsdRow(), adminConfirmed: true }], [gmailMember]);
+    expect(plan).toEqual([{ memberId: 'm1', updates: { email: 'kan075@ucsd.edu' } }]);
+  });
+});
