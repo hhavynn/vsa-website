@@ -3,6 +3,7 @@ import {
   getLosAngelesDateOnly,
   isExistingLosAngelesWallClock,
   losAngelesDateTimeToIso,
+  addDaysToDateOnly,
 } from './losAngelesDate';
 import { buildGcalTimedDates } from '../lib/eventTime';
 
@@ -50,5 +51,16 @@ describe('isExistingLosAngelesWallClock', () => {
     expect(isExistingLosAngelesWallClock('2026-03-08', '03:00')).toBe(true);
     expect(isExistingLosAngelesWallClock('2026-10-01', '19:00')).toBe(true);
     expect(isExistingLosAngelesWallClock('2026-10-01')).toBe(true);
+  });
+});
+
+describe('addDaysToDateOnly', () => {
+  it('adds days across months and leap years', () => {
+    expect(addDaysToDateOnly('2026-10-19', 1)).toBe('2026-10-20');
+    expect(addDaysToDateOnly('2026-10-19', -1)).toBe('2026-10-18');
+    expect(addDaysToDateOnly('2026-12-31', 1)).toBe('2027-01-01');
+    expect(addDaysToDateOnly('2027-01-01', -1)).toBe('2026-12-31');
+    expect(addDaysToDateOnly('2028-02-28', 1)).toBe('2028-02-29'); // Leap year
+    expect(addDaysToDateOnly('2028-02-29', 1)).toBe('2028-03-01');
   });
 });

@@ -73,3 +73,16 @@ export function isExistingLosAngelesWallClock(dateOnly: string, time: string = '
   }).format(new Date(iso));
   return getLosAngelesDateOnly(new Date(iso)) === dateOnly && actual === expected;
 }
+
+/**
+ * Adds or subtracts whole calendar days to/from a YYYY-MM-DD date string
+ * using UTC arithmetic to avoid timezone shifts or DST skips.
+ */
+export function addDaysToDateOnly(dateOnly: string, days: number): string {
+  const [year, month, day] = dateOnly.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day + days));
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dt = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${dt}`;
+}

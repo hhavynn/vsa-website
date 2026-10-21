@@ -16,7 +16,16 @@ import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
-import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
+import {
+  addDaysToDateOnly,
+  getLosAngelesDateOnly,
+  losAngelesDateTimeToIso,
+} from '../utils/losAngelesDate';
+import {
+  isEventUpcomingOrOngoing,
+  isEventPast,
+} from '../lib/eventLifecycle';
+import { useEventLifecycleTimer } from '../hooks/useEventLifecycleTimer';
 import { houseSlugFromKey } from '../utils/houseSlug';
 import { buildEventAlbumMap, eventAnchorId, parseEventAnchor } from '../lib/eventGalleryLinks';
 import { supabase } from '../lib/supabase';
@@ -122,20 +131,30 @@ export function Events() {
     () => searchParams.get('term')
   );
 
-  const now = useMemo(() => new Date(), []);
-  const oneDayAgo = useMemo(() => new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), [now]);
+  const [currentNow, setCurrentNow] = useState(() => new Date());
+  const todayDateOnly = getLosAngelesDateOnly(currentNow);
+  const queryDateFrom = useMemo(() => addDaysToDateOnly(todayDateOnly, -30), [todayDateOnly]);
+  const archiveDateTo = useMemo(
+    () => losAngelesDateTimeToIso(addDaysToDateOnly(todayDateOnly, 1), '00:00'),
+    [todayDateOnly]
+  );
 
-  // 1. Fetch upcoming events
+  // 1. Fetch upcoming events (window covering recent multi-day events that may still be ongoing)
   const { events: unfilteredUpcomingEvents, loading: upcomingLoading, error: upcomingError } = useEvents({
-    date_from: oneDayAgo,
+    date_from: queryDateFrom,
     sort_ascending: true
   });
 
+  const eligibleUpcomingEvents = useMemo(
+    () => unfilteredUpcomingEvents.filter((event) => isEventUpcomingOrOngoing(event, currentNow)),
+    [unfilteredUpcomingEvents, currentNow]
+  );
+
   const upcomingEventsAll = useMemo(
     () => activeFilter === 'all'
-      ? unfilteredUpcomingEvents
-      : unfilteredUpcomingEvents.filter((event) => event.event_type === activeFilter),
-    [activeFilter, unfilteredUpcomingEvents]
+      ? eligibleUpcomingEvents
+      : eligibleUpcomingEvents.filter((event) => event.event_type === activeFilter),
+    [activeFilter, eligibleUpcomingEvents]
   );
 
   const { terms, loading: termsLoading, error: termsError } = useAcademicTerms();
@@ -144,7 +163,7 @@ export function Events() {
     data: archiveAvailability,
     isLoading: archiveAvailabilityLoading,
     error: archiveAvailabilityError,
-  } = usePublishedPastEventArchiveAvailability(oneDayAgo);
+  } = usePublishedPastEventArchiveAvailability(archiveDateTo);
 
   // 2. Fetch past events (paginated)
   const publishedPastEventTermIds = useMemo(
@@ -177,15 +196,26 @@ export function Events() {
     fetchNextPage: fetchMorePast,
     isFetchingNextPage: fetchingMorePast
   } = useInfiniteEvents({
-    date_to: oneDayAgo,
+    date_to: archiveDateTo,
     event_type: activeFilter === 'all' ? undefined : activeFilter,
     academic_term_id: effectiveArchiveTermId === 'unassigned' ? null : effectiveArchiveTermId,
     sort_ascending: false
   });
 
   const archivedEvents = useMemo(() => {
-    return pastEventsData?.pages.flatMap(page => page) ?? [];
-  }, [pastEventsData]);
+    const pages = pastEventsData?.pages.flatMap(page => page) ?? [];
+    return pages.filter((event) => isEventPast(event, currentNow));
+  }, [pastEventsData, currentNow]);
+
+  const allEventsForTimer = useMemo(() => {
+    return [...unfilteredUpcomingEvents, ...archivedEvents];
+  }, [unfilteredUpcomingEvents, archivedEvents]);
+
+  const timerNow = useEventLifecycleTimer(allEventsForTimer, [['events']]);
+
+  useEffect(() => {
+    setCurrentNow(timerNow);
+  }, [timerNow]);
 
   // A Gallery "related event" link (#event-<id>) targets a card that may sit
   // beyond the first page of its term. Keep loading pages (bounded) until it is
@@ -230,17 +260,16 @@ export function Events() {
 
   // Only external events carry a UVSA Network listing; one batched lookup
   // covers both the upcoming list and the visible archive.
-  const externalEventIds = [...unfilteredUpcomingEvents, ...archivedEvents]
+  const externalEventIds = [...eligibleUpcomingEvents, ...archivedEvents]
     .filter((event) => event.event_type === 'external_event')
     .map((event) => event.id);
   const externalListings = useLinkedExternalListings(externalEventIds);
 
   const [featured, ...rest] = upcomingEventsAll;
-  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(unfilteredUpcomingEvents.length > 0);
+  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(eligibleUpcomingEvents.length > 0);
   const summerEventsMessage = getSummerBreakMessage('events');
-  const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(now.toISOString())?.code);
+  const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(currentNow.toISOString())?.code);
   const activeYear = activeTerm?.academic_year_start ?? null;
-  const todayDateOnly = getLosAngelesDateOnly();
   const { data: houseEventPreviews = [] } = useQuery<HouseEvent[]>({
     queryKey: ['events-page', 'house-event-previews', todayDateOnly],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 4),

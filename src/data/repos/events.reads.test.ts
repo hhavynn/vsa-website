@@ -204,7 +204,7 @@ describe('EventsRepository.getPublicUpcomingPreview', () => {
     thumbnail_url: null,
   };
 
-  it('returns preview rows with interest counts, bounded by date and ordered by date ascending', async () => {
+  it('returns preview rows with interest counts, bounded by date/end_date and ordered by date ascending', async () => {
     supabaseMock.queueResult('events', { data: [previewRow], error: null });
     supabaseMock.queueResult('event_interest_counts', {
       data: [{ event_id: 'event-1', interested: 1, going: 0 }],
@@ -215,9 +215,11 @@ describe('EventsRepository.getPublicUpcomingPreview', () => {
 
     expect(result).toEqual([{ ...previewRow, interest_counts: { event_id: 'event-1', interested: 1, going: 0 } }]);
     const calls = callsFor('events');
-    expect(calls).toContainEqual({ method: 'gte', args: ['date', '2026-09-15'] });
+    expect(calls).toContainEqual({
+      method: 'or',
+      args: ['date.gte.2026-09-14,end_date.gte.2026-09-15'],
+    });
     expect(calls).toContainEqual({ method: 'order', args: ['date', { ascending: true }] });
-    expect(calls).toContainEqual({ method: 'limit', args: [4] });
   });
 
   it('selects only public preview columns (no check_in_form_url, no *)', async () => {
@@ -228,9 +230,54 @@ describe('EventsRepository.getPublicUpcomingPreview', () => {
     expect(columns).not.toContain('*');
   });
 
-  it('defaults the limit to 4', async () => {
-    await eventsRepository.getPublicUpcomingPreview('2026-09-15');
-    expect(firstCall('events', 'limit')).toEqual([4]);
+  it('defaults the limit to 4 and skips expired events to fill the quota', async () => {
+    const expiredRow = (n: number) => ({
+      id: `expired-${n}`,
+      name: `Past Event ${n}`,
+      date: '2026-09-15',
+      start_time: '10:00:00',
+      end_time: '12:00:00',
+      end_date: null,
+      location: null,
+      points: 1,
+      event_type: 'gbm' as const,
+      image_url: null,
+      thumbnail_url: null,
+    });
+    const upcomingRow = (n: number) => ({
+      id: `upcoming-${n}`,
+      name: `Upcoming Event ${n}`,
+      date: '2026-09-15',
+      start_time: '18:00:00',
+      end_time: '20:00:00',
+      end_date: null,
+      location: null,
+      points: 1,
+      event_type: 'gbm' as const,
+      image_url: null,
+      thumbnail_url: null,
+    });
+
+    // 4 expired events followed by 4 upcoming events in the candidate batch
+    const candidateBatch = [
+      expiredRow(1),
+      expiredRow(2),
+      expiredRow(3),
+      expiredRow(4),
+      upcomingRow(1),
+      upcomingRow(2),
+      upcomingRow(3),
+      upcomingRow(4),
+    ];
+
+    supabaseMock.queueResult('events', { data: candidateBatch, error: null });
+    supabaseMock.queueResult('event_interest_counts', { data: [], error: null });
+
+    const testNow = new Date('2026-09-15T20:00:00Z'); // 1:00 PM PDT (after 12:00 PM, before 6:00 PM)
+    const result = await eventsRepository.getPublicUpcomingPreview('2026-09-15', 4, testNow);
+
+    expect(result).toHaveLength(4);
+    expect(result.map((e) => e.id)).toEqual(['upcoming-1', 'upcoming-2', 'upcoming-3', 'upcoming-4']);
   });
 
   it('gives null interest counts to events without a counts row', async () => {

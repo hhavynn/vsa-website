@@ -17,6 +17,8 @@ import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../
 import { OptimizedImage } from '../../common/OptimizedImage';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
+import { isEventUpcomingOrOngoing } from '../../../lib/eventLifecycle';
+import { useEventLifecycleTimer } from '../../../hooks/useEventLifecycleTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../constants/houses';
 import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
@@ -58,14 +60,6 @@ function CardSkeleton() {
   );
 }
 
-function getTodayDateOnly(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function getEventTimeLabel(event: Pick<Event, 'start_time' | 'end_time'>): string | null {
   if (event.start_time && event.end_time) return formatEventTimeRange(event.start_time, event.end_time);
   if (event.start_time) return formatEventTime(event.start_time);
@@ -73,15 +67,15 @@ function getEventTimeLabel(event: Pick<Event, 'start_time' | 'end_time'>): strin
 }
 
 function NextEventCard() {
-  const today = getTodayDateOnly();
-  const { data: events = [], isLoading } = useQuery<PublicEventPreview[]>({
+  const today = getLosAngelesDateOnly();
+  const { data: rawEvents = [], isLoading } = useQuery<PublicEventPreview[]>({
     queryKey: ['home', 'upcoming-event-preview', today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  const todayDateOnly = getLosAngelesDateOnly();
+  const todayDateOnly = today;
   const { data: houseEvents = [] } = useQuery<HouseEvent[]>({
     queryKey: ['home', 'upcoming-house-event-preview', todayDateOnly],
     queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 1),
@@ -89,6 +83,16 @@ function NextEventCard() {
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const now = useEventLifecycleTimer(rawEvents, [
+    ['home', 'upcoming-event-preview'],
+  ]);
+
+  const events = useMemo(() => {
+    return rawEvents
+      .filter((event) => isEventUpcomingOrOngoing(event, now))
+      .slice(0, 4);
+  }, [rawEvents, now]);
 
   const stack = events.slice(0, 3);
   const [activeIndex, setActiveIndex] = useState(0);

@@ -2,6 +2,12 @@ import { supabase } from '../../lib/supabase';
 import { withErrorHandling, DatabaseError, NotFoundError } from '../errors';
 import { Event, EventInterestCounts } from '../../types';
 import { CreateEventFormData, UpdateEventFormData } from '../../schemas';
+import { isEventUpcomingOrOngoing } from '../../lib/eventLifecycle';
+import {
+  addDaysToDateOnly,
+  getLosAngelesDateOnly,
+  losAngelesDateTimeToIso,
+} from '../../utils/losAngelesDate';
 
 export type EventInterestAction =
   | 'interested'
@@ -286,33 +292,67 @@ export class EventsRepository {
     }, 'Failed to fetch events for search');
   }
 
-  async getPublicUpcomingPreview(dateFrom: string, limit: number = 4): Promise<PublicEventPreview[]> {
+  async getPublicUpcomingPreview(
+    dateFrom?: string | null,
+    limit: number = 4,
+    now?: Date
+  ): Promise<PublicEventPreview[]> {
     return withErrorHandling(async () => {
-      const { data: events, error } = await supabase
-        .from('events')
-        .select('id, name, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url')
-        .eq('is_published', true)
-        .gte('date', dateFrom)
-        .order('date', { ascending: true })
-        .limit(limit);
+      const todayInSD = getLosAngelesDateOnly();
+      const effectiveNow =
+        now ??
+        (dateFrom && dateFrom !== todayInSD
+          ? new Date(losAngelesDateTimeToIso(dateFrom, '00:00'))
+          : new Date());
+      const effectiveDate = dateFrom || getLosAngelesDateOnly(effectiveNow);
+      const bufferDate = addDaysToDateOnly(effectiveDate, -1);
 
-      if (error) throw error;
-      if (!events) return [];
+      const eligibleEvents: PublicEventPreview[] = [];
+      const batchSize = Math.max(limit * 4, 20);
+      const maxScanned = 100;
+      let offset = 0;
+
+      while (eligibleEvents.length < limit && offset < maxScanned) {
+        const { data: batch, error } = await supabase
+          .from('events')
+          .select(
+            'id, name, date, start_time, end_time, end_date, location, points, event_type, image_url, thumbnail_url'
+          )
+          .eq('is_published', true)
+          .or(`date.gte.${bufferDate},end_date.gte.${effectiveDate}`)
+          .order('date', { ascending: true })
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+        if (!batch || batch.length === 0) break;
+
+        for (const event of batch) {
+          if (isEventUpcomingOrOngoing(event, effectiveNow)) {
+            eligibleEvents.push(event as PublicEventPreview);
+            if (eligibleEvents.length >= limit) break;
+          }
+        }
+
+        if (batch.length < batchSize) break;
+        offset += batchSize;
+      }
+
+      if (eligibleEvents.length === 0) return [];
 
       // Fetch interest counts
-      const eventIds = events.map(e => e.id);
+      const eventIds = eligibleEvents.map((e) => e.id);
       const { data: interestData } = await supabase
         .from('event_interest_counts')
         .select('*')
         .in('event_id', eventIds);
 
       const interestMap = new Map<string, EventInterestCounts>();
-      interestData?.forEach(ic => interestMap.set(ic.event_id, ic));
+      interestData?.forEach((ic) => interestMap.set(ic.event_id, ic));
 
-      return events.map((event) => ({
+      return eligibleEvents.map((event) => ({
         ...event,
         interest_counts: interestMap.get(event.id) || null,
-      })) as PublicEventPreview[];
+      }));
     }, 'Failed to fetch upcoming event previews');
   }
 
