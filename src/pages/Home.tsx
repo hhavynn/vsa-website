@@ -18,7 +18,10 @@ import { OpenOpportunities } from "../components/features/home/OpenOpportunities
 import { ClosingSoonApplications } from "../components/features/home/ClosingSoonApplications";
 import { WrappedRecapCard } from "../components/features/home/WrappedRecapCard";
 import { PresidentsMessageSection } from "../components/features/home/PresidentsMessage";
-import { type ComponentType, useRef } from "react";
+import { type ComponentType, useMemo, useRef } from "react";
+import { getLosAngelesDateOnly } from "../utils/losAngelesDate";
+import { isEventUpcomingOrOngoing } from "../lib/eventLifecycle";
+import { useEventLifecycleTimer } from "../hooks/useEventLifecycleTimer";
 import { type IconBaseProps } from "react-icons";
 import { RevealOnScrollWrapper } from "../components/common/RevealOnScrollWrapper";
 import {
@@ -66,14 +69,6 @@ const TYPE_COLOR: Record<string, BadgeColor> = {
   other: "gray",
   external_event: "gray",
 };
-
-function getTodayDateOnly(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function getEventTimeLabel(
   event: Pick<PublicEventPreview, "start_time" | "end_time">,
@@ -199,14 +194,12 @@ export function Home() {
   );
   const { content: presidentsContent } = usePresidentsContent();
   const { settings: siteSettings } = useSiteSettings();
-  const today = getTodayDateOnly();
+  const today = getLosAngelesDateOnly();
   const {
-    data: upcomingEvents = [],
+    data: rawUpcomingEvents = [],
     isError: eventsError,
     isLoading: upcomingEventsLoading,
-  } = useQuery<
-    PublicEventPreview[]
-  >({
+  } = useQuery<PublicEventPreview[]>({
     queryKey: ["home", "upcoming-events-section", today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 4),
     staleTime: 5 * 60 * 1000,
@@ -214,6 +207,17 @@ export function Home() {
     refetchOnWindowFocus: false,
     retry: 1,
   });
+
+  const now = useEventLifecycleTimer(rawUpcomingEvents, [
+    ["home", "upcoming-events-section"],
+  ]);
+
+  const upcomingEvents = useMemo(() => {
+    return rawUpcomingEvents
+      .filter((event) => isEventUpcomingOrOngoing(event, now))
+      .slice(0, 4);
+  }, [rawUpcomingEvents, now]);
+
   const logoSrc =
     siteSettings.logoUrl ||
     `${process.env.PUBLIC_URL || ""}/images/vsa-logo.jpg`;

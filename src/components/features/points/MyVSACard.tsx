@@ -17,6 +17,7 @@ import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { Skeleton } from '../../ui/Skeleton';
 import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
 import { formatRank, isWithinTop } from '../../../utils/leaderboardRanking';
+import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 
 // ─── House emoji map ───────────────────────────────────────────────────────────
 
@@ -185,7 +186,7 @@ function useRecentAttendance(memberId: string) {
 }
 
 function useUpcomingEvents() {
-  const today = new Date().toISOString();
+  const today = getLosAngelesDateOnly();
   return useQuery<PublicEventPreview[]>({
     queryKey: ['upcoming-events-preview', today],
     queryFn: () => eventsRepository.getPublicUpcomingPreview(today, 2),
