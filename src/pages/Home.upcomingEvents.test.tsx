@@ -53,6 +53,8 @@ describe('Home.tsx Upcoming Events section', () => {
         queries: { retry: false, cacheTime: 0 },
       },
     });
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(losAngelesDateTimeToIso('2026-10-20', '12:00')));
   });
 
   afterEach(() => {

@@ -163,7 +163,7 @@ export function Events() {
     data: archiveAvailability,
     isLoading: archiveAvailabilityLoading,
     error: archiveAvailabilityError,
-  } = usePublishedPastEventArchiveAvailability(archiveDateTo);
+  } = usePublishedPastEventArchiveAvailability(archiveDateTo, currentNow);
 
   // 2. Fetch past events (paginated)
   const publishedPastEventTermIds = useMemo(

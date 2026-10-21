@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { withErrorHandling, DatabaseError, NotFoundError } from '../errors';
 import { Event, EventInterestCounts } from '../../types';
 import { CreateEventFormData, UpdateEventFormData } from '../../schemas';
-import { isEventUpcomingOrOngoing } from '../../lib/eventLifecycle';
+import { isEventPast, isEventUpcomingOrOngoing } from '../../lib/eventLifecycle';
 import {
   addDaysToDateOnly,
   getLosAngelesDateOnly,
@@ -98,21 +98,26 @@ const ADMIN_EVENT_COLUMNS =
 
 export class EventsRepository {
   async getPublishedPastEventArchiveAvailability(
-    dateTo: string
+    dateTo: string,
+    now?: Date
   ): Promise<PublishedPastEventArchiveAvailability> {
     return withErrorHandling(async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('academic_term_id')
+        .select('academic_term_id, date, start_time, end_time, end_date')
         .eq('is_published', true)
         .lte('date', dateTo);
 
       if (error) throw error;
 
+      const effectiveNow = now ?? new Date();
       const termIds = new Set<string>();
       let hasUnassignedEvents = false;
 
       for (const event of data ?? []) {
+        if (event.date && !isEventPast(event as Event, effectiveNow)) {
+          continue;
+        }
         if (event.academic_term_id) {
           termIds.add(event.academic_term_id);
         } else {

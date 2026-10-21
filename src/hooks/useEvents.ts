@@ -16,10 +16,10 @@ export function useEvents(filters?: EventFilters) {
 
 export const EVENTS_PAGE_SIZE = 9;
 
-export function usePublishedPastEventArchiveAvailability(dateTo: string) {
+export function usePublishedPastEventArchiveAvailability(dateTo: string, now?: Date) {
   return useQuery({
-    queryKey: ['events', 'archive-availability', dateTo],
-    queryFn: () => eventsRepository.getPublishedPastEventArchiveAvailability(dateTo),
+    queryKey: ['events', 'archive-availability', dateTo, now?.toISOString()],
+    queryFn: () => eventsRepository.getPublishedPastEventArchiveAvailability(dateTo, now),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
   });

@@ -15,6 +15,7 @@
 import { eventsRepository } from './events';
 import { DatabaseError } from '../errors';
 import { supabaseMock, postgrestError } from '../../test-utils/supabaseMock';
+import { losAngelesDateTimeToIso } from '../../utils/losAngelesDate';
 
 jest.mock('../../lib/supabase', () => ({
   get supabase() {
@@ -344,5 +345,41 @@ describe('EventsRepository.getPublishedPastEventArchiveAvailability', () => {
     await expect(eventsRepository.getPublishedPastEventArchiveAvailability('2026-06-01')).rejects.toBeInstanceOf(
       DatabaseError
     );
+  });
+
+  it('excludes active events and includes only completed events when determining archive availability', async () => {
+    const now = new Date(losAngelesDateTimeToIso('2026-10-20', '12:00'));
+
+    supabaseMock.queueResult('events', {
+      data: [
+        {
+          academic_term_id: 'term-past',
+          date: '2026-10-19',
+          start_time: '17:00:00',
+          end_time: '20:00:00',
+          end_date: null,
+        },
+        {
+          academic_term_id: 'term-active-only',
+          date: '2026-10-20',
+          start_time: '10:00:00',
+          end_time: '22:00:00',
+          end_date: null,
+        },
+        {
+          academic_term_id: null,
+          date: '2026-10-18',
+          start_time: '12:00:00',
+          end_time: '14:00:00',
+          end_date: null,
+        },
+      ],
+      error: null,
+    });
+
+    const result = await eventsRepository.getPublishedPastEventArchiveAvailability('2026-10-21', now);
+
+    expect(result.termIds).toEqual(['term-past']);
+    expect(result.hasUnassignedEvents).toBe(true);
   });
 });
