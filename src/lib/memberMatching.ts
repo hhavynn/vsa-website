@@ -372,7 +372,11 @@ function hasAmbiguousTopCandidate(candidates: ReturnType<typeof candidateScore>[
 function findIdentityConflict(row: AttendanceImportRowInput, member: AttendanceImportMember): string | null {
   const csvEmail = normalizeEmail(row.csvEmail);
   const memberEmail = normalizeEmail(member.email);
-  if (csvEmail && memberEmail && csvEmail !== memberEmail) return 'the email on file is different';
+  if (csvEmail && memberEmail && csvEmail !== memberEmail) {
+    return isSchoolEmail(csvEmail) && !isSchoolEmail(memberEmail)
+      ? 'this row has a UCSD email and the member has a personal one on file (force match to switch them to the UCSD email)'
+      : 'the email on file is different';
+  }
   const csvCollege = normalizeCollegeForMatch(row.csvCollege);
   const memberCollege = normalizeCollegeForMatch(member.college);
   if (csvCollege && memberCollege && csvCollege !== memberCollege) return 'the college on file is different';
@@ -621,9 +625,11 @@ export interface AttendanceEnrichmentOptions {
   /**
    * An admin explicitly force-matched this `review` row to `matchedMember`.
    * Their confirmation already credits the member's attendance, so it is
-   * enough to advance year. It deliberately unlocks nothing else: a review
-   * row's email/college can belong to a different person (email-name
-   * conflicts, ambiguous names), so those stay fill-only on safe matches.
+   * enough to advance year, and to replace a personal email on file with the
+   * row's UCSD email when no other member holds it. It unlocks nothing else:
+   * a review row's email/college can belong to a different person
+   * (email-name conflicts, ambiguous names), so those stay fill-only on safe
+   * matches.
    */
   adminConfirmed?: boolean;
 }
@@ -640,13 +646,25 @@ export function getSafeAttendanceMemberEnrichment(
   const updates: Partial<Pick<AttendanceImportMember, 'college' | 'year' | 'email'>> = {};
   const safeHighConfidenceMatch = row.method === 'email' || row.method === 'exact_name';
 
-  if (row.status === 'match' && !member.email && row.csvEmail) {
-    const email = normalizeEmail(row.csvEmail);
-    const emailUsedByAnotherMember = members.some((candidate) => (
-      candidate.id !== member.id && normalizeEmail(candidate.email) === email
-    ));
+  const csvEmail = normalizeEmail(row.csvEmail);
+  const emailUsedByAnotherMember = !!csvEmail && members.some((candidate) => (
+    candidate.id !== member.id && normalizeEmail(candidate.email) === csvEmail
+  ));
+
+  if (row.status === 'match' && !member.email && csvEmail) {
     const canAttachEmail = row.method === 'email' || (row.method === 'exact_name' && !emailUsedByAnotherMember);
-    if (canAttachEmail) updates.email = email;
+    if (canAttachEmail) updates.email = csvEmail;
+  }
+
+  // A member first recorded with a personal address who later signs in with
+  // their UCSD one: the school address is the durable identifier, so it
+  // replaces the personal one once the row is confirmed to be this member.
+  // A school address on file is never replaced, and neither is any address
+  // when the UCSD one already belongs to someone else.
+  const upgradesToSchoolEmail = !!member.email && isSchoolEmail(csvEmail) && !isSchoolEmail(member.email);
+  if (upgradesToSchoolEmail && !emailUsedByAnotherMember
+      && ((row.status === 'match' && row.method === 'exact_name') || confirmedReviewRow)) {
+    updates.email = csvEmail;
   }
 
   if (safeHighConfidenceMatch && row.status === 'match') {
@@ -687,9 +705,11 @@ export function planAttendanceMemberEnrichments(
     if (!row.matchedMember) continue;
     const id = row.matchedMember.id;
     const latest = current.get(id) ?? row.matchedMember;
+    // Checked against the members as earlier rows already left them, so an
+    // email planned for one member counts as taken for every later row.
     const updates = getSafeAttendanceMemberEnrichment(
       { ...row, matchedMember: latest },
-      latestMembers,
+      Array.from(current.values()),
       { adminConfirmed: row.adminConfirmed },
     );
     if (Object.keys(updates).length === 0) continue;
