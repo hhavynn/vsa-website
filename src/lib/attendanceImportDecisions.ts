@@ -235,7 +235,15 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
     const resolved = resolveRow(row, ctx);
     if ((resolved.status === 'match' || resolved.status === 'already') && resolved.member) {
       const member = resolved.member;
-      if (creditByMember.has(member.id)) continue;
+      const existing = creditByMember.get(member.id);
+      if (existing) {
+        // Attendance is credited once, but a later row an admin matched to the
+        // same member still confirms its own addresses.
+        const remembers = resolved.adminConfirmed && row.decision?.kind === 'match'
+          && (row.decision.rememberEmail ?? rememberEmailByDefault(row, member.id));
+        if (remembers) existing.aliases.push(...unheld(row.emails).map((email) => ({ email, method: 'admin_confirmed' as const })));
+        continue;
+      }
       const automatic = !resolved.adminConfirmed;
       const remember = resolved.adminConfirmed && row.decision?.kind === 'match'
         && (row.decision.rememberEmail ?? rememberEmailByDefault(row, member.id));

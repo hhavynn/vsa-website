@@ -121,6 +121,15 @@ describe('weak evidence never becomes an automatic match or an alias (review fin
     expect(rows[1]).toMatchObject({ status: 'review', reason: 'member_claimed_by_earlier_row', aliasPlan: [] });
   });
 
+  it('a third new row with another school address is not folded into a group that already has one', () => {
+    const { rows } = scenario([
+      { name: 'Hoa Pham', email: 'hoa@gmail.com', college: 'Sixth', year: '1st' },
+      { name: 'Hoa Pham', email: 'hoa1@ucsd.edu', college: 'Sixth', year: '1st' },
+      { name: 'Hoa Pham', email: 'hoa2@ucsd.edu', college: 'Sixth', year: '1st' },
+    ], []);
+    expect(rows.map((r) => r.status)).toEqual(['new', 'duplicate', 'new']);
+  });
+
   it('two new rows with one name and two personal emails stay two people', () => {
     const { rows } = scenario([
       { name: 'Hoa Pham', email: 'hoa.one@gmail.com', college: 'Sixth', year: '1st' },
