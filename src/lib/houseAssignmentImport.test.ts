@@ -123,3 +123,21 @@ describe('persisted draft rows', () => {
     expect(draftInsertFromParsed(row, 0).preferences).toEqual(['Toad', 'Boo']);
   });
 });
+
+describe('legacy sheet parsing uses the record-level CSV parser', () => {
+  it('keeps a quoted multi-line cell and quoted commas in one long-sheet row', () => {
+    const rows = parseLongRows('name,email,house,notes\n"Phan, Ai",aiphan@ucsd.edu,Bowser,"line one\nline two"\nKevin Tran,kevin@ucsd.edu,Toad,', members, emailMap, profileMap);
+    expect(rows.map((row) => [row.email, row.house])).toEqual([['aiphan@ucsd.edu', 'Bowser'], ['kevin@ucsd.edu', 'Toad']]);
+  });
+});
+
+describe('legacy header and quote semantics', () => {
+  it('keeps the last column for a repeated header, as the old parser did', () => {
+    const [row] = parseLongRows('name,house,house\nKevin Tran,Bowser,Toad', members, emailMap, profileMap);
+    expect(row.house).toBe('Toad');
+  });
+
+  it('rejects an unclosed quote instead of merging every later row into one cell', () => {
+    expect(() => parseLongRows('name,house\nKevin "K,Bowser\nAi Phan,Toad', members, emailMap, profileMap)).toThrow(/never closes/);
+  });
+});

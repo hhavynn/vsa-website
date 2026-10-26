@@ -1670,9 +1670,12 @@ export type Database = {
         Row: {
           academic_year_end: number;
           academic_year_start: number;
+          assignment_method: string;
+          capacity_config: Json | null;
           created_at: string;
           created_by: string | null;
           effective_start_date: string;
+          excluded_applicants: Json | null;
           id: string;
           locked_at: string | null;
           published_at: string | null;
@@ -1683,9 +1686,12 @@ export type Database = {
         Insert: {
           academic_year_end: number;
           academic_year_start: number;
+          assignment_method?: string;
+          capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date: string;
+          excluded_applicants?: Json | null;
           id?: string;
           locked_at?: string | null;
           published_at?: string | null;
@@ -1696,9 +1702,12 @@ export type Database = {
         Update: {
           academic_year_end?: number;
           academic_year_start?: number;
+          assignment_method?: string;
+          capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date?: string;
+          excluded_applicants?: Json | null;
           id?: string;
           locked_at?: string | null;
           published_at?: string | null;
@@ -1712,6 +1721,7 @@ export type Database = {
         Row: {
           batch_id: string;
           created_at: string;
+          generated_house_profile_id: string | null;
           house_profile_id: string | null;
           id: string;
           match_method: string | null;
@@ -1719,15 +1729,19 @@ export type Database = {
           match_status: string;
           member_id: string | null;
           notes: string | null;
+          override_reason: string | null;
           preferences: Json | null;
           source_house: string | null;
           source_name: string;
           source_order: number;
+          source_row_number: number | null;
+          submission_timestamp: string | null;
           updated_at: string;
         };
         Insert: {
           batch_id: string;
           created_at?: string;
+          generated_house_profile_id?: string | null;
           house_profile_id?: string | null;
           id?: string;
           match_method?: string | null;
@@ -1735,15 +1749,19 @@ export type Database = {
           match_status?: string;
           member_id?: string | null;
           notes?: string | null;
+          override_reason?: string | null;
           preferences?: Json | null;
           source_house?: string | null;
           source_name?: string;
           source_order?: number;
+          source_row_number?: number | null;
+          submission_timestamp?: string | null;
           updated_at?: string;
         };
         Update: {
           batch_id?: string;
           created_at?: string;
+          generated_house_profile_id?: string | null;
           house_profile_id?: string | null;
           id?: string;
           match_method?: string | null;
@@ -1751,10 +1769,13 @@ export type Database = {
           match_status?: string;
           member_id?: string | null;
           notes?: string | null;
+          override_reason?: string | null;
           preferences?: Json | null;
           source_house?: string | null;
           source_name?: string;
           source_order?: number;
+          source_row_number?: number | null;
+          submission_timestamp?: string | null;
           updated_at?: string;
         };
         Relationships: [];

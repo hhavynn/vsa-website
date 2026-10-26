@@ -10,9 +10,11 @@ import {
   HouseAssignmentDraftInsert,
   HouseProfileLite,
   PreflightResult,
-  buildPreflight,
+  buildBatchPreflight,
   publishableRows,
 } from '../../lib/houseAssignmentDraft';
+import type { ExcludedApplicant } from '../../lib/houseAssignmentDraft';
+import type { Json } from '../../types/database';
 import type { MemberYearMembership } from '../../lib/houseMembershipIntervals';
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
 import { houseMembershipsWriteRepository } from './houseMembershipWrites';
@@ -25,11 +27,20 @@ export interface CreateHouseBatchInput {
   sourceLabel: string | null;
   userId: string | null;
   rows: Array<Omit<HouseAssignmentDraftInsert, 'batch_id'>>;
+  /**
+   * Set only for a timestamp-priority placement. Left out entirely for manual
+   * imports, so they keep working against a database without the placement
+   * migration.
+   */
+  placement?: {
+    capacityConfig: Record<string, number>;
+    excludedApplicants: ExcludedApplicant[];
+  };
 }
 
 export type HouseDraftPatch = Partial<Pick<
   HouseAssignmentDraft,
-  'member_id' | 'house_profile_id' | 'match_status' | 'match_method' | 'match_score' | 'notes'
+  'member_id' | 'house_profile_id' | 'match_status' | 'match_method' | 'match_score' | 'notes' | 'override_reason'
 >>;
 
 export interface HouseBatchSnapshot {
@@ -109,6 +120,13 @@ export class HouseAssignmentsRepository {
           effective_start_date: input.effectiveStartDate,
           source_label: input.sourceLabel,
           created_by: input.userId,
+          ...(input.placement
+            ? {
+                assignment_method: 'timestamp_ranked',
+                capacity_config: input.placement.capacityConfig,
+                excluded_applicants: input.placement.excludedApplicants as unknown as Json,
+              }
+            : {}),
         })
         .select('*')
         .single();
@@ -205,7 +223,11 @@ export class HouseAssignmentsRepository {
     }, 'Failed to delete House assignment draft');
   }
 
-  /** Loads the batch with fresh preflight results. Reads only. */
+  /**
+   * Loads the batch with fresh preflight results. Reads only. Lock and publish
+   * both call this, so the strict timestamp-priority checks always run against
+   * persisted state, never only a browser preview.
+   */
   async loadSnapshot(batchId: string, memberNames?: Map<string, string>): Promise<HouseBatchSnapshot> {
     return withErrorHandling(async () => {
       const batch = await this.getBatch(batchId);
@@ -214,7 +236,7 @@ export class HouseAssignmentsRepository {
         this.getProfiles(batch.academic_year_start),
         houseMembershipsWriteRepository.listMembershipsForYear(batch.academic_year_start),
       ]);
-      const preflight = buildPreflight(drafts, profiles, {
+      const preflight = buildBatchPreflight(batch, drafts, profiles, {
         effectiveStartDate: batch.effective_start_date,
         existingMemberships,
         memberNames,

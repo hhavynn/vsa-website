@@ -1,8 +1,11 @@
 import {
   HouseAssignmentDraft,
   HouseProfileLite,
+  achievedRank,
+  buildBatchPreflight,
   buildPreflight,
   computeHouseCounts,
+  draftInsertFromPlacement,
   publishableRows,
   suggestBalancing,
 } from './houseAssignmentDraft';
@@ -31,6 +34,10 @@ function row(overrides: Partial<HouseAssignmentDraft> = {}): HouseAssignmentDraf
     preferences: null,
     notes: null,
     source_order: counter,
+    submission_timestamp: null,
+    source_row_number: null,
+    generated_house_profile_id: null,
+    override_reason: null,
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
     ...overrides,
@@ -228,5 +235,77 @@ describe('Balance helper', () => {
     const before = JSON.stringify(rows);
     suggestBalancing(rows, profiles, undefined, lookup);
     expect(JSON.stringify(rows)).toBe(before);
+  });
+});
+
+describe('timestamp-priority preflight', () => {
+  const two = [bowser, boo];
+  const auto = { assignment_method: 'timestamp_ranked', capacity_config: { [bowser.id]: 1, [boo.id]: 1 } };
+  const options = { effectiveStartDate: '2026-11-08', existingMemberships: new Map() };
+  const placed = (order: number, houseId: string, overrides: Partial<HouseAssignmentDraft> = {}) => row({
+    house_profile_id: houseId,
+    generated_house_profile_id: houseId,
+    preferences: [houseId, houseId === bowser.id ? boo.id : bowser.id],
+    source_order: order,
+    submission_timestamp: `2026-10-22T03:0${order}:00.000Z`,
+    source_row_number: order + 2,
+    ...overrides,
+  });
+  const codes = (result: ReturnType<typeof buildBatchPreflight>) => result.blockers.map((issue) => issue.code);
+
+  it('leaves manual batches exactly as buildPreflight reports them', () => {
+    const rows = [row({ house_profile_id: bowser.id, match_status: 'review' }), row({ member_id: null, match_status: 'unmatched' })];
+    expect(buildBatchPreflight({ assignment_method: 'manual', capacity_config: null }, rows, profiles, options)).toEqual(buildPreflight(rows, profiles, options));
+  });
+
+  it('passes a complete placement', () => {
+    const result = buildBatchPreflight(auto, [placed(0, bowser.id), placed(1, boo.id)], two, options);
+    expect(result.blockers).toEqual([]);
+    expect(result.canLock).toBe(true);
+  });
+
+  it('blocks review matches, duplicate members, and missing Houses', () => {
+    const shared = placed(1, boo.id);
+    const result = buildBatchPreflight(auto, [placed(0, bowser.id, { member_id: shared.member_id }), shared, placed(2, boo.id, { match_status: 'review' })], two, options);
+    expect(codes(result)).toEqual(expect.arrayContaining(['placement_unmatched', 'placement_duplicate_member', 'capacity_mismatch', 'capacity_exceeded']));
+    expect(result.warnings.map((issue) => issue.code)).not.toContain('ambiguous_match');
+  });
+
+  it('blocks capacities that no longer match the active Houses', () => {
+    const result = buildBatchPreflight({ ...auto, capacity_config: { [bowser.id]: 2 } }, [placed(0, bowser.id), placed(1, bowser.id)], two, options);
+    expect(codes(result)).toContain('capacity_config');
+  });
+
+  it('blocks malformed preferences and broken priority metadata', () => {
+    const result = buildBatchPreflight(auto, [
+      placed(0, bowser.id, { preferences: [bowser.id, bowser.id] }),
+      placed(1, boo.id, { submission_timestamp: null }),
+    ], two, options);
+    expect(codes(result)).toEqual(expect.arrayContaining(['placement_preferences', 'priority_metadata']));
+    const outOfOrder = buildBatchPreflight(auto, [
+      placed(0, bowser.id, { submission_timestamp: '2026-10-22T05:00:00.000Z' }),
+      placed(1, boo.id),
+    ], two, options);
+    expect(codes(outOfOrder)).toContain('priority_metadata');
+  });
+
+  it('blocks a House profile from another year', () => {
+    const result = buildBatchPreflight(auto, [placed(0, 'p-other-year'), placed(1, boo.id)], two, options);
+    expect(codes(result)).toEqual(expect.arrayContaining(['invalid_house', 'placement_missing_house']));
+  });
+
+  it('builds a draft row with priority metadata and no contact data', () => {
+    const insert = draftInsertFromPlacement({
+      name: 'An Example', submittedAtIso: '2026-10-22T03:00:00.000Z', sourceRow: 5, priority: 3,
+      preferences: [boo.id, bowser.id], houseId: bowser.id, explanation: 'Assigned to Bowser (2nd choice). Boo was full when this applicant was processed.',
+      corrected: false, match: { status: 'unmatched', memberId: null, method: null },
+    });
+    expect(insert).toEqual({
+      source_name: 'An Example', source_house: null, member_id: null, house_profile_id: bowser.id, generated_house_profile_id: bowser.id,
+      override_reason: null, match_status: 'unmatched', match_method: null, match_score: null, preferences: [boo.id, bowser.id],
+      notes: 'Assigned to Bowser (2nd choice). Boo was full when this applicant was processed.', source_order: 2,
+      submission_timestamp: '2026-10-22T03:00:00.000Z', source_row_number: 5,
+    });
+    expect(achievedRank({ house_profile_id: bowser.id, preferences: insert.preferences ?? null })).toBe(2);
   });
 });

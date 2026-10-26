@@ -1,0 +1,225 @@
+// Protected domain — House membership. Stage D of automatic House placement:
+// a read-only preview of what the allocator decided and why. Nothing here
+// writes anywhere; exports download to the admin's device only.
+import { useMemo, useState } from 'react';
+import { ordinal } from '../../../lib/housePlacement';
+import type { PlacementHouse } from '../../../lib/housePlacement';
+import type { ApplicantMemberMatch } from '../../../lib/housePlacementImport';
+import {
+  PlacementExportRow,
+  downloadCsv,
+  exportFilename,
+  houseRosterCsv,
+  placementExceptionsCsv,
+  placementRosterCsv,
+} from '../../../lib/housePlacementExport';
+
+export interface PlacementPreviewRow {
+  id: string;
+  priority: number;
+  name: string;
+  submitted: string;
+  /** House labels, first choice first. */
+  preferences: string[];
+  houseId: string;
+  houseLabel: string;
+  achievedRank: number;
+  explanation: string;
+  corrected: boolean;
+  match: ApplicantMemberMatch;
+}
+
+export interface HousePlacementResultsProps {
+  rows: PlacementPreviewRow[];
+  houses: PlacementHouse[];
+  capacities: Readonly<Record<string, number>>;
+  rankCounts: number[];
+  exportLabel: string;
+}
+
+const selectCls =
+  'rounded border bg-[var(--color-surface2)] px-2 py-1.5 text-xs text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]';
+const ghostBtn =
+  'rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50';
+const headCls = 'px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]';
+
+function matchLabel(match: ApplicantMemberMatch) {
+  if (match.status === 'match') return 'Matched';
+  if (match.status === 'review') return 'Review';
+  return 'Unmatched';
+}
+
+function matchTone(match: ApplicantMemberMatch) {
+  if (match.status === 'match') return 'text-emerald-700 dark:text-emerald-400';
+  if (match.status === 'review') return 'text-amber-700 dark:text-amber-400';
+  return 'text-zinc-500 dark:text-zinc-400';
+}
+
+export function previewExportRows(rows: readonly PlacementPreviewRow[]): PlacementExportRow[] {
+  return rows.map((row) => ({
+    priority: row.priority,
+    name: row.name,
+    houseId: row.houseId,
+    house: row.houseLabel,
+    submitted: row.submitted,
+    preferences: row.preferences,
+    achievedRank: row.achievedRank,
+    placement: 'Automatic',
+    overrideReason: '',
+    memberMatch: matchLabel(row.match),
+    exception: row.match.status !== 'match',
+  }));
+}
+
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border px-3 py-2" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>{label}</p>
+      <p className="mt-0.5 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>{value}</p>
+    </div>
+  );
+}
+
+export function HousePlacementResults({ rows, houses, capacities, rankCounts, exportLabel }: HousePlacementResultsProps) {
+  const [search, setSearch] = useState('');
+  const [houseFilter, setHouseFilter] = useState('');
+  const [rankFilter, setRankFilter] = useState('');
+  const [matchFilter, setMatchFilter] = useState('');
+  const [exportHouse, setExportHouse] = useState(houses[0]?.id ?? '');
+
+  const counts = useMemo(() => {
+    const perHouse = new Map<string, number>();
+    rows.forEach((row) => perHouse.set(row.houseId, (perHouse.get(row.houseId) ?? 0) + 1));
+    return perHouse;
+  }, [rows]);
+  const needsMember = rows.filter((row) => row.match.status !== 'match').length;
+  const term = search.trim().toLowerCase();
+  const visible = rows.filter((row) =>
+    (!houseFilter || row.houseId === houseFilter)
+    && (!rankFilter || String(row.achievedRank) === rankFilter)
+    && (!matchFilter || (matchFilter === 'corrected' ? row.corrected : row.match.status === matchFilter))
+    && (!term || row.name.toLowerCase().includes(term)));
+  const exportRows = useMemo(() => previewExportRows(rows), [rows]);
+
+  return (
+    <section className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Placement results">
+      <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
+        <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Placement preview</h3>
+        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+          First-come, first-served: each applicant, in submission order, took their highest-ranked House with room. Nothing is saved yet.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          <SummaryCard label="Applicants" value={rows.length} />
+          <SummaryCard label="Assigned" value={rows.length} />
+          {rankCounts.map((count, index) => (
+            <SummaryCard key={index} label={`${ordinal(index + 1)} choice`} value={count} />
+          ))}
+          <SummaryCard label="Member review" value={needsMember} />
+        </div>
+        <div className="mt-4 space-y-2">
+          {houses.map((house) => {
+            const count = counts.get(house.id) ?? 0;
+            const capacity = capacities[house.id] ?? 0;
+            const percent = capacity > 0 ? Math.min(100, Math.round((count / capacity) * 100)) : 0;
+            return (
+              <div key={house.id} data-testid={`placement-capacity-${house.label}`}>
+                <div className="flex justify-between text-xs" style={{ color: 'var(--color-text2)' }}>
+                  <span className="font-semibold" style={{ color: 'var(--color-text)' }}>{house.label}</span>
+                  <span className="font-mono">{count} / {capacity}</span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded bg-[var(--color-surface2)]" role="progressbar" aria-label={`${house.label} filled`} aria-valuenow={count} aria-valuemin={0} aria-valuemax={capacity}>
+                  <div className="h-full bg-brand-600 dark:bg-brand-400" style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportLabel, 'placement-roster'))}>
+            Export full roster
+          </button>
+          <span className="flex items-center gap-1">
+            <select value={exportHouse} onChange={(event) => setExportHouse(event.target.value)} aria-label="House roster to export" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+              {houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
+            </select>
+            <button
+              type="button"
+              disabled={!exportHouse}
+              className={ghostBtn}
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              onClick={() => downloadCsv(houseRosterCsv(exportRows, exportHouse), exportFilename(exportLabel, houses.find((house) => house.id === exportHouse)?.label ?? 'house', 'roster'))}
+            >
+              Export House roster
+            </button>
+          </span>
+          <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportLabel, 'placement-exceptions'))}>
+            Export review list
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3" style={{ borderColor: 'var(--color-border)' }}>
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search applicants…"
+          aria-label="Search applicants"
+          className="rounded border px-2 py-1.5 text-xs"
+          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+        />
+        <select value={houseFilter} onChange={(event) => setHouseFilter(event.target.value)} aria-label="Filter by assigned House" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+          <option value="">All Houses</option>
+          {houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
+        </select>
+        <select value={rankFilter} onChange={(event) => setRankFilter(event.target.value)} aria-label="Filter by achieved choice" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+          <option value="">Any choice</option>
+          {rankCounts.map((_, index) => <option key={index} value={String(index + 1)}>{`${ordinal(index + 1)} choice`}</option>)}
+        </select>
+        <select value={matchFilter} onChange={(event) => setMatchFilter(event.target.value)} aria-label="Filter by member match" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+          <option value="">Any member match</option>
+          <option value="match">Matched</option>
+          <option value="review">Needs review</option>
+          <option value="unmatched">Unmatched</option>
+          <option value="corrected">Ranking corrected</option>
+        </select>
+        <span className="text-xs" style={{ color: 'var(--color-text3)' }}>{visible.length} of {rows.length}</span>
+      </div>
+
+      <div className="max-h-[70vh] overflow-auto">
+        <table className="w-full min-w-[1040px] text-sm">
+          <thead className="sticky top-0 z-[1]">
+            <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+              {['Priority', 'Name', 'Submitted', ...rankCounts.map((_, index) => ordinal(index + 1)), 'Assigned House', 'Result', 'Member match'].map((heading) => (
+                <th key={heading} className={headCls} style={{ color: 'var(--color-text3)' }}>{heading}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+            {visible.map((row) => (
+              <tr key={row.id} data-testid="placement-result-row" className="align-top">
+                <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--color-text2)' }}>#{row.priority}</td>
+                <td className="px-3 py-2">
+                  <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{row.name}</p>
+                  <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>{row.explanation}</p>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs" style={{ color: 'var(--color-text2)' }}>{row.submitted}</td>
+                {rankCounts.map((_, index) => (
+                  <td key={index} className={`px-3 py-2 text-xs ${index + 1 === row.achievedRank ? 'font-bold' : ''}`} style={{ color: index + 1 === row.achievedRank ? 'var(--color-text)' : 'var(--color-text3)' }}>
+                    {row.preferences[index] ?? '—'}
+                  </td>
+                ))}
+                <td className="px-3 py-2 text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{row.houseLabel}</td>
+                <td className="px-3 py-2 font-mono text-[11px]" style={{ color: 'var(--color-text2)' }}>{ordinal(row.achievedRank)}</td>
+                <td className="px-3 py-2 text-[11px]">
+                  <p className={`font-mono font-bold uppercase ${matchTone(row.match)}`}>{matchLabel(row.match)}</p>
+                  <p className="mt-0.5" style={{ color: 'var(--color-text3)' }}>{row.match.note}</p>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}

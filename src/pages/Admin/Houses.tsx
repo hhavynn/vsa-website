@@ -11,6 +11,7 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
 import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
 import { getVerifiedLegacyHouseYears } from '../../data/legacyHouseArchive';
+import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { HouseDraftWorkflow } from '../../components/features/admin/HouseDraftWorkflow';
@@ -115,15 +116,11 @@ export default function AdminHouses() {
 
   async function loadMembers() {
     setLoadingMembers(true);
-    const { data, error } = await supabase
-      .from('members')
-      .select('id, first_name, last_name, college, year, house, email, points, events_attended')
-      .order('points', { ascending: false });
-
-    if (error) {
+    try {
+      const directory = await memberLookupRepository.listHouseImportMembers();
+      setMembers([...directory].sort((a, b) => b.points - a.points));
+    } catch {
       toast.error('Failed to load members.');
-    } else {
-      setMembers((data ?? []) as Member[]);
     }
     setLoadingMembers(false);
   }

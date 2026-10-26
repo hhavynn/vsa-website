@@ -1,7 +1,11 @@
 // Protected domain — House membership. Review/edit/preflight/lock/reveal for one
 // persisted House assignment batch. Locking is private; only "Reveal" writes
 // house_memberships, and it does so through the shared dated-membership writer.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+// A timestamp-priority (automatic) batch keeps its House counts fixed: rows
+// move only through a documented override or swap, never through bulk edits
+// or the balance helper, so first-come-first-served priority is not undone
+// silently.
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
@@ -21,12 +25,27 @@ import {
   HouseAssignmentBatch,
   HouseAssignmentDraft,
   HouseProfileLite,
-  buildPreflight,
+  achievedRank,
+  buildBatchPreflight,
   computeHouseCounts,
   houseLabel,
+  isOverridden,
+  isTimestampRanked,
+  readCapacityConfig,
+  readExcludedApplicants,
   readPreferences,
   suggestBalancing,
 } from '../../../lib/houseAssignmentDraft';
+import { findPriorityViolations, ordinal } from '../../../lib/housePlacement';
+import { formatFormTime } from '../../../lib/housePlacementImport';
+import {
+  PlacementExportRow,
+  downloadCsv,
+  exportFilename,
+  houseRosterCsv,
+  placementExceptionsCsv,
+  placementRosterCsv,
+} from '../../../lib/housePlacementExport';
 import type { BalanceSuggestion } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember, getMemberName, normalizeHouseLookup } from '../../../lib/houseAssignmentImport';
 import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals';
@@ -73,6 +92,111 @@ const ghostBtn =
   'rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50';
 const labelCls = 'mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em]';
 
+interface OverrideMove {
+  row: HouseAssignmentDraft;
+  from: string | null;
+  to: string | null;
+}
+
+interface OverridePlan {
+  moves: OverrideMove[];
+  error: string | null;
+  /** An earlier applicant would lose a higher-ranked House to a later one. */
+  breaksPriority: boolean;
+}
+
+function OverrideForm({
+  row,
+  profiles,
+  drafts,
+  houseNameOf,
+  personNameOf,
+  plan,
+  busy,
+  onApply,
+  onCancel,
+}: {
+  row: HouseAssignmentDraft;
+  profiles: HouseProfileLite[];
+  drafts: HouseAssignmentDraft[];
+  houseNameOf: (id: string | null | undefined) => string | null;
+  personNameOf: (row: HouseAssignmentDraft) => string;
+  plan: (toHouseId: string, swapWithId: string | null) => OverridePlan;
+  busy: boolean;
+  onApply: (plan: OverridePlan, reason: string) => void;
+  onCancel: () => void;
+}) {
+  const [toHouseId, setToHouseId] = useState('');
+  const [swapWithId, setSwapWithId] = useState('');
+  const [reason, setReason] = useState('');
+  const current = toHouseId ? plan(toHouseId, swapWithId || null) : null;
+  const inTarget = drafts
+    .filter((item) => item.house_profile_id === toHouseId && item.id !== row.id)
+    .sort((a, b) => a.source_order - b.source_order);
+  const rankText = (item: HouseAssignmentDraft, houseId: string | null) => {
+    const index = houseId ? readPreferences(item.preferences).indexOf(houseId) : -1;
+    return index === -1 ? 'not ranked' : `${ordinal(index + 1)} choice`;
+  };
+
+  return (
+    <div className="space-y-3 rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }} data-testid="override-form">
+      <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
+        Manual override for {personNameOf(row)} (priority #{row.source_order + 1}). Currently {houseNameOf(row.house_profile_id) ?? 'unassigned'} ({rankText(row, row.house_profile_id)}).
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor={`override-house-${row.id}`} className={labelCls} style={{ color: 'var(--color-text3)' }}>Move to</label>
+          <select id={`override-house-${row.id}`} value={toHouseId} onChange={(event) => { setToHouseId(event.target.value); setSwapWithId(''); }} className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+            <option value="">Choose a House…</option>
+            {profiles.filter((profile) => profile.is_active && profile.id !== row.house_profile_id).map((profile) => (
+              <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`override-swap-${row.id}`} className={labelCls} style={{ color: 'var(--color-text3)' }}>Swap with (if full)</label>
+          <select id={`override-swap-${row.id}`} value={swapWithId} disabled={!toHouseId} onChange={(event) => setSwapWithId(event.target.value)} className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+            <option value="">No swap</option>
+            {inTarget.map((item) => (
+              <option key={item.id} value={item.id}>#{item.source_order + 1} {personNameOf(item)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`override-reason-${row.id}`} className={labelCls} style={{ color: 'var(--color-text3)' }}>Reason (required)</label>
+          <input id={`override-reason-${row.id}`} type="text" value={reason} onChange={(event) => setReason(event.target.value)} className={selectCls} style={{ borderColor: 'var(--color-border)' }} placeholder="e.g. House Parent conflict approved by president" />
+        </div>
+      </div>
+      {current && (
+        <div style={{ color: 'var(--color-text2)' }}>
+          {current.error ? (
+            <p role="alert" className="text-red-600 dark:text-red-400">{current.error}</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {current.moves.map((move) => (
+                <li key={move.row.id}>
+                  {personNameOf(move.row)}: {houseNameOf(move.from) ?? 'unassigned'} ({rankText(move.row, move.from)}) → {houseNameOf(move.to)} ({rankText(move.row, move.to)})
+                </li>
+              ))}
+            </ul>
+          )}
+          {current.breaksPriority && !current.error && (
+            <p className="mt-1 text-amber-700 dark:text-amber-400">
+              Warning: this breaks first-come, first-served — an earlier applicant would miss a higher-ranked House that a later applicant gets.
+            </p>
+          )}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button type="button" disabled={busy || !current || !!current.error || !reason.trim()} onClick={() => current && onApply(current, reason)} className="vsa-btn-primary px-4 py-1.5 text-xs disabled:opacity-50">
+          Apply override
+        </button>
+        <button type="button" onClick={onCancel} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function statusTone(status: string) {
   if (status === 'match' || status === 'manual') return 'text-emerald-700 dark:text-emerald-400';
   if (status === 'review') return 'text-amber-700 dark:text-amber-400';
@@ -117,6 +241,11 @@ export function HouseDraftEditor({
   const [addHouseId, setAddHouseId] = useState('');
 
   const editable = batch.status === 'draft';
+  const auto = isTimestampRanked(batch);
+  const capacityConfig = useMemo(() => readCapacityConfig(batch.capacity_config), [batch.capacity_config]);
+  const [placementFilter, setPlacementFilter] = useState<'all' | 'automatic' | 'override'>('all');
+  const [overrideRowId, setOverrideRowId] = useState<string | null>(null);
+  const [exportHouseId, setExportHouseId] = useState('');
   const activeProfiles = useMemo(() => profiles.filter((profile) => profile.is_active), [profiles]);
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
@@ -127,14 +256,15 @@ export function HouseDraftEditor({
   const houseIdByText = useMemo(() => {
     const map = new Map<string, string>();
     profiles.forEach((profile) => {
-      [profile.house_key, profile.display_name].forEach((value) => map.set(normalizeHouseLookup(value), profile.id));
+      // Automatic batches store preferences as profile ids.
+      [profile.id, profile.house_key, profile.display_name].forEach((value) => map.set(normalizeHouseLookup(value), profile.id));
     });
     return map;
   }, [profiles]);
 
   const preflight = useMemo(
-    () => buildPreflight(drafts, profiles, { effectiveStartDate: batch.effective_start_date, existingMemberships, memberNames }),
-    [drafts, profiles, batch.effective_start_date, existingMemberships, memberNames],
+    () => buildBatchPreflight(batch, drafts, profiles, { effectiveStartDate: batch.effective_start_date, existingMemberships, memberNames }),
+    [batch, drafts, profiles, existingMemberships, memberNames],
   );
   const counts = useMemo(() => computeHouseCounts(drafts, profiles), [drafts, profiles]);
   const balance = useMemo(
@@ -172,10 +302,11 @@ export function HouseDraftEditor({
     const byFilter = applyQuickFilter(facts, HOUSE_ROW_FILTERS, filter);
     return byFilter.filter((item) => {
       if (houseFilterValid && !houseRowIsIn(item, houseFilter as string)) return false;
+      if (auto && placementFilter !== 'all' && (placementFilter === 'override') !== isOverridden(item.row)) return false;
       const name = (item.row.member_id && memberNames.get(item.row.member_id)) || item.row.source_name;
       return matchesText(search, name, item.row.source_name);
     });
-  }, [facts, filter, houseFilter, houseFilterValid, search, memberNames]);
+  }, [facts, filter, houseFilter, houseFilterValid, search, memberNames, auto, placementFilter]);
   const visibleRows = useMemo(() => visibleFacts.map((item) => item.row), [visibleFacts]);
 
   // Possible duplicates the admin should see before locking.
@@ -266,6 +397,109 @@ export function HouseDraftEditor({
     if (!row) return;
     return editRow(row, { house_profile_id: suggestion.toProfileId }, 'Failed to apply the suggestion.');
   }
+
+  // ─── Automatic placement: overrides ────────────────────────────────────────
+  const priorityOrdered = useMemo(
+    () => [...drafts].sort((a, b) => a.source_order - b.source_order || a.id.localeCompare(b.id)),
+    [drafts],
+  );
+  const placedIn = useCallback((houseId: string) => drafts.filter((row) => row.house_profile_id === houseId).length, [drafts]);
+  const preferenceLabels = (row: HouseAssignmentDraft) => readPreferences(row.preferences).map((id) => houseNameOf(id) ?? id);
+
+  function planOverride(row: HouseAssignmentDraft, toHouseId: string, swapWithId: string | null): OverridePlan {
+    const moves: OverrideMove[] = [];
+    if (!toHouseId || toHouseId === row.house_profile_id) return { moves, error: 'Choose a different House.', breaksPriority: false };
+    const capacity = capacityConfig?.[toHouseId];
+    if (capacity === undefined) return { moves, error: 'That House has no capacity in this placement.', breaksPriority: false };
+    const partner = swapWithId ? drafts.find((item) => item.id === swapWithId) ?? null : null;
+    if (partner && partner.house_profile_id !== toHouseId) return { moves, error: 'Choose someone currently in that House to swap with.', breaksPriority: false };
+    if (!partner && placedIn(toHouseId) + 1 > capacity) {
+      return { moves, error: `${houseNameOf(toHouseId)} is full (${capacity}). Choose someone to swap with, or the move would exceed capacity.`, breaksPriority: false };
+    }
+    moves.push({ row, from: row.house_profile_id, to: toHouseId });
+    if (partner) moves.push({ row: partner, from: partner.house_profile_id, to: row.house_profile_id });
+    const after = new Map(moves.map((move) => [move.row.id, move.to]));
+    const breaksPriority = findPriorityViolations(priorityOrdered.map((item) => ({
+      id: item.id,
+      preferences: readPreferences(item.preferences),
+      houseId: after.has(item.id) ? after.get(item.id) ?? null : item.house_profile_id,
+    }))).length > 0;
+    return { moves, error: null, breaksPriority };
+  }
+
+  function applyOverride(plan: OverridePlan, reason: string) {
+    const why = reason.trim();
+    if (!why) {
+      toast.error('A reason is required for a manual override.');
+      return;
+    }
+    if (plan.error || plan.moves.length === 0) {
+      toast.error(plan.error ?? 'Nothing to change.');
+      return;
+    }
+    return run(async () => {
+      for (const move of plan.moves) {
+        const patch = {
+          house_profile_id: move.to,
+          override_reason: move.to === move.row.generated_house_profile_id ? null : why,
+        };
+        await houseAssignmentsRepository.updateDraft(batch.id, move.row.id, patch);
+        patchLocal(move.row.id, patch);
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.houseAssignmentChanged,
+          entityType: 'house_assignment_draft',
+          entityId: move.row.id,
+          academicYearStart: batch.academic_year_start,
+          summary: `${activitySummary.houseChanged(personNameOf(move.row), houseNameOf(move.from), houseNameOf(move.to))} Manual override of the automatic placement: ${why}`,
+          metadata: buildUndoMetadata({
+            kind: 'house_draft_house',
+            target: { batchId: batch.id, draftId: move.row.id },
+            before: move.from ?? null,
+            after: move.to ?? null,
+          }),
+        });
+      }
+      setOverrideRowId(null);
+      toast.success(plan.moves.length > 1 ? 'Swapped. Both rows are marked as manual overrides.' : 'Moved. The row is marked as a manual override.');
+    }, 'Failed to apply the override.');
+  }
+
+  const exportRows = useMemo<PlacementExportRow[]>(() => priorityOrdered.map((row) => {
+    const linked = !!row.member_id && (row.match_status === 'match' || row.match_status === 'manual');
+    return {
+      priority: row.source_order + 1,
+      name: personNameOf(row),
+      houseId: row.house_profile_id,
+      house: houseNameOf(row.house_profile_id) ?? 'Unassigned',
+      submitted: formatFormTime(row.submission_timestamp),
+      preferences: preferenceLabels(row),
+      achievedRank: achievedRank(row),
+      placement: isOverridden(row) ? 'Manual override' : 'Automatic',
+      overrideReason: row.override_reason ?? '',
+      memberMatch: linked ? 'Matched' : row.match_status === 'review' ? 'Review' : 'Unmatched',
+      exception: !linked || isOverridden(row) || !row.house_profile_id,
+    };
+    // personNameOf/houseNameOf/preferenceLabels only read the maps listed here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [priorityOrdered, memberNames, profileById]);
+  function restoreAutomatic(row: HouseAssignmentDraft) {
+    const target = row.generated_house_profile_id;
+    if (!target) return;
+    const capacity = capacityConfig?.[target] ?? 0;
+    if (placedIn(target) + 1 > capacity) {
+      toast.error(`${houseNameOf(target)} is full. Swap someone out of it instead.`);
+      return;
+    }
+    return run(async () => {
+      const patch = { house_profile_id: target, override_reason: null };
+      await houseAssignmentsRepository.updateDraft(batch.id, row.id, patch);
+      patchLocal(row.id, patch);
+      logHouseChange(row, patch);
+      toast.success('Restored the automatic placement.');
+    }, 'Failed to restore the automatic placement.');
+  }
+
+  const exportBase = `${formatYearSpan(batch.academic_year_start)} ${batch.source_label ?? 'house placement'}`;
 
   function removeRow(row: HouseAssignmentDraft) {
     return run(async () => {
@@ -592,6 +826,53 @@ export function HouseDraftEditor({
 
       <PossibleDuplicates duplicates={conflicts} onCompare={() => setFilter('duplicates')} />
 
+      {auto ? (
+        <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Automatic placement">
+          <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Automatic placement · first-come, first-served</h3>
+          <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+            Generated by submission time, then ranked choices, within these capacities. Rows move only through a documented override. Every applicant must be linked to a member before locking; nobody is skipped at reveal.
+          </p>
+          <div className="mt-3 space-y-2">
+            {activeProfiles.map((profile) => {
+              const count = placedIn(profile.id);
+              const capacity = capacityConfig?.[profile.id];
+              return (
+                <div key={profile.id} className="flex justify-between gap-4 font-mono text-sm" data-testid={`placement-capacity-${houseLabel(profile)}`}>
+                  <span style={{ color: 'var(--color-text2)' }}>{houseLabel(profile)}</span>
+                  <span className={capacity !== undefined && count > capacity ? 'text-red-600 dark:text-red-400' : undefined} style={capacity !== undefined && count > capacity ? undefined : { color: 'var(--color-text)' }}>
+                    {count} / {capacity ?? '?'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {readExcludedApplicants(batch.excluded_applicants).length > 0 && (
+            <details className="mt-3 text-xs" style={{ color: 'var(--color-text2)' }}>
+              <summary className="cursor-pointer font-semibold">{readExcludedApplicants(batch.excluded_applicants).length} not placed (excluded or repeat submission)</summary>
+              <ul className="mt-1 space-y-0.5">
+                {readExcludedApplicants(batch.excluded_applicants).map((item) => (
+                  <li key={item.source_row_number}>Row {item.source_row_number} · {item.name || 'no name'} — {item.reason}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportBase, 'placement-roster'))}>
+              Export full roster
+            </button>
+            <select value={exportHouseId} onChange={(event) => setExportHouseId(event.target.value)} aria-label="House roster to export" className={`${selectCls} w-auto`} style={{ borderColor: 'var(--color-border)' }}>
+              <option value="">Choose a House…</option>
+              {activeProfiles.map((profile) => <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>)}
+            </select>
+            <button type="button" disabled={!exportHouseId} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(houseRosterCsv(exportRows, exportHouseId), exportFilename(exportBase, houseNameOf(exportHouseId) ?? 'house', 'roster'))}>
+              Export House roster
+            </button>
+            <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportBase, 'placement-exceptions'))}>
+              Export review list
+            </button>
+          </div>
+        </section>
+      ) : (
       <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Balance helper">
         <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Balance helper</h3>
         <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
@@ -633,6 +914,7 @@ export function HouseDraftEditor({
           </ul>
         )}
       </section>
+      )}
 
       <section className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Assignment rows">
         <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-end sm:justify-between" style={{ borderColor: 'var(--color-border)' }}>
@@ -659,6 +941,19 @@ export function HouseDraftEditor({
                 <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>
               ))}
             </select>
+            {auto && (
+              <select
+                value={placementFilter}
+                onChange={(event) => setPlacementFilter(event.target.value as typeof placementFilter)}
+                aria-label="Filter by placement"
+                className={`${selectCls} w-auto`}
+                style={{ borderColor: 'var(--color-border)' }}
+              >
+                <option value="all">Placement: all</option>
+                <option value="automatic">Automatically assigned</option>
+                <option value="override">Manually overridden</option>
+              </select>
+            )}
           </div>
         </div>
 
@@ -667,7 +962,7 @@ export function HouseDraftEditor({
         </div>
 
         <BulkActionBar count={selected.size} noun="row" onClear={() => { setSelected(new Set()); setPendingClear(false); }}>
-          {editable && (
+          {editable && !auto && (
             <>
               <label htmlFor="bulk-house" className="sr-only">House for selected rows</label>
               <select id="bulk-house" value={bulkHouseId} onChange={(event) => setBulkHouseId(event.target.value)} className={`${selectCls} w-auto`} style={{ borderColor: 'var(--color-border)' }}>
@@ -686,7 +981,7 @@ export function HouseDraftEditor({
           <BulkConfirm plan={clearPlan} busy={busy} onConfirm={bulkClear} onCancel={() => setPendingClear(false)} skippedLabel={(row) => personNameOf(row)} />
         )}
 
-        {editable && (
+        {editable && !auto && (
           <div className="flex flex-wrap items-end gap-3 border-b px-5 py-3" style={{ borderColor: 'var(--color-border)' }}>
             <div className="min-w-[240px] flex-1">
               <span className={labelCls} style={{ color: 'var(--color-text3)' }}>Add someone manually</span>
@@ -734,7 +1029,7 @@ export function HouseDraftEditor({
                       label="Select all visible rows"
                     />
                   </th>
-                  {['Sheet entry', 'Member', 'House', 'Match', ''].map((heading) => (
+                  {[auto ? 'Applicant' : 'Sheet entry', 'Member', 'House', 'Match', ''].map((heading) => (
                     <th key={heading || 'actions'} className="px-4 py-3 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{heading}</th>
                   ))}
                 </tr>
@@ -743,14 +1038,21 @@ export function HouseDraftEditor({
                 {visibleRows.map((row) => {
                   const profile = row.house_profile_id ? profileById.get(row.house_profile_id) : null;
                   const brokenHouse = (!!row.house_profile_id && !profile?.is_active) || (!row.house_profile_id && !!row.source_house);
-                  const prefs = readPreferences(row.preferences);
+                  const prefs = auto ? preferenceLabels(row) : readPreferences(row.preferences);
+                  const rank = auto ? achievedRank(row) : null;
+                  const overridden = auto && isOverridden(row);
                   return (
-                    <tr key={row.id} id={`house-row-${row.id}`} data-testid="house-draft-row" data-reviewed={reviewed.has(row.id)} data-highlighted={row.id === highlightRowId} className={row.id === highlightRowId ? 'bg-brand-600/10 dark:bg-brand-400/10' : undefined}>
+                    <Fragment key={row.id}>
+                    <tr id={`house-row-${row.id}`} data-testid="house-draft-row" data-reviewed={reviewed.has(row.id)} data-highlighted={row.id === highlightRowId} className={row.id === highlightRowId ? 'bg-brand-600/10 dark:bg-brand-400/10' : undefined}>
                       <td className="px-4 py-3 align-top">
                         <RowCheckbox checked={selected.has(row.id)} onChange={() => setSelected((current) => toggleSelected(current, row.id))} label={`Select ${row.source_name}`} />
                       </td>
                       <td className="px-4 py-3 align-top">
-                        <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{row.source_name || '—'}</p>
+                        <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
+                          {auto && <span className="mr-1 font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>#{row.source_order + 1}</span>}
+                          {row.source_name || '—'}
+                        </p>
+                        {auto && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>Submitted {formatFormTime(row.submission_timestamp)} · sheet row {row.source_row_number ?? '—'}</p>}
                         {reviewed.has(row.id) && <p className="mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-green-700 dark:text-green-400">✓ Reviewed</p>}
                         {prefs.length > 0 && <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>Prefers: {prefs.join(' › ')}</p>}
                         {duplicateRowIds.has(row.id) && <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400">Duplicate member</p>}
@@ -765,6 +1067,32 @@ export function HouseDraftEditor({
                         />
                       </td>
                       <td className="px-4 py-3 align-top">
+                        {auto ? (
+                          <div>
+                            <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{houseNameOf(row.house_profile_id) ?? 'Unassigned'}</p>
+                            <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>{rank ? `${ordinal(rank)} choice` : 'Not ranked'}</p>
+                            <p className={`mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] ${overridden ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                              {overridden ? 'Manually overridden' : 'Automatically assigned'}
+                            </p>
+                            {overridden && (
+                              <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text2)' }}>
+                                Automatic: {houseNameOf(row.generated_house_profile_id) ?? '—'}. Reason: {row.override_reason || 'none recorded'}
+                              </p>
+                            )}
+                            {editable && (
+                              <div className="mt-1 flex gap-3">
+                                <button type="button" disabled={busy} onClick={() => setOverrideRowId(overrideRowId === row.id ? null : row.id)} className="bg-transparent p-0 text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--brand)' }}>
+                                  Override…
+                                </button>
+                                {overridden && (
+                                  <button type="button" disabled={busy} onClick={() => restoreAutomatic(row)} className="bg-transparent p-0 text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--color-text2)' }}>
+                                    Restore automatic
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
                         <select
                           value={row.house_profile_id ?? ''}
                           disabled={busy || !editable}
@@ -778,6 +1106,7 @@ export function HouseDraftEditor({
                             <option key={option.id} value={option.id}>{houseLabel(option)}</option>
                           ))}
                         </select>
+                        )}
                         {brokenHouse && (
                           <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">
                             {row.source_house ? `"${row.source_house}" has no profile this year.` : 'House profile unavailable.'}
@@ -797,13 +1126,31 @@ export function HouseDraftEditor({
                         )}
                       </td>
                       <td className="px-4 py-3 align-top text-right">
-                        {editable && (
+                        {editable && !auto && (
                           <button type="button" disabled={busy} onClick={() => removeRow(row)} aria-label={`Remove ${row.source_name}`} className="bg-transparent p-0 text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: 'var(--color-text2)' }}>
                             Remove
                           </button>
                         )}
                       </td>
                     </tr>
+                    {auto && editable && overrideRowId === row.id && (
+                      <tr>
+                        <td colSpan={6} className="px-4 pb-4">
+                          <OverrideForm
+                            row={row}
+                            profiles={profiles}
+                            drafts={drafts}
+                            houseNameOf={houseNameOf}
+                            personNameOf={personNameOf}
+                            plan={(toHouseId, swapWithId) => planOverride(row, toHouseId, swapWithId)}
+                            busy={busy}
+                            onApply={applyOverride}
+                            onCancel={() => setOverrideRowId(null)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

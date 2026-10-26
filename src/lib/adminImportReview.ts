@@ -106,7 +106,7 @@ const CATEGORY_LABEL: Record<ImportRowCategory, string> = {
 };
 
 /** A leading =, +, -, @, tab or CR makes a spreadsheet treat a cell as a formula. */
-function csvCell(value: string): string {
+export function csvCell(value: string): string {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }

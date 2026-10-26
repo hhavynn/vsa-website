@@ -12,6 +12,7 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 - Preflight blockers (lock and reveal refuse): one member in several Houses; a row whose House has no active profile this year; a placement that would overlap an existing membership interval. Warnings: unassigned, duplicate-in-same-House, ambiguous match (skipped at reveal until confirmed), no member match, House size gap.
 - **Reveal** writes `house_memberships` through `src/data/repos/houseMembershipWrites.ts` — the same dated-interval behavior Admin → Houses has always used (close the open membership, insert the new one, stop it where a later one begins, refresh `members.house`). Each row is skipped if the member is already in that House from that date, so a retry is safe, and a published batch is a no-op.
 - The Legacy Backfill tab is unchanged and separate.
+- **Google Forms — Auto Placement** is a third import mode that generates the draft by timestamp priority (first-come, first-served, then ranked choices, within capacities) and adds stricter lock/reveal checks for those batches. See [house-auto-placement.md](house-auto-placement.md).
 
 ## Intern cohort (`/admin/interns`)
 
@@ -27,6 +28,8 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 2. `20261001213433_create_intern_cohort_cycles.sql`
 
 **Status:** both applied to production on 2026-10-01; filenames match the versions recorded in `supabase_migrations`.
+
+3. `20261026180000_house_assignment_timestamp_placement.sql` — additive placement metadata columns for automatic House placement. **Not yet applied to production**; apply before deploying the frontend that uses it ([house-auto-placement.md](house-auto-placement.md#deploying)).
 
 Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 

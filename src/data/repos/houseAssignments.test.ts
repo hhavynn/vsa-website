@@ -34,6 +34,9 @@ function batch(status: HouseAssignmentBatch['status']): HouseAssignmentBatch {
     created_by: 'admin-1',
     locked_at: null,
     published_at: null,
+    assignment_method: 'manual',
+    capacity_config: null,
+    excluded_applicants: null,
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
   };
@@ -53,6 +56,10 @@ function draft(order: number, overrides: Partial<HouseAssignmentDraft> = {}): Ho
     preferences: null,
     notes: null,
     source_order: order,
+    submission_timestamp: null,
+    source_row_number: null,
+    generated_house_profile_id: null,
+    override_reason: null,
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
     ...overrides,
@@ -258,6 +265,78 @@ describe('publishing (reveal)', () => {
 
     await expect(houseAssignmentsRepository.publishBatch('batch-1', 'admin-1')).rejects.toThrow(/Cannot publish/);
 
+    expect(membershipWrites()).toHaveLength(0);
+    expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
+  });
+});
+
+describe('timestamp-priority (automatic) batches', () => {
+  const placementBatch = (status: HouseAssignmentBatch['status']): HouseAssignmentBatch => ({
+    ...batch(status),
+    assignment_method: 'timestamp_ranked',
+    capacity_config: { 'p-boo': 1, 'p-toad': 1 },
+  });
+  const placed = (order: number, overrides: Partial<HouseAssignmentDraft> = {}) => draft(order, {
+    house_profile_id: order === 1 ? 'p-boo' : 'p-toad',
+    generated_house_profile_id: order === 1 ? 'p-boo' : 'p-toad',
+    preferences: order === 1 ? ['p-boo', 'p-toad'] : ['p-toad', 'p-boo'],
+    source_order: order - 1,
+    submission_timestamp: `2026-10-22T03:0${order}:00.000Z`,
+    source_row_number: order + 1,
+    ...overrides,
+  });
+  function queuePlacementSnapshot(status: HouseAssignmentBatch['status'], drafts: HouseAssignmentDraft[]) {
+    supabaseMock.queueResult('house_assignment_batches', { data: placementBatch(status), error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: drafts, error: null });
+    supabaseMock.queueResult('house_page_assets', { data: profiles, error: null });
+    supabaseMock.queueResult('house_memberships', { data: [], error: null });
+  }
+
+  it('saves placement metadata on the batch, and leaves it off manual imports', async () => {
+    supabaseMock.queueResult('house_assignment_batches', { data: placementBatch('draft'), error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
+    await houseAssignmentsRepository.createBatch({
+      academicYearStart: YEAR,
+      effectiveStartDate: START,
+      sourceLabel: 'Auto',
+      userId: 'admin-1',
+      rows: [{ source_name: 'Person 1', source_order: 0 }],
+      placement: { capacityConfig: { 'p-boo': 1 }, excludedApplicants: [{ source_row_number: 7, name: 'Left Out', reason: 'Withdrew' }] },
+    });
+    supabaseMock.queueResult('house_assignment_batches', { data: batch('draft'), error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
+    await houseAssignmentsRepository.createBatch({ academicYearStart: YEAR, effectiveStartDate: START, sourceLabel: 'Sheet', userId: null, rows: [{ source_name: 'Person 1' }] });
+
+    const inserts = supabaseMock.queriesFor('house_assignment_batches').flatMap((query) => query.calls).filter((call) => call.method === 'insert');
+    expect(inserts[0].args[0]).toMatchObject({
+      assignment_method: 'timestamp_ranked',
+      capacity_config: { 'p-boo': 1 },
+      excluded_applicants: [{ source_row_number: 7, name: 'Left Out', reason: 'Withdrew' }],
+    });
+    expect(inserts[1].args[0]).not.toHaveProperty('assignment_method');
+    expect(inserts[1].args[0]).not.toHaveProperty('capacity_config');
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('re-runs the strict checks on persisted rows and refuses to lock with an unmatched applicant', async () => {
+    queuePlacementSnapshot('draft', [placed(1), placed(2, { member_id: null, match_status: 'unmatched' })]);
+    await expect(houseAssignmentsRepository.lockBatch('batch-1')).rejects.toThrow(/not linked to a confirmed member/);
+    expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('locks a complete placement without writing memberships', async () => {
+    queuePlacementSnapshot('draft', [placed(1), placed(2)]);
+    supabaseMock.queueResult('house_assignment_batches', { data: [{ id: 'batch-1' }], error: null });
+    const preflight = await houseAssignmentsRepository.lockBatch('batch-1');
+    expect(preflight.canLock).toBe(true);
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('refuses to publish when persisted state exceeds a capacity, writing nothing', async () => {
+    supabaseMock.queueResult('house_assignment_batches', { data: placementBatch('locked'), error: null });
+    queuePlacementSnapshot('locked', [placed(1, { house_profile_id: 'p-toad', override_reason: 'moved' }), placed(2)]);
+    await expect(houseAssignmentsRepository.publishBatch('batch-1', 'admin-1')).rejects.toThrow(/Cannot publish: Boo has 0 of 1 spots filled/);
     expect(membershipWrites()).toHaveLength(0);
     expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
   });
