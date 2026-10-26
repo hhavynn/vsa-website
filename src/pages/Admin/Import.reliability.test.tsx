@@ -125,6 +125,13 @@ describe("real-world CSV shapes", () => {
     expect(screen.getAllByText("1st Year").length).toBeGreaterThan(0);
   });
 
+  it("refuses a file with an unclosed quote instead of merging the rows after it into one cell", async () => {
+    supabaseMock.setDefault("members", { data: [], error: null });
+    await preview('Name,Comment\nAn Tran,"forgot to close\nBao Le,hi\nChi Vo,hey');
+    expect(await screen.findByText(/quotation mark opened on line 2 is never closed/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Import summary")).not.toBeInTheDocument();
+  });
+
   it("explains a file with no name column instead of creating nameless members", async () => {
     supabaseMock.setDefault("members", { data: [], error: null });
     await preview("Timestamp,Email Address\n10/1/2026,a@ucsd.edu");

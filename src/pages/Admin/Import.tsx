@@ -301,6 +301,10 @@ export default function AdminImport() {
         raw = await res.text();
       }
       const table = parseCsvTable(raw);
+      // A quote that never closes swallows every later line into one cell; never import that reading.
+      if (table.unterminatedQuote) {
+        throw new Error(`a quotation mark opened on line ${table.unterminatedQuoteLine} is never closed, so the rows after it would be read as one cell. Fix or re-export the file and try again.`);
+      }
       if (!table.rows.length) throw new Error('No data rows found in CSV.');
 
       const detected = detectAttendanceColumns(table.headers);

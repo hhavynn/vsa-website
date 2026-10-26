@@ -12,16 +12,20 @@ export interface ParsedCsvTable {
   duplicateHeaders: string[];
   /** The text ended inside a quoted cell; the last cell runs to end of input. */
   unterminatedQuote: boolean;
+  /** 1-based file line where that unclosed quote opened, or null. */
+  unterminatedQuoteLine: number | null;
 }
 
 /** Splits CSV text into records of raw cells. Handles CRLF, LF and lone CR. */
-export function parseCsvRecords(raw: string): { records: string[][]; unterminatedQuote: boolean } {
+export function parseCsvRecords(raw: string): { records: string[][]; unterminatedQuote: boolean; unterminatedQuoteLine: number | null } {
   const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
   const records: string[][] = [];
   let record: string[] = [];
   let cell = '';
   let inQuotes = false;
   let i = 0;
+  let line = 1;
+  let quoteLine = 1;
 
   const endCell = () => {
     record.push(cell);
@@ -46,6 +50,7 @@ export function parseCsvRecords(raw: string): { records: string[][]; unterminate
         i += 1;
         continue;
       }
+      if (char === '\n' || (char === '\r' && text[i + 1] !== '\n')) line += 1;
       cell += char;
       i += 1;
       continue;
@@ -54,12 +59,14 @@ export function parseCsvRecords(raw: string): { records: string[][]; unterminate
       // A quote opens a quoted section anywhere in the cell; sheets only emit
       // it at the start, and being lenient never drops characters.
       inQuotes = true;
+      quoteLine = line;
       i += 1;
     } else if (char === ',') {
       endCell();
       i += 1;
     } else if (char === '\r' || char === '\n') {
       endRecord();
+      line += 1;
       i += char === '\r' && text[i + 1] === '\n' ? 2 : 1;
     } else {
       cell += char;
@@ -68,7 +75,7 @@ export function parseCsvRecords(raw: string): { records: string[][]; unterminate
   }
   if (cell !== '' || record.length > 0 || inQuotes) endRecord();
 
-  return { records, unterminatedQuote: inQuotes };
+  return { records, unterminatedQuote: inQuotes, unterminatedQuoteLine: inQuotes ? quoteLine : null };
 }
 
 function isBlankRecord(record: readonly string[]): boolean {
@@ -81,9 +88,9 @@ function isBlankRecord(record: readonly string[]): boolean {
  * "Email (2)" so it can still be mapped. Empty headers become "Column N".
  */
 export function parseCsvTable(raw: string): ParsedCsvTable {
-  const { records, unterminatedQuote } = parseCsvRecords(raw);
+  const { records, unterminatedQuote, unterminatedQuoteLine } = parseCsvRecords(raw);
   const nonBlank = records.filter((record) => !isBlankRecord(record));
-  if (nonBlank.length === 0) return { headers: [], rows: [], duplicateHeaders: [], unterminatedQuote };
+  if (nonBlank.length === 0) return { headers: [], rows: [], duplicateHeaders: [], unterminatedQuote, unterminatedQuoteLine };
 
   const [headerRecord, ...dataRecords] = nonBlank;
   const seen = new Map<string, number>();
@@ -111,5 +118,5 @@ export function parseCsvTable(raw: string): ParsedCsvTable {
     return row;
   });
 
-  return { headers, rows, duplicateHeaders, unterminatedQuote };
+  return { headers, rows, duplicateHeaders, unterminatedQuote, unterminatedQuoteLine };
 }
