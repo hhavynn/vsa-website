@@ -177,6 +177,17 @@ describe('the write plan', () => {
     expect(summary.duplicatesSkipped).toBe(1);
   });
 
+  it('keeps each admin-matched row\'s email choice when several rows point at one member', () => {
+    const lan = member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' });
+    const { plan } = run(
+      [{ name: 'Lan Tran', email: 'a@gmail.com' }, { name: 'Lan Tran', email: 'b@gmail.com' }],
+      [lan],
+      { decisions: { 0: { kind: 'match', memberId: 'lan', rememberEmail: false }, 1: { kind: 'match', memberId: 'lan', rememberEmail: true } } },
+    );
+    expect(plan.credits).toHaveLength(1);
+    expect(plan.credits[0].aliases).toEqual([{ email: 'b@gmail.com', method: 'admin_confirmed' }]);
+  });
+
   it('a new person submitted twice becomes one create carrying both addresses', () => {
     const { plan } = run([
       { name: 'Hoa Pham', email: 'hoa@gmail.com', college: 'Sixth', year: '1st' },

@@ -617,6 +617,7 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
         if (compareNames(other.name, row.name).relation !== 'exact') return false;
         if (other.college && seen.college && other.college !== seen.college) return false;
         if (other.year && row.csvYear && other.year !== row.csvYear) return false;
+        if (hardEmailConflict(other.emails, row.emails)) return false;
         if (other.emails.length === 0 || row.emails.length === 0) return true;
         // Two different addresses are one person only as a personal + school pair
         // with the same college and year on both rows.
@@ -624,6 +625,9 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
         return schoolPair && !!other.college && other.college === seen.college && !!other.year && other.year === row.csvYear;
       });
       if (twin) {
+        // The group's addresses grow with each repeat, so a third row is checked
+        // against every address already accepted for this new person.
+        twin.emails = Array.from(new Set([...twin.emails, ...row.emails]));
         return duplicate('same_person_as_new_row', `Same new person as row ${rowNumber(twin.rowId)}; one member is created.`, twin.rowId, null,
           row.emails.filter((email) => !index.emailHolders.has(email)).map((email) => ({ email, method: 'same_submission' as const })));
       }
