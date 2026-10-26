@@ -1,338 +1,264 @@
-// Synthetic members only. Covers identity resolution for the attendance import:
-// matcher verdicts -> admin decisions -> summary -> write plan.
+// Synthetic members only. Matcher verdicts -> admin decisions -> summary -> write plan -> request.
 import {
-  DecisionRow,
-  RowDecision,
-  planAttendanceWrites,
+  planAttendanceImport,
+  planTotals,
   resolveRow,
+  rowNeedsAdmin,
   summarizeAttendanceImport,
+  toImportRequest,
 } from './attendanceImportDecisions';
-import {
-  AttendanceImportMember,
-  AttendanceImportRowInput,
-  matchAttendanceImportRows,
-} from './memberMatching';
+import type { RowDecision } from './attendanceImportDecisions';
+import { member, RowSpec, scenario, ScenarioOptions } from '../test-utils/identityFixtures';
+import type { IdentityMember } from './identityResolution';
 
-const member = (
-  id: string,
-  first_name: string,
-  last_name: string,
-  extra: Partial<AttendanceImportMember> = {},
-): AttendanceImportMember => ({ id, first_name, last_name, college: null, year: null, email: null, ...extra });
-
-const input = (index: number, name: string, extra: Partial<AttendanceImportRowInput> = {}): AttendanceImportRowInput => ({
-  rowId: `row-${index}`,
-  originalIndex: index,
-  csvRow: {},
-  displayName: name,
-  matchName: name,
-  csvCollege: '',
-  csvYear: '',
-  csvEmail: '',
-  invalidYear: false,
-  ...extra,
-});
-
-function run(
-  inputs: AttendanceImportRowInput[],
-  members: AttendanceImportMember[],
-  already: string[] = [],
-  decisions: Record<string, RowDecision> = {},
-) {
-  const alreadyMemberIds = new Set(already);
-  const rows: DecisionRow[] = matchAttendanceImportRows(inputs, members, alreadyMemberIds).map((r) => ({
-    ...r,
-    decision: decisions[r.rowId] ?? null,
-  }));
-  const ctx = { membersById: new Map(members.map((m) => [m.id, m])), alreadyMemberIds };
+function run(specs: RowSpec[], members: IdentityMember[], options: ScenarioOptions = {}) {
+  const s = scenario(specs, members, options);
+  const plan = planAttendanceImport(s.rows, s.ctx, {
+    heldEmails: s.heldEmails,
+    observations: s.snapshot.observations,
+    eventAcademicYear: s.snapshot.eventAcademicYear,
+  });
   return {
-    rows,
-    ctx,
-    summary: summarizeAttendanceImport(rows, ctx),
-    plan: planAttendanceWrites(rows, ctx, members),
-    statusOf: (i: number) => resolveRow(rows[i], ctx),
+    ...s,
+    plan,
+    totals: planTotals(plan),
+    summary: summarizeAttendanceImport(s.rows, s.ctx),
+    statusOf: (i: number) => resolveRow(s.rows[i], s.ctx).status,
   };
 }
 
-describe('two distinct people with similar names', () => {
-  const members = [member('alex', 'Alex', 'Nguyen', { college: 'Muir', year: '3rd Year', email: 'alex@ucsd.edu' })];
+const alex = member('alex', 'Alex', 'Nguyen', { college: 'Muir', year: '2nd Year', email: 'alex@gmail.com' });
+const lastYear = { member_id: 'alex', academic_year_start: 2025, year_label: '2nd Year', source: 'attendance_import' as const };
 
-  it('never auto-matches a near name, even with the same college and year', () => {
-    const { rows } = run([input(0, 'Alec Nguyen', { csvCollege: 'Muir', csvYear: '3rd Year' })], members);
-    expect(rows[0].status).toBe('review');
-    expect(rows[0].reason).toBe('fuzzy_name_match');
-    expect(rows[0].candidateMemberIds).toEqual(['alex']);
-  });
+describe('admin decisions', () => {
+  const lan = member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' });
+  const review = [{ name: 'Lan Tran', email: 'lan.two@gmail.com' }];
 
-  it('lets the admin create the second person without touching the suggested member', () => {
-    const { plan, summary } = run([input(0, 'Alec Nguyen', { csvEmail: 'alec@ucsd.edu' })], members, [], { 'row-0': { kind: 'new' } });
-    expect(plan.updates).toEqual([]);
-    expect(plan.creates).toHaveLength(1);
-    expect(plan.creates[0]).toMatchObject({ first_name: 'Alec', last_name: 'Nguyen', email: 'alec@ucsd.edu', emailWithheld: false });
-    expect(summary).toMatchObject({ newMembers: 1, existingMembers: 0, unresolved: 0 });
-  });
-});
-
-describe('two distinct people with identical names', () => {
-  const twins = [
-    member('a', 'Sam', 'Le', { college: 'Muir', email: 'sam.a@ucsd.edu' }),
-    member('b', 'Sam', 'Le', { college: 'Warren', email: 'sam.b@ucsd.edu' }),
-  ];
-
-  it('is ambiguous and offers match and create', () => {
-    const { rows } = run([input(0, 'Sam Le')], twins);
-    expect(rows[0]).toMatchObject({ status: 'review', reason: 'ambiguous_match', canForceMatch: true, canMarkNew: true });
-    expect(rows[0].candidateMemberIds.sort()).toEqual(['a', 'b']);
-  });
-
-  it('creates a third person with the same name when confirmed', () => {
-    const { plan } = run([input(0, 'Sam Le', { csvEmail: 'sam.c@ucsd.edu' })], twins, [], { 'row-0': { kind: 'new' } });
-    expect(plan.creates).toHaveLength(1);
-    expect(plan.creates[0]).toMatchObject({ first_name: 'Sam', last_name: 'Le', email: 'sam.c@ucsd.edu' });
-    expect(plan.updates).toEqual([]);
-  });
-
-  it('sends a unique exact name with a different email to review instead of overriding it', () => {
-    const { rows } = run([input(0, 'Sam Le', { csvEmail: 'other@gmail.com' })], [twins[0]]);
-    expect(rows[0].status).toBe('review');
-    expect(rows[0].reason).toBe('identity_conflict');
-    expect(rows[0].canMarkNew).toBe(true);
-  });
-
-  it('sends a unique exact name with a different college to review', () => {
-    const { rows } = run([input(0, 'Sam Le', { csvCollege: 'Revelle' })], [twins[0]]);
-    expect(rows[0].reason).toBe('identity_conflict');
-  });
-
-  it('still auto-matches a unique exact name with consistent evidence', () => {
-    const { rows } = run([input(0, 'Sam Le', { csvCollege: 'Muir College', csvEmail: 'sam.a@ucsd.edu' })], [twins[0]]);
-    expect(rows[0]).toMatchObject({ status: 'match', matchedMember: expect.objectContaining({ id: 'a' }) });
-  });
-
-  it('still auto-matches a unique exact name when the member has no email on file', () => {
-    const { rows } = run([input(0, 'Sam Le', { csvEmail: 'sam@ucsd.edu' })], [member('a', 'Sam', 'Le')]);
-    expect(rows[0].status).toBe('match');
-  });
-});
-
-describe('fuzzy matches with and without an email', () => {
-  const members = [member('dan', 'Dan', 'Lee', { email: 'dan@ucsd.edu' })];
-
-  it.each([
-    ['without an email', {}],
-    ['with an unknown email', { csvEmail: 'dani@ucsd.edu' }],
-  ])('goes to review %s and can still become a new member', (_label, extra) => {
-    const { rows, plan } = run([input(0, 'Dan Le', extra)], members, [], { 'row-0': { kind: 'new' } });
-    expect(rows[0]).toMatchObject({ status: 'review', canForceMatch: true, canMarkNew: true });
-    expect(plan.creates).toHaveLength(1);
-  });
-});
-
-describe('conflicting email and name', () => {
-  const members = [member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' })];
-
-  it('reviews it and creates the new person without the email already on file', () => {
-    const { rows, plan } = run([input(0, 'Bao Pham', { csvEmail: 'LAN@ucsd.edu' })], members, [], { 'row-0': { kind: 'new' } });
-    expect(rows[0].reason).toBe('email_name_conflict');
-    expect(plan.creates[0]).toMatchObject({ first_name: 'Bao', email: null, emailWithheld: true });
-    expect(plan.updates).toEqual([]);
-  });
-
-  it('does not let a second new row claim an email an earlier new row will take', () => {
-    const { plan } = run(
-      [
-        input(0, 'Bao Pham', { csvEmail: 'shared@ucsd.edu' }),
-        input(1, 'Bao Phan', { csvEmail: 'shared@ucsd.edu' }),
-      ],
-      [],
-      [],
-      { 'row-1': { kind: 'new' } },
-    );
-    expect(plan.creates.map((c) => c.email)).toEqual(['shared@ucsd.edu', null]);
-  });
-});
-
-describe('multiple members sharing an email', () => {
-  const members = [
-    member('m1', 'Alex', 'Nguyen', { email: 'shared@ucsd.edu' }),
-    member('m2', 'Alyx', 'Nguyen', { email: 'shared@ucsd.edu' }),
-  ];
-
-  it('needs an explicit choice and never picks one itself', () => {
-    const { rows, summary } = run([input(0, 'Alex Nguyen', { csvEmail: 'shared@ucsd.edu' })], members);
-    expect(rows[0]).toMatchObject({ status: 'review', reason: 'duplicate_email_conflict', canForceMatch: true });
+  it('an unresolved row writes nothing until decided', () => {
+    const { summary, plan } = run(review, [lan]);
     expect(summary.unresolved).toBe(1);
+    expect(plan.credits).toEqual([]);
+    expect(plan.creates).toEqual([]);
   });
 
-  it('credits exactly the member the admin chose', () => {
-    const { plan } = run([input(0, 'Alex Nguyen', { csvEmail: 'shared@ucsd.edu' })], members, [], {
-      'row-0': { kind: 'match', memberId: 'm2' },
-    });
-    expect(plan.updates.map((u) => u.member.id)).toEqual(['m2']);
-  });
-});
-
-describe('a repeated email in one CSV', () => {
-  it('lets the later row be matched to the existing email owner', () => {
-    const owner = member('kim', 'Kim', 'Do', { email: 'kim@ucsd.edu' });
-    const { rows, plan, summary } = run(
-      [input(0, 'Zed Quinn', { csvEmail: 'kim@ucsd.edu' }), input(1, 'Kim Do', { csvEmail: 'kim@ucsd.edu' })],
-      [owner],
-      [],
-      { 'row-0': { kind: 'skip' }, 'row-1': { kind: 'match', memberId: 'kim' } },
-    );
-    expect(rows[0].status).toBe('review');
-    expect(summary.unresolved).toBe(0);
-    expect(plan.updates.map((u) => u.member.id)).toEqual(['kim']);
+  it('Match Existing credits that member and, by default, remembers the email as admin-confirmed', () => {
+    const { plan, summary } = run(review, [lan], { decisions: { 0: { kind: 'match', memberId: 'lan' } } });
+    expect(summary).toMatchObject({ existingMembers: 1, adminConfirmed: 1, autoMatched: 0 });
+    expect(plan.credits[0]).toMatchObject({ adminConfirmed: true, aliases: [{ email: 'lan.two@gmail.com', method: 'admin_confirmed' }] });
+    // An admin's match never fills college or replaces the contact email.
+    expect(plan.credits[0].fill).toEqual({});
   });
 
-  it('offers the email owner as a candidate on the later row', () => {
-    const owner = member('kim', 'Kim', 'Do', { email: 'kim@ucsd.edu' });
-    const rows = matchAttendanceImportRows(
-      [input(0, 'Kim Do', { csvEmail: 'kim@ucsd.edu' }), input(1, 'Someone Else', { csvEmail: 'kim@ucsd.edu' })],
-      [owner],
-      new Set(),
-    );
-    expect(rows[1]).toMatchObject({ status: 'review', reason: 'duplicate_email_conflict', canForceMatch: true });
-    expect(rows[1].candidateMemberIds).toEqual(['kim']);
-  });
-});
-
-describe('manual selection among candidates', () => {
-  const members = [
-    member('a', 'Sam', 'Le', { college: 'Muir' }),
-    member('b', 'Sam', 'Le', { college: 'Warren' }),
-    member('c', 'Sam', 'Lee', { college: 'Sixth' }),
-  ];
-
-  it('credits the chosen candidate, not the matcher best guess', () => {
-    const { rows, plan } = run([input(0, 'Sam Le', { csvCollege: 'Muir' })], members, [], {
-      'row-0': { kind: 'match', memberId: 'b' },
-    });
-    expect(rows[0].matchedMember?.id).not.toBe('b');
-    expect(plan.updates.map((u) => u.member.id)).toEqual(['b']);
+  it('an admin can match without remembering the email', () => {
+    const decision: RowDecision = { kind: 'match', memberId: 'lan', rememberEmail: false };
+    const { plan } = run(review, [lan], { decisions: { 0: decision } });
+    expect(plan.credits[0].aliases).toEqual([]);
   });
 
-  it('ignores a choice that was never offered for the row', () => {
-    const { statusOf, plan } = run([input(0, 'Sam Le')], members, [], { 'row-0': { kind: 'match', memberId: 'zzz' } });
-    expect(statusOf(0).status).toBe('review');
-    expect(plan.updates).toEqual([]);
+  it('Create New makes a separate member, withholding an email someone else holds', () => {
+    const { plan } = run([{ name: 'Lan Tran', email: 'lan@ucsd.edu', college: 'Revelle' }], [{ ...lan, college: 'Muir' }],
+      { decisions: { 0: { kind: 'new' } } });
+    expect(plan.credits).toEqual([]);
+    expect(plan.creates[0]).toMatchObject({ first_name: 'Lan', last_name: 'Tran', email: null, emailWithheld: true });
   });
 
-  it('treats a chosen member who already has attendance as already recorded, not a second record', () => {
-    const { statusOf, plan, summary } = run([input(0, 'Sam Le')], members, ['b'], { 'row-0': { kind: 'match', memberId: 'b' } });
-    expect(statusOf(0).status).toBe('already');
-    expect(plan.updates).toEqual([]);
-    expect(summary.alreadyRecorded).toBe(1);
+  it('a match decision can only pick a member the row offered', () => {
+    const { statusOf } = run(review, [lan, member('x', 'X', 'Y')], { decisions: { 0: { kind: 'match', memberId: 'x' } } });
+    expect(statusOf(0)).toBe('review');
   });
 
-  it('can be undone before confirming', () => {
-    const rows = run([input(0, 'Sam Le')], members, [], { 'row-0': { kind: 'new' } });
-    expect(rows.plan.creates).toHaveLength(1);
-    const undone = run([input(0, 'Sam Le')], members, [], {});
-    expect(undone.statusOf(0).status).toBe('review');
-    expect(undone.plan.creates).toEqual([]);
-  });
-});
-
-describe('a confirmed new member', () => {
-  it('is a plan entry of its own and never an update to the suggested member', () => {
-    const suggested = member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu', college: 'Muir' });
-    const { plan, summary } = run([input(0, 'Lan Tran', { csvEmail: 'lan2@gmail.com', csvCollege: 'Revelle' })], [suggested], [], {
-      'row-0': { kind: 'new' },
-    });
-    expect(plan.updates).toEqual([]);
-    expect(plan.creates).toEqual([
-      expect.objectContaining({ first_name: 'Lan', last_name: 'Tran', college: 'Revelle', email: 'lan2@gmail.com' }),
-    ]);
-    expect(summary).toMatchObject({ newMembers: 1, existingMembers: 0 });
-  });
-});
-
-describe('unresolved and skipped rows', () => {
-  const members = [member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' })];
-  const inputs = [input(0, 'Minh Vo'), input(1, 'Lan Trann')];
-
-  it('counts an undecided near match as unresolved and writes nothing for it', () => {
-    const { summary, plan } = run(inputs, members);
-    expect(summary).toMatchObject({ validRows: 2, newMembers: 1, unresolved: 1, skipped: 0 });
-    expect(plan.creates).toHaveLength(1);
-    expect(plan.updates).toEqual([]);
+  it('Skip records nothing, and undo (no decision) restores review', () => {
+    expect(run(review, [lan], { decisions: { 0: { kind: 'skip' } } }).summary.skipped).toBe(1);
+    expect(run(review, [lan]).summary.unresolved).toBe(1);
   });
 
-  it('moves an explicitly skipped row out of unresolved and writes nothing for it', () => {
-    const { summary, plan, statusOf } = run(inputs, members, [], { 'row-1': { kind: 'skip' } });
-    expect(statusOf(1).status).toBe('skipped');
-    expect(summary).toMatchObject({ unresolved: 0, skipped: 1 });
-    expect(plan.creates.map((c) => c.first_name)).toEqual(['Minh']);
+  it('a similar member ruled out by evidence can still be matched on purpose', () => {
+    const anh = member('anh', 'Anh', 'Nguyen', { college: 'Warren' });
+    const { statusOf } = run([{ name: 'An Nguyen', college: 'Muir' }], [anh], { decisions: { 0: { kind: 'match', memberId: 'anh' } } });
+    expect(statusOf(0)).toBe('match');
   });
 
-  it('never turns an unresolved row into a member or a match', () => {
-    const { plan } = run([input(0, 'Lan Trann')], members);
-    expect(plan).toEqual({ updates: [], creates: [] });
-  });
-
-  it('reports rows without a name as invalid instead of counting them as new', () => {
-    const { summary, plan } = run([input(0, '  ')], []);
-    expect(summary).toMatchObject({ validRows: 0, invalid: 1, newMembers: 0 });
+  it('a nameless row is invalid and never planned', () => {
+    const { summary, plan } = run([{ name: '', email: 'x@ucsd.edu' }], []);
+    expect(summary.invalid).toBe(1);
     expect(plan.creates).toEqual([]);
   });
 });
 
-describe('reimporting', () => {
-  const members = [member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' }), member('mai', 'Mai', 'Ho')];
-
-  it('brings a previously skipped attendee back for a decision', () => {
-    const first = run([input(0, 'Mai Ho'), input(1, 'Lan Trann')], members, [], { 'row-1': { kind: 'skip' } });
-    expect(first.statusOf(1).status).toBe('skipped');
-    // Mai was credited by the first run; the skipped row left no attendance behind.
-    const second = run([input(0, 'Mai Ho'), input(1, 'Lan Trann')], members, ['mai']);
-    expect(second.statusOf(0).status).toBe('already');
-    expect(second.statusOf(1).status).toBe('review');
-    expect(second.summary).toMatchObject({ alreadyRecorded: 1, unresolved: 1 });
+describe('the write plan', () => {
+  it('a Gmail → UCSD match keeps the member id and plans the alias, year advance and observation', () => {
+    const { plan, totals } = run([{ name: 'Alex Nguyen', email: 'alex@ucsd.edu', college: 'Muir', year: '3rd' }], [alex],
+      { observations: [lastYear] });
+    expect(plan.credits).toHaveLength(1);
+    expect(plan.credits[0]).toMatchObject({
+      member: alex,
+      aliases: [{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }],
+      year: { from: '2nd Year', to: '3rd Year' },
+      observedYear: '3rd Year',
+    });
+    expect(plan.creates).toEqual([]);
+    expect(totals).toMatchObject({ aliasesToAdd: 1, yearAdvances: 1 });
   });
 
-  it('recognizes existing attendance and plans no writes, so points cannot double', () => {
-    const { plan, summary } = run([input(0, 'Mai Ho'), input(1, 'Lan Tran', { csvEmail: 'lan@ucsd.edu' })], members, ['mai', 'lan']);
-    expect(summary).toMatchObject({ alreadyRecorded: 2, existingMembers: 0, newMembers: 0 });
-    expect(plan).toEqual({ updates: [], creates: [] });
+  it('a historical import never rewinds or advances current standing', () => {
+    const current = { ...alex, year: '3rd Year' };
+    const { plan } = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com', year: '1st' }], [current], {
+      observations: [{ ...lastYear, academic_year_start: 2026, year_label: '3rd Year' }],
+      eventYear: 2024,
+    });
+    expect(plan.credits[0].year).toBeNull();
   });
 
-  it('lets an admin confirm a same-named different person even when the existing one already attended', () => {
-    const { plan } = run([input(0, 'Mai Ho')], members, ['mai'], { 'row-0': { kind: 'new' } });
-    expect(plan.creates).toHaveLength(1);
-    expect(plan.updates).toEqual([]);
+  it('fills an empty contact email only on a name + college + year match, instead of a separate alias', () => {
+    const bao = member('bao', 'Bao', 'Le', { college: 'Sixth', year: '1st Year' });
+    const { plan } = run([{ name: 'Bao Le', email: 'bao@ucsd.edu', college: 'Sixth', year: '2nd' }], [bao]);
+    expect(plan.credits[0].fill).toEqual({ email: 'bao@ucsd.edu' });
+    expect(plan.credits[0].aliases).toEqual([]);
   });
-});
 
-describe('duplicate attendees in one CSV', () => {
-  const members = [member('mai', 'Mai', 'Ho', { college: 'Muir' })];
+  it('a bare name match never fills an email or remembers one (review: weak evidence must not become an alias)', () => {
+    const anh = member('anh', 'Anh', 'Nguyen');
+    const { plan, rows } = run([{ name: 'Anh Nguyen', email: 'someone@gmail.com' }], [anh]);
+    expect(rows[0].reason).toBe('unique_name');
+    expect(plan.credits[0].fill).toEqual({});
+    expect(plan.credits[0].aliases).toEqual([]);
+    const withCollege = run([{ name: 'Anh Nguyen', email: 'someone@gmail.com', college: 'Muir' }], [{ ...anh, college: 'Muir' }]);
+    expect(withCollege.rows[0].reason).toBe('name_college');
+    expect(withCollege.plan.credits[0].fill).toEqual({});
+  });
 
-  it('skips an exact repeat of the same name, college and year', () => {
-    const { summary, plan } = run([input(0, 'Mai Ho'), input(1, 'Mai Ho')], members);
+  it('remembers an email on an admin match by default only for an exact name', () => {
+    const alexander = member('al', 'Alexander', 'Nguyen');
+    const similar = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com' }], [alexander], { decisions: { 0: { kind: 'match', memberId: 'al' } } });
+    expect(similar.plan.credits[0].aliases).toEqual([]);
+    const optedIn = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com' }], [alexander],
+      { decisions: { 0: { kind: 'match', memberId: 'al', rememberEmail: true } } });
+    expect(optedIn.plan.credits[0].aliases).toEqual([{ email: 'alex@gmail.com', method: 'admin_confirmed' }]);
+  });
+
+  it('sends the same-name members the preview saw, for automatic matches and new members only', () => {
+    const a = member('a', 'Ryan', 'Le', { college: 'Muir' });
+    const b = member('b', 'Ryan', 'Le', { college: 'Sixth' });
+    const auto = run([{ name: 'Minh Vo' }], [member('m', 'Minh', 'Vo')]);
+    expect(auto.plan.credits[0].knownSameNameIds).toEqual(['m']);
+    const created = run([{ name: 'Ryan Le' }], [a, b], { decisions: { 0: { kind: 'new' } } });
+    expect(created.plan.creates[0].knownSameNameIds.sort()).toEqual(['a', 'b']);
+    const chosen = run([{ name: 'Ryan Le' }], [a, b], { decisions: { 0: { kind: 'match', memberId: 'a' } } });
+    expect(chosen.plan.credits[0].knownSameNameIds).toBeNull();
+  });
+
+  it('two rows for one member write one credit, and the second address joins it', () => {
+    const { plan, summary } = run([
+      { name: 'Alex Nguyen', email: 'alex@gmail.com', college: 'Muir', year: '3rd' },
+      { name: 'Alex Nguyen', email: 'alex@ucsd.edu', college: 'Muir', year: '3rd' },
+    ], [alex], { observations: [lastYear] });
+    expect(plan.credits).toHaveLength(1);
+    expect(plan.credits[0].aliases).toEqual([{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }]);
     expect(summary).toMatchObject({ existingMembers: 1, duplicatesSkipped: 1 });
-    expect(plan.updates).toHaveLength(1);
   });
 
-  it('flags a second row that resolves to the same member instead of silently dropping it', () => {
-    const { rows, summary } = run(
-      [input(0, 'Mai Ho', { csvCollege: 'Muir' }), input(1, 'Mai Ho', { csvCollege: 'Warren' })],
-      [member('mai', 'Mai', 'Ho')],
-    );
-    expect(rows[0].status).toBe('match');
-    expect(rows[1]).toMatchObject({ status: 'review', reason: 'member_claimed_by_earlier_row', canMarkNew: true });
-    expect(summary).toMatchObject({ existingMembers: 1, unresolved: 1 });
+  it('a repeat comes back for a decision when the row it repeats is skipped', () => {
+    const specs = [{ name: 'Alex Nguyen', email: 'alex@gmail.com' }, { name: 'Alex Nguyen', email: 'alex@gmail.com' }];
+    const skipped = run(specs, [alex], { decisions: { 0: { kind: 'skip' } } });
+    expect(skipped.statusOf(1)).toBe('review');
+    expect(rowNeedsAdmin(skipped.rows[1], skipped.ctx)).toBe(true);
+    const decided = run(specs, [alex], { decisions: { 0: { kind: 'skip' }, 1: { kind: 'new' } } });
+    expect(decided.plan.creates).toHaveLength(1);
   });
 
-  it('credits one member once even when an admin matches two rows to them', () => {
-    const twins = [member('a', 'Sam', 'Le'), member('b', 'Sam', 'Le')];
+  it('several rows an admin points at one member still credit once', () => {
+    const lan = member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' });
     const { plan, summary } = run(
-      [input(0, 'Sam Le', { csvCollege: 'Muir' }), input(1, 'Sam Le', { csvCollege: 'Warren' })],
-      twins,
-      [],
-      { 'row-0': { kind: 'match', memberId: 'a' }, 'row-1': { kind: 'match', memberId: 'a' } },
+      [{ name: 'Lan Tran', email: 'a@gmail.com' }, { name: 'Lan Tran', email: 'b@gmail.com' }],
+      [lan],
+      { decisions: { 0: { kind: 'match', memberId: 'lan' }, 1: { kind: 'match', memberId: 'lan' } } },
     );
-    expect(plan.updates).toHaveLength(1);
-    expect(summary).toMatchObject({ existingMembers: 1, duplicatesSkipped: 1 });
+    expect(plan.credits).toHaveLength(1);
+    expect(summary.duplicatesSkipped).toBe(1);
+  });
+
+  it('keeps each admin-matched row\'s email choice when several rows point at one member', () => {
+    const lan = member('lan', 'Lan', 'Tran', { email: 'lan@ucsd.edu' });
+    const { plan } = run(
+      [{ name: 'Lan Tran', email: 'a@gmail.com' }, { name: 'Lan Tran', email: 'b@gmail.com' }],
+      [lan],
+      { decisions: { 0: { kind: 'match', memberId: 'lan', rememberEmail: false }, 1: { kind: 'match', memberId: 'lan', rememberEmail: true } } },
+    );
+    expect(plan.credits).toHaveLength(1);
+    expect(plan.credits[0].aliases).toEqual([{ email: 'b@gmail.com', method: 'admin_confirmed' }]);
+  });
+
+  it('sends the address that identified a known-email match so the database can recheck it', () => {
+    const { plan } = run([{ name: 'Alex Nguyen', email: 'Alex@Gmail.com', email2: 'alex@ucsd.edu' }], [alex]);
+    expect(plan.credits[0]).toMatchObject({ evidenceEmails: ['alex@gmail.com'], aliases: [{ email: 'alex@ucsd.edu', method: 'same_submission' }] });
+    const byName = run([{ name: 'Alex Nguyen', college: 'Muir' }], [alex]);
+    expect(byName.plan.credits[0].evidenceEmails).toEqual([]);
+  });
+
+  it('a new person submitted twice becomes one create carrying both addresses', () => {
+    const { plan } = run([
+      { name: 'Hoa Pham', email: 'hoa@gmail.com', college: 'Sixth', year: '1st' },
+      { name: 'Hoa Pham', email: 'hoa@ucsd.edu', college: 'Sixth', year: '1st' },
+    ], []);
+    expect(plan.creates).toHaveLength(1);
+    expect(plan.creates[0]).toMatchObject({ email: 'hoa@gmail.com', aliases: [{ email: 'hoa@ucsd.edu', method: 'same_submission' }] });
+  });
+
+  it('an address planned for two people is remembered for neither', () => {
+    const specs = [
+      { name: 'Hoa Pham', email: 'shared@gmail.com', college: 'Sixth' },
+      { name: 'Minh Vo', email: 'x@ucsd.edu', email2: 'shared@gmail.com', college: 'Muir' },
+    ];
+    // Row 2 repeats row 1's address with another name, so it waits for review.
+    expect(run(specs, []).plan.creates).toHaveLength(1);
+    const decided = run(specs, [], { decisions: { 1: { kind: 'new' } } });
+    expect(decided.plan.creates).toHaveLength(2);
+    expect(decided.plan.creates.every((c) => c.email !== 'shared@gmail.com' && c.aliases.every((a) => a.email !== 'shared@gmail.com'))).toBe(true);
+    expect(decided.totals.aliasConflicts).toBe(2);
+  });
+
+  it('a member who already attended is not re-credited, but a new address is still remembered', () => {
+    const { plan, summary } = run([{ name: 'Alex Nguyen', email: 'alex@ucsd.edu', college: 'Muir', year: '2nd' }], [alex],
+      { attended: ['alex'], observations: [lastYear], eventYear: 2025 });
+    expect(summary.alreadyRecorded).toBe(1);
+    expect(plan.credits[0]).toMatchObject({ alreadyAttended: true, aliases: [{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }] });
+    expect(planTotals(plan).creditedMembers).toBe(0);
+  });
+
+  it('a re-import of an event already recorded plans no new credit at all', () => {
+    const { plan } = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com' }], [alex], { attended: ['alex'] });
+    expect(plan.credits).toEqual([]);
+    expect(plan.creates).toEqual([]);
+  });
+
+  it('builds the request the database function expects', () => {
+    const { plan } = run([
+      { name: 'Alex Nguyen', email: 'alex@ucsd.edu', college: 'Muir', year: '3rd' },
+      { name: 'Hoa Pham', email: 'hoa@ucsd.edu', college: 'Sixth', year: 'Alumni' },
+    ], [alex], { observations: [lastYear] });
+    const request = toImportRequest(plan, {
+      requestId: 'req', eventId: 'gbm', expectedPoints: 3, expectedTermId: 'fall',
+    });
+    expect(request).toEqual({
+      request_id: 'req',
+      event_id: 'gbm',
+      expected_points: 3,
+      expected_term_id: 'fall',
+      credits: [{
+        row_key: 'row-0',
+        member_id: 'alex',
+        expected: { first_name: 'Alex', last_name: 'Nguyen', college: 'Muir', email: 'alex@gmail.com' },
+        year: { from: '2nd Year', to: '3rd Year' },
+        aliases: [{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }],
+        observed_year: '3rd Year',
+        known_same_name_ids: ['alex'],
+        expected_standing: { year: '2nd Year', observations: 1 },
+        source_name: 'Alex Nguyen',
+      }],
+      creates: [{
+        row_key: 'row-1', first_name: 'Hoa', last_name: 'Pham', college: 'Sixth', year: 'Alumni', email: 'hoa@ucsd.edu',
+        known_same_name_ids: [],
+      }],
+    });
   });
 });

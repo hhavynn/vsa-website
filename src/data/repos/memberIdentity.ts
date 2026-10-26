@@ -9,6 +9,10 @@
 //      as "no members" would turn every attendee into a new duplicate member.
 import { supabase } from '../../lib/supabase';
 import { isPostgrestErrorShape, withErrorHandling } from '../errors';
+import type { Json } from '../../types/database';
+import type { IdentityAlias } from '../../lib/identityResolution';
+import type { YearObservation } from '../../lib/yearStanding';
+import type { AttendanceImportRequest } from '../../lib/attendanceImportDecisions';
 
 export const IDENTITY_PAGE_SIZE = 1000;
 
@@ -25,6 +29,19 @@ export interface RosterMember {
 }
 
 type PageResult<T> = { data: T[] | null; error: unknown };
+
+/** A missing identity table means the rollout flag is on before its migration. */
+async function requireIdentitySchema<T>(read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
+    if (code === 'PGRST205' || code === '42P01') {
+      throw new Error('The member identity migration (20261025000000) is not applied to this database. Turn off REACT_APP_ATTENDANCE_IDENTITY_V2, or apply the migration first.');
+    }
+    throw error;
+  }
+}
 
 /** PostgREST errors are plain objects; keep their message when one has no code. */
 function toThrowable(error: unknown): unknown {
@@ -58,6 +75,49 @@ export async function readAllById<T extends { id: string }>(
 
 const ROSTER_COLUMNS = 'id, first_name, last_name, college, year, email, points, events_attended, created_at';
 
+export interface ImportEvent {
+  id: string;
+  name: string;
+  date: string;
+  points: number;
+  academic_term_id: string | null;
+}
+
+export interface ImportTerm {
+  id: string;
+  label: string;
+  academic_year_start: number;
+  academic_year_end: number;
+}
+
+export type ImportProblemKind =
+  | 'event_missing'
+  | 'event_has_no_term'
+  | 'event_changed'
+  | 'member_missing'
+  | 'member_changed'
+  | 'email_owned_by_other'
+  | 'email_held_by_other'
+  | 'possible_duplicate_created'
+  /** Client-side: an earlier attempt with this request id already committed. */
+  | 'already_applied';
+
+export type AttendanceImportResult =
+  | { ok: false; problems: { kind: ImportProblemKind; row_key?: string }[] }
+  | {
+      ok: true;
+      request_id: string;
+      replayed?: boolean;
+      created: { row_key: string; member_id: string }[];
+      attendance_inserted: number;
+      attendance_already_present: string[];
+      profile_fills: number;
+      years_advanced: number;
+      years_skipped: string[];
+      aliases_added: number;
+      observations_added: number;
+    };
+
 export class MemberIdentityRepository {
   /** Every member an admin can see. Throws rather than returning a partial roster. */
   async loadRoster(): Promise<RosterMember[]> {
@@ -86,6 +146,70 @@ export class MemberIdentityRepository {
       });
       return new Set(rows.map((row) => row.member_id));
     }, 'Could not load existing attendance for this event');
+  }
+
+  /** Every confirmed address. Admin-only table; a non-admin reads nothing. */
+  async loadIdentityEmails(): Promise<(IdentityAlias & { id: string })[]> {
+    return withErrorHandling(
+      () => requireIdentitySchema(() => readAllById<IdentityAlias & { id: string }>((afterId, pageSize) => {
+        let query = supabase.from('member_identity_emails').select('id, member_id, email').order('id', { ascending: true }).limit(pageSize);
+        if (afterId) query = query.gt('id', afterId);
+        return query as unknown as PromiseLike<PageResult<IdentityAlias & { id: string }>>;
+      })),
+      'Could not load confirmed member emails',
+    );
+  }
+
+  async loadYearObservations(): Promise<YearObservation[]> {
+    return withErrorHandling(
+      () => readAllById<YearObservation & { id: string }>((afterId, pageSize) => {
+        let query = supabase
+          .from('member_year_observations')
+          .select('id, member_id, academic_year_start, year_label, source')
+          .order('id', { ascending: true })
+          .limit(pageSize);
+        if (afterId) query = query.gt('id', afterId);
+        return query as unknown as PromiseLike<PageResult<YearObservation & { id: string }>>;
+      }),
+      'Could not load recorded member years',
+    );
+  }
+
+  /** One transaction; returns the problems instead of writing when the preview is stale. */
+  async applyAttendanceImport(request: AttendanceImportRequest): Promise<AttendanceImportResult> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase.rpc('admin_apply_attendance_import', { p_request: request as unknown as Json });
+      if (error) throw toThrowable(error);
+      if (!data || typeof data !== 'object' || Array.isArray(data) || typeof (data as { ok?: unknown }).ok !== 'boolean') {
+        throw new Error('The import returned an unexpected result; check Recent Imports before retrying.');
+      }
+      return data as unknown as AttendanceImportResult;
+    }, 'Import failed');
+  }
+
+  /**
+   * The event being imported and its academic term, read fresh so a preview
+   * (and the import's expected points / term) reflects edits made since the
+   * page loaded. Accepts a list or a single row (both PostgREST shapes).
+   */
+  async readImportEvent(eventId: string): Promise<{ event: ImportEvent; term: ImportTerm | null }> {
+    return withErrorHandling(async () => {
+      const asList = <T,>(data: unknown): T[] => (Array.isArray(data) ? data : data ? [data] : []) as T[];
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('id, name, date, points, academic_term_id')
+        .eq('id', eventId);
+      if (eventError) throw toThrowable(eventError);
+      const event = asList<ImportEvent>(eventData).find((e) => e.id === eventId);
+      if (!event) throw new Error('The selected event no longer exists.');
+      if (!event.academic_term_id) return { event, term: null };
+      const { data: termData, error: termError } = await supabase
+        .from('academic_terms')
+        .select('id, label, academic_year_start, academic_year_end')
+        .eq('id', event.academic_term_id);
+      if (termError) throw toThrowable(termError);
+      return { event, term: asList<ImportTerm>(termData).find((t) => t.id === event.academic_term_id) ?? null };
+    }, 'Could not re-read the event');
   }
 
   /** Pairs an admin marked as different people. Ordered offset pages (the table has a composite key). */
