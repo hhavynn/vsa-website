@@ -182,6 +182,8 @@ export interface PlannedCredit<R, M extends IdentityMember> {
   evidenceEmails: string[];
   /** Automatic matches: the standing the evidence was judged against (profile year and how many years were recorded). */
   expectedStanding: { year: string | null; observations: number } | null;
+  /** Automatic matches: the name as written on the row, which the same-name recheck uses. */
+  sourceName: string | null;
 }
 
 export interface PlannedCreate<R> {
@@ -277,6 +279,7 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
         expectedStanding: automatic
           ? { year: member.year, observations: (observationsByMember.get(member.id) ?? []).length }
           : null,
+        sourceName: automatic ? row.displayName : null,
       };
       creditByMember.set(member.id, credit);
       plan.credits.push(credit);
@@ -405,6 +408,7 @@ export interface AttendanceImportRequest {
     known_same_name_ids?: string[];
     evidence_emails?: string[];
     expected_standing?: { year: string | null; observations: number };
+    source_name?: string;
   }>;
   creates: Array<{
     row_key: string;
@@ -440,6 +444,7 @@ export function toImportRequest<M extends IdentityMember>(
       ...(c.knownSameNameIds ? { known_same_name_ids: c.knownSameNameIds } : {}),
       ...(c.evidenceEmails.length ? { evidence_emails: c.evidenceEmails } : {}),
       ...(c.expectedStanding ? { expected_standing: c.expectedStanding } : {}),
+      ...(c.sourceName ? { source_name: c.sourceName } : {}),
     })),
     creates: plan.creates.map((c) => ({
       row_key: c.row.rowId,

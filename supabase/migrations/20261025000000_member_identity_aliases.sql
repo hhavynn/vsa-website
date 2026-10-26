@@ -459,6 +459,8 @@ revoke all on function public.fold_person_name(text) from public, anon, authenti
 --                    evidence_emails?: [text]       addresses that identified the
 --                                       member (known-email matches); they must
 --                                       still identify only this member
+--                    source_name?: text            automatic matches: the row's
+--                                       name, for the same-name recheck and lock
 --                    expected_standing?: { year, observations }  automatic
 --                                       matches: profile year and recorded-year
 --                                       count the evidence was judged against
@@ -639,8 +641,8 @@ begin
   -- Same-name members created by another import (any event) must be visible to
   -- the same-name check below, so imports touching one name queue on it.
   for v_email in
-    select distinct public.fold_person_name(coalesce(c ->> 'first_name', c -> 'expected' ->> 'first_name')
-             || ' ' || coalesce(c ->> 'last_name', c -> 'expected' ->> 'last_name'))
+    select distinct public.fold_person_name(coalesce(c ->> 'source_name', coalesce(c ->> 'first_name', c -> 'expected' ->> 'first_name')
+             || ' ' || coalesce(c ->> 'last_name', c -> 'expected' ->> 'last_name')))
     from (
       select c from jsonb_array_elements(v_creates) c
       union all select c from jsonb_array_elements(v_credits) c where c ? 'known_same_name_ids'
@@ -732,8 +734,8 @@ begin
     end if;
     if exists (
       select 1 from pg_temp.import_member_names m
-      where m.folded = public.fold_person_name(coalesce(v_item ->> 'first_name', v_item -> 'expected' ->> 'first_name')
-              || ' ' || coalesce(v_item ->> 'last_name', v_item -> 'expected' ->> 'last_name'))
+      where m.folded = public.fold_person_name(coalesce(v_item ->> 'source_name', coalesce(v_item ->> 'first_name', v_item -> 'expected' ->> 'first_name')
+              || ' ' || coalesce(v_item ->> 'last_name', v_item -> 'expected' ->> 'last_name')))
         and m.id::text not in (
           select jsonb_array_elements_text(coalesce(v_item -> 'known_same_name_ids', '[]'::jsonb))
           union all select coalesce(v_item ->> 'member_id', ''))
