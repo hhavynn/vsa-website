@@ -226,3 +226,4 @@ describe("profile enrichment during an import", () => {
     expect(await screen.findByText(/1 year update was skipped/)).toBeInTheDocument();
   });
 });
+
