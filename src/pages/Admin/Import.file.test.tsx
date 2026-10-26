@@ -188,16 +188,6 @@ describe("profile enrichment during an import", () => {
 
   const sophomoreCsv =
     "Timestamp,Name (First & Last),School Email?,What year are you?,College\n9/30/2026,Lan Tran,lan@ucsd.edu,2,Muir";
-  const lan = {
-    id: "lan",
-    first_name: "Lan",
-    last_name: "Tran",
-    email: "lan@ucsd.edu",
-    year: "Freshman",
-    college: "Muir",
-    points: 0,
-    events_attended: 0,
-  };
 
   async function previewAndImport() {
     await setup();

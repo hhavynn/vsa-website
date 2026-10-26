@@ -15,6 +15,8 @@ import { PaginationControls } from '../../components/common/PaginationControls';
 import { Button } from '../../components/ui/Button';
 import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { AddMemberModal } from '../../components/features/admin/AddMemberModal';
+import { MemberIdentityEmails } from '../../components/features/admin/MemberIdentityEmails';
+import { identityImportEnabled } from '../../lib/identityRollout';
 import { MemberAttendanceModal } from '../../components/features/admin/MemberAttendanceModal';
 import { MEMBER_COLLEGES } from '../../constants/memberOptions';
 import { HOUSE_LABELS, HOUSE_OPTIONS, normalizeHouse } from '../../constants/houses';
@@ -761,6 +763,7 @@ export default function AdminMembers() {
               <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="optional - helps identify duplicates" className={inputCls} />
             </Field>
+            {identityImportEnabled() && <MemberIdentityEmails memberId={editing.id} contactEmail={editing.email} />}
             <Field label="House (legacy cache — not this year's assignment)">
               <p className="mb-1 text-[11px] text-[var(--color-text3)]">
                 Assign Houses for {formatAcademicYear(getAcademicYearStart(new Date()))} on Admin &rarr; Houses. This field only

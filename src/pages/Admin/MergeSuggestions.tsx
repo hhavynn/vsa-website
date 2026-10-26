@@ -1,47 +1,25 @@
 import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '../../lib/supabase';
 import { memberIdentityRepository } from '../../data/repos/memberIdentity';
+import { identityImportEnabled } from '../../lib/identityRollout';
+import { DUPLICATE_REASON_LABEL, DuplicateCandidateMember, DuplicatePair, findDuplicateMembers } from '../../lib/duplicateMembers';
+import type { IdentityAlias } from '../../lib/identityResolution';
+import type { YearObservation } from '../../lib/yearStanding';
+import { EvidenceList } from '../../components/features/admin/AttendanceRowDecision';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
 import { PageTitle } from '../../components/common/PageTitle';
 
-interface Member {
-  id: string;
-  first_name: string;
-  last_name: string;
-  college: string | null;
-  year: string | null;
-  email: string | null;
-  points: number;
-  events_attended: number;
-  created_at: string;
-}
-
-interface MergePair {
-  source: Member;
-  target: Member;
-  reason: 'Exact Name Match' | 'Exact Email Match';
-}
-
-function normalizeForMatch(s: string): string {
-  return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function cleanName(raw: string): string {
-  let s = raw.trim();
-  s = s.replace(/,/g, ' ');
-  s = s.replace(/\b[A-Za-z]\.\s*/g, '');
-  s = s.replace(/(\b\w{2,})\s+\b[A-Za-z]\b\s+(\w{2,}\b)/g, '$1 $2');
-  return s.replace(/\s+/g, ' ').trim();
-}
+type Member = DuplicateCandidateMember;
+type MergePair = DuplicatePair<Member>;
 
 export default function AdminMergeSuggestions() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [aliases, setAliases] = useState<IdentityAlias[]>([]);
+  const [observations, setObservations] = useState<YearObservation[]>([]);
   const [exclusions, setExclusions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [executingRow, setExecutingRow] = useState<string | null>(null);
-
   const [loadError, setLoadError] = useState('');
 
   async function loadData() {
@@ -49,11 +27,17 @@ export default function AdminMergeSuggestions() {
     setLoadError('');
     try {
       // Complete reads or an error: a partial roster would hide real duplicates and show "All clean".
-      const [roster, excluded] = await Promise.all([
+      // Aliases and years exist only once the identity migration is rolled out.
+      const identity = identityImportEnabled();
+      const [roster, excluded, emails, years] = await Promise.all([
         memberIdentityRepository.loadRoster(),
         memberIdentityRepository.loadMergeExclusions(),
+        identity ? memberIdentityRepository.loadIdentityEmails() : Promise.resolve([]),
+        identity ? memberIdentityRepository.loadYearObservations() : Promise.resolve([]),
       ]);
-      setMembers([...roster].sort((a, b) => a.created_at.localeCompare(b.created_at)) as Member[]);
+      setMembers(roster);
+      setAliases(emails);
+      setObservations(years);
       // Store pairs symmetrically so A->B or B->A are both recognized
       const exSet = new Set<string>();
       excluded.forEach((row) => {
@@ -72,43 +56,23 @@ export default function AdminMergeSuggestions() {
   useEffect(() => { loadData(); }, []);
 
   // ─── Detection Logic ──────────────────────────────────────────────────────────
-  const potentialMatches = useMemo(() => {
-    if (members.length < 2) return [];
-    
-    // Pre-compute matched values to avoid n^2 string manipulation
-    const prep = members.map(m => ({
-      m,
-      normName: normalizeForMatch(cleanName(`${m.first_name} ${m.last_name}`)),
-      normEmail: m.email ? m.email.trim().toLowerCase() : null
-    }));
-
-    const pairs: MergePair[] = [];
-    // Only compare each pair once
-    for (let i = 0; i < prep.length; i++) {
-      for (let j = i + 1; j < prep.length; j++) {
-        const A = prep[i];
-        const B = prep[j];
-        
-        // Skip ignored pairs
-        if (exclusions.has(`${A.m.id}-${B.m.id}`)) continue;
-
-        let reason: MergePair['reason'] | null = null;
-        if (A.normEmail && A.normEmail === B.normEmail) {
-          reason = 'Exact Email Match';
-        } else if (A.normName && A.normName === B.normName) {
-          reason = 'Exact Name Match';
-        }
-
-        if (reason) {
-          // Put the older record as the 'target' and newer as 'source'
-          const target = new Date(A.m.created_at) <= new Date(B.m.created_at) ? A.m : B.m;
-          const source = target.id === A.m.id ? B.m : A.m;
-          pairs.push({ target, source, reason });
-        }
-      }
-    }
-    return pairs;
-  }, [members, exclusions]);
+  // Shared with the attendance importer's name and evidence rules; suggestions only.
+  const potentialMatches = useMemo(
+    () => findDuplicateMembers(members, aliases, observations, exclusions),
+    [members, aliases, observations, exclusions],
+  );
+  const emailsByMember = useMemo(() => {
+    const map = new Map<string, string[]>();
+    const add = (id: string, email: string | null) => {
+      const value = (email ?? '').trim().toLowerCase();
+      if (!value) return;
+      const list = map.get(id) ?? [];
+      if (!list.includes(value)) map.set(id, [...list, value]);
+    };
+    members.forEach(m => add(m.id, m.email));
+    aliases.forEach(a => add(a.member_id, a.email));
+    return map;
+  }, [members, aliases]);
 
   // ─── Pagination ───────────────────────────────────────────────────────────────
   const {
@@ -117,22 +81,16 @@ export default function AdminMergeSuggestions() {
     paginatedData: paginatedMatches,
   } = usePagination(potentialMatches, { defaultRowsPerPage: 10 });
 
-  // ─── Actions ──────────────────────────────────────────────────────────────────
+  // ─── Actions ─────────────────────────────────────────────────────────────────
   async function handleMerge(pair: MergePair) {
     const pairId = `${pair.source.id}-${pair.target.id}`;
     setExecutingRow(pairId);
-    
     try {
-      const { error } = await supabase.rpc('smart_merge_members', {
-        p_source_id: pair.source.id,
-        p_target_id: pair.target.id
-      });
-      
-      if (error) throw error;
+      await memberIdentityRepository.mergeMembers(pair.source.id, pair.target.id);
       toast.success('Successfully merged members.');
       await loadData(); // Full refresh ensures we don't try to merge deleted records later
-    } catch (err: any) {
-      toast.error(err.message || 'Merge failed.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Merge failed.');
     } finally {
       setExecutingRow(null);
     }
@@ -141,16 +99,8 @@ export default function AdminMergeSuggestions() {
   async function handleIgnore(pair: MergePair) {
     const pairId = `${pair.source.id}-${pair.target.id}`;
     setExecutingRow(pairId);
-    
     try {
-      const { error } = await supabase.from('merge_exclusions').insert({
-        source_id: pair.source.id,
-        target_id: pair.target.id
-      });
-      
-      if (error) throw error;
-      
-      // Update local state without full refetch
+      await memberIdentityRepository.ignoreMergePair(pair.source.id, pair.target.id);
       setExclusions(prev => {
         const next = new Set(prev);
         next.add(`${pair.source.id}-${pair.target.id}`);
@@ -158,15 +108,15 @@ export default function AdminMergeSuggestions() {
         return next;
       });
       toast.success('Pair ignored.');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to ignore pair.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to ignore pair.');
     } finally {
       setExecutingRow(null);
     }
   }
 
   // ─── Render Helper ────────────────────────────────────────────────────────────
-  const DiffRow = ({ label, targetVal, sourceVal }: { label: string, targetVal: any, sourceVal: any }) => {
+  const DiffRow = ({ label, targetVal, sourceVal }: { label: string, targetVal: string | null, sourceVal: string | null }) => {
     const hasSourceOnly = !targetVal && sourceVal;
 
     return (
@@ -200,8 +150,8 @@ export default function AdminMergeSuggestions() {
           <div className="mb-6">
             <h2 className="font-sans font-semibold text-base tracking-[-0.01em]" style={{ color: 'var(--color-text)' }}>Duplicate Review Queue</h2>
             <p className="mt-1 text-sm max-w-2xl" style={{ color: 'var(--color-text2)' }}>
-              Clean up your database. The system automatically finds potential duplicates based on names or emails. 
-              Merging will transfer attendance and fill in any missing data on the Target member.
+              Likely duplicates, found by a shared email, the same name and college, or the same name. Nothing merges without you.
+              Merging keeps the Target's id, moves attendance (never crediting an event twice), keeps every email so both keep matching on future imports, and fills missing details.
             </p>
           </div>
 
@@ -234,21 +184,23 @@ export default function AdminMergeSuggestions() {
                     {/* Header */}
                     <div className="px-6 py-3 border-b flex justify-between items-center" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
                       <span className="text-xs font-semibold uppercase tracking-label" style={{ color: 'var(--color-text2)' }}>
-                        {pair.reason}
+                        {DUPLICATE_REASON_LABEL[pair.reason]}
                       </span>
                     </div>
 
                     {/* Columns */}
                     <div className="p-6">
+                      <div className="mb-4"><EvidenceList notes={pair.evidence} /></div>
                       <div className="grid grid-cols-12 gap-4 pb-2 text-xs font-semibold uppercase tracking-label" style={{ color: 'var(--color-text2)' }}>
                         <div className="col-span-2">Field</div>
                         <div className="col-span-5 text-brand-600 dark:text-brand-400">Target (Master Record)</div>
-                        <div className="col-span-5 text-red-600 dark:text-red-400">Source (To be deleted)</div>
+                        <div className="col-span-5 text-red-600 dark:text-red-400">Source (merged into target)</div>
                       </div>
 
                       <DiffRow label="First Name" targetVal={pair.target.first_name} sourceVal={pair.source.first_name} />
                       <DiffRow label="Last Name" targetVal={pair.target.last_name} sourceVal={pair.source.last_name} />
-                      <DiffRow label="Email" targetVal={pair.target.email} sourceVal={pair.source.email} />
+                      <DiffRow label="Contact email" targetVal={pair.target.email} sourceVal={pair.source.email} />
+                      <DiffRow label="All emails" targetVal={(emailsByMember.get(pair.target.id) ?? []).join(', ') || null} sourceVal={(emailsByMember.get(pair.source.id) ?? []).join(', ') || null} />
                       <DiffRow label="College" targetVal={pair.target.college} sourceVal={pair.source.college} />
                       <DiffRow label="Year" targetVal={pair.target.year} sourceVal={pair.source.year} />
                       

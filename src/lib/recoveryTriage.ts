@@ -106,29 +106,48 @@ export interface MemberLookup {
   byId: ReadonlyMap<string, MemberSnapshot>;
   /** Folded full name → members. */
   byName: ReadonlyMap<string, MemberSnapshot[]>;
-  /** Lower-cased email → members. */
+  /** Lower-cased email (stored or a confirmed alias) → members. */
   byEmail: ReadonlyMap<string, MemberSnapshot[]>;
+  /** Member id → every address that identifies them (stored email and confirmed aliases). */
+  emailsById: ReadonlyMap<string, ReadonlySet<string>>;
   /** Members with attendance for the scoped event; null while not loaded. */
   attendedIds: ReadonlySet<string> | null;
   /** Every batched lookup has loaded; until then no row is called straightforward. */
   ready: boolean;
 }
 
-export const EMPTY_LOOKUP: MemberLookup = { byId: new Map(), byName: new Map(), byEmail: new Map(), attendedIds: null, ready: false };
+export const EMPTY_LOOKUP: MemberLookup = { byId: new Map(), byName: new Map(), byEmail: new Map(), emailsById: new Map(), attendedIds: null, ready: false };
 
-export function buildLookup(members: readonly MemberSnapshot[], attendedIds: ReadonlySet<string> | null, ready: boolean): MemberLookup {
+export function buildLookup(
+  members: readonly MemberSnapshot[],
+  attendedIds: ReadonlySet<string> | null,
+  ready: boolean,
+  aliases: readonly { member_id: string; email: string }[] = [],
+): MemberLookup {
   const byId = new Map<string, MemberSnapshot>();
   const byName = new Map<string, MemberSnapshot[]>();
   const byEmail = new Map<string, MemberSnapshot[]>();
+  const emailsById = new Map<string, Set<string>>();
+  const holdEmail = (member: MemberSnapshot, email: string) => {
+    if (!email) return;
+    const known = emailsById.get(member.id) ?? new Set<string>();
+    if (known.has(email)) return;
+    known.add(email);
+    emailsById.set(member.id, known);
+    byEmail.set(email, [...(byEmail.get(email) ?? []), member]);
+  };
   members.forEach((member) => {
     if (byId.has(member.id)) return;
     byId.set(member.id, member);
     const name = foldName(memberName(member));
     if (name) byName.set(name, [...(byName.get(name) ?? []), member]);
-    const email = normEmail(member.email);
-    if (email) byEmail.set(email, [...(byEmail.get(email) ?? []), member]);
+    holdEmail(member, normEmail(member.email));
   });
-  return { byId, byName, byEmail, attendedIds, ready };
+  aliases.forEach((alias) => {
+    const member = byId.get(alias.member_id);
+    if (member) holdEmail(member, normEmail(alias.email));
+  });
+  return { byId, byName, byEmail, emailsById, attendedIds, ready };
 }
 
 export type CandidateSource = 'audit' | 'matched' | 'same_name' | 'email';
@@ -136,7 +155,7 @@ export type CandidateSource = 'audit' | 'matched' | 'same_name' | 'email';
 export interface Candidate {
   member: MemberSnapshot;
   sources: CandidateSource[];
-  /** The row's email equals this member's stored email: the only identity-strong signal. */
+  /** The row's email is this member's stored email or a confirmed alias: the only identity-strong signal. */
   emailMatches: boolean;
   /** Both have an email and they differ. */
   emailDiffers: boolean;
@@ -174,7 +193,7 @@ export function candidatesFor(finding: RecoveryFinding, lookup: MemberLookup): C
   if (email) (lookup.byEmail.get(email) ?? []).forEach((member) => add(member.id, 'email'));
 
   return rankCandidates(Array.from(sources.entries()).map(([id, set]) =>
-    describeCandidate(lookup.byId.get(id) as MemberSnapshot, record, lookup.attendedIds, Array.from(set))));
+    describeCandidate(lookup.byId.get(id) as MemberSnapshot, record, lookup.attendedIds, Array.from(set), lookup.emailsById.get(id))));
 }
 
 /** How a member compares with the row: the evidence an admin needs to tell similar people apart. */
@@ -183,13 +202,16 @@ export function describeCandidate(
   record: Pick<RecoveryFinding['record'], 'csv_email' | 'csv_college' | 'csv_year'>,
   attendedIds: ReadonlySet<string> | null,
   sources: CandidateSource[] = [],
+  /** The member's stored email and confirmed aliases; defaults to the stored email. */
+  memberEmails?: ReadonlySet<string>,
 ): Candidate {
   const email = normEmail(record.csv_email);
+  const known = memberEmails ?? new Set([normEmail(member.email)].filter(Boolean));
   return {
     member,
     sources,
-    emailMatches: !!email && normEmail(member.email) === email,
-    emailDiffers: !!email && !!normEmail(member.email) && normEmail(member.email) !== email,
+    emailMatches: !!email && known.has(email),
+    emailDiffers: !!email && known.size > 0 && !known.has(email),
     collegeDiffers: differs(record.csv_college, member.college),
     yearDiffers: differs(record.csv_year, member.year),
     attended: attendedIds ? attendedIds.has(member.id) : null,

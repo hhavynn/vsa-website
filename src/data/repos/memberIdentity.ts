@@ -75,6 +75,16 @@ export async function readAllById<T extends { id: string }>(
 
 const ROSTER_COLUMNS = 'id, first_name, last_name, college, year, email, points, events_attended, created_at';
 
+export interface MemberIdentityEmail {
+  id: string;
+  member_id: string;
+  email: string;
+  source: 'backfill' | 'member_profile' | 'attendance_import' | 'admin' | 'merge';
+  verification_method: 'primary_email' | 'unique_name_college_year' | 'admin_confirmed' | 'same_submission' | 'admin_entered';
+  created_at: string;
+  moved_from_member_id: string | null;
+}
+
 export interface ImportEvent {
   id: string;
   name: string;
@@ -185,6 +195,52 @@ export class MemberIdentityRepository {
       }
       return data as unknown as AttendanceImportResult;
     }, 'Import failed');
+  }
+
+  /** One member's confirmed addresses, newest first. */
+  async listMemberEmails(memberId: string): Promise<MemberIdentityEmail[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('member_identity_emails')
+        .select('id, member_id, email, source, verification_method, created_at, moved_from_member_id')
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false });
+      if (error) throw toThrowable(error);
+      return (data ?? []) as MemberIdentityEmail[];
+    }, 'Could not load this member\'s emails');
+  }
+
+  /** An admin's own confirmation that this address is the member's. */
+  async addMemberEmail(memberId: string, email: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase
+        .from('member_identity_emails')
+        .insert({ member_id: memberId, email, source: 'admin', verification_method: 'admin_entered' });
+      if (error) throw toThrowable(error);
+    }, 'Could not add the email');
+  }
+
+  /** Forgets an address (for example one remembered for the wrong person). Attendance is not touched. */
+  async removeMemberEmail(id: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase.from('member_identity_emails').delete().eq('id', id);
+      if (error) throw toThrowable(error);
+    }, 'Could not remove the email');
+  }
+
+  /** smart_merge_members: the target keeps its id; attendance, aliases and links move to it. */
+  async mergeMembers(sourceId: string, targetId: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase.rpc('smart_merge_members', { p_source_id: sourceId, p_target_id: targetId });
+      if (error) throw toThrowable(error);
+    }, 'Merge failed');
+  }
+
+  async ignoreMergePair(sourceId: string, targetId: string): Promise<void> {
+    return withErrorHandling(async () => {
+      const { error } = await supabase.from('merge_exclusions').insert({ source_id: sourceId, target_id: targetId });
+      if (error) throw toThrowable(error);
+    }, 'Could not ignore the pair');
   }
 
   /**
