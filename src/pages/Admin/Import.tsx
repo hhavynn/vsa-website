@@ -11,7 +11,15 @@ import { supabase } from '../../lib/supabase';
 import { runBulkWrites } from '../../lib/bulkWrites';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
-import { normalizeYearInput, OFFICIAL_YEARS } from '../../lib/yearNormalizer';
+import { parseCsvTable } from '../../lib/csvParse';
+import {
+  AttendanceColumnMapping,
+  EMPTY_ATTENDANCE_MAPPING,
+  attendanceMappingProblem,
+  buildAttendanceRows,
+  detectAttendanceColumns,
+} from '../../lib/attendanceCsv';
+import { memberIdentityRepository } from '../../data/repos/memberIdentity';
 import { PageTitle } from '../../components/common/PageTitle';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -34,6 +42,7 @@ import {
   AttendanceMatchReason,
   AttendanceMatchResult,
   buildMemberLookupMaps,
+  cleanNameForImport,
   getSafeAttendanceMemberEnrichment,
   planAttendanceMemberEnrichments,
   matchAttendanceImportRows,
@@ -135,62 +144,7 @@ function getSortPriority(status: EffectiveStatus, row: RowResult, sortMode: Sort
   return row.originalIndex;
 }
 
-// ─── Name helpers ─────────────────────────────────────────────────────────────
-
-/** Capitalize the first letter of every word, lowercase the rest.
- *  "john doe" → "John Doe", "MARY LOU" → "Mary Lou" */
-function capitalizeName(s: string): string {
-  return s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-}
-
-/**
- * Normalise a raw name string for matching purposes:
- *  - "Lynna, On"        → "Lynna On"      (comma stripped, order kept)
- *  - "Kevin J. Nguyen"  → "Kevin Nguyen"  (middle initial with period)
- *  - "Kevin J Nguyen"   → "Kevin Nguyen"  (single-letter middle word)
- * Returns a capitalised string. Does NOT mutate the display name.
- */
-function cleanName(raw: string): string {
-  let s = raw.trim();
-  // Strip ALL commas — treat as typos/separators, never as Last/First markers
-  s = s.replace(/,/g, ' ');
-  // Remove middle initials followed by a period: "J." or "J. "
-  s = s.replace(/\b[A-Za-z]\.\s*/g, '');
-  // Remove lone single-letter middle words between two multi-letter words
-  s = s.replace(/(\b\w{2,})\s+\b[A-Za-z]\b\s+(\w{2,}\b)/g, '$1 $2');
-  return capitalizeName(s.replace(/\s+/g, ' ').trim());
-}
-
-// ─── CSV helpers ──────────────────────────────────────────────────────────────
-
-function parseCSV(raw: string): Record<string, string>[] {
-  const lines = raw.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const headers = splitRow(lines[0]);
-  return lines.slice(1).map(line => {
-    const vals = splitRow(line);
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h.trim()] = (vals[i] ?? '').trim(); });
-    return row;
-  });
-}
-
-function splitRow(line: string): string[] {
-  const out: string[] = [];
-  let cur = '', inQ = false;
-  for (const ch of line) {
-    if (ch === '"') inQ = !inQ;
-    else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
-    else cur += ch;
-  }
-  out.push(cur);
-  return out;
-}
-
-function detectCol(headers: string[], hints: string[]): string {
-  const h = hints.map(x => x.toLowerCase());
-  return headers.find(c => h.some(hint => c.toLowerCase().includes(hint))) ?? '';
-}
+// ─── Source helpers ───────────────────────────────────────────────────────────
 
 /** Supabase errors are sometimes plain `{ message }` objects rather than Error instances. */
 function describeError(err: unknown): string {
@@ -235,13 +189,10 @@ export default function AdminImport() {
 
   // Column mapping
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [firstNameCol, setFirstNameCol] = useState('');
-  const [lastNameCol, setLastNameCol] = useState('');
-  const [fullNameCol, setFullNameCol] = useState('');
-  const [useFullName, setUseFullName] = useState(false);
-  const [collegeCol, setCollegeCol] = useState('');
-  const [yearCol, setYearCol] = useState('');
-  const [emailCol, setEmailCol] = useState('');
+  const [mapping, setMapping] = useState<AttendanceColumnMapping>(EMPTY_ATTENDANCE_MAPPING);
+  const [duplicateHeaders, setDuplicateHeaders] = useState<string[]>([]);
+  // Matching could not run (mapping problem or an incomplete member read). Blocks the import.
+  const [matchError, setMatchError] = useState('');
 
   // Preview
   const [rows, setRows] = useState<RowResult[]>([]);
@@ -258,21 +209,24 @@ export default function AdminImport() {
 
   useEffect(() => {
     async function loadData() {
-      const { data: eventsData } = await supabase
-        .from('events')
-        .select('id, name, date, points, academic_term_id')
-        .order('date', { ascending: false });
+      const [{ data: eventsData, error: eventsError }, { data: termsData, error: termsError }] = await Promise.all([
+        supabase.from('events').select('id, name, date, points, academic_term_id').order('date', { ascending: false }),
+        supabase.from('academic_terms').select('id, label, academic_year_start, academic_year_end'),
+      ]);
+      if (eventsError || termsError) {
+        setConfigError('Could not load events and academic terms. Reload the page before importing.');
+      }
       setEvents((eventsData ?? []) as Event[]);
-
-      const { data: termsData } = await supabase
-        .from('academic_terms')
-        .select('id, label, academic_year_start, academic_year_end');
       const termMap: Record<string, AcademicTerm> = {};
       (termsData ?? []).forEach((t: AcademicTerm) => { termMap[t.id] = t; });
       setTerms(termMap);
     }
     loadData();
   }, []);
+
+  function setColumn<K extends keyof AttendanceColumnMapping>(key: K, value: AttendanceColumnMapping[K]) {
+    setMapping(current => ({ ...current, [key]: value }));
+  }
 
   function updateRow(rowId: string, updater: (row: RowResult) => RowResult) {
     setRows(current => current.map(row => (row.rowId === rowId ? updater(row) : row)));
@@ -341,25 +295,16 @@ export default function AdminImport() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         raw = await res.text();
       }
-      const parsed = parseCSV(raw);
-      if (!parsed.length) throw new Error('No data rows found in CSV.');
+      const table = parseCsvTable(raw);
+      if (!table.rows.length) throw new Error('No data rows found in CSV.');
 
-      const headers = Object.keys(parsed[0]);
-      setCsvHeaders(headers);
-      setCachedParsed(parsed);
+      const detected = detectAttendanceColumns(table.headers);
+      setCsvHeaders(table.headers);
+      setDuplicateHeaders(table.duplicateHeaders);
+      setCachedParsed(table.rows);
+      setMapping(detected);
 
-      const dFirst   = detectCol(headers, ['first name', 'first', 'given name', 'firstname']);
-      const dLast    = detectCol(headers, ['last name', 'last', 'family', 'lastname', 'surname']);
-      const dFull    = detectCol(headers, ['full name', 'name', 'your name', 'student name', 'what is your name']);
-      const dCollege = detectCol(headers, ['college', 'ucsd college', 'residential college']);
-      const dYear    = detectCol(headers, ['year', 'student year', 'year in school', 'academic year', 'standing']);
-      const dEmail   = detectCol(headers, ['email', 'email address', 'e-mail', 'contact email', 'gmail']);
-      const useFull  = !!dFull;
-
-      setFirstNameCol(dFirst); setLastNameCol(dLast); setFullNameCol(dFull);
-      setUseFullName(useFull); setCollegeCol(dCollege); setYearCol(dYear); setEmailCol(dEmail);
-
-      await runMatching(parsed, dFirst, dLast, dFull, useFull, dCollege, dYear, dEmail, selectedEventId);
+      await runMatching(table.rows, detected, selectedEventId);
       setStep('preview');
     } catch (err: unknown) {
       setConfigError(`Failed to load CSV: ${err instanceof Error ? err.message : String(err)}`);
@@ -369,54 +314,42 @@ export default function AdminImport() {
   }
 
   // ── Matching engine ───────────────────────────────────────────────────────────
-  async function runMatching(
-    parsed: Record<string, string>[],
-    fCol: string, lCol: string, fullCol: string, useFull: boolean,
-    cCol: string, yCol: string, eCol: string, eventId: string,
-  ) {
-    // Load all existing members
-    const { data: membersData } = await supabase
-      .from('members')
-      .select('id, first_name, last_name, college, year, points, events_attended, email');
-    const allMembers = (membersData ?? []) as Member[];
-
-    // Load which members already have attendance for this event
-    const { data: existingAtt } = await supabase
-      .from('member_event_attendance')
-      .select('member_id')
-      .eq('event_id', eventId);
-    const alreadySet = new Set((existingAtt ?? []).map((r: { member_id: string }) => r.member_id));
-    setAlreadyMemberIds(alreadySet);
+  async function runMatching(parsed: Record<string, string>[], columns: AttendanceColumnMapping, eventId: string) {
     setAckPartial(false);
     createdByRowIdRef.current = {};
     withheldEmailRowIdsRef.current = new Set();
+    setMatchError('');
 
-    const matchInputs = parsed.map((row, index) => {
-      // Build display name (capitalised, shown in table)
-      let displayName = '';
-      if (useFull) {
-        displayName = capitalizeName(fullCol ? row[fullCol] : '');
-      } else {
-        const fn = capitalizeName(fCol ? row[fCol] : '');
-        const ln = capitalizeName(lCol ? row[lCol] : '');
-        displayName = [fn, ln].filter(Boolean).join(' ');
-      }
+    const problem = attendanceMappingProblem(columns, Object.keys(parsed[0] ?? {}));
+    let allMembers: Member[];
+    let alreadySet: Set<string>;
+    try {
+      if (problem) throw new Error(problem);
+      // Both reads are complete or they throw: an unread member must never look like a new one.
+      [allMembers, alreadySet] = await Promise.all([
+        memberIdentityRepository.loadRoster(),
+        memberIdentityRepository.loadEventAttendeeIds(eventId),
+      ]);
+    } catch (err: unknown) {
+      setMatchError(describeError(err));
+      setRows([]);
+      setMatchedMembersSnapshot([]);
+      setAlreadyMemberIds(new Set());
+      return;
+    }
+    setAlreadyMemberIds(alreadySet);
 
-      // Build match name (cleaned: no middle initials, comma-reversed)
-      const matchName = cleanName(displayName);
-
-      const csvCollege    = (cCol ? row[cCol] : '').trim();
-      const csvYear       = normalizeYearInput(yCol ? row[yCol] : '');
-      const csvEmail      = (eCol ? row[eCol] : '').trim().toLowerCase();
-      const invalidYear = csvYear !== '' && !OFFICIAL_YEARS.includes(csvYear);
-
-      return {
-        rowId: `${index}-${displayName}-${csvEmail}`,
-        originalIndex: index,
-        csvRow: row, displayName, matchName, csvCollege, csvYear, csvEmail,
-        invalidYear,
-      };
-    });
+    const matchInputs = buildAttendanceRows(parsed, columns).map(row => ({
+      rowId: row.rowId,
+      originalIndex: row.originalIndex,
+      csvRow: row.csvRow,
+      displayName: row.displayName,
+      matchName: cleanNameForImport(row.displayName),
+      csvCollege: row.csvCollege,
+      csvYear: row.csvYear,
+      csvEmail: row.csvEmail,
+      invalidYear: row.invalidYear,
+    }));
 
     const results = matchAttendanceImportRows(matchInputs, allMembers, alreadySet).map((result) => ({
       ...result,
@@ -433,7 +366,7 @@ export default function AdminImport() {
   async function handleRematch() {
     setFetchingCsv(true);
     try {
-      await runMatching(cachedParsed, firstNameCol, lastNameCol, fullNameCol, useFullName, collegeCol, yearCol, emailCol, selectedEventId);
+      await runMatching(cachedParsed, mapping, selectedEventId);
     } finally {
       setFetchingCsv(false);
     }
@@ -469,11 +402,7 @@ export default function AdminImport() {
       const pts = event.points ?? 1;
       importPoints = pts;
 
-      const { data: latestMembersData, error: latestMembersError } = await supabase
-        .from('members')
-        .select('id, first_name, last_name, college, year, points, events_attended, email');
-      if (latestMembersError) throw latestMembersError;
-      const latestMembers = (latestMembersData ?? matchedMembersSnapshot) as Member[];
+      const latestMembers: Member[] = await memberIdentityRepository.loadRoster();
 
       // Plan from the latest member list so a new member never takes an email that has since been claimed.
       const plan = planAttendanceWrites(rows, decisionContext, latestMembers);
@@ -883,23 +812,37 @@ export default function AdminImport() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="col-span-2 sm:col-span-1 flex items-end">
                     <label className="flex items-center gap-1.5 text-xs text-[var(--color-text3)] cursor-pointer select-none">
-                      <input type="checkbox" checked={useFullName} onChange={e => setUseFullName(e.target.checked)} className="rounded" />
+                      <input type="checkbox" checked={mapping.useFullName} onChange={e => setColumn('useFullName', e.target.checked)} className="rounded" />
                       Use single "full name" column
                     </label>
                   </div>
-                  {useFullName
-                    ? <ColSelect label="Full name"  value={fullNameCol}  onChange={setFullNameCol}  headers={csvHeaders} />
-                    : <><ColSelect label="First name" value={firstNameCol} onChange={setFirstNameCol} headers={csvHeaders} />
-                        <ColSelect label="Last name"  value={lastNameCol}  onChange={setLastNameCol}  headers={csvHeaders} /></>}
-                  <ColSelect label="College" value={collegeCol} onChange={setCollegeCol} headers={csvHeaders} />
-                  <ColSelect label="Year"    value={yearCol}    onChange={setYearCol}    headers={csvHeaders} />
-                  <ColSelect label="Email"   value={emailCol}   onChange={setEmailCol}   headers={csvHeaders} />
+                  {mapping.useFullName
+                    ? <ColSelect label="Full name" value={mapping.fullName} onChange={v => setColumn('fullName', v)} headers={csvHeaders} />
+                    : <><ColSelect label="First name" value={mapping.firstName} onChange={v => setColumn('firstName', v)} headers={csvHeaders} />
+                        <ColSelect label="Last name" value={mapping.lastName} onChange={v => setColumn('lastName', v)} headers={csvHeaders} /></>}
+                  <ColSelect label="College" value={mapping.college} onChange={v => setColumn('college', v)} headers={csvHeaders} />
+                  <ColSelect label="Year" value={mapping.year} onChange={v => setColumn('year', v)} headers={csvHeaders} />
+                  <ColSelect label="Email" value={mapping.email} onChange={v => setColumn('email', v)} headers={csvHeaders} />
+                  <ColSelect label="Second email (optional)" value={mapping.secondaryEmail} onChange={v => setColumn('secondaryEmail', v)} headers={csvHeaders} />
                 </div>
+                {duplicateHeaders.length > 0 && (
+                  <p className="mt-3 text-xs text-[var(--color-text3)]">
+                    This file repeats the column{duplicateHeaders.length !== 1 ? 's' : ''} {duplicateHeaders.map(h => `"${h}"`).join(', ')}. Later copies are listed as "(2)", "(3)"; check the mapping uses the right one.
+                  </p>
+                )}
                 <button onClick={handleRematch} disabled={fetchingCsv}
                   className="mt-3 text-xs text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-50">
                   {fetchingCsv ? 'Re-matching…' : '↻ Re-run matching with these columns'}
                 </button>
               </div>
+
+              {matchError && (
+                <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                  <p className="font-medium">Matching did not run, so nothing can be imported.</p>
+                  <p className="mt-1">{matchError}</p>
+                  <p className="mt-1 text-xs">Fix the column mapping or retry with ↻ Re-run matching. An incomplete member list is never used, because it would turn existing members into new duplicates.</p>
+                </div>
+              )}
 
               <ImportReviewPanel
                 rows={reviewAttendanceRows(rows.map(r => ({
@@ -1143,7 +1086,7 @@ export default function AdminImport() {
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || selectedEventMissingTerm || (summary.existingMembers + totalNewMembers) === 0 || (summary.unresolved > 0 && !ackPartial)}
+                  disabled={importing || !!matchError || selectedEventMissingTerm || (summary.existingMembers + totalNewMembers) === 0 || (summary.unresolved > 0 && !ackPartial)}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
                     text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing

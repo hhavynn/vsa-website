@@ -248,6 +248,7 @@ describe("profile enrichment during an import", () => {
       const importButton = await previewAndImport();
       // Import-time reads of `members` (latest record), then the profile update, which is rejected.
       supabaseMock.queueResult("members", { data: [lan], error: null });
+      supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
       supabaseMock.queueResult("members", {
         data: null,
         error: { code: "over_request_rate_limit", message: "paused" },

@@ -104,6 +104,7 @@ describe("a suggested member who is actually someone else", () => {
     expect(stat("New members being created")).toBe("1");
 
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "lan-two" }], error: null });
     fireEvent.click(screen.getByRole("button", { name: /Import \(0 updates \+ 1 new\)/ }));
     await screen.findByText("Import complete!");
@@ -134,6 +135,7 @@ describe("a suggested member who is actually someone else", () => {
     fireEvent.click(screen.getByRole("button", { name: /Match existing member Lan Tran/ }));
     expect(stat("Existing members receiving attendance")).toBe("1");
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     fireEvent.click(screen.getByRole("button", { name: /Import \(1 update \+ 0 new\)/ }));
     await screen.findByText("Import complete!");
     expect(attendanceUpserts()[0].args[0]).toEqual([{ member_id: "lan", event_id: "gbm", points_earned: 3 }]);
@@ -149,6 +151,7 @@ describe("an email that already belongs to another member", () => {
     expect(screen.getByText(/already belongs to Lan Tran/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Create new member for Bao Pham/ }));
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "bao" }], error: null });
     fireEvent.click(screen.getByRole("button", { name: /Import \(0 updates \+ 1 new\)/ }));
     await screen.findByText("Import complete!");
@@ -164,6 +167,7 @@ describe("emails across one import", () => {
     await preview(["Kim Do,shared@ucsd.edu,2,Muir", "Bao Pham,shared@ucsd.edu,2,Warren"]);
     fireEvent.click(screen.getByRole("button", { name: /Create new member for Bao Pham/ }));
     supabaseMock.queueResult("members", { data: [{ ...lan, id: "kim", first_name: "Kim", last_name: "Do", email: null, college: null }], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "bao" }], error: null });
     fireEvent.click(screen.getByRole("button", { name: /Import \(1 update \+ 1 new\)/ }));
     await screen.findByText("Import complete!");
@@ -183,6 +187,7 @@ describe("unresolved rows", () => {
     expect(importButton).toBeEnabled();
 
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "minh" }], error: null });
     fireEvent.click(importButton);
     await screen.findByText("Import complete!");
@@ -210,6 +215,7 @@ describe("unresolved rows", () => {
     expect(screen.queryByRole("checkbox", { name: /I understand/ })).not.toBeInTheDocument();
 
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "minh" }], error: null });
     fireEvent.click(screen.getByRole("button", { name: /Import \(0 updates \+ 1 new\)/ }));
     await screen.findByText("Import complete!");
@@ -236,6 +242,7 @@ describe("failures and retries", () => {
 
     // Attempt 1: the member is created, then the attendance write fails.
     supabaseMock.queueResult("members", { data: [lan], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     supabaseMock.queueResult("members", { data: [{ id: "minh" }], error: null });
     supabaseMock.queueResult("member_event_attendance", { data: null, error: { message: "connection reset" } });
     fireEvent.click(importButton);
@@ -246,6 +253,7 @@ describe("failures and retries", () => {
 
     // Attempt 2: no second member, attendance goes to the member already created.
     supabaseMock.queueResult("members", { data: [lan, { ...lan, id: "minh", first_name: "Minh", last_name: "Vo", email: "minh@ucsd.edu" }], error: null });
+    supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
     fireEvent.click(screen.getByRole("button", { name: /Import \(0 updates \+ 1 new\)/ }));
     await screen.findByText("Import complete!");
     expect(memberInserts()).toHaveLength(1);
@@ -258,7 +266,7 @@ describe("failures and retries", () => {
     await preview(["Minh Vo,minh@ucsd.edu,1,Muir"]);
     supabaseMock.queueResult("members", { data: null, error: { message: "permission denied" } });
     fireEvent.click(screen.getByRole("button", { name: /Import \(0 updates \+ 1 new\)/ }));
-    expect(await screen.findByText(/Import failed: permission denied/)).toBeInTheDocument();
+    expect(await screen.findByText(/Import failed: Could not load the complete member list: permission denied/)).toBeInTheDocument();
     expect(attendanceUpserts()).toEqual([]);
   });
 });

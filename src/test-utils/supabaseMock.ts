@@ -101,7 +101,7 @@ export type MockQueryBuilder<T = unknown> = {
  */
 function createQueryBuilder<T>(
   record: RecordedQuery,
-  resolveResult: (table: string, singleRow: boolean) => QueryResult<T>
+  resolveResult: (table: string, singleRow: boolean, record: RecordedQuery) => QueryResult<T>
 ): MockQueryBuilder<T> {
   const builder: Record<string, unknown> = {};
   // Held on an object rather than a bare `let` so the closures installed in the
@@ -119,7 +119,7 @@ function createQueryBuilder<T>(
     builder[method] = (...args: unknown[]) => {
       record.calls.push({ method, args });
       state.settled = true;
-      return Promise.resolve(resolveResult(record.table, true));
+      return Promise.resolve(resolveResult(record.table, true, record));
     };
   }
 
@@ -131,7 +131,7 @@ function createQueryBuilder<T>(
     onfulfilled?: ((value: QueryResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2> =>
-    Promise.resolve(resolveResult(record.table, state.settled)).then(
+    Promise.resolve(resolveResult(record.table, state.settled, record)).then(
       onfulfilled as never,
       onrejected as never
     );
@@ -232,12 +232,12 @@ export class SupabaseMock {
     from: (table: string) => {
       const record: RecordedQuery = { table, calls: [] };
       this.recorded.push(record);
-      return createQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
+      return createQueryBuilder(record, (t, singleRow, r) => this.takeResult(t, singleRow, r));
     },
     rpc: (fn: string, args?: unknown) => {
       const record: RecordedQuery = { table: `rpc:${fn}`, calls: [{ method: 'rpc', args: [args] }] };
       this.recorded.push(record);
-      return createQueryBuilder(record, (t, singleRow) => this.takeResult(t, singleRow));
+      return createQueryBuilder(record, (t, singleRow, r) => this.takeResult(t, singleRow, r));
     },
     // Realtime: an inert channel. Leaderboard subscribes to `members` changes
     // in its all-time view once data has loaded; without this the page threw
@@ -281,12 +281,12 @@ export class SupabaseMock {
     return this;
   }
 
-  private takeResult(table: string, singleRow: boolean): QueryResult {
+  private takeResult(table: string, singleRow: boolean, record: RecordedQuery): QueryResult {
     const queue = this.queued.get(table);
     if (queue && queue.length > 0) return queue.shift() as QueryResult;
 
     const fallback = this.defaults.get(table);
-    if (fallback) return fallback;
+    if (fallback) return keysetPage(fallback, record);
 
     // An unconfigured table resolves empty rather than throwing, so a
     // repository that fans out across several tables does not require every
@@ -320,6 +320,24 @@ export class SupabaseMock {
   usedMethod(table: string, method: string): boolean {
     return this.queriesFor(table).some((q) => q.calls.some((c) => c.method === method));
   }
+}
+
+/**
+ * A default list read as a keyset page: `.order('id').gt('id', x).limit(n)`
+ * returns the rows after `x`, at most `n`, so a paging repository walks the
+ * default rows and then sees an empty page. Other reads get the default as is.
+ */
+function keysetPage(result: QueryResult, record: RecordedQuery): QueryResult {
+  const calls = record.calls;
+  const byId = calls.some((c) => c.method === 'order' && c.args[0] === 'id');
+  const limit = calls.find((c) => c.method === 'limit')?.args[0];
+  if (!byId || typeof limit !== 'number' || !Array.isArray(result.data)) return result;
+  const after = calls.find((c) => c.method === 'gt' && c.args[0] === 'id')?.args[1];
+  const rows = (result.data as Array<{ id: string }>)
+    .slice()
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .filter((row) => typeof after !== 'string' || row.id > after);
+  return { ...result, data: rows.slice(0, limit) };
 }
 
 /** Shared instance, so `jest.mock` factories can reach it without hoisting problems. */
