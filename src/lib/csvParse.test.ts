@@ -26,6 +26,9 @@ describe('parseCsvRecords', () => {
     const result = parseCsvRecords('a,b\n"open,1');
     expect(result.unterminatedQuote).toBe(true);
     expect(result.records[1]).toEqual(['open,1']);
+    expect(result.unterminatedQuoteLine).toBe(2);
+    expect(parseCsvRecords('a\n"ok\nstill ok",x\nb,"never closed\nc,d').unterminatedQuoteLine).toBe(4);
+    expect(parseCsvRecords('a\n"closed"').unterminatedQuoteLine).toBeNull();
   });
 
   it('keeps empty trailing cells', () => {

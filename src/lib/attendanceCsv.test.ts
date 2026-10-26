@@ -35,6 +35,11 @@ describe('detectAttendanceColumns', () => {
     expect(mapping.fullName).toBe('Student name');
   });
 
+  it('recognizes "Family Name" as the surname, while a family-group question is not a name', () => {
+    const mapping = detectAttendanceColumns(['First Name', 'Family Name', 'Email', 'ACE fam name']);
+    expect(mapping).toMatchObject({ useFullName: false, firstName: 'First Name', lastName: 'Family Name', fullName: '' });
+  });
+
   it('does not take a graduation year or a timestamp as the year in school', () => {
     const mapping = detectAttendanceColumns(['Timestamp', 'Expected graduation year', 'Year in school']);
     expect(mapping.year).toBe('Year in school');

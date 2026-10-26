@@ -27,12 +27,15 @@ export const EMPTY_ATTENDANCE_MAPPING: AttendanceColumnMapping = {
   secondaryEmail: '',
 };
 
-// Questions that mention a name but are not the attendee's own name.
+// Questions that mention a name but are not the attendee's own name. Fragments
+// match inside words; the short ones must be whole words, so "Family Name" is
+// still a surname while "ACE fam name" is not.
 const NOT_ATTENDEE_NAME = [
   'nick', 'preferred', 'parent', 'guardian', 'emergency', 'user', 'file', 'event', 'team', 'house',
-  'college', 'school', 'company', 'pet', 'fam', 'big', 'little', 'partner', 'friend', 'refer',
+  'college', 'school', 'company', 'partner', 'friend', 'refer',
   'instagram', 'discord', 'major', 'pronoun', 'email',
 ];
+const NOT_ATTENDEE_NAME_WORDS = ['pet', 'fam', 'fams', 'big', 'little', 'ace'];
 
 function words(header: string): string[] {
   return foldName(header).split(' ').filter(Boolean);
@@ -43,10 +46,15 @@ function mentionsAny(header: string, fragments: string[]): boolean {
   return fragments.some((fragment) => folded.includes(fragment));
 }
 
+function notAttendeeName(header: string): boolean {
+  const w = words(header);
+  return mentionsAny(header, NOT_ATTENDEE_NAME) || w.some((word) => NOT_ATTENDEE_NAME_WORDS.includes(word));
+}
+
 function scoreFirstName(header: string): number {
   const w = words(header);
   const folded = w.join(' ');
-  if (w.includes('last') || mentionsAny(header, NOT_ATTENDEE_NAME)) return 0;
+  if (w.includes('last') || notAttendeeName(header)) return 0;
   if (/^(first|given)( name)?$|^firstname$/.test(folded)) return 3;
   if (/\b(first|given) name\b|\bfirstname\b/.test(folded)) return 2;
   return 0;
@@ -55,7 +63,7 @@ function scoreFirstName(header: string): number {
 function scoreLastName(header: string): number {
   const w = words(header);
   const folded = w.join(' ');
-  if (w.includes('first') || mentionsAny(header, NOT_ATTENDEE_NAME)) return 0;
+  if (w.includes('first') || notAttendeeName(header)) return 0;
   if (/^(last|family|sur)( ?name)?$|^lastname$/.test(folded)) return 3;
   if (/\b(last|family) name\b|\bsurname\b|\blastname\b/.test(folded)) return 2;
   return 0;
@@ -64,7 +72,7 @@ function scoreLastName(header: string): number {
 function scoreFullName(header: string): number {
   const w = words(header);
   const folded = w.join(' ');
-  if (!w.includes('name') || mentionsAny(header, NOT_ATTENDEE_NAME)) return 0;
+  if (!w.includes('name') || notAttendeeName(header)) return 0;
   if (/^(full )?name$/.test(folded)) return 4;
   if (/\bfull name\b|\byour name\b|\bstudent name\b|\bname first (and )?last\b/.test(folded)) return 3;
   // "First name" / "Last name" alone belong to the two-column mapping.
