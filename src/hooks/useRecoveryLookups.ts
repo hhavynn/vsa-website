@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { attendanceRecoveryRepository } from '../data/repos/attendanceRecovery';
+import { memberIdentityRepository } from '../data/repos/memberIdentity';
 import { RecoveryFinding } from '../lib/attendanceRecovery';
 import { MemberLookup, NO_EVENT_ID, buildLookup, foldName, lastNameToken, normEmail } from '../lib/recoveryTriage';
 
@@ -13,7 +14,12 @@ const STALE = 60_000;
  * and who already attended the event. No per-row requests.
  */
 export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId: string | null) {
+  // Confirmed addresses, so a row that used a member's other email still finds them.
+  const aliases = useQuery(['attendance-recovery', 'identity-emails'], () => memberIdentityRepository.loadIdentityEmails(), {
+    enabled: !!eventId, staleTime: STALE,
+  });
   const { ids, surnames, emails } = useMemo(() => {
+    const rowEmails = new Set(findings.map(({ record }) => normEmail(record.csv_email)).filter(Boolean));
     const idSet = new Set<string>();
     const surnameSet = new Set<string>();
     const emailSet = new Set<string>();
@@ -29,8 +35,9 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
       }
       if (record.email_in_members && record.csv_email) emailSet.add(normEmail(record.csv_email));
     });
+    (aliases.data ?? []).forEach((alias) => { if (rowEmails.has(normEmail(alias.email))) idSet.add(alias.member_id); });
     return { ids: Array.from(idSet).sort(), surnames: Array.from(surnameSet).sort(), emails: Array.from(emailSet).sort() };
-  }, [findings]);
+  }, [findings, aliases.data]);
 
   const enabled = !!eventId;
   // Findings whose event was deleted have no event attendance to check.
@@ -49,20 +56,22 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   });
 
   const settled = (query: { isSuccess: boolean }, needed: boolean) => !needed || query.isSuccess;
-  const ready = enabled && settled(byIds, ids.length > 0) && settled(bySurname, surnames.length > 0)
+  const ready = enabled && aliases.isSuccess && settled(byIds, ids.length > 0) && settled(bySurname, surnames.length > 0)
     && settled(byEmail, emails.length > 0) && settled(attended, realEvent);
-  const error: unknown = byIds.error ?? bySurname.error ?? byEmail.error ?? attended.error ?? null;
+  const error: unknown = aliases.error ?? byIds.error ?? bySurname.error ?? byEmail.error ?? attended.error ?? null;
 
   const lookup: MemberLookup = useMemo(
     () => buildLookup(
       [...(byIds.data ?? []), ...(bySurname.data ?? []), ...(byEmail.data ?? [])],
       realEvent ? (attended.data ? new Set(attended.data) : null) : new Set<string>(),
       ready,
+      aliases.data ?? [],
     ),
-    [byIds.data, bySurname.data, byEmail.data, attended.data, ready, realEvent],
+    [byIds.data, bySurname.data, byEmail.data, attended.data, ready, realEvent, aliases.data],
   );
 
   const refetch = () => {
+    void aliases.refetch();
     void byIds.refetch();
     void bySurname.refetch();
     void byEmail.refetch();

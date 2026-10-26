@@ -86,6 +86,19 @@ describe('candidates and triage', () => {
     expect(onlyNames.triage.recommendation).toBeNull();
   });
 
+  it('treats a confirmed alias like a stored email: the member is found and recommended, never on name alone', () => {
+    // Stored contact email is the UCSD one; the row used the member's confirmed Gmail.
+    const linh = member('m-1', 'Linh', 'Tran', 'linh.tran@ucsd.edu');
+    const twin = member('m-2', 'Linh', 'Tran', 'other@ucsd.edu');
+    const lookup = buildLookup([linh, twin], new Set(), true, [{ member_id: 'm-1', email: 'Linh.New@gmail.com' }]);
+    const insight = insightFor(finding({ exact_name_members: 2 }), lookup);
+    expect(insight.candidates[0]).toMatchObject({ member: linh, emailMatches: true, emailDiffers: false });
+    expect(insight.candidates[1]).toMatchObject({ member: twin, emailMatches: false, emailDiffers: true });
+    expect(insight.triage.recommendation).toMatchObject({ kind: 'restore', memberId: 'm-1' });
+    // An alias for a member the lookup did not load adds nobody.
+    expect(buildLookup([], new Set(), true, [{ member_id: 'm-9', email: 'linh.new@gmail.com' }]).byEmail.size).toBe(0);
+  });
+
   it('calls a row already resolved when the email holder already attended, and suggests a duplicate dismissal', () => {
     const exact = member('m-1', 'Linh', 'Tran', 'linh.new@gmail.com');
     const insight = insightFor(finding({ candidate_member_ids: ['m-1'], candidate_count: 1 }), buildLookup([exact], new Set(['m-1']), true));

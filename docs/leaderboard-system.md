@@ -87,6 +87,10 @@ Admins can create a member with first/last name and optional email, year, and co
 
 Use **History** or **Edit → Manage attendance** to view and edit attendance. Additions read current event points and ignore existing member/event pairs; removal requires confirmation. Database triggers own recalculation; the UI reloads member totals, history, and yearly totals after each mutation. Events need an academic term before attendance can be added.
 
+The member editor lists **Emails that identify this member** (`member_identity_emails`): how each was confirmed, an Add field (an admin's own confirmation) and a two-step Remove for an address remembered for the wrong person. Removing an address never touches attendance or points.
+
+**Merge Suggestions** uses the importer's name folding and evidence (`src/lib/duplicateMembers.ts`): a shared confirmed email, the same name and college (accents, case and middle initials ignored), the same first and last name with a middle name added or left out in one college, or the same name, each with its evidence (different colleges, years that do or do not line up). Similar names are never suggested, and nothing merges without an admin. `smart_merge_members` keeps the target's id, moves attendance without crediting an event twice, moves every email alias (recording where it came from) and year observation, keeps the more recently observed year, moves House history for years the target has none, and repoints import audit rows, photo requests and ACE / Cabinet / workspace links instead of nulling them. Cached totals are recalculated by the triggers. If both records have a House membership in the same year, the source's row is dropped with the source.
+
 The Member History modal includes:
 - A yearly breakdown of points earned.
 - The specific academic term for each attended event.

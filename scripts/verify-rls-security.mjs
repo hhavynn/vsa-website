@@ -449,6 +449,31 @@ async function runTests() {
       }
     }
 
+    // Member identity evidence (migration 20261025000000) holds private email aliases and
+    // standings: no anon access at all. Missing tables or the function mean the migration is
+    // not applied yet (a skip). Writes, merge and concurrency are covered offline by
+    // scripts/test-member-identity.sh.
+    {
+      const missing = (error) => error && (error.code === 'PGRST205' || error.code === '42P01');
+      for (const table of ['member_identity_emails', 'member_year_observations', 'attendance_import_requests']) {
+        const { data, error } = await anon.from(table).select('*').limit(1);
+        if (missing(error)) reportSkip(`${table} is not present yet (migration 20261025000000 not applied)`);
+        else if (error) reportPass(`anon cannot read ${table} (${error.message || error.code})`);
+        else if (data && data.length > 0) reportFail(`anon read ${table} successfully (returned rows)`);
+        else reportPass(`anon cannot read ${table} (returned empty list due to RLS)`);
+      }
+      const { error: insertError } = await anon
+        .from('member_identity_emails')
+        .insert({ member_id: dummyUuid, email: 'rls-probe@example.com', source: 'admin', verification_method: 'admin_entered' });
+      if (missing(insertError)) reportSkip('member_identity_emails is not present yet (migration 20261025000000 not applied)');
+      else if (insertError) reportPass(`anon cannot add an email alias (${insertError.message || insertError.code})`);
+      else reportFail('anon added an email alias');
+      const { data: applyData, error: applyError } = await anon.rpc('admin_apply_attendance_import', { p_request: {} });
+      if (isMissingFunction(applyError)) reportSkip('admin_apply_attendance_import is not present yet (migration 20261025000000 not applied)');
+      else if (applyError) reportPass(`anon cannot run admin_apply_attendance_import (${applyError.message || applyError.code})`);
+      else reportFail(`anon ran admin_apply_attendance_import (${JSON.stringify(applyData)})`);
+    }
+
     // Historical attendance recovery (migration 20261009000026) is admin-only. A missing table or
     // function means the migration is not applied yet: a skip, not a pass. Writes, rollback and
     // concurrency are covered offline by scripts/test-attendance-recovery.sh, not probed here.
