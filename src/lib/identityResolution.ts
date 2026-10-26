@@ -572,11 +572,13 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
         // Repeating weak evidence (a name-only match) never upgrades it into a confirmed address.
         const known = [...earlier.emails, ...(earlier.memberId ? Array.from(index.byId.get(earlier.memberId)?.emails ?? []) : [])];
         const mayConfirm = earlier.strength === 'confirmed' || earlier.strength === 'new';
+        const accepted = mayConfirm
+          ? row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email) && !hardEmailConflict(known, [email]))
+          : [];
+        // The group remembers what it accepted, so a later repeat is checked against it too.
+        earlier.emails = [...earlier.emails, ...accepted];
         return duplicate('duplicate_row', `Repeats row ${rowNumber(earlier.rowId)} (same email and name).`, earlier.rowId, null,
-          mayConfirm
-            ? row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email) && !hardEmailConflict(known, [email]))
-              .map((email) => ({ email, method: 'same_submission' as const }))
-            : []);
+          accepted.map((email) => ({ email, method: 'same_submission' as const })));
       }
       const verdict = resolveAgainstRoster(row, index, eventYear);
       return finish(review(

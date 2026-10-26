@@ -252,6 +252,7 @@ describe('the write plan', () => {
         aliases: [{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }],
         observed_year: '3rd Year',
         known_same_name_ids: ['alex'],
+        expected_standing: { year: '2nd Year', observations: 1 },
       }],
       creates: [{
         row_key: 'row-1', first_name: 'Hoa', last_name: 'Pham', college: 'Sixth', year: 'Alumni', email: 'hoa@ucsd.edu',

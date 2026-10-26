@@ -179,6 +179,7 @@ describe("Gmail at one event, UCSD at the next", () => {
       aliases: [{ email: "alex@ucsd.edu", method: "unique_name_college_year" }],
       observed_year: "3rd Year",
       known_same_name_ids: ["alex"],
+      expected_standing: { year: "2nd Year", observations: 0 },
     }]);
     expect(requests()[0].creates).toEqual([]);
   });

@@ -75,6 +75,21 @@ export async function readAllById<T extends { id: string }>(
 
 const ROSTER_COLUMNS = 'id, first_name, last_name, college, year, email, points, events_attended, created_at';
 
+export interface ImportEvent {
+  id: string;
+  name: string;
+  date: string;
+  points: number;
+  academic_term_id: string | null;
+}
+
+export interface ImportTerm {
+  id: string;
+  label: string;
+  academic_year_start: number;
+  academic_year_end: number;
+}
+
 export type ImportProblemKind =
   | 'event_missing'
   | 'event_has_no_term'
@@ -170,6 +185,31 @@ export class MemberIdentityRepository {
       }
       return data as unknown as AttendanceImportResult;
     }, 'Import failed');
+  }
+
+  /**
+   * The event being imported and its academic term, read fresh so a preview
+   * (and the import's expected points / term) reflects edits made since the
+   * page loaded. Accepts a list or a single row (both PostgREST shapes).
+   */
+  async readImportEvent(eventId: string): Promise<{ event: ImportEvent; term: ImportTerm | null }> {
+    return withErrorHandling(async () => {
+      const asList = <T,>(data: unknown): T[] => (Array.isArray(data) ? data : data ? [data] : []) as T[];
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('id, name, date, points, academic_term_id')
+        .eq('id', eventId);
+      if (eventError) throw toThrowable(eventError);
+      const event = asList<ImportEvent>(eventData).find((e) => e.id === eventId);
+      if (!event) throw new Error('The selected event no longer exists.');
+      if (!event.academic_term_id) return { event, term: null };
+      const { data: termData, error: termError } = await supabase
+        .from('academic_terms')
+        .select('id, label, academic_year_start, academic_year_end')
+        .eq('id', event.academic_term_id);
+      if (termError) throw toThrowable(termError);
+      return { event, term: asList<ImportTerm>(termData).find((t) => t.id === event.academic_term_id) ?? null };
+    }, 'Could not re-read the event');
   }
 
   /** Pairs an admin marked as different people. Ordered offset pages (the table has a composite key). */

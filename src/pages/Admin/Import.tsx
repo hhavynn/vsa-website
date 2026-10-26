@@ -178,25 +178,6 @@ function getImportSourceType(raw: string): 'google_sheets_csv' | 'csv_url' | 'un
   return 'csv_url';
 }
 
-/** The event and its term, freshly read. Accepts a list or a single row (both PostgREST shapes). */
-async function readEventWithTerm(eventId: string): Promise<{ event: Event; term: AcademicTerm | null }> {
-  const asList = <T,>(data: unknown): T[] => (Array.isArray(data) ? data : data ? [data] : []) as T[];
-  const { data: eventData, error: eventError } = await supabase
-    .from('events')
-    .select('id, name, date, points, academic_term_id')
-    .eq('id', eventId);
-  if (eventError) throw new Error(`Could not re-read the event: ${describeError(eventError)}`);
-  const event = asList<Event>(eventData).find(e => e.id === eventId);
-  if (!event) throw new Error('The selected event no longer exists.');
-  if (!event.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
-  const { data: termData, error: termError } = await supabase
-    .from('academic_terms')
-    .select('id, label, academic_year_start, academic_year_end')
-    .eq('id', event.academic_term_id);
-  if (termError) throw new Error(`Could not re-read the event's academic term: ${describeError(termError)}`);
-  return { event, term: asList<AcademicTerm>(termData).find(t => t.id === event.academic_term_id) ?? null };
-}
-
 function newRequestId(): string {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
@@ -360,12 +341,13 @@ export function IdentityAdminImport() {
       // Every read is complete or throws: an unread member or address must never look unknown.
       // The event is re-read too, so re-running matching picks up a changed points value or term.
       const [{ event, term }, members, attendedMemberIds, aliases, observations] = await Promise.all([
-        readEventWithTerm(eventId),
+        memberIdentityRepository.readImportEvent(eventId),
         memberIdentityRepository.loadRoster(),
         memberIdentityRepository.loadEventAttendeeIds(eventId),
         memberIdentityRepository.loadIdentityEmails(),
         memberIdentityRepository.loadYearObservations(),
       ]);
+      if (!event.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
       setEvents(current => current.map(e => (e.id === event.id ? event : e)));
       if (term) setTerms(current => ({ ...current, [term.id]: term }));
       next = { members, aliases, observations, attendedMemberIds, eventAcademicYear: term?.academic_year_start ?? null, event };
