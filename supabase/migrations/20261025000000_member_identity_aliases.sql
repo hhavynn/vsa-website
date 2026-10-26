@@ -404,6 +404,47 @@ $$;
 revoke execute on function public.smart_merge_members(uuid, uuid) from public, anon;
 grant execute on function public.smart_merge_members(uuid, uuid) to authenticated;
 
+-- ── Name folding ──────────────────────────────────────────────────────────────
+-- The database twin of src/lib/personName.ts (foldName + middle-initial drop):
+-- accents and Đ/đ fold, apostrophes join, other punctuation separates, case and
+-- spacing are ignored, single-letter middle tokens are dropped. "Hoa Nguyễn"
+-- and "HOA  NGUYEN" fold to one key, so the import's same-name guard and name
+-- locks treat them as the resolver does. Keep the two in step.
+
+create or replace function public.fold_person_name(p_name text)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_folded text;
+  v_tokens text[];
+  v_core text[] := '{}';
+  v_count integer;
+begin
+  v_folded := lower(regexp_replace(translate(normalize(coalesce(p_name, ''), NFD), 'đĐ', 'dd'), '[\u0300-\u036f]', '', 'g'));
+  v_folded := regexp_replace(v_folded, '[''’`]', '', 'g');
+  v_folded := btrim(regexp_replace(v_folded, '[^a-z0-9]+', ' ', 'g'));
+  if v_folded = '' then
+    return lower(btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g')));
+  end if;
+  v_tokens := string_to_array(v_folded, ' ');
+  v_count := array_length(v_tokens, 1);
+  if v_count <= 2 then
+    return v_folded;
+  end if;
+  for i in 1..v_count loop
+    if i = 1 or i = v_count or char_length(v_tokens[i]) > 1 then
+      v_core := v_core || v_tokens[i];
+    end if;
+  end loop;
+  return array_to_string(v_core, ' ');
+end;
+$$;
+
+revoke all on function public.fold_person_name(text) from public, anon, authenticated;
+
 -- ── admin_apply_attendance_import ─────────────────────────────────────────────
 --
 -- p_request:
@@ -595,8 +636,8 @@ begin
   -- Same-name members created by another import (any event) must be visible to
   -- the same-name check below, so imports touching one name queue on it.
   for v_email in
-    select distinct lower(regexp_replace(btrim(coalesce(c ->> 'first_name', c -> 'expected' ->> 'first_name')
-             || ' ' || coalesce(c ->> 'last_name', c -> 'expected' ->> 'last_name')), '\s+', ' ', 'g'))
+    select distinct public.fold_person_name(coalesce(c ->> 'first_name', c -> 'expected' ->> 'first_name')
+             || ' ' || coalesce(c ->> 'last_name', c -> 'expected' ->> 'last_name'))
     from (
       select c from jsonb_array_elements(v_creates) c
       union all select c from jsonb_array_elements(v_credits) c where c ? 'known_same_name_ids'
@@ -657,6 +698,13 @@ begin
 
   -- Same-name members the preview did not see: a new member may be a duplicate,
   -- and an automatic name match may no longer be unique.
+  -- Folded once per import, not once per row.
+  create temporary table if not exists pg_temp.import_member_names (id uuid, folded text) on commit drop;
+  truncate pg_temp.import_member_names;
+  if jsonb_array_length(v_creates) > 0 or exists (select 1 from jsonb_array_elements(v_credits) c where c ? 'known_same_name_ids') then
+    insert into pg_temp.import_member_names (id, folded)
+    select m.id, public.fold_person_name(m.first_name || ' ' || m.last_name) from public.members m;
+  end if;
   for v_item in
     select c from jsonb_array_elements(v_creates) c
     union all
@@ -666,10 +714,9 @@ begin
       raise exception 'known_same_name_ids must be an array' using errcode = '22023';
     end if;
     if exists (
-      select 1 from public.members m
-      where lower(regexp_replace(btrim(m.first_name || ' ' || m.last_name), '\s+', ' ', 'g'))
-          = lower(regexp_replace(btrim(coalesce(v_item ->> 'first_name', v_item -> 'expected' ->> 'first_name')
-              || ' ' || coalesce(v_item ->> 'last_name', v_item -> 'expected' ->> 'last_name')), '\s+', ' ', 'g'))
+      select 1 from pg_temp.import_member_names m
+      where m.folded = public.fold_person_name(coalesce(v_item ->> 'first_name', v_item -> 'expected' ->> 'first_name')
+              || ' ' || coalesce(v_item ->> 'last_name', v_item -> 'expected' ->> 'last_name'))
         and m.id::text not in (
           select jsonb_array_elements_text(coalesce(v_item -> 'known_same_name_ids', '[]'::jsonb))
           union all select coalesce(v_item ->> 'member_id', ''))

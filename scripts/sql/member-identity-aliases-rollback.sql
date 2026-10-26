@@ -16,6 +16,7 @@ drop trigger if exists trg_member_purge_identity_on_anonymize on public.members;
 drop function if exists public.sync_member_primary_email_alias();
 drop function if exists public.purge_member_identity_on_anonymize();
 drop function if exists public.admin_apply_attendance_import(jsonb);
+drop function if exists public.fold_person_name(text);
 
 create or replace function public.smart_merge_members(
   p_source_id uuid,

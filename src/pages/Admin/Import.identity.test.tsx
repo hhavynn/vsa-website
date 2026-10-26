@@ -280,11 +280,46 @@ describe("a preview that went stale", () => {
     expect(mockAudit).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /Re-run matching/ }));
-    await waitFor(() => expect(screen.queryByText(/Nothing was imported\. The data changed/)).not.toBeInTheDocument());
+    await screen.findByText(/↻ Re-run matching with these columns/);
+    expect(screen.queryByText(/Nothing was imported\. The data changed/)).not.toBeInTheDocument();
     await confirm(/Import \(1 update \+ 0 new\)/);
     const [first, second] = requests();
     // The retry after a refusal is a new request, against freshly read data.
     expect(second.request_id).not.toBe(first.request_id);
+  });
+});
+
+describe("review findings on the confirmation step", () => {
+  it("lets an admin save profile-only updates for a member already credited for the event", async () => {
+    supabaseMock.setDefault("members", { data: [alex], error: null });
+    supabaseMock.queueResult("member_event_attendance", { data: [{ id: "a1", member_id: "alex" }], error: null });
+    await preview(["Alex Nguyen,alex@ucsd.edu,3rd,Muir"]);
+    expect(stat("Already recorded")).toBe("1");
+    const button = screen.getByRole("button", { name: /Import \(0 updates \+ 0 new \+ 1 profile update\)/ });
+    expect(button).toBeEnabled();
+    await confirm(/Import \(0 updates \+ 0 new \+ 1 profile update\)/);
+    expect(requests()[0].credits[0]).toMatchObject({
+      member_id: "alex",
+      year: { from: "2nd Year", to: "3rd Year" },
+      aliases: [{ email: "alex@ucsd.edu", method: "unique_name_college_year" }],
+    });
+  });
+
+  it("re-reads the event when matching is re-run, so a changed points value can be confirmed", async () => {
+    await preview(["Lan Tran,lan@ucsd.edu,2,Muir"]);
+    supabaseMock.queueResult(RPC, { data: { ok: false, problems: [{ kind: "event_changed" }] }, error: null });
+    fireEvent.click(screen.getByRole("button", { name: /Import \(1 update \+ 0 new\)/ }));
+    await screen.findByText(/points or academic term changed after this preview/);
+    supabaseMock.setDefault("events", {
+      data: [{ id: "gbm", name: "GBM 1", points: 5, date: "2026-09-30", academic_term_id: "fall" }],
+      error: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Re-run matching/ }));
+    // Import stays disabled until the fresh reads finish.
+    expect(screen.getByRole("button", { name: /Import \(1 update \+ 0 new\)/ })).toBeDisabled();
+    await screen.findByText(/↻ Re-run matching with these columns/);
+    await confirm(/Import \(1 update \+ 0 new\)/);
+    expect(requests()[1]).toMatchObject({ expected_points: 5, expected_term_id: "fall" });
   });
 });
 

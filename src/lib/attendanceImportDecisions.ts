@@ -350,7 +350,8 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
   plan.aliasConflictRowIds = Array.from(conflictRows);
 
   // Already-credited members with nothing to update are left out of the request.
-  plan.credits = plan.credits.filter((c) => !c.alreadyAttended || c.aliases.length > 0 || !!c.year || !!c.fill.college || !!c.fill.email || !!c.observedYear);
+  // (A recorded standing alone is not worth an import of its own.)
+  plan.credits = plan.credits.filter((c) => !c.alreadyAttended || c.aliases.length > 0 || !!c.year || !!c.fill.college || !!c.fill.email);
   return plan;
 }
 

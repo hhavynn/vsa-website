@@ -82,6 +82,8 @@ interface IdentitySnapshotState {
   observations: YearObservation[];
   attendedMemberIds: Set<string>;
   eventAcademicYear: number | null;
+  /** The event as re-read for this preview; the import expects exactly these points and term. */
+  event: Event | null;
 }
 
 interface ImportOutcome {
@@ -105,7 +107,7 @@ interface ImportOutcome {
 const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
 
 const EMPTY_SNAPSHOT: IdentitySnapshotState = {
-  members: [], aliases: [], observations: [], attendedMemberIds: new Set(), eventAcademicYear: null,
+  members: [], aliases: [], observations: [], attendedMemberIds: new Set(), eventAcademicYear: null, event: null,
 };
 
 const PROBLEM_TEXT: Record<ImportProblemKind, string> = {
@@ -174,6 +176,25 @@ function getImportSourceType(raw: string): 'google_sheets_csv' | 'csv_url' | 'un
   if (!url) return 'unknown';
   if (url.includes('docs.google.com/spreadsheets')) return 'google_sheets_csv';
   return 'csv_url';
+}
+
+/** The event and its term, freshly read. Accepts a list or a single row (both PostgREST shapes). */
+async function readEventWithTerm(eventId: string): Promise<{ event: Event; term: AcademicTerm | null }> {
+  const asList = <T,>(data: unknown): T[] => (Array.isArray(data) ? data : data ? [data] : []) as T[];
+  const { data: eventData, error: eventError } = await supabase
+    .from('events')
+    .select('id, name, date, points, academic_term_id')
+    .eq('id', eventId);
+  if (eventError) throw new Error(`Could not re-read the event: ${describeError(eventError)}`);
+  const event = asList<Event>(eventData).find(e => e.id === eventId);
+  if (!event) throw new Error('The selected event no longer exists.');
+  if (!event.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
+  const { data: termData, error: termError } = await supabase
+    .from('academic_terms')
+    .select('id, label, academic_year_start, academic_year_end')
+    .eq('id', event.academic_term_id);
+  if (termError) throw new Error(`Could not re-read the event's academic term: ${describeError(termError)}`);
+  return { event, term: asList<AcademicTerm>(termData).find(t => t.id === event.academic_term_id) ?? null };
 }
 
 function newRequestId(): string {
@@ -332,20 +353,22 @@ export function IdentityAdminImport() {
     setStaleProblems([]);
     requestIdRef.current = null;
 
-    const event = events.find(e => e.id === eventId);
-    const eventAcademicYear = event?.academic_term_id ? terms[event.academic_term_id]?.academic_year_start ?? null : null;
     const problem = attendanceMappingProblem(columns, Object.keys(parsed[0] ?? {}));
     let next: IdentitySnapshotState;
     try {
       if (problem) throw new Error(problem);
       // Every read is complete or throws: an unread member or address must never look unknown.
-      const [members, attendedMemberIds, aliases, observations] = await Promise.all([
+      // The event is re-read too, so re-running matching picks up a changed points value or term.
+      const [{ event, term }, members, attendedMemberIds, aliases, observations] = await Promise.all([
+        readEventWithTerm(eventId),
         memberIdentityRepository.loadRoster(),
         memberIdentityRepository.loadEventAttendeeIds(eventId),
         memberIdentityRepository.loadIdentityEmails(),
         memberIdentityRepository.loadYearObservations(),
       ]);
-      next = { members, aliases, observations, attendedMemberIds, eventAcademicYear };
+      setEvents(current => current.map(e => (e.id === event.id ? event : e)));
+      if (term) setTerms(current => ({ ...current, [term.id]: term }));
+      next = { members, aliases, observations, attendedMemberIds, eventAcademicYear: term?.academic_year_start ?? null, event };
     } catch (err: unknown) {
       setMatchError(describeError(err));
       setRows([]);
@@ -416,7 +439,7 @@ export function IdentityAdminImport() {
       toast.error(summary.unresolved || summary.duplicatesSkipped || summary.skipped ? 'No rows to import.' : 'Nothing to import.');
       return;
     }
-    const event = events.find(e => e.id === selectedEventId);
+    const event = snapshot.event;
     if (!event?.academic_term_id) {
       toast.error(MISSING_TERM_IMPORT_MESSAGE);
       return;
@@ -607,7 +630,9 @@ export function IdentityAdminImport() {
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedTerm = selectedEvent?.academic_term_id ? terms[selectedEvent.academic_term_id] : undefined;
   const selectedEventMissingTerm = !!selectedEvent && !selectedEvent.academic_term_id;
-  const writes = plan.credits.filter(c => !c.alreadyAttended).length + plan.creates.length;
+  // Every retained plan entry writes something (the planner drops already-credited members with nothing to update).
+  const writes = plan.credits.length + plan.creates.length;
+  const profileOnly = plan.credits.filter(c => c.alreadyAttended).length;
 
   function applyDecisionToSelected(kind: 'new' | 'skip' | 'clear') {
     setRows(current => current.map(row => {
@@ -1028,12 +1053,12 @@ export function IdentityAdminImport() {
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || !!matchError || staleProblems.length > 0 || selectedEventMissingTerm || writes === 0 || (summary.unresolved > 0 && !ackPartial)}
+                  disabled={importing || fetchingCsv || !!matchError || staleProblems.length > 0 || selectedEventMissingTerm || writes === 0 || (summary.unresolved > 0 && !ackPartial)}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
                     text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing
                     ? <><Spinner />Importing…</>
-                    : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {summary.newMembers} new)</>}
+                    : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {summary.newMembers} new{profileOnly > 0 ? ` + ${profileOnly} profile update${profileOnly !== 1 ? 's' : ''}` : ''})</>}
                 </button>
                 <button onClick={() => { setStep('configure'); setRows([]); setSnapshot(EMPTY_SNAPSHOT); requestIdRef.current = null; setStaleProblems([]); setAckPartial(false); }}
                   className="text-sm text-[var(--color-text3)] hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
