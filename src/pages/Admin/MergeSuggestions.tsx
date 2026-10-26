@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
+import { memberIdentityRepository } from '../../data/repos/memberIdentity';
 import toast, { Toaster } from 'react-hot-toast';
 import { usePagination } from '../../hooks/usePagination';
 import { PaginationControls } from '../../components/common/PaginationControls';
@@ -41,26 +42,31 @@ export default function AdminMergeSuggestions() {
   const [loading, setLoading] = useState(true);
   const [executingRow, setExecutingRow] = useState<string | null>(null);
 
+  const [loadError, setLoadError] = useState('');
+
   async function loadData() {
     setLoading(true);
-    const [{ data: mData, error: mErr }, { data: eData, error: eErr }] = await Promise.all([
-      supabase.from('members').select('*').order('created_at', { ascending: true }),
-      supabase.from('merge_exclusions').select('source_id, target_id')
-    ]);
-
-    if (mErr) toast.error('Failed to load members.');
-    if (eErr) toast.error('Failed to load exclusions.');
-
-    setMembers((mData ?? []) as Member[]);
-    
-    // Store pairs symmetrically so A->B or B->A are both recognized
-    const exSet = new Set<string>();
-    (eData ?? []).forEach((row: any) => {
-      exSet.add(`${row.source_id}-${row.target_id}`);
-      exSet.add(`${row.target_id}-${row.source_id}`);
-    });
-    setExclusions(exSet);
-    setLoading(false);
+    setLoadError('');
+    try {
+      // Complete reads or an error: a partial roster would hide real duplicates and show "All clean".
+      const [roster, excluded] = await Promise.all([
+        memberIdentityRepository.loadRoster(),
+        memberIdentityRepository.loadMergeExclusions(),
+      ]);
+      setMembers([...roster].sort((a, b) => a.created_at.localeCompare(b.created_at)) as Member[]);
+      // Store pairs symmetrically so A->B or B->A are both recognized
+      const exSet = new Set<string>();
+      excluded.forEach((row) => {
+        exSet.add(`${row.source_id}-${row.target_id}`);
+        exSet.add(`${row.target_id}-${row.source_id}`);
+      });
+      setExclusions(exSet);
+    } catch (err: unknown) {
+      setMembers([]);
+      setLoadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { loadData(); }, []);
@@ -201,6 +207,12 @@ export default function AdminMergeSuggestions() {
 
           {loading ? (
             <div className="py-16 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading suggestions...</div>
+          ) : loadError ? (
+            <div role="alert" className="py-16 text-center">
+              <h3 className="text-base font-semibold text-text-primary">Suggestions could not be loaded.</h3>
+              <p className="mt-1 text-sm text-text-secondary">{loadError}</p>
+              <button type="button" onClick={loadData} className="mt-4 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">Try again</button>
+            </div>
           ) : potentialMatches.length === 0 ? (
             <div className="py-16 text-center">
               <h3 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>All clean.</h3>

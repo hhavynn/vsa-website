@@ -176,7 +176,7 @@ describe("anon column allowlists stay closed", () => {
 
   it("the repos directory has no stray raw-ledger read outside admin pages", () => {
     // Repositories used only behind AdminRoute; RLS also limits the raw ledger to admins.
-    const adminOnlyLedgerRepos = ["adminMembers.ts", "attendanceRecovery.ts"];
+    const adminOnlyLedgerRepos = ["adminMembers.ts", "attendanceRecovery.ts", "memberIdentity.ts"];
     const offenders = fs
       .readdirSync(reposDir)
       .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
