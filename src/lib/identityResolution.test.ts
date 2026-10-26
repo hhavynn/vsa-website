@@ -98,6 +98,22 @@ describe('weak evidence never becomes an automatic match or an alias (review fin
     expect(rows[0]).toMatchObject({ status: 'match', reason: 'known_email', aliasPlan: [] });
   });
 
+  it('a repeated submission never remembers a school address that contradicts the member\'s', () => {
+    const aliases = [{ member_id: 'alex', email: 'alex@ucsd.edu' }];
+    const { rows } = scenario([
+      { name: 'Alex Nguyen', email: 'alex@gmail.com' },
+      { name: 'Alex Nguyen', email: 'alex@gmail.com', email2: 'other@ucsd.edu' },
+    ], [alex], { aliases });
+    expect(rows[0].reason).toBe('known_email');
+    expect(rows[1]).toMatchObject({ status: 'duplicate', reason: 'duplicate_row', aliasPlan: [] });
+    // The same rows with a personal second address still pass it on.
+    const personal = scenario([
+      { name: 'Alex Nguyen', email: 'alex@gmail.com' },
+      { name: 'Alex Nguyen', email: 'alex@gmail.com', email2: 'alex.n@yahoo.com' },
+    ], [alex], { aliases });
+    expect(personal.rows[1].aliasPlan).toEqual([{ email: 'alex.n@yahoo.com', method: 'same_submission' }]);
+  });
+
   it('two rows matching one member by name alone are not collapsed into one credit', () => {
     const anh = member('anh', 'Anh', 'Nguyen');
     const { rows } = scenario([{ name: 'Anh Nguyen', email: 'anh.one@gmail.com' }, { name: 'Anh Nguyen', email: 'anh.two@gmail.com' }], [anh]);

@@ -489,6 +489,8 @@ function resolveAgainstRoster<M extends IdentityMember>(
 }
 
 interface SeenRow {
+  /** The existing member the row resolved to automatically, once known. */
+  memberId?: string;
   rowId: string;
   name: PersonName;
   college: string;
@@ -563,8 +565,11 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
     const earlier = row.emails.map((email) => firstRowByEmail.get(email)).find(Boolean);
     if (earlier) {
       if (namesCompatible(earlier.name, row.name)) {
+        // A repeat confirms an extra address only as a single row would: never one
+        // that contradicts a school address of that row or of the member it matched.
+        const known = [...earlier.emails, ...(earlier.memberId ? Array.from(index.byId.get(earlier.memberId)?.emails ?? []) : [])];
         return duplicate('duplicate_row', `Repeats row ${rowNumber(earlier.rowId)} (same email and name).`, earlier.rowId, null,
-          row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email))
+          row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email) && !hardEmailConflict(known, [email]))
             .map((email) => ({ email, method: 'same_submission' as const })));
       }
       const verdict = resolveAgainstRoster(row, index, eventYear);
@@ -603,6 +608,7 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
           previous.rowId, member, verdict.aliasPlan);
       }
       claimed.set(member.id, seen);
+      seen.memberId = member.id;
       return finish(attended ? { ...verdict, status: 'already', note: `${verdict.note} Attendance is already recorded for this event.` } : verdict);
     }
 
