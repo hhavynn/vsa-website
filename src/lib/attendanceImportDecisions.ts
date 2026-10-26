@@ -180,6 +180,8 @@ export interface PlannedCredit<R, M extends IdentityMember> {
   knownSameNameIds: string[] | null;
   /** Known-email matches: the addresses that identified the member, rechecked before writing. */
   evidenceEmails: string[];
+  /** Automatic matches: the standing the evidence was judged against (profile year and how many years were recorded). */
+  expectedStanding: { year: string | null; observations: number } | null;
 }
 
 export interface PlannedCreate<R> {
@@ -272,6 +274,9 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
         evidenceEmails: automatic && row.reason === 'known_email'
           ? row.emails.map(normalizeEmail).filter((e) => planCtx.heldEmails.has(e))
           : [],
+        expectedStanding: automatic
+          ? { year: member.year, observations: (observationsByMember.get(member.id) ?? []).length }
+          : null,
       };
       creditByMember.set(member.id, credit);
       plan.credits.push(credit);
@@ -399,6 +404,7 @@ export interface AttendanceImportRequest {
     observed_year?: string;
     known_same_name_ids?: string[];
     evidence_emails?: string[];
+    expected_standing?: { year: string | null; observations: number };
   }>;
   creates: Array<{
     row_key: string;
@@ -433,6 +439,7 @@ export function toImportRequest<M extends IdentityMember>(
       ...(c.observedYear ? { observed_year: c.observedYear } : {}),
       ...(c.knownSameNameIds ? { known_same_name_ids: c.knownSameNameIds } : {}),
       ...(c.evidenceEmails.length ? { evidence_emails: c.evidenceEmails } : {}),
+      ...(c.expectedStanding ? { expected_standing: c.expectedStanding } : {}),
     })),
     creates: plan.creates.map((c) => ({
       row_key: c.row.rowId,

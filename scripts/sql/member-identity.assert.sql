@@ -342,6 +342,17 @@ select pg_temp.check_true('the fold function is not callable by clients',
   not has_function_privilege('anon', 'public.fold_person_name(text)', 'execute')
   and not has_function_privilege('authenticated', 'public.fold_person_name(text)', 'execute'));
 
+select pg_temp.check_true('an automatic match whose standing changed since the preview is stale',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000034', jsonb_build_array(
+    pg_temp.minh('{"expected_standing": {"year": "3rd Year", "observations": 0}}')))) = 'member_changed'
+  and pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000035', jsonb_build_array(
+    pg_temp.minh('{"expected_standing": {"year": "2nd Year", "observations": 1}}')))) = 'member_changed');
+select pg_temp.check_true('an automatic match whose standing is unchanged applies',
+  (pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000036', jsonb_build_array(
+    pg_temp.minh(jsonb_build_object('expected_standing', jsonb_build_object('year', '3rd Year',
+      'observations', (select count(*) from public.member_year_observations where member_id = '11000000-0000-0000-0000-000000000007'))))),
+    '[]', 7)) -> 'result' ->> 'ok')::boolean);
+
 -- ── Import: malformed requests ────────────────────────────────────────────────
 select pg_temp.check_true('crediting one member twice is refused',
   pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000020', jsonb_build_array(pg_temp.minh(), pg_temp.minh('{"row_key": "row-x"}')))) ->> 'code' = '22023');

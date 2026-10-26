@@ -459,6 +459,9 @@ revoke all on function public.fold_person_name(text) from public, anon, authenti
 --                    evidence_emails?: [text]       addresses that identified the
 --                                       member (known-email matches); they must
 --                                       still identify only this member
+--                    expected_standing?: { year, observations }  automatic
+--                                       matches: profile year and recorded-year
+--                                       count the evidence was judged against
 --                    fill?: { college?, email? }        only where empty now
 --                    year?: { from, to }                only if still "from"
 --                    aliases?: [{ email, method }]
@@ -682,6 +685,20 @@ begin
     ) then
       v_problems := v_problems || jsonb_build_object('kind', 'email_held_by_other',
         'row_key', (select row_key from pg_temp.import_emails where email = v_email limit 1));
+    end if;
+  end loop;
+
+  -- An automatic match was judged against this standing; a changed one may no
+  -- longer support it (another import can record a year in the meantime).
+  for v_item in select c from jsonb_array_elements(v_credits) c where jsonb_typeof(c -> 'expected_standing') = 'object' loop
+    v_member_id := (v_item ->> 'member_id')::uuid;
+    if not exists (
+      select 1 from public.members m
+      where m.id = v_member_id
+        and coalesce(btrim(m.year), '') = coalesce(btrim(v_item -> 'expected_standing' ->> 'year'), '')
+    ) or (select count(*) from public.member_year_observations o where o.member_id = v_member_id)
+         <> coalesce((v_item -> 'expected_standing' ->> 'observations')::integer, -1) then
+      v_problems := v_problems || jsonb_build_object('kind', 'member_changed', 'row_key', v_item ->> 'row_key');
     end if;
   end loop;
 
