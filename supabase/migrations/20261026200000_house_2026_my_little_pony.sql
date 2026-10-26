@@ -1,5 +1,8 @@
 -- 2026-2027 Houses: My Little Pony, with their House Parents.
 --
+-- Applied to production 2026-10-26 in the SQL Editor; history recorded under
+-- this file's own version (schema_migrations version 20261026200000).
+--
 -- Owner-confirmed (2026-10-26) Houses and House Parents for 2026-2027:
 --   Twilight Sparkle  Timothy (Tim) Huynh, Kent Nguyen
 --   Applejack         Ryan Francisco, Nathan Centeno
@@ -30,7 +33,7 @@
 --   points or leaderboard rows are written. Idempotent: re-running converges
 --   to the same state.
 --
--- Deploy: apply after 20261026180000_house_assignment_timestamp_placement.sql,
+-- Deploy: apply with 20261026230757_house_assignment_timestamp_placement.sql,
 -- then deploy the frontend. Applying this migration makes the four House
 -- profiles (names, colors, House Parent names) visible on /house; House
 -- assignments stay private until a placement draft is revealed.

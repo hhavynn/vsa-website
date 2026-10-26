@@ -1,5 +1,8 @@
 -- Timestamp-priority automatic House placement metadata.
 --
+-- Applied to production 2026-10-26 (schema_migrations version 20261026230757)
+-- via apply_migration; renamed from 20261026180000 to match.
+--
 -- Admin -> Houses can now generate a draft batch from a Google Forms House
 -- application export: applicants are placed earliest-submission first into
 -- their highest-ranked House with room. The draft still goes through the

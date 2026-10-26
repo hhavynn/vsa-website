@@ -12,7 +12,7 @@ const read = (relative: string) => fs.readFileSync(path.resolve(root, relative),
 const stripSqlComments = (sql: string) => sql.replace(/--.*$/gm, '');
 const stripTsComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-const MIGRATION = 'supabase/migrations/20261026180000_house_assignment_timestamp_placement.sql';
+const MIGRATION = 'supabase/migrations/20261026230757_house_assignment_timestamp_placement.sql';
 const PLACEMENT_SOURCES = [
   'src/lib/housePlacement.ts',
   'src/lib/housePlacementImport.ts',

@@ -29,7 +29,7 @@ The migration is idempotent and only touches 2026 rows:
 
 **What stays untouched:** the 2025–2026 Mario Houses and every earlier year; `house_memberships`; members; attendance; points; leaderboard views; and the public `published_house_page_assets` view.
 
-**Read-only check against production (2026-10-26):** there were no 2026 House rows, no 2026 memberships, and no `house_parents` table. Each of the eight House Parents has exactly one member record with their exact name. Timothy is recorded as "Timothy Huynh", and there is no separate "Tim Huynh" record. So the migration is expected to link all eight. Re-check in the admin panel after applying it.
+**Read-only check against production (2026-10-26):** there were no 2026 House rows, no 2026 memberships, and no `house_parents` table. Each of the eight House Parents has exactly one member record with their exact name. Timothy is recorded as "Timothy Huynh", and there is no separate "Tim Huynh" record. So the migration was expected to link all eight. **After applying it on 2026-10-26, all eight House Parents are linked**, each to the member record with their exact name.
 
 ## Archive
 
@@ -37,8 +37,8 @@ In `src/data/legacyHouseArchive.ts`, 2025–2026 (Super Mario) is now an archive
 
 ## Steps
 
-1. Apply `20261026180000_house_assignment_timestamp_placement.sql`, then `20261026200000_house_2026_my_little_pony.sql`, after staging verification.
-2. Deploy the frontend.
+1. Apply `20261026230757_house_assignment_timestamp_placement.sql`, then `20261026200000_house_2026_my_little_pony.sql`. **Done 2026-10-26**: both are applied to production.
+2. Deploy the frontend. **Done**: PR #557 is merged to `main`.
 3. In Admin → Houses → Profiles & Images (2026–2027), confirm that all eight House Parents show as **Linked**, and resolve any that say **Needs review**.
 4. Optionally upload House images and House Parent posters there.
 
