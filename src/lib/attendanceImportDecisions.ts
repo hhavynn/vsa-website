@@ -178,6 +178,8 @@ export interface PlannedCredit<R, M extends IdentityMember> {
   observedYear: string | null;
   /** Automatic matches: every same-name member the preview saw (the import refuses if another appears). */
   knownSameNameIds: string[] | null;
+  /** Known-email matches: the addresses that identified the member, rechecked before writing. */
+  evidenceEmails: string[];
 }
 
 export interface PlannedCreate<R> {
@@ -267,6 +269,9 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
         aliases,
         observedYear: observedYear(row),
         knownSameNameIds: automatic ? row.sameNameIds : null,
+        evidenceEmails: automatic && row.reason === 'known_email'
+          ? row.emails.map(normalizeEmail).filter((e) => planCtx.heldEmails.has(e))
+          : [],
       };
       creditByMember.set(member.id, credit);
       plan.credits.push(credit);
@@ -392,6 +397,7 @@ export interface AttendanceImportRequest {
     aliases?: AliasPlan[];
     observed_year?: string;
     known_same_name_ids?: string[];
+    evidence_emails?: string[];
   }>;
   creates: Array<{
     row_key: string;
@@ -425,6 +431,7 @@ export function toImportRequest<M extends IdentityMember>(
       ...(c.aliases.length ? { aliases: c.aliases } : {}),
       ...(c.observedYear ? { observed_year: c.observedYear } : {}),
       ...(c.knownSameNameIds ? { known_same_name_ids: c.knownSameNameIds } : {}),
+      ...(c.evidenceEmails.length ? { evidence_emails: c.evidenceEmails } : {}),
     })),
     creates: plan.creates.map((c) => ({
       row_key: c.row.rowId,

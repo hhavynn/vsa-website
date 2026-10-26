@@ -188,6 +188,13 @@ describe('the write plan', () => {
     expect(plan.credits[0].aliases).toEqual([{ email: 'b@gmail.com', method: 'admin_confirmed' }]);
   });
 
+  it('sends the address that identified a known-email match so the database can recheck it', () => {
+    const { plan } = run([{ name: 'Alex Nguyen', email: 'Alex@Gmail.com', email2: 'alex@ucsd.edu' }], [alex]);
+    expect(plan.credits[0]).toMatchObject({ evidenceEmails: ['alex@gmail.com'], aliases: [{ email: 'alex@ucsd.edu', method: 'same_submission' }] });
+    const byName = run([{ name: 'Alex Nguyen', college: 'Muir' }], [alex]);
+    expect(byName.plan.credits[0].evidenceEmails).toEqual([]);
+  });
+
   it('a new person submitted twice becomes one create carrying both addresses', () => {
     const { plan } = run([
       { name: 'Hoa Pham', email: 'hoa@gmail.com', college: 'Sixth', year: '1st' },
