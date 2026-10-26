@@ -6,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
 
+// These cover the identity importer behind the rollout flag (LegacyImport.*.test.tsx covers the default).
+beforeAll(() => { process.env.REACT_APP_ATTENDANCE_IDENTITY_V2 = 'true'; });
+afterAll(() => { delete process.env.REACT_APP_ATTENDANCE_IDENTITY_V2; });
+
 jest.mock("../../lib/supabase", () => ({
   get supabase() {
     return require("../../test-utils/supabaseMock").supabaseMock.client;

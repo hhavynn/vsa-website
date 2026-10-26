@@ -16,6 +16,10 @@ const rpcOk = (extra: Record<string, unknown> = {}) => ({
 const requests = () =>
   supabaseMock.queriesFor(RPC).map((q) => (q.calls[0].args[0] as { p_request: AttendanceImportRequest }).p_request);
 
+// These cover the identity importer behind the rollout flag (LegacyImport.*.test.tsx covers the default).
+beforeAll(() => { process.env.REACT_APP_ATTENDANCE_IDENTITY_V2 = 'true'; });
+afterAll(() => { delete process.env.REACT_APP_ATTENDANCE_IDENTITY_V2; });
+
 jest.mock("../../lib/supabase", () => ({
   get supabase() {
     return require("../../test-utils/supabaseMock").supabaseMock.client;
