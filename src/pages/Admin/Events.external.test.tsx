@@ -41,6 +41,16 @@ const mockInsert = jest.fn();
 const mockUpdate = jest.fn();
 const mockApplySyncPlan = jest.fn();
 
+// The form classifies an External Event as upcoming or past against "today" in
+// San Diego. Pin today for this file (only when called without a date) so the
+// fixture dates keep meaning "after today" whatever day the suite runs.
+jest.mock('../../utils/losAngelesDate', () => {
+  const actual = jest.requireActual('../../utils/losAngelesDate');
+  return {
+    ...actual,
+    getLosAngelesDateOnly: (date?: Date) => (date ? actual.getLosAngelesDateOnly(date) : '2026-10-01'),
+  };
+});
 jest.mock('../../lib/supabase', () => ({
   supabase: {
     from: () => ({
