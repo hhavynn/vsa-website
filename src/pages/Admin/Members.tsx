@@ -763,7 +763,7 @@ export default function AdminMembers() {
               <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="optional - helps identify duplicates" className={inputCls} />
             </Field>
-            {identityImportEnabled() && <MemberIdentityEmails memberId={editing.id} />}
+            {identityImportEnabled() && <MemberIdentityEmails memberId={editing.id} contactEmail={editing.email} />}
             <Field label="House (legacy cache — not this year's assignment)">
               <p className="mb-1 text-[11px] text-[var(--color-text3)]">
                 Assign Houses for {formatAcademicYear(getAcademicYearStart(new Date()))} on Admin &rarr; Houses. This field only

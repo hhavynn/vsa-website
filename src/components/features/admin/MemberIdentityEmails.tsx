@@ -16,7 +16,7 @@ const HOW: Record<MemberIdentityEmail['verification_method'], string> = {
   admin_entered: 'added by an admin',
 };
 
-export function MemberIdentityEmails({ memberId }: { memberId: string }) {
+export function MemberIdentityEmails({ memberId, contactEmail }: { memberId: string; contactEmail: string | null }) {
   const queryClient = useQueryClient();
   const key = ['member-identity-emails', memberId];
   const { data, isLoading, error, refetch } = useQuery(key, () => memberIdentityRepository.listMemberEmails(memberId));
@@ -30,6 +30,9 @@ export function MemberIdentityEmails({ memberId }: { memberId: string }) {
     onSuccess: () => { setConfirming(null); refresh(); },
   });
   const normalized = normalizeEmail(draft);
+  // The contact email identifies the member on its own (imports read members.email
+  // too), so removing only its alias would change nothing: change the email first.
+  const contact = normalizeEmail(contactEmail);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 
   return (
@@ -55,7 +58,9 @@ export function MemberIdentityEmails({ memberId }: { memberId: string }) {
                 <span className="font-medium text-text-primary">{alias.email}</span>
                 <span className="ml-1 text-[11px] text-text-muted">· {HOW[alias.verification_method]}{alias.moved_from_member_id ? ' · kept from a merged duplicate' : ''}</span>
               </span>
-              {confirming === alias.id ? (
+              {alias.email === contact ? (
+                <span className="text-[11px] text-text-muted">Contact email: change it above to stop matching it</span>
+              ) : confirming === alias.id ? (
                 <span className="flex gap-2">
                   <button type="button" disabled={remove.isLoading} onClick={() => remove.mutate(alias.id)}
                     className="text-[11px] font-medium text-red-700 hover:underline dark:text-red-400">

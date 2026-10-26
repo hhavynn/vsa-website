@@ -17,7 +17,7 @@ const alias = (id: string, email: string, verification_method: string) => ({
 function renderPanel() {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemberIdentityEmails memberId="alex" />
+      <MemberIdentityEmails memberId="alex" contactEmail="alex@gmail.com" />
     </QueryClientProvider>,
   );
 }
@@ -64,4 +64,16 @@ it('shows a retry instead of an empty list when the read fails', async () => {
   renderPanel();
   expect(await screen.findByText(/Could not load the emails/)).toBeInTheDocument();
   expect(screen.queryByText('No confirmed emails yet.')).not.toBeInTheDocument();
+});
+
+it('does not offer to remove the contact email, which identifies the member by itself', async () => {
+  supabaseMock.setDefault('member_identity_emails', {
+    data: [alias('e1', 'alex@gmail.com', 'primary_email'), alias('e2', 'old@ucsd.edu', 'admin_confirmed')],
+    error: null,
+  });
+  renderPanel();
+  await screen.findByText('alex@gmail.com');
+  expect(screen.queryByRole('button', { name: 'Remove alex@gmail.com' })).not.toBeInTheDocument();
+  expect(screen.getByText(/Contact email: change it above/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Remove old@ucsd.edu' })).toBeInTheDocument();
 });
