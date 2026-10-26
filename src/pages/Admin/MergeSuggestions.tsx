@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { memberIdentityRepository } from '../../data/repos/memberIdentity';
+import { identityImportEnabled } from '../../lib/identityRollout';
 import { DUPLICATE_REASON_LABEL, DuplicateCandidateMember, DuplicatePair, findDuplicateMembers } from '../../lib/duplicateMembers';
 import type { IdentityAlias } from '../../lib/identityResolution';
 import type { YearObservation } from '../../lib/yearStanding';
@@ -26,11 +27,13 @@ export default function AdminMergeSuggestions() {
     setLoadError('');
     try {
       // Complete reads or an error: a partial roster would hide real duplicates and show "All clean".
+      // Aliases and years exist only once the identity migration is rolled out.
+      const identity = identityImportEnabled();
       const [roster, excluded, emails, years] = await Promise.all([
         memberIdentityRepository.loadRoster(),
         memberIdentityRepository.loadMergeExclusions(),
-        memberIdentityRepository.loadIdentityEmails(),
-        memberIdentityRepository.loadYearObservations(),
+        identity ? memberIdentityRepository.loadIdentityEmails() : Promise.resolve([]),
+        identity ? memberIdentityRepository.loadYearObservations() : Promise.resolve([]),
       ]);
       setMembers(roster);
       setAliases(emails);

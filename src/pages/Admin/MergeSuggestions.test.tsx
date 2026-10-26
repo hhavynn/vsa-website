@@ -15,8 +15,10 @@ const member = (id: string, first: string, last: string, extra: Record<string, u
 });
 
 beforeEach(() => supabaseMock.reset());
+afterEach(() => { delete process.env.REACT_APP_ATTENDANCE_IDENTITY_V2; });
 
 it('suggests a pair that shares a confirmed address and shows every email on both records', async () => {
+  process.env.REACT_APP_ATTENDANCE_IDENTITY_V2 = 'true';
   supabaseMock.setDefault('members', {
     data: [member('a', 'Alex', 'Nguyen', { email: 'alex@gmail.com' }), member('b', 'Alexander', 'Nguyen', { email: 'anguyen@ucsd.edu' })],
     error: null,
@@ -42,4 +44,12 @@ it('does not suggest merely similar names', async () => {
   supabaseMock.setDefault('members', { data: [member('a', 'An', 'Nguyen'), member('b', 'Anh', 'Nguyen')], error: null });
   render(<AdminMergeSuggestions />);
   expect(await screen.findByText('All clean.')).toBeInTheDocument();
+});
+
+it('never reads the identity tables while the identity rollout is off', async () => {
+  supabaseMock.setDefault('members', { data: [member('a', 'Ryan', 'Le'), member('b', 'Ryan', 'Le')], error: null });
+  render(<AdminMergeSuggestions />);
+  expect(await screen.findByText('Same name')).toBeInTheDocument();
+  expect(supabaseMock.queriesFor('member_identity_emails')).toEqual([]);
+  expect(supabaseMock.queriesFor('member_year_observations')).toEqual([]);
 });

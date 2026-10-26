@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { attendanceRecoveryRepository } from '../data/repos/attendanceRecovery';
 import { memberIdentityRepository } from '../data/repos/memberIdentity';
+import { identityImportEnabled } from '../lib/identityRollout';
 import { RecoveryFinding } from '../lib/attendanceRecovery';
 import { MemberLookup, NO_EVENT_ID, buildLookup, foldName, lastNameToken, normEmail } from '../lib/recoveryTriage';
 
@@ -15,8 +16,9 @@ const STALE = 60_000;
  */
 export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId: string | null) {
   // Confirmed addresses, so a row that used a member's other email still finds them.
+  const identity = identityImportEnabled();
   const aliases = useQuery(['attendance-recovery', 'identity-emails'], () => memberIdentityRepository.loadIdentityEmails(), {
-    enabled: !!eventId, staleTime: STALE,
+    enabled: !!eventId && identity, staleTime: STALE,
   });
   const { ids, surnames, emails } = useMemo(() => {
     const rowEmails = new Set(findings.map(({ record }) => normEmail(record.csv_email)).filter(Boolean));
@@ -56,7 +58,7 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   });
 
   const settled = (query: { isSuccess: boolean }, needed: boolean) => !needed || query.isSuccess;
-  const ready = enabled && aliases.isSuccess && settled(byIds, ids.length > 0) && settled(bySurname, surnames.length > 0)
+  const ready = enabled && settled(aliases, identity) && settled(byIds, ids.length > 0) && settled(bySurname, surnames.length > 0)
     && settled(byEmail, emails.length > 0) && settled(attended, realEvent);
   const error: unknown = aliases.error ?? byIds.error ?? bySurname.error ?? byEmail.error ?? attended.error ?? null;
 
@@ -71,7 +73,7 @@ export function useRecoveryLookups(findings: readonly RecoveryFinding[], eventId
   );
 
   const refetch = () => {
-    void aliases.refetch();
+    if (identity) void aliases.refetch();
     void byIds.refetch();
     void bySurname.refetch();
     void byEmail.refetch();
