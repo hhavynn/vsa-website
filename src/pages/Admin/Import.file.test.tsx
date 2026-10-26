@@ -172,6 +172,7 @@ it("creates a new member from the Google Form columns before importing attendanc
     year: "2nd Year",
     email: "minh@ucsd.edu",
     observed_year: "2nd Year",
+    known_same_name_ids: [],
   }]);
   expect(supabaseMock.usedMethod("members", "insert")).toBe(false);
   expect(supabaseMock.usedMethod("member_event_attendance", "upsert")).toBe(false);

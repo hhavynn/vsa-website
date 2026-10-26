@@ -40,6 +40,7 @@ import {
   hasImportableName,
   planAttendanceImport,
   planTotals,
+  rememberEmailByDefault,
   resolveRow,
   rowNeedsAdmin,
   summarizeAttendanceImport,
@@ -79,8 +80,6 @@ interface IdentitySnapshotState {
   observations: YearObservation[];
   attendedMemberIds: Set<string>;
   eventAcademicYear: number | null;
-  /** Newest member created_at the preview saw; the import refuses same-name members created after it. */
-  readAt: string;
 }
 
 interface ImportOutcome {
@@ -104,7 +103,7 @@ interface ImportOutcome {
 const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
 
 const EMPTY_SNAPSHOT: IdentitySnapshotState = {
-  members: [], aliases: [], observations: [], attendedMemberIds: new Set(), eventAcademicYear: null, readAt: '',
+  members: [], aliases: [], observations: [], attendedMemberIds: new Set(), eventAcademicYear: null,
 };
 
 const PROBLEM_TEXT: Record<ImportProblemKind, string> = {
@@ -115,7 +114,8 @@ const PROBLEM_TEXT: Record<ImportProblemKind, string> = {
   member_changed: 'A matched member\'s name, college or email was edited after this preview.',
   email_owned_by_other: 'An email in this import now belongs to a different member.',
   email_held_by_other: 'Another member now has an email this import would use.',
-  possible_duplicate_created: 'A member with the same name as a new member was created after this preview (perhaps by another import).',
+  possible_duplicate_created: 'A member with the same name appeared after this preview (perhaps from another import), so a new member may be a duplicate or a name match may no longer be unique.',
+  already_applied: 'An earlier attempt of this import was already applied. Check Recent Imports before importing again.',
 };
 
 function getAcademicYearLabel(term: AcademicTerm | undefined): string {
@@ -331,7 +331,6 @@ export default function AdminImport() {
     let next: IdentitySnapshotState;
     try {
       if (problem) throw new Error(problem);
-      const requestedAt = new Date().toISOString();
       // Every read is complete or throws: an unread member or address must never look unknown.
       const [members, attendedMemberIds, aliases, observations] = await Promise.all([
         memberIdentityRepository.loadRoster(),
@@ -339,9 +338,7 @@ export default function AdminImport() {
         memberIdentityRepository.loadIdentityEmails(),
         memberIdentityRepository.loadYearObservations(),
       ]);
-      // Server time, not this browser's clock: the newest member the preview saw.
-      const readAt = members.reduce((latest, m) => (m.created_at > latest ? m.created_at : latest), '') || requestedAt;
-      next = { members, aliases, observations, attendedMemberIds, eventAcademicYear, readAt };
+      next = { members, aliases, observations, attendedMemberIds, eventAcademicYear };
     } catch (err: unknown) {
       setMatchError(describeError(err));
       setRows([]);
@@ -426,7 +423,6 @@ export default function AdminImport() {
         eventId: selectedEventId,
         expectedPoints: event.points ?? null,
         expectedTermId: event.academic_term_id,
-        snapshotAt: snapshot.readAt,
       }));
 
       if (!result.ok) {
@@ -461,7 +457,7 @@ export default function AdminImport() {
       });
       const notImported = summary.unresolved + summary.skipped + summary.duplicatesSkipped;
       toast.success(
-        `Done! Credited ${totals.creditedMembers} member${totals.creditedMembers !== 1 ? 's' : ''}, created ${result.created.length} new`
+        `Done! Recorded ${result.attendance_inserted} attendance${result.attendance_inserted !== 1 ? ' records' : ' record'}, created ${result.created.length} new member${result.created.length !== 1 ? 's' : ''}`
           + `${notImported ? `, not imported: ${notImported} row${notImported !== 1 ? 's' : ''}` : ''}${result.replayed ? ' (already applied)' : ''}.`,
       );
       if (!auditSaved) toast.error('The import was applied, but its audit record could not be saved.', { duration: 10000 });
@@ -472,10 +468,17 @@ export default function AdminImport() {
       setStep('done');
     } catch (err: unknown) {
       const errorMessage = describeError(err);
+      if (/already used for a different import/i.test(errorMessage)) {
+        // An earlier attempt committed, and the decisions changed since. Never send it again.
+        requestIdRef.current = null;
+        setStaleProblems([{ kind: 'already_applied', rowLabel: null }]);
+        toast.error('An earlier attempt of this import was already applied. Check Recent Imports, then re-run matching before importing anything else.', { duration: 12000 });
+        return;
+      }
       // The response may have been lost after the database committed; retrying
       // sends the same request id, which returns the first result instead of writing again.
       await recordImportAudit('failed', event.points ?? 1, null, errorMessage);
-      toast.error(`Import failed: ${errorMessage} Nothing was written by this attempt unless it already finished; retrying is safe.`, { duration: 10000 });
+      toast.error(`Import failed: ${errorMessage} If it actually finished, retrying returns that result instead of writing again.`, { duration: 10000 });
     } finally {
       setImporting(false);
     }
@@ -978,6 +981,7 @@ export default function AdminImport() {
                                 note={needsAdmin && row.status === 'duplicate' ? `${row.note} That row is not being imported, so decide this one.` : row.note}
                                 csvEmail={row.csvEmail}
                                 freshEmails={freshEmails}
+                                rememberByDefault={row.decision?.kind === 'match' ? rememberEmailByDefault(row, row.decision.memberId) : false}
                                 canMatch={row.canForceMatch}
                                 canCreateNew={canMarkAsNew(row, effectiveStatus)}
                                 canSkip={canSkipRow(row, effectiveStatus)}

@@ -262,8 +262,12 @@ create trigger trg_member_purge_identity_on_anonymize
   execute function public.purge_member_identity_on_anonymize();
 
 -- ── smart_merge_members ───────────────────────────────────────────────────────
--- Same contract and lock order as production (target member -> events ->
--- attendance -> source member). Additions, all before the source is deleted:
+-- Same contract as production. Locks: both member advisory keys (sorted), then
+-- both member rows FOR UPDATE (sorted), then events / attendance through the
+-- points triggers. An import or recovery crediting either member therefore
+-- either finishes first (and its credit is moved) or waits and then finds the
+-- source gone (stale), so a merge can never delete a credit committed under it.
+-- Additions, all before the source is deleted:
 --   * year: the side with the more recent observation wins when both have one;
 --     otherwise the target keeps its own (as before).
 --   * house: kept from the source when the target has none (dropped in 20260619).
@@ -300,6 +304,10 @@ begin
   if p_source_id is null or p_target_id is null or p_source_id = p_target_id then
     raise exception 'Choose two different members to merge';
   end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || least(p_source_id, p_target_id)::text, 0));
+  perform pg_advisory_xact_lock(hashtextextended('vsa-member-points:' || greatest(p_source_id, p_target_id)::text, 0));
+  perform 1 from public.members where id in (p_source_id, p_target_id) order by id for update;
 
   select * into v_source from public.members where id = p_source_id;
   if not found then
@@ -377,6 +385,8 @@ begin
     where c.table_schema = 'public'
     order by 1, 2
   loop
+    -- On a unique conflict this table's whole UPDATE is undone; its rows then
+    -- fall back to the existing ON DELETE SET NULL (every listed column has it).
     begin
       execute format('update public.%I set %I = $1 where %I = $2', v_link.table_name, v_link.column_name, v_link.column_name)
         using p_target_id, p_source_id;
@@ -400,20 +410,24 @@ grant execute on function public.smart_merge_members(uuid, uuid) to authenticate
 --                  returns the first result without writing again
 --   event_id       uuid
 --   expected_points, expected_term_id   what the preview showed
---   snapshot_at    when the preview read the roster
 --   credits[]      { row_key, member_id,
 --                    expected: { first_name, last_name, college, email },
+--                    known_same_name_ids?: [uuid]   automatic matches: every
+--                                       member with this name the preview saw
 --                    fill?: { college?, email? }        only where empty now
 --                    year?: { from, to }                only if still "from"
 --                    aliases?: [{ email, method }]
 --                    observed_year? }
 --   creates[]      { row_key, first_name, last_name, college?, year?, email?,
---                    aliases?: [{ email, method }], observed_year? }
+--                    known_same_name_ids: [uuid], aliases?: [{ email, method }],
+--                    observed_year? }
 --
 -- Returns { ok: false, problems: [...] } and writes nothing when the preview is
 -- stale: the event's points or term changed, a credited member was deleted,
--- merged or edited, an address now belongs to someone else, or a member with a
--- new member's name was created after the preview. The admin re-runs matching.
+-- merged or edited, an address now belongs to someone else, or a member with the
+-- same name as a new member (or an automatic match) appeared that the preview
+-- did not see. The admin re-runs matching. A year update also never applies
+-- from an event older than the member's latest observation.
 
 create or replace function public.admin_apply_attendance_import(p_request jsonb)
 returns jsonb
@@ -426,7 +440,6 @@ declare
   v_uid uuid := auth.uid();
   v_request_id uuid;
   v_event_id uuid;
-  v_snapshot timestamptz;
   v_credits jsonb;
   v_creates jsonb;
   v_fingerprint text;
@@ -463,10 +476,9 @@ begin
 
   v_request_id := (p_request ->> 'request_id')::uuid;
   v_event_id := (p_request ->> 'event_id')::uuid;
-  v_snapshot := (p_request ->> 'snapshot_at')::timestamptz;
   v_credits := coalesce(p_request -> 'credits', '[]'::jsonb);
   v_creates := coalesce(p_request -> 'creates', '[]'::jsonb);
-  if v_request_id is null or v_event_id is null or v_snapshot is null
+  if v_request_id is null or v_event_id is null
      or jsonb_typeof(v_credits) <> 'array' or jsonb_typeof(v_creates) <> 'array' then
     raise exception 'The import request is missing required fields' using errcode = '22023';
   end if;
@@ -613,13 +625,24 @@ begin
     end if;
   end loop;
 
-  -- New members: nobody with the same name appeared after the preview.
-  for v_item in select c from jsonb_array_elements(v_creates) c loop
+  -- Same-name members the preview did not see: a new member may be a duplicate,
+  -- and an automatic name match may no longer be unique.
+  for v_item in
+    select c from jsonb_array_elements(v_creates) c
+    union all
+    select c from jsonb_array_elements(v_credits) c where c ? 'known_same_name_ids'
+  loop
+    if jsonb_typeof(coalesce(v_item -> 'known_same_name_ids', '[]'::jsonb)) <> 'array' then
+      raise exception 'known_same_name_ids must be an array' using errcode = '22023';
+    end if;
     if exists (
       select 1 from public.members m
-      where m.created_at > v_snapshot
-        and lower(regexp_replace(btrim(m.first_name || ' ' || m.last_name), '\s+', ' ', 'g'))
-          = lower(regexp_replace(btrim((v_item ->> 'first_name') || ' ' || (v_item ->> 'last_name')), '\s+', ' ', 'g'))
+      where lower(regexp_replace(btrim(m.first_name || ' ' || m.last_name), '\s+', ' ', 'g'))
+          = lower(regexp_replace(btrim(coalesce(v_item ->> 'first_name', v_item -> 'expected' ->> 'first_name')
+              || ' ' || coalesce(v_item ->> 'last_name', v_item -> 'expected' ->> 'last_name')), '\s+', ' ', 'g'))
+        and m.id::text not in (
+          select jsonb_array_elements_text(coalesce(v_item -> 'known_same_name_ids', '[]'::jsonb))
+          union all select coalesce(v_item ->> 'member_id', ''))
     ) then
       v_problems := v_problems || jsonb_build_object('kind', 'possible_duplicate_created', 'row_key', v_item ->> 'row_key');
     end if;
@@ -675,7 +698,12 @@ begin
     if jsonb_typeof(v_item -> 'year') = 'object' and nullif(btrim(coalesce(v_item -> 'year' ->> 'to', '')), '') is not null then
       update public.members set year = left(btrim(v_item -> 'year' ->> 'to'), 40), updated_at = now()
       where id = v_member_id
-        and coalesce(btrim(year), '') = coalesce(btrim(v_item -> 'year' ->> 'from'), '');
+        and coalesce(btrim(year), '') = coalesce(btrim(v_item -> 'year' ->> 'from'), '')
+        -- Never from an event older than what the member last reported.
+        and not exists (
+          select 1 from public.member_year_observations o
+          where o.member_id = v_member_id and o.academic_year_start > v_academic_year
+        );
       get diagnostics v_count = row_count;
       if v_count = 0 then
         v_year_skipped := v_year_skipped || to_jsonb(v_item ->> 'row_key');

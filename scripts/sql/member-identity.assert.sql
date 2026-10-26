@@ -290,6 +290,29 @@ select pg_temp.check_true('a new member whose name appeared after the preview is
   pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000016', '[]', jsonb_build_array(
     jsonb_build_object('row_key', 'row-n', 'first_name', 'cam', 'last_name', 'LY')))) = 'possible_duplicate_created');
 
+insert into r select 'ryan', pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000017', '[]', jsonb_build_array(
+    jsonb_build_object('row_key', 'row-r', 'first_name', 'Ryan', 'last_name', 'Le',
+      'known_same_name_ids', jsonb_build_array('11000000-0000-0000-0000-000000000002', '11000000-0000-0000-0000-000000000003'))),
+    4, '81000000-0000-0000-0000-000000000028'));
+select pg_temp.check_true('a new member the admin confirmed against every same-name member the preview saw is created',
+  (select (v -> 'result' ->> 'ok')::boolean from r where label = 'ryan')
+  and (select count(*) from public.members where first_name = 'Ryan' and last_name = 'Le') = 3);
+insert into public.members (id, first_name, last_name) values ('11000000-0000-0000-0000-0000000000a7', 'Minh', 'Pham');
+select pg_temp.check_true('an automatic name match whose name became shared after the preview is stale',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000018', jsonb_build_array(
+    pg_temp.minh('{"known_same_name_ids": ["11000000-0000-0000-0000-000000000007"]}')))) = 'possible_duplicate_created');
+delete from public.members where id = '11000000-0000-0000-0000-0000000000a7';
+insert into r select 'old-event-year', pg_temp.import(jsonb_build_object(
+  'request_id', '90000000-0000-0000-0000-000000000019',
+  'event_id', '81000000-0000-0000-0000-000000000025', 'expected_points', 5,
+  'expected_term_id', '71000000-0000-0000-0000-000000000025',
+  'credits', jsonb_build_array(jsonb_build_object('row_key', 'row-o', 'member_id', '11000000-0000-0000-0000-000000000001',
+    'expected', jsonb_build_object('first_name', 'Alex', 'last_name', 'Nguyen', 'college', 'Muir', 'email', 'alex@gmail.com'),
+    'year', jsonb_build_object('from', '3rd Year', 'to', '4th Year')))));
+select pg_temp.check_true('the database never applies a year from an event older than the latest observation',
+  (select year from public.members where id = '11000000-0000-0000-0000-000000000001') = '3rd Year'
+  and (select v -> 'result' -> 'years_skipped' from r where label = 'old-event-year') = '["row-o"]'::jsonb);
+
 -- ── Import: malformed requests ────────────────────────────────────────────────
 select pg_temp.check_true('crediting one member twice is refused',
   pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000020', jsonb_build_array(pg_temp.minh(), pg_temp.minh('{"row_key": "row-x"}')))) ->> 'code' = '22023');

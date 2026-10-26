@@ -125,7 +125,7 @@ describe("a suggested member who is actually someone else", () => {
     const [request] = requests();
     expect(request.credits).toEqual([]);
     expect(request.creates).toEqual([
-      { row_key: "row-0", first_name: "Lan", last_name: "Tran", college: "Revelle", year: "1st Year", email: "lan.tran.two@gmail.com", observed_year: "1st Year" },
+      { row_key: "row-0", first_name: "Lan", last_name: "Tran", college: "Revelle", year: "1st Year", email: "lan.tran.two@gmail.com", observed_year: "1st Year", known_same_name_ids: ["lan"] },
     ]);
     expect(request).toMatchObject({ event_id: "gbm", expected_points: 3, expected_term_id: "fall" });
     expect(directMemberWrites()).toEqual([]);
@@ -174,6 +174,7 @@ describe("Gmail at one event, UCSD at the next", () => {
       year: { from: "2nd Year", to: "3rd Year" },
       aliases: [{ email: "alex@ucsd.edu", method: "unique_name_college_year" }],
       observed_year: "3rd Year",
+      known_same_name_ids: ["alex"],
     }]);
     expect(requests()[0].creates).toEqual([]);
   });

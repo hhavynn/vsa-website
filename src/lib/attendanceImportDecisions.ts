@@ -68,6 +68,16 @@ export function duplicateInEffect<M extends IdentityMember>(row: DecisionRow<M>,
   return true;
 }
 
+/**
+ * Whether an admin's Match Existing also remembers the row's new email unless
+ * they untick it: only when the chosen member's name matches outright (or with
+ * a middle name added or left out). For a similar or shortened name it is opt-in.
+ */
+export function rememberEmailByDefault(row: Pick<IdentityResult, 'candidates'>, memberId: string): boolean {
+  const relation = row.candidates.find((c) => c.member.id === memberId)?.name;
+  return relation === 'exact' || relation === 'middle_omitted';
+}
+
 function chosenCandidate<M extends IdentityMember>(row: DecisionRow<M>, ctx: DecisionContext<M>): M | null {
   if (row.decision?.kind !== 'match') return null;
   const { memberId } = row.decision;
@@ -166,6 +176,8 @@ export interface PlannedCredit<R, M extends IdentityMember> {
   year: { from: string | null; to: string } | null;
   aliases: AliasPlan[];
   observedYear: string | null;
+  /** Automatic matches: every same-name member the preview saw (the import refuses if another appears). */
+  knownSameNameIds: string[] | null;
 }
 
 export interface PlannedCreate<R> {
@@ -179,6 +191,7 @@ export interface PlannedCreate<R> {
   emailWithheld: boolean;
   aliases: AliasPlan[];
   observedYear: string | null;
+  knownSameNameIds: string[];
 }
 
 export interface AttendanceImportPlan<R, M extends IdentityMember> {
@@ -224,14 +237,17 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
       const member = resolved.member;
       if (creditByMember.has(member.id)) continue;
       const automatic = !resolved.adminConfirmed;
-      const remember = resolved.adminConfirmed && row.decision?.kind === 'match' && row.decision.rememberEmail !== false;
+      const remember = resolved.adminConfirmed && row.decision?.kind === 'match'
+        && (row.decision.rememberEmail ?? rememberEmailByDefault(row, member.id));
       const aliases: AliasPlan[] = automatic
         ? row.aliasPlan.filter((a) => !planCtx.heldEmails.has(a.email))
         : remember ? unheld(row.emails).map((email) => ({ email, method: 'admin_confirmed' as const })) : [];
       const fill: PlannedCredit<R, M>['fill'] = {};
       if (automatic && !member.college && row.csvCollege) fill.college = row.csvCollege;
-      const firstFresh = unheld(row.emails)[0];
-      if (automatic && !normalizeEmail(member.email) && firstFresh) fill.email = firstFresh;
+      // A filled contact email becomes an alias through the database trigger, so
+      // it needs the same confirmation as one: name + college + year.
+      const confirmed = aliases.find((a) => a.method === 'unique_name_college_year');
+      if (automatic && !normalizeEmail(member.email) && confirmed) fill.email = confirmed.email;
       const to = planYearAdvance(member.year, row.csvYear, row.invalidYear, observationsByMember.get(member.id) ?? [], planCtx.eventAcademicYear);
       const credit: PlannedCredit<R, M> = {
         row,
@@ -242,6 +258,7 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
         year: to ? { from: member.year, to } : null,
         aliases,
         observedYear: observedYear(row),
+        knownSameNameIds: automatic ? row.sameNameIds : null,
       };
       creditByMember.set(member.id, credit);
       plan.credits.push(credit);
@@ -258,6 +275,7 @@ export function planAttendanceImport<M extends IdentityMember, R extends Decisio
         emailWithheld,
         aliases: unheld(others).map((email) => ({ email, method: 'same_submission' as const })),
         observedYear: observedYear(row),
+        knownSameNameIds: row.sameNameIds,
       };
       createByRow.set(row.rowId, create);
       plan.creates.push(create);
@@ -350,7 +368,6 @@ export interface ImportRequestMeta {
   eventId: string;
   expectedPoints: number | null;
   expectedTermId: string;
-  snapshotAt: string;
 }
 
 export interface AttendanceImportRequest {
@@ -358,7 +375,6 @@ export interface AttendanceImportRequest {
   event_id: string;
   expected_points: number | null;
   expected_term_id: string;
-  snapshot_at: string;
   credits: Array<{
     row_key: string;
     member_id: string;
@@ -367,6 +383,7 @@ export interface AttendanceImportRequest {
     year?: { from: string | null; to: string };
     aliases?: AliasPlan[];
     observed_year?: string;
+    known_same_name_ids?: string[];
   }>;
   creates: Array<{
     row_key: string;
@@ -375,6 +392,7 @@ export interface AttendanceImportRequest {
     college: string | null;
     year: string | null;
     email: string | null;
+    known_same_name_ids: string[];
     aliases?: AliasPlan[];
     observed_year?: string;
   }>;
@@ -390,7 +408,6 @@ export function toImportRequest<M extends IdentityMember>(
     event_id: meta.eventId,
     expected_points: meta.expectedPoints,
     expected_term_id: meta.expectedTermId,
-    snapshot_at: meta.snapshotAt,
     credits: plan.credits.map((c) => ({
       row_key: c.row.rowId,
       member_id: c.member.id,
@@ -399,6 +416,7 @@ export function toImportRequest<M extends IdentityMember>(
       ...(c.year ? { year: c.year } : {}),
       ...(c.aliases.length ? { aliases: c.aliases } : {}),
       ...(c.observedYear ? { observed_year: c.observedYear } : {}),
+      ...(c.knownSameNameIds ? { known_same_name_ids: c.knownSameNameIds } : {}),
     })),
     creates: plan.creates.map((c) => ({
       row_key: c.row.rowId,
@@ -407,6 +425,7 @@ export function toImportRequest<M extends IdentityMember>(
       college: c.college,
       year: c.year,
       email: c.email,
+      known_same_name_ids: c.knownSameNameIds,
       ...(c.aliases.length ? { aliases: c.aliases } : {}),
       ...(c.observedYear ? { observed_year: c.observedYear } : {}),
     })),

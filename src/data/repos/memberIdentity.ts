@@ -70,7 +70,9 @@ export type ImportProblemKind =
   | 'member_changed'
   | 'email_owned_by_other'
   | 'email_held_by_other'
-  | 'possible_duplicate_created';
+  | 'possible_duplicate_created'
+  /** Client-side: an earlier attempt with this request id already committed. */
+  | 'already_applied';
 
 export type AttendanceImportResult =
   | { ok: false; problems: { kind: ImportProblemKind; row_key?: string }[] }

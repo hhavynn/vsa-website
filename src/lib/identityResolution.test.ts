@@ -79,6 +79,49 @@ describe('email switching', () => {
   });
 });
 
+describe('weak evidence never becomes an automatic match or an alias (review findings)', () => {
+  it('a known email with a merely similar name goes to review (siblings on a family email)', () => {
+    const an = member('an', 'An', 'Nguyen', { email: 'nguyen.family@gmail.com' });
+    const { rows } = scenario([{ name: 'Anh Nguyen', email: 'nguyen.family@gmail.com' }], [an]);
+    expect(rows[0]).toMatchObject({ status: 'review', reason: 'email_name_conflict' });
+  });
+
+  it('a known email with an implausible standing goes to review', () => {
+    const { rows } = scenario([{ name: 'Alex Nguyen', email: 'alex@gmail.com', year: '1st' }], [{ ...alex, year: '4th Year' }],
+      { observations: [obs('alex', 2025, '4th Year')] });
+    expect(rows[0]).toMatchObject({ status: 'review', reason: 'email_name_conflict' });
+  });
+
+  it('never remembers a second school address that contradicts the owner\'s', () => {
+    const owner = { ...alex, email: 'anguyen@ucsd.edu' };
+    const { rows } = scenario([{ name: 'Alex Nguyen', email: 'anguyen@ucsd.edu', email2: 'other.person@ucsd.edu' }], [owner]);
+    expect(rows[0]).toMatchObject({ status: 'match', reason: 'known_email', aliasPlan: [] });
+  });
+
+  it('two rows matching one member by name alone are not collapsed into one credit', () => {
+    const anh = member('anh', 'Anh', 'Nguyen');
+    const { rows } = scenario([{ name: 'Anh Nguyen', email: 'anh.one@gmail.com' }, { name: 'Anh Nguyen', email: 'anh.two@gmail.com' }], [anh]);
+    expect(rows[0].reason).toBe('unique_name');
+    expect(rows[1]).toMatchObject({ status: 'review', reason: 'member_claimed_by_earlier_row', aliasPlan: [] });
+  });
+
+  it('two new rows with one name and two personal emails stay two people', () => {
+    const { rows } = scenario([
+      { name: 'Hoa Pham', email: 'hoa.one@gmail.com', college: 'Sixth', year: '1st' },
+      { name: 'Hoa Pham', email: 'hoa.two@gmail.com', college: 'Sixth', year: '1st' },
+    ], []);
+    expect(rows.map((r) => r.status)).toEqual(['new', 'new']);
+  });
+
+  it('a personal + school pair is one new person only with the same college and year on both rows', () => {
+    const { rows } = scenario([
+      { name: 'Hoa Pham', email: 'hoa@gmail.com', college: 'Sixth', year: '1st' },
+      { name: 'Hoa Pham', email: 'hoa@ucsd.edu', college: 'Sixth' },
+    ], []);
+    expect(rows.map((r) => r.status)).toEqual(['new', 'new']);
+  });
+});
+
 describe('names', () => {
   it('matches a unique exact name with nothing on file against it', () => {
     const bao = member('bao', 'Bao', 'Le');

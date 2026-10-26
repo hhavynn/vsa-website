@@ -109,11 +109,42 @@ describe('the write plan', () => {
     expect(plan.credits[0].year).toBeNull();
   });
 
-  it('fills an empty contact email on an automatic match instead of adding a separate alias', () => {
-    const bao = member('bao', 'Bao', 'Le');
-    const { plan } = run([{ name: 'Bao Le', email: 'bao@ucsd.edu', college: 'Sixth' }], [bao]);
-    expect(plan.credits[0].fill).toEqual({ college: 'Sixth', email: 'bao@ucsd.edu' });
+  it('fills an empty contact email only on a name + college + year match, instead of a separate alias', () => {
+    const bao = member('bao', 'Bao', 'Le', { college: 'Sixth', year: '1st Year' });
+    const { plan } = run([{ name: 'Bao Le', email: 'bao@ucsd.edu', college: 'Sixth', year: '2nd' }], [bao]);
+    expect(plan.credits[0].fill).toEqual({ email: 'bao@ucsd.edu' });
     expect(plan.credits[0].aliases).toEqual([]);
+  });
+
+  it('a bare name match never fills an email or remembers one (review: weak evidence must not become an alias)', () => {
+    const anh = member('anh', 'Anh', 'Nguyen');
+    const { plan, rows } = run([{ name: 'Anh Nguyen', email: 'someone@gmail.com' }], [anh]);
+    expect(rows[0].reason).toBe('unique_name');
+    expect(plan.credits[0].fill).toEqual({});
+    expect(plan.credits[0].aliases).toEqual([]);
+    const withCollege = run([{ name: 'Anh Nguyen', email: 'someone@gmail.com', college: 'Muir' }], [{ ...anh, college: 'Muir' }]);
+    expect(withCollege.rows[0].reason).toBe('name_college');
+    expect(withCollege.plan.credits[0].fill).toEqual({});
+  });
+
+  it('remembers an email on an admin match by default only for an exact name', () => {
+    const alexander = member('al', 'Alexander', 'Nguyen');
+    const similar = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com' }], [alexander], { decisions: { 0: { kind: 'match', memberId: 'al' } } });
+    expect(similar.plan.credits[0].aliases).toEqual([]);
+    const optedIn = run([{ name: 'Alex Nguyen', email: 'alex@gmail.com' }], [alexander],
+      { decisions: { 0: { kind: 'match', memberId: 'al', rememberEmail: true } } });
+    expect(optedIn.plan.credits[0].aliases).toEqual([{ email: 'alex@gmail.com', method: 'admin_confirmed' }]);
+  });
+
+  it('sends the same-name members the preview saw, for automatic matches and new members only', () => {
+    const a = member('a', 'Ryan', 'Le', { college: 'Muir' });
+    const b = member('b', 'Ryan', 'Le', { college: 'Sixth' });
+    const auto = run([{ name: 'Minh Vo' }], [member('m', 'Minh', 'Vo')]);
+    expect(auto.plan.credits[0].knownSameNameIds).toEqual(['m']);
+    const created = run([{ name: 'Ryan Le' }], [a, b], { decisions: { 0: { kind: 'new' } } });
+    expect(created.plan.creates[0].knownSameNameIds.sort()).toEqual(['a', 'b']);
+    const chosen = run([{ name: 'Ryan Le' }], [a, b], { decisions: { 0: { kind: 'match', memberId: 'a' } } });
+    expect(chosen.plan.credits[0].knownSameNameIds).toBeNull();
   });
 
   it('two rows for one member write one credit, and the second address joins it', () => {
@@ -188,14 +219,13 @@ describe('the write plan', () => {
       { name: 'Hoa Pham', email: 'hoa@ucsd.edu', college: 'Sixth', year: 'Alumni' },
     ], [alex], { observations: [lastYear] });
     const request = toImportRequest(plan, {
-      requestId: 'req', eventId: 'gbm', expectedPoints: 3, expectedTermId: 'fall', snapshotAt: '2026-10-25T00:00:00.000Z',
+      requestId: 'req', eventId: 'gbm', expectedPoints: 3, expectedTermId: 'fall',
     });
     expect(request).toEqual({
       request_id: 'req',
       event_id: 'gbm',
       expected_points: 3,
       expected_term_id: 'fall',
-      snapshot_at: '2026-10-25T00:00:00.000Z',
       credits: [{
         row_key: 'row-0',
         member_id: 'alex',
@@ -203,9 +233,11 @@ describe('the write plan', () => {
         year: { from: '2nd Year', to: '3rd Year' },
         aliases: [{ email: 'alex@ucsd.edu', method: 'unique_name_college_year' }],
         observed_year: '3rd Year',
+        known_same_name_ids: ['alex'],
       }],
       creates: [{
         row_key: 'row-1', first_name: 'Hoa', last_name: 'Pham', college: 'Sixth', year: 'Alumni', email: 'hoa@ucsd.edu',
+        known_same_name_ids: [],
       }],
     });
   });

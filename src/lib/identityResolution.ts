@@ -131,6 +131,8 @@ export interface IdentityResult<M extends IdentityMember = IdentityMember> exten
   aliasPlan: AliasPlan[];
   /** Members who already hold one of the row's addresses. */
   emailHolderIds: string[];
+  /** Every member with exactly this (folded) name in the preview; the import refuses if another appears. */
+  sameNameIds: string[];
 }
 
 const MAX_CANDIDATES = 5;
@@ -382,10 +384,17 @@ function resolveAgainstRoster<M extends IdentityMember>(
     }
     const owner = ownerCandidates[0];
     const strongName = owner.name === 'exact' || owner.name === 'middle_omitted';
-    const closeName = owner.name === 'first_name_prefix' || owner.name === 'reordered' || owner.name === 'similar';
+    // A shortened or reordered name can be the same person; a merely similar one
+    // (An / Anh) sharing an address is more often a sibling on a family email.
+    const closeName = owner.name === 'first_name_prefix' || owner.name === 'reordered';
     const exactElsewhere = exactByKey.filter((c) => c.member.id !== owner.member.id);
-    if (strongName || (closeName && owner.college !== 'conflict' && exactElsewhere.length === 0)) {
-      const aliases = unknownEmails(row, index).map((email): AliasPlan => ({ email, method: 'same_submission' }));
+    const ownerEmails = Array.from(index.byId.get(owner.member.id)!.emails);
+    if (owner.year !== 'implausible'
+        && (strongName || (closeName && owner.college !== 'conflict' && exactElsewhere.length === 0))) {
+      // A second school address that differs from the owner's is not theirs to keep.
+      const aliases = unknownEmails(row, index)
+        .filter((email) => !hardEmailConflict(ownerEmails, [email]))
+        .map((email): AliasPlan => ({ email, method: 'same_submission' }));
       return automatic('known_email', 'Matched by a known email.', owner, aliases);
     }
     return review(
@@ -427,10 +436,10 @@ function resolveAgainstRoster<M extends IdentityMember>(
         [candidate, ...credible.filter((c) => c !== candidate)],
       );
     }
-    const fresh = unknownEmails(row, index);
-    const memberHasEmail = index.byId.get(candidate.member.id)!.emails.size > 0;
-    const aliases: AliasPlan[] = collegeMatch && yearFits && memberHasEmail
-      ? fresh.map((email) => ({ email, method: 'unique_name_college_year' }))
+    // Only the strongest name evidence confirms an address; weaker tiers credit the
+    // member but remember nothing (a wrong alias would win every later import).
+    const aliases: AliasPlan[] = collegeMatch && yearFits
+      ? unknownEmails(row, index).map((email) => ({ email, method: 'unique_name_college_year' }))
       : [];
     if (collegeMatch && yearFits) return automatic('name_college_year', 'Matched by name, college and standing.', candidate, aliases);
     if (collegeMatch) return automatic('name_college', 'Matched by name and college.', candidate, aliases);
@@ -521,6 +530,7 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
       candidateMemberIds: [] as string[],
       duplicateOf: null as string | null,
       emailHolderIds,
+      sameNameIds: (index.byKey.get(row.name.key) ?? []).map((prepared) => prepared.member.id),
     };
     const finish = (verdict: Verdict<M>, duplicateOf: string | null = null): IdentityResult<M> => ({
       ...base,
@@ -579,10 +589,13 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
       const previous = claimed.get(member.id);
       const attended = snapshot.attendedMemberIds.has(member.id);
       if (previous) {
-        if (hardEmailConflict(previous.emails, row.emails)) {
+        // Two rows are one person only when the second is identified by an
+        // address or by name + college + year; a bare name could be someone else.
+        const confident = verdict.reason === 'known_email' || verdict.reason === 'name_college_year';
+        if (!confident || hardEmailConflict(previous.emails, row.emails)) {
           return finish(review(
             'member_claimed_by_earlier_row',
-            `Row ${rowNumber(previous.rowId)} already matched ${member.first_name} ${member.last_name} with a different school email. Skip this row if it repeats, or create a new member if it is someone else.`,
+            `Row ${rowNumber(previous.rowId)} already matched ${member.first_name} ${member.last_name}, and nothing here confirms this row is the same person. Skip this row if it repeats, or create a new member if it is someone else.`,
             [assess(row, index.byId.get(member.id)!, eventYear)],
           ));
         }
@@ -594,12 +607,16 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
     }
 
     if (verdict.status === 'new') {
-      const twin = pendingNew.find((other) => (
-        compareNames(other.name, row.name).relation === 'exact'
-        && !(other.college && seen.college && other.college !== seen.college)
-        && !hardEmailConflict(other.emails, row.emails)
-        && (other.emails.length === 0 || row.emails.length === 0 || other.year === row.csvYear || !other.year || !row.csvYear)
-      ));
+      const twin = pendingNew.find((other) => {
+        if (compareNames(other.name, row.name).relation !== 'exact') return false;
+        if (other.college && seen.college && other.college !== seen.college) return false;
+        if (other.year && row.csvYear && other.year !== row.csvYear) return false;
+        if (other.emails.length === 0 || row.emails.length === 0) return true;
+        // Two different addresses are one person only as a personal + school pair
+        // with the same college and year on both rows.
+        const schoolPair = other.emails.some(isSchoolEmail) !== row.emails.some(isSchoolEmail);
+        return schoolPair && !!other.college && other.college === seen.college && !!other.year && other.year === row.csvYear;
+      });
       if (twin) {
         return duplicate('same_person_as_new_row', `Same new person as row ${rowNumber(twin.rowId)}; one member is created.`, twin.rowId, null,
           row.emails.filter((email) => !index.emailHolders.has(email)).map((email) => ({ email, method: 'same_submission' as const })));

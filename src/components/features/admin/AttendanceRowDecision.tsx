@@ -18,6 +18,8 @@ interface Props {
   csvEmail: string;
   /** Row addresses no member holds yet; an admin match can remember them. */
   freshEmails: string[];
+  /** Remember them unless unticked (exact names); otherwise opt-in. */
+  rememberByDefault: boolean;
   canMatch: boolean;
   canCreateNew: boolean;
   canSkip: boolean;
@@ -78,6 +80,7 @@ export function AttendanceRowDecision({
   note,
   csvEmail,
   freshEmails,
+  rememberByDefault,
   canMatch,
   canCreateNew,
   canSkip,
@@ -88,7 +91,7 @@ export function AttendanceRowDecision({
 }: Props) {
   const chosen = decision?.kind === 'match' ? candidates.find((c) => c.member.id === decision.memberId)?.member : undefined;
   const emailTaken = emailHolders.length > 0;
-  const remember = decision?.kind === 'match' && decision.rememberEmail !== false;
+  const remember = decision?.kind === 'match' && (decision.rememberEmail ?? rememberByDefault);
   const showCandidates = !decision && canMatch && candidates.length > 0 && (needsDecision || suggestOnly);
 
   return (

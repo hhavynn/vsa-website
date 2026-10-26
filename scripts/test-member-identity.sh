@@ -167,6 +167,37 @@ SQL
   [ "$owner" = "12000000-0000-0000-0000-000000000002" ] || fail "[$db] the address belongs to the first claimant (got $owner)"
   pass "[$db] the contested address belongs to exactly the first claimant"
 
+  # 4. A merge and an import touching the same member. Merge first: the import
+  #    waits, then finds the source gone and writes nothing. Import first: the
+  #    merge waits, then moves the new credit to the target. Either way no
+  #    committed credit is deleted by the merge's cascade.
+  rtk psql "${psql_args[@]}" -d "$db" -q -c "insert into public.members (id, first_name, last_name) values
+    ('12000000-0000-0000-0000-000000000011', 'Quy', 'Ta'), ('12000000-0000-0000-0000-000000000012', 'Quy', 'Ta'),
+    ('12000000-0000-0000-0000-000000000013', 'Tien', 'Lu'), ('12000000-0000-0000-0000-000000000014', 'Tien', 'Lu')"
+  local quy='[{"row_key": "r1", "member_id": "12000000-0000-0000-0000-000000000011", "expected": {"first_name": "Quy", "last_name": "Ta", "college": null, "email": null}}]'
+  local tien='[{"row_key": "r1", "member_id": "12000000-0000-0000-0000-000000000013", "expected": {"first_name": "Tien", "last_name": "Lu", "college": null, "email": null}}]'
+  as_admin "$db" "$a1" "select public.smart_merge_members('12000000-0000-0000-0000-000000000011', '12000000-0000-0000-0000-000000000012'); select pg_sleep(1.2);" >"$runtime_dir/$db.m1.out" &
+  local pm1=$!
+  as_admin "$db" "$a2" "select public.admin_apply_attendance_import('$(req 92000000-0000-0000-0000-000000000008 $e28 4 "$tien" '[]')'::jsonb); select pg_sleep(1.2);" >"$runtime_dir/$db.m3.out" &
+  local pm3=$!
+  sleep 0.3
+  as_admin "$db" "$a2" "select public.admin_apply_attendance_import('$(req 92000000-0000-0000-0000-000000000007 $e27 7 "$quy" '[]')'::jsonb);" >"$runtime_dir/$db.m2.out" &
+  local pm2=$!
+  as_admin "$db" "$a1" "select public.smart_merge_members('12000000-0000-0000-0000-000000000013', '12000000-0000-0000-0000-000000000014');" >"$runtime_dir/$db.m4.out" &
+  local pm4=$!
+  wait "$pm1" "$pm2" "$pm3" "$pm4"
+  dump+=("$runtime_dir/$db.m1.out" "$runtime_dir/$db.m2.out" "$runtime_dir/$db.m3.out" "$runtime_dir/$db.m4.out")
+  check_out m2 'member_missing' 'an import waiting on a merge finds the source gone and writes nothing'
+  local quy_rows
+  quy_rows="$(rtk psql "${psql_args[@]}" -d "$db" -qtA -c "select count(*) from public.member_event_attendance where member_id in ('12000000-0000-0000-0000-000000000011', '12000000-0000-0000-0000-000000000012')")"
+  [ "$quy_rows" = "0" ] || fail "[$db] no credit was written for the merged-away member (got $quy_rows)"
+  pass "[$db] no credit was written for the merged-away member"
+  check_out m3 '"ok": true' 'an import that started before a merge applies'
+  local tien_target
+  tien_target="$(rtk psql "${psql_args[@]}" -d "$db" -qtA -c "select (select points || '/' || events_attended from public.members where id = '12000000-0000-0000-0000-000000000014') || '|' || (select count(*) from public.members where id = '12000000-0000-0000-0000-000000000013')")"
+  [ "$tien_target" = "4/1|0" ] || fail "[$db] a merge waiting on an import keeps that import's credit on the target (got $tien_target, want 4/1|0)"
+  pass "[$db] a merge waiting on an import keeps that import's credit on the target (4/1)"
+
   local drift
   drift="$(rtk psql "${psql_args[@]}" -d "$db" -qtA -c "
     select count(*) from (
