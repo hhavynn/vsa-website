@@ -191,7 +191,7 @@ function newRequestId(): string {
 
 type Step = 'configure' | 'preview' | 'done';
 
-/** The identity-aware importer (needs migration 20261025000000). */
+/** The identity-aware importer (needs migration 20261026075912). */
 export function IdentityAdminImport() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>('configure');

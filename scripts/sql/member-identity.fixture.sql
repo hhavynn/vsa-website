@@ -1,6 +1,6 @@
 -- Synthetic records only, for scripts/test-member-identity.sh. Loaded after
 -- attendance-recovery.fixture.sql (members, ledger, production points
--- triggers, import audit tables) and BEFORE 20261025000000, so the backfill
+-- triggers, import audit tables) and BEFORE 20261026075912, so the backfill
 -- runs against existing data the way it will in production.
 
 alter table public.academic_terms add column if not exists academic_year_start integer;

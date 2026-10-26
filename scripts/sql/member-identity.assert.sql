@@ -1,4 +1,4 @@
--- Assertions for 20261025000000_member_identity_aliases.sql. Run by
+-- Assertions for 20261026075912_member_identity_aliases.sql. Run by
 -- scripts/test-member-identity.sh on a disposable local cluster. Synthetic
 -- people only. One transaction, rolled back. Prints "PASS: ..." per check and
 -- aborts on the first failure. Concurrency runs in the shell script.

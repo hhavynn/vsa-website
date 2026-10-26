@@ -271,7 +271,7 @@ investigation or reopening.
 `scripts/audit-import-history.sql` does not read recovery history. After a recovery it still reports the
 row by its import-time state. The Historical Recovery panel is the source of truth for recovery status.
 
-### Confirmed email aliases (migration 20261025000000)
+### Confirmed email aliases (migration 20261026075912)
 
 The workspace's triage also reads `member_identity_emails`: a row whose email is a confirmed alias of a member (for example their Gmail while the stored contact email is UCSD) finds that member and counts as the same identity-strong email evidence as a stored email. It is still only a suggestion and is never preselected. Nothing about the recovery function, its history or its locks changed. One limitation: `admin_recover_import_row`'s "a member already has this email" check for **Create separate member** still reads `members.email` only, so it does not refuse an address that is only another member's alias; the new member is created with it and the alias stays with its owner. Check the candidate list (which does show alias holders) before creating.
 

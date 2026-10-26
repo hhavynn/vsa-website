@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline only: verifies 20261025000000_member_identity_aliases.sql on a
+# Offline only: verifies 20261026075912_member_identity_aliases.sql on a
 # disposable local cluster with no TCP listener and no app env. Never touches a
 # hosted Supabase project. Synthetic people only.
 #
@@ -45,7 +45,7 @@ create role authenticated;
 create role service_role bypassrls;
 SQL
 
-migration="${VSA_IDENTITY_MIGRATION:-$repo_dir/supabase/migrations/20261025000000_member_identity_aliases.sql}"
+migration="${VSA_IDENTITY_MIGRATION:-$repo_dir/supabase/migrations/20261026075912_member_identity_aliases.sql}"
 points_migration="$repo_dir/supabase/migrations/20261010000000_serialize_member_points_recalculation.sql"
 
 fail() {
