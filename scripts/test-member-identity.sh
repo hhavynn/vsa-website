@@ -167,6 +167,25 @@ SQL
   [ "$owner" = "12000000-0000-0000-0000-000000000002" ] || fail "[$db] the address belongs to the first claimant (got $owner)"
   pass "[$db] the contested address belongs to exactly the first claimant"
 
+  # 5. Two imports into different events create the same new person (no shared
+  #    email or event lock): the name lock serializes them, so the second sees
+  #    the first's member and is sent back for review.
+  local kha1='[{"row_key": "r1", "first_name": "Kha", "last_name": "Dinh", "email": "kha.one@gmail.com", "known_same_name_ids": []}]'
+  local kha2='[{"row_key": "r1", "first_name": "Kha", "last_name": "Dinh", "email": "kha.two@ucsd.edu", "known_same_name_ids": []}]'
+  as_admin "$db" "$a1" "select public.admin_apply_attendance_import('$(req 92000000-0000-0000-0000-000000000009 $e27 7 '[]' "$kha1")'::jsonb); select pg_sleep(1.2);" >"$runtime_dir/$db.n1.out" &
+  local pn1=$!
+  sleep 0.3
+  as_admin "$db" "$a2" "select public.admin_apply_attendance_import('$(req 92000000-0000-0000-0000-000000000010 $e28 4 '[]' "$kha2")'::jsonb);" >"$runtime_dir/$db.n2.out" &
+  local pn2=$!
+  wait "$pn1" "$pn2"
+  dump+=("$runtime_dir/$db.n1.out" "$runtime_dir/$db.n2.out")
+  check_out n1 '"ok": true' 'the first of two concurrent imports of one new person (different events) applies'
+  check_out n2 'possible_duplicate_created' 'the second, on another event, is sent back for review instead of creating a duplicate'
+  local khas
+  khas="$(rtk psql "${psql_args[@]}" -d "$db" -qtA -c "select count(*) from public.members where first_name = 'Kha' and last_name = 'Dinh'")"
+  [ "$khas" = "1" ] || fail "[$db] exactly one Kha Dinh exists (got $khas)"
+  pass "[$db] exactly one member exists for a person imported into two events at once"
+
   # 4. A merge and an import touching the same member. Merge first: the import
   #    waits, then finds the source gone and writes nothing. Import first: the
   #    merge waits, then moves the new credit to the target. Either way no

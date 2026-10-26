@@ -48,7 +48,8 @@
 --
 -- LOCKS (admin_apply_attendance_import)
 --   event advisory -> event FOR SHARE -> email advisories (sorted)
---   -> per member, sorted: member advisory -> member row FOR NO KEY UPDATE
+--   -> name advisories (sorted) -> per member, sorted: member advisory
+--   -> member row FOR NO KEY UPDATE
 --   -> member inserts -> attendance -> members (points triggers) -> aliases.
 --   The member advisory key and the email advisory key are the ones Historical
 --   Recovery takes, so the two writers queue instead of racing. Holding the
@@ -414,6 +415,9 @@ grant execute on function public.smart_merge_members(uuid, uuid) to authenticate
 --                    expected: { first_name, last_name, college, email },
 --                    known_same_name_ids?: [uuid]   automatic matches: every
 --                                       member with this name the preview saw
+--                    evidence_emails?: [text]       addresses that identified the
+--                                       member (known-email matches); they must
+--                                       still identify only this member
 --                    fill?: { college?, email? }        only where empty now
 --                    year?: { from, to }                only if still "from"
 --                    aliases?: [{ email, method }]
@@ -542,6 +546,7 @@ begin
   ) x
   cross join lateral (
     select a ->> 'email' as email from jsonb_array_elements(coalesce(x.item -> 'aliases', '[]'::jsonb)) a
+    union all select e from jsonb_array_elements_text(coalesce(x.item -> 'evidence_emails', '[]'::jsonb)) e
     union all select x.item -> 'fill' ->> 'email'
     union all select x.item ->> 'email' where x.target like 'new:%'
   ) e
@@ -587,6 +592,20 @@ begin
     perform pg_advisory_xact_lock(hashtextextended('vsa-member-email:' || v_email, 0));
   end loop;
 
+  -- Same-name members created by another import (any event) must be visible to
+  -- the same-name check below, so imports touching one name queue on it.
+  for v_email in
+    select distinct lower(regexp_replace(btrim(coalesce(c ->> 'first_name', c -> 'expected' ->> 'first_name')
+             || ' ' || coalesce(c ->> 'last_name', c -> 'expected' ->> 'last_name')), '\s+', ' ', 'g'))
+    from (
+      select c from jsonb_array_elements(v_creates) c
+      union all select c from jsonb_array_elements(v_credits) c where c ? 'known_same_name_ids'
+    ) named
+    order by 1
+  loop
+    perform pg_advisory_xact_lock(hashtextextended('vsa-member-name:' || v_email, 0));
+  end loop;
+
   -- Credited members: lock, then confirm they are who the preview showed.
   for v_item in
     select c from jsonb_array_elements(v_credits) c order by (c ->> 'member_id')::uuid
@@ -623,6 +642,17 @@ begin
       v_problems := v_problems || jsonb_build_object('kind', 'email_held_by_other',
         'row_key', (select row_key from pg_temp.import_emails where email = v_email limit 1));
     end if;
+  end loop;
+
+  -- Addresses that identified a member must still be that member's.
+  for v_item in select c from jsonb_array_elements(v_credits) c where c ? 'evidence_emails' loop
+    v_member_id := (v_item ->> 'member_id')::uuid;
+    for v_email in select lower(btrim(e)) from jsonb_array_elements_text(v_item -> 'evidence_emails') e loop
+      if not exists (select 1 from public.member_identity_emails where email = v_email and member_id = v_member_id)
+         and not exists (select 1 from public.members where id = v_member_id and email is not null and lower(btrim(email)) = v_email) then
+        v_problems := v_problems || jsonb_build_object('kind', 'member_changed', 'row_key', v_item ->> 'row_key');
+      end if;
+    end loop;
   end loop;
 
   -- Same-name members the preview did not see: a new member may be a duplicate,

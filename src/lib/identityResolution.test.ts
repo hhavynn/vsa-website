@@ -114,6 +114,16 @@ describe('weak evidence never becomes an automatic match or an alias (review fin
     expect(personal.rows[1].aliasPlan).toEqual([{ email: 'alex.n@yahoo.com', method: 'same_submission' }]);
   });
 
+  it('a repeat of a name-only match never confirms a new address', () => {
+    const bare = member('alex', 'Alex', 'Nguyen');
+    const { rows } = scenario([
+      { name: 'Alex Nguyen', email: 'alex@gmail.com' },
+      { name: 'Alex Nguyen', email: 'alex@gmail.com', email2: 'alex@ucsd.edu' },
+    ], [bare]);
+    expect(rows[0].reason).toBe('unique_name');
+    expect(rows[1]).toMatchObject({ status: 'duplicate', reason: 'duplicate_row', aliasPlan: [] });
+  });
+
   it('two rows matching one member by name alone are not collapsed into one credit', () => {
     const anh = member('anh', 'Anh', 'Nguyen');
     const { rows } = scenario([{ name: 'Anh Nguyen', email: 'anh.one@gmail.com' }, { name: 'Anh Nguyen', email: 'anh.two@gmail.com' }], [anh]);

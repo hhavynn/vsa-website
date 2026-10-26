@@ -491,6 +491,8 @@ function resolveAgainstRoster<M extends IdentityMember>(
 interface SeenRow {
   /** The existing member the row resolved to automatically, once known. */
   memberId?: string;
+  /** How the row resolved: by strong evidence, by weaker evidence, or as a new person. */
+  strength?: 'confirmed' | 'weak' | 'new';
   rowId: string;
   name: PersonName;
   college: string;
@@ -567,10 +569,14 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
       if (namesCompatible(earlier.name, row.name)) {
         // A repeat confirms an extra address only as a single row would: never one
         // that contradicts a school address of that row or of the member it matched.
+        // Repeating weak evidence (a name-only match) never upgrades it into a confirmed address.
         const known = [...earlier.emails, ...(earlier.memberId ? Array.from(index.byId.get(earlier.memberId)?.emails ?? []) : [])];
+        const mayConfirm = earlier.strength === 'confirmed' || earlier.strength === 'new';
         return duplicate('duplicate_row', `Repeats row ${rowNumber(earlier.rowId)} (same email and name).`, earlier.rowId, null,
-          row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email) && !hardEmailConflict(known, [email]))
-            .map((email) => ({ email, method: 'same_submission' as const })));
+          mayConfirm
+            ? row.emails.filter((email) => !earlier.emails.includes(email) && !index.emailHolders.has(email) && !hardEmailConflict(known, [email]))
+              .map((email) => ({ email, method: 'same_submission' as const }))
+            : []);
       }
       const verdict = resolveAgainstRoster(row, index, eventYear);
       return finish(review(
@@ -609,6 +615,7 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
       }
       claimed.set(member.id, seen);
       seen.memberId = member.id;
+      seen.strength = verdict.reason === 'known_email' || verdict.reason === 'name_college_year' ? 'confirmed' : 'weak';
       return finish(attended ? { ...verdict, status: 'already', note: `${verdict.note} Attendance is already recorded for this event.` } : verdict);
     }
 
@@ -631,6 +638,7 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
         return duplicate('same_person_as_new_row', `Same new person as row ${rowNumber(twin.rowId)}; one member is created.`, twin.rowId, null,
           row.emails.filter((email) => !index.emailHolders.has(email)).map((email) => ({ email, method: 'same_submission' as const })));
       }
+      seen.strength = 'new';
       pendingNew.push(seen);
     }
     return finish(verdict);

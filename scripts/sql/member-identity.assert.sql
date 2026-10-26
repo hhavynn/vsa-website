@@ -313,6 +313,21 @@ select pg_temp.check_true('the database never applies a year from an event older
   (select year from public.members where id = '11000000-0000-0000-0000-000000000001') = '3rd Year'
   and (select v -> 'result' -> 'years_skipped' from r where label = 'old-event-year') = '["row-o"]'::jsonb);
 
+insert into public.member_identity_emails (member_id, email, source, verification_method)
+values ('11000000-0000-0000-0000-000000000007', 'evidence@ucsd.edu', 'admin', 'admin_entered');
+update public.members set email = 'evidence@ucsd.edu' where id = '11000000-0000-0000-0000-000000000004';
+select pg_temp.check_true('a known-email match whose address became another member''s contact email is stale',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000030', jsonb_build_array(
+    pg_temp.minh('{"evidence_emails": ["evidence@ucsd.edu"]}')))) = 'email_held_by_other');
+update public.members set email = null where id = '11000000-0000-0000-0000-000000000004';
+delete from public.member_identity_emails where email = 'evidence@ucsd.edu';
+select pg_temp.check_true('a known-email match whose address no longer identifies the member is stale',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000031', jsonb_build_array(
+    pg_temp.minh('{"evidence_emails": ["gone@ucsd.edu"]}')))) = 'member_changed');
+select pg_temp.check_true('a known-email match whose address still identifies only the member applies',
+  (pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000032', jsonb_build_array(
+    pg_temp.minh('{"evidence_emails": ["minh@ucsd.edu"]}')), '[]', 4, '81000000-0000-0000-0000-000000000028')) -> 'result' ->> 'ok')::boolean);
+
 -- ── Import: malformed requests ────────────────────────────────────────────────
 select pg_temp.check_true('crediting one member twice is refused',
   pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000020', jsonb_build_array(pg_temp.minh(), pg_temp.minh('{"row_key": "row-x"}')))) ->> 'code' = '22023');
