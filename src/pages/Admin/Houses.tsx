@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
 import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
 import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
+import { HouseParentLinks } from '../../components/features/admin/HouseParentLinks';
 import { getVerifiedLegacyHouseYears } from '../../data/legacyHouseArchive';
 import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
@@ -442,10 +443,13 @@ export default function AdminHouses() {
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
       ) : activeTab === 'images' ? (
-        <HouseImagesManager 
-          selectedYear={selectedYear} 
-          onYearChange={setSelectedYear} 
-        />
+        <>
+          <HouseImagesManager
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+          <HouseParentLinks selectedYear={selectedYear} />
+        </>
       ) : activeTab === 'events' ? (
         <HouseEventsManager 
           selectedYear={selectedYear} 

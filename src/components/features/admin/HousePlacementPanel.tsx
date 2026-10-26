@@ -6,7 +6,9 @@
 // only; no email or extra form answer is stored or logged.
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useQuery } from 'react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { ACTIVITY_ACTIONS } from '../../../lib/adminActivity';
 import { formatYearSpan } from '../../../lib/operationalStatus';
@@ -109,9 +111,24 @@ export function HousePlacementPanel({
   const savingRef = useRef(false);
 
   const activeProfiles = useMemo(() => houseProfiles.filter((profile) => profile.is_active), [houseProfiles]);
+  // House Parents let "Pinky Pie (Ingyin & Martin)" resolve to Pinkie Pie. Without
+  // them (e.g. before the House Parent migration) labels still resolve by name.
+  const { data: parents = [] } = useQuery({
+    queryKey: ['admin', 'house-parents', selectedYear],
+    queryFn: () => houseParentsRepository.listForYear(selectedYear as number),
+    enabled: selectedYear !== null,
+    retry: false,
+  });
+  const placementProfiles = useMemo(
+    () => houseProfiles.map((profile) => ({
+      ...profile,
+      parentNames: parents.filter((parent) => parent.house_profile_id === profile.id).map((parent) => parent.display_name),
+    })),
+    [houseProfiles, parents],
+  );
   const review = useMemo(
-    () => (parse?.ok ? buildPlacementReview(parse.rows, houseProfiles, edits) : null),
-    [parse, houseProfiles, edits],
+    () => (parse?.ok ? buildPlacementReview(parse.rows, placementProfiles, edits) : null),
+    [parse, placementProfiles, edits],
   );
   const applicants = useMemo(() => (review ? placementApplicants(review) : []), [review]);
   const houses = useMemo(() => review?.houses ?? [], [review]);
@@ -134,7 +151,7 @@ export function HousePlacementPanel({
     () => (capacities ? validateCapacities(houses, capacities, applicants.length) : []),
     [capacities, houses, applicants.length],
   );
-  const inputKey = `${parseVersion}|${JSON.stringify(edits)}|${JSON.stringify(capacities)}|${houses.map((house) => house.id).join(',')}|${selectedYear}`;
+  const inputKey = `${parseVersion}|${JSON.stringify(edits)}|${JSON.stringify(capacities)}|${houses.map((house) => house.id).join(',')}|${parents.map((parent) => `${parent.house_profile_id}:${parent.display_name}`).join(',')}|${selectedYear}`;
   const current = generated && generated.key === inputKey ? generated : null;
   const stage: PlacementStage = current ? 2 : rawText ? 1 : 0;
   useEffect(() => { onStageChange(stage); }, [stage, onStageChange]);

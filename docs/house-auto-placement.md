@@ -13,7 +13,7 @@ This mode turns the House application form's response sheet into a **private dra
 3. Each applicant is processed once, in that order, and takes their highest-ranked House that still has room.
 4. An earlier applicant is never displaced to improve a later applicant's result or the overall satisfaction score.
 
-There is no lottery, randomness, scoring, personality matching or AI. The same file and capacities always produce the same result. Each row records an explanation built from allocator state, for example *"Assigned to Pinky Pie (2nd choice). Rarity was full when this applicant was processed."*
+There is no lottery, randomness, scoring, personality matching or AI. The same file and capacities always produce the same result. Each row records an explanation built from allocator state, for example *"Assigned to Pinkie Pie (2nd choice). Rarity was full when this applicant was processed."*
 
 Code: `src/lib/housePlacement.ts` (allocator, pure), `src/lib/housePlacementImport.ts` (strict CSV parsing and validation, pure). `suggestBalancing()` is not used: it is a size-based suggestion helper for manual drafts and is hidden for automatic batches.
 
@@ -28,7 +28,7 @@ Code: `src/lib/housePlacement.ts` (allocator, pure), `src/lib/housePlacementImpo
 
 ## Houses
 
-Choices are matched to the selected year's **active** `house_page_assets` rows by House key, display name, or display name with a trailing parenthetical removed (for example "Rarity (Kirsten & Jonas)" becomes Rarity). A parenthetical is stripped only when the rest matches exactly one House. An option that matches no House or several Houses is listed under **Unrecognized House options** and must be mapped by hand. If the year has no active Houses, the page blocks and points to Profiles & Images. Houses are never created, and another year's Houses are never used. `src/constants/houses.ts` is not involved.
+Choices are matched to the selected year's **active** `house_page_assets` rows by House key, display name, or display name with a trailing parenthetical removed (for example "Rarity (Kirsten & Jonas)" becomes Rarity). A parenthetical is stripped only when the rest matches exactly one House. When the name itself doesn't match, the parenthetical's House Parent names can identify the House. The 2026 form spells "Pinky Pie (Ingyin & Martin)", and Ingyin and Martin are Pinkie Pie's House Parents in `house_parents`, so it resolves to **Pinkie Pie**. Every name listed must be a House Parent (full name, first name or nickname) of exactly one active House. A name and House Parents that point at different Houses count as ambiguous. Options recognized this way are listed under **Recognized by House Parent names** with a House select, so you can correct them. An option that matches no House or several Houses is listed under **Unrecognized House options** and must be mapped by hand. Mapped options stay in their list so the mapping can be changed. If the year has no active Houses, the page blocks and points to Profiles & Images. Houses are never created, and another year's Houses are never used. `src/constants/houses.ts` is not involved.
 
 ## Form format
 

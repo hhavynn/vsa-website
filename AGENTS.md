@@ -240,7 +240,7 @@ The canonical roster — every playbook with its edit/audit mode and one-line us
 ### Domain-critical facts
 
 - Current 2026–2027 president fallback/copy should use April Pham and Havyn Nguyen.
-- 2026–2027 Houses are placeholders only; do not invent Houses.
+- 2026–2027 Houses are My Little Pony (owner-confirmed 2026-10-26): Twilight Sparkle, Applejack, Pinkie Pie (not "Pinky Pie"), and Rarity. House Parents: Timothy (Tim) Huynh & Kent Nguyen; Ryan Francisco & Nathan Centeno; Ingyin Moh & Martin Dang; Kirsten Ngo & Jonas Truong. Seeded by `20261026200000_house_2026_my_little_pony.sql`. Never invent Houses for a later year before it is announced.
 - 2025–2026 Houses are Bowser, Donkey Kong, Boo, and Toad.
 - 2023–2024 Houses are drinks/treats, not designer Houses. Designer Houses belong to 2019–2020; Mario Houses belong only to 2025–2026.
 - Closed or future application URLs must not be exposed publicly.

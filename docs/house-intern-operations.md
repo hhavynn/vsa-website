@@ -30,6 +30,7 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 **Status:** both applied to production on 2026-10-01; filenames match the versions recorded in `supabase_migrations`.
 
 3. `20261026180000_house_assignment_timestamp_placement.sql` — additive placement metadata columns for automatic House placement. **Not yet applied to production**; apply before deploying the frontend that uses it ([house-auto-placement.md](house-auto-placement.md#deploying)).
+4. `20261026200000_house_2026_my_little_pony.sql` — the 2026-2027 My Little Pony House profiles and the admin-only `house_parents` member links ([house-2026-my-little-pony.md](house-2026-my-little-pony.md)). **Not yet applied to production.** Apply after 3.
 
 Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 

@@ -2178,6 +2178,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      house_parents: {
+        Row: {
+          created_at: string;
+          display_name: string;
+          display_order: number;
+          house_profile_id: string;
+          id: string;
+          member_id: string | null;
+          review_note: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_name: string;
+          display_order?: number;
+          house_profile_id: string;
+          id?: string;
+          member_id?: string | null;
+          review_note?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_name?: string;
+          display_order?: number;
+          house_profile_id?: string;
+          id?: string;
+          member_id?: string | null;
+          review_note?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       import_job_rows: {
         Row: {
           attendance_member_id: string | null;

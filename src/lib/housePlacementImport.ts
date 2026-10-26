@@ -22,6 +22,8 @@ export interface PlacementProfile {
   display_name: string;
   is_active: boolean;
   display_order?: number | null;
+  /** House Parent display names from house_parents, e.g. "Timothy (Tim) Huynh". */
+  parentNames?: string[];
 }
 
 // ─── Columns ─────────────────────────────────────────────────────────────────
@@ -354,7 +356,7 @@ export function parsePlacementCsv(raw: string, overrides: ColumnOverrides = {}):
 // ─── House labels ────────────────────────────────────────────────────────────
 
 export type HouseLabelResolution =
-  | { kind: 'resolved'; profileId: string }
+  | { kind: 'resolved'; profileId: string; viaParents?: boolean; viaMapping?: boolean }
   | { kind: 'inactive'; profileId: string }
   | { kind: 'ambiguous'; profileIds: string[] }
   | { kind: 'unknown' };
@@ -374,11 +376,43 @@ function fromMatches(matches: PlacementProfile[]): HouseLabelResolution | null {
   return { kind: 'ambiguous', profileIds: matches.map((profile) => profile.id) };
 }
 
+/** "Timothy (Tim) Huynh" → ["Timothy Huynh", "Tim Huynh"]; other names → [name]. */
+export function houseParentNameVariants(displayName: string): string[] {
+  const nickname = displayName.trim().match(/^(\S+)\s*\(([^()]+)\)\s*(.+)$/);
+  if (!nickname) return [displayName.trim()];
+  return [`${nickname[1]} ${nickname[3]}`.trim(), `${nickname[2]} ${nickname[3]}`.trim()];
+}
+
+/** Full names and first names (incl. nicknames) a House Parent can be written as. */
+function parentKeys(displayName: string): string[] {
+  return houseParentNameVariants(displayName).flatMap((variant) => {
+    const key = normalizeMemberName(variant);
+    return [key, key.split(' ')[0]];
+  });
+}
+
+/**
+ * "Ingyin & Martin" → the one active House whose House Parents include every
+ * listed name, or null. Exact (normalized) names only.
+ */
+function houseByParents(text: string, profiles: readonly PlacementProfile[]): string | null {
+  const names = text.split(/\s*(?:&|\+|\/|,|\band\b)\s*/i).map(normalizeMemberName).filter(Boolean);
+  if (names.length === 0) return null;
+  const matches = profiles.filter((profile) => {
+    if (!profile.is_active || !profile.parentNames?.length) return false;
+    const keys = new Set(profile.parentNames.flatMap(parentKeys));
+    return names.every((name) => keys.has(name));
+  });
+  return matches.length === 1 ? matches[0].id : null;
+}
+
 /**
  * Resolves one form option to a selected-year House profile: an admin mapping,
  * then House key / display name, then the name with a trailing parenthetical
- * ("Rarity (Kirsten & Jonas)" → "Rarity") stripped. Never picks between two
- * candidates.
+ * ("Rarity (Kirsten & Jonas)" → "Rarity") stripped. When the name itself does
+ * not match (the 2026 form spells "Pinky Pie"), the parenthetical's House
+ * Parent names may identify exactly one House. A name and House Parents that
+ * point at different Houses are ambiguous. Never picks between two candidates.
  */
 export function resolveHouseLabel(
   text: string,
@@ -389,14 +423,21 @@ export function resolveHouseLabel(
   const mapped = mappings[key];
   if (mapped) {
     const profile = profiles.find((item) => item.id === mapped);
-    if (profile) return profile.is_active ? { kind: 'resolved', profileId: profile.id } : { kind: 'inactive', profileId: profile.id };
+    if (profile) return profile.is_active ? { kind: 'resolved', profileId: profile.id, viaMapping: true } : { kind: 'inactive', profileId: profile.id };
   }
   const direct = fromMatches(lookupLabel(key, profiles));
   if (direct) return direct;
-  const stripped = text.trim().match(/^(.*\S)\s*\([^()]*\)$/);
+  const stripped = text.trim().match(/^(.*\S)\s*\(([^()]*)\)$/);
   if (stripped) {
     const base = fromMatches(lookupLabel(normalizeHouseLookup(stripped[1]), profiles));
-    if (base) return base;
+    const byParents = houseByParents(stripped[2], profiles);
+    if (base) {
+      if (base.kind === 'resolved' && byParents && byParents !== base.profileId) {
+        return { kind: 'ambiguous', profileIds: [base.profileId, byParents] };
+      }
+      return base;
+    }
+    if (byParents) return { kind: 'resolved', profileId: byParents, viaParents: true };
   }
   return { kind: 'unknown' };
 }
@@ -481,11 +522,19 @@ export interface PlacementReviewCounts {
   valid: number;
 }
 
+export interface ParentResolvedLabel {
+  label: string;
+  profileId: string;
+  count: number;
+}
+
 export interface PlacementReview {
   applicants: ReviewedApplicant[];
   houses: PlacementHouse[];
   requiredRanks: number;
   unresolvedLabels: UnresolvedLabel[];
+  /** Options recognized only through their House Parent names, shown to the admin. */
+  parentResolvedLabels: ParentResolvedLabel[];
   counts: PlacementReviewCounts;
   /** Every included applicant is valid and there is at least one. */
   ready: boolean;
@@ -591,6 +640,7 @@ export function buildPlacementReview(
   const rankColumns = rows.reduce((max, row) => Math.max(max, row.rawChoices.length), 0);
   const requiredRanks = Math.min(active.length, rankColumns);
   const labelTally = new Map<string, UnresolvedLabel>();
+  const parentTally = new Map<string, ParentResolvedLabel>();
 
   const evaluated = rows.map((row): ReviewedApplicant => {
     const issues: ApplicantIssue[] = [];
@@ -625,8 +675,17 @@ export function buildPlacementReview(
     } else {
       choiceIds = raw.ids;
       issues.push(...raw.issues);
-      raw.labels.forEach(({ label, resolution }) => {
-        if (resolution.kind === 'resolved') return;
+      raw.labels.forEach(({ label, resolution: current }) => {
+        // A mapped option stays listed (with its mapping) so the admin can change or undo it.
+        const resolution = current.kind === 'resolved' && current.viaMapping ? resolveHouseLabel(label, profiles) : current;
+        if (resolution.kind === 'resolved') {
+          if (resolution.viaParents) {
+            const entry = parentTally.get(label) ?? { label, profileId: current.kind === 'resolved' ? current.profileId : resolution.profileId, count: 0 };
+            entry.count += 1;
+            parentTally.set(label, entry);
+          }
+          return;
+        }
         const key = normalizeHouseLookup(label);
         const entry = labelTally.get(key) ?? {
           label,
@@ -697,6 +756,7 @@ export function buildPlacementReview(
     houses,
     requiredRanks,
     unresolvedLabels: Array.from(labelTally.values()).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+    parentResolvedLabels: Array.from(parentTally.values()).sort((a, b) => a.label.localeCompare(b.label)),
     counts,
     ready: counts.invalid === 0 && counts.valid > 0 && houses.length > 0,
   };

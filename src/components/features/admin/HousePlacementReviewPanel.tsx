@@ -3,6 +3,7 @@
 // option to a House, confirm an identity, or exclude someone with a reason.
 // Nothing is reordered or repaired without one of those explicit actions.
 import { useState } from 'react';
+import { normalizeHouseLookup } from '../../../lib/houseAssignmentImport';
 import { ordinal } from '../../../lib/housePlacement';
 import {
   PlacementEdits,
@@ -118,6 +119,32 @@ export function HousePlacementReviewPanel({ review, edits, onEditsChange, disabl
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <option value="">Choose a House…</option>
+                  {review.houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
+                </select>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {review.parentResolvedLabels.length > 0 && (
+        <section className="scrapbook-paper p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Recognized by House Parents">
+          <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Recognized by House Parent names</h3>
+          <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+            These options don&rsquo;t match a House name exactly, but their House Parents match exactly one House. Change the House here only if this is wrong.
+          </p>
+          <ul className="mt-2 space-y-1 text-xs" style={{ color: 'var(--color-text2)' }}>
+            {review.parentResolvedLabels.map((item) => (
+              <li key={item.label} className="flex flex-wrap items-center justify-between gap-2">
+                <span>“{item.label}” · {item.count} selection{item.count === 1 ? '' : 's'}</span>
+                <select
+                  value={item.profileId}
+                  disabled={disabled}
+                  onChange={(event) => setMapping(normalizeHouseLookup(item.label), event.target.value)}
+                  aria-label={`House for option ${item.label}`}
+                  className={`${selectCls} w-auto`}
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
                   {review.houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
                 </select>
               </li>

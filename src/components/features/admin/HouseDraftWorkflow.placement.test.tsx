@@ -12,6 +12,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { HouseDraftWorkflow } from './HouseDraftWorkflow';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
 import { houseMembershipsWriteRepository } from '../../../data/repos/houseMembershipWrites';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
 import type { HouseImportMember } from '../../../lib/houseAssignmentImport';
 import type { HousePageAsset } from '../../../types';
 
@@ -27,6 +28,9 @@ jest.mock('../../../data/repos/adminOperations', () => ({
 jest.mock('../../../data/repos/houseAssignments', () => ({
   houseAssignmentsRepository: { listBatches: jest.fn(), loadSnapshot: jest.fn(), createBatch: jest.fn() },
 }));
+jest.mock('../../../data/repos/houseParents', () => ({
+  houseParentsRepository: { listForYear: jest.fn() },
+}));
 jest.mock('../../../data/repos/houseMembershipWrites', () => ({
   houseMembershipsWriteRepository: { applyMembership: jest.fn(), listMembershipsForYear: jest.fn() },
 }));
@@ -35,12 +39,13 @@ jest.mock('../../../lib/supabase', () => ({
 }));
 
 const repo = houseAssignmentsRepository as jest.Mocked<typeof houseAssignmentsRepository>;
+const parentsRepo = houseParentsRepository as jest.Mocked<typeof houseParentsRepository>;
 const writer = houseMembershipsWriteRepository as jest.Mocked<typeof houseMembershipsWriteRepository>;
 
 function profile(id: string, name: string, order: number): HousePageAsset {
   return { id, house: name, house_key: name.toLowerCase(), display_name: name, display_order: order, is_active: true, academic_year_start: 2026, academic_year_end: 2027 } as HousePageAsset;
 }
-const profiles = [profile('p-rarity', 'Rarity', 1), profile('p-pinky', 'Pinky Pie', 2)];
+const profiles = [profile('p-rarity', 'Rarity', 1), profile('p-pinkie', 'Pinkie Pie', 2)];
 const members: HouseImportMember[] = [
   { id: 'm-an', first_name: 'An', last_name: 'Example', college: null, year: null, house: null, email: 'an@example.test', points: 0, events_attended: 0 },
   { id: 'm-bao', first_name: 'Bao', last_name: 'Tran', college: null, year: null, house: null, email: 'bao@example.test', points: 0, events_attended: 0 },
@@ -49,10 +54,10 @@ const members: HouseImportMember[] = [
 const HEADER = 'Timestamp,"Name (First, Middle Initial, Last)",Phone Number,Email,House Rank [First Choice ],House Rank [Second Choice ]';
 const CSV = [
   HEADER,
-  '10/21/2026 21:00:00,Chi Le,555-0100,chi@example.test,Rarity (Parent A),Pinky Pie (Parent B)',
-  '10/21/2026 20:00:00,An Example,555-0101,an@example.test,Rarity (Parent A),Pinky Pie (Parent B)',
-  '10/21/2026 20:30:00,Bao Tran,555-0102,bao@example.test,Pinky Pie (Parent B),Pinky Pie (Parent B)',
-  '10/21/2026 22:00:00,An Example,555-0103,an@example.test,Pinky Pie (Parent B),Rarity (Parent A)',
+  '10/21/2026 21:00:00,Chi Le,555-0100,chi@example.test,Rarity (Parent A),Pinkie Pie (Parent B)',
+  '10/21/2026 20:00:00,An Example,555-0101,an@example.test,Rarity (Parent A),Pinkie Pie (Parent B)',
+  '10/21/2026 20:30:00,Bao Tran,555-0102,bao@example.test,Pinkie Pie (Parent B),Pinkie Pie (Parent B)',
+  '10/21/2026 22:00:00,An Example,555-0103,an@example.test,Pinkie Pie (Parent B),Rarity (Parent A)',
 ].join('\n');
 
 function renderWorkflow(props: { houseProfiles?: HousePageAsset[] } = {}) {
@@ -91,6 +96,7 @@ function stat(label: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   repo.listBatches.mockResolvedValue([]);
+  parentsRepo.listForYear.mockResolvedValue([]);
 });
 
 it('keeps the legacy wide and long modes usable', async () => {
@@ -131,8 +137,8 @@ it('validates, requires a ranking repair, generates without writing, and saves o
   expect(screen.getByText(/Row 5 \(An Example, 10\/21\/2026 22:00:00\) ignored — kept row 3 submitted 10\/21\/2026 20:00:00/)).toBeInTheDocument();
   expect(screen.getByText('The later submission ranked Houses differently.')).toBeInTheDocument();
 
-  // Bao picked Pinky Pie twice: it is not silently repaired.
-  expect(screen.getByText('Pinky Pie is ranked #1 and #2.')).toBeInTheDocument();
+  // Bao picked Pinkie Pie twice: it is not silently repaired.
+  expect(screen.getByText('Pinkie Pie is ranked #1 and #2.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeDisabled();
 
   await userEvent.selectOptions(screen.getByLabelText('2nd choice for row 4'), 'p-rarity');
@@ -141,9 +147,9 @@ it('validates, requires a ranking repair, generates without writing, and saves o
 
   // Default split for 3 applicants over 2 Houses: Rarity has more first-choice demand.
   expect(screen.getByLabelText('Capacity for Rarity')).toHaveValue(2);
-  expect(screen.getByLabelText('Capacity for Pinky Pie')).toHaveValue(1);
-  await userEvent.clear(screen.getByLabelText('Capacity for Pinky Pie'));
-  await userEvent.type(screen.getByLabelText('Capacity for Pinky Pie'), '3');
+  expect(screen.getByLabelText('Capacity for Pinkie Pie')).toHaveValue(1);
+  await userEvent.clear(screen.getByLabelText('Capacity for Pinkie Pie'));
+  await userEvent.type(screen.getByLabelText('Capacity for Pinkie Pie'), '3');
   expect(screen.getByTestId('capacity-total')).toHaveTextContent('5');
   expect(screen.getByText(/2 spots would stay empty/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeDisabled();
@@ -156,7 +162,7 @@ it('validates, requires a ranking repair, generates without writing, and saves o
   expect(rows[0]).toHaveTextContent('An Example');
   expect(rows[0]).toHaveTextContent('Assigned to Rarity (1st choice).');
   expect(rows[1]).toHaveTextContent('Bao Tran');
-  expect(rows[1]).toHaveTextContent('Assigned to Pinky Pie (1st choice).');
+  expect(rows[1]).toHaveTextContent('Assigned to Pinkie Pie (1st choice).');
   expect(rows[2]).toHaveTextContent('Chi Le');
   expect(rows[2]).toHaveTextContent('Assigned to Rarity (1st choice).');
   expect(rows[2]).toHaveTextContent('Unmatched');
@@ -177,16 +183,16 @@ it('validates, requires a ranking repair, generates without writing, and saves o
     academicYearStart: 2026,
     effectiveStartDate: '2026-11-08',
     placement: {
-      capacityConfig: { 'p-rarity': 2, 'p-pinky': 1 },
+      capacityConfig: { 'p-rarity': 2, 'p-pinkie': 1 },
       excludedApplicants: [{ source_row_number: 5, name: 'An Example', reason: 'Repeat submission; kept the earlier row 3 (this one ranked Houses differently).' }],
     },
   });
   expect(input.rows.map((row) => [row.source_order, row.source_name, row.house_profile_id, row.generated_house_profile_id, row.member_id, row.match_status, row.source_row_number])).toEqual([
     [0, 'An Example', 'p-rarity', 'p-rarity', 'm-an', 'match', 3],
-    [1, 'Bao Tran', 'p-pinky', 'p-pinky', 'm-bao', 'match', 4],
+    [1, 'Bao Tran', 'p-pinkie', 'p-pinkie', 'm-bao', 'match', 4],
     [2, 'Chi Le', 'p-rarity', 'p-rarity', null, 'unmatched', 2],
   ]);
-  expect(input.rows[0]).toMatchObject({ submission_timestamp: '2026-10-22T03:00:00.000Z', preferences: ['p-rarity', 'p-pinky'] });
+  expect(input.rows[0]).toMatchObject({ submission_timestamp: '2026-10-22T03:00:00.000Z', preferences: ['p-rarity', 'p-pinkie'] });
   expect(input.rows[1].notes).toMatch(/Ranking corrected by an admin/);
   // No email, phone, or other form answer reaches the draft rows.
   expect(JSON.stringify(input)).not.toMatch(/@example\.test|555-01/);
@@ -194,4 +200,41 @@ it('validates, requires a ranking repair, generates without writing, and saves o
   await act(async () => { resolveSave({ id: 'new-batch' } as SavedBatch); });
   await waitFor(() => expect(repo.loadSnapshot).toHaveBeenCalledWith('new-batch', expect.any(Map)));
   expect(writer.applyMembership).not.toHaveBeenCalled();
+});
+
+it('places the real 2026 form options, recognizing "Pinky Pie (Ingyin & Martin)" as Pinkie Pie through its House Parents', async () => {
+  const mlp = [
+    profile('p-twilight', 'Twilight Sparkle', 0),
+    profile('p-applejack', 'Applejack', 1),
+    profile('p-pinkie', 'Pinkie Pie', 2),
+    profile('p-rarity', 'Rarity', 3),
+  ];
+  const parents = [
+    ['p-twilight', 'Timothy (Tim) Huynh'], ['p-twilight', 'Kent Nguyen'],
+    ['p-applejack', 'Ryan Francisco'], ['p-applejack', 'Nathan Centeno'],
+    ['p-pinkie', 'Ingyin Moh'], ['p-pinkie', 'Martin Dang'],
+    ['p-rarity', 'Kirsten Ngo'], ['p-rarity', 'Jonas Truong'],
+  ].map(([house, name], index) => ({
+    id: `hp${index}`, house_profile_id: house, display_name: name, member_id: null, review_note: null, display_order: index % 2,
+    created_at: '', updated_at: '', houseLabel: '', houseDisplayOrder: 0,
+  }));
+  parentsRepo.listForYear.mockResolvedValue(parents);
+  const header = 'Timestamp,"Name (First, Middle Initial, Last)",Email,House Rank [First Choice ],House Rank [Second Choice ],House Rank [Third Choice ],House Rank [Forth Choice ]';
+  const options = ['Rarity (Kirsten & Jonas)', 'Pinky Pie (Ingyin & Martin)', 'Applejack (Ryan & Nathan)', 'Twilight Sparkle (Kent & Tim)'];
+  const csv = [header, ...['An', 'Bao', 'Chi', 'Dung'].map((name, index) => {
+    const ranked = [...options.slice(index), ...options.slice(0, index)];
+    return `10/21/2026 20:0${index}:00,${name} Example,${name.toLowerCase()}@example.test,${ranked.join(',')}`;
+  })].join('\n');
+
+  renderWorkflow({ houseProfiles: mlp });
+  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'auto');
+  await waitFor(() => expect(parentsRepo.listForYear).toHaveBeenCalledWith(2026));
+  await uploadAndValidate(csv);
+  expect(stat('Need a fix')).toHaveTextContent('0');
+  expect(within(screen.getByLabelText('Recognized by House Parents')).getByLabelText('House for option Pinky Pie (Ingyin & Martin)')).toHaveValue('p-pinkie');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Generate Placements' }));
+  const rows = await screen.findAllByTestId('placement-result-row');
+  expect(rows.map((row) => within(row).getAllByRole('cell')[7].textContent)).toEqual(['Rarity', 'Pinkie Pie', 'Applejack', 'Twilight Sparkle']);
+  expect(screen.queryByText(/Pinky Pie \(/, { selector: 'td' })).not.toBeInTheDocument();
 });

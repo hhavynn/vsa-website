@@ -11,12 +11,12 @@ import {
 } from './housePlacement';
 
 const RARITY = 'h-rarity';
-const PINKY = 'h-pinky';
+const PINKIE = 'h-pinkie';
 const APPLE = 'h-apple';
 const TWILIGHT = 'h-twilight';
 const houses: PlacementHouse[] = [
   { id: RARITY, label: 'Rarity', displayOrder: 1 },
-  { id: PINKY, label: 'Pinky Pie', displayOrder: 2 },
+  { id: PINKIE, label: 'Pinkie Pie', displayOrder: 2 },
   { id: APPLE, label: 'Applejack', displayOrder: 3 },
   { id: TWILIGHT, label: 'Twilight Sparkle', displayOrder: 4 },
 ];
@@ -35,8 +35,8 @@ function applicant(id: string, minutesIn: number, preferences: string[], overrid
   };
 }
 
-function caps(rarity: number, pinky: number, apple: number, twilight: number) {
-  return { [RARITY]: rarity, [PINKY]: pinky, [APPLE]: apple, [TWILIGHT]: twilight };
+function caps(rarity: number, pinkie: number, apple: number, twilight: number) {
+  return { [RARITY]: rarity, [PINKIE]: pinkie, [APPLE]: apple, [TWILIGHT]: twilight };
 }
 
 function placed(result: ReturnType<typeof allocateHouseApplicants>) {
@@ -44,7 +44,7 @@ function placed(result: ReturnType<typeof allocateHouseApplicants>) {
   return new Map(result.placements.map((placement) => [placement.applicantId, placement]));
 }
 
-const ALL = [RARITY, PINKY, APPLE, TWILIGHT];
+const ALL = [RARITY, PINKIE, APPLE, TWILIGHT];
 
 describe('allocateHouseApplicants', () => {
   it('assigns every applicant to their first choice when capacities equal demand', () => {
@@ -52,10 +52,10 @@ describe('allocateHouseApplicants', () => {
       houses,
       capacities: caps(1, 1, 1, 1),
       applicants: [
-        applicant('a1', 1, [RARITY, PINKY, APPLE, TWILIGHT]),
-        applicant('a2', 2, [PINKY, RARITY, APPLE, TWILIGHT]),
-        applicant('a3', 3, [APPLE, RARITY, PINKY, TWILIGHT]),
-        applicant('a4', 4, [TWILIGHT, RARITY, PINKY, APPLE]),
+        applicant('a1', 1, [RARITY, PINKIE, APPLE, TWILIGHT]),
+        applicant('a2', 2, [PINKIE, RARITY, APPLE, TWILIGHT]),
+        applicant('a3', 3, [APPLE, RARITY, PINKIE, TWILIGHT]),
+        applicant('a4', 4, [TWILIGHT, RARITY, PINKIE, APPLE]),
       ],
     });
     expect(result.ok).toBe(true);
@@ -69,36 +69,36 @@ describe('allocateHouseApplicants', () => {
       houses,
       capacities: caps(1, 1, 1, 1),
       applicants: [
-        applicant('a2', 20, [RARITY, PINKY, APPLE, TWILIGHT]),
-        applicant('a1', 0, [RARITY, APPLE, PINKY, TWILIGHT]),
-        applicant('a3', 30, [PINKY, APPLE, RARITY, TWILIGHT]),
-        applicant('a4', 40, [APPLE, TWILIGHT, RARITY, PINKY]),
+        applicant('a2', 20, [RARITY, PINKIE, APPLE, TWILIGHT]),
+        applicant('a1', 0, [RARITY, APPLE, PINKIE, TWILIGHT]),
+        applicant('a3', 30, [PINKIE, APPLE, RARITY, TWILIGHT]),
+        applicant('a4', 40, [APPLE, TWILIGHT, RARITY, PINKIE]),
       ],
     }));
     expect(result.get('a1')?.houseId).toBe(RARITY);
-    expect(result.get('a2')?.houseId).toBe(PINKY);
-    expect(result.get('a2')?.explanation).toBe('Assigned to Pinky Pie (2nd choice). Rarity was full when this applicant was processed.');
+    expect(result.get('a2')?.houseId).toBe(PINKIE);
+    expect(result.get('a2')?.explanation).toBe('Assigned to Pinkie Pie (2nd choice). Rarity was full when this applicant was processed.');
   });
 
   it('keeps an early second-choice placement even when a later applicant ranked that House first', () => {
-    // A (9:00 PM) wants Rarity then Pinky Pie; Rarity is already full. B (9:20 PM) wants Pinky Pie first.
+    // A (9:00 PM) wants Rarity then Pinkie Pie; Rarity is already full. B (9:20 PM) wants Pinkie Pie first.
     const result = placed(allocateHouseApplicants({
       houses,
       capacities: caps(1, 1, 1, 1),
       applicants: [
-        applicant('a0', -10, [RARITY, APPLE, PINKY, TWILIGHT]),
-        applicant('a1', 0, [RARITY, PINKY, APPLE, TWILIGHT]),
-        applicant('a2', 20, [PINKY, RARITY, APPLE, TWILIGHT]),
-        applicant('a3', 30, [TWILIGHT, APPLE, RARITY, PINKY]),
+        applicant('a0', -10, [RARITY, APPLE, PINKIE, TWILIGHT]),
+        applicant('a1', 0, [RARITY, PINKIE, APPLE, TWILIGHT]),
+        applicant('a2', 20, [PINKIE, RARITY, APPLE, TWILIGHT]),
+        applicant('a3', 30, [TWILIGHT, APPLE, RARITY, PINKIE]),
       ],
     }));
-    expect(result.get('a1')?.houseId).toBe(PINKY);
-    expect(result.get('a2')?.houseId).not.toBe(PINKY);
+    expect(result.get('a1')?.houseId).toBe(PINKIE);
+    expect(result.get('a2')?.houseId).not.toBe(PINKIE);
     expect(result.get('a2')?.achievedRank).toBe(3);
   });
 
   it('never exceeds capacity, even when one House is overwhelmingly popular', () => {
-    const applicants = Array.from({ length: 40 }, (_, index) => applicant(`a${index}`, index, [RARITY, PINKY, APPLE, TWILIGHT]));
+    const applicants = Array.from({ length: 40 }, (_, index) => applicant(`a${index}`, index, [RARITY, PINKIE, APPLE, TWILIGHT]));
     const result = allocateHouseApplicants({ houses, capacities: caps(10, 10, 10, 10), applicants });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -107,9 +107,9 @@ describe('allocateHouseApplicants', () => {
     const byId = placed(result);
     expect(byId.get('a0')?.houseId).toBe(RARITY);
     expect(byId.get('a9')?.houseId).toBe(RARITY);
-    expect(byId.get('a10')?.houseId).toBe(PINKY);
+    expect(byId.get('a10')?.houseId).toBe(PINKIE);
     expect(byId.get('a39')?.houseId).toBe(TWILIGHT);
-    expect(byId.get('a39')?.explanation).toBe('Assigned to Twilight Sparkle (4th choice). Rarity, Pinky Pie, and Applejack were full when this applicant was processed.');
+    expect(byId.get('a39')?.explanation).toBe('Assigned to Twilight Sparkle (4th choice). Rarity, Pinkie Pie, and Applejack were full when this applicant was processed.');
   });
 
   it('is deterministic: the same input, in any input order, gives identical results', () => {
@@ -128,14 +128,14 @@ describe('allocateHouseApplicants', () => {
       houses,
       capacities: caps(1, 1, 1, 0),
       applicants: [
-        applicant('late', 50, [RARITY, PINKY, APPLE]),
-        applicant('early', 1, [RARITY, PINKY, APPLE]),
-        applicant('mid', 25, [RARITY, PINKY, APPLE]),
+        applicant('late', 50, [RARITY, PINKIE, APPLE]),
+        applicant('early', 1, [RARITY, PINKIE, APPLE]),
+        applicant('mid', 25, [RARITY, PINKIE, APPLE]),
       ],
     });
     expect(result.ok && result.placements.map((placement) => [placement.applicantId, placement.priority, placement.houseId])).toEqual([
       ['early', 1, RARITY],
-      ['mid', 2, PINKY],
+      ['mid', 2, PINKIE],
       ['late', 3, APPLE],
     ]);
   });
@@ -145,9 +145,9 @@ describe('allocateHouseApplicants', () => {
       houses,
       capacities: caps(1, 1, 1, 0),
       applicants: [
-        applicant('x', 0, [RARITY, PINKY, APPLE], { sourceRow: 9 }),
-        applicant('y', 0, [RARITY, PINKY, APPLE], { sourceRow: 4 }),
-        applicant('b', 0, [RARITY, PINKY, APPLE], { sourceRow: 12 }),
+        applicant('x', 0, [RARITY, PINKIE, APPLE], { sourceRow: 9 }),
+        applicant('y', 0, [RARITY, PINKIE, APPLE], { sourceRow: 4 }),
+        applicant('b', 0, [RARITY, PINKIE, APPLE], { sourceRow: 12 }),
       ],
     });
     expect(result.ok && result.placements.map((placement) => placement.applicantId)).toEqual(['y', 'x', 'b']);
@@ -159,8 +159,8 @@ describe('allocateHouseApplicants', () => {
       houses,
       capacities: caps(1, 0, 0, 0),
       applicants: [
-        applicant('again', 30, [PINKY, RARITY, APPLE, TWILIGHT], { email: 'Same@Example.test' }),
-        applicant('first', 5, [RARITY, PINKY, APPLE, TWILIGHT], { email: 'same@example.test' }),
+        applicant('again', 30, [PINKIE, RARITY, APPLE, TWILIGHT], { email: 'Same@Example.test' }),
+        applicant('first', 5, [RARITY, PINKIE, APPLE, TWILIGHT], { email: 'same@example.test' }),
       ],
     });
     expect(result.ok).toBe(true);
@@ -194,23 +194,23 @@ describe('allocateHouseApplicants', () => {
     const result = allocateHouseApplicants({
       houses,
       capacities: caps(1, 1, 0, 0),
-      applicants: [applicant('linked', 0, [RARITY, PINKY]), applicant('not-yet-linked', 1, [RARITY, PINKY])],
+      applicants: [applicant('linked', 0, [RARITY, PINKIE]), applicant('not-yet-linked', 1, [RARITY, PINKIE])],
     });
     expect(result.ok && result.placements.map((placement) => placement.applicantId)).toEqual(['linked', 'not-yet-linked']);
   });
 
   it('handles no applicants and a single applicant', () => {
     expect(allocateHouseApplicants({ houses, capacities: caps(0, 0, 0, 0), applicants: [] })).toMatchObject({ ok: true, placements: [] });
-    const one = allocateHouseApplicants({ houses, capacities: suggestCapacities(houses, 1, { [APPLE]: 1 }), applicants: [applicant('a1', 0, [APPLE, RARITY, PINKY, TWILIGHT])] });
+    const one = allocateHouseApplicants({ houses, capacities: suggestCapacities(houses, 1, { [APPLE]: 1 }), applicants: [applicant('a1', 0, [APPLE, RARITY, PINKIE, TWILIGHT])] });
     expect(one.ok && one.placements[0].houseId).toBe(APPLE);
   });
 
   it('handles four Houses with fewer than four applicants', () => {
-    const applicants = [applicant('a1', 0, [PINKY, RARITY, APPLE, TWILIGHT]), applicant('a2', 1, [PINKY, APPLE, RARITY, TWILIGHT]), applicant('a3', 2, [RARITY, PINKY, APPLE, TWILIGHT])];
+    const applicants = [applicant('a1', 0, [PINKIE, RARITY, APPLE, TWILIGHT]), applicant('a2', 1, [PINKIE, APPLE, RARITY, TWILIGHT]), applicant('a3', 2, [RARITY, PINKIE, APPLE, TWILIGHT])];
     const capacities = suggestCapacities(houses, 3, firstChoiceDemand(houses, applicants));
     expect(capacities).toEqual(caps(1, 1, 1, 0));
     const byId = placed(allocateHouseApplicants({ houses, capacities, applicants }));
-    expect(byId.get('a1')?.houseId).toBe(PINKY);
+    expect(byId.get('a1')?.houseId).toBe(PINKIE);
     expect(byId.get('a2')?.houseId).toBe(APPLE);
     expect(byId.get('a3')?.houseId).toBe(RARITY);
   });
@@ -236,7 +236,7 @@ describe('allocateHouseApplicants', () => {
       capacities: caps(1, 1, 1, 1),
       applicants: [
         applicant('a1', 0, [RARITY, 'h-unknown']),
-        applicant('a2', 1, [PINKY, PINKY, PINKY, PINKY]),
+        applicant('a2', 1, [PINKIE, PINKIE, PINKIE, PINKIE]),
         applicant('a3', Number.NaN, [APPLE]),
         applicant('a4', 3, []),
       ],
@@ -274,22 +274,22 @@ describe('suggestCapacities', () => {
   });
 
   it('gives 155 applicants over four Houses 39/39/39/38, extra seats following first-choice demand', () => {
-    const demand = { [RARITY]: 85, [PINKY]: 38, [APPLE]: 21, [TWILIGHT]: 10 };
+    const demand = { [RARITY]: 85, [PINKIE]: 38, [APPLE]: 21, [TWILIGHT]: 10 };
     expect(suggestCapacities(houses, 155, demand)).toEqual(caps(39, 39, 39, 38));
   });
 
   it('breaks tied demand by display order, then id', () => {
-    expect(suggestCapacities(houses, 6, { [TWILIGHT]: 5, [APPLE]: 2, [PINKY]: 2, [RARITY]: 0 })).toEqual(caps(1, 2, 1, 2));
+    expect(suggestCapacities(houses, 6, { [TWILIGHT]: 5, [APPLE]: 2, [PINKIE]: 2, [RARITY]: 0 })).toEqual(caps(1, 2, 1, 2));
     const sameOrder: PlacementHouse[] = [{ id: 'b', label: 'B', displayOrder: 1 }, { id: 'a', label: 'A', displayOrder: 1 }];
     expect(suggestCapacities(sameOrder, 1, {})).toEqual({ a: 1, b: 0 });
   });
 
   it('places 155 applicants within the default capacities, all ranked, with no priority violations', () => {
     const order = (index: number) => {
-      if (index % 155 < 85) return [RARITY, PINKY, APPLE, TWILIGHT];
-      if (index % 155 < 123) return [PINKY, RARITY, TWILIGHT, APPLE];
-      if (index % 155 < 144) return [APPLE, TWILIGHT, PINKY, RARITY];
-      return [TWILIGHT, APPLE, RARITY, PINKY];
+      if (index % 155 < 85) return [RARITY, PINKIE, APPLE, TWILIGHT];
+      if (index % 155 < 123) return [PINKIE, RARITY, TWILIGHT, APPLE];
+      if (index % 155 < 144) return [APPLE, TWILIGHT, PINKIE, RARITY];
+      return [TWILIGHT, APPLE, RARITY, PINKIE];
     };
     const applicants = Array.from({ length: 155 }, (_, index) => applicant(`a${index}`, (index * 37) % 155, order(index)));
     const capacities = suggestCapacities(houses, 155, firstChoiceDemand(houses, applicants));
@@ -305,8 +305,8 @@ describe('suggestCapacities', () => {
 describe('findPriorityViolations', () => {
   it('flags an earlier applicant who lost a preferred House to a later one', () => {
     expect(findPriorityViolations([
-      { id: 'early', preferences: [RARITY, PINKY], houseId: PINKY },
-      { id: 'late', preferences: [PINKY, RARITY], houseId: RARITY },
+      { id: 'early', preferences: [RARITY, PINKIE], houseId: PINKIE },
+      { id: 'late', preferences: [PINKIE, RARITY], houseId: RARITY },
     ])).toEqual([{ applicantId: 'early', laterApplicantId: 'late', houseId: RARITY }]);
   });
 });

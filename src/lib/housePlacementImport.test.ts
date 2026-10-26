@@ -19,14 +19,14 @@ import type { HouseImportMember } from './houseAssignmentImport';
 // Synthetic fixtures only — never real applicant data.
 const profiles: PlacementProfile[] = [
   { id: 'p-rarity', house_key: 'rarity', display_name: 'Rarity', is_active: true, display_order: 1 },
-  { id: 'p-pinky', house_key: 'pinky-pie', display_name: 'Pinky Pie', is_active: true, display_order: 2 },
+  { id: 'p-pinkie', house_key: 'pinkie-pie', display_name: 'Pinkie Pie', is_active: true, display_order: 2 },
   { id: 'p-apple', house_key: 'applejack', display_name: 'Applejack', is_active: true, display_order: 3 },
   { id: 'p-twilight', house_key: 'twilight-sparkle', display_name: 'Twilight Sparkle', is_active: true, display_order: 4 },
   { id: 'p-old', house_key: 'fluttershy', display_name: 'Fluttershy', is_active: false, display_order: 5 },
 ];
 
 const R = 'Rarity (Parent A & Parent B)';
-const P = 'Pinky Pie (Parent C & Parent D)';
+const P = 'Pinkie Pie (Parent C & Parent D)';
 const A = 'Applejack (Parent E & Parent F)';
 const T = 'Twilight Sparkle (Parent G & Parent H)';
 
@@ -168,7 +168,7 @@ describe('timestamps', () => {
 describe('House label resolution', () => {
   it('maps exact keys, names, and labels with a House Parent parenthetical', () => {
     expect(resolveHouseLabel('Rarity', profiles)).toEqual({ kind: 'resolved', profileId: 'p-rarity' });
-    expect(resolveHouseLabel('pinky-pie', profiles)).toEqual({ kind: 'resolved', profileId: 'p-pinky' });
+    expect(resolveHouseLabel('pinkie-pie', profiles)).toEqual({ kind: 'resolved', profileId: 'p-pinkie' });
     expect(resolveHouseLabel('  twilight SPARKLE ', profiles)).toEqual({ kind: 'resolved', profileId: 'p-twilight' });
     expect(resolveHouseLabel(A, profiles)).toEqual({ kind: 'resolved', profileId: 'p-apple' });
   });
@@ -181,7 +181,7 @@ describe('House label resolution', () => {
       { id: 'x2', house_key: 'star-2', display_name: 'Star', is_active: true },
     ];
     expect(resolveHouseLabel('Star (Parents)', twins)).toEqual({ kind: 'ambiguous', profileIds: ['x1', 'x2'] });
-    expect(resolveHouseLabel('Spike (Parent Z)', profiles, { 'spike parent z': 'p-apple' })).toEqual({ kind: 'resolved', profileId: 'p-apple' });
+    expect(resolveHouseLabel('Spike (Parent Z)', profiles, { 'spike parent z': 'p-apple' })).toEqual({ kind: 'resolved', profileId: 'p-apple', viaMapping: true });
   });
 });
 
@@ -227,18 +227,18 @@ describe('buildPlacementReview', () => {
     ));
     const review = buildPlacementReview(rows, profiles, {
       ...EMPTY_PLACEMENT_EDITS,
-      corrections: { 'row-2': ['p-pinky', 'p-rarity', 'p-apple', 'p-twilight'] },
+      corrections: { 'row-2': ['p-pinkie', 'p-rarity', 'p-apple', 'p-twilight'] },
     });
     expect(review.applicants[0]).toMatchObject({ status: 'valid', corrected: true });
     expect(review.ready).toBe(true);
     const applicants = placementApplicants(review);
-    const result = allocateHouseApplicants({ houses: review.houses, capacities: { 'p-rarity': 1, 'p-pinky': 1, 'p-apple': 0, 'p-twilight': 0 }, applicants });
-    expect(result.ok && result.placements.map((placement) => [placement.applicantId, placement.houseId])).toEqual([['row-2', 'p-pinky'], ['row-3', 'p-rarity']]);
+    const result = allocateHouseApplicants({ houses: review.houses, capacities: { 'p-rarity': 1, 'p-pinkie': 1, 'p-apple': 0, 'p-twilight': 0 }, applicants });
+    expect(result.ok && result.placements.map((placement) => [placement.applicantId, placement.houseId])).toEqual([['row-2', 'p-pinkie'], ['row-3', 'p-rarity']]);
   });
 
   it('re-validates a correction that still repeats a House', () => {
     const { rows } = parsed(csv(line('10/21/2026 20:00:00', 'Four Times', 'four@example.test', [P, P, P, P])));
-    const review = buildPlacementReview(rows, profiles, { ...EMPTY_PLACEMENT_EDITS, corrections: { 'row-2': ['p-pinky', 'p-pinky', 'p-apple', null] } });
+    const review = buildPlacementReview(rows, profiles, { ...EMPTY_PLACEMENT_EDITS, corrections: { 'row-2': ['p-pinkie', 'p-pinkie', 'p-apple', null] } });
     expect(review.applicants[0].issues.map((issue) => issue.code)).toEqual(['missing_choice', 'repeated_choice']);
   });
 
@@ -284,7 +284,7 @@ describe('buildPlacementReview', () => {
     const result = allocateHouseApplicants({ houses: review.houses, capacities, applicants });
     expect(result.ok && result.placements.map((placement) => [placement.name, placement.houseId])).toEqual([
       ['First', 'p-rarity'],
-      ['Second', 'p-pinky'],
+      ['Second', 'p-pinkie'],
       ['Third', 'p-apple'],
     ]);
   });
@@ -327,7 +327,7 @@ describe('matchApplicantToMember', () => {
 describe('placement CSV export', () => {
   const row = (overrides: Partial<PlacementExportRow>): PlacementExportRow => ({
     priority: 1, name: 'An Example', houseId: 'p-rarity', house: 'Rarity', submitted: '10/21/2026 20:00:00',
-    preferences: ['Rarity', 'Pinky Pie', 'Applejack', 'Twilight Sparkle'], achievedRank: 1, placement: 'Automatic',
+    preferences: ['Rarity', 'Pinkie Pie', 'Applejack', 'Twilight Sparkle'], achievedRank: 1, placement: 'Automatic',
     overrideReason: '', memberMatch: 'Matched', exception: false, ...overrides,
   });
 
@@ -345,5 +345,47 @@ describe('placement CSV export', () => {
     const out = placementExceptionsCsv([row({}), row({ priority: 2, name: 'Needs Review', exception: true, memberMatch: 'Unmatched' })]);
     expect(out).toContain('Needs Review');
     expect(out).not.toContain('An Example');
+  });
+});
+
+describe('2026-2027 My Little Pony Houses', () => {
+  const mlp: PlacementProfile[] = [
+    { id: 'p-twilight', house_key: 'twilight-sparkle', display_name: 'Twilight Sparkle', is_active: true, display_order: 0, parentNames: ['Timothy (Tim) Huynh', 'Kent Nguyen'] },
+    { id: 'p-applejack', house_key: 'applejack', display_name: 'Applejack', is_active: true, display_order: 1, parentNames: ['Ryan Francisco', 'Nathan Centeno'] },
+    { id: 'p-pinkie', house_key: 'pinkie-pie', display_name: 'Pinkie Pie', is_active: true, display_order: 2, parentNames: ['Ingyin Moh', 'Martin Dang'] },
+    { id: 'p-rarity', house_key: 'rarity', display_name: 'Rarity', is_active: true, display_order: 3, parentNames: ['Kirsten Ngo', 'Jonas Truong'] },
+    { id: 'p-bowser-2025', house_key: 'bowser', display_name: 'Bowser', is_active: false, display_order: 9 },
+  ];
+
+  it('recognizes every 2026 form option, including the form\u2019s "Pinky Pie" spelling via its House Parents', () => {
+    expect(resolveHouseLabel('Twilight Sparkle (Kent & Tim)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-twilight' });
+    expect(resolveHouseLabel('Applejack (Ryan & Nathan)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-applejack' });
+    expect(resolveHouseLabel('Rarity (Kirsten & Jonas)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-rarity' });
+    expect(resolveHouseLabel('Pinkie Pie (Ingyin & Martin)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-pinkie' });
+    expect(resolveHouseLabel('Pinky Pie (Ingyin & Martin)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-pinkie', viaParents: true });
+    expect(resolveHouseLabel('Pinky Pie (Ingyin Moh and Martin Dang)', mlp)).toEqual({ kind: 'resolved', profileId: 'p-pinkie', viaParents: true });
+  });
+
+  it('never guesses: a misspelling without matching House Parents, or a name that contradicts its parents, needs review', () => {
+    expect(resolveHouseLabel('Pinky Pie', mlp)).toEqual({ kind: 'unknown' });
+    expect(resolveHouseLabel('Pinky Pie (Ingyin & Someone)', mlp)).toEqual({ kind: 'unknown' });
+    expect(resolveHouseLabel('Pinky Pie (Ingyin & Martin)', mlp.map(({ parentNames, ...profile }) => profile))).toEqual({ kind: 'unknown' });
+    expect(resolveHouseLabel('Rarity (Ingyin & Martin)', mlp)).toEqual({ kind: 'ambiguous', profileIds: ['p-rarity', 'p-pinkie'] });
+    expect(resolveHouseLabel('Bowser', mlp)).toEqual({ kind: 'inactive', profileId: 'p-bowser-2025' });
+  });
+
+  it('lists options recognized by House Parents, and keeps a mapped option visible so it can be changed', () => {
+    const { rows } = parsed(csv(
+      line('10/21/2026 20:00:00', 'An', 'an@example.test', ['Pinky Pie (Ingyin & Martin)', 'Rarity (Kirsten & Jonas)', 'Applejack (Ryan & Nathan)', 'Twilight Sparkle (Kent & Tim)']),
+      line('10/21/2026 20:01:00', 'Bao', 'bao@example.test', ['Rarity (Kirsten & Jonas)', 'Pinky Pie (Ingyin & Martin)', 'Applejack (Ryan & Nathan)', 'Sparkle']),
+    ));
+    const review = buildPlacementReview(rows, mlp);
+    expect(review.houses.map((house) => house.label)).toEqual(['Twilight Sparkle', 'Applejack', 'Pinkie Pie', 'Rarity']);
+    expect(review.parentResolvedLabels).toEqual([{ label: 'Pinky Pie (Ingyin & Martin)', profileId: 'p-pinkie', count: 2 }]);
+    expect(review.applicants[0].status).toBe('valid');
+    expect(review.applicants[1].issues.map((issue) => issue.code)).toEqual(['unknown_house']);
+    const mapped = buildPlacementReview(rows, mlp, { ...EMPTY_PLACEMENT_EDITS, houseMappings: { sparkle: 'p-twilight' } });
+    expect(mapped.ready).toBe(true);
+    expect(mapped.unresolvedLabels.map((label) => label.label)).toEqual(['Sparkle']);
   });
 });

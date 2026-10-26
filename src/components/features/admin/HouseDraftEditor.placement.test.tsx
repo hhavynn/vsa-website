@@ -37,7 +37,7 @@ jest.mock('../../../data/repos/houseAssignments', () => ({
 const repo = houseAssignmentsRepository as jest.Mocked<typeof houseAssignmentsRepository>;
 const profiles: HouseProfileLite[] = [
   { id: 'p-rarity', house_key: 'rarity', display_name: 'Rarity', is_active: true },
-  { id: 'p-pinky', house_key: 'pinky-pie', display_name: 'Pinky Pie', is_active: true },
+  { id: 'p-pinkie', house_key: 'pinkie-pie', display_name: 'Pinkie Pie', is_active: true },
 ];
 const members: HouseImportMember[] = ['a', 'b', 'c', 'd'].map((id) => ({
   id: `m-${id}`, first_name: `Member${id.toUpperCase()}`, last_name: 'Test', college: null, year: null, house: null, email: null, points: 0, events_attended: 0,
@@ -47,7 +47,7 @@ function batch(status: HouseAssignmentBatch['status'] = 'draft'): HouseAssignmen
   return {
     id: 'b1', academic_year_start: 2026, academic_year_end: 2027, effective_start_date: '2026-11-08', status,
     source_label: 'Fall auto', created_by: null, locked_at: null, published_at: null,
-    assignment_method: 'timestamp_ranked', capacity_config: { 'p-rarity': 2, 'p-pinky': 2 }, excluded_applicants: [{ source_row_number: 9, name: 'Left Out', reason: 'Withdrew' }],
+    assignment_method: 'timestamp_ranked', capacity_config: { 'p-rarity': 2, 'p-pinkie': 2 }, excluded_applicants: [{ source_row_number: 9, name: 'Left Out', reason: 'Withdrew' }],
     created_at: '2026-10-26T00:00:00Z', updated_at: '2026-10-26T00:00:00Z',
   };
 }
@@ -63,7 +63,7 @@ function draft(order: number, name: string, houseId: string, prefs: string[], ov
 }
 
 const R = 'p-rarity';
-const P = 'p-pinky';
+const P = 'p-pinkie';
 function placement() {
   return [
     draft(0, 'MemberA Test', R, [R, P]),
@@ -104,7 +104,7 @@ it('shows priority, submission time, achieved rank and capacities, and hides the
   const rows = screen.getAllByTestId('house-draft-row');
   expect(rows[2]).toHaveTextContent('#3');
   expect(rows[2]).toHaveTextContent('Submitted 10/21/2026 20:02:00 · sheet row 4');
-  expect(rows[2]).toHaveTextContent('Prefers: Rarity › Pinky Pie');
+  expect(rows[2]).toHaveTextContent('Prefers: Rarity › Pinkie Pie');
   expect(rows[2]).toHaveTextContent('2nd choice');
   expect(rows[2]).toHaveTextContent('Automatically assigned');
   const policy = within(screen.getByLabelText('Automatic placement'));
@@ -137,8 +137,8 @@ it('rejects a move that would exceed capacity and requires a reason for a swap',
   expect(form.getByRole('button', { name: 'Apply override' })).toBeDisabled();
 
   await userEvent.selectOptions(form.getByLabelText('Swap with (if full)'), 'd1');
-  expect(form.getByText(/MemberC Test: Pinky Pie \(2nd choice\) → Rarity \(1st choice\)/)).toBeInTheDocument();
-  expect(form.getByText(/MemberB Test: Rarity \(1st choice\) → Pinky Pie \(2nd choice\)/)).toBeInTheDocument();
+  expect(form.getByText(/MemberC Test: Pinkie Pie \(2nd choice\) → Rarity \(1st choice\)/)).toBeInTheDocument();
+  expect(form.getByText(/MemberB Test: Rarity \(1st choice\) → Pinkie Pie \(2nd choice\)/)).toBeInTheDocument();
   expect(form.getByText(/breaks first-come, first-served/)).toBeInTheDocument();
 
   await userEvent.clear(form.getByLabelText('Reason (required)'));
