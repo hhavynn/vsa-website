@@ -102,6 +102,17 @@ const HOUSE_ISSUE: Partial<Record<HouseIssue['code'], { detail: string; fix?: Is
   unmatched: { detail: 'Choose a member for these rows before revealing.', fix: { label: 'Review Unmatched', filter: 'unmatched' } },
   imbalance: { detail: 'Use the Balance helper; nothing moves until you accept it.' },
   empty: { detail: 'Import or add people first.' },
+  placement_unmatched: { detail: 'Automatic placement reveals everyone or no one: link each applicant to a member.', fix: { label: 'Review Unmatched', filter: 'needs_review' } },
+  placement_duplicate_member: { detail: 'Two applicants are linked to the same member record.', fix: { label: 'Compare Duplicates', filter: 'duplicates' } },
+  placement_missing_house: { detail: 'Every applicant needs a House from this year.', fix: { label: 'Review Unassigned', filter: 'unassigned' } },
+  capacity_config: { detail: 'Delete this draft and generate the placement again.' },
+  capacity_exceeded: { detail: 'Undo or swap an override so the House fits its capacity.' },
+  capacity_mismatch: { detail: 'Every spot must be filled exactly as allocated.' },
+  placement_preferences: { detail: 'Ranked choices are needed to explain each placement. Regenerate from the form export.' },
+  priority_metadata: { detail: 'Submission time and sheet row set the order. Regenerate from the form export.' },
+  override_reason: { detail: 'Use Override on the row and record why it moved.' },
+  priority_override: { detail: 'Allowed with a documented reason, but it departs from first-come, first-served.' },
+  manual_override: { detail: 'Shown as manual overrides, not automatic results.' },
 };
 
 export function houseIssues(preflight: Pick<PreflightResult, 'blockers' | 'warnings'>): UnifiedIssue[] {

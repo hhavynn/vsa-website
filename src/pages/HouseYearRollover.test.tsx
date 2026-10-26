@@ -119,3 +119,50 @@ describe('House pages before the new year\'s House Reveal', () => {
     expect(screen.queryByText(/house page not found/i)).not.toBeInTheDocument();
   }, 15000);
 });
+
+describe('House pages once the 2026-2027 My Little Pony Houses are published', () => {
+  const MLP_2026 = [
+    ['Twilight Sparkle', 'twilight-sparkle', 'Timothy (Tim) Huynh & Kent Nguyen'],
+    ['Applejack', 'applejack', 'Ryan Francisco & Nathan Centeno'],
+    ['Pinkie Pie', 'pinkie-pie', 'Ingyin Moh & Martin Dang'],
+    ['Rarity', 'rarity', 'Kirsten Ngo & Jonas Truong'],
+  ].map(([house, key, parents], index) => ({
+    ...BOWSER_2025,
+    id: `${key}-2026`,
+    academic_year_start: 2026,
+    academic_year_end: 2027,
+    house,
+    house_key: key,
+    display_name: house,
+    display_order: index,
+    house_parent_body: parents,
+  }));
+
+  beforeEach(() => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('academic_terms', { data: [ACTIVE_2026_TERM], error: null });
+  });
+
+  it('/house lists the four 2026 Houses instead of the not-announced state', async () => {
+    supabaseMock.setDefault('published_house_page_assets', { data: MLP_2026, error: null });
+    renderAt('/house');
+    for (const name of ['Twilight Sparkle', 'Applejack', 'Pinkie Pie', 'Rarity']) {
+      expect((await screen.findAllByText(name)).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByText(/2026-2027 Houses have not been announced yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pinky/)).not.toBeInTheDocument();
+  }, 15000);
+
+  it('a 2026 House page shows its House Parents from the House Parent fields', async () => {
+    supabaseMock.setDefault('published_house_page_assets', { data: MLP_2026, error: null });
+    renderAt('/house/year/2026-2027/pinkie-pie');
+    expect(await screen.findByRole('heading', { level: 1, name: /pinkie pie/i })).toBeInTheDocument();
+    expect(screen.getByText('Ingyin Moh & Martin Dang')).toBeInTheDocument();
+  }, 15000);
+
+  it('the 2025-2026 Mario House page still resolves for its own year', async () => {
+    supabaseMock.setDefault('published_house_page_assets', { data: [BOWSER_2025], error: null });
+    renderAt('/house/year/2025-2026/bowser');
+    expect(await screen.findByRole('heading', { level: 1, name: /bowser/i })).toBeInTheDocument();
+  }, 15000);
+});

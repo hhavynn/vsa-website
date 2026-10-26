@@ -11,7 +11,29 @@ describe('legacy House archive data', () => {
       '2023-2024',
       '2024-2025',
       '2025-2026',
+      '2026-2027',
     ]);
+  });
+
+  it('keeps the 2025-2026 Mario Houses archived, linked to their own year', () => {
+    const mario = getLegacyHouseArchiveByYear('2025-2026');
+    expect(mario?.houses).toEqual(['Bowser', 'Donkey Kong', 'Boo', 'Toad']);
+    expect(mario?.theme).toBe('Super Mario');
+    expect(mario?.status).toBe('verified');
+    expect(Object.values(mario?.currentHouseLinks ?? {})).toEqual([
+      '/house/year/2025-2026/bowser',
+      '/house/year/2025-2026/donkey-kong',
+      '/house/year/2025-2026/boo',
+      '/house/year/2025-2026/toad',
+    ]);
+  });
+
+  it('records 2026-2027 as the current My Little Pony year, spelled "Pinkie Pie"', () => {
+    const pony = getLegacyHouseArchiveByYear('2026-2027');
+    expect(pony?.houses).toEqual(['Twilight Sparkle', 'Applejack', 'Pinkie Pie', 'Rarity']);
+    expect(pony?.status).toBe('current');
+    expect(LEGACY_HOUSE_ARCHIVE.filter((entry) => entry.status === 'current').map((entry) => entry.academicYear)).toEqual(['2026-2027']);
+    expect(JSON.stringify(LEGACY_HOUSE_ARCHIVE)).not.toMatch(/Pinky/);
   });
 
   it('marks 2020-2021 as an unconfirmed archive gap', () => {

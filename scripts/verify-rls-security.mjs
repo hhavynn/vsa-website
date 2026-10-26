@@ -474,6 +474,16 @@ async function runTests() {
       else reportFail(`anon ran admin_apply_attendance_import (${JSON.stringify(applyData)})`);
     }
 
+    // House Parent identity links (migration 20261026200000) are admin-only; public pages read
+    // House Parents from published_house_page_assets instead. A missing table means not applied.
+    {
+      const { data: hpData, error: hpError } = await anon.from('house_parents').select('id, member_id').limit(1);
+      if (hpError && (hpError.code === 'PGRST205' || hpError.code === '42P01')) reportSkip('house_parents is not present yet (migration 20261026200000 not applied)');
+      else if (hpError) reportPass(`anon cannot read house_parents (${hpError.message || hpError.code})`);
+      else if (hpData && hpData.length > 0) reportFail('anon read house_parents successfully (returned rows)');
+      else reportPass('anon cannot read house_parents (returned empty list due to RLS)');
+    }
+
     // Historical attendance recovery (migration 20261009000026) is admin-only. A missing table or
     // function means the migration is not applied yet: a skip, not a pass. Writes, rollback and
     // concurrency are covered offline by scripts/test-attendance-recovery.sh, not probed here.

@@ -88,3 +88,11 @@ describe('parseCsvTable', () => {
     expect(table.rows[4999]).toEqual({ Name: 'Member, 4999', Email: 'm4999@ucsd.edu' });
   });
 });
+
+describe('parseCsvTable row numbers', () => {
+  it('reports the spreadsheet row of each record, counting blank rows and multi-line cells once', () => {
+    const table = parseCsvTable('Name,Note\nAn,"two\nlines"\n\nBao,x\n');
+    expect(table.rows.map((row) => row.Name)).toEqual(['An', 'Bao']);
+    expect(table.rowNumbers).toEqual([2, 4]);
+  });
+});

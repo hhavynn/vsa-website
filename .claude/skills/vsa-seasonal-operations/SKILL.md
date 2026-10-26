@@ -106,7 +106,7 @@ Frozen surfaces per event:
    order by sort_order;
    ```
    `status = 'open'`, or `not_open` with `open_at` within ~2 weeks → the corresponding surfaces are frozen.
-2. **Is a House reveal pending?** If the current year's Houses are still placeholders (as of 2026-07-06, 2026–2027 Houses are placeholders — AGENTS.md), a reveal is by definition pending. Never invent House names, themes, or assignments; never "pre-fill" reveal content. The placeholder state in `src/pages/House.tsx` *is* the correct production state until leadership announces. A pending reveal freezes House data and reveal content — it does **not** freeze House page UI work, provided the UI change leaves the placeholder state and its copy intact.
+2. **Is a House reveal pending?** If the current year's Houses are still placeholders, a reveal is by definition pending. (2026–2027 Houses were announced as My Little Pony on 2026-10-26 — AGENTS.md.) Never invent House names, themes, or assignments; never "pre-fill" reveal content. The placeholder state in `src/pages/House.tsx` *is* the correct production state until leadership announces. A pending reveal freezes House data and reveal content — it does **not** freeze House page UI work, provided the UI change leaves the placeholder state and its copy intact.
 3. **Is VCN season active?** Check whether `vcn_stage_ninja_interest` / `vcn_props_team_interest` are open (query above) and whether current-VCN content is live (admin `/admin/vcn`). If yes → VCN surfaces frozen.
 4. If any check fires and your change touches a frozen surface: **stop and get explicit owner approval** (see `vsa-change-control` for the approval flow). Record the approval in the PR body.
 
@@ -138,7 +138,7 @@ Canonical home: **AGENTS.md → "Domain-critical facts"** (repo root, ~L229–23
 | Fact | Value (AGENTS.md quote) |
 |---|---|
 | 2026–2027 presidents (fallback/copy) | "use April Pham and Havyn Nguyen" |
-| 2026–2027 Houses | "placeholders only; do not invent Houses" |
+| 2026–2027 Houses | My Little Pony: Twilight Sparkle, Applejack, Pinkie Pie, Rarity (owner-confirmed 2026-10-26) |
 | 2025–2026 Houses | "Bowser, Donkey Kong, Boo, and Toad" |
 | 2023–2024 Houses | "drinks/treats, not designer Houses" |
 | Designer Houses | "belong to 2019–2020"; "Mario Houses belong only to 2025–2026" |

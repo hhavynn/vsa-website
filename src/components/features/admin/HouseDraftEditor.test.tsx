@@ -43,6 +43,7 @@ function batch(status: HouseAssignmentBatch['status'] = 'draft'): HouseAssignmen
   return {
     id: 'b1', academic_year_start: 2026, academic_year_end: 2027, effective_start_date: '2026-11-08', status,
     source_label: 'Fall sort', created_by: null, locked_at: null, published_at: null,
+    assignment_method: 'manual', capacity_config: null, excluded_applicants: null,
     created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
   };
 }
@@ -50,7 +51,8 @@ function draft(id: string, overrides: Partial<HouseAssignmentDraft>): HouseAssig
   return {
     id, batch_id: 'b1', source_name: id, source_house: null, member_id: null, house_profile_id: null,
     match_status: 'unmatched', match_method: null, match_score: null, preferences: null, notes: null,
-    source_order: 0, created_at: '', updated_at: '', ...overrides,
+    source_order: 0, submission_timestamp: null, source_row_number: null, generated_house_profile_id: null, override_reason: null,
+    created_at: '', updated_at: '', ...overrides,
   };
 }
 

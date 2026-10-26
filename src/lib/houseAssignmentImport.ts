@@ -10,8 +10,8 @@ import {
   displayNameFromHouseCell,
   nameSimilarity,
   normalizeEmail,
-  parseCSV,
 } from './memberMatching';
+import { parseCsvRecords } from './csvParse';
 
 export interface HouseImportMember {
   id: string;
@@ -69,11 +69,35 @@ export function profileMapByName(profiles: HousePageAsset[]) {
   return map;
 }
 
+/**
+ * Quoted commas, escaped quotes and line breaks inside a cell need the
+ * record-level parser; a line split would cut a multi-line cell in two. Header
+ * semantics stay as they always were (trimmed, a repeated header keeps the
+ * last column), and an unclosed quote is an error rather than a silent merge
+ * of every later row into one cell.
+ */
+function parseLegacyCsv(text: string): Record<string, string>[] {
+  const { records, unterminatedQuote, unterminatedQuoteLine } = parseCsvRecords(text);
+  if (unterminatedQuote) {
+    throw new Error(`A quoted cell that starts on line ${unterminatedQuoteLine} never closes. Fix the stray " and try again.`);
+  }
+  const lines = records.filter((record) => record.some((cell) => cell.trim().length > 0));
+  if (lines.length < 2) return [];
+  const headers = lines[0].map((header) => header.trim());
+  return lines.slice(1).map((values) => {
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = (values[index] ?? '').trim();
+    });
+    return row;
+  });
+}
+
 export function parseTable(raw: string): Record<string, string>[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
   const firstLine = trimmed.split(/\r?\n/)[0] ?? '';
-  if (!firstLine.includes('\t')) return parseCSV(trimmed);
+  if (!firstLine.includes('\t')) return parseLegacyCsv(trimmed);
 
   const lines = trimmed.split(/\r?\n/).filter((line) => line.trim().length > 0);
   const headers = lines[0].split('\t').map((header) => header.trim());

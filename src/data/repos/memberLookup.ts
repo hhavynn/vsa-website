@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { withErrorHandling } from '../errors';
+import type { HouseImportMember } from '../../lib/houseAssignmentImport';
 import {
   ExactMemberMatch,
   MemberOption,
@@ -81,6 +82,27 @@ export class MemberLookupRepository {
         if (!data || data.length < DIRECTORY_PAGE_SIZE) return members;
       }
     }, 'Failed to load member directory');
+  }
+
+  /**
+   * Admin-only. Every member with the fields Admin -> Houses matches on,
+   * paged past PostgREST's row cap so no one is misreported as unmatched.
+   * Email stays in memory for matching; callers must not persist it.
+   */
+  async listHouseImportMembers(): Promise<HouseImportMember[]> {
+    return withErrorHandling(async () => {
+      const members: HouseImportMember[] = [];
+      for (let from = 0; ; from += DIRECTORY_PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('members')
+          .select('id, first_name, last_name, college, year, house, email, points, events_attended')
+          .order('id', { ascending: true })
+          .range(from, from + DIRECTORY_PAGE_SIZE - 1);
+        if (error) throw error;
+        members.push(...((data ?? []) as HouseImportMember[]));
+        if (!data || data.length < DIRECTORY_PAGE_SIZE) return members;
+      }
+    }, 'Failed to load members');
   }
 
   /**

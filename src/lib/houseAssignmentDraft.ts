@@ -4,12 +4,14 @@
 import type { Database, Json } from '../types/database';
 import { MemberYearMembership, planMembershipChange } from './houseMembershipIntervals';
 import type { ParsedHouseRow } from './houseAssignmentImport';
+import { findPriorityViolations } from './housePlacement';
 
 export type HouseAssignmentBatch = Database['public']['Tables']['house_assignment_batches']['Row'];
 export type HouseAssignmentDraft = Database['public']['Tables']['house_assignment_drafts']['Row'];
 export type HouseAssignmentDraftInsert = Database['public']['Tables']['house_assignment_drafts']['Insert'];
 export type HouseBatchStatus = 'draft' | 'locked' | 'published' | 'archived';
 export type DraftMatchStatus = 'match' | 'review' | 'unmatched' | 'invalid' | 'manual';
+export type HouseAssignmentMethod = 'manual' | 'timestamp_ranked';
 
 export interface HouseProfileLite {
   id: string;
@@ -125,7 +127,18 @@ export interface PreflightIssue {
     | 'ambiguous_match'
     | 'unmatched'
     | 'imbalance'
-    | 'empty';
+    | 'empty'
+    | 'placement_unmatched'
+    | 'placement_duplicate_member'
+    | 'placement_missing_house'
+    | 'capacity_config'
+    | 'capacity_exceeded'
+    | 'capacity_mismatch'
+    | 'placement_preferences'
+    | 'priority_metadata'
+    | 'override_reason'
+    | 'priority_override'
+    | 'manual_override';
   message: string;
   /** Row ids involved, so the UI can jump to them. */
   rowIds: string[];
@@ -405,4 +418,273 @@ export function suggestBalancing(
   }
 
   return report;
+}
+
+// ─── Timestamp-priority (automatic) batches ─────────────────────────────────
+
+/** Old rows read before the placement migration have no assignment_method. */
+export function isTimestampRanked(batch: Pick<HouseAssignmentBatch, 'assignment_method'> | null | undefined) {
+  return batch?.assignment_method === 'timestamp_ranked';
+}
+
+export function readCapacityConfig(value: Json | null | undefined): Record<string, number> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const config: Record<string, number> = {};
+  for (const [id, capacity] of Object.entries(value)) {
+    if (typeof capacity !== 'number' || !Number.isInteger(capacity) || capacity < 0) return null;
+    config[id] = capacity;
+  }
+  return config;
+}
+
+export interface ExcludedApplicant {
+  source_row_number: number;
+  name: string;
+  reason: string;
+}
+
+export function readExcludedApplicants(value: Json | null | undefined): ExcludedApplicant[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const { source_row_number: row, name, reason } = item as Record<string, Json | undefined>;
+    return typeof row === 'number' && typeof name === 'string' && typeof reason === 'string'
+      ? [{ source_row_number: row, name, reason }]
+      : [];
+  });
+}
+
+/** The House the allocator chose differs from the current one. */
+export function isOverridden(row: Pick<HouseAssignmentDraft, 'house_profile_id' | 'generated_house_profile_id'>) {
+  return (row.house_profile_id ?? null) !== (row.generated_house_profile_id ?? null);
+}
+
+/** 1-based rank of the current House in the applicant's own preferences, or null if unranked. */
+export function achievedRank(row: Pick<HouseAssignmentDraft, 'house_profile_id' | 'preferences'>) {
+  if (!row.house_profile_id) return null;
+  const index = readPreferences(row.preferences).indexOf(row.house_profile_id);
+  return index === -1 ? null : index + 1;
+}
+
+function priorityOrder(rows: HouseAssignmentDraft[]) {
+  return [...rows].sort((a, b) => a.source_order - b.source_order || a.id.localeCompare(b.id));
+}
+
+/**
+ * Extra checks for a timestamp-priority batch. Legacy publishing skips
+ * unmatched rows; here that would silently break the balanced allocation, so
+ * every included applicant must be linked, placed within capacity, and carry
+ * intact priority metadata. Overrides need a reason; any that undo
+ * first-come-first-served priority are surfaced.
+ */
+export function buildTimestampPlacementChecks(
+  batch: Pick<HouseAssignmentBatch, 'capacity_config'>,
+  rows: HouseAssignmentDraft[],
+  profiles: HouseProfileLite[],
+  memberNames?: Map<string, string>,
+): { blockers: PreflightIssue[]; warnings: PreflightIssue[] } {
+  const blockers: PreflightIssue[] = [];
+  const warnings: PreflightIssue[] = [];
+  const active = profiles.filter((profile) => profile.is_active);
+  const valid = validProfileIds(profiles);
+  const labelOf = (id: string) => {
+    const profile = profiles.find((item) => item.id === id);
+    return profile ? houseLabel(profile) : 'Unknown House';
+  };
+  const nameOf = (row: HouseAssignmentDraft) =>
+    (row.member_id && memberNames?.get(row.member_id)) || row.source_name || 'Unknown applicant';
+  const ids = (list: HouseAssignmentDraft[]) => list.map((row) => row.id);
+
+  const notLinked = rows.filter((row) => !row.member_id || !PUBLISHABLE_STATUSES.has(row.match_status));
+  if (notLinked.length > 0) {
+    blockers.push({
+      code: 'placement_unmatched',
+      message: `${plural(notLinked.length, 'applicant')} not linked to a confirmed member record. Every placed applicant must be linked before locking.`,
+      rowIds: ids(notLinked),
+    });
+  }
+
+  const byMember = new Map<string, HouseAssignmentDraft[]>();
+  rows.forEach((row) => {
+    if (row.member_id) byMember.set(row.member_id, [...(byMember.get(row.member_id) ?? []), row]);
+  });
+  const repeated = Array.from(byMember.values()).filter((list) => list.length > 1);
+  if (repeated.length > 0) {
+    blockers.push({
+      code: 'placement_duplicate_member',
+      message: `${plural(repeated.length, 'member')} linked to more than one applicant (${repeated.map((list) => nameOf(list[0])).join(', ')}).`,
+      rowIds: repeated.flat().map((row) => row.id),
+    });
+  }
+
+  const noHouse = rows.filter((row) => !row.house_profile_id || !valid.has(row.house_profile_id));
+  if (noHouse.length > 0) {
+    blockers.push({ code: 'placement_missing_house', message: `${plural(noHouse.length, 'applicant')} without a valid House for this year.`, rowIds: ids(noHouse) });
+  }
+
+  const capacity = readCapacityConfig(batch.capacity_config);
+  const capacityKeys = capacity ? Object.keys(capacity).sort() : [];
+  const activeKeys = active.map((profile) => profile.id).sort();
+  if (!capacity || capacityKeys.join('|') !== activeKeys.join('|')) {
+    blockers.push({
+      code: 'capacity_config',
+      message: 'The saved House capacities do not match this year’s active Houses. Regenerate the placement.',
+      rowIds: [],
+    });
+  } else {
+    const total = Object.values(capacity).reduce((sum, value) => sum + value, 0);
+    if (total !== rows.length) {
+      blockers.push({
+        code: 'capacity_mismatch',
+        message: `Capacities add up to ${total} but the draft has ${plural(rows.length, 'applicant')}.`,
+        rowIds: [],
+      });
+    }
+    active.forEach((profile) => {
+      const placed = rows.filter((row) => row.house_profile_id === profile.id);
+      if (placed.length > capacity[profile.id]) {
+        blockers.push({
+          code: 'capacity_exceeded',
+          message: `${houseLabel(profile)} has ${placed.length} applicants but a capacity of ${capacity[profile.id]}.`,
+          rowIds: ids(placed),
+        });
+      } else if (placed.length < capacity[profile.id] && total === rows.length) {
+        blockers.push({
+          code: 'capacity_mismatch',
+          message: `${houseLabel(profile)} has ${placed.length} of ${capacity[profile.id]} spots filled; the allocation expects it full.`,
+          rowIds: [],
+        });
+      }
+    });
+  }
+
+  const badPreferences = rows.filter((row) => {
+    const prefs = readPreferences(row.preferences);
+    if (!Array.isArray(row.preferences) || prefs.length !== row.preferences.length) return true;
+    if (prefs.length === 0 || prefs.length > active.length) return true;
+    if (new Set(prefs).size !== prefs.length || prefs.some((id) => !valid.has(id))) return true;
+    return !!row.generated_house_profile_id && !prefs.includes(row.generated_house_profile_id);
+  });
+  if (badPreferences.length > 0) {
+    blockers.push({
+      code: 'placement_preferences',
+      message: `${plural(badPreferences.length, 'applicant')} with missing or malformed ranked preferences.`,
+      rowIds: ids(badPreferences),
+    });
+  }
+
+  const ordered = priorityOrder(rows);
+  const badMetadata = ordered.filter((row, index) => {
+    const ms = row.submission_timestamp ? Date.parse(row.submission_timestamp) : Number.NaN;
+    if (!Number.isFinite(ms)) return true;
+    if (!Number.isInteger(row.source_row_number) || (row.source_row_number as number) < 1) return true;
+    if (!row.generated_house_profile_id) return true;
+    if (row.source_order !== index) return true;
+    const previous = ordered[index - 1];
+    if (!previous) return false;
+    const previousMs = previous.submission_timestamp ? Date.parse(previous.submission_timestamp) : Number.NaN;
+    return previousMs > ms || (previousMs === ms && (previous.source_row_number ?? 0) >= (row.source_row_number as number));
+  });
+  if (badMetadata.length > 0) {
+    blockers.push({
+      code: 'priority_metadata',
+      message: `${plural(badMetadata.length, 'applicant')} with missing or out-of-order submission priority. Regenerate the placement.`,
+      rowIds: ids(badMetadata),
+    });
+  }
+
+  const overridden = rows.filter((row) => isOverridden(row));
+  const unexplained = overridden.filter((row) => !row.override_reason?.trim());
+  if (unexplained.length > 0) {
+    blockers.push({
+      code: 'override_reason',
+      message: `${plural(unexplained.length, 'House change')} from the automatic result without a documented reason.`,
+      rowIds: ids(unexplained),
+    });
+  }
+  if (overridden.length > 0) {
+    warnings.push({
+      code: 'manual_override',
+      message: `${plural(overridden.length, 'manual override')} of the automatic placement.`,
+      rowIds: ids(overridden),
+    });
+  }
+
+  const violations = findPriorityViolations(ordered.map((row) => ({
+    id: row.id,
+    preferences: readPreferences(row.preferences),
+    houseId: row.house_profile_id,
+  })));
+  if (violations.length > 0) {
+    const earlier = new Set(violations.map((item) => item.applicantId));
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    warnings.push({
+      code: 'priority_override',
+      message: `${plural(earlier.size, 'earlier applicant')} now ${earlier.size === 1 ? 'misses' : 'miss'} a higher-ranked House that a later applicant holds (${violations.slice(0, 3).map((item) => `${nameOf(byId.get(item.applicantId) as HouseAssignmentDraft)} → ${labelOf(item.houseId)}`).join(', ')}${violations.length > 3 ? ', …' : ''}). This breaks first-come, first-served.`,
+      rowIds: Array.from(new Set(violations.flatMap((item) => [item.applicantId, item.laterApplicantId]))),
+    });
+  }
+
+  return { blockers, warnings };
+}
+
+const SUPERSEDED_FOR_TIMESTAMP = new Set<PreflightIssue['code']>(['ambiguous_match', 'unmatched', 'imbalance']);
+
+/**
+ * Preflight for any batch. Manual batches get exactly buildPreflight; a
+ * timestamp-priority batch also gets the stricter placement checks, which
+ * replace the legacy "skipped at publish" warnings they supersede.
+ */
+export function buildBatchPreflight(
+  batch: Pick<HouseAssignmentBatch, 'assignment_method' | 'capacity_config'>,
+  rows: HouseAssignmentDraft[],
+  profiles: HouseProfileLite[],
+  options: Parameters<typeof buildPreflight>[2],
+): PreflightResult {
+  const base = buildPreflight(rows, profiles, options);
+  if (!isTimestampRanked(batch)) return base;
+  const strict = buildTimestampPlacementChecks(batch, rows, profiles, options.memberNames);
+  const blockers = [...base.blockers, ...strict.blockers];
+  return {
+    ...base,
+    blockers,
+    warnings: [...base.warnings.filter((issue) => !SUPERSEDED_FOR_TIMESTAMP.has(issue.code)), ...strict.warnings],
+    canLock: blockers.length === 0,
+  };
+}
+
+export interface PlacementDraftSource {
+  name: string;
+  /** UTC ISO submission instant. */
+  submittedAtIso: string;
+  sourceRow: number;
+  /** 1-based priority from the allocator. */
+  priority: number;
+  /** House profile ids, first choice first. */
+  preferences: string[];
+  houseId: string;
+  explanation: string;
+  /** An admin repaired this applicant's ranking before placement. */
+  corrected: boolean;
+  match: { status: 'match' | 'review' | 'unmatched'; memberId: string | null; method: 'email' | 'name' | null };
+}
+
+/** A draft row for one automatic placement. Stores no email or other form answers. */
+export function draftInsertFromPlacement(source: PlacementDraftSource): Omit<HouseAssignmentDraftInsert, 'batch_id'> {
+  return {
+    source_name: source.name,
+    source_house: null,
+    member_id: source.match.memberId,
+    house_profile_id: source.houseId,
+    generated_house_profile_id: source.houseId,
+    override_reason: null,
+    match_status: source.match.status,
+    match_method: source.match.method,
+    match_score: source.match.method ? 100 : null,
+    preferences: source.preferences,
+    notes: source.corrected ? `${source.explanation} Ranking corrected by an admin before placement.` : source.explanation,
+    source_order: source.priority - 1,
+    submission_timestamp: source.submittedAtIso,
+    source_row_number: source.sourceRow,
+  };
 }

@@ -8,6 +8,8 @@ export interface ParsedCsvTable {
   headers: string[];
   /** One record per non-blank data line, keyed by header. */
   rows: Record<string, string>[];
+  /** 1-based spreadsheet row of each entry in `rows` (the header is row 1; blank rows still count). */
+  rowNumbers: number[];
   /** Original header names that appeared more than once (renamed "Name (2)", …). */
   duplicateHeaders: string[];
   /** The text ended inside a quoted cell; the last cell runs to end of input. */
@@ -89,10 +91,13 @@ function isBlankRecord(record: readonly string[]): boolean {
  */
 export function parseCsvTable(raw: string): ParsedCsvTable {
   const { records, unterminatedQuote, unterminatedQuoteLine } = parseCsvRecords(raw);
-  const nonBlank = records.filter((record) => !isBlankRecord(record));
-  if (nonBlank.length === 0) return { headers: [], rows: [], duplicateHeaders: [], unterminatedQuote, unterminatedQuoteLine };
+  const nonBlank = records
+    .map((record, index) => ({ record, rowNumber: index + 1 }))
+    .filter(({ record }) => !isBlankRecord(record));
+  if (nonBlank.length === 0) return { headers: [], rows: [], rowNumbers: [], duplicateHeaders: [], unterminatedQuote, unterminatedQuoteLine };
 
-  const [headerRecord, ...dataRecords] = nonBlank;
+  const headerRecord = nonBlank[0].record;
+  const dataRecords = nonBlank.slice(1);
   const seen = new Map<string, number>();
   const used = new Set<string>();
   const duplicateHeaders: string[] = [];
@@ -110,7 +115,7 @@ export function parseCsvTable(raw: string): ParsedCsvTable {
     return name;
   });
 
-  const rows = dataRecords.map((record) => {
+  const rows = dataRecords.map(({ record }) => {
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {
       row[header] = (record[index] ?? '').trim();
@@ -118,5 +123,5 @@ export function parseCsvTable(raw: string): ParsedCsvTable {
     return row;
   });
 
-  return { headers, rows, duplicateHeaders, unterminatedQuote, unterminatedQuoteLine };
+  return { headers, rows, rowNumbers: dataRecords.map(({ rowNumber }) => rowNumber), duplicateHeaders, unterminatedQuote, unterminatedQuoteLine };
 }

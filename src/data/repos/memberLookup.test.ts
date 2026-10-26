@@ -66,3 +66,13 @@ it('does not query members when there are no emails to match', async () => {
   await expect(memberLookupRepository.matchMembersByEmail(['', '  '])).resolves.toEqual(new Map());
   expect(supabaseMock.queriesFor('members')).toHaveLength(0);
 });
+
+it('pages the House import member list past the 1,000-row cap', async () => {
+  const member = (index: number) => ({ id: `m${String(index).padStart(5, '0')}`, first_name: `F${index}`, last_name: 'L', college: null, year: null, house: null, email: null, points: 0, events_attended: 0 });
+  supabaseMock.queueResult('members', { data: Array.from({ length: 1000 }, (_, index) => member(index)), error: null });
+  supabaseMock.queueResult('members', { data: Array.from({ length: 234 }, (_, index) => member(1000 + index)), error: null });
+  const members = await memberLookupRepository.listHouseImportMembers();
+  expect(members).toHaveLength(1234);
+  const ranges = supabaseMock.queriesFor('members').flatMap((query) => query.calls).filter((call) => call.method === 'range');
+  expect(ranges).toEqual([{ method: 'range', args: [0, 999] }, { method: 'range', args: [1000, 1999] }]);
+});
