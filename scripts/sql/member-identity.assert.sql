@@ -353,6 +353,12 @@ select pg_temp.check_true('an automatic match whose standing is unchanged applie
       'observations', (select count(*) from public.member_year_observations where member_id = '11000000-0000-0000-0000-000000000007'))))),
     '[]', 7)) -> 'result' ->> 'ok')::boolean);
 
+insert into public.members (id, first_name, last_name) values ('11000000-0000-0000-0000-0000000000b8', 'Kevin', 'Pham');
+select pg_temp.check_true('a middle-name match is stale when a member with the row''s own name appeared',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000037', jsonb_build_array(
+    pg_temp.minh('{"source_name": "Kevin Pham", "known_same_name_ids": []}')))) = 'possible_duplicate_created');
+delete from public.members where id = '11000000-0000-0000-0000-0000000000b8';
+
 -- ── Import: malformed requests ────────────────────────────────────────────────
 select pg_temp.check_true('crediting one member twice is refused',
   pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000020', jsonb_build_array(pg_temp.minh(), pg_temp.minh('{"row_key": "row-x"}')))) ->> 'code' = '22023');

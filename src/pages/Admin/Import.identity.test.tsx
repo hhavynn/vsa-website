@@ -180,6 +180,7 @@ describe("Gmail at one event, UCSD at the next", () => {
       observed_year: "3rd Year",
       known_same_name_ids: ["alex"],
       expected_standing: { year: "2nd Year", observations: 0 },
+      source_name: "Alex Nguyen",
     }]);
     expect(requests()[0].creates).toEqual([]);
   });

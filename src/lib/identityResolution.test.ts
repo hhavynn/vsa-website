@@ -124,6 +124,17 @@ describe('weak evidence never becomes an automatic match or an alias (review fin
     expect(rows[2].aliasPlan).toEqual([]);
   });
 
+  it('a member matched by several rows is not given two different school addresses', () => {
+    const m = member('alex', 'Alex', 'Nguyen', { college: 'Muir', year: '1st Year' });
+    const { rows } = scenario([
+      { name: 'Alex Nguyen', email: 'alex@gmail.com', college: 'Muir', year: '1st' },
+      { name: 'Alex Nguyen', email: 'alex1@ucsd.edu', college: 'Muir', year: '1st' },
+      { name: 'Alex Nguyen', email: 'alex2@ucsd.edu', college: 'Muir', year: '1st' },
+    ], [m]);
+    expect(rows[1]).toMatchObject({ status: 'duplicate', reason: 'same_member_as_row' });
+    expect(rows[2]).toMatchObject({ status: 'review', reason: 'member_claimed_by_earlier_row', aliasPlan: [] });
+  });
+
   it('a repeat of a name-only match never confirms a new address', () => {
     const bare = member('alex', 'Alex', 'Nguyen');
     const { rows } = scenario([

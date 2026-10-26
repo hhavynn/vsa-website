@@ -612,6 +612,9 @@ export function resolveAttendanceIdentities<M extends IdentityMember>(
             [assess(row, index.byId.get(member.id)!, eventYear)],
           ));
         }
+        // The member's group remembers what it accepted, so a later row with yet
+        // another school address is reviewed instead of confirmed.
+        previous.emails = [...previous.emails, ...row.emails.filter((email) => !previous.emails.includes(email))];
         return duplicate('same_member_as_row', `Same member as row ${rowNumber(previous.rowId)}; attendance is recorded once.`,
           previous.rowId, member, verdict.aliasPlan);
       }
