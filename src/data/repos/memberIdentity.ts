@@ -37,7 +37,7 @@ async function requireIdentitySchema<T>(read: () => Promise<T>): Promise<T> {
   } catch (error) {
     const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
     if (code === 'PGRST205' || code === '42P01') {
-      throw new Error('The member identity migration (20261025000000) is not applied to this database. Turn off REACT_APP_ATTENDANCE_IDENTITY_V2, or apply the migration first.');
+      throw new Error('The member identity migration (20261026075912) is not applied to this database. Turn off REACT_APP_ATTENDANCE_IDENTITY_V2, or apply the migration first.');
     }
     throw error;
   }

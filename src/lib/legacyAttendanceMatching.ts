@@ -1,6 +1,6 @@
 // Stage A attendance matcher, kept as-is behind the identity rollout flag
 // (src/lib/identityRollout.ts). While REACT_APP_ATTENDANCE_IDENTITY_V2 is off —
-// until migration 20261025000000 is applied and verified — Admin → Import runs
+// until migration 20261026075912 is applied and verified — Admin → Import runs
 // this path, exactly as it shipped in #546. Delete this module, the legacy
 // decisions/decision-row/page modules and their tests once the flag is retired.
 import { getYearRank } from './yearNormalizer';

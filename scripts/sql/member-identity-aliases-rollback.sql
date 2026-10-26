@@ -1,4 +1,4 @@
--- Rollback for 20261025000000_member_identity_aliases.sql. One transaction.
+-- Rollback for 20261026075912_member_identity_aliases.sql. One transaction.
 -- Restores the production smart_merge_members body (20260619000000) and drops
 -- only what that migration added. Attendance, members and points are not
 -- touched. Aliases and year observations are discarded with their tables, so

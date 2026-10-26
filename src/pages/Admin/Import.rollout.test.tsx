@@ -65,6 +65,6 @@ it("says the migration is missing, before anything is imported, if the flag is o
   process.env.REACT_APP_ATTENDANCE_IDENTITY_V2 = "true";
   supabaseMock.setDefault("member_identity_emails", { data: null, error: { code: "PGRST205", message: "Could not find the table" } });
   await preview();
-  expect(await screen.findByText(/identity migration \(20261025000000\) is not applied/)).toBeInTheDocument();
+  expect(await screen.findByText(/identity migration \(20261026075912\) is not applied/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Import \(/ })).toBeDisabled();
 });
