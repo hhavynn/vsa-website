@@ -5,6 +5,8 @@
 // real members. Do not modify import logic unless explicitly requested.
 // Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useMemo, useRef, useState } from 'react';
+import LegacyAdminImport from './LegacyImport';
+import { identityImportEnabled } from '../../lib/identityRollout';
 import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
@@ -187,7 +189,8 @@ function newRequestId(): string {
 
 type Step = 'configure' | 'preview' | 'done';
 
-export default function AdminImport() {
+/** The identity-aware importer (needs migration 20261025000000). */
+export function IdentityAdminImport() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>('configure');
 
@@ -1147,4 +1150,9 @@ function Spinner() {
 
 function CheckIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
+}
+
+/** Admin → Import: the Stage A importer until the identity rollout flag is on. */
+export default function AdminImport() {
+  return identityImportEnabled() ? <IdentityAdminImport /> : <LegacyAdminImport />;
 }

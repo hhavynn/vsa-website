@@ -30,6 +30,19 @@ export interface RosterMember {
 
 type PageResult<T> = { data: T[] | null; error: unknown };
 
+/** A missing identity table means the rollout flag is on before its migration. */
+async function requireIdentitySchema<T>(read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? String((error as { code: unknown }).code) : '';
+    if (code === 'PGRST205' || code === '42P01') {
+      throw new Error('The member identity migration (20261025000000) is not applied to this database. Turn off REACT_APP_ATTENDANCE_IDENTITY_V2, or apply the migration first.');
+    }
+    throw error;
+  }
+}
+
 /** PostgREST errors are plain objects; keep their message when one has no code. */
 function toThrowable(error: unknown): unknown {
   if (error instanceof Error || isPostgrestErrorShape(error)) return error;
@@ -133,11 +146,11 @@ export class MemberIdentityRepository {
   /** Every confirmed address. Admin-only table; a non-admin reads nothing. */
   async loadIdentityEmails(): Promise<(IdentityAlias & { id: string })[]> {
     return withErrorHandling(
-      () => readAllById<IdentityAlias & { id: string }>((afterId, pageSize) => {
+      () => requireIdentitySchema(() => readAllById<IdentityAlias & { id: string }>((afterId, pageSize) => {
         let query = supabase.from('member_identity_emails').select('id, member_id, email').order('id', { ascending: true }).limit(pageSize);
         if (afterId) query = query.gt('id', afterId);
         return query as unknown as PromiseLike<PageResult<IdentityAlias & { id: string }>>;
-      }),
+      })),
       'Could not load confirmed member emails',
     );
   }
