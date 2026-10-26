@@ -66,30 +66,28 @@ export function HouseParentLinks({ selectedYear }: { selectedYear: number | null
   const needsReview = parents.filter((parent) => !parent.member_id).length;
 
   return (
-    <section className="scrapbook-paper m-4 p-5 sm:m-6 lg:m-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="House Parent member links">
-      <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>House Parents · member links</h2>
-      <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+    <section className="scrapbook-paper m-4 p-5 sm:m-6 lg:m-8 border-[var(--color-border)] bg-surface" aria-label="House Parent member links">
+      <h2 className="font-serif text-xl font-bold text-text-primary">House Parents · member links</h2>
+      <p className="mt-1 text-xs text-text-muted">
         Links each {formatAcademicYear(selectedYear)} House Parent to their member record. The public House page shows the House Parent text and image set above; links stay private.
       </p>
       {isLoading ? (
-        <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>Loading House Parents…</p>
+        <p className="mt-4 text-sm text-text-muted">Loading House Parents…</p>
       ) : error ? (
         <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">House Parents could not be loaded. If the House Parent migration has not been applied yet, apply it first.</p>
       ) : parents.length === 0 ? (
-        <p className="mt-4 text-sm" style={{ color: 'var(--color-text3)' }}>No House Parents are recorded for this year.</p>
+        <p className="mt-4 text-sm text-text-muted">No House Parents are recorded for this year.</p>
       ) : (
         <>
-          <p className="mt-3 text-xs font-semibold" style={{ color: needsReview > 0 ? undefined : 'var(--color-text2)' }}>
-            <span className={needsReview > 0 ? 'text-amber-700 dark:text-amber-400' : undefined}>
-              {needsReview > 0 ? `${needsReview} House Parent${needsReview === 1 ? '' : 's'} need${needsReview === 1 ? 's' : ''} review.` : 'Every House Parent is linked.'}
-            </span>
+          <p className={`mt-3 text-xs font-semibold ${needsReview > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-text-secondary'}`}>
+            {needsReview > 0 ? `${needsReview} House Parent${needsReview === 1 ? '' : 's'} need${needsReview === 1 ? 's' : ''} review.` : 'Every House Parent is linked.'}
           </p>
-          <ul className="mt-3 divide-y" style={{ borderColor: 'var(--color-border)' }}>
+          <ul className="mt-3 divide-y border-[var(--color-border)]">
             {parents.map((parent) => (
               <li key={parent.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5" data-testid="house-parent-link">
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{parent.display_name}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="text-sm font-semibold text-text-primary">{parent.display_name}</p>
+                  <p className="text-[11px] text-text-muted">
                     {parent.houseLabel} · {parent.member_id ? 'Linked' : `Needs review${parent.review_note ? ` — ${parent.review_note}` : ''}`}
                   </p>
                 </div>

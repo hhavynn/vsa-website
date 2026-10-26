@@ -79,9 +79,9 @@ function readFileText(file: File): Promise<string> {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <div className="rounded border px-3 py-2" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-      <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>{label}</dt>
-      <dd className={`mt-0.5 font-serif text-xl font-bold ${tone ?? ''}`} style={tone ? undefined : { color: 'var(--color-text)' }}>{value}</dd>
+    <div className="rounded border px-3 py-2 border-[var(--color-border)] bg-surface2">
+      <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">{label}</dt>
+      <dd className={`mt-0.5 font-serif text-xl font-bold ${tone ?? 'text-text-primary'}`}>{value}</dd>
     </div>
   );
 }
@@ -312,36 +312,35 @@ export function HousePlacementPanel({
 
   return (
     <div className="space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
-      <section className="scrapbook-paper p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Upload Google Form responses">
-        <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Google Forms — Auto Placement</h2>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+      <section className="scrapbook-paper p-6 border-[var(--color-border)] bg-surface" aria-label="Upload Google Form responses">
+        <h2 className="font-serif text-xl font-bold text-text-primary">Google Forms — Auto Placement</h2>
+        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
           First-come, first-served: applicants are placed in submission order into their highest-ranked House with room. No lottery, scoring, or AI. The result is a private draft until you lock and reveal it.
         </p>
-        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+        <p className="mt-1 text-xs text-text-muted">
           In the responses sheet, use File → Download → Comma-separated values. The file stays in this browser; only names, rankings, submission times and sheet rows are saved with the draft.
         </p>
 
         {noHouses ? (
-          <div role="alert" className="mt-4 rounded border p-3 text-sm" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}>
+          <div role="alert" className="mt-4 rounded border p-3 text-sm border-[var(--color-border)] bg-surface2 text-text-primary">
             <p className="font-semibold">No active Houses for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.</p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--color-text2)' }}>
+            <p className="mt-1 text-xs text-text-secondary">
               Create this year&rsquo;s House profiles in the Profiles &amp; Images tab first. Placement never uses another year&rsquo;s Houses.
             </p>
           </div>
         ) : (
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label htmlFor="placement-file" className={labelCls} style={{ color: 'var(--color-text3)' }}>Form responses CSV</label>
+              <label htmlFor="placement-file" className={`${labelCls} text-text-muted`}>Form responses CSV</label>
               <input
                 id="placement-file"
                 type="file"
                 accept=".csv,text/csv"
                 onChange={handleFile}
                 disabled={saving}
-                className="block w-full text-xs"
-                style={{ color: 'var(--color-text2)' }}
+                className="block w-full text-xs text-text-secondary"
               />
-              {fileName && <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>Loaded {fileName}</p>}
+              {fileName && <p className="mt-1 text-xs text-text-muted">Loaded {fileName}</p>}
             </div>
             <button
               type="button"
@@ -366,18 +365,17 @@ export function HousePlacementPanel({
         )}
 
         {showMapping && detection && parse && (
-          <div className="mt-4 rounded border p-3" style={{ borderColor: 'var(--color-border)' }}>
-            <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Choose the columns to use</p>
+          <div className="mt-4 rounded border p-3 border-[var(--color-border)]">
+            <p className="text-xs font-semibold text-text-primary">Choose the columns to use</p>
             <div className="mt-2 grid gap-3 sm:grid-cols-3">
               {(Object.keys(ROLE_LABEL) as PlacementColumnRole[]).map((role) => (
                 <div key={role}>
-                  <label htmlFor={`placement-col-${role}`} className={labelCls} style={{ color: 'var(--color-text3)' }}>{ROLE_LABEL[role]}</label>
+                  <label htmlFor={`placement-col-${role}`} className={`${labelCls} text-text-muted`}>{ROLE_LABEL[role]}</label>
                   <select
                     id={`placement-col-${role}`}
                     value={(overrides[role] ?? detection.columns[role]) || ''}
                     onChange={(event) => setOverride(role, event.target.value)}
-                    className={fieldCls}
-                    style={{ borderColor: 'var(--color-border)' }}
+                    className={`${fieldCls} border-[var(--color-border)]`}
                   >
                     <option value="">{role === 'email' ? 'No email column' : 'Choose…'}</option>
                     {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
@@ -386,13 +384,12 @@ export function HousePlacementPanel({
               ))}
               {Array.from({ length: rankSlots }, (_, index) => (
                 <div key={`rank-${index}`}>
-                  <label htmlFor={`placement-rank-${index}`} className={labelCls} style={{ color: 'var(--color-text3)' }}>Choice #{index + 1} column</label>
+                  <label htmlFor={`placement-rank-${index}`} className={`${labelCls} text-text-muted`}>Choice #{index + 1} column</label>
                   <select
                     id={`placement-rank-${index}`}
                     value={(overrides.ranks ?? detection.columns.ranks)[index] ?? ''}
                     onChange={(event) => setRankOverride(index, event.target.value)}
-                    className={fieldCls}
-                    style={{ borderColor: 'var(--color-border)' }}
+                    className={`${fieldCls} border-[var(--color-border)]`}
                   >
                     <option value="">Not used</option>
                     {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
@@ -403,8 +400,7 @@ export function HousePlacementPanel({
             <button
               type="button"
               onClick={() => validate(overrides)}
-              className="mt-3 rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              className="mt-3 rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] border-[var(--color-border)] text-text-primary"
             >
               Validate with these columns
             </button>
@@ -447,7 +443,7 @@ export function HousePlacementPanel({
           <button type="button" onClick={handleGenerate} disabled={!canGenerate || saving} className="vsa-btn-primary px-6 py-3 text-xs disabled:opacity-50">
             Generate Placements
           </button>
-          <p className="text-xs" style={{ color: 'var(--color-text3)' }}>
+          <p className="text-xs text-text-muted">
             {!review.ready
               ? 'Fix or exclude every flagged submission first.'
               : capacityErrors.length > 0
@@ -478,8 +474,8 @@ export function HousePlacementPanel({
             rankCounts={current.rankCounts}
             exportLabel={`${selectedYear ? formatYearSpan(selectedYear) : ''} ${sourceLabel || 'house'}`}
           />
-          <div className="scrapbook-paper flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <p className="text-xs" style={{ color: 'var(--color-text2)' }}>
+          <div className="scrapbook-paper flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between border-[var(--color-border)] bg-surface">
+            <p className="text-xs text-text-secondary">
               Saving creates one private draft for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. No House membership changes and nothing is revealed. Unmatched members must be linked in the draft before it can be locked.
             </p>
             <button type="button" onClick={handleSave} disabled={saving || !selectedYear || !effectiveStartDate} className="vsa-btn-primary px-6 py-3 text-xs disabled:opacity-50">

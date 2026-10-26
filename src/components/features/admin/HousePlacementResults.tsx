@@ -73,9 +73,9 @@ export function previewExportRows(rows: readonly PlacementPreviewRow[]): Placeme
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded border px-3 py-2" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>{label}</p>
-      <p className="mt-0.5 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>{value}</p>
+    <div className="rounded border px-3 py-2 border-[var(--color-border)] bg-surface2">
+      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">{label}</p>
+      <p className="mt-0.5 font-serif text-xl font-bold text-text-primary">{value}</p>
     </div>
   );
 }
@@ -102,10 +102,10 @@ export function HousePlacementResults({ rows, houses, capacities, rankCounts, ex
   const exportRows = useMemo(() => previewExportRows(rows), [rows]);
 
   return (
-    <section className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }} aria-label="Placement results">
-      <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
-        <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-text)' }}>Placement preview</h3>
-        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
+    <section className="scrapbook-paper overflow-hidden border-[var(--color-border)] bg-surface" aria-label="Placement results">
+      <div className="border-b px-5 py-4 border-[var(--color-border)]">
+        <h3 className="font-serif text-lg font-bold text-text-primary">Placement preview</h3>
+        <p className="mt-1 text-xs text-text-muted">
           First-come, first-served: each applicant, in submission order, took their highest-ranked House with room. Nothing is saved yet.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -123,8 +123,8 @@ export function HousePlacementResults({ rows, houses, capacities, rankCounts, ex
             const percent = capacity > 0 ? Math.min(100, Math.round((count / capacity) * 100)) : 0;
             return (
               <div key={house.id} data-testid={`placement-capacity-${house.label}`}>
-                <div className="flex justify-between text-xs" style={{ color: 'var(--color-text2)' }}>
-                  <span className="font-semibold" style={{ color: 'var(--color-text)' }}>{house.label}</span>
+                <div className="flex justify-between text-xs text-text-secondary">
+                  <span className="font-semibold text-text-primary">{house.label}</span>
                   <span className="font-mono">{count} / {capacity}</span>
                 </div>
                 <div className="mt-1 h-2 overflow-hidden rounded bg-[var(--color-surface2)]" role="progressbar" aria-label={`${house.label} filled`} aria-valuenow={count} aria-valuemin={0} aria-valuemax={capacity}>
@@ -135,85 +135,83 @@ export function HousePlacementResults({ rows, houses, capacities, rankCounts, ex
           })}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportLabel, 'placement-roster'))}>
+          <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportLabel, 'placement-roster'))}>
             Export full roster
           </button>
           <span className="flex items-center gap-1">
-            <select value={exportHouse} onChange={(event) => setExportHouse(event.target.value)} aria-label="House roster to export" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+            <select value={exportHouse} onChange={(event) => setExportHouse(event.target.value)} aria-label="House roster to export" className={`${selectCls} border-[var(--color-border)]`}>
               {houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
             </select>
             <button
               type="button"
               disabled={!exportHouse}
-              className={ghostBtn}
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              className={`${ghostBtn} border-[var(--color-border)] text-text-primary`}
               onClick={() => downloadCsv(houseRosterCsv(exportRows, exportHouse), exportFilename(exportLabel, houses.find((house) => house.id === exportHouse)?.label ?? 'house', 'roster'))}
             >
               Export House roster
             </button>
           </span>
-          <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportLabel, 'placement-exceptions'))}>
+          <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportLabel, 'placement-exceptions'))}>
             Export review list
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 border-[var(--color-border)]">
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search applicants…"
           aria-label="Search applicants"
-          className="rounded border px-2 py-1.5 text-xs"
-          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
+          className="rounded border px-2 py-1.5 text-xs border-[var(--color-border)] bg-surface2 text-text-primary"
         />
-        <select value={houseFilter} onChange={(event) => setHouseFilter(event.target.value)} aria-label="Filter by assigned House" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+        <select value={houseFilter} onChange={(event) => setHouseFilter(event.target.value)} aria-label="Filter by assigned House" className={`${selectCls} border-[var(--color-border)]`}>
           <option value="">All Houses</option>
           {houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
         </select>
-        <select value={rankFilter} onChange={(event) => setRankFilter(event.target.value)} aria-label="Filter by achieved choice" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+        <select value={rankFilter} onChange={(event) => setRankFilter(event.target.value)} aria-label="Filter by achieved choice" className={`${selectCls} border-[var(--color-border)]`}>
           <option value="">Any choice</option>
           {rankCounts.map((_, index) => <option key={index} value={String(index + 1)}>{`${ordinal(index + 1)} choice`}</option>)}
         </select>
-        <select value={matchFilter} onChange={(event) => setMatchFilter(event.target.value)} aria-label="Filter by member match" className={selectCls} style={{ borderColor: 'var(--color-border)' }}>
+        <select value={matchFilter} onChange={(event) => setMatchFilter(event.target.value)} aria-label="Filter by member match" className={`${selectCls} border-[var(--color-border)]`}>
           <option value="">Any member match</option>
           <option value="match">Matched</option>
           <option value="review">Needs review</option>
           <option value="unmatched">Unmatched</option>
           <option value="corrected">Ranking corrected</option>
         </select>
-        <span className="text-xs" style={{ color: 'var(--color-text3)' }}>{visible.length} of {rows.length}</span>
+        <span className="text-xs text-text-muted">{visible.length} of {rows.length}</span>
       </div>
 
       <div className="max-h-[70vh] overflow-auto">
         <table className="w-full min-w-[1040px] text-sm">
           <thead className="sticky top-0 z-[1]">
-            <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+            <tr className="border-b bg-[var(--color-surface2)] border-[var(--color-border)]">
               {['Priority', 'Name', 'Submitted', ...rankCounts.map((_, index) => ordinal(index + 1)), 'Assigned House', 'Result', 'Member match'].map((heading) => (
-                <th key={heading} className={headCls} style={{ color: 'var(--color-text3)' }}>{heading}</th>
+                <th key={heading} className={`${headCls} text-text-muted`}>{heading}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+          <tbody className="divide-y border-[var(--color-border)]">
             {visible.map((row) => (
               <tr key={row.id} data-testid="placement-result-row" className="align-top">
-                <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--color-text2)' }}>#{row.priority}</td>
+                <td className="px-3 py-2 font-mono text-xs text-text-secondary">#{row.priority}</td>
                 <td className="px-3 py-2">
-                  <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>{row.name}</p>
-                  <p className="mt-0.5 text-[11px]" style={{ color: 'var(--color-text3)' }}>{row.explanation}</p>
+                  <p className="text-[13px] font-semibold text-text-primary">{row.name}</p>
+                  <p className="mt-0.5 text-[11px] text-text-muted">{row.explanation}</p>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs" style={{ color: 'var(--color-text2)' }}>{row.submitted}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-text-secondary">{row.submitted}</td>
                 {rankCounts.map((_, index) => (
-                  <td key={index} className={`px-3 py-2 text-xs ${index + 1 === row.achievedRank ? 'font-bold' : ''}`} style={{ color: index + 1 === row.achievedRank ? 'var(--color-text)' : 'var(--color-text3)' }}>
+                  <td key={index} className={`px-3 py-2 text-xs ${index + 1 === row.achievedRank ? 'font-bold text-text-primary' : 'text-text-muted'}`}>
                     {row.preferences[index] ?? '—'}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{row.houseLabel}</td>
-                <td className="px-3 py-2 font-mono text-[11px]" style={{ color: 'var(--color-text2)' }}>{ordinal(row.achievedRank)}</td>
+                <td className="px-3 py-2 text-xs font-semibold text-text-primary">{row.houseLabel}</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-text-secondary">{ordinal(row.achievedRank)}</td>
                 <td className="px-3 py-2 text-[11px]">
                   <p className={`font-mono font-bold uppercase ${matchTone(row.match)}`}>{matchLabel(row.match)}</p>
-                  <p className="mt-0.5" style={{ color: 'var(--color-text3)' }}>{row.match.note}</p>
+                  <p className="mt-0.5 text-text-muted">{row.match.note}</p>
                 </td>
               </tr>
             ))}

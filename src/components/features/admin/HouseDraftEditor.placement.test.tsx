@@ -150,6 +150,8 @@ it('rejects a move that would exceed capacity and requires a reason for a swap',
   expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'd2', { house_profile_id: R, override_reason: 'Approved by president' });
   expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'd1', { house_profile_id: P, override_reason: 'Approved by president' });
   expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ summary: expect.stringMatching(/Manual override of the automatic placement: Approved by president/) }));
+  // A one-row House undo would split the swap and drop its reason, so none is offered.
+  (logAdminActivity as jest.Mock).mock.calls.forEach(([entry]) => expect(entry.metadata).toBeUndefined());
   await settle();
 
   const rows = screen.getAllByTestId('house-draft-row');

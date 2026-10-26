@@ -389,3 +389,32 @@ describe('2026-2027 My Little Pony Houses', () => {
     expect(mapped.unresolvedLabels.map((label) => label.label)).toEqual(['Sparkle']);
   });
 });
+
+describe('repeat submissions with an uncertain time', () => {
+  it('does not set aside a timestamped resubmission while the same email has a row with no time', () => {
+    const { rows } = parsed(csv(
+      line('', 'An', 'an@example.test', [R, P, A, T]),
+      line('10/21/2026 21:00:00', 'An', 'an@example.test', [P, R, A, T]),
+    ));
+    const review = buildPlacementReview(rows, profiles);
+    expect(review.applicants.map((row) => row.status)).toEqual(['invalid', 'valid']);
+    expect(review.applicants[0].issues.map((issue) => issue.code)).toEqual(['missing_timestamp', 'repeat_pending']);
+    expect(review.ready).toBe(false);
+    const excluded = buildPlacementReview(rows, profiles, { ...EMPTY_PLACEMENT_EDITS, exclusions: { 'row-2': 'No submission time' } });
+    expect(excluded.applicants.map((row) => row.status)).toEqual(['excluded', 'valid']);
+    expect(excluded.ready).toBe(true);
+  });
+
+  it('picks the earliest rollback-hour resubmission only after the admin says which hour each was', () => {
+    // Real order: row 2 at 1:10 PST (09:10Z) is later than row 3 at 1:50 PDT (08:50Z).
+    const { rows } = parsed(csv(
+      line('11/1/2026 1:10:00', 'An', 'an@example.test', [R, P, A, T]),
+      line('11/1/2026 1:50:00', 'An', 'an@example.test', [P, R, A, T]),
+    ));
+    const pending = buildPlacementReview(rows, profiles);
+    expect(pending.applicants.every((row) => row.duplicateOf === null)).toBe(true);
+    expect(pending.ready).toBe(false);
+    const resolved = buildPlacementReview(rows, profiles, { ...EMPTY_PLACEMENT_EDITS, rollbackChoices: { 'row-2': 'second', 'row-3': 'first' } });
+    expect(resolved.applicants.map((row) => [row.status, row.duplicateOf])).toEqual([['duplicate', 'row-3'], ['valid', null]]);
+  });
+});

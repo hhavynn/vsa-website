@@ -458,7 +458,8 @@ export type ApplicantIssueCode =
   | 'ambiguous_house'
   | 'inactive_house'
   | 'too_few_choices'
-  | 'too_many_choices';
+  | 'too_many_choices'
+  | 'repeat_pending';
 
 export interface ApplicantIssue {
   code: ApplicantIssueCode;
@@ -714,25 +715,40 @@ export function buildPlacementReview(
     };
   });
 
-  // Repeat submissions: the earliest included one for each email is kept.
+  // Repeat submissions: the earliest included one for each email is kept. An
+  // email group with a submission whose time is missing, invalid or an
+  // unresolved rollback-hour time is not decided yet: which row is earliest is
+  // unknown, so nothing in it is set aside until an admin resolves or excludes
+  // that row.
   const sortKey = (row: ReviewedApplicant) => ({
     id: row.id,
     sourceRow: row.sourceRow,
     submittedAtMs: row.submittedAtMs ?? Number.POSITIVE_INFINITY,
   });
-  const keptByEmail = new Map<string, ReviewedApplicant>();
-  [...evaluated]
-    .filter((row) => !row.exclusionReason && row.email)
-    .sort((a, b) => comparePriority(sortKey(a), sortKey(b)))
-    .forEach((row) => {
-      const kept = keptByEmail.get(row.email);
-      if (!kept) {
-        keptByEmail.set(row.email, row);
-        return;
-      }
+  const uncertainTime = (row: ReviewedApplicant) =>
+    row.submittedAtMs === null || row.issues.some((issue) => issue.code === 'ambiguous_timestamp');
+  const included = evaluated.filter((row) => !row.exclusionReason && row.email);
+  const byEmail = new Map<string, ReviewedApplicant[]>();
+  included.forEach((row) => byEmail.set(row.email, [...(byEmail.get(row.email) ?? []), row]));
+  byEmail.forEach((group) => {
+    if (group.length < 2) return;
+    if (group.some(uncertainTime)) {
+      const others = (row: ReviewedApplicant) => group.filter((item) => item !== row).map((item) => item.sourceRow).join(', ');
+      group.filter(uncertainTime).forEach((row) => {
+        row.issues.push({
+          code: 'repeat_pending',
+          severity: 'warning',
+          message: `Same email as row ${others(row)}. The earliest submission is kept once this time is resolved, or this row is excluded.`,
+        });
+      });
+      return;
+    }
+    const [kept, ...later] = [...group].sort((a, b) => comparePriority(sortKey(a), sortKey(b)));
+    later.forEach((row) => {
       row.duplicateOf = kept.id;
       row.duplicateDiffers = row.rawChoices.map(normalizeHouseLookup).join('|') !== kept.rawChoices.map(normalizeHouseLookup).join('|');
     });
+  });
 
   evaluated.forEach((row) => {
     if (row.exclusionReason) row.status = 'excluded';

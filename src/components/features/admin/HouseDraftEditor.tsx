@@ -369,12 +369,16 @@ export function HouseDraftEditor({
       entityId: row.id,
       academicYearStart: batch.academic_year_start,
       summary: activitySummary.houseChanged(personNameOf(row), houseNameOf(row.house_profile_id), houseNameOf(patch.house_profile_id)),
-      metadata: buildUndoMetadata({
-        kind: 'house_draft_house',
-        target: { batchId: batch.id, draftId: row.id },
-        before: row.house_profile_id ?? null,
-        after: patch.house_profile_id ?? null,
-      }),
+      // The one-row House undo can't restore an automatic batch's swap partner
+      // or override reason, so automatic batches log without an undo action.
+      metadata: auto
+        ? undefined
+        : buildUndoMetadata({
+            kind: 'house_draft_house',
+            target: { batchId: batch.id, draftId: row.id },
+            before: row.house_profile_id ?? null,
+            after: patch.house_profile_id ?? null,
+          }),
     });
   }
 
@@ -451,12 +455,6 @@ export function HouseDraftEditor({
           entityId: move.row.id,
           academicYearStart: batch.academic_year_start,
           summary: `${activitySummary.houseChanged(personNameOf(move.row), houseNameOf(move.from), houseNameOf(move.to))} Manual override of the automatic placement: ${why}`,
-          metadata: buildUndoMetadata({
-            kind: 'house_draft_house',
-            target: { batchId: batch.id, draftId: move.row.id },
-            before: move.from ?? null,
-            after: move.to ?? null,
-          }),
         });
       }
       setOverrideRowId(null);
