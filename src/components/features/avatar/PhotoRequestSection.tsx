@@ -152,7 +152,7 @@ export function PhotoRequestSection({
     });
     const errors: FieldErrors = {};
     if (!parsed.success) {
-      for (const issue of parsed.error.errors) {
+      for (const issue of parsed.error.issues) {
         const field = SCHEMA_FIELD[String(issue.path[0])];
         if (field && !errors[field]) errors[field] = issue.message;
       }
@@ -166,7 +166,7 @@ export function PhotoRequestSection({
       setFormError(
         invalid.length > 0
           ? `Your request hasn't been submitted yet. Fix ${invalid.length === 1 ? 'the highlighted field' : `the ${invalid.length} highlighted fields`} and try again.`
-          : (!parsed.success ? parsed.error.errors[0]?.message : null) ?? 'Please check the form.',
+          : (!parsed.success ? parsed.error.issues[0]?.message : null) ?? 'Please check the form.',
       );
       if (invalid[0]) focusField(invalid[0]);
       return;

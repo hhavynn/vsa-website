@@ -12,7 +12,7 @@ const keyTuple = APPLICATION_KEYS as [ApplicationKey, ...ApplicationKey[]];
 
 export const ApplicationLinkFormSchema = z
   .object({
-    application_key: z.enum(keyTuple, { errorMap: () => ({ message: 'Choose an application type' }) }),
+    application_key: z.enum(keyTuple, { error: 'Choose an application type' }),
     title: z.string().trim().min(1, 'Title is required'),
     description: z.string(),
     button_label: z.string().trim().min(1, 'Button label is required'),

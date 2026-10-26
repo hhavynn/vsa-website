@@ -12,7 +12,7 @@ export type AdminMemberInput = z.infer<typeof AdminMemberSchema>;
 
 // Event schemas
 export const EventSchema = z.object({
-  id: z.string().uuid('Invalid event ID'),
+  id: z.string().guid('Invalid event ID'),
   name: z.string().min(1, 'Event name is required').max(100, 'Event name must be less than 100 characters'),
   description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
   date: z.string().datetime('Invalid date format'),
@@ -23,7 +23,7 @@ export const EventSchema = z.object({
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
   is_published: z.boolean().default(true),
-  academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
+  academic_term_id: z.string().guid('Invalid academic term ID').nullable().optional(),
 });
 
 export const CreateEventSchema = EventSchema.omit({ id: true });
@@ -46,7 +46,7 @@ export const FeedbackSchema = z.object({
 
 // Admin schemas
 export const AdminEventUpdateSchema = z.object({
-  id: z.string().uuid('Invalid event ID'),
+  id: z.string().guid('Invalid event ID'),
   name: z.string().min(1, 'Event name is required').max(100, 'Event name must be less than 100 characters').optional(),
   description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters').optional(),
   date: z.string().datetime('Invalid date format').optional(),
@@ -57,10 +57,10 @@ export const AdminEventUpdateSchema = z.object({
   image_url: z.string().url('Invalid image URL').optional().or(z.literal('')),
   thumbnail_url: z.string().url('Invalid thumbnail URL').nullable().optional().or(z.literal('')),
   is_published: z.boolean().optional(),
-  academic_term_id: z.string().uuid('Invalid academic term ID').nullable().optional(),
+  academic_term_id: z.string().guid('Invalid academic term ID').nullable().optional(),
 });
 
-const optionalUuid = z.union([z.string().uuid('Use a valid UUID'), z.literal('')]);
+const optionalUuid = z.union([z.string().guid('Use a valid UUID'), z.literal('')]);
 
 export const DataRightsRequestFormSchema = z.object({
   request_type: z.enum([
@@ -117,14 +117,12 @@ export const MemberPhotoRequestFormSchema = z.object({
     // server-side rejection into a message beside the field.
     .regex(/@ucsd\.edu$/i, 'Use your UCSD email (it must end in @ucsd.edu)'),
   note_to_admins: z.string().max(1000, 'Note must be 1,000 characters or fewer'),
-  consent_confirmed: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm consent to submit a photo' }),
-  }),
+  consent_confirmed: z.literal(true, { error: 'You must confirm consent to submit a photo' }),
 }).strict();
 
 export const DataRightsDependencyPreviewSchema = z.object({
   version: z.literal(1),
-  request_id: z.string().uuid(),
+  request_id: z.string().guid(),
   read_only: z.literal(true),
   subject_signals: z.object({
     has_auth_user_id: z.boolean(),
@@ -159,8 +157,8 @@ export const DataRightsDependencyPreviewSchema = z.object({
 }).strict();
 
 const DataRightsExportEventSchema = z.object({
-  id: z.string().uuid(),
-  event_id: z.string().uuid(),
+  id: z.string().guid(),
+  event_id: z.string().guid(),
   event_name: z.string(),
   event_date: z.string(),
   event_location: z.string().nullable(),
@@ -170,21 +168,21 @@ const DataRightsExportEventSchema = z.object({
 
 export const DataRightsExportBundleSchema = z.object({
   version: z.literal(1),
-  request_id: z.string().uuid(),
+  request_id: z.string().guid(),
   generated_at: z.string(),
   subject: z.object({
     has_auth_user_id: z.boolean(),
     has_member_id: z.boolean(),
   }).strict(),
   auth_account: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     email: z.string().nullable(),
     created_at: z.string(),
     updated_at: z.string().nullable(),
     last_sign_in_at: z.string().nullable(),
   }).strict().nullable(),
   profile: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     email: z.string(),
     first_name: z.string(),
     last_name: z.string(),
@@ -197,7 +195,7 @@ export const DataRightsExportBundleSchema = z.object({
     updated_at: z.string(),
   }).strict().nullable(),
   member_records: z.array(z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     first_name: z.string(),
     last_name: z.string(),
     college: z.string().nullable(),
@@ -215,27 +213,27 @@ export const DataRightsExportBundleSchema = z.object({
       created_at: z.string(),
     }).strict()),
     member_attendance: z.array(DataRightsExportEventSchema.extend({
-      member_id: z.string().uuid(),
+      member_id: z.string().guid(),
       imported_at: z.string(),
     }).strict()),
   }).strict(),
   points: z.object({
     auth_points: z.array(z.object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       total_points: z.number().int(),
       points: z.number().int().nullable(),
       created_at: z.string(),
       updated_at: z.string(),
     }).strict()),
     member_totals: z.array(z.object({
-      member_id: z.string().uuid(),
+      member_id: z.string().guid(),
       total_points: z.number().int(),
       events_attended: z.number().int(),
     }).strict()),
   }).strict(),
   house_memberships: z.array(z.object({
-    id: z.string().uuid(),
-    member_id: z.string().uuid(),
+    id: z.string().guid(),
+    member_id: z.string().guid(),
     house_key: z.string(),
     house_name: z.string(),
     academic_year_start: z.number().int(),
@@ -246,7 +244,7 @@ export const DataRightsExportBundleSchema = z.object({
     updated_at: z.string(),
   }).strict()),
   feedback: z.array(z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     type: z.enum(['bug', 'feature', 'improvement', 'event', 'other']),
     title: z.string(),
     description: z.string(),

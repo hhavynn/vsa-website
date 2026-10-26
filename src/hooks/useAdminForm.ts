@@ -7,21 +7,26 @@ import { SaveStatus, saveStatus } from '../lib/adminDirty';
 import { ConstraintHint, serverErrorToForm } from '../lib/adminForm';
 import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 
-export interface UseAdminFormOptions<S extends z.ZodTypeAny> {
+type FormSchema = z.ZodType;
+/** The schema's own input/output types (zod 4 no longer guarantees they extend FieldValues). */
+type FormInput<S extends FormSchema> = z.input<S> extends FieldValues ? z.input<S> : never;
+type FormOutput<S extends FormSchema> = z.output<S> extends FieldValues ? z.output<S> : never;
+
+export interface UseAdminFormOptions<S extends FormSchema> {
   /** Lives in src/schemas/. Client validation is UX; the DB/RLS stay authoritative. */
   schema: S;
-  defaultValues: DefaultValues<z.input<S>>;
+  defaultValues: DefaultValues<FormInput<S>>;
   /** Throw (a DatabaseError etc.) to report a server failure; return normally on success. */
-  onSubmit: (values: z.output<S>) => Promise<unknown>;
+  onSubmit: (values: FormOutput<S>) => Promise<unknown>;
   /** Toast on success. Pass null to stay quiet when the caller already confirms. */
   successMessage?: string | null;
   /** Maps database constraint names to the field they belong to. */
   constraints?: Record<string, ConstraintHint>;
-  onSuccess?: (values: z.output<S>) => void;
+  onSuccess?: (values: FormOutput<S>) => void;
 }
 
-export interface AdminFormApi<S extends z.ZodTypeAny> {
-  form: UseFormReturn<z.input<S>, unknown, z.output<S>>;
+export interface AdminFormApi<S extends FormSchema> {
+  form: UseFormReturn<FormInput<S>, unknown, FormOutput<S>>;
   submit: (event?: React.BaseSyntheticEvent) => Promise<void>;
   status: SaveStatus;
   /** Form-level error from the last failed save (field errors live on `form.formState.errors`). */
@@ -38,9 +43,9 @@ export interface AdminFormApi<S extends z.ZodTypeAny> {
  * guard. The guard follows react-hook-form's dirty state, which `reset(values)`
  * clears on success — so saving and then navigating never prompts.
  */
-export function useAdminForm<S extends z.ZodTypeAny>(options: UseAdminFormOptions<S>): AdminFormApi<S> {
-  type Input = z.input<S>;
-  type Output = z.output<S>;
+export function useAdminForm<S extends FormSchema>(options: UseAdminFormOptions<S>): AdminFormApi<S> {
+  type Input = FormInput<S>;
+  type Output = FormOutput<S>;
   const { schema, defaultValues, onSubmit, successMessage = 'Saved.', constraints, onSuccess } = options;
   const form = useForm<Input, unknown, Output>({
     // zod's input/output generics do not line up with the resolver's inferred
