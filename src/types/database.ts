@@ -2803,6 +2803,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      member_identity_emails: {
+        Row: {
+          id: string;
+          member_id: string;
+          email: string;
+          source: "backfill" | "member_profile" | "attendance_import" | "admin" | "merge";
+          verification_method: "primary_email" | "unique_name_college_year" | "admin_confirmed" | "same_submission" | "admin_entered";
+          import_request_id: string | null;
+          moved_from_member_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          confirmed_at: string;
+        };
+        Insert: {
+          id?: string;
+          member_id: string;
+          email: string;
+          source: "admin";
+          verification_method: "admin_entered";
+          created_by?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      member_year_observations: {
+        Row: {
+          id: string;
+          member_id: string;
+          academic_year_start: number;
+          year_label: string;
+          source: "profile_estimate" | "attendance_import";
+          import_request_id: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      attendance_import_requests: {
+        Row: {
+          request_id: string;
+          event_id: string;
+          fingerprint: string;
+          result: Json;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       merge_exclusions: {
         Row: {
           created_at: string;
@@ -3879,6 +3930,10 @@ export type Database = {
       };
       admin_search_members: {
         Args: { p_query: string; p_limit?: number };
+        Returns: Json;
+      };
+      admin_apply_attendance_import: {
+        Args: { p_request: Json };
         Returns: Json;
       };
       admin_recover_import_row: {

@@ -8,7 +8,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ImportReviewPanel } from '../../components/features/admin/ops';
 import { reviewAttendanceRows } from '../../lib/adminImportReview';
 import { supabase } from '../../lib/supabase';
-import { runBulkWrites } from '../../lib/bulkWrites';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQueryClient } from 'react-query';
 import { parseCsvTable } from '../../lib/csvParse';
@@ -19,7 +18,12 @@ import {
   buildAttendanceRows,
   detectAttendanceColumns,
 } from '../../lib/attendanceCsv';
-import { memberIdentityRepository } from '../../data/repos/memberIdentity';
+import {
+  AttendanceImportResult,
+  ImportProblemKind,
+  RosterMember,
+  memberIdentityRepository,
+} from '../../data/repos/memberIdentity';
 import { PageTitle } from '../../components/common/PageTitle';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -27,26 +31,24 @@ import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPan
 import { HistoricalRecoveryPanel } from '../../components/features/admin/HistoricalRecoveryPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
-import { AttendanceRowDecision, MemberIdentity } from '../../components/features/admin/AttendanceRowDecision';
+import { AttendanceRowDecision, EvidenceList, MemberIdentity } from '../../components/features/admin/AttendanceRowDecision';
 import {
   DecisionContext,
+  DecisionRow,
   EffectiveStatus,
   RowDecision,
   hasImportableName,
-  planAttendanceWrites,
+  planAttendanceImport,
+  planTotals,
   resolveRow,
+  rowNeedsAdmin,
   summarizeAttendanceImport,
+  toImportRequest,
 } from '../../lib/attendanceImportDecisions';
-import {
-  AttendanceMatchMethod,
-  AttendanceMatchReason,
-  AttendanceMatchResult,
-  buildMemberLookupMaps,
-  cleanNameForImport,
-  getSafeAttendanceMemberEnrichment,
-  planAttendanceMemberEnrichments,
-  matchAttendanceImportRows,
-} from '../../lib/memberMatching';
+import { IdentityAlias, IdentityReason, resolveAttendanceIdentities } from '../../lib/identityResolution';
+import { identityLabel } from '../../lib/attendanceImportLabels';
+import { normalizeEmail } from '../../lib/memberMatching';
+import type { YearObservation } from '../../lib/yearStanding';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,30 +67,20 @@ interface AcademicTerm {
   academic_year_end: number;
 }
 
-interface Member {
-  id: string;
-  first_name: string;
-  last_name: string;
-  college: string | null;
-  year: string | null;
-  points: number;
-  events_attended: number;
-  email: string | null;
-  needs_review?: boolean;
-}
-
-type RowStatus = 'match' | 'new' | 'already' | 'review' | 'duplicate';
+type Member = RosterMember;
 type SortMode = 'default' | 'review-first' | 'review-last';
 
-interface RowResult extends Omit<AttendanceMatchResult, 'matchedMember' | 'status' | 'method' | 'reason'> {
-  /** Best suggested existing member, or null. A suggestion is not a decision. */
-  matchedMember: Member | null;
-  status: RowStatus;
-  method: AttendanceMatchMethod;
-  reason: AttendanceMatchReason;
-  selected: boolean;
-  /** The admin's explicit choice for this row; null leaves the matcher's verdict as is. */
-  decision: RowDecision | null;
+type RowResult = DecisionRow<Member> & { selected: boolean };
+
+/** Everything the preview matched against, read completely or not at all. */
+interface IdentitySnapshotState {
+  members: Member[];
+  aliases: IdentityAlias[];
+  observations: YearObservation[];
+  attendedMemberIds: Set<string>;
+  eventAcademicYear: number | null;
+  /** Newest member created_at the preview saw; the import refuses same-name members created after it. */
+  readAt: string;
 }
 
 interface ImportOutcome {
@@ -99,7 +91,9 @@ interface ImportOutcome {
   attendanceAlreadyPresent: number;
   createdMembers: number;
   emailsWithheld: number;
-  enrichedProfiles: number;
+  aliasesAdded: number;
+  yearsAdvanced: number;
+  profileFills: number;
   alreadyRecorded: number;
   duplicatesSkipped: number;
   skipped: number;
@@ -109,26 +103,24 @@ interface ImportOutcome {
 
 const MISSING_TERM_IMPORT_MESSAGE = 'This event has no academic term assigned. Assign a term in Admin Events before importing attendance.';
 
+const EMPTY_SNAPSHOT: IdentitySnapshotState = {
+  members: [], aliases: [], observations: [], attendedMemberIds: new Set(), eventAcademicYear: null, readAt: '',
+};
+
+const PROBLEM_TEXT: Record<ImportProblemKind, string> = {
+  event_missing: 'The event no longer exists.',
+  event_has_no_term: 'The event no longer has an academic term.',
+  event_changed: 'The event\'s points or academic term changed after this preview.',
+  member_missing: 'A matched member was deleted or merged after this preview.',
+  member_changed: 'A matched member\'s name, college or email was edited after this preview.',
+  email_owned_by_other: 'An email in this import now belongs to a different member.',
+  email_held_by_other: 'Another member now has an email this import would use.',
+  possible_duplicate_created: 'A member with the same name as a new member was created after this preview (perhaps by another import).',
+};
+
 function getAcademicYearLabel(term: AcademicTerm | undefined): string {
   if (!term) return 'its assigned academic year';
   return `${term.academic_year_start}–${term.academic_year_end}`;
-}
-
-function canMarkAsNew(row: RowResult, status: EffectiveStatus): boolean {
-  return row.canMarkNew && hasImportableName(row) && (row.status === 'review' || row.status === 'match' || row.status === 'already') && status !== 'duplicate';
-}
-
-function canSkipRow(row: RowResult): boolean {
-  return hasImportableName(row) && (row.status === 'review' || row.status === 'match' || row.status === 'new');
-}
-
-function getActionLabel(status: EffectiveStatus, row: RowResult): string {
-  if (status === 'match') return row.status === 'review' ? 'Matched (you chose)' : 'Update';
-  if (status === 'new') return row.status === 'new' ? 'Create' : 'Create New';
-  if (status === 'review') return 'Needs decision';
-  if (status === 'skipped') return 'Skipped';
-  if (status === 'invalid') return 'Invalid';
-  return 'Skip';
 }
 
 function getSortPriority(status: EffectiveStatus, row: RowResult, sortMode: SortMode): number {
@@ -142,6 +134,19 @@ function getSortPriority(status: EffectiveStatus, row: RowResult, sortMode: Sort
   if (sortMode === 'review-first') return reviewFirstOrder[status];
   if (sortMode === 'review-last') return reviewLastOrder[status];
   return row.originalIndex;
+}
+
+/** The audit's match_method, kept in the vocabulary importHistoryAudit.ts reads. */
+function auditMethod(row: RowResult): 'email' | 'exact_name' | 'fuzzy_name' | 'new' | 'none' {
+  const byReason: Partial<Record<IdentityReason, 'email' | 'exact_name' | 'fuzzy_name'>> = {
+    known_email: 'email',
+    name_college_year: 'exact_name',
+    name_college: 'exact_name',
+    unique_name: 'exact_name',
+    middle_name_college_year: 'fuzzy_name',
+  };
+  if (row.status === 'new') return 'new';
+  return byReason[row.reason] ?? (row.candidates.length > 0 ? 'fuzzy_name' : 'none');
 }
 
 // ─── Source helpers ───────────────────────────────────────────────────────────
@@ -169,6 +174,15 @@ function getImportSourceType(raw: string): 'google_sheets_csv' | 'csv_url' | 'un
   return 'csv_url';
 }
 
+function newRequestId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.floor(Math.random() * 16);
+      return (c === 'x' ? r : (r % 4) + 8).toString(16);
+    });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Step = 'configure' | 'preview' | 'done';
@@ -191,20 +205,20 @@ export default function AdminImport() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<AttendanceColumnMapping>(EMPTY_ATTENDANCE_MAPPING);
   const [duplicateHeaders, setDuplicateHeaders] = useState<string[]>([]);
-  // Matching could not run (mapping problem or an incomplete member read). Blocks the import.
+  // Matching could not run (mapping problem or an incomplete read). Blocks the import.
   const [matchError, setMatchError] = useState('');
+  // The database refused a stale preview; nothing was written. Re-run matching to continue.
+  const [staleProblems, setStaleProblems] = useState<{ kind: ImportProblemKind; rowLabel: string | null }[]>([]);
 
   // Preview
   const [rows, setRows] = useState<RowResult[]>([]);
   const [cachedParsed, setCachedParsed] = useState<Record<string, string>[]>([]);
-  const [matchedMembersSnapshot, setMatchedMembersSnapshot] = useState<Member[]>([]);
+  const [snapshot, setSnapshot] = useState<IdentitySnapshotState>(EMPTY_SNAPSHOT);
   const [importing, setImporting] = useState(false);
-  const [alreadyMemberIds, setAlreadyMemberIds] = useState<Set<string>>(new Set());
   const [ackPartial, setAckPartial] = useState(false);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
-  // Members created by an attempt that then failed. A retry reuses them instead of creating duplicates.
-  const createdByRowIdRef = useRef<Record<string, string>>({});
-  const withheldEmailRowIdsRef = useRef<Set<string>>(new Set());
+  // Reused when a confirmation's response was lost, so the retry replays instead of writing twice.
+  const requestIdRef = useRef<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   useEffect(() => {
@@ -245,15 +259,6 @@ export default function AdminImport() {
 
   function setRowDecision(rowId: string, decision: RowDecision | null) {
     updateRow(rowId, row => ({ ...row, decision }));
-  }
-
-  function applyDecisionToSelected(kind: 'new' | 'skip' | 'clear') {
-    setRows(current => current.map(row => {
-      if (!row.selected) return row;
-      if (kind === 'clear') return { ...row, decision: null };
-      if (kind === 'new') return canMarkAsNew(row, row.status) ? { ...row, decision: { kind: 'new' } } : row;
-      return canSkipRow(row) ? { ...row, decision: { kind: 'skip' } } : row;
-    }));
   }
 
   function toggleActionSort() {
@@ -316,49 +321,37 @@ export default function AdminImport() {
   // ── Matching engine ───────────────────────────────────────────────────────────
   async function runMatching(parsed: Record<string, string>[], columns: AttendanceColumnMapping, eventId: string) {
     setAckPartial(false);
-    createdByRowIdRef.current = {};
-    withheldEmailRowIdsRef.current = new Set();
     setMatchError('');
+    setStaleProblems([]);
+    requestIdRef.current = null;
 
+    const event = events.find(e => e.id === eventId);
+    const eventAcademicYear = event?.academic_term_id ? terms[event.academic_term_id]?.academic_year_start ?? null : null;
     const problem = attendanceMappingProblem(columns, Object.keys(parsed[0] ?? {}));
-    let allMembers: Member[];
-    let alreadySet: Set<string>;
+    let next: IdentitySnapshotState;
     try {
       if (problem) throw new Error(problem);
-      // Both reads are complete or they throw: an unread member must never look like a new one.
-      [allMembers, alreadySet] = await Promise.all([
+      const requestedAt = new Date().toISOString();
+      // Every read is complete or throws: an unread member or address must never look unknown.
+      const [members, attendedMemberIds, aliases, observations] = await Promise.all([
         memberIdentityRepository.loadRoster(),
         memberIdentityRepository.loadEventAttendeeIds(eventId),
+        memberIdentityRepository.loadIdentityEmails(),
+        memberIdentityRepository.loadYearObservations(),
       ]);
+      // Server time, not this browser's clock: the newest member the preview saw.
+      const readAt = members.reduce((latest, m) => (m.created_at > latest ? m.created_at : latest), '') || requestedAt;
+      next = { members, aliases, observations, attendedMemberIds, eventAcademicYear, readAt };
     } catch (err: unknown) {
       setMatchError(describeError(err));
       setRows([]);
-      setMatchedMembersSnapshot([]);
-      setAlreadyMemberIds(new Set());
+      setSnapshot(EMPTY_SNAPSHOT);
       return;
     }
-    setAlreadyMemberIds(alreadySet);
 
-    const matchInputs = buildAttendanceRows(parsed, columns).map(row => ({
-      rowId: row.rowId,
-      originalIndex: row.originalIndex,
-      csvRow: row.csvRow,
-      displayName: row.displayName,
-      matchName: cleanNameForImport(row.displayName),
-      csvCollege: row.csvCollege,
-      csvYear: row.csvYear,
-      csvEmail: row.csvEmail,
-      invalidYear: row.invalidYear,
-    }));
-
-    const results = matchAttendanceImportRows(matchInputs, allMembers, alreadySet).map((result) => ({
-      ...result,
-      matchedMember: result.matchedMember as Member | null,
-      selected: false,
-      decision: null,
-    })) as RowResult[];
-
-    setMatchedMembersSnapshot(allMembers);
+    const results = resolveAttendanceIdentities(buildAttendanceRows(parsed, columns), next)
+      .map((result): RowResult => ({ ...result, selected: false, decision: null }));
+    setSnapshot(next);
     setRows(results);
     setSortMode('default');
   }
@@ -372,144 +365,94 @@ export default function AdminImport() {
     }
   }
 
+  // ── Derived plan ──────────────────────────────────────────────────────────────
+  const membersById = useMemo(() => new Map(snapshot.members.map(m => [m.id, m])), [snapshot.members]);
+  const heldEmails = useMemo(() => {
+    const held = new Set(snapshot.aliases.map(a => normalizeEmail(a.email)));
+    snapshot.members.forEach(m => { const e = normalizeEmail(m.email); if (e) held.add(e); });
+    return held;
+  }, [snapshot]);
+  const emailHoldersByEmail = useMemo(() => {
+    const holders = new Map<string, Member[]>();
+    const add = (email: string, member: Member | undefined) => {
+      if (!email || !member) return;
+      const list = holders.get(email) ?? [];
+      if (!list.includes(member)) holders.set(email, [...list, member]);
+    };
+    snapshot.members.forEach(m => add(normalizeEmail(m.email), m));
+    snapshot.aliases.forEach(a => add(normalizeEmail(a.email), membersById.get(a.member_id)));
+    return holders;
+  }, [snapshot, membersById]);
+  const rowsById = useMemo(() => new Map(rows.map(r => [r.rowId, r])), [rows]);
+  const decisionContext: DecisionContext<Member> = useMemo(
+    () => ({ membersById, alreadyMemberIds: snapshot.attendedMemberIds, rowsById }),
+    [membersById, snapshot.attendedMemberIds, rowsById],
+  );
+  const plan = useMemo(
+    () => planAttendanceImport(rows, decisionContext, {
+      heldEmails, observations: snapshot.observations, eventAcademicYear: snapshot.eventAcademicYear,
+    }),
+    [rows, decisionContext, heldEmails, snapshot.observations, snapshot.eventAcademicYear],
+  );
+  const totals = useMemo(() => planTotals(plan), [plan]);
+  const summary = useMemo(() => summarizeAttendanceImport(rows, decisionContext), [rows, decisionContext]);
+  const resolved = (row: RowResult) => resolveRow(row, decisionContext);
+
   // ── Confirm import ────────────────────────────────────────────────────────────
   async function handleImport() {
+    if (matchError || staleProblems.length) {
+      toast.error('Re-run matching before importing.');
+      return;
+    }
     if (summary.unresolved > 0 && !ackPartial) {
       toast.error('Acknowledge the unresolved rows, or resolve them, before importing.');
       return;
     }
-    if (!summary.existingMembers && !summary.newMembers) {
+    if (plan.credits.length + plan.creates.length === 0) {
       toast.error(summary.unresolved || summary.duplicatesSkipped || summary.skipped ? 'No rows to import.' : 'Nothing to import.');
+      return;
+    }
+    const event = events.find(e => e.id === selectedEventId);
+    if (!event?.academic_term_id) {
+      toast.error(MISSING_TERM_IMPORT_MESSAGE);
       return;
     }
 
     setImporting(true);
-    let importPoints = selectedEvent?.points ?? 0;
-    const createdMemberIdsByRowId: Record<string, string> = { ...createdByRowIdRef.current };
-    const withheldEmailRowIds = new Set<string>(withheldEmailRowIdsRef.current);
-    let createdAttendanceCount = 0;
-
+    requestIdRef.current = requestIdRef.current ?? newRequestId();
     try {
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .select('id, name, date, points, academic_term_id')
-        .eq('id', selectedEventId)
-        .single();
+      const result = await memberIdentityRepository.applyAttendanceImport(toImportRequest(plan, {
+        requestId: requestIdRef.current,
+        eventId: selectedEventId,
+        expectedPoints: event.points ?? null,
+        expectedTermId: event.academic_term_id,
+        snapshotAt: snapshot.readAt,
+      }));
 
-      if (eventError) throw eventError;
-      if (!event?.academic_term_id) throw new Error(MISSING_TERM_IMPORT_MESSAGE);
-
-      const pts = event.points ?? 1;
-      importPoints = pts;
-
-      const latestMembers: Member[] = await memberIdentityRepository.loadRoster();
-
-      // Plan from the latest member list so a new member never takes an email that has since been claimed.
-      const plan = planAttendanceWrites(rows, decisionContext, latestMembers);
-
-      // 1. Create new member rows (points/events_attended computed by DB trigger).
-      //    Rows created by an earlier failed attempt are reused, never created twice.
-      const pendingCreates = plan.creates.filter(c => !createdMemberIdsByRowId[c.row.rowId]);
-      if (pendingCreates.length) {
-        const { data: inserted, error } = await supabase
-          .from('members')
-          .insert(pendingCreates.map(c => ({
-            first_name: c.first_name,
-            last_name: c.last_name,
-            college: c.college,
-            year: c.year,
-            email: c.email,
-            needs_review: false,
-          })))
-          .select('id');
-        if (error) throw error;
-        const insertedIds = (inserted ?? []).map((m: { id: string }) => m.id);
-        if (insertedIds.length !== pendingCreates.length) {
-          throw new Error('Created members could not be matched back to their rows. Check Admin → Members before retrying.');
-        }
-        pendingCreates.forEach((c, index) => {
-          createdMemberIdsByRowId[c.row.rowId] = insertedIds[index];
-          createdByRowIdRef.current[c.row.rowId] = insertedIds[index];
-          if (c.emailWithheld) {
-            withheldEmailRowIds.add(c.row.rowId);
-            withheldEmailRowIdsRef.current.add(c.row.rowId);
-          }
-        });
+      if (!result.ok) {
+        // Nothing was written. The next attempt is a new request against fresh data.
+        requestIdRef.current = null;
+        setStaleProblems(result.problems.map(p => ({
+          kind: p.kind,
+          rowLabel: p.row_key ? (rowsById.get(p.row_key)?.displayName || null) : null,
+        })));
+        toast.error('Nothing was imported: the data changed after this preview. Re-run matching and review again.', { duration: 10000 });
+        return;
       }
 
-      // 2. Insert attendance records — DB trigger recalculates member points automatically.
-      //    Existing member/event pairs are ignored, so repeating an import never doubles points.
-      const attendanceRows = [
-        ...plan.updates.map(u => ({ member_id: u.member.id, event_id: selectedEventId, points_earned: pts })),
-        ...plan.creates.map(c => ({ member_id: createdMemberIdsByRowId[c.row.rowId], event_id: selectedEventId, points_earned: pts })),
-      ];
-
-      if (attendanceRows.length) {
-        const { data: insertedAttendance, error } = await supabase
-          .from('member_event_attendance')
-          .upsert(attendanceRows, { onConflict: 'member_id,event_id', ignoreDuplicates: true })
-          .select('member_id,event_id');
-        if (error) throw error;
-        createdAttendanceCount = insertedAttendance?.length ?? 0;
-      }
-
-      // 3. Fill missing profile fields on matched members, and advance year
-      //    when the CSV reports a higher standing than the one on record.
-      //    One write per member, computed from the record refetched above.
-      //    A suggestion that an admin did not confirm never reaches this step.
-      const toEnrich = planAttendanceMemberEnrichments(
-        plan.updates.map(({ row, member }) => ({
-          ...row,
-          matchedMember: member,
-          adminConfirmed: row.status === 'review',
-        })),
-        latestMembers,
-      );
-      // An email a new member in this import now holds is never also attached to a matched member.
-      const emailsOfNewMembers = new Set(plan.creates.map(c => c.email).filter(Boolean));
-      toEnrich.forEach(({ updates }) => {
-        if (updates.email && emailsOfNewMembers.has(updates.email)) delete updates.email;
-      });
-      const enrichPlans = toEnrich.filter(({ updates }) => Object.keys(updates).length > 0);
-      let enrichedCount = 0;
-      await runBulkWrites(async () => {
-        for (const { memberId, updates } of enrichPlans) {
-          const { error } = await supabase
-            .from('members')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', memberId);
-          if (!error) {
-            enrichedCount += 1;
-            continue;
-          }
-          console.error('Import: failed to update member profile', error);
-          // Paused by the request guard / rate limited: every remaining update would fail too.
-          if (error.code === 'over_request_rate_limit') break;
-        }
-      });
-      // Attendance is already recorded. Only updates confirmed written count as enriched;
-      // failed or skipped ones are reported below, never announced as success.
-      const enrichFailedCount = enrichPlans.length - enrichedCount;
-
-      const auditSaved = await recordImportAudit({
-        status: 'completed',
-        points: pts,
-        createdMemberIdsByRowId,
-        withheldEmailRowIds,
-        createdAttendanceCount,
-        enrichedMembersCount: enrichedCount,
-      });
-      createdByRowIdRef.current = {};
-      withheldEmailRowIdsRef.current = new Set();
+      requestIdRef.current = null;
+      const auditSaved = await recordImportAudit('completed', event.points ?? 1, result);
       setOutcome({
         totalRows: rows.length,
         validRows: summary.validRows,
-        creditedMembers: plan.updates.length,
-        attendanceInserted: createdAttendanceCount,
-        attendanceAlreadyPresent: Math.max(0, attendanceRows.length - createdAttendanceCount),
-        createdMembers: plan.creates.length,
-        emailsWithheld: plan.creates.filter(c => withheldEmailRowIds.has(c.row.rowId)).length,
-        enrichedProfiles: enrichedCount,
+        creditedMembers: totals.creditedMembers,
+        attendanceInserted: result.attendance_inserted,
+        attendanceAlreadyPresent: result.attendance_already_present.length,
+        createdMembers: result.created.length,
+        emailsWithheld: totals.emailsWithheld,
+        aliasesAdded: result.aliases_added,
+        yearsAdvanced: result.years_advanced,
+        profileFills: result.profile_fills,
         alreadyRecorded: summary.alreadyRecorded,
         duplicatesSkipped: summary.duplicatesSkipped,
         skipped: summary.skipped,
@@ -517,79 +460,54 @@ export default function AdminImport() {
         invalid: summary.invalid,
       });
       const notImported = summary.unresolved + summary.skipped + summary.duplicatesSkipped;
-      const enrichMsg = enrichedCount ? `, enriched ${enrichedCount} profile${enrichedCount !== 1 ? 's' : ''}` : '';
-      const notImportedMsg = notImported ? `, not imported: ${notImported} row${notImported !== 1 ? 's' : ''}` : '';
-      toast.success(`Done! Updated ${plan.updates.length} member${plan.updates.length !== 1 ? 's' : ''}, created ${plan.creates.length} new${enrichMsg}${notImportedMsg}.`);
-      if (!auditSaved) {
-        toast.error('The import was applied, but its audit record could not be saved.', { duration: 10000 });
+      toast.success(
+        `Done! Credited ${totals.creditedMembers} member${totals.creditedMembers !== 1 ? 's' : ''}, created ${result.created.length} new`
+          + `${notImported ? `, not imported: ${notImported} row${notImported !== 1 ? 's' : ''}` : ''}${result.replayed ? ' (already applied)' : ''}.`,
+      );
+      if (!auditSaved) toast.error('The import was applied, but its audit record could not be saved.', { duration: 10000 });
+      if (result.years_skipped.length) {
+        toast.error(`${result.years_skipped.length} year update${result.years_skipped.length !== 1 ? 's were' : ' was'} skipped because the member's year changed after this preview.`, { duration: 10000 });
       }
-      if (enrichFailedCount > 0) {
-        toast.error(
-          `${enrichFailedCount} profile update${enrichFailedCount !== 1 ? 's' : ''} did not save. Attendance and points were recorded. Check those members' year, college and email in Admin → Members.`,
-          { duration: 10000 },
-        );
-      }
+      queryClient.invalidateQueries();
       setStep('done');
     } catch (err: unknown) {
       const errorMessage = describeError(err);
-      await recordImportAudit({
-        status: 'failed',
-        points: importPoints,
-        createdMemberIdsByRowId,
-        withheldEmailRowIds,
-        createdAttendanceCount,
-        enrichedMembersCount: 0,
-        errorMessage,
-      });
-      const kept = Object.keys(createdByRowIdRef.current).length;
-      toast.error(
-        `Import failed: ${errorMessage}${kept ? ` ${kept} new member${kept !== 1 ? 's were' : ' was'} already created; retrying reuses ${kept !== 1 ? 'them' : 'it'} without duplicating.` : ''}`,
-        { duration: 10000 },
-      );
+      // The response may have been lost after the database committed; retrying
+      // sends the same request id, which returns the first result instead of writing again.
+      await recordImportAudit('failed', event.points ?? 1, null, errorMessage);
+      toast.error(`Import failed: ${errorMessage} Nothing was written by this attempt unless it already finished; retrying is safe.`, { duration: 10000 });
     } finally {
       setImporting(false);
     }
   }
 
   /** Returns false when the audit record could not be saved. */
-  async function recordImportAudit({
-    status,
-    points,
-    createdMemberIdsByRowId,
-    withheldEmailRowIds,
-    createdAttendanceCount,
-    enrichedMembersCount,
-    errorMessage,
-  }: {
-    status: ImportJobStatus;
-    points: number;
-    createdMemberIdsByRowId: Record<string, string>;
-    withheldEmailRowIds: ReadonlySet<string>;
-    createdAttendanceCount: number;
-    enrichedMembersCount: number;
-    errorMessage?: string;
-  }): Promise<boolean> {
+  async function recordImportAudit(
+    status: ImportJobStatus,
+    points: number,
+    result: Extract<AttendanceImportResult, { ok: true }> | null,
+    errorMessage?: string,
+  ): Promise<boolean> {
     if (!selectedEventId || rows.length === 0) return true;
 
     try {
       const { data: authData } = await supabase.auth.getUser();
-      const resolvedRows = rows.map(row => ({ row, resolved: resolveRow(row, decisionContext) }));
-      // Rows that resolve to a member another row already credits write nothing of their own.
-      const crediting = new Set(planAttendanceWrites(rows, decisionContext, matchedMembersSnapshot).updates.map(u => u.row.rowId));
-      const rowInserts = resolvedRows.map(({ row, resolved }) => {
-        const effectiveStatus = resolved.status;
-        const createdMemberId = effectiveStatus === 'new' ? createdMemberIdsByRowId[row.rowId] ?? null : null;
-        const attendanceMemberId =
-          effectiveStatus === 'match' && crediting.has(row.rowId)
-            ? resolved.member?.id ?? null
-            : effectiveStatus === 'new'
-              ? createdMemberId
-              : null;
+      const createdByRow = new Map((result?.created ?? []).map(c => [c.row_key, c.member_id]));
+      const alreadyPresent = new Set(result?.attendance_already_present ?? []);
+      const creditByRow = new Map(plan.credits.map(c => [c.row.rowId, c]));
+      const createByRow = new Map(plan.creates.map(c => [c.row.rowId, c]));
+      const rowInserts = rows.map(row => {
+        const resolvedRow = resolved(row);
+        const effectiveStatus = resolvedRow.status;
+        const credit = creditByRow.get(row.rowId);
+        const create = createByRow.get(row.rowId);
+        const createdMemberId = createdByRow.get(row.rowId) ?? null;
+        const attendanceMemberId = credit && !credit.alreadyAttended ? credit.member.id : create ? createdMemberId : null;
         const finalReason =
           effectiveStatus === 'review' ? 'skipped_unresolved_review'
             : effectiveStatus === 'skipped' ? 'skipped_by_admin'
               : effectiveStatus === 'invalid' ? 'invalid_row_no_name'
-                : effectiveStatus === 'match' && !crediting.has(row.rowId) ? 'duplicate_member_in_file'
+                : effectiveStatus === 'match' && !credit ? 'duplicate_member_in_file'
                   : row.reason;
 
         return {
@@ -599,51 +517,51 @@ export default function AdminImport() {
           csv_email: row.csvEmail || null,
           csv_college: row.csvCollege || null,
           csv_year: row.csvYear || null,
-          matched_member_id: resolved.member?.id ?? null,
+          matched_member_id: resolvedRow.member?.id ?? null,
           created_member_id: createdMemberId,
           event_id: selectedEventId,
           attendance_member_id: attendanceMemberId,
-          points_earned: status === 'completed' && attendanceMemberId && (effectiveStatus === 'match' || effectiveStatus === 'new') ? points : null,
+          points_earned: status === 'completed' && attendanceMemberId && !alreadyPresent.has(row.rowId) ? points : null,
           decision: decisionFromRowStatus(effectiveStatus),
           status: 'recorded' as const,
-          score: row.score || null,
+          score: null,
           match_details: asJson({
             original_status: row.status,
             effective_status: effectiveStatus,
             manual_decision: row.decision,
-            suggested_member_id: row.matchedMember?.id ?? null,
-            email_withheld: withheldEmailRowIds.has(row.rowId),
+            suggested_member_id: row.matchedMember?.id ?? row.candidates[0]?.member.id ?? null,
+            email_withheld: !!create?.emailWithheld,
             match_reason: row.reason,
             final_reason: finalReason,
-            match_method: row.method,
+            match_method: auditMethod(row),
             note: row.note,
-            match_name: row.matchName,
-            name_score: row.nameScore,
-            college_match: row.collegeMatch,
-            year_match: row.yearMatch,
-            invalid_year: row.invalidYear,
-            email_is_school_email: row.emailIsSchoolEmail,
-            email_already_used: row.emailAlreadyUsed,
+            match_name: row.name.key,
+            evidence: row.evidence.map(e => `${e.tone}: ${e.text}`),
+            candidate_member_ids: row.candidateMemberIds,
+            candidate_evidence: row.candidates.map(c => ({
+              member_id: c.member.id, name: c.name, college: c.college, year: c.year, email: c.email,
+            })),
             can_force_match: row.canForceMatch,
             can_mark_new: row.canMarkNew,
-            candidate_member_ids: row.candidateMemberIds,
-            duplicate_row_of: row.duplicateRowOf,
-            enriched_members_count: enrichedMembersCount,
+            invalid_year: row.invalidYear,
+            duplicate_row_of: row.duplicateOf,
+            aliases_planned: (credit?.aliases.length ?? 0) + (create?.aliases.length ?? 0) + (credit?.fill.email ? 1 : 0),
+            year_advance: credit?.year ?? null,
+            import_request_id: result?.request_id ?? null,
           }),
           error_message: null,
         };
       });
-      const countOf = (...statuses: EffectiveStatus[]) =>
-        resolvedRows.filter(({ resolved }) => statuses.includes(resolved.status)).length;
+      const countOf = (...statuses: EffectiveStatus[]) => rows.filter(row => statuses.includes(resolved(row).status)).length;
 
       await importJobsRepository.createJob({
         event_id: selectedEventId,
         source_url: csvSource === 'file' ? null : csvUrl.trim() || null,
         source_type: csvSource === 'file' ? 'manual' : getImportSourceType(csvUrl),
         total_rows: rows.length,
-        matched_rows: resolvedRows.filter(({ row, resolved }) => resolved.status === 'match' && crediting.has(row.rowId)).length,
-        created_members: Object.keys(createdMemberIdsByRowId).length,
-        created_attendance_count: createdAttendanceCount,
+        matched_rows: plan.credits.filter(c => !c.alreadyAttended).length,
+        created_members: result?.created.length ?? 0,
+        created_attendance_count: result?.attendance_inserted ?? 0,
         skipped_duplicate_rows: countOf('already', 'duplicate'),
         review_rows: countOf('review', 'skipped', 'invalid'),
         error_count: errorMessage ? rows.length : 0,
@@ -662,33 +580,43 @@ export default function AdminImport() {
   }
 
   // ── Counts ────────────────────────────────────────────────────────────────────
-  const membersById = useMemo(() => new Map(matchedMembersSnapshot.map(m => [m.id, m])), [matchedMembersSnapshot]);
-  const membersByEmail = useMemo(() => buildMemberLookupMaps(matchedMembersSnapshot).byEmail, [matchedMembersSnapshot]);
-  const decisionContext: DecisionContext<Member> = useMemo(
-    () => ({ membersById, alreadyMemberIds }),
-    [membersById, alreadyMemberIds],
-  );
-  const resolved = (row: RowResult) => resolveRow(row, decisionContext);
-  const displayedRows = [...rows].sort((a, b) => {
-    const priorityDiff = getSortPriority(resolved(a).status, a, sortMode) - getSortPriority(resolved(b).status, b, sortMode);
+  const displayedRows = useMemo(() => [...rows].sort((a, b) => {
+    const priorityDiff = getSortPriority(resolveRow(a, decisionContext).status, a, sortMode) - getSortPriority(resolveRow(b, decisionContext).status, b, sortMode);
     return priorityDiff !== 0 ? priorityDiff : a.originalIndex - b.originalIndex;
-  });
+  }), [rows, decisionContext, sortMode]);
   const selectedRows = rows.filter(r => r.selected);
   const allRowsSelected = rows.length > 0 && rows.every(r => r.selected);
-  const summary = summarizeAttendanceImport(rows, decisionContext);
-  const extras = {
-    invalidYear: rows.filter(r => r.invalidYear).length,
-    enrich: rows.filter(r => {
-      const { status, member } = resolved(r);
-      return status === 'match' && !!member && Object.keys(getSafeAttendanceMemberEnrichment({ ...r, matchedMember: member }, matchedMembersSnapshot, { adminConfirmed: r.status === 'review' })).length > 0;
-    }).length,
-  };
-  const totalNewMembers = summary.newMembers;
+  const yearAdvanceRows = useMemo(() => new Set(plan.credits.filter(c => c.year).map(c => c.row.rowId)), [plan]);
+  const aliasRows = useMemo(() => new Map([
+    ...plan.credits.map(c => [c.row.rowId, c.aliases.length + (c.fill.email ? 1 : 0)] as const),
+    ...plan.creates.map(c => [c.row.rowId, c.aliases.length] as const),
+  ]), [plan]);
+  const conflictRows = useMemo(() => new Set(plan.aliasConflictRowIds), [plan]);
   // A changed unresolved count is a different decision to acknowledge.
   useEffect(() => { setAckPartial(false); }, [summary.unresolved]);
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedTerm = selectedEvent?.academic_term_id ? terms[selectedEvent.academic_term_id] : undefined;
   const selectedEventMissingTerm = !!selectedEvent && !selectedEvent.academic_term_id;
+  const writes = plan.credits.filter(c => !c.alreadyAttended).length + plan.creates.length;
+
+  function applyDecisionToSelected(kind: 'new' | 'skip' | 'clear') {
+    setRows(current => current.map(row => {
+      if (!row.selected) return row;
+      if (kind === 'clear') return { ...row, decision: null };
+      const status = resolveRow(row, decisionContext).status;
+      if (kind === 'new') return canMarkAsNew(row, status) ? { ...row, decision: { kind: 'new' } } : row;
+      return canSkipRow(row, status) ? { ...row, decision: { kind: 'skip' } } : row;
+    }));
+  }
+
+  function canMarkAsNew(row: RowResult, status: EffectiveStatus): boolean {
+    if (!hasImportableName(row) || status === 'duplicate' || status === 'invalid') return false;
+    return row.canMarkNew || rowNeedsAdmin(row, decisionContext);
+  }
+
+  function canSkipRow(row: RowResult, status: EffectiveStatus): boolean {
+    return hasImportableName(row) && status !== 'already' && status !== 'duplicate' && status !== 'invalid';
+  }
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -866,22 +794,35 @@ export default function AdminImport() {
                 <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <SummaryStat label="Valid source rows" value={summary.validRows} />
                   <SummaryStat label="Existing members receiving attendance" value={summary.existingMembers} tone="green" />
+                  <SummaryStat label="Matched automatically" value={summary.autoMatched} tone="green" />
+                  <SummaryStat label="Matched by you" value={summary.adminConfirmed} tone="green" />
                   <SummaryStat label="New members being created" value={summary.newMembers} tone="blue" />
                   <SummaryStat label="Already recorded" value={summary.alreadyRecorded} />
                   <SummaryStat label="Duplicate rows skipped" value={summary.duplicatesSkipped} />
                   <SummaryStat label="Unresolved identity matches" value={summary.unresolved} tone={summary.unresolved > 0 ? 'amber' : undefined} />
                   <SummaryStat label="Skipped by you" value={summary.skipped} />
                   {summary.invalid > 0 && <SummaryStat label="Rows without a name" value={summary.invalid} tone="red" />}
+                  <SummaryStat label="Profiles whose year will advance" value={totals.yearAdvances} />
+                  <SummaryStat label="Email aliases to be added" value={totals.aliasesToAdd} />
+                  {totals.aliasConflicts > 0 && <SummaryStat label="Email conflicts (not remembered)" value={totals.aliasConflicts} tone="amber" />}
+                  {totals.emailsWithheld > 0 && <SummaryStat label="New members without their email" value={totals.emailsWithheld} tone="amber" />}
                 </dl>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {extras.invalidYear > 0 && (
-                    <SummaryBadge color="red" count={extras.invalidYear} label="year unrecognized, review manually" plural="years unrecognized, review manually" />
-                  )}
-                  {extras.enrich > 0 && (
-                    <SummaryBadge color="purple" count={extras.enrich} label="profile will be enriched" plural="profiles will be enriched" />
-                  )}
-                </div>
+                <p className="mt-3 text-xs text-[var(--color-text3)]">
+                  These counts are the exact write plan. Before writing, the database checks it again; if a member, email or the event changed since this preview, nothing is written and you are asked to re-run matching.
+                </p>
               </section>
+
+              {staleProblems.length > 0 && (
+                <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                  <p className="font-medium">Nothing was imported. The data changed after this preview:</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {staleProblems.map((p, i) => (
+                      <li key={`${p.kind}-${i}`}>{PROBLEM_TEXT[p.kind]}{p.rowLabel ? ` (${p.rowLabel})` : ''}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs">Re-run matching to review the rows against the current data. Your decisions are cleared because the candidates may have changed.</p>
+                </div>
+              )}
 
               {summary.unresolved > 0 && (
                 <div role="alert" className="rounded-md border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
@@ -963,27 +904,26 @@ export default function AdminImport() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">
                         <button type="button" onClick={toggleActionSort} className="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                          Action
+                          Classification
                           <span className="text-[10px] normal-case">
                             {sortMode === 'review-first' ? 'Review first' : sortMode === 'review-last' ? 'Review last' : 'Default'}
                           </span>
                         </button>
                       </th>
-                      {['CSV Name', 'CSV College', 'CSV Year', 'Matched Member', 'Confidence'].map(h => (
+                      {['CSV Name', 'CSV College', 'CSV Year', 'Member', 'Evidence'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text3)] uppercase tracking-label whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-[var(--color-surface)] divide-y divide-zinc-100 dark:divide-zinc-800">
                     {displayedRows.map((row) => {
-                      const { status: effectiveStatus, member: resolvedMember } = resolved(row);
-                      const candidates = row.candidateMemberIds
-                        .map(id => membersById.get(id))
-                        .filter((m): m is Member => !!m);
-                      const emailHolders = row.csvEmail ? (membersByEmail.get(row.csvEmail) ?? []) : [];
-                      const enrich = effectiveStatus === 'match' && !!resolvedMember && Object.keys(
-                        getSafeAttendanceMemberEnrichment({ ...row, matchedMember: resolvedMember }, matchedMembersSnapshot, { adminConfirmed: row.status === 'review' }),
-                      ).length > 0;
+                      const resolvedRow = resolved(row);
+                      const effectiveStatus = resolvedRow.status;
+                      const { label, tone } = identityLabel(row, resolvedRow);
+                      const needsAdmin = rowNeedsAdmin(row, decisionContext);
+                      const emailHolders = Array.from(new Set(row.emails.flatMap(e => emailHoldersByEmail.get(e) ?? [])));
+                      const freshEmails = row.emails.filter(e => !heldEmails.has(e));
+                      const remembered = aliasRows.get(row.rowId) ?? 0;
 
                       return (
                       <tr key={row.rowId} className={
@@ -1001,21 +941,15 @@ export default function AdminImport() {
                             aria-label={`Select ${row.displayName || 'row'}`}
                           />
                         </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap align-top">
-                          <ActionBadge
-                            color={effectiveStatus === 'match' ? 'green' : effectiveStatus === 'new' ? 'blue' : effectiveStatus === 'review' ? 'amber' : 'gray'}
-                            label={effectiveStatus === 'duplicate' ? 'Duplicate' : effectiveStatus === 'already' ? 'Skip' : getActionLabel(effectiveStatus, row)}
-                          />
-                          {enrich && (
-                            <span className="ml-1 text-[10px] text-purple-500 dark:text-purple-400" title="Missing profile fields will be filled, and year advanced, during import">✉</span>
-                          )}
+                        <td className="px-4 py-2.5 align-top">
+                          <ActionBadge color={tone} label={label} />
+                          <div className="mt-0.5 text-[10px] text-[var(--color-text3)]">Row {row.originalIndex + 2}</div>
                         </td>
                         <td className="px-4 py-2.5 font-medium text-[var(--color-text)] align-top">
                           <div>{row.displayName || <span className="text-[var(--color-text3)] italic">—</span>}</div>
-                          {row.matchName !== row.displayName && (
-                            <div className="text-[10px] text-[var(--color-text3)] mt-0.5">matched as: {row.matchName}</div>
-                          )}
-                          {row.csvEmail && <div className="text-[10px] text-[var(--color-text3)] mt-0.5">{row.csvEmail}</div>}
+                          {row.emails.map(email => (
+                            <div key={email} className="text-[10px] text-[var(--color-text3)] mt-0.5">{email}</div>
+                          ))}
                         </td>
                         <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs align-top">{row.csvCollege || '—'}</td>
                         <td className="px-4 py-2.5 text-[var(--color-text3)] text-xs align-top">
@@ -1025,53 +959,50 @@ export default function AdminImport() {
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300 align-top">
-                          {(row.status === 'match' || row.status === 'already') && row.matchedMember && (
-                            <div className={row.decision?.kind === 'new' ? 'line-through opacity-60' : undefined}>
-                              <MemberIdentity member={row.matchedMember} />
-                              {row.status === 'already' && <div className="text-[10px] text-[var(--color-text3)]">Attendance already recorded for this event.</div>}
-                              {enrich && <div className="text-[10px] text-violet-500 dark:text-violet-400 mt-0.5">Profile fields will be filled or year advanced during import</div>}
-                            </div>
+                          {(effectiveStatus === 'match' || effectiveStatus === 'already') && resolvedRow.member && !resolvedRow.adminConfirmed && (
+                            <MemberIdentity member={resolvedRow.member} />
                           )}
-                          {row.status === 'new' && !row.decision && (
-                            <span className="text-blue-500 dark:text-blue-400 text-xs italic">new member</span>
-                          )}
-                          {row.status === 'duplicate' && (
+                          {effectiveStatus === 'duplicate' && (
                             <span className="text-zinc-500 dark:text-zinc-400 text-xs italic">{row.note}</span>
                           )}
                           {effectiveStatus === 'invalid' && (
                             <span className="text-red-500 text-xs italic">No name — cannot be imported.</span>
                           )}
-                          {row.status !== 'duplicate' && effectiveStatus !== 'invalid' && (
+                          {effectiveStatus !== 'duplicate' && effectiveStatus !== 'invalid' && (
                             <div className="mt-1">
                               <AttendanceRowDecision
                                 rowLabel={row.displayName || `row ${row.originalIndex + 2}`}
                                 status={effectiveStatus}
-                                rowStatus={row.status}
+                                needsDecision={needsAdmin}
                                 decision={row.decision}
-                                note={row.note}
+                                note={needsAdmin && row.status === 'duplicate' ? `${row.note} That row is not being imported, so decide this one.` : row.note}
                                 csvEmail={row.csvEmail}
+                                freshEmails={freshEmails}
                                 canMatch={row.canForceMatch}
                                 canCreateNew={canMarkAsNew(row, effectiveStatus)}
-                                candidates={candidates}
+                                canSkip={canSkipRow(row, effectiveStatus)}
+                                candidates={row.candidates}
+                                suggestOnly={row.status === 'new'}
                                 emailHolders={emailHolders}
                                 onDecide={decision => setRowDecision(row.rowId, decision)}
                               />
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap align-top">
-                          {(row.status === 'match' || row.status === 'review') ? (
-                            <span className={`text-xs font-mono font-semibold ${
-                              row.status === 'review' ? 'text-amber-600 dark:text-amber-400' :
-                              row.method === 'email' || row.method === 'exact_name' ? 'text-emerald-600 dark:text-emerald-400' :
-                                                           'text-yellow-600 dark:text-yellow-400'
-                            }`}>{row.score}%</span>
-                          ) : row.status === 'new' ? (
-                            <span className="text-xs text-[var(--color-text3)]">—</span>
-                          ) : row.status === 'duplicate' ? (
-                            <span className="text-xs text-[var(--color-text3)]">duplicate row</span>
-                          ) : (
-                            <span className="text-xs text-[var(--color-text3)]">already done</span>
+                        <td className="px-4 py-2.5 align-top text-xs">
+                          {effectiveStatus === 'match' && !resolvedRow.adminConfirmed && row.evidence.length > 0 && (
+                            <EvidenceList notes={row.evidence} />
+                          )}
+                          {yearAdvanceRows.has(row.rowId) && (
+                            <div className="mt-1 text-[11px] text-violet-600 dark:text-violet-400">Year will advance to {row.csvYear}</div>
+                          )}
+                          {remembered > 0 && (
+                            <div className="mt-1 text-[11px] text-violet-600 dark:text-violet-400">
+                              {remembered} email{remembered !== 1 ? 's' : ''} will be remembered for this member
+                            </div>
+                          )}
+                          {conflictRows.has(row.rowId) && (
+                            <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Email also used by another person in this file; it will not be remembered.</div>
                           )}
                         </td>
                       </tr>
@@ -1081,19 +1012,19 @@ export default function AdminImport() {
               </div>
 
               <p className="text-xs text-[var(--color-text3)] dark:text-[var(--color-text3)]">
-                Email is checked first. Near-name matches, conflicting emails and shared names always wait for your decision; nothing is matched or created for them automatically.
+                Automatic matches need one member supported by a known email, or by an exact name with nothing on file against it (the same college and a fitting year when the email differs). Shared names, similar names and any contradiction wait for your decision; spelling similarity only orders the suggestions.
               </p>
 
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={handleImport}
-                  disabled={importing || !!matchError || selectedEventMissingTerm || (summary.existingMembers + totalNewMembers) === 0 || (summary.unresolved > 0 && !ackPartial)}
+                  disabled={importing || !!matchError || staleProblems.length > 0 || selectedEventMissingTerm || writes === 0 || (summary.unresolved > 0 && !ackPartial)}
                   className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40
                     text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                   {importing
                     ? <><Spinner />Importing…</>
-                    : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {totalNewMembers} new)</>}
+                    : <><CheckIcon />Import ({summary.existingMembers} update{summary.existingMembers !== 1 ? 's' : ''} + {summary.newMembers} new)</>}
                 </button>
-                <button onClick={() => { setStep('configure'); setRows([]); createdByRowIdRef.current = {}; withheldEmailRowIdsRef.current = new Set(); setAckPartial(false); }}
+                <button onClick={() => { setStep('configure'); setRows([]); setSnapshot(EMPTY_SNAPSHOT); requestIdRef.current = null; setStaleProblems([]); setAckPartial(false); }}
                   className="text-sm text-[var(--color-text3)] hover:text-zinc-700 dark:hover:text-zinc-200 px-3 py-2.5">
                   ← Back
                 </button>
@@ -1117,7 +1048,9 @@ export default function AdminImport() {
                     <SummaryStat label="New members created" value={outcome.createdMembers} tone="blue" />
                     <SummaryStat label="Attendance records added" value={outcome.attendanceInserted} />
                     <SummaryStat label="Attendance already present" value={outcome.attendanceAlreadyPresent} />
-                    <SummaryStat label="Profiles enriched" value={outcome.enrichedProfiles} />
+                    <SummaryStat label="Email aliases added" value={outcome.aliasesAdded} />
+                    <SummaryStat label="Years advanced" value={outcome.yearsAdvanced} />
+                    <SummaryStat label="Profiles filled" value={outcome.profileFills} />
                     <SummaryStat label="New members without email" value={outcome.emailsWithheld} />
                   </dl>
                   <h3 className="mb-3 mt-5 text-xs font-semibold uppercase tracking-label text-[var(--color-text3)]">What was not written</h3>
@@ -1136,7 +1069,7 @@ export default function AdminImport() {
                 </section>
               )}
               <button
-                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setCsvFile(null); setSelectedEventId(''); setCachedParsed([]); setOutcome(null); createdByRowIdRef.current = {}; withheldEmailRowIdsRef.current = new Set(); }}
+                onClick={() => { setStep('configure'); setRows([]); setCsvUrl(''); setCsvFile(null); setSelectedEventId(''); setCachedParsed([]); setOutcome(null); setSnapshot(EMPTY_SNAPSHOT); requestIdRef.current = null; }}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-medium px-5 py-2.5 rounded text-sm transition-colors">
                 Import another sheet
               </button>
@@ -1166,27 +1099,6 @@ function ColSelect({ label, value, onChange, headers }: { label: string; value: 
   );
 }
 
-function SummaryBadge({ color, count, label, plural }: { color: string; count: number; label: string; plural: string }) {
-  const cls: Record<string, string> = {
-    green:  'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    blue:   'bg-blue-100  dark:bg-blue-900/30  text-blue-700  dark:text-blue-300',
-    red:    'bg-red-100   dark:bg-red-900/30   text-red-700   dark:text-red-300',
-    gray:   'bg-gray-100  dark:bg-gray-700      text-gray-500  dark:text-gray-400',
-    amber:  'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-  };
-  const dot: Record<string, string> = {
-    green: 'bg-green-500', blue: 'bg-blue-500', red: 'bg-red-500', gray: 'bg-gray-400',
-    amber: 'bg-amber-500', purple: 'bg-purple-500',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium ${cls[color]}`}>
-      <span className={`w-2 h-2 rounded-full inline-block ${dot[color]}`} />
-      {count} {count === 1 ? label : plural}
-    </span>
-  );
-}
-
 function SummaryStat({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'blue' | 'amber' | 'red' }) {
   const color = {
     green: 'text-green-700 dark:text-green-300',
@@ -1208,9 +1120,10 @@ function ActionBadge({ color, label }: { color: string; label: string }) {
     blue:  'text-blue-700  dark:text-blue-400',
     gray:  'text-gray-500  dark:text-gray-400',
     amber: 'text-amber-700 dark:text-amber-400',
+    red:   'text-red-700 dark:text-red-400',
   };
   const dot: Record<string, string> = {
-    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400', amber: 'bg-amber-500',
+    green: 'bg-green-500', blue: 'bg-blue-500', gray: 'bg-gray-400', amber: 'bg-amber-500', red: 'bg-red-500',
   };
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cls[color]}`}>

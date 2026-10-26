@@ -103,7 +103,7 @@ describe("a failed member read", () => {
     await preview("Name,Email\nFiller1 Person1,filler1@ucsd.edu");
     await screen.findByText("Matching did not run, so nothing can be imported.");
     fireEvent.click(screen.getByRole("button", { name: /Re-run matching/ }));
-    await screen.findByText(/Matched by unique normalized email|Update/);
+    await screen.findByText("Matched by known email");
     expect(screen.queryByText("Matching did not run, so nothing can be imported.")).not.toBeInTheDocument();
     expect(stat("Existing members receiving attendance")).toBe("1");
   });

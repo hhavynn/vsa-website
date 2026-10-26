@@ -3,6 +3,18 @@ import toast from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
+import type { AttendanceImportRequest } from "../../lib/attendanceImportDecisions";
+
+const RPC = "rpc:admin_apply_attendance_import";
+const rpcOk = (extra: Record<string, unknown> = {}) => ({
+  data: {
+    ok: true, request_id: "r", created: [], attendance_inserted: 1, attendance_already_present: [],
+    profile_fills: 0, years_advanced: 0, years_skipped: [], aliases_added: 0, observations_added: 0, ...extra,
+  },
+  error: null,
+});
+const requests = () =>
+  supabaseMock.queriesFor(RPC).map((q) => (q.calls[0].args[0] as { p_request: AttendanceImportRequest }).p_request);
 
 jest.mock("../../lib/supabase", () => ({
   get supabase() {
@@ -26,6 +38,7 @@ jest.mock("../../data/repos/importJobs", () => ({
 beforeEach(() => {
   supabaseMock.reset();
   mockAudit.mockClear();
+  supabaseMock.setDefault(RPC, rpcOk());
   supabaseMock.setDefault("events", {
     data: [
       {
@@ -108,16 +121,7 @@ it("feeds a Google Form file into the existing matching, duplicate and import/au
   });
   fireEvent.click(importButton);
   await screen.findByText("Import complete!");
-  expect(
-    supabaseMock
-      .queriesFor("member_event_attendance")
-      .some((q) =>
-        q.calls.some(
-          (c) =>
-            c.method === "upsert" && JSON.stringify(c.args).includes("lan"),
-        ),
-      ),
-  ).toBe(true);
+  expect(requests()[0].credits.map((c) => c.member_id)).toEqual(["lan"]);
   await waitFor(() =>
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({ source_type: "manual", source_url: null }),
@@ -157,38 +161,20 @@ it("creates a new member from the Google Form columns before importing attendanc
     data: { id: "gbm", points: 3, academic_term_id: "fall" },
     error: null,
   });
-  supabaseMock.queueResult("members", { data: [], error: null });
-  supabaseMock.queueResult("members", { data: [{ id: "minh" }], error: null });
+  supabaseMock.queueResult(RPC, rpcOk({ created: [{ row_key: "row-0", member_id: "minh" }] }));
   fireEvent.click(confirm);
   await screen.findByText("Import complete!");
-  expect(
-    supabaseMock.queriesFor("members").flatMap((query) => query.calls),
-  ).toContainEqual({
-    method: "insert",
-    args: [
-      [
-        {
-          first_name: "Minh",
-          last_name: "Nguyen",
-          college: "Muir",
-          year: "2nd Year",
-          email: "minh@ucsd.edu",
-          needs_review: false,
-        },
-      ],
-    ],
-  });
-  expect(
-    supabaseMock
-      .queriesFor("member_event_attendance")
-      .flatMap((query) => query.calls),
-  ).toContainEqual({
-    method: "upsert",
-    args: [
-      [{ member_id: "minh", event_id: "gbm", points_earned: 3 }],
-      { onConflict: "member_id,event_id", ignoreDuplicates: true },
-    ],
-  });
+  expect(requests()[0].creates).toEqual([{
+    row_key: "row-0",
+    first_name: "Minh",
+    last_name: "Nguyen",
+    college: "Muir",
+    year: "2nd Year",
+    email: "minh@ucsd.edu",
+    observed_year: "2nd Year",
+  }]);
+  expect(supabaseMock.usedMethod("members", "insert")).toBe(false);
+  expect(supabaseMock.usedMethod("member_event_attendance", "upsert")).toBe(false);
 });
 
 describe("profile enrichment during an import", () => {
@@ -226,45 +212,23 @@ describe("profile enrichment during an import", () => {
     return importButton;
   }
 
-  const auditedEnrichedCount = () =>
-    (mockAudit.mock.calls[0]?.[0]?.rows ?? []).map(
-      (row: { match_details: { enriched_members_count: number } }) =>
-        row.match_details.enriched_members_count,
-    );
-
-  it("announces the profile update only when it was saved", async () => {
+  it("plans the year advance from the legacy label and reports it once written", async () => {
+    supabaseMock.setDefault(RPC, rpcOk({ years_advanced: 1 }));
     const importButton = await previewAndImport();
     fireEvent.click(importButton);
-
-    expect(await screen.findByText(/enriched 1 profile/)).toBeInTheDocument();
-    expect(screen.queryByText(/did not save/)).not.toBeInTheDocument();
+    await screen.findByText("Import complete!");
+    expect(requests()[0].credits[0]).toMatchObject({ member_id: "lan", year: { from: "Freshman", to: "2nd Year" } });
+    const advanced = screen.getAllByTestId("summary-stat").find((el) => within(el).queryByText("Years advanced")) as HTMLElement;
+    expect(within(advanced).getByRole("definition")).toHaveTextContent("1");
     await waitFor(() => expect(mockAudit).toHaveBeenCalled());
-    expect(auditedEnrichedCount()).toEqual([1]);
+    expect(mockAudit.mock.calls[0][0].rows[0].match_details.year_advance).toEqual({ from: "Freshman", to: "2nd Year" });
   });
 
-  it("reports a profile update that failed instead of counting it as enriched", async () => {
-    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    try {
-      const importButton = await previewAndImport();
-      // Import-time reads of `members` (latest record), then the profile update, which is rejected.
-      supabaseMock.queueResult("members", { data: [lan], error: null });
-      supabaseMock.queueResult("members", { data: [], error: null }); // end of the paged roster read
-      supabaseMock.queueResult("members", {
-        data: null,
-        error: { code: "over_request_rate_limit", message: "paused" },
-      });
-      fireEvent.click(importButton);
-
-      expect(await screen.findByText(/1 profile update did not save/)).toBeInTheDocument();
-      expect(screen.queryByText(/enriched 1 profile/)).not.toBeInTheDocument();
-      // Attendance was still recorded, and the audit says nothing was enriched.
-      expect(
-        supabaseMock.queriesFor("member_event_attendance").some((q) => q.calls.some((c) => c.method === "upsert")),
-      ).toBe(true);
-      await waitFor(() => expect(mockAudit).toHaveBeenCalled());
-      expect(auditedEnrichedCount()).toEqual([0]);
-    } finally {
-      consoleError.mockRestore();
-    }
+  it("reports a year the database skipped because it changed after the preview", async () => {
+    supabaseMock.setDefault(RPC, rpcOk({ years_skipped: ["row-0"] }));
+    const importButton = await previewAndImport();
+    fireEvent.click(importButton);
+    expect(await screen.findByText(/1 year update was skipped/)).toBeInTheDocument();
   });
 });
+
