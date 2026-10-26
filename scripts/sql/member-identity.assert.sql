@@ -328,6 +328,20 @@ select pg_temp.check_true('a known-email match whose address still identifies on
   (pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000032', jsonb_build_array(
     pg_temp.minh('{"evidence_emails": ["minh@ucsd.edu"]}')), '[]', 4, '81000000-0000-0000-0000-000000000028')) -> 'result' ->> 'ok')::boolean);
 
+select pg_temp.check_true('name folding matches the resolver: accents, Đ, case, spacing, punctuation, middle initials',
+  public.fold_person_name('Nguyễn  Văn An') = 'nguyen van an'
+  and public.fold_person_name('ĐẶNG Thị Hồng') = 'dang thi hong'
+  and public.fold_person_name('O''Brien-Tran') = 'obrien tran'
+  and public.fold_person_name('Kevin J. Nguyen') = 'kevin nguyen'
+  and public.fold_person_name('An Tran') = 'an tran');
+insert into public.members (first_name, last_name) values ('Hoa', 'Nguyễn');
+select pg_temp.check_true('a new member whose accented name appeared after the preview is stale',
+  pg_temp.stale(pg_temp.req('90000000-0000-0000-0000-000000000033', '[]', jsonb_build_array(
+    jsonb_build_object('row_key', 'row-h', 'first_name', 'Hoa', 'last_name', 'Nguyen', 'known_same_name_ids', '[]'::jsonb)))) = 'possible_duplicate_created');
+select pg_temp.check_true('the fold function is not callable by clients',
+  not has_function_privilege('anon', 'public.fold_person_name(text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.fold_person_name(text)', 'execute'));
+
 -- ── Import: malformed requests ────────────────────────────────────────────────
 select pg_temp.check_true('crediting one member twice is refused',
   pg_temp.import(pg_temp.req('90000000-0000-0000-0000-000000000020', jsonb_build_array(pg_temp.minh(), pg_temp.minh('{"row_key": "row-x"}')))) ->> 'code' = '22023');

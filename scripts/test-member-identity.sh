@@ -236,6 +236,7 @@ rtk psql "${psql_args[@]}" -d identity_row_trigger -q -c 'set client_min_message
 remaining="$(rtk psql "${psql_args[@]}" -d identity_row_trigger -qtA -c "
   select coalesce(to_regclass('public.member_identity_emails')::text, '') || coalesce(to_regclass('public.member_year_observations')::text, '')
       || coalesce(to_regprocedure('public.admin_apply_attendance_import(jsonb)')::text, '')
+      || coalesce(to_regprocedure('public.fold_person_name(text)')::text, '')
       || (select count(*)::text from pg_trigger where tgname in ('trg_member_primary_email_alias', 'trg_member_purge_identity_on_anonymize'))")"
 [ "$remaining" = "0" ] || fail "rollback leaves no identity objects (got '$remaining')"
 merge_body="$(rtk psql "${psql_args[@]}" -d identity_row_trigger -qtA -c "select pg_get_functiondef('public.smart_merge_members(uuid, uuid)'::regprocedure)")"
