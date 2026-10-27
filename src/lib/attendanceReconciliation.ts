@@ -152,6 +152,14 @@ interface Evidence<M extends IdentityMember> {
   /** Weak contradictions (two name-based school aliases). */
   soft: string[];
   emails: string[];
+  /** A near-identical school login (same digits) that nothing contradicts but college and class year do not confirm. */
+  nearLogin: boolean;
+}
+
+/** The class number in "2nd Year Transfer" (2), or null. */
+function classLevel(label: string | null | undefined): number | null {
+  const found = /(\d)(?:st|nd|rd|th)/i.exec(label ?? '');
+  return found ? Number(found[1]) : null;
 }
 
 function assessCandidate<M extends IdentityMember>(
@@ -166,17 +174,22 @@ function assessCandidate<M extends IdentityMember>(
   if (candidate.college === 'conflict') hard.push('another college is on file');
   if (candidate.year === 'implausible') hard.push('standing does not fit');
   const relation = schoolEmailRelation(row.emails, emails);
-  // Same account digits with mistyped letters (abc068 / abxyz068, or xyn004 / xym004) are
-  // one login when everything else about the person agrees. A known college allows any
-  // misspelling; with no college on file only a one-letter slip counts. A middle
+  // A login with the same digits and different letters (abc068 / abxyz068, xyn004 / xym004) can
+  // be one student's typo, or two students with the same name: same-name students get
+  // similar logins. It counts as one login only when college AND class year both agree. With
+  // either missing it goes to an admin; with either different it is someone else. A middle
   // initial never matters (the name still compares as exact); a full middle name does.
   const digits = (login: string) => login.split('@')[0].replace(/^[a-z]+/, '');
   const letters = (login: string) => login.split('@')[0].replace(/\d+$/, '');
-  const sameDigitsTypo = relation === 'login_distinct' && candidate.name === 'exact'
-    && candidate.college !== 'conflict' && candidate.year === 'compatible'
+  const [rowClass, memberClass] = [classLevel(row.csvYear), classLevel(candidate.member.year)];
+  const classDiffers = rowClass !== null && memberClass !== null && rowClass !== memberClass;
+  const sameDigits = relation === 'login_distinct' && candidate.name === 'exact'
+    && candidate.college !== 'conflict' && candidate.year !== 'implausible' && !classDiffers
     && row.emails.filter(isSchoolLogin).every((x) => emails.filter(isSchoolLogin).some((y) =>
       digits(x) === digits(y) && (candidate.college === 'match' || levenshtein(letters(x), letters(y)) <= 1)));
-  if (relation === 'login_distinct' && !sameDigitsTypo) hard.push('a different school login is on file');
+  const confirmedTypo = sameDigits && candidate.college === 'match' && rowClass !== null && rowClass === memberClass;
+  const nearLogin = sameDigits && !confirmedTypo;
+  if (relation === 'login_distinct' && !confirmedTypo && !nearLogin) hard.push('a different school login is on file');
   if (relation === 'alias_distinct') soft.push('a different school alias is on file');
   // A near-identical address does not outweigh another college: that is someone else.
   if (relation === 'typo' && candidate.college === 'conflict') soft.push('a similar but different school address is on file');
@@ -190,7 +203,7 @@ function assessCandidate<M extends IdentityMember>(
     && !row.emails.some((email) => other.emails.includes(email)));
   if (elsewhere) hard.push('already attending through another row of this file');
   const addressHard = hard.some((reason) => reason.includes('login') || reason.includes('another row'));
-  return { candidate, hard, soft, emails, addressHard };
+  return { candidate, hard, soft, emails, addressHard, nearLogin };
 }
 
 /** Why a row cannot be this member (empty when nothing contradicts them). */
@@ -297,7 +310,7 @@ export function reconcileRow<M extends IdentityMember>(
   }
   const strong = row.candidates.filter((c) => STRONG.has(c.name) || (c.name === 'first_name_prefix' && c.college === 'match'));
   const assessed = strong.map((c) => assessCandidate(row, c, ctx));
-  const eligible = assessed.filter((e) => e.hard.length === 0);
+  const eligible = assessed.filter((e) => e.hard.length === 0 && !e.nearLogin);
   const pool = eligible.filter((e) => e.soft.length === 0);
   // A soft contradiction plus a profile mismatch is a firm one.
   assessed.forEach((e) => { if (e.hard.length === 0 && e.soft.length > 0 && e.candidate.college === 'conflict') e.hard.push('another college is on file'); });
@@ -329,6 +342,11 @@ export function reconcileRow<M extends IdentityMember>(
 
   const decided = pick(pool) ?? (pool.length === 0 ? pick(eligible) : null);
   if (decided) return decided;
+
+  // Same name, a near-identical school login, and college or class year not there to confirm it.
+  if (assessed.some((e) => e.nearLogin && e.hard.length === 0)) {
+    return { kind: 'pending', rule: 'pending', note: 'Near-identical school login on a member with the same name. Same person only if college and class year agree; they are not both on file.' };
+  }
 
   if (eligible.length > 1) {
     return { kind: 'pending', rule: 'pending', note: 'Several members share this name and nothing separates them.' };

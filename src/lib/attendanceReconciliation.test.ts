@@ -95,11 +95,26 @@ describe('same person, different address', () => {
     expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'dara' });
   });
 
-  it('a middle initial never separates two records, and a one-letter slip in the login does not either', () => {
+  it('a middle initial never separates two records; a one-letter login slip goes to an admin when college is not on file', () => {
     const odessa = member('odessa', 'Odessa T', 'Marrow', { email: 'otm004@ucsd.edu', year: '1st Year' });
     const { rows, decisions } = decide([{ name: 'Odessa Marrow', email: 'otn004@ucsd.edu', college: 'Eighth', year: '1st Year' }], [odessa]);
     expect(rows[0].candidates[0].name).toBe('exact');
+    expect(decisions[0]).toMatchObject({ kind: 'pending' });
+    expect((decisions[0] as { note: string }).note).toMatch(/near-identical school login/i);
+  });
+
+  it('a near-identical login is one student when college and class year both agree', () => {
+    const odessa = member('odessa', 'Odessa T', 'Marrow', { email: 'otm004@ucsd.edu', college: 'Eighth', year: '1st Year' });
+    const { decisions } = decide([{ name: 'Odessa Marrow', email: 'otn004@ucsd.edu', college: 'Eighth', year: '1st Year' }], [odessa]);
     expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'odessa', rememberEmail: false });
+  });
+
+  it('a near-identical login with another college or another class year is a different student', () => {
+    const odessa = member('odessa', 'Odessa', 'Marrow', { email: 'otm004@ucsd.edu', college: 'Eighth', year: '1st Year' });
+    const otherCollege = decide([{ name: 'Odessa Marrow', email: 'otn004@ucsd.edu', college: 'Muir', year: '1st Year' }], [odessa]);
+    expect(otherCollege.decisions[0]).toMatchObject({ kind: 'new', rule: 'different_person' });
+    const otherYear = decide([{ name: 'Odessa Marrow', email: 'otn004@ucsd.edu', college: 'Eighth', year: '3rd Year' }], [odessa]);
+    expect(otherYear.decisions[0]).toMatchObject({ kind: 'new', rule: 'different_person' });
   });
 
   it('a different login with a full middle name (not an initial) is still a different person', () => {
