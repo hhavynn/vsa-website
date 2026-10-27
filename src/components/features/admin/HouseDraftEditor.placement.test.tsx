@@ -226,15 +226,19 @@ it('filters to manual overrides', async () => {
   expect(rows[1]).toHaveTextContent('#3MemberC Test');
 });
 
-it('reloads the saved rows and says so when a swap fails, so a half-applied change is never shown', async () => {
-  repo.applyPlacementOverride.mockRejectedValue(new Error('That House would have 3 applicants but its capacity is 2. Nothing was changed.'));
+it.each([
+  'That House would have 3 applicants but its capacity is 2. Nothing was changed.',
+  'House placement changes are unavailable. Ask a site administrator to verify database migration 20261027120000 and refresh the API schema cache. Nothing was changed.',
+])('reloads saved rows without reporting success when an override fails: %s', async (message) => {
+  repo.applyPlacementOverride.mockRejectedValue(new Error(message));
   repo.getDrafts.mockResolvedValue(placement());
   renderEditor(placement());
   const form = await openSwapForm();
   await userEvent.click(form.getByRole('button', { name: 'Apply override' }));
 
   await waitFor(() => expect(repo.getDrafts).toHaveBeenCalledWith('b1'));
-  expect(toast.error).toHaveBeenCalledWith('That House would have 3 applicants but its capacity is 2. Nothing was changed. The rows were reloaded from the saved draft.');
+  expect(toast.error).toHaveBeenCalledWith(`${message} The rows were reloaded from the saved draft.`);
+  expect(toast.success).not.toHaveBeenCalled();
   expect(repo.updateDraft).not.toHaveBeenCalled();
   expect(logAdminActivity).not.toHaveBeenCalled();
   await settle();
