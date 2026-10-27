@@ -85,7 +85,9 @@
     ]
   },
   "devDependencies": {
+    "@types/jest-axe": "^3.5.9",
     "autoprefixer": "^10.6.1",
+    "jest-axe": "^11.0.0",
     "postcss": "^8.5.31",
     "prettier": "^3.9.10",
     "react-scripts": "^5.0.1",
