@@ -193,6 +193,29 @@ describe('records and repeats', () => {
     expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'school', rule: 'same_submission', mergeMemberIds: ['personal'] });
   });
 
+  it('an address two members share is never evidence that they are one person', () => {
+    const ann = member('ann', 'Ann', 'Tran', { email: 'family@gmail.com', college: 'Muir', year: '2nd Year', points: 1 });
+    const anh = member('anh', 'Anh', 'Tran', { email: 'family@gmail.com', college: 'Warren', year: '2nd Year', points: 9 });
+    const { decisions } = decide([{ name: 'Ann Tran', email: 'family@gmail.com', college: 'Muir', year: '2nd Year' }], [ann, anh]);
+    expect(decisions[0]).toMatchObject({ kind: 'pending' });
+  });
+
+  it('two addresses on one row, each held by a different record, still merge', () => {
+    const a = member('a', 'Cleo', 'Marsh', { email: 'cm014@ucsd.edu', year: '2nd Year', points: 3 });
+    const b = member('b', 'Cleo', 'Marsh', { email: 'cleo@gmail.com', year: '2nd Year', points: 1 });
+    const { decisions } = decide([{ name: 'Cleo Marsh', email: 'cm014@ucsd.edu', email2: 'cleo@gmail.com', year: '2nd Year' }], [a, b]);
+    expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'a', rule: 'same_submission', mergeMemberIds: ['b'] });
+  });
+
+  it('a full candidate list is never read as complete: no new member is created from it', () => {
+    const lena = (id: string, login: string) => member(id, 'Lena', 'Fisk', { email: `${login}@ucsd.edu`, college: 'Eighth', year: '2nd Year' });
+    const roster = [lena('l1', 'lef031'), lena('l2', 'lef032'), lena('l3', 'lef033'), lena('l4', 'lef034'), lena('l5', 'lef035'),
+      member('ann', 'Lena Ann', 'Fisk', { year: '2nd Year' })];
+    const { rows, decisions } = decide([{ name: 'Lena Fisk', email: 'lef036@ucsd.edu', college: 'Eighth', year: '2nd Year' }], roster);
+    expect(rows[0].candidates.length).toBe(5);
+    expect(decisions[0]).toMatchObject({ kind: 'pending' });
+  });
+
   it('a second row for a member an earlier row already claimed is a repeat, not a second credit', () => {
     const hana = member('hana', 'Hana', 'Okoye', { email: 'hokoye@ucsd.edu' });
     const { rows, decisions } = decide(

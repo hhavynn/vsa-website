@@ -61,6 +61,9 @@ export interface ReconcileContext<M extends IdentityMember> {
   provenance: ReadonlyMap<string, readonly CreditProvenance[]>;
 }
 
+/** identityResolution keeps this many candidates per review row (its MAX_CANDIDATES). */
+const RESOLVER_CANDIDATE_LIMIT = 5;
+
 // Typed school domains that are one slip away from ucsd.edu.
 const SCHOOL_DOMAIN_TYPOS = /^ucsd\.(edy|edi|rdu|ed|eud|ude|edu\.|net|org|com)$/;
 
@@ -253,18 +256,23 @@ export function reconcileRow<M extends IdentityMember>(
   row.emails.forEach((email) => ctx.index.emailHolders.get(email)?.forEach((id) => owners.add(id)));
   if (owners.size > 1) {
     // One submission lists addresses held by different records: one person, two records.
+    // That needs a submission that links separate addresses. An address two members
+    // share (a family inbox) says nothing about whether they are the same person.
     const records = Array.from(owners).map((id) => row.candidates.find((c) => c.member.id === id)).filter(Boolean) as CandidateAssessment<M>[];
+    const linksSeparateAddresses = row.emails.length >= 2
+      && row.emails.every((email) => (ctx.index.emailHolders.get(email)?.size ?? 0) <= 1)
+      && Array.from(owners).every((id) => row.emails.some((email) => ctx.index.emailHolders.get(email)?.has(id)));
     const compatible = records.length === owners.size && records.every((c) => namesPlausiblyOne(row.name, ctx.index.byId.get(c.member.id)!.name)
-      && c.year !== 'implausible');
+      && c.year !== 'implausible' && c.college !== 'conflict');
     // The records may still be two people if their own school logins differ.
     const logins = new Set(records.flatMap((c) => Array.from(ctx.index.byId.get(c.member.id)!.emails)).filter(isSchoolLogin));
-    if (compatible && logins.size <= 1) {
+    if (linksSeparateAddresses && compatible && logins.size <= 1) {
       const keep = [...records].sort((a, b) => (b.member.points ?? 0) - (a.member.points ?? 0))[0];
       return match(keep.member.id, 'same_submission',
         `One row lists addresses held by ${records.length} records; they are one person.`, false,
         records.filter((c) => c !== keep).map((c) => c.member.id));
     }
-    return { kind: 'pending', rule: 'pending', note: 'The row lists addresses held by different members whose records disagree.' };
+    return { kind: 'pending', rule: 'pending', note: 'The row lists an address shared by several members, or addresses held by members whose records disagree.' };
   }
   if (owners.size === 1) {
     const [ownerId] = Array.from(owners);
@@ -282,6 +290,11 @@ export function reconcileRow<M extends IdentityMember>(
   }
 
   // ── Name candidates. ────────────────────────────────────────────────────────
+  // The resolver keeps only its best few candidates. When the list is full, members that
+  // would change the answer may be missing, so neither a match nor a new member is safe.
+  if (row.candidates.length >= RESOLVER_CANDIDATE_LIMIT) {
+    return { kind: 'pending', rule: 'pending', note: 'Too many members share this name to rule any of them out.' };
+  }
   const strong = row.candidates.filter((c) => STRONG.has(c.name) || (c.name === 'first_name_prefix' && c.college === 'match'));
   const assessed = strong.map((c) => assessCandidate(row, c, ctx));
   const eligible = assessed.filter((e) => e.hard.length === 0);
