@@ -6,9 +6,9 @@ import { ActivityList } from './ops';
 export function RecentActivityCard() {
   const { entries, loading, error, canUndo, undo, undoing, undone } = useAdminActivity({ limit: 6 });
   return (
-    <section aria-label="Recent changes" className="scrapbook-paper border-[var(--color-border)] bg-surface p-5">
+    <section aria-labelledby="recent-changes-title" className="h-full rounded-lg border border-[var(--color-border)] bg-surface p-5">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-serif text-lg font-bold text-text-primary">Recent changes</h3>
+        <h2 id="recent-changes-title" className="font-serif text-xl font-bold text-text-primary">Recent changes</h2>
         <Link to="/admin/recent-changes" className="font-sans text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300">
           See all →
         </Link>

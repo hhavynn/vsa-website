@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
+import { MemoryRouter } from "react-router-dom";
 
 // These cover the identity importer behind the rollout flag (LegacyImport.*.test.tsx covers the default).
 beforeAll(() => { process.env.REACT_APP_ATTENDANCE_IDENTITY_V2 = 'true'; });
@@ -48,7 +49,9 @@ beforeEach(() => {
 async function preview(csv: string) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <AdminImport />
+      <MemoryRouter>
+        <AdminImport />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   await screen.findByRole("option", { name: /GBM 1/ });

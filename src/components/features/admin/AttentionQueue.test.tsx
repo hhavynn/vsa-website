@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AttentionQueue } from './AttentionQueue';
 import { ClosingSoonApplications } from '../home/ClosingSoonApplications';
@@ -118,5 +118,35 @@ describe('AttentionQueue', () => {
       jest.useRealTimers();
       mockPublicLinks = [];
     }
+  });
+
+  describe('compact view', () => {
+    const MANY: AttentionSignals = {
+      ...CLEAR,
+      photoRequestsPending: 1,
+      aiFeedbackUnresolved: 2,
+      feedbackPending: 3,
+      dataRightsOpen: 1,
+      draftEventDates: ['2026-10-04T18:00:00Z'],
+      contentHealth: { issues: 4, urgent: 0 },
+    };
+
+    it('shows the first few items, urgent ones first, and reveals the rest on request', () => {
+      renderQueue(MANY);
+      const list = screen.getByRole('region', { name: 'Needs attention' });
+      expect(within(list).getAllByRole('link')).toHaveLength(4);
+      // Data-rights requests are the urgent kind, so they lead even though they were not first in the source order.
+      expect(within(list).getAllByRole('link')[0]).toHaveTextContent('open data-rights request');
+      expect(within(list).getAllByRole('link')[0]).toHaveTextContent('Urgent');
+
+      fireEvent.click(within(list).getByRole('button', { name: 'Show 2 more' }));
+      expect(within(list).getAllByRole('link')).toHaveLength(6);
+      expect(within(list).getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('has no toggle when everything already fits', () => {
+      renderQueue({ ...CLEAR, photoRequestsPending: 2 });
+      expect(screen.queryByRole('button', { name: /Show/ })).not.toBeInTheDocument();
+    });
   });
 });

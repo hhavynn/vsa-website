@@ -453,6 +453,7 @@ export default function AdminMembers() {
 
       {/* PAGE HEADER */}
       <AdminPageHeader
+        related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}
         description={`${members.length} total members`}
         actions={
           <>

@@ -86,6 +86,8 @@ it('cannot be created without choosing a new date', async () => {
 describe('replacing unsaved Create-form work with a duplicate', () => {
   async function askToReplace() {
     renderEvents();
+    // Manage is the landing view, so open the Create form first.
+    await userEvent.click(screen.getByRole('button', { name: '+ Create Event' }));
     await userEvent.type(screen.getByPlaceholderText('Spring GBM'), 'Half-typed');
     await userEvent.click(screen.getByRole('button', { name: /Manage/i }));
     await userEvent.click(await screen.findByRole('button', { name: 'Duplicate' }));

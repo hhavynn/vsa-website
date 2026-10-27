@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
 import type { AttendanceImportRequest } from "../../lib/attendanceImportDecisions";
+import { MemoryRouter } from "react-router-dom";
 
 const RPC = "rpc:admin_apply_attendance_import";
 const rpcOk = (extra: Record<string, unknown> = {}) => ({
@@ -90,7 +91,9 @@ async function setup() {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AdminImport />
+      <MemoryRouter>
+        <AdminImport />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   await screen.findByRole("option", { name: /GBM 1/ });

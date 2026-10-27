@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./Import";
 import { supabaseMock } from "../../test-utils/supabaseMock";
+import { MemoryRouter } from "react-router-dom";
 
 jest.mock("../../lib/supabase", () => ({
   get supabase() {
@@ -28,7 +29,9 @@ afterAll(() => { delete process.env.REACT_APP_ATTENDANCE_IDENTITY_V2; });
 async function preview() {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <AdminImport />
+      <MemoryRouter>
+        <AdminImport />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   await screen.findByRole("option", { name: /GBM 1/ });

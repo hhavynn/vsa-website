@@ -4,7 +4,7 @@ Covers the shared building blocks every admin page should use, and the inventory
 
 ## Nav, routes, breadcrumbs, headers
 
-- **Single source:** `src/lib/adminNavigation.ts` (`ADMIN_NAV_GROUPS`) feeds the sidebar (`AdminNav`), Quick Search (`adminSearch.ts`), and breadcrumbs/page headers.
+- **Single source:** `src/lib/adminNavigation.ts` (`ADMIN_NAV_GROUPS`, plus `ADMIN_QUICK_ACTIONS` and the favorites defaults) feeds the collapsible sidebar and drawer (`AdminNav`), Quick Search (`adminSearch.ts`), breadcrumbs/page headers, and the dashboard's quick actions and "All admin tools" directory. Pinned favorites and open groups are per-browser localStorage (`useAdminNavPreferences`), never Supabase.
 - **Parity guarantee:** `src/lib/adminNavigation.test.ts` reads `src/routes/index.tsx` and fails if a guarded `/admin/*` route has no nav entry, a nav entry has no route, or any admin route sits outside the `<AdminRoute />` boundary. Adding a page is therefore: lazy import + `<Route>` in `routes/index.tsx` **and** one entry in `adminNavigation.ts`; forgetting either fails CI.
 - **A nav entry is not a permission.** Access is `AdminRoute` + RLS only.
 - **Nested pages:** give the entry a `parent` path (e.g. Cabinet Rollover → `/admin/cabinet`). Optional `description` is the default subtitle.

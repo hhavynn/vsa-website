@@ -1,18 +1,8 @@
-import { ReactNode, useMemo } from 'react';
-import { useQuery } from 'react-query';
+import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { adminOperationsRepository } from '../../../data/repos/adminOperations';
-import {
-  OPS_LINKS,
-  OperationsInputs,
-  OperationsSummary,
-  buildOperationsPreflight,
-  buildOperationsSummary,
-  countPreflightIssues,
-  formatHouseBalance,
-} from '../../../lib/adminOperations';
+import { useOperationsSummary } from '../../../hooks/useOperationsSummary';
+import { OPS_LINKS, OperationsInputs, OperationsSummary, formatHouseBalance } from '../../../lib/adminOperations';
 import { buildContinueItems } from '../../../lib/adminContinue';
-import { ADMIN_HEALTH_QUERY_KEYS, HEALTH_QUERY_OPTIONS } from '../../../lib/adminHealthQuery';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { OperationsCard, PreflightItem, ProgressCount, StatusBadge } from './ops';
 
@@ -61,27 +51,57 @@ function formatEventDate(value: string) {
     : new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' }).format(parsed);
 }
 
-function ContinueWorking({ summary }: { summary: OperationsSummary }) {
+function ContinueItems({ summary }: { summary: OperationsSummary }) {
   const items = buildContinueItems(summary);
+  // A section that could not load cannot be called "caught up".
+  const unchecked = [
+    summary.ace ? null : 'ACE',
+    summary.houses ? null : 'Houses',
+    summary.cabinet ? null : 'Cabinet',
+    summary.interns ? null : 'Interns',
+  ].filter((name): name is string => Boolean(name));
+  return items.length === 0 ? (
+    unchecked.length > 0 ? (
+      <p role="alert" className="mt-2 text-sm text-text-secondary">
+        Could not check {unchecked.join(', ')}, so in-progress work can’t be confirmed. Use Refresh counts to try again.
+      </p>
+    ) : (
+      <p className="mt-2 text-sm text-text-secondary">Nothing is in progress. The year is caught up.</p>
+    )
+  ) : (
+    <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <li key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2.5" data-domain={item.domain}>
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">{item.title}</p>
+            <p className="mt-0.5 font-sans text-[13px] text-text-primary">{item.detail}</p>
+          </div>
+          <Link to={item.to} className="shrink-0 rounded-md border border-[var(--color-border)] px-2.5 py-1.5 font-sans text-xs font-semibold text-brand-700 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-300">
+            {item.cta} →
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * "Continue working": the resumable yearly workflows (ACE, Houses, Cabinet
+ * rollover, Interns), derived from persisted workflow state. Shares the
+ * operations scan with the health section, so it adds no requests. A failed scan
+ * says so; it never renders as "nothing in progress".
+ */
+export function ContinueWorking({ loadInputs }: { loadInputs?: () => Promise<OperationsInputs> }) {
+  const { summary, failed } = useOperationsSummary(loadInputs);
   return (
-    <section aria-label="Continue working" className="scrapbook-paper border-[var(--color-border)] bg-surface p-5">
-      <h3 className="font-serif text-lg font-bold text-text-primary">Continue working</h3>
-      {items.length === 0 ? (
-        <p className="mt-2 text-xs text-text-muted">Nothing is in progress. The year is caught up.</p>
+    <section aria-labelledby="continue-working-title" className="h-full rounded-lg border border-[var(--color-border)] bg-surface p-5">
+      <h2 id="continue-working-title" className="font-serif text-xl font-bold text-text-primary">Continue working</h2>
+      {failed ? (
+        <p role="alert" className="mt-2 text-sm text-text-secondary">Could not load in-progress work. Use Refresh counts to try again; the tools still work.</p>
+      ) : !summary ? (
+        <p className="mt-2 text-sm text-text-muted">Loading…</p>
       ) : (
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item) => (
-            <li key={item.id} className="flex items-start justify-between gap-3 rounded border border-[var(--color-border)] px-3 py-2.5" data-domain={item.domain}>
-              <div className="min-w-0">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">{item.title}</p>
-                <p className="mt-0.5 font-sans text-[13px] text-text-primary">{item.detail}</p>
-              </div>
-              <Link to={item.to} className="shrink-0 rounded border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-brand-700 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-300">
-                {item.cta} →
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ContinueItems summary={summary} />
       )}
     </section>
   );
@@ -193,45 +213,31 @@ function OperationsCards({ summary }: { summary: OperationsSummary }) {
 }
 
 /**
- * The first thing the Cabinet sees: what the year looks like right now and what
- * needs attention, with every number linking to the tool that fixes it. Read-only.
+ * Per-program operations cards and the cross-program preflight, with every number
+ * linking to the tool that fixes it. Read-only. The dashboard shows these inside
+ * its health section's details; "Continue working" is a separate panel.
  */
-export function OperationsDashboard({ loadInputs = () => adminOperationsRepository.loadInputs() }: OperationsDashboardProps) {
-  // Cached and never auto-refetched (see lib/adminHealthQuery.ts); the Overview's
-  // Refresh button invalidates it. A failed load shows the unavailable state.
-  const query = useQuery(ADMIN_HEALTH_QUERY_KEYS.operations, loadInputs, {
-    ...HEALTH_QUERY_OPTIONS,
-    onError: (error) => console.error(error),
-  });
-  const inputs = query.data ?? null;
-  const failed = query.isError;
-
-  const summary = useMemo(() => (inputs ? buildOperationsSummary(inputs) : null), [inputs]);
-  const preflight = useMemo(() => (summary ? buildOperationsPreflight(summary) : []), [summary]);
-  const issues = countPreflightIssues(preflight);
+export function OperationsDashboard({ loadInputs }: OperationsDashboardProps) {
+  // Mounted when the health details open, long after the page's own scan: reuse it, never repeat it.
+  const { summary, preflight, issues, failed } = useOperationsSummary(loadInputs, { refetchOnMount: false });
   const nextYear = (summary?.yearStart ?? new Date().getFullYear()) + 1;
 
   return (
     <section aria-label="Operations" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
-            Operations
-          </p>
-          <h2 className="font-serif text-2xl font-bold text-text-primary">
-            {summary ? `${summary.yearLabel} VSA Operations` : 'VSA Operations'}
-          </h2>
-        </div>
+        <h3 className="font-serif text-xl font-bold text-text-primary">
+          {summary ? `${summary.yearLabel} VSA Operations` : 'VSA Operations'}
+        </h3>
         <Link
           to={OPS_LINKS.yearSetup}
-          className="rounded border px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-400 border-[var(--color-border)]"
+          className="rounded-md border px-3 py-1.5 font-sans text-xs font-semibold text-brand-600 transition-colors hover:bg-[var(--color-surface2)] dark:text-brand-400 border-[var(--color-border)]"
         >
           Start {formatYearSpan(nextYear)} →
         </Link>
       </div>
 
       {failed ? (
-        <p className="rounded border px-4 py-3 text-sm border-[var(--color-border)] text-text-secondary">
+        <p role="alert" className="rounded border px-4 py-3 text-sm border-[var(--color-border)] text-text-secondary">
           Could not load operations status. The tools below still work.
         </p>
       ) : !summary ? (
@@ -240,11 +246,10 @@ export function OperationsDashboard({ loadInputs = () => adminOperationsReposito
         </p>
       ) : (
         <>
-          <ContinueWorking summary={summary} />
           <OperationsCards summary={summary} />
 
           <section
-            className="scrapbook-paper p-5 border-[var(--color-border)] bg-surface"
+            className="rounded-lg p-5 border border-[var(--color-border)] bg-surface"
             aria-label="Operations preflight"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2">

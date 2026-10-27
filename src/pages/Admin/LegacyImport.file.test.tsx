@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import AdminImport from "./LegacyImport";
 import { supabaseMock } from "../../test-utils/supabaseMock";
+import { MemoryRouter } from "react-router-dom";
 
 jest.mock("../../lib/supabase", () => ({
   get supabase() {
@@ -74,7 +75,9 @@ async function setup() {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AdminImport />
+      <MemoryRouter>
+        <AdminImport />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   await screen.findByRole("option", { name: /GBM 1/ });

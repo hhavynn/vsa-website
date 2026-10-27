@@ -16,6 +16,7 @@ export function AdminPageHeader({
   description,
   detail,
   actions,
+  related,
   className = '',
 }: {
   /** Defaults to the nav label for the current path. */
@@ -26,6 +27,8 @@ export function AdminPageHeader({
   detail?: string | null;
   /** Primary actions, kept in the same top-right slot on every page. */
   actions?: ReactNode;
+  /** Admin paths of closely related tools, shown as quick links. Labels and icons come from the nav config. */
+  related?: readonly string[];
   className?: string;
 }) {
   const { pathname } = useLocation();
@@ -33,6 +36,7 @@ export function AdminPageHeader({
   const crumbs = adminBreadcrumbs(pathname, detail);
   const heading = title ?? item?.label ?? 'Admin';
   const blurb = description ?? item?.description;
+  const relatedItems = (related ?? []).map((to) => adminNavItemFor(to)).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry) && entry?.to !== item?.to);
 
   return (
     <header
@@ -75,6 +79,24 @@ export function AdminPageHeader({
           <p className="mt-2 font-sans text-sm text-text-secondary">
             {blurb}
           </p>
+        )}
+        {relatedItems.length > 0 && (
+          <nav aria-label="Related tools" className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="font-sans text-xs text-text-muted">Related:</span>
+            {relatedItems.map((entry) => {
+              const Icon = entry.icon;
+              return (
+                <Link
+                  key={entry.to}
+                  to={entry.to}
+                  className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 font-sans text-xs font-semibold text-text-secondary transition-colors hover:bg-surface2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400"
+                >
+                  <Icon aria-hidden className="h-3.5 w-3.5" />
+                  {entry.label}
+                </Link>
+              );
+            })}
+          </nav>
         )}
       </div>
       {actions && <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">{actions}</div>}
