@@ -70,6 +70,12 @@ jobs:
         # theme bootstrap or admit a new inline script (#222).
         run: npm run check:csp-hashes
 
+      - name: Check initial-load bundle budget
+        # The entry chunk loads on every anonymous visitor's first paint (#300).
+        # Fails when build/static/js/main.*.js grows beyond the recorded gzip
+        # budget in scripts/bundle-budget.json.
+        run: node scripts/check-bundle-budget.mjs
+
   # Edge Functions (Deno): type-check and unit tests (#296)
   #
   # Nothing here can reach production. The tests replace `fetch`, point

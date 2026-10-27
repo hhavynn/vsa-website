@@ -32,6 +32,7 @@ Jargon used below, defined once: **RLS** = Row Level Security, Postgres per-row 
 | "Can anon/users read or write what they shouldn't?" | RLS verifier | `node scripts/verify-rls-security.mjs` | §3 |
 | "What is eating Supabase storage / egress / DB size?" | usage audit SQL | run sections of `docs/supabase-usage-audit.sql` in the SQL editor | §4 |
 | "Did my change bloat the JS bundle or break lazy loading?" | source-map-explorer | `npm run analyze` (or `:css`, `:all`) | §5 |
+| "Is the initial-load JS still within the recorded budget?" | bundle budget guard | `npm run build && node scripts/check-bundle-budget.mjs` (also runs in CI) | §5 |
 | "Is the site fast on a phone?" | Lighthouse | `npx lighthouse http://localhost:3000 ...` against a prod build | §6 |
 | "Is the page accessible?" | axe | `npx @axe-core/cli http://localhost:3000` | §6 |
 | "What are real users' Core Web Vitals?" | web-vitals | wired in `src/reportWebVitals.ts` (currently a no-op — see §6) | §6 |
@@ -161,6 +162,8 @@ Each runs a full `npm run build` first (~minutes), then opens an HTML treemap in
 - **Chunk count is the lazy-loading signal.** Routes in `src/routes/index.tsx` are `React.lazy`-loaded, so `build/static/js/` should contain one `main.*.js` plus many small numbered chunks (one-ish per lazy page). If a page's code shows up inside `main.*.js` instead of its own chunk, someone added a static import of a page module — a lazy-loading regression. Grep the importing file for a non-`lazy` import of that page.
 - **Heavy imports:** in the treemap, `node_modules` blocks dwarf app code. Watch for a library appearing in `main` when only one page uses it (should be in that page's chunk), or duplicated across many chunks (hoist or restructure).
 - Also compare raw gzip sizes: the tail of `npm run build` output prints per-chunk gzipped sizes with deltas vs the previous build — the cheapest regression check of all.
+
+**Baseline / budget:** `scripts/bundle-budget.json` records the entry-chunk gzip budget and its rationale; `node scripts/check-bundle-budget.mjs` (after a build) enforces it locally and the CI `test` job fails a PR on breach (set by #300, October 2026, after the lazy AdminLayout/AI-assistant boundaries cut the entry chunk from 289.06 kB to 215.22 kB gzip). A change that grows `main` beyond the budget needs a named justification or a lazy boundary.
 
 **Baseline:** capture on first run — record `main.*.js` gzip size and chunk count from the build output before and after your change; a change that grows `main` by more than a few KB needs a named justification. (No committed baseline exists as of 2026-07-06.) Do NOT run `analyze` speculatively in agent sessions — it triggers a full build; run it when a bundle question is actually on the table.
 
