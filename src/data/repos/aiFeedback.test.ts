@@ -61,7 +61,7 @@ describe('aiFeedbackRepository query and write boundaries (#291)', () => {
       data: null, error: postgrestError('permission denied', '42501'),
     });
     await expect(aiFeedbackRepository.listAdminFeedback()).rejects.toMatchObject({
-      name: 'DatabaseError', code: '42501',
+      name: 'DatabaseError', message: 'Failed to fetch AI feedback: permission denied',
     });
   });
 
