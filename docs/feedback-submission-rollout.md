@@ -53,9 +53,12 @@ migrations; never use `supabase db push`.
 6. Verify browser INSERT/EXECUTE denial, administrator review access, and public
    feedback read denial using catalog checks and the RLS runbook. Record each
    applied file's hash and migration-history version; reconcile versions per
-   `vsa-run-and-operate` before regenerating public Database types. The service-only
-   RPC is not called by the typed browser client, and generated types must not be
-   hand-edited to imply that it is deployed.
+   `vsa-run-and-operate` after the replay-order check. The RPC definition in `src/types/database.ts`
+   was generated from the exact additive migration on disposable PostgreSQL using
+   the official postgres-meta v0.96.1 TypeScript generator. Only that generated
+   function definition was copied; existing domain aliases and unrelated schema
+   definitions were preserved. Generated types describe the repository contract,
+   not evidence that the migration is deployed.
 
 The impersonation issue remains open until step 5 and production permission
 verification complete. Reverting the frontend after cutover must retain the
