@@ -55,7 +55,7 @@ const Footer: React.FC = () => {
           </div>
 
           {FOOTER_GROUPS.map((group) => (
-            <div key={group.title}>
+            <nav key={group.title} aria-label={group.title}>
               <div className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
                 {group.title}
               </div>
@@ -68,16 +68,16 @@ const Footer: React.FC = () => {
                   {link.label}
                 </Link>
               ))}
-            </div>
+            </nav>
           ))}
 
-          <div>
+          <nav aria-label="Connect">
             <div className="mb-4 font-sans text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
               Connect
             </div>
             <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://instagram.com/vsaatucsd" target="_blank" rel="noopener noreferrer">@vsaatucsd</a>
             <a className="mb-2.5 block touch:mb-0 touch:flex touch:min-h-11 touch:items-center font-sans text-[13.5px] text-[var(--text2)] transition-colors duration-150 hover:text-[var(--brand)]" href="https://discord.gg/cSb6Q4gnW8" target="_blank" rel="noopener noreferrer">Discord Server</a>
-          </div>
+          </nav>
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--border)' }}>
