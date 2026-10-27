@@ -95,6 +95,19 @@ describe('same person, different address', () => {
     expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'dara' });
   });
 
+  it('a middle initial never separates two records, and a one-letter slip in the login does not either', () => {
+    const odessa = member('odessa', 'Odessa T', 'Marrow', { email: 'otm004@ucsd.edu', year: '1st Year' });
+    const { rows, decisions } = decide([{ name: 'Odessa Marrow', email: 'otn004@ucsd.edu', college: 'Eighth', year: '1st Year' }], [odessa]);
+    expect(rows[0].candidates[0].name).toBe('exact');
+    expect(decisions[0]).toMatchObject({ kind: 'match', memberId: 'odessa', rememberEmail: false });
+  });
+
+  it('a different login with a full middle name (not an initial) is still a different person', () => {
+    const ann = member('ann', 'Odessa Ann', 'Marrow', { email: 'oam004@ucsd.edu', year: '2nd Year' });
+    const { decisions } = decide([{ name: 'Odessa Marrow', email: 'otm004@ucsd.edu', college: 'Eighth', year: '1st Year' }], [ann]);
+    expect(decisions[0]?.kind).toBe('new');
+  });
+
   it('an email owner whose name was mistyped still gets the credit', () => {
     const wren = member('wren', 'Wren', 'Alder', { email: 'wea007@ucsd.edu', college: 'ERC', year: '2nd Year' });
     const { decisions } = decide([{ name: 'Wern Alder', email: 'wea007@ucsd.edu', college: 'ERC', year: '2nd Year' }], [wren]);

@@ -163,12 +163,16 @@ function assessCandidate<M extends IdentityMember>(
   if (candidate.college === 'conflict') hard.push('another college is on file');
   if (candidate.year === 'implausible') hard.push('standing does not fit');
   const relation = schoolEmailRelation(row.emails, emails);
-  // Same account digits with mistyped letters (abc068 / abxyz068) are one login
-  // when everything else about the person agrees.
+  // Same account digits with mistyped letters (abc068 / abxyz068, or xyn004 / xym004) are
+  // one login when everything else about the person agrees. A known college allows any
+  // misspelling; with no college on file only a one-letter slip counts. A middle
+  // initial never matters (the name still compares as exact); a full middle name does.
+  const digits = (login: string) => login.split('@')[0].replace(/^[a-z]+/, '');
+  const letters = (login: string) => login.split('@')[0].replace(/\d+$/, '');
   const sameDigitsTypo = relation === 'login_distinct' && candidate.name === 'exact'
-    && candidate.college === 'match' && candidate.year === 'compatible'
+    && candidate.college !== 'conflict' && candidate.year === 'compatible'
     && row.emails.filter(isSchoolLogin).every((x) => emails.filter(isSchoolLogin).some((y) =>
-      x.split('@')[0].replace(/^[a-z]+/, '') === y.split('@')[0].replace(/^[a-z]+/, '')));
+      digits(x) === digits(y) && (candidate.college === 'match' || levenshtein(letters(x), letters(y)) <= 1)));
   if (relation === 'login_distinct' && !sameDigitsTypo) hard.push('a different school login is on file');
   if (relation === 'alias_distinct') soft.push('a different school alias is on file');
   // A near-identical address does not outweigh another college: that is someone else.

@@ -31,6 +31,8 @@ Each event ran as one transaction. Re-running plans nothing: every row finishes 
 
 A school login (letters then three digits, e.g. `abc012`) is unique to a student and the digits tell same-initial students apart, so two different logins are two people. A login and a name-based alias (`a8lee`) can belong to one student; two near-identical aliases are treated as a typo. A college or standing that differs on its own can be a slip on the form, so those rows stay pending rather than guessed.
 
+A middle initial never separates two records (the name still compares as exact), and a school login that differs by one letter with identical digits is read as a typo when the name, class year and (if known) college agree. A full middle name plus a different login still means two people.
+
 A single-word name with no address inherits the full name from the one person elsewhere with that first name, college and standing. A mistyped school domain (`ucsd.edy`, `.net`) is read as `ucsd.edu`.
 
 ## Removing wrong credits
@@ -49,7 +51,7 @@ where event_id = '<event id>' and source_row is not null order by source_row;
 
 ## Finishing the pending rows
 
-Rows with a real identity question are the only ones left uncredited. Upload a small file with just those rows on `/admin/import` for the event; the page shows the candidates with their evidence and lets an admin Match existing, Create new or Skip.
+The six rows left open after the main run were decided by the owner and are logged as `resolved_by_admin` (none are pending). For any future open rows, upload a small file with just those rows on `/admin/import` for the event; the page shows the candidates with their evidence and lets an admin Match existing, Create new or Skip.
 
 ## Not applied
 
