@@ -28,8 +28,8 @@ retrying later; the daily ceiling can remain exhausted beyond the one-hour retry
 
 ## Ordered rollout
 
-These files are prepared, **not applied**. Production uses manual per-file
-migrations; never use `supabase db push`.
+Production uses manual per-file migrations; never use `supabase db push`.
+Execution status and production evidence are recorded in PR #575 and issue #572.
 
 1. Review this PR and run `bash scripts/test-feedback-boundary.sh` on disposable
    PostgreSQL. The script creates its own socket-only cluster and synthetic users.
