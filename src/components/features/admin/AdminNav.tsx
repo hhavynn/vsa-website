@@ -19,6 +19,9 @@ import { QuickSearchButton } from './AdminQuickSearch';
 const FOCUS_RING =
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400';
 
+/** Tailwind's `md` breakpoint, where the drawer gives way to the sidebar column. */
+const DESKTOP_QUERY = '(min-width: 768px)';
+
 const FOCUSABLE = 'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])';
 
 function ItemLink({
@@ -329,7 +332,16 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
       }
     };
     document.addEventListener('keydown', onKeyDown);
+
+    // The drawer is `md:hidden`, so crossing into the desktop layout (rotating a tablet,
+    // resizing) hides it without unmounting. Close it then, or its focus trap would
+    // keep catching Tab in a panel nobody can see.
+    const desktop = typeof window.matchMedia === 'function' ? window.matchMedia(DESKTOP_QUERY) : null;
+    const onBreakpoint = (event: MediaQueryListEvent) => event.matches && onClose();
+    if (desktop?.matches) onClose();
+    desktop?.addEventListener?.('change', onBreakpoint);
     return () => {
+      desktop?.removeEventListener?.('change', onBreakpoint);
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
       opener?.focus?.();

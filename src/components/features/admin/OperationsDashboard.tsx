@@ -218,7 +218,8 @@ function OperationsCards({ summary }: { summary: OperationsSummary }) {
  * its health section's details; "Continue working" is a separate panel.
  */
 export function OperationsDashboard({ loadInputs }: OperationsDashboardProps) {
-  const { summary, preflight, issues, failed } = useOperationsSummary(loadInputs);
+  // Mounted when the health details open, long after the page's own scan: reuse it, never repeat it.
+  const { summary, preflight, issues, failed } = useOperationsSummary(loadInputs, { refetchOnMount: false });
   const nextYear = (summary?.yearStart ?? new Date().getFullYear()) + 1;
 
   return (

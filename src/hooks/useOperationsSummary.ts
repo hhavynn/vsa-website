@@ -18,9 +18,14 @@ import { ADMIN_HEALTH_QUERY_KEYS, HEALTH_QUERY_OPTIONS } from '../lib/adminHealt
  * re-runs it for all of them. Cached and never auto-refetched; see
  * lib/adminHealthQuery.ts.
  */
-export function useOperationsSummary(loadInputs: () => Promise<OperationsInputs> = () => adminOperationsRepository.loadInputs()) {
+export function useOperationsSummary(
+  loadInputs: () => Promise<OperationsInputs> = () => adminOperationsRepository.loadInputs(),
+  /** A late-mounting observer (the health details disclosure) passes `refetchOnMount: false` so opening it reuses the cached scan instead of re-running it. */
+  options: { refetchOnMount?: boolean } = {},
+) {
   const query = useQuery(ADMIN_HEALTH_QUERY_KEYS.operations, loadInputs, {
     ...HEALTH_QUERY_OPTIONS,
+    ...options,
     onError: (error) => console.error(error),
   });
   const inputs = query.data ?? null;

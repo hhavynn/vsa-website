@@ -232,4 +232,37 @@ describe('AdminNav mobile drawer', () => {
     view.unmount();
     expect(document.body.style.overflow).toBe('');
   });
+
+  describe('crossing the desktop breakpoint', () => {
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    function mockMedia(initial: boolean) {
+      let listener: ((event: { matches: boolean }) => void) | null = null;
+      (window as unknown as { matchMedia: unknown }).matchMedia = jest.fn().mockImplementation(() => ({
+        matches: initial,
+        addEventListener: (_: string, fn: typeof listener) => { listener = fn; },
+        removeEventListener: jest.fn(),
+      }));
+      return (matches: boolean) => listener?.({ matches });
+    }
+
+    it('closes when the viewport widens to the desktop layout', () => {
+      const onClose = jest.fn();
+      const change = mockMedia(false);
+      renderNav('/admin', { isOpen: true, onClose });
+      expect(onClose).not.toHaveBeenCalled();
+      change(true);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when narrowing back to mobile', () => {
+      const onClose = jest.fn();
+      const change = mockMedia(false);
+      renderNav('/admin', { isOpen: true, onClose });
+      change(false);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -146,3 +146,32 @@ describe('ContinueWorking', () => {
     expect(screen.queryByText(/Nothing is in progress/)).not.toBeInTheDocument();
   });
 });
+
+describe('operations details reuse the cached scan', () => {
+  it('does not re-run a stale scan when the details mount', async () => {
+    const load = jest.fn().mockResolvedValue(inputs);
+    const client = new QueryClient();
+    const wrap = (ui: React.ReactElement) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientProvider>
+    );
+    // The page's own observer (Continue working) loads the scan first...
+    const view = render(wrap(<ContinueWorking loadInputs={load} />));
+    await screen.findByText(/5 Littles still need assignments/);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    // ...then a minute passes, so the data is stale, and the details disclosure opens.
+    client.getQueryCache().getAll().forEach((query) => query.setState({ ...query.state, dataUpdatedAt: Date.now() - 5 * 60 * 1000 }));
+    view.rerender(
+      wrap(
+        <>
+          <ContinueWorking loadInputs={load} />
+          <OperationsDashboard loadInputs={load} />
+        </>,
+      ),
+    );
+    await screen.findByRole('region', { name: 'Operations preflight' });
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+});
