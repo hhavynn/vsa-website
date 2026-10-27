@@ -2,6 +2,8 @@
  * HouseDraftEditor for a timestamp-priority (automatic) batch: priority and
  * achieved rank are visible, overrides need a reason and respect capacity,
  * unmatched applicants block locking, and the reveal confirmation is unchanged.
+ * Moves and swaps go through one atomic repository call; when it fails the
+ * persisted rows are reloaded and the admin is told. Exports reflect the draft.
  */
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,6 +14,8 @@ import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember } from '../../../lib/houseAssignmentImport';
+import { downloadCsv } from '../../../lib/housePlacementExport';
+import toast from 'react-hot-toast';
 
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../../data/repos/adminReview', () => ({
@@ -21,9 +25,15 @@ jest.mock('../../../data/repos/adminOperations', () => ({
   adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
 }));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
+jest.mock('../../../lib/housePlacementExport', () => ({
+  ...jest.requireActual('../../../lib/housePlacementExport'),
+  downloadCsv: jest.fn(),
+}));
 jest.mock('../../../data/repos/houseAssignments', () => ({
   houseAssignmentsRepository: {
     updateDraft: jest.fn().mockResolvedValue(undefined),
+    applyPlacementOverride: jest.fn(),
+    getDrafts: jest.fn(),
     removeDraft: jest.fn(),
     addDraft: jest.fn(),
     lockBatch: jest.fn().mockResolvedValue(undefined),
@@ -97,7 +107,26 @@ async function settle() {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 }
 
-beforeEach(() => jest.clearAllMocks());
+const download = downloadCsv as jest.MockedFunction<typeof downloadCsv>;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  // The real RPC returns the updated rows; mimic that from the requested changes.
+  repo.applyPlacementOverride.mockImplementation(async (_batchId, changes, reason) => changes.map((change) => {
+    const row = placement().find((item) => item.id === change.draftId) as HouseAssignmentDraft;
+    return { ...row, house_profile_id: change.houseProfileId, override_reason: change.houseProfileId === row.generated_house_profile_id ? null : reason };
+  }));
+});
+
+async function openSwapForm() {
+  const row = screen.getAllByTestId('house-draft-row')[2];
+  await userEvent.click(within(row).getByRole('button', { name: 'Override…' }));
+  const form = within(screen.getByTestId('override-form'));
+  await userEvent.selectOptions(form.getByLabelText('Move to'), R);
+  await userEvent.selectOptions(form.getByLabelText('Swap with (if full)'), 'd1');
+  await userEvent.type(form.getByLabelText('Reason (required)'), 'Approved by president');
+  return form;
+}
 
 it('shows priority, submission time, achieved rank and capacities, and hides the balance helper and bulk House edits', () => {
   renderEditor(placement());
@@ -146,9 +175,13 @@ it('rejects a move that would exceed capacity and requires a reason for a swap',
   await userEvent.type(form.getByLabelText('Reason (required)'), 'Approved by president');
   await userEvent.click(form.getByRole('button', { name: 'Apply override' }));
 
-  await waitFor(() => expect(repo.updateDraft).toHaveBeenCalledTimes(2));
-  expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'd2', { house_profile_id: R, override_reason: 'Approved by president' });
-  expect(repo.updateDraft).toHaveBeenCalledWith('b1', 'd1', { house_profile_id: P, override_reason: 'Approved by president' });
+  // Both rows change in ONE atomic call, never two separate row updates.
+  await waitFor(() => expect(repo.applyPlacementOverride).toHaveBeenCalledTimes(1));
+  expect(repo.applyPlacementOverride).toHaveBeenCalledWith('b1', [
+    { draftId: 'd2', houseProfileId: R },
+    { draftId: 'd1', houseProfileId: P },
+  ], 'Approved by president');
+  expect(repo.updateDraft).not.toHaveBeenCalled();
   expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ summary: expect.stringMatching(/Manual override of the automatic placement: Approved by president/) }));
   // A one-row House undo would split the swap and drop its reason, so none is offered.
   (logAdminActivity as jest.Mock).mock.calls.forEach(([entry]) => expect(entry.metadata).toBeUndefined());
@@ -191,4 +224,76 @@ it('filters to manual overrides', async () => {
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent('#2MemberB Test');
   expect(rows[1]).toHaveTextContent('#3MemberC Test');
+});
+
+it('reloads the saved rows and says so when a swap fails, so a half-applied change is never shown', async () => {
+  repo.applyPlacementOverride.mockRejectedValue(new Error('That House would have 3 applicants but its capacity is 2. Nothing was changed.'));
+  repo.getDrafts.mockResolvedValue(placement());
+  renderEditor(placement());
+  const form = await openSwapForm();
+  await userEvent.click(form.getByRole('button', { name: 'Apply override' }));
+
+  await waitFor(() => expect(repo.getDrafts).toHaveBeenCalledWith('b1'));
+  expect(toast.error).toHaveBeenCalledWith('That House would have 3 applicants but its capacity is 2. Nothing was changed. The rows were reloaded from the saved draft.');
+  expect(repo.updateDraft).not.toHaveBeenCalled();
+  expect(logAdminActivity).not.toHaveBeenCalled();
+  await settle();
+  const rows = screen.getAllByTestId('house-draft-row');
+  rows.forEach((row) => expect(row).not.toHaveTextContent('Manually overridden'));
+  expect(within(screen.getByLabelText('Automatic placement')).getByTestId('placement-capacity-Rarity')).toHaveTextContent('2 / 2');
+});
+
+it('shows the persisted state the database reports after a failure, even if it differs from the screen', async () => {
+  // E.g. another admin's change landed first: the reload shows what is actually saved.
+  const persisted = placement().map((row) => (row.id === 'd3' ? { ...row, notes: 'saved elsewhere' } : row));
+  repo.applyPlacementOverride.mockRejectedValue(new Error('This batch is locked. Reopen it before changing placements.'));
+  repo.getDrafts.mockResolvedValue(persisted);
+  renderEditor(placement());
+  const form = await openSwapForm();
+  await userEvent.click(form.getByRole('button', { name: 'Apply override' }));
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/locked.*reloaded from the saved draft/)));
+});
+
+it('asks for a page refresh when the reload after a failure also fails', async () => {
+  repo.applyPlacementOverride.mockRejectedValue(new Error('Network error occurred'));
+  repo.getDrafts.mockRejectedValue(new Error('offline'));
+  renderEditor(placement());
+  const form = await openSwapForm();
+  await userEvent.click(form.getByRole('button', { name: 'Apply override' }));
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/could not be reloaded; refresh the page/)));
+});
+
+it('restores the automatic placement through the same atomic call, with no reason needed', async () => {
+  const drafts = placement();
+  drafts[3] = { ...drafts[3], house_profile_id: R, override_reason: 'Temporary move' };
+  renderEditor(drafts);
+  const row = screen.getAllByTestId('house-draft-row')[3];
+  repo.applyPlacementOverride.mockResolvedValueOnce([{ ...drafts[3], house_profile_id: P, override_reason: null }]);
+  // Pinkie Pie has room (1 / 2) after MemberD left, so the restore is a single move.
+  await userEvent.click(within(row).getByRole('button', { name: /Restore automatic/ }));
+  await waitFor(() => expect(repo.applyPlacementOverride).toHaveBeenCalledWith('b1', [{ draftId: 'd3', houseProfileId: P }], null));
+  expect(logAdminActivity).toHaveBeenCalledWith(expect.objectContaining({ summary: expect.stringMatching(/Restored the automatic placement/) }));
+});
+
+it('exports the saved draft for Google Sheets, reflecting overrides, with draft row IDs and no emails', async () => {
+  const drafts = placement();
+  drafts[1] = { ...drafts[1], house_profile_id: P, override_reason: 'Approved swap' };
+  drafts[2] = { ...drafts[2], house_profile_id: R, override_reason: 'Approved swap' };
+  renderEditor(drafts);
+  const panel = screen.getByRole('region', { name: 'Export for Google Sheets' });
+  await userEvent.click(within(panel).getByRole('button', { name: 'Full roster (4)' }));
+  await userEvent.click(within(panel).getByRole('button', { name: 'Rarity roster (2)' }));
+  await userEvent.click(within(panel).getByRole('button', { name: 'Needs review (2)' }));
+  expect(download.mock.calls.map(([, name]) => name)).toEqual([
+    'vsa-house-placement-2026-2027-full-roster.csv',
+    'vsa-house-placement-2026-2027-rarity-roster.csv',
+    'vsa-house-placement-2026-2027-needs-review.csv',
+  ]);
+  const full = download.mock.calls[0][0].trim().split('\n');
+  expect(full[2]).toBe('2,3,MemberB Test,MemberB Test,10/21/2026 20:01:00,2026-10-22T03:01:00.000Z,Rarity,Pinkie Pie,,,Rarity,Pinkie Pie,2,Manual override,Approved swap,Matched,Yes,Manual override,d1');
+  expect(download.mock.calls[1][0]).toMatch(/MemberA Test/);
+  expect(download.mock.calls[1][0]).toMatch(/MemberC Test/);
+  expect(download.mock.calls[1][0]).not.toMatch(/MemberB Test/);
+  expect(repo.updateDraft).not.toHaveBeenCalled();
+  expect(repo.applyPlacementOverride).not.toHaveBeenCalled();
 });

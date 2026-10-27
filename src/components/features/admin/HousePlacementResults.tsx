@@ -5,20 +5,18 @@ import { useMemo, useState } from 'react';
 import { ordinal } from '../../../lib/housePlacement';
 import type { PlacementHouse } from '../../../lib/housePlacement';
 import type { ApplicantMemberMatch } from '../../../lib/housePlacementImport';
-import {
-  PlacementExportRow,
-  downloadCsv,
-  exportFilename,
-  houseRosterCsv,
-  placementExceptionsCsv,
-  placementRosterCsv,
-} from '../../../lib/housePlacementExport';
+import type { PlacementExportRow } from '../../../lib/housePlacementExport';
+import { HousePlacementExportPanel } from './HousePlacementExportPanel';
 
 export interface PlacementPreviewRow {
   id: string;
   priority: number;
   name: string;
+  /** Row in the Google Form responses sheet. */
+  sourceRow: number;
   submitted: string;
+  /** UTC ISO submission instant. */
+  submittedIso: string | null;
   /** House labels, first choice first. */
   preferences: string[];
   houseId: string;
@@ -34,18 +32,17 @@ export interface HousePlacementResultsProps {
   houses: PlacementHouse[];
   capacities: Readonly<Record<string, number>>;
   rankCounts: number[];
-  exportLabel: string;
+  academicYearStart: number;
+  memberName?: (memberId: string) => string | null;
 }
 
 const selectCls =
   'rounded border bg-[var(--color-surface2)] px-2 py-1.5 text-xs text-[var(--color-text)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)]';
-const ghostBtn =
-  'rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50';
 const headCls = 'px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]';
 
 function matchLabel(match: ApplicantMemberMatch) {
   if (match.status === 'match') return 'Matched';
-  if (match.status === 'review') return 'Review';
+  if (match.status === 'review') return 'Needs review';
   return 'Unmatched';
 }
 
@@ -55,19 +52,29 @@ function matchTone(match: ApplicantMemberMatch) {
   return 'text-zinc-500 dark:text-zinc-400';
 }
 
-export function previewExportRows(rows: readonly PlacementPreviewRow[]): PlacementExportRow[] {
+export function previewExportRows(rows: readonly PlacementPreviewRow[], memberName: (memberId: string) => string | null = () => null): PlacementExportRow[] {
   return rows.map((row) => ({
     priority: row.priority,
-    name: row.name,
+    sheetRow: row.sourceRow,
+    applicantName: row.name,
+    linkedMember: row.match.memberId ? memberName(row.match.memberId) ?? '' : '',
+    submittedPacific: row.submitted,
+    submittedUtc: row.submittedIso ?? '',
+    preferences: row.preferences,
+    generatedHouseId: row.houseId,
+    generatedHouse: row.houseLabel,
     houseId: row.houseId,
     house: row.houseLabel,
-    submitted: row.submitted,
-    preferences: row.preferences,
     achievedRank: row.achievedRank,
     placement: 'Automatic',
     overrideReason: '',
     memberMatch: matchLabel(row.match),
-    exception: row.match.status !== 'match',
+    reviewReasons: [
+      row.match.status === 'review' ? 'Member match needs review' : null,
+      row.match.status === 'unmatched' ? 'No linked member' : null,
+      row.corrected ? 'Ranking corrected by an admin' : null,
+    ].filter((reason): reason is string => !!reason),
+    draftRowId: '',
   }));
 }
 
@@ -80,12 +87,11 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function HousePlacementResults({ rows, houses, capacities, rankCounts, exportLabel }: HousePlacementResultsProps) {
+export function HousePlacementResults({ rows, houses, capacities, rankCounts, academicYearStart, memberName }: HousePlacementResultsProps) {
   const [search, setSearch] = useState('');
   const [houseFilter, setHouseFilter] = useState('');
   const [rankFilter, setRankFilter] = useState('');
   const [matchFilter, setMatchFilter] = useState('');
-  const [exportHouse, setExportHouse] = useState(houses[0]?.id ?? '');
 
   const counts = useMemo(() => {
     const perHouse = new Map<string, number>();
@@ -99,7 +105,7 @@ export function HousePlacementResults({ rows, houses, capacities, rankCounts, ex
     && (!rankFilter || String(row.achievedRank) === rankFilter)
     && (!matchFilter || (matchFilter === 'corrected' ? row.corrected : row.match.status === matchFilter))
     && (!term || row.name.toLowerCase().includes(term)));
-  const exportRows = useMemo(() => previewExportRows(rows), [rows]);
+  const exportRows = useMemo(() => previewExportRows(rows, memberName), [rows, memberName]);
 
   return (
     <section className="scrapbook-paper overflow-hidden border-[var(--color-border)] bg-surface" aria-label="Placement results">
@@ -134,26 +140,8 @@ export function HousePlacementResults({ rows, houses, capacities, rankCounts, ex
             );
           })}
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportLabel, 'placement-roster'))}>
-            Export full roster
-          </button>
-          <span className="flex items-center gap-1">
-            <select value={exportHouse} onChange={(event) => setExportHouse(event.target.value)} aria-label="House roster to export" className={`${selectCls} border-[var(--color-border)]`}>
-              {houses.map((house) => <option key={house.id} value={house.id}>{house.label}</option>)}
-            </select>
-            <button
-              type="button"
-              disabled={!exportHouse}
-              className={`${ghostBtn} border-[var(--color-border)] text-text-primary`}
-              onClick={() => downloadCsv(houseRosterCsv(exportRows, exportHouse), exportFilename(exportLabel, houses.find((house) => house.id === exportHouse)?.label ?? 'house', 'roster'))}
-            >
-              Export House roster
-            </button>
-          </span>
-          <button type="button" className={`${ghostBtn} border-[var(--color-border)] text-text-primary`} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportLabel, 'placement-exceptions'))}>
-            Export review list
-          </button>
+        <div className="mt-4">
+          <HousePlacementExportPanel rows={exportRows} houses={houses} academicYearStart={academicYearStart} preview />
         </div>
       </div>
 

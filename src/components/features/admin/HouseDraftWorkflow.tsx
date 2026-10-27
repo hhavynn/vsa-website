@@ -1,9 +1,12 @@
-// Protected domain — House membership. Import -> Match -> Save Draft entry point
-// for the House assignment workflow. Parsing and matching are the existing
-// Admin -> Houses behavior; the result is saved as a private draft batch and
-// never writes to house_memberships. The "Google Forms — Auto Placement" mode
-// (HousePlacementPanel) generates the draft by timestamp priority instead.
-// Review, lock, and reveal live in HouseDraftEditor for every mode.
+// Protected domain — House membership. Entry point for the House assignment
+// workflow. The default, primary path is "Import House Applications"
+// (HousePlacementPanel): upload the Google Form responses CSV and generate a
+// first-come, first-served placement draft. The older wide/long sheet importers
+// stay available, collapsed under "Historical / Advanced Import", for
+// re-importing a sort that was already decided by hand; they never run the
+// timestamp-priority placement. Every path saves a private draft batch and
+// never writes to house_memberships. Review, lock, and reveal live in
+// HouseDraftEditor for every batch, automatic or manual.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -56,8 +59,6 @@ interface HouseDraftWorkflowProps {
   /** Reload members after a reveal refreshed the legacy members.house cache. */
   onMembershipsPublished: () => void;
 }
-
-type ImportMode = SheetFormat | 'auto';
 
 const STEPS = ['Import', 'Match', 'Save draft', 'Review', 'Preflight', 'Lock', 'Reveal'] as const;
 const PREVIEW_LIMIT = 50;
@@ -112,7 +113,9 @@ export function HouseDraftWorkflow({
   const [editor, setEditor] = useState<HouseBatchSnapshot | null>(null);
   const [opening, setOpening] = useState(false);
 
-  const [format, setFormat] = useState<ImportMode>('wide');
+  // Only the collapsed historical importer uses a sheet format; there is no
+  // legacy default anywhere else.
+  const [legacyFormat, setLegacyFormat] = useState<SheetFormat>('wide');
   const [placementStage, setPlacementStage] = useState<PlacementStage>(0);
   const [csvUrl, setCsvUrl] = useState('');
   const [fetchingCsv, setFetchingCsv] = useState(false);
@@ -124,8 +127,8 @@ export function HouseDraftWorkflow({
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightRowId, setHighlightRowId] = useState<string | null>(null);
   const operatingYear = useOperatingYear();
-  // A pasted sheet that has not been saved as a draft yet is unsaved work.
-  useUnsavedChangesGuard((rawInput.trim().length > 0 || (format === 'auto' && placementStage > 0)) && !editor, saving);
+  // An uploaded CSV or a pasted sheet that has not been saved as a draft yet is unsaved work.
+  useUnsavedChangesGuard((rawInput.trim().length > 0 || placementStage > 0) && !editor, saving);
 
   const emailMap = useMemo(() => buildEmailMap(members), [members]);
   const houseProfilesByName = useMemo(() => profileMapByName(houseProfiles), [houseProfiles]);
@@ -175,13 +178,11 @@ export function HouseDraftWorkflow({
 
   const currentStep = editor
     ? (editor.batch.status === 'draft' ? 3 : editor.batch.status === 'locked' ? 6 : 7)
-    : format === 'auto' ? placementStage
-      : rows.length > 0 ? 2 : rawInput.trim() ? 1 : 0;
+    : rows.length > 0 ? 2 : rawInput.trim() ? 1 : placementStage;
 
   function handleParse() {
-    if (format === 'auto') return;
     try {
-      const parsed = format === 'wide'
+      const parsed = legacyFormat === 'wide'
         ? parseWideRows(rawInput, members, emailMap, houseProfilesByName)
         : parseLongRows(rawInput, members, emailMap, houseProfilesByName);
       setRows(parsed);
@@ -316,6 +317,95 @@ export function HouseDraftWorkflow({
     );
   }
 
+  const setup = (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="draft-year" className={`${labelCls} text-text-muted`}>Academic Year</label>
+          <select
+            id="draft-year"
+            value={selectedYear ?? ''}
+            onChange={(event) => onYearChange(Number(event.target.value))}
+            className={`${fieldCls} border-[var(--color-border)]`}
+          >
+            {yearOptions.map((year) => (
+              <option key={year.start} value={year.start}>{`${year.label}${year.isActive ? ' (Active)' : ''}`}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="draft-effective" className={`${labelCls} text-text-muted`}>Effective Start Date</label>
+          <input
+            id="draft-effective"
+            type="date"
+            value={effectiveStartDate}
+            onChange={(event) => { onEffectiveStartDateChange(event.target.value); setRows([]); }}
+            className={`${fieldCls} border-[var(--color-border)]`}
+          />
+        </div>
+      </div>
+      <p className="rounded border p-3 text-xs border-[var(--color-border)] bg-surface2 text-text-secondary">
+        {loadingProfiles ? 'Loading house profiles...' : `${houseProfiles.length} house profile${houseProfiles.length !== 1 ? 's' : ''} found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in Profiles & Images before importing.`}
+        {' '}Memberships start on the effective date. Earlier event attendance keeps individual points but does not earn house points.
+      </p>
+      <div>
+        <label htmlFor="draft-label" className={`${labelCls} text-text-muted`}>Draft label (optional)</label>
+        <input
+          id="draft-label"
+          type="text"
+          value={sourceLabel}
+          onChange={(event) => setSourceLabel(event.target.value)}
+          placeholder="e.g. Fall House placement, round 1"
+          className={`${fieldCls} border-[var(--color-border)]`}
+        />
+      </div>
+    </div>
+  );
+
+  const savedDrafts = (
+    <section className="scrapbook-paper overflow-hidden border-[var(--color-border)] bg-surface" aria-label="Saved drafts">
+      <div className="border-b px-5 py-4 border-[var(--color-border)]">
+        <h2 className="font-serif text-xl font-bold text-text-primary">Saved drafts</h2>
+        <p className="mt-1 font-sans text-xs text-text-muted">
+          {selectedYear ? formatAcademicYear(selectedYear) : 'Choose a year'} · private to admins · choose another year above to open its drafts
+        </p>
+      </div>
+      {loadingBatches ? (
+        <p className="px-5 py-8 text-center text-sm text-text-muted">Loading drafts…</p>
+      ) : batches.length === 0 ? (
+        <div className="p-5">
+          <EmptyState
+            title={`No House assignment draft yet${selectedYear ? ` for ${formatYearSpan(selectedYear)}` : ''}.`}
+            description="Upload the House Applications CSV, validate it, generate the placement, then save it as a private draft."
+            action={{ label: 'Import House Applications', onClick: () => document.getElementById('placement-file')?.focus() }}
+          />
+        </div>
+      ) : (
+        <ul className="divide-y divide-[var(--color-border)]">
+          {batches.map((batch) => (
+            <li key={batch.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">{batch.source_label || 'Untitled draft'}</p>
+                <p className="text-xs text-text-muted">
+                  {batch.assignment_method === 'timestamp_ranked' ? 'Automatic placement' : 'Manual import'} · {statusLabel(batch.status)} · effective {batch.effective_start_date} · saved {new Date(batch.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={opening}
+                onClick={() => openBatch(batch.id)}
+                aria-label={`Open ${batch.source_label || 'Untitled draft'}`}
+                className="rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50 border-[var(--color-border)] text-text-primary"
+              >
+                Open
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
   return (
     <>
       <Stepper current={currentStep} />
@@ -324,237 +414,7 @@ export function HouseDraftWorkflow({
           <YearContextBadge context={describeYearContext(selectedYear, operatingYear)} />
         </div>
       )}
-      <div className="grid gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <div className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-          <div className="mb-6">
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Import Sheet</h2>
-            <p className="mt-2 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-              Importing saves a private draft. Nothing changes House membership until you lock the draft and reveal it.
-            </p>
-            <p className="mt-2 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-              Memberships start on the effective date. Earlier event attendance keeps individual points but does not earn house points.
-            </p>
-          </div>
-
-          <div className="mb-5 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="draft-year" className={labelCls} style={{ color: 'var(--color-text3)' }}>Academic Year</label>
-              <select
-                id="draft-year"
-                value={selectedYear ?? ''}
-                onChange={(event) => onYearChange(Number(event.target.value))}
-                className={fieldCls}
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year.start} value={year.start}>{`${year.label}${year.isActive ? ' (Active)' : ''}`}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="draft-effective" className={labelCls} style={{ color: 'var(--color-text3)' }}>Effective Start Date</label>
-              <input
-                id="draft-effective"
-                type="date"
-                value={effectiveStartDate}
-                onChange={(event) => { onEffectiveStartDateChange(event.target.value); setRows([]); }}
-                className={fieldCls}
-                style={{ borderColor: 'var(--color-border)' }}
-              />
-            </div>
-          </div>
-
-          <div className="mb-5 rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface2)' }}>
-            {loadingProfiles ? 'Loading house profiles...' : `${houseProfiles.length} house profile${houseProfiles.length !== 1 ? 's' : ''} found for ${selectedYear ? formatAcademicYear(selectedYear) : 'the selected year'}. Create profiles in Profiles & Images before importing.`}
-          </div>
-
-          <label htmlFor="draft-format" className={labelCls} style={{ color: 'var(--color-text3)' }}>Sheet Format</label>
-          <select
-            id="draft-format"
-            value={format}
-            onChange={(event) => { setFormat(event.target.value as ImportMode); setRows([]); }}
-            className={`${fieldCls} mb-5`}
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <option value="wide">Wide House sorting sheet</option>
-            <option value="long">Long CSV with name/email/house (+ optional choices)</option>
-            <option value="auto">Google Forms — Auto Placement (first-come, first-served)</option>
-          </select>
-
-          {format === 'auto' ? (
-            <p className="mb-5 rounded border p-3 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface2)' }}>
-              Upload the House application responses below. Placement follows submission order, then each applicant&rsquo;s ranked choices, within House capacities.
-            </p>
-          ) : (
-            <>
-              <label htmlFor="draft-csv-url" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>Public CSV URL</label>
-              <div className="mb-5 flex gap-2">
-                <input
-                  id="draft-csv-url"
-                  type="url"
-                  value={csvUrl}
-                  onChange={(event) => setCsvUrl(event.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"
-                  className="min-w-0 flex-1 rounded border px-3 py-2 text-xs"
-                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
-                />
-                <button
-                  type="button"
-                  onClick={handleFetchCsv}
-                  disabled={fetchingCsv || !csvUrl.trim()}
-                  className="rounded border px-3 py-2 text-xs font-semibold disabled:opacity-50"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-                >
-                  {fetchingCsv ? 'Loading...' : 'Load'}
-                </button>
-              </div>
-
-              <label htmlFor="draft-paste" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>CSV or Pasted Sheet</label>
-              <textarea
-                id="draft-paste"
-                value={rawInput}
-                onChange={(event) => setRawInput(event.target.value)}
-                rows={12}
-                placeholder={format === 'wide'
-                  ? 'Bowser,Toad,Donkey Kong,Boo\nAi E Phan (first) (2025-10-15 20:55:54),Adriel Luis Abaoag (second) - Sat 10/18/2025 14:37:49,,Alyssa, Nott (first) (2025-10-15 21:05:46)'
-                  : 'name,email,house,year,college,first choice,second choice\nAi E Phan,aiphan@ucsd.edu,Bowser,Second Year,Muir,Toad,Boo'}
-                className="w-full rounded border px-3 py-2 font-mono text-xs"
-                style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text)' }}
-              />
-            </>
-          )}
-
-          <label htmlFor="draft-label" className={`${labelCls} mt-4`} style={{ color: 'var(--color-text3)' }}>Draft label (optional)</label>
-          <input
-            id="draft-label"
-            type="text"
-            value={sourceLabel}
-            onChange={(event) => setSourceLabel(event.target.value)}
-            placeholder="e.g. Fall House sort, round 1"
-            className={fieldCls}
-            style={{ borderColor: 'var(--color-border)' }}
-          />
-
-          {format !== 'auto' && (
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={handleParse}
-                disabled={loadingMembers || loadingProfiles || !rawInput.trim() || !selectedYear || !effectiveStartDate}
-                className="vsa-btn-primary flex-1 py-3 text-xs disabled:opacity-50"
-              >
-                Preview Matches
-              </button>
-              <button
-                type="button"
-                onClick={() => { setRawInput(''); setRows([]); }}
-                className="rounded border bg-transparent px-5 py-3 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}
-              >
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <div className="border-b px-5 py-4 sm:px-6" style={{ borderColor: 'var(--color-border)' }}>
-              <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Saved drafts</h2>
-              <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                {selectedYear ? formatAcademicYear(selectedYear) : 'Choose a year'} · private to admins
-              </p>
-            </div>
-            {loadingBatches ? (
-              <p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading drafts…</p>
-            ) : batches.length === 0 ? (
-              <div className="p-5">
-                <EmptyState
-                  title={`No House assignment draft yet${selectedYear ? ` for ${formatYearSpan(selectedYear)}` : ''}.`}
-                  description="Paste or load the sorting sheet, preview the matches, then save it as a private draft."
-                  action={{ label: 'Import Assignments', onClick: () => document.getElementById(format === 'auto' ? 'placement-file' : 'draft-paste')?.focus() }}
-                />
-              </div>
-            ) : (
-              <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                {batches.map((batch) => (
-                  <li key={batch.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                        {batch.source_label || 'Untitled draft'}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--color-text3)' }}>
-                        {statusLabel(batch.status)} · effective {batch.effective_start_date} · saved {new Date(batch.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={opening}
-                      onClick={() => openBatch(batch.id)}
-                      className="rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:opacity-50"
-                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
-                    >
-                      Open
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {rows.length > 0 && <ImportReviewPanel rows={reviewRows} hasInput filename="house-import-problem-rows" />}
-          <PossibleDuplicates duplicates={importDuplicates} />
-          {rows.length > 0 && (
-            <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6" style={{ borderColor: 'var(--color-border)' }}>
-                <div>
-                  <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Match preview</h2>
-                  <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-                    {rows.length} rows · {summary.match} matched · {summary.review} to review · {summary.unmatched + summary.invalid} unmatched · {summary.noHouse} without a House profile
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  disabled={saving}
-                  className="vsa-btn-primary w-full py-2.5 text-xs disabled:opacity-50 sm:w-auto sm:px-6"
-                >
-                  {saving ? 'Saving…' : `Save as draft (${rows.length})`}
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead>
-                    <tr className="border-b bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
-                      {['Sheet entry', 'House', 'Match', 'Member'].map((heading) => (
-                        <th key={heading} className="px-4 py-3 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{heading}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                    {rows.slice(0, PREVIEW_LIMIT).map((row) => (
-                      <tr key={row.rowId}>
-                        <td className="px-4 py-2 text-[13px]" style={{ color: 'var(--color-text)' }}>{row.name || '-'}</td>
-                        <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text2)' }}>{row.houseProfile?.display_name ?? row.house ?? 'Unassigned'}</td>
-                        <td className="px-4 py-2 font-mono text-[11px] uppercase" style={{ color: 'var(--color-text2)' }}>{row.status}</td>
-                        <td className="px-4 py-2 text-xs" style={{ color: 'var(--color-text2)' }}>
-                          {row.matchedMember && row.status !== 'unmatched' ? `${row.matchedMember.first_name} ${row.matchedMember.last_name}` : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {rows.length > PREVIEW_LIMIT && (
-                <p className="px-5 py-3 text-xs" style={{ color: 'var(--color-text3)' }}>
-                  Showing the first {PREVIEW_LIMIT} of {rows.length}. Every row is editable after you save the draft.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      {format === 'auto' && (
+      <div className="pt-4 sm:pt-6 lg:pt-8">
         <HousePlacementPanel
           selectedYear={selectedYear}
           effectiveStartDate={effectiveStartDate}
@@ -566,8 +426,145 @@ export function HouseDraftWorkflow({
           sourceLabel={sourceLabel}
           onStageChange={setPlacementStage}
           onSaved={handlePlacementSaved}
+          setup={setup}
+          aside={savedDrafts}
         />
-      )}
+      </div>
+
+      <div className="space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
+        <details className="scrapbook-paper border-[var(--color-border)] bg-surface" data-testid="legacy-import">
+          <summary className="cursor-pointer px-6 py-4 font-serif text-base font-bold text-text-primary">
+            Historical / Advanced Import
+          </summary>
+          <div className="space-y-4 border-t px-6 pb-6 pt-4 border-[var(--color-border)]">
+            <div role="note" className="rounded border p-3 text-xs border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-semibold">These formats do not use timestamp-priority placement.</p>
+              <p className="mt-1">
+                Use them only to re-import a sort that was already decided by hand, such as an earlier year&rsquo;s sheet or a manual correction. They import each person&rsquo;s House as written, with no capacities, no first-come, first-served order and no automatic placement checks. For House Applications, use Import House Applications above.
+              </p>
+              <p className="mt-1">Uses the academic year, effective date and draft label above.</p>
+            </div>
+
+            <div>
+              <label htmlFor="draft-format" className={`${labelCls} text-text-muted`}>Historical sheet format</label>
+              <select
+                id="draft-format"
+                value={legacyFormat}
+                onChange={(event) => { setLegacyFormat(event.target.value as SheetFormat); setRows([]); }}
+                className={`${fieldCls} border-[var(--color-border)]`}
+              >
+                <option value="wide">Wide House sorting sheet (one column per House)</option>
+                <option value="long">Long CSV with name/email/house (+ optional choices)</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="draft-csv-url" className={`${labelCls} text-text-muted`}>Public CSV URL (historical sheets only)</label>
+              <div className="flex gap-2">
+                <input
+                  id="draft-csv-url"
+                  type="url"
+                  value={csvUrl}
+                  onChange={(event) => setCsvUrl(event.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv"
+                  className={`${fieldCls} min-w-0 flex-1 text-xs border-[var(--color-border)]`}
+                />
+                <button
+                  type="button"
+                  onClick={handleFetchCsv}
+                  disabled={fetchingCsv || !csvUrl.trim()}
+                  className="rounded border px-3 py-2 text-xs font-semibold disabled:opacity-50 border-[var(--color-border)] text-text-secondary"
+                >
+                  {fetchingCsv ? 'Loading...' : 'Load'}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="draft-paste" className={`${labelCls} text-text-muted`}>CSV or Pasted Sheet</label>
+              <textarea
+                id="draft-paste"
+                value={rawInput}
+                onChange={(event) => setRawInput(event.target.value)}
+                rows={10}
+                placeholder={legacyFormat === 'wide'
+                  ? 'House A,House B\nApplicant One (first),Applicant Two (second)'
+                  : 'name,email,house\nApplicant One,applicant.one@example.edu,House A'}
+                className={`${fieldCls} font-mono text-xs border-[var(--color-border)]`}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleParse}
+                disabled={loadingMembers || loadingProfiles || !rawInput.trim() || !selectedYear || !effectiveStartDate}
+                className="vsa-btn-primary flex-1 py-3 text-xs disabled:opacity-50"
+              >
+                Preview Matches
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRawInput(''); setRows([]); }}
+                className="rounded border bg-transparent px-5 py-3 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] border-[var(--color-border)] text-text-secondary"
+              >
+                Clear
+              </button>
+            </div>
+
+            {rows.length > 0 && <ImportReviewPanel rows={reviewRows} hasInput filename="house-import-problem-rows" />}
+            <PossibleDuplicates duplicates={importDuplicates} />
+            {rows.length > 0 && (
+              <div className="overflow-hidden rounded border border-[var(--color-border)]">
+                <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between border-[var(--color-border)]">
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-text-primary">Match preview</h3>
+                    <p className="mt-1 font-sans text-xs text-text-muted">
+                      {rows.length} rows · {summary.match} matched · {summary.review} to review · {summary.unmatched + summary.invalid} unmatched · {summary.noHouse} without a House profile
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={saving}
+                    className="vsa-btn-primary w-full py-2.5 text-xs disabled:opacity-50 sm:w-auto sm:px-6"
+                  >
+                    {saving ? 'Saving…' : `Save as draft (${rows.length})`}
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead>
+                      <tr className="border-b bg-surface2 border-[var(--color-border)]">
+                        {['Sheet entry', 'House', 'Match', 'Member'].map((heading) => (
+                          <th key={heading} className="px-4 py-3 text-left font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">{heading}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)]">
+                      {rows.slice(0, PREVIEW_LIMIT).map((row) => (
+                        <tr key={row.rowId}>
+                          <td className="px-4 py-2 text-[13px] text-text-primary">{row.name || '-'}</td>
+                          <td className="px-4 py-2 text-xs text-text-secondary">{row.houseProfile?.display_name ?? row.house ?? 'Unassigned'}</td>
+                          <td className="px-4 py-2 font-mono text-[11px] uppercase text-text-secondary">{row.status}</td>
+                          <td className="px-4 py-2 text-xs text-text-secondary">
+                            {row.matchedMember && row.status !== 'unmatched' ? `${row.matchedMember.first_name} ${row.matchedMember.last_name}` : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {rows.length > PREVIEW_LIMIT && (
+                  <p className="px-5 py-3 text-xs text-text-muted">
+                    Showing the first {PREVIEW_LIMIT} of {rows.length}. Every row is editable after you save the draft.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+      </div>
     </>
   );
 }

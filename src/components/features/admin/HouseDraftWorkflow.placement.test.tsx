@@ -1,9 +1,11 @@
 /**
- * "Google Forms — Auto Placement" mode of the House assignment workflow.
- * What matters: validation counts are right, invalid rankings block generation
- * until an admin repairs them, Generate writes nothing, Save creates exactly
- * one private draft (no memberships, no email), and the legacy modes remain.
- * All fixtures are synthetic.
+ * The CSV-first House assignment workflow ("Import House Applications").
+ * What matters: it is the default with no legacy format to pick, validation
+ * counts are right, invalid rankings block generation until an admin repairs
+ * them, Generate and the Google Sheets exports write nothing, Save creates
+ * exactly one private draft (no memberships, no email), the legacy wide/long
+ * importers stay reachable under "Historical / Advanced Import", and saved
+ * drafts of every kind can still be opened. All fixtures are synthetic.
  */
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -13,6 +15,8 @@ import { HouseDraftWorkflow } from './HouseDraftWorkflow';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
 import { houseMembershipsWriteRepository } from '../../../data/repos/houseMembershipWrites';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
+import { downloadCsv } from '../../../lib/housePlacementExport';
 import type { HouseImportMember } from '../../../lib/houseAssignmentImport';
 import type { HousePageAsset } from '../../../types';
 
@@ -31,6 +35,13 @@ jest.mock('../../../data/repos/houseAssignments', () => ({
 jest.mock('../../../data/repos/houseParents', () => ({
   houseParentsRepository: { listForYear: jest.fn() },
 }));
+jest.mock('../../../data/repos/memberIdentity', () => ({
+  memberIdentityRepository: { loadIdentityEmails: jest.fn() },
+}));
+jest.mock('../../../lib/housePlacementExport', () => ({
+  ...jest.requireActual('../../../lib/housePlacementExport'),
+  downloadCsv: jest.fn(),
+}));
 jest.mock('../../../data/repos/houseMembershipWrites', () => ({
   houseMembershipsWriteRepository: { applyMembership: jest.fn(), listMembershipsForYear: jest.fn() },
 }));
@@ -41,6 +52,8 @@ jest.mock('../../../lib/supabase', () => ({
 const repo = houseAssignmentsRepository as jest.Mocked<typeof houseAssignmentsRepository>;
 const parentsRepo = houseParentsRepository as jest.Mocked<typeof houseParentsRepository>;
 const writer = houseMembershipsWriteRepository as jest.Mocked<typeof houseMembershipsWriteRepository>;
+const identityRepo = memberIdentityRepository as jest.Mocked<typeof memberIdentityRepository>;
+const download = downloadCsv as jest.MockedFunction<typeof downloadCsv>;
 
 function profile(id: string, name: string, order: number): HousePageAsset {
   return { id, house: name, house_key: name.toLowerCase(), display_name: name, display_order: order, is_active: true, academic_year_start: 2026, academic_year_end: 2027 } as HousePageAsset;
@@ -60,19 +73,19 @@ const CSV = [
   '10/21/2026 22:00:00,An Example,555-0103,an@example.test,Pinkie Pie (Parent B),Rarity (Parent A)',
 ].join('\n');
 
-function renderWorkflow(props: { houseProfiles?: HousePageAsset[] } = {}) {
+function renderWorkflow(props: { houseProfiles?: HousePageAsset[]; onYearChange?: (year: number) => void; members?: HouseImportMember[] } = {}) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter initialEntries={['/admin/houses']}>
         <HouseDraftWorkflow
           selectedYear={2026}
-          onYearChange={jest.fn()}
-          yearOptions={[{ start: 2026, label: '2026-2027', isActive: true }]}
+          onYearChange={props.onYearChange ?? jest.fn()}
+          yearOptions={[{ start: 2025, label: '2025-2026', isActive: false }, { start: 2026, label: '2026-2027', isActive: true }]}
           effectiveStartDate="2026-11-08"
           onEffectiveStartDateChange={jest.fn()}
           houseProfiles={props.houseProfiles ?? profiles}
           loadingProfiles={false}
-          members={members}
+          members={props.members ?? members}
           loadingMembers={false}
           onMembershipsPublished={jest.fn()}
         />
@@ -82,7 +95,6 @@ function renderWorkflow(props: { houseProfiles?: HousePageAsset[] } = {}) {
 }
 
 async function uploadAndValidate(csv = CSV) {
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'auto');
   const file = new File([csv], 'responses.csv', { type: 'text/csv' });
   await userEvent.upload(screen.getByLabelText('Form responses CSV'), file);
   await screen.findByText('Loaded responses.csv');
@@ -97,23 +109,93 @@ beforeEach(() => {
   jest.clearAllMocks();
   repo.listBatches.mockResolvedValue([]);
   parentsRepo.listForYear.mockResolvedValue([]);
+  identityRepo.loadIdentityEmails.mockResolvedValue([]);
 });
 
-it('keeps the legacy wide and long modes usable', async () => {
+it('defaults to Import House Applications, with no legacy format or public CSV URL in the primary workflow', async () => {
   renderWorkflow();
-  expect(await screen.findByLabelText('CSV or Pasted Sheet')).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'long');
-  expect(screen.getByRole('button', { name: 'Preview Matches' })).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'auto');
-  expect(screen.queryByLabelText('CSV or Pasted Sheet')).not.toBeInTheDocument();
+  const primary = await screen.findByRole('region', { name: 'Import House Applications' });
+  expect(within(primary).getByRole('heading', { name: 'Import House Applications' })).toBeInTheDocument();
+  expect(within(primary).getByLabelText('Form responses CSV')).toBeInTheDocument();
+  expect(within(primary).getByLabelText('Academic Year')).toBeInTheDocument();
+  expect(within(primary).getByLabelText('Effective Start Date')).toBeInTheDocument();
+  expect(within(primary).queryByLabelText(/Public CSV URL/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Import Sheet')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Sheet Format')).not.toBeInTheDocument();
+  // No 2025 Mario names as placeholders anywhere in the default view.
+  expect(document.body.innerHTML).not.toMatch(/Bowser|Toad|Donkey Kong|Boo\b/);
+});
+
+it('keeps the legacy wide and long importers under a collapsed Historical / Advanced Import, with a warning', async () => {
+  renderWorkflow();
+  const summary = await screen.findByText('Historical / Advanced Import');
+  const details = screen.getByTestId('legacy-import') as HTMLDetailsElement;
+  expect(details.open).toBe(false);
+  await userEvent.click(summary);
+  expect(details.open).toBe(true);
+  expect(within(details).getByRole('note')).toHaveTextContent('These formats do not use timestamp-priority placement.');
+  const format = within(details).getByLabelText('Historical sheet format');
+  expect(within(format).getAllByRole('option').map((option) => (option as HTMLOptionElement).value)).toEqual(['wide', 'long']);
+  expect(within(details).getByLabelText('Public CSV URL (historical sheets only)')).toBeInTheDocument();
+  expect(within(details).getByLabelText('CSV or Pasted Sheet')).toHaveAttribute('placeholder', expect.stringContaining('House A'));
+  await userEvent.selectOptions(format, 'long');
+  expect(within(details).getByLabelText('CSV or Pasted Sheet')).toHaveAttribute('placeholder', expect.stringMatching(/^name,email,house/));
+  expect(within(details).getByRole('button', { name: 'Preview Matches' })).toBeDisabled();
+  // The primary upload is still there alongside it.
   expect(screen.getByLabelText('Form responses CSV')).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'wide');
-  expect(screen.getByLabelText('CSV or Pasted Sheet')).toBeInTheDocument();
+});
+
+it('lists saved drafts of both kinds, opens a manual historical batch, and switches year from the primary card', async () => {
+  repo.listBatches.mockResolvedValue([
+    { id: 'b-auto', academic_year_start: 2026, status: 'draft', assignment_method: 'timestamp_ranked', source_label: 'Fall placement', effective_start_date: '2026-11-08', created_at: '2026-10-27T00:00:00Z' },
+    { id: 'b-manual', academic_year_start: 2026, status: 'published', assignment_method: 'manual', source_label: 'Hand sort', effective_start_date: '2026-11-08', created_at: '2026-10-20T00:00:00Z' },
+  ] as unknown as Awaited<ReturnType<typeof repo.listBatches>>);
+  repo.loadSnapshot.mockResolvedValue({
+    batch: { id: 'b-manual', academic_year_start: 2026, status: 'published', assignment_method: 'manual', effective_start_date: '2026-11-08' },
+    drafts: [], profiles: [], existingMemberships: new Map(), preflight: { blockers: [], warnings: [] },
+  } as unknown as HouseBatchSnapshot);
+  const onYearChange = jest.fn();
+  renderWorkflow({ onYearChange });
+  const saved = await screen.findByRole('region', { name: 'Saved drafts' });
+  expect(await within(saved).findByText(/Automatic placement · Draft/)).toBeInTheDocument();
+  expect(within(saved).getByText(/Manual import · Revealed/)).toBeInTheDocument();
+
+  await userEvent.selectOptions(screen.getByLabelText('Academic Year'), '2025');
+  expect(onYearChange).toHaveBeenCalledWith(2025);
+
+  await userEvent.click(within(saved).getByRole('button', { name: 'Open Hand sort' }));
+  await waitFor(() => expect(repo.loadSnapshot).toHaveBeenCalledWith('b-manual', expect.any(Map)));
+  expect(writer.applyMembership).not.toHaveBeenCalled();
+});
+
+it('matches an applicant through a confirmed alternate email', async () => {
+  identityRepo.loadIdentityEmails.mockResolvedValue([{ id: 'alias-1', member_id: 'm-chi', email: 'chi@example.test' }]);
+  const chi: HouseImportMember = { id: 'm-chi', first_name: 'Chi', last_name: 'Le', college: null, year: null, house: null, email: 'chi.main@example.test', points: 0, events_attended: 0 };
+  renderWorkflow({ members: [...members, chi] });
+  await waitFor(() => expect(identityRepo.loadIdentityEmails).toHaveBeenCalled());
+  await uploadAndValidate();
+  await userEvent.selectOptions(screen.getByLabelText('2nd choice for row 4'), 'p-rarity');
+  await userEvent.click(screen.getByRole('button', { name: 'Generate Placements' }));
+  const rows = await screen.findAllByTestId('placement-result-row');
+  expect(rows[2]).toHaveTextContent('Chi Le');
+  expect(rows[2]).not.toHaveTextContent('Unmatched');
+});
+
+it('does not generate until confirmed member emails have loaded', async () => {
+  type Aliases = Awaited<ReturnType<typeof identityRepo.loadIdentityEmails>>;
+  let resolveAliases: (value: Aliases) => void = () => undefined;
+  identityRepo.loadIdentityEmails.mockImplementation(() => new Promise<Aliases>((resolve) => { resolveAliases = resolve; }));
+  renderWorkflow();
+  await uploadAndValidate();
+  await userEvent.selectOptions(screen.getByLabelText('2nd choice for row 4'), 'p-rarity');
+  expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeDisabled();
+  expect(screen.getByText('Loading confirmed member emails…')).toBeInTheDocument();
+  await act(async () => { resolveAliases([]); });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeEnabled());
 });
 
 it('blocks with a clear message when the year has no active Houses', async () => {
   renderWorkflow({ houseProfiles: [] });
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'auto');
   expect(screen.getByRole('alert')).toHaveTextContent(/No active Houses for 2026/);
   expect(screen.getByRole('alert')).toHaveTextContent(/Profiles & Images/);
   expect(screen.queryByRole('button', { name: 'Validate Applications' })).not.toBeInTheDocument();
@@ -166,6 +248,27 @@ it('validates, requires a ranking repair, generates without writing, and saves o
   expect(rows[2]).toHaveTextContent('Chi Le');
   expect(rows[2]).toHaveTextContent('Assigned to Rarity (1st choice).');
   expect(rows[2]).toHaveTextContent('Unmatched');
+  expect(repo.createBatch).not.toHaveBeenCalled();
+  expect(writer.applyMembership).not.toHaveBeenCalled();
+
+  // Google Sheets exports of the unsaved preview: download only, nothing written.
+  const exportsPanel = screen.getByRole('region', { name: 'Export for Google Sheets' });
+  expect(exportsPanel).toHaveTextContent('File → Import');
+  await userEvent.click(within(exportsPanel).getByRole('button', { name: 'Full roster (3)' }));
+  await userEvent.click(within(exportsPanel).getByRole('button', { name: 'Rarity roster (2)' }));
+  await userEvent.click(within(exportsPanel).getByRole('button', { name: 'Pinkie Pie roster (1)' }));
+  await userEvent.click(within(exportsPanel).getByRole('button', { name: 'Needs review (2)' }));
+  expect(download.mock.calls.map(([, filename]) => filename)).toEqual([
+    'vsa-house-placement-2026-2027-preview-full-roster.csv',
+    'vsa-house-placement-2026-2027-preview-rarity-roster.csv',
+    'vsa-house-placement-2026-2027-preview-pinkie-pie-roster.csv',
+    'vsa-house-placement-2026-2027-preview-needs-review.csv',
+  ]);
+  const [fullCsv] = download.mock.calls[0];
+  expect(fullCsv.split('\n').slice(1, 4).map((line) => line.split(',').slice(0, 3).join(','))).toEqual(['1,3,An Example', '2,4,Bao Tran', '3,2,Chi Le']);
+  expect(download.mock.calls.map(([csv]) => csv).join('')).not.toMatch(/@example\.test|555-01/);
+  expect(download.mock.calls[3][0]).toMatch(/Chi Le.*No linked member/);
+  expect(download.mock.calls[3][0]).toMatch(/Bao Tran.*Ranking corrected by an admin/);
   expect(repo.createBatch).not.toHaveBeenCalled();
   expect(writer.applyMembership).not.toHaveBeenCalled();
 
@@ -227,7 +330,6 @@ it('places the real 2026 form options, recognizing "Pinky Pie (Ingyin & Martin)"
   })].join('\n');
 
   renderWorkflow({ houseProfiles: mlp });
-  await userEvent.selectOptions(screen.getByLabelText('Sheet Format'), 'auto');
   await waitFor(() => expect(parentsRepo.listForYear).toHaveBeenCalledWith(2026));
   await uploadAndValidate(csv);
   expect(stat('Need a fix')).toHaveTextContent('0');

@@ -38,20 +38,14 @@ import {
 } from '../../../lib/houseAssignmentDraft';
 import { findPriorityViolations, ordinal } from '../../../lib/housePlacement';
 import { formatFormTime } from '../../../lib/housePlacementImport';
-import {
-  PlacementExportRow,
-  downloadCsv,
-  exportFilename,
-  houseRosterCsv,
-  placementExceptionsCsv,
-  placementRosterCsv,
-} from '../../../lib/housePlacementExport';
+import { exportRowsFromDrafts } from '../../../lib/housePlacementExport';
 import type { BalanceSuggestion } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember, getMemberName, normalizeHouseLookup } from '../../../lib/houseAssignmentImport';
 import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals';
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HousePlacementExportPanel } from './HousePlacementExportPanel';
 import { MemberSearchSelect } from './MemberSearchSelect';
 import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
 import { runBulkWrites } from '../../../lib/bulkWrites';
@@ -245,7 +239,6 @@ export function HouseDraftEditor({
   const capacityConfig = useMemo(() => readCapacityConfig(batch.capacity_config), [batch.capacity_config]);
   const [placementFilter, setPlacementFilter] = useState<'all' | 'automatic' | 'override'>('all');
   const [overrideRowId, setOverrideRowId] = useState<string | null>(null);
-  const [exportHouseId, setExportHouseId] = useState('');
   const activeProfiles = useMemo(() => profiles.filter((profile) => profile.is_active), [profiles]);
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
@@ -431,6 +424,47 @@ export function HouseDraftEditor({
     return { moves, error: null, breaksPriority };
   }
 
+  /**
+   * Applies a move or swap through the transactional override RPC, then shows
+   * the rows the database returned. On any failure the persisted rows are
+   * reloaded, so the screen never shows a half-applied change.
+   */
+  function commitOverride(moves: OverrideMove[], reason: string | null, success: string, failure: string) {
+    return run(async () => {
+      let updated: HouseAssignmentDraft[];
+      try {
+        updated = await houseAssignmentsRepository.applyPlacementOverride(
+          batch.id,
+          moves.map((move) => ({ draftId: move.row.id, houseProfileId: move.to as string })),
+          reason,
+        );
+      } catch (err) {
+        try {
+          setDrafts(await houseAssignmentsRepository.getDrafts(batch.id));
+        } catch (reloadErr) {
+          console.error(reloadErr);
+          throw new Error(`${err instanceof Error && err.message ? err.message : failure} The saved rows could not be reloaded; refresh the page before making more changes.`);
+        }
+        throw new Error(`${err instanceof Error && err.message ? err.message : failure} The rows were reloaded from the saved draft.`);
+      }
+      const byId = new Map(updated.map((row) => [row.id, row]));
+      setDrafts((current) => current.map((row) => byId.get(row.id) ?? row));
+      for (const move of moves) {
+        logAdminActivity({
+          action: ACTIVITY_ACTIONS.houseAssignmentChanged,
+          entityType: 'house_assignment_draft',
+          entityId: move.row.id,
+          academicYearStart: batch.academic_year_start,
+          summary: reason
+            ? `${activitySummary.houseChanged(personNameOf(move.row), houseNameOf(move.from), houseNameOf(move.to))} Manual override of the automatic placement: ${reason}`
+            : `${activitySummary.houseChanged(personNameOf(move.row), houseNameOf(move.from), houseNameOf(move.to))} Restored the automatic placement.`,
+        });
+      }
+      setOverrideRowId(null);
+      toast.success(success);
+    }, failure);
+  }
+
   function applyOverride(plan: OverridePlan, reason: string) {
     const why = reason.trim();
     if (!why) {
@@ -441,45 +475,24 @@ export function HouseDraftEditor({
       toast.error(plan.error ?? 'Nothing to change.');
       return;
     }
-    return run(async () => {
-      for (const move of plan.moves) {
-        const patch = {
-          house_profile_id: move.to,
-          override_reason: move.to === move.row.generated_house_profile_id ? null : why,
-        };
-        await houseAssignmentsRepository.updateDraft(batch.id, move.row.id, patch);
-        patchLocal(move.row.id, patch);
-        logAdminActivity({
-          action: ACTIVITY_ACTIONS.houseAssignmentChanged,
-          entityType: 'house_assignment_draft',
-          entityId: move.row.id,
-          academicYearStart: batch.academic_year_start,
-          summary: `${activitySummary.houseChanged(personNameOf(move.row), houseNameOf(move.from), houseNameOf(move.to))} Manual override of the automatic placement: ${why}`,
-        });
-      }
-      setOverrideRowId(null);
-      toast.success(plan.moves.length > 1 ? 'Swapped. Both rows are marked as manual overrides.' : 'Moved. The row is marked as a manual override.');
-    }, 'Failed to apply the override.');
+    return commitOverride(
+      plan.moves,
+      why,
+      plan.moves.length > 1 ? 'Swapped. Both rows are marked as manual overrides.' : 'Moved. The row is marked as a manual override.',
+      'Failed to apply the override.',
+    );
   }
 
-  const exportRows = useMemo<PlacementExportRow[]>(() => priorityOrdered.map((row) => {
-    const linked = !!row.member_id && (row.match_status === 'match' || row.match_status === 'manual');
-    return {
-      priority: row.source_order + 1,
-      name: personNameOf(row),
-      houseId: row.house_profile_id,
-      house: houseNameOf(row.house_profile_id) ?? 'Unassigned',
-      submitted: formatFormTime(row.submission_timestamp),
-      preferences: preferenceLabels(row),
-      achievedRank: achievedRank(row),
-      placement: isOverridden(row) ? 'Manual override' : 'Automatic',
-      overrideReason: row.override_reason ?? '',
-      memberMatch: linked ? 'Matched' : row.match_status === 'review' ? 'Review' : 'Unmatched',
-      exception: !linked || isOverridden(row) || !row.house_profile_id,
-    };
-    // personNameOf/houseNameOf/preferenceLabels only read the maps listed here.
+  const exportRows = useMemo(
+    () => exportRowsFromDrafts(drafts, {
+      houseLabel: (id) => houseNameOf(id),
+      memberName: (id) => memberNames.get(id) ?? null,
+    }),
+    // houseNameOf only reads profileById.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [priorityOrdered, memberNames, profileById]);
+    [drafts, memberNames, profileById],
+  );
+
   function restoreAutomatic(row: HouseAssignmentDraft) {
     const target = row.generated_house_profile_id;
     if (!target) return;
@@ -488,16 +501,13 @@ export function HouseDraftEditor({
       toast.error(`${houseNameOf(target)} is full. Swap someone out of it instead.`);
       return;
     }
-    return run(async () => {
-      const patch = { house_profile_id: target, override_reason: null };
-      await houseAssignmentsRepository.updateDraft(batch.id, row.id, patch);
-      patchLocal(row.id, patch);
-      logHouseChange(row, patch);
-      toast.success('Restored the automatic placement.');
-    }, 'Failed to restore the automatic placement.');
+    return commitOverride(
+      [{ row, from: row.house_profile_id, to: target }],
+      null,
+      'Restored the automatic placement.',
+      'Failed to restore the automatic placement.',
+    );
   }
-
-  const exportBase = `${formatYearSpan(batch.academic_year_start)} ${batch.source_label ?? 'house placement'}`;
 
   function removeRow(row: HouseAssignmentDraft) {
     return run(async () => {
@@ -854,20 +864,12 @@ export function HouseDraftEditor({
               </ul>
             </details>
           )}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementRosterCsv(exportRows), exportFilename(exportBase, 'placement-roster'))}>
-              Export full roster
-            </button>
-            <select value={exportHouseId} onChange={(event) => setExportHouseId(event.target.value)} aria-label="House roster to export" className={`${selectCls} w-auto`} style={{ borderColor: 'var(--color-border)' }}>
-              <option value="">Choose a House…</option>
-              {activeProfiles.map((profile) => <option key={profile.id} value={profile.id}>{houseLabel(profile)}</option>)}
-            </select>
-            <button type="button" disabled={!exportHouseId} className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(houseRosterCsv(exportRows, exportHouseId), exportFilename(exportBase, houseNameOf(exportHouseId) ?? 'house', 'roster'))}>
-              Export House roster
-            </button>
-            <button type="button" className={ghostBtn} style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }} onClick={() => downloadCsv(placementExceptionsCsv(exportRows), exportFilename(exportBase, 'placement-exceptions'))}>
-              Export review list
-            </button>
+          <div className="mt-4">
+            <HousePlacementExportPanel
+              rows={exportRows}
+              houses={activeProfiles.map((profile) => ({ id: profile.id, label: houseLabel(profile) }))}
+              academicYearStart={batch.academic_year_start}
+            />
           </div>
         </section>
       ) : (

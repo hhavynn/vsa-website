@@ -105,9 +105,12 @@ const CATEGORY_LABEL: Record<ImportRowCategory, string> = {
   invalid: 'Invalid',
 };
 
-/** A leading =, +, -, @, tab or CR makes a spreadsheet treat a cell as a formula. */
+/**
+ * A leading =, +, -, @, tab or CR makes a spreadsheet treat a cell as a
+ * formula; some spreadsheets also skip leading spaces before the =.
+ */
 export function csvCell(value: string): string {
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  const safe = /^[\t\r]|^\s*[=+\-@]/.test(value) ? `'${value}` : value;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 

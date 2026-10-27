@@ -13,7 +13,6 @@ import {
   resolveHouseLabel,
 } from './housePlacementImport';
 import { allocateHouseApplicants, firstChoiceDemand, suggestCapacities } from './housePlacement';
-import { PlacementExportRow, placementExceptionsCsv, placementRosterCsv } from './housePlacementExport';
 import type { HouseImportMember } from './houseAssignmentImport';
 
 // Synthetic fixtures only — never real applicant data.
@@ -324,27 +323,36 @@ describe('matchApplicantToMember', () => {
   });
 });
 
-describe('placement CSV export', () => {
-  const row = (overrides: Partial<PlacementExportRow>): PlacementExportRow => ({
-    priority: 1, name: 'An Example', houseId: 'p-rarity', house: 'Rarity', submitted: '10/21/2026 20:00:00',
-    preferences: ['Rarity', 'Pinkie Pie', 'Applejack', 'Twilight Sparkle'], achievedRank: 1, placement: 'Automatic',
-    overrideReason: '', memberMatch: 'Matched', exception: false, ...overrides,
+describe('matchApplicantToMember with confirmed alternate emails', () => {
+  const people: HouseImportMember[] = [
+    { id: 'm-chi', first_name: 'Chi', last_name: 'Le', college: null, year: null, house: null, email: 'chi.personal@example.test', points: 0, events_attended: 0 },
+    { id: 'm-giang', first_name: 'Giang', last_name: 'Ho', college: null, year: null, house: null, email: 'giang@example.test', points: 0, events_attended: 0 },
+    { id: 'm-hoa', first_name: 'Hoa', last_name: 'Ly', college: null, year: null, house: null, email: null, points: 0, events_attended: 0 },
+  ];
+
+  it('matches a unique alias owner, and says the match came from an alternate email', () => {
+    const index = buildPlacementMemberIndex(people, [{ member_id: 'm-chi', email: 'Chi@School.test' }]);
+    expect(matchApplicantToMember({ name: 'Someone Else', email: 'chi@school.test' }, index)).toEqual({
+      status: 'match', memberId: 'm-chi', method: 'email', note: 'Matched by a confirmed alternate email.',
+    });
   });
 
-  it('neutralizes spreadsheet formulas in user-controlled text and quotes per RFC 4180', () => {
-    const out = placementRosterCsv([row({ name: '=HYPERLINK("http://evil.test","x")' }), row({ priority: 2, name: '+SUM(A1)', overrideReason: 'Swap, "approved"' })]);
-    const lines = out.trim().split('\n');
-    expect(lines[0]).toBe('Priority,Name,Assigned House,Submitted (Pacific),1st choice,2nd choice,3rd choice,4th choice,Result,Placement,Override reason,Member match');
-    expect(lines[1]).toContain(`"'=HYPERLINK(""http://evil.test"",""x"")"`);
-    expect(lines[2]).toContain(`'+SUM(A1)`);
-    expect(lines[2]).toContain('"Swap, ""approved"""');
-    expect(out).not.toMatch(/@example\.test/);
+  it('does not call it an alias match when the alias repeats the main email', () => {
+    const index = buildPlacementMemberIndex(people, [{ member_id: 'm-giang', email: 'giang@example.test' }]);
+    expect(matchApplicantToMember({ name: 'Giang Ho', email: 'giang@example.test' }, index)).toMatchObject({ status: 'match', memberId: 'm-giang', note: 'Matched by email.' });
   });
 
-  it('exports only the exception rows in the exception list', () => {
-    const out = placementExceptionsCsv([row({}), row({ priority: 2, name: 'Needs Review', exception: true, memberMatch: 'Unmatched' })]);
-    expect(out).toContain('Needs Review');
-    expect(out).not.toContain('An Example');
+  it('sends an email used by two different members (main and alias) to review instead of picking one', () => {
+    const index = buildPlacementMemberIndex(people, [{ member_id: 'm-hoa', email: 'giang@example.test' }]);
+    const result = matchApplicantToMember({ name: 'Giang Ho', email: 'giang@example.test' }, index);
+    expect(result).toMatchObject({ status: 'review', memberId: null });
+    expect(result.note).toMatch(/2 member records use this email/);
+  });
+
+  it('ignores an alias whose member is not in the directory and never invents a member', () => {
+    const index = buildPlacementMemberIndex(people, [{ member_id: 'm-gone', email: 'gone@example.test' }]);
+    expect(matchApplicantToMember({ name: 'Gone Person', email: 'gone@example.test' }, index)).toMatchObject({ status: 'unmatched', memberId: null });
+    expect(index.byEmail.has('gone@example.test')).toBe(false);
   });
 });
 
@@ -372,6 +380,9 @@ describe('2026-2027 My Little Pony Houses', () => {
     expect(resolveHouseLabel('Pinky Pie (Ingyin & Martin)', mlp.map(({ parentNames, ...profile }) => profile))).toEqual({ kind: 'unknown' });
     expect(resolveHouseLabel('Rarity (Ingyin & Martin)', mlp)).toEqual({ kind: 'ambiguous', profileIds: ['p-rarity', 'p-pinkie'] });
     expect(resolveHouseLabel('Bowser', mlp)).toEqual({ kind: 'inactive', profileId: 'p-bowser-2025' });
+    // Two Houses in one cell must not resolve through the last House's parents.
+    expect(resolveHouseLabel('Twilight Sparkle (Kent & Tim), Rarity (Kirsten & Jonas)', mlp)).toEqual({ kind: 'unknown' });
+    expect(resolveHouseLabel('Twilight Sparkle (Kent & Tim), Pinky Pie (Ingyin & Martin)', mlp)).toEqual({ kind: 'unknown' });
   });
 
   it('lists options recognized by House Parents, and keeps a mapped option visible so it can be changed', () => {
