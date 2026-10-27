@@ -49,9 +49,11 @@ dispatch loop; unchanged-image suppression remains in place. A 429 advises a
    it changes no members, events, House assignments, points or AI limiter.
 2. Verify PUBLIC/anon/authenticated cannot execute the RPC or read/write its
    table, and the internal guard rejects non-service claims. Use the normal RLS
-   checklist with dedicated staging accounts. Regenerate the generated public
-   Database types after deployment; no browser code consumes this service-only
-   RPC and its undeployed types must not be fabricated by hand.
+   checklist with dedicated staging accounts. The new table/RPC type definitions
+   were generated from the exact migration on disposable PostgreSQL using the
+   official postgres-meta v0.96.1 TypeScript generator. Only those generated
+   definitions were inserted, preserving unrelated schema and domain aliases.
+   Types describe the repository contract and do not certify hosted deployment.
 3. Deploy only `trigger-event-image-migration`,
    `trigger-house-event-image-migration`, and `analytics-proxy`. Missing admission
    schema/configuration returns 503 and dispatches nothing; apply schema first.
