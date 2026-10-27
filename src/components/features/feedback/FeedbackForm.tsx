@@ -1,8 +1,8 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../hooks/useAuth';
+import { feedbackRepository } from '../../../data/repos/feedback';
+import { toUserMessage } from '../../../data/errors';
 import { toast } from 'react-hot-toast';
 import { FeedbackSchema, type FeedbackFormData } from '../../../schemas';
 import { FieldError, FormAlert } from '../../ui/FieldError';
@@ -18,8 +18,6 @@ const inputCls = 'w-full touch:min-h-11 px-2 py-1 border border-zinc-300 dark:bo
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
 
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel, defaultType = 'feature', defaultTitle = '' }) => {
-  const { user } = useAuth();
-
   const {
     register,
     handleSubmit,
@@ -38,29 +36,15 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
 
   const onSubmit = async (data: FeedbackFormData) => {
     try {
-      const { error } = await supabase
-        .from('feedback')
-        .insert([
-          {
-            user_id: user?.id || null,
-            type: data.type,
-            title: data.title.trim(),
-            description: data.description.trim(),
-            name: data.name?.trim() || null,
-            email: data.email?.trim() || null,
-          },
-        ]);
-
-      if (error) throw error;
+      await feedbackRepository.submit(data);
 
       toast.success('Thank you for your feedback!');
       reset();
       onSuccess?.();
     } catch (error) {
-      console.error('Error submitting feedback:', error);
       setFormError('root', {
         type: 'manual',
-        message: 'Failed to submit feedback. Please try again.',
+        message: toUserMessage(error, 'Failed to submit feedback. Please try again.'),
       });
     }
   };
