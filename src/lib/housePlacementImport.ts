@@ -11,6 +11,7 @@ import type { HouseImportMember } from './houseAssignmentImport';
 import { normalizeEmail } from './memberMatching';
 import { buildMemberNameIndex, findExactMemberMatch, normalizeMemberName, toMemberOption } from './memberLinkMatching';
 import type { MemberNameIndex } from './memberLinkMatching';
+import type { IdentityAlias } from './identityResolution';
 import { PlacementApplicant, PlacementHouse, comparePriority } from './housePlacement';
 
 /** The Google Sheet behind the House form records wall-clock time in this zone. */
@@ -427,7 +428,9 @@ export function resolveHouseLabel(
   }
   const direct = fromMatches(lookupLabel(key, profiles));
   if (direct) return direct;
-  const stripped = text.trim().match(/^(.*\S)\s*\(([^()]*)\)$/);
+  // One trailing parenthetical only: "A (x), Rarity (y)" names two Houses and
+  // must reach the multi-select check, not resolve through its last parents.
+  const stripped = text.trim().match(/^([^()]*\S)\s*\(([^()]*)\)$/);
   if (stripped) {
     const base = fromMatches(lookupLabel(normalizeHouseLookup(stripped[1]), profiles));
     const byParents = houseByParents(stripped[2], profiles);
@@ -801,8 +804,15 @@ export interface ApplicantMemberMatch {
   note: string;
 }
 
+export interface EmailCandidate {
+  member: HouseImportMember;
+  /** Found only through a confirmed alternate address, not members.email. */
+  viaAlias: boolean;
+}
+
 export interface PlacementMemberIndex {
-  byEmail: ReadonlyMap<string, HouseImportMember[]>;
+  /** Every member an address belongs to, as members.email or a confirmed alias. */
+  byEmail: ReadonlyMap<string, EmailCandidate[]>;
   byName: MemberNameIndex;
   byLooseName: MemberNameIndex;
   emailById: ReadonlyMap<string, string>;
@@ -815,14 +825,37 @@ function looseName(name: string) {
   return [tokens[0], ...tokens.slice(1, -1).filter((token) => token.replace(/\.$/, '').length > 1), tokens[tokens.length - 1]].join(' ');
 }
 
-export function buildPlacementMemberIndex(members: readonly HouseImportMember[]): PlacementMemberIndex {
-  const byEmail = new Map<string, HouseImportMember[]>();
+/**
+ * `aliases` are rows of member_identity_emails: confirmed addresses, each owned
+ * by exactly one member. An alias whose owner is not in the directory is
+ * ignored rather than guessed at.
+ */
+export function buildPlacementMemberIndex(
+  members: readonly HouseImportMember[],
+  aliases: ReadonlyArray<IdentityAlias> = [],
+): PlacementMemberIndex {
+  const memberById = new Map(members.map((member) => [member.id, member]));
+  const owners = new Map<string, Map<string, boolean>>();
+  const add = (email: string, memberId: string, viaAlias: boolean) => {
+    if (!email) return;
+    const forEmail = owners.get(email) ?? new Map<string, boolean>();
+    const previous = forEmail.get(memberId);
+    forEmail.set(memberId, previous === undefined ? viaAlias : previous && viaAlias);
+    owners.set(email, forEmail);
+  };
   const emailById = new Map<string, string>();
   members.forEach((member) => {
     const email = normalizeEmail(member.email);
     if (!email) return;
     emailById.set(member.id, email);
-    byEmail.set(email, [...(byEmail.get(email) ?? []), member]);
+    add(email, member.id, false);
+  });
+  aliases.forEach((alias) => {
+    if (memberById.has(alias.member_id)) add(normalizeEmail(alias.email), alias.member_id, true);
+  });
+  const byEmail = new Map<string, EmailCandidate[]>();
+  owners.forEach((forEmail, email) => {
+    byEmail.set(email, Array.from(forEmail, ([memberId, viaAlias]) => ({ member: memberById.get(memberId) as HouseImportMember, viaAlias })));
   });
   const options = members.map((member) => toMemberOption(member));
   const loose = options.map((option) => ({ ...option, fullName: looseName(option.fullName) }));
@@ -830,17 +863,28 @@ export function buildPlacementMemberIndex(members: readonly HouseImportMember[])
 }
 
 /**
- * Exact email, then exact unique name, then a unique name ignoring middle
- * initials (review only). Never fuzzy, never picks between candidates, never
- * creates a member. Matching does not affect anyone's place in line.
+ * Exact email (members.email or a confirmed alias), then exact unique name,
+ * then a unique name ignoring middle initials (review only). Never fuzzy,
+ * never picks between candidates, never creates a member. Matching does not
+ * affect anyone's place in line.
  */
 export function matchApplicantToMember(applicant: { name: string; email: string | null }, index: PlacementMemberIndex): ApplicantMemberMatch {
   const email = normalizeEmail(applicant.email);
   if (email) {
     const byEmail = index.byEmail.get(email) ?? [];
-    if (byEmail.length === 1) return { status: 'match', memberId: byEmail[0].id, method: 'email', note: 'Matched by email.' };
+    if (byEmail.length === 1) {
+      const [only] = byEmail;
+      return { status: 'match', memberId: only.member.id, method: 'email', note: only.viaAlias ? 'Matched by a confirmed alternate email.' : 'Matched by email.' };
+    }
     if (byEmail.length > 1) {
-      return { status: 'review', memberId: null, method: null, note: `${byEmail.length} member records share this email. Choose one.` };
+      return {
+        status: 'review',
+        memberId: null,
+        method: null,
+        note: byEmail.some((candidate) => candidate.viaAlias)
+          ? `${byEmail.length} member records use this email (as their main or a confirmed alternate address). Choose one.`
+          : `${byEmail.length} member records share this email. Choose one.`,
+      };
     }
   }
   const exact = findExactMemberMatch(applicant.name, index.byName);

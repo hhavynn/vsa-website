@@ -1,14 +1,15 @@
-// Protected domain — House membership. "Google Forms — Auto Placement" import
-// mode: upload -> validate -> fix problems -> capacities -> generate -> save a
-// private draft. Generating is pure and local; saving creates one draft batch
+// Protected domain — House membership. The primary House import ("Import House
+// Applications", Google Forms auto placement): upload -> validate -> fix
+// problems -> capacities -> generate -> save a private draft. Generating is pure and local; saving creates one draft batch
 // through houseAssignmentsRepository and never writes house_memberships. Lock
 // and reveal stay in HouseDraftEditor. The uploaded file is read in memory
 // only; no email or extra form answer is stored or logged.
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { ACTIVITY_ACTIONS } from '../../../lib/adminActivity';
 import { formatYearSpan } from '../../../lib/operationalStatus';
@@ -54,6 +55,10 @@ export interface HousePlacementPanelProps {
   sourceLabel: string;
   onStageChange: (stage: PlacementStage) => void;
   onSaved: (batchId: string, rows: number, issues: number) => Promise<void> | void;
+  /** Year, start date and label fields, shown above the upload. */
+  setup?: ReactNode;
+  /** Shown beside the upload card, e.g. the saved drafts list. */
+  aside?: ReactNode;
 }
 
 interface Generated {
@@ -97,6 +102,8 @@ export function HousePlacementPanel({
   sourceLabel,
   onStageChange,
   onSaved,
+  setup,
+  aside,
 }: HousePlacementPanelProps) {
   const [fileName, setFileName] = useState('');
   const [rawText, setRawText] = useState('');
@@ -119,6 +126,16 @@ export function HousePlacementPanel({
     enabled: selectedYear !== null,
     retry: false,
   });
+  // Confirmed alternate emails (member_identity_emails) widen email matching.
+  // If they can't be read, matching falls back to each member's main email.
+  const { data: aliases = [], isError: aliasesFailed } = useQuery({
+    queryKey: ['admin', 'member-identity-emails'],
+    queryFn: () => memberIdentityRepository.loadIdentityEmails(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const memberNameById = useMemo(() => new Map(members.map((member) => [member.id, `${member.first_name} ${member.last_name}`.trim()])), [members]);
+  const memberName = useCallback((memberId: string) => memberNameById.get(memberId) ?? null, [memberNameById]);
   const placementProfiles = useMemo(
     () => houseProfiles.map((profile) => ({
       ...profile,
@@ -215,7 +232,7 @@ export function HousePlacementPanel({
       return;
     }
     setGenerateErrors([]);
-    const index = buildPlacementMemberIndex(members);
+    const index = buildPlacementMemberIndex(members, aliases);
     const byId = new Map(review.applicants.map((row) => [row.id, row]));
     const labelOf = new Map(houses.map((house) => [house.id, house.label]));
     const rows = result.placements.map((placement): PlacementPreviewRow => {
@@ -225,7 +242,9 @@ export function HousePlacementPanel({
         id: placement.applicantId,
         priority: placement.priority,
         name: placement.name,
+        sourceRow: source?.sourceRow ?? 0,
         submitted: formatFormTime(source?.submittedAtIso),
+        submittedIso: source?.submittedAtIso ?? null,
         preferences: preferenceIds.map((id) => labelOf.get(id) ?? id),
         houseId: placement.houseId,
         houseLabel: labelOf.get(placement.houseId) ?? placement.houseId,
@@ -312,113 +331,122 @@ export function HousePlacementPanel({
 
   return (
     <div className="space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
-      <section className="scrapbook-paper p-6 border-[var(--color-border)] bg-surface" aria-label="Upload Google Form responses">
-        <h2 className="font-serif text-xl font-bold text-text-primary">Google Forms — Auto Placement</h2>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-          First-come, first-served: applicants are placed in submission order into their highest-ranked House with room. No lottery, scoring, or AI. The result is a private draft until you lock and reveal it.
-        </p>
-        <p className="mt-1 text-xs text-text-muted">
-          In the responses sheet, use File → Download → Comma-separated values. The file stays in this browser; only names, rankings, submission times and sheet rows are saved with the draft.
-        </p>
+      <div className={aside ? 'grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]' : undefined}>
+        <section className="scrapbook-paper p-6 border-[var(--color-border)] bg-surface" aria-label="Import House Applications">
+          <h2 className="font-serif text-xl font-bold text-text-primary">Import House Applications</h2>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            Upload the Google Form responses. Applicants are placed first-come, first-served: in submission order, each takes their highest-ranked House with room. No lottery, scoring, or AI. The result is a private draft until you lock and reveal it.
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            In the responses sheet, use File → Download → Comma-separated values (.csv). The file stays in this browser and the sheet never needs to be public; only names, rankings, submission times and sheet rows are saved with the draft.
+          </p>
+          {setup && <div className="mt-5">{setup}</div>}
 
-        {noHouses ? (
-          <div role="alert" className="mt-4 rounded border p-3 text-sm border-[var(--color-border)] bg-surface2 text-text-primary">
-            <p className="font-semibold">No active Houses for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.</p>
-            <p className="mt-1 text-xs text-text-secondary">
-              Create this year&rsquo;s House profiles in the Profiles &amp; Images tab first. Placement never uses another year&rsquo;s Houses.
+          {noHouses ? (
+            <div role="alert" className="mt-4 rounded border p-3 text-sm border-[var(--color-border)] bg-surface2 text-text-primary">
+              <p className="font-semibold">No active Houses for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}.</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                Create this year&rsquo;s House profiles in the Profiles &amp; Images tab first. Placement never uses another year&rsquo;s Houses.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="min-w-[220px] flex-1">
+                <label htmlFor="placement-file" className={`${labelCls} text-text-muted`}>Form responses CSV</label>
+                <input
+                  id="placement-file"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleFile}
+                  disabled={saving}
+                  className="block w-full text-xs text-text-secondary"
+                />
+                {fileName && <p className="mt-1 text-xs text-text-muted">Loaded {fileName}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => validate()}
+                disabled={!rawText || saving || loadingProfiles || !selectedYear || !effectiveStartDate}
+                className="vsa-btn-primary px-6 py-2.5 text-xs disabled:opacity-50"
+              >
+                Validate Applications
+              </button>
+            </div>
+          )}
+
+          {parse && !parse.ok && (
+            <div role="alert" className="mt-4 rounded border border-red-300 p-3 text-sm text-red-700 dark:border-red-800 dark:text-red-300">
+              {parse.error}
+            </div>
+          )}
+          {parse?.ok && parse.warnings.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+              {parse.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          )}
+          {aliasesFailed && (
+            <p className="mt-3 text-xs text-text-muted">
+              Confirmed alternate member emails could not be loaded, so member matching uses each member&rsquo;s main email only.
             </p>
-          </div>
-        ) : (
-          <div className="mt-4 flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1">
-              <label htmlFor="placement-file" className={`${labelCls} text-text-muted`}>Form responses CSV</label>
-              <input
-                id="placement-file"
-                type="file"
-                accept=".csv,text/csv"
-                onChange={handleFile}
-                disabled={saving}
-                className="block w-full text-xs text-text-secondary"
-              />
-              {fileName && <p className="mt-1 text-xs text-text-muted">Loaded {fileName}</p>}
+          )}
+
+          {showMapping && detection && parse && (
+            <div className="mt-4 rounded border p-3 border-[var(--color-border)]">
+              <p className="text-xs font-semibold text-text-primary">Choose the columns to use</p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                {(Object.keys(ROLE_LABEL) as PlacementColumnRole[]).map((role) => (
+                  <div key={role}>
+                    <label htmlFor={`placement-col-${role}`} className={`${labelCls} text-text-muted`}>{ROLE_LABEL[role]}</label>
+                    <select
+                      id={`placement-col-${role}`}
+                      value={(overrides[role] ?? detection.columns[role]) || ''}
+                      onChange={(event) => setOverride(role, event.target.value)}
+                      className={`${fieldCls} border-[var(--color-border)]`}
+                    >
+                      <option value="">{role === 'email' ? 'No email column' : 'Choose…'}</option>
+                      {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                ))}
+                {Array.from({ length: rankSlots }, (_, index) => (
+                  <div key={`rank-${index}`}>
+                    <label htmlFor={`placement-rank-${index}`} className={`${labelCls} text-text-muted`}>Choice #{index + 1} column</label>
+                    <select
+                      id={`placement-rank-${index}`}
+                      value={(overrides.ranks ?? detection.columns.ranks)[index] ?? ''}
+                      onChange={(event) => setRankOverride(index, event.target.value)}
+                      className={`${fieldCls} border-[var(--color-border)]`}
+                    >
+                      <option value="">Not used</option>
+                      {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => validate(overrides)}
+                className="mt-3 rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] border-[var(--color-border)] text-text-primary"
+              >
+                Validate with these columns
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => validate()}
-              disabled={!rawText || saving || loadingProfiles || !selectedYear || !effectiveStartDate}
-              className="vsa-btn-primary px-6 py-2.5 text-xs disabled:opacity-50"
-            >
-              Validate Applications
-            </button>
-          </div>
-        )}
+          )}
 
-        {parse && !parse.ok && (
-          <div role="alert" className="mt-4 rounded border border-red-300 p-3 text-sm text-red-700 dark:border-red-800 dark:text-red-300">
-            {parse.error}
-          </div>
-        )}
-        {parse?.ok && parse.warnings.length > 0 && (
-          <ul className="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-400">
-            {parse.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-          </ul>
-        )}
-
-        {showMapping && detection && parse && (
-          <div className="mt-4 rounded border p-3 border-[var(--color-border)]">
-            <p className="text-xs font-semibold text-text-primary">Choose the columns to use</p>
-            <div className="mt-2 grid gap-3 sm:grid-cols-3">
-              {(Object.keys(ROLE_LABEL) as PlacementColumnRole[]).map((role) => (
-                <div key={role}>
-                  <label htmlFor={`placement-col-${role}`} className={`${labelCls} text-text-muted`}>{ROLE_LABEL[role]}</label>
-                  <select
-                    id={`placement-col-${role}`}
-                    value={(overrides[role] ?? detection.columns[role]) || ''}
-                    onChange={(event) => setOverride(role, event.target.value)}
-                    className={`${fieldCls} border-[var(--color-border)]`}
-                  >
-                    <option value="">{role === 'email' ? 'No email column' : 'Choose…'}</option>
-                    {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
-                  </select>
-                </div>
-              ))}
-              {Array.from({ length: rankSlots }, (_, index) => (
-                <div key={`rank-${index}`}>
-                  <label htmlFor={`placement-rank-${index}`} className={`${labelCls} text-text-muted`}>Choice #{index + 1} column</label>
-                  <select
-                    id={`placement-rank-${index}`}
-                    value={(overrides.ranks ?? detection.columns.ranks)[index] ?? ''}
-                    onChange={(event) => setRankOverride(index, event.target.value)}
-                    className={`${fieldCls} border-[var(--color-border)]`}
-                  >
-                    <option value="">Not used</option>
-                    {parse.headers.map((header) => <option key={header} value={header}>{header}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => validate(overrides)}
-              className="mt-3 rounded border bg-transparent px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)] border-[var(--color-border)] text-text-primary"
-            >
-              Validate with these columns
-            </button>
-          </div>
-        )}
-
-        {review && (
-          <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Submission counts">
-            <Stat label="Submissions" value={review.counts.submissions} />
-            <Stat label="Unique applicants" value={review.counts.unique} />
-            <Stat label="Repeat submissions" value={review.counts.duplicates} />
-            <Stat label="Need a fix" value={review.counts.invalid} tone={review.counts.invalid > 0 ? 'text-red-600 dark:text-red-400' : undefined} />
-            <Stat label="Missing time" value={review.counts.missingTimestamps} />
-            <Stat label="Excluded" value={review.counts.excluded} />
-            <Stat label="Valid" value={review.counts.valid} tone="text-emerald-700 dark:text-emerald-400" />
-          </dl>
-        )}
-      </section>
+          {review && (
+            <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Submission counts">
+              <Stat label="Submissions" value={review.counts.submissions} />
+              <Stat label="Unique applicants" value={review.counts.unique} />
+              <Stat label="Repeat submissions" value={review.counts.duplicates} />
+              <Stat label="Need a fix" value={review.counts.invalid} tone={review.counts.invalid > 0 ? 'text-red-600 dark:text-red-400' : undefined} />
+              <Stat label="Missing time" value={review.counts.missingTimestamps} />
+              <Stat label="Excluded" value={review.counts.excluded} />
+              <Stat label="Valid" value={review.counts.valid} tone="text-emerald-700 dark:text-emerald-400" />
+            </dl>
+          )}
+        </section>
+        {aside}
+      </div>
 
       {review && (
         <HousePlacementReviewPanel review={review} edits={edits} onEditsChange={setEdits} disabled={saving} />
@@ -472,7 +500,8 @@ export function HousePlacementPanel({
             houses={houses}
             capacities={current.capacities}
             rankCounts={current.rankCounts}
-            exportLabel={`${selectedYear ? formatYearSpan(selectedYear) : ''} ${sourceLabel || 'house'}`}
+            academicYearStart={selectedYear ?? new Date().getFullYear()}
+            memberName={memberName}
           />
           <div className="scrapbook-paper flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between border-[var(--color-border)] bg-surface">
             <p className="text-xs text-text-secondary">

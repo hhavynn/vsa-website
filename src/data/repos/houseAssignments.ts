@@ -190,6 +190,52 @@ export class HouseAssignmentsRepository {
     }, 'Failed to update House assignment row');
   }
 
+  /**
+   * Moves one automatically placed applicant, or swaps two, in one database
+   * transaction (admin_apply_house_placement_override): every row changes or
+   * none does, with the batch's capacities and the reason rule checked
+   * server-side. Returns the updated rows.
+   *
+   * Until migration 20261027120000 is applied the function does not exist; a
+   * single move then falls back to one row update (atomic on its own), and a
+   * swap is refused rather than risking a half-applied pair.
+   */
+  async applyPlacementOverride(
+    batchId: string,
+    changes: ReadonlyArray<{ draftId: string; houseProfileId: string }>,
+    reason: string | null,
+  ): Promise<HouseAssignmentDraft[]> {
+    return withErrorHandling(async () => {
+      if (changes.length < 1 || changes.length > 2) {
+        throw new ValidationError('An override changes one row, or two rows for a swap.', 'changes');
+      }
+      const { data, error } = await supabase.rpc('admin_apply_house_placement_override', {
+        p_batch_id: batchId,
+        p_changes: changes.map((change) => ({ draft_id: change.draftId, house_profile_id: change.houseProfileId })),
+        p_reason: reason,
+      });
+      if (!error) return data ?? [];
+      if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
+
+      if (changes.length > 1) {
+        throw new ValidationError(
+          'Swaps need the database update in migration 20261027120000, which has not been applied yet. Nothing was changed; move one applicant at a time instead.',
+          'changes',
+        );
+      }
+      const [change] = changes;
+      const drafts = await this.getDrafts(batchId);
+      const current = drafts.find((row) => row.id === change.draftId);
+      if (!current) throw new NotFoundError('That row is not part of this batch.', 'house_assignment_drafts', change.draftId);
+      const backToGenerated = change.houseProfileId === current.generated_house_profile_id;
+      const trimmed = reason?.trim() || null;
+      if (!backToGenerated && !trimmed) throw new ValidationError('A reason is required for a manual override.', 'override_reason');
+      const patch: HouseDraftPatch = { house_profile_id: change.houseProfileId, override_reason: backToGenerated ? null : trimmed };
+      await this.updateDraft(batchId, change.draftId, patch);
+      return [{ ...current, ...patch }];
+    }, 'Failed to change House placement');
+  }
+
   async addDraft(batchId: string, row: Omit<HouseAssignmentDraftInsert, 'batch_id'>): Promise<HouseAssignmentDraft> {
     return withErrorHandling(async () => {
       await this.assertDraft(batchId);

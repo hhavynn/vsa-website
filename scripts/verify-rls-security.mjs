@@ -484,6 +484,14 @@ async function runTests() {
       else reportPass('anon cannot read house_parents (returned empty list due to RLS)');
     }
 
+    // Atomic House placement override (migration 20261027120000): EXECUTE is for authenticated only.
+    {
+      const { data: hoData, error: hoError } = await anon.rpc('admin_apply_house_placement_override', { p_batch_id: dummyUuid, p_changes: [], p_reason: 'RLS verify probe' });
+      if (isMissingFunction(hoError)) reportSkip('admin_apply_house_placement_override is not present yet (migration 20261027120000 not applied)');
+      else if (hoError && (hoError.code === '42501' || hoError.message.includes('permission denied'))) reportPass(`anon cannot call admin_apply_house_placement_override (${hoError.message})`);
+      else reportFail(`anon could call admin_apply_house_placement_override or got unexpected error: ${JSON.stringify(hoError || hoData)}`);
+    }
+
     // Historical attendance recovery (migration 20261009000026) is admin-only. A missing table or
     // function means the migration is not applied yet: a skip, not a pass. Writes, rollback and
     // concurrency are covered offline by scripts/test-attendance-recovery.sh, not probed here.

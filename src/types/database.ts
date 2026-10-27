@@ -3974,6 +3974,10 @@ export type Database = {
       };
     };
     Functions: {
+      admin_apply_house_placement_override: {
+        Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
+        Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];
+      };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
         Returns: Json;

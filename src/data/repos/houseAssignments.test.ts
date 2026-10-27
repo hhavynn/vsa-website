@@ -341,3 +341,71 @@ describe('timestamp-priority (automatic) batches', () => {
     expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
   });
 });
+
+describe('applyPlacementOverride', () => {
+  const RPC = 'rpc:admin_apply_house_placement_override';
+  const auto = (overrides: Partial<HouseAssignmentDraft> = {}) => draft(1, { generated_house_profile_id: 'p-toad', ...overrides });
+
+  it('sends a swap as one RPC call and returns the rows the database updated', async () => {
+    const updated = [auto({ house_profile_id: 'p-boo', override_reason: 'Approved' }), draft(2, { house_profile_id: 'p-toad' })];
+    supabaseMock.queueResult(RPC, { data: updated, error: null });
+
+    const rows = await houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+      { draftId: 'd2', houseProfileId: 'p-toad' },
+    ], 'Approved');
+
+    expect(rows).toEqual(updated);
+    expect(supabaseMock.queriesFor(RPC)).toHaveLength(1);
+    expect(supabaseMock.queriesFor(RPC)[0].calls[0].args[0]).toEqual({
+      p_batch_id: 'batch-1',
+      p_changes: [{ draft_id: 'd1', house_profile_id: 'p-boo' }, { draft_id: 'd2', house_profile_id: 'p-toad' }],
+      p_reason: 'Approved',
+    });
+    // No direct row writes, and never a membership write.
+    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('passes the database refusal through and changes nothing else', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: '23514', message: 'That House would have 3 applicants but its capacity is 2. Nothing was changed.' } });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], 'x'))
+      .rejects.toThrow('Nothing was changed.');
+    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+  });
+
+  it('refuses a swap when the function is not deployed yet, instead of two separate updates', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+      { draftId: 'd2', houseProfileId: 'p-toad' },
+    ], 'Approved')).rejects.toThrow(/20261027120000.*Nothing was changed/);
+    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+  });
+
+  it('falls back to one row update for a single move when the function is not deployed yet', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: '42883', message: 'function does not exist' } });
+    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
+    supabaseMock.queueResult('house_assignment_batches', { data: batch('draft'), error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
+
+    const rows = await houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], '  Approved  ');
+
+    expect(rows).toEqual([expect.objectContaining({ id: 'd1', house_profile_id: 'p-boo', override_reason: 'Approved' })]);
+    const updates = supabaseMock.queriesFor('house_assignment_drafts').flatMap((query) => query.calls).filter((call) => call.method === 'update');
+    expect(updates).toEqual([{ method: 'update', args: [{ house_profile_id: 'p-boo', override_reason: 'Approved' }] }]);
+  });
+
+  it('still requires a reason in the fallback unless the row returns to its generated House', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], ' '))
+      .rejects.toThrow(/reason is required/);
+    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+  });
+
+  it('rejects an empty or oversized change list without calling the database', async () => {
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [], null)).rejects.toThrow(/one row, or two/);
+    expect(supabaseMock.queriesFor(RPC)).toHaveLength(0);
+  });
+});

@@ -13,6 +13,12 @@ jest.mock('../../../data/repos/adminReview', () => ({
 jest.mock('../../../data/repos/adminOperations', () => ({
   adminOperationsRepository: { resolveYearStart: jest.fn().mockResolvedValue(2026) },
 }));
+jest.mock('../../../data/repos/houseParents', () => ({
+  houseParentsRepository: { listForYear: jest.fn().mockResolvedValue([]) },
+}));
+jest.mock('../../../data/repos/memberIdentity', () => ({
+  memberIdentityRepository: { loadIdentityEmails: jest.fn().mockResolvedValue([]) },
+}));
 jest.mock('../../../data/repos/houseAssignments', () => ({
   houseAssignmentsRepository: { listBatches: jest.fn(), loadSnapshot: jest.fn() },
 }));
@@ -98,6 +104,6 @@ it('switches to the batch’s year when the link points at a different one', asy
 
 it('does nothing without the parameters', async () => {
   renderWorkflow('/admin/houses');
-  await screen.findByText('Import Sheet');
+  await screen.findByRole('heading', { name: 'Import House Applications' });
   expect(repo.loadSnapshot).not.toHaveBeenCalled();
 });

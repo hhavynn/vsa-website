@@ -21,7 +21,9 @@ const PLACEMENT_SOURCES = [
   'src/components/features/admin/HousePlacementReviewPanel.tsx',
   'src/components/features/admin/HousePlacementCapacityEditor.tsx',
   'src/components/features/admin/HousePlacementResults.tsx',
+  'src/components/features/admin/HousePlacementExportPanel.tsx',
 ];
+const OVERRIDE_MIGRATION = 'supabase/migrations/20261027120000_house_placement_override_rpc.sql';
 
 describe('placement migration', () => {
   const sql = stripSqlComments(read(MIGRATION)).toLowerCase();
@@ -37,6 +39,52 @@ describe('placement migration', () => {
 
   it('adds no email, phone or other contact column', () => {
     expect(sql).not.toMatch(/email|phone|birth|allerg/);
+  });
+});
+
+describe('override RPC migration', () => {
+  const sql = stripSqlComments(read(OVERRIDE_MIGRATION)).toLowerCase();
+
+  it('adds one SECURITY INVOKER function with a pinned search_path and an admin check', () => {
+    expect(sql.match(/create or replace function/g)).toHaveLength(1);
+    expect(sql).toMatch(/create or replace function public\.admin_apply_house_placement_override\(/);
+    expect(sql).toMatch(/security invoker/);
+    expect(sql).not.toMatch(/security definer/);
+    expect(sql).toMatch(/set search_path = ''/);
+    expect(sql).toMatch(/if not public\.is_admin_user\(auth\.uid\(\)\) then/);
+  });
+
+  it('revokes EXECUTE from public and anon and grants it to authenticated only', () => {
+    const revoke = sql.indexOf('revoke all on function public.admin_apply_house_placement_override(uuid, jsonb, text) from public, anon, authenticated');
+    const grant = sql.indexOf('grant execute on function public.admin_apply_house_placement_override(uuid, jsonb, text) to authenticated;');
+    expect(revoke).toBeGreaterThan(-1);
+    expect(grant).toBeGreaterThan(revoke);
+    expect(sql.match(/\bgrant\b/g)).toHaveLength(1);
+    expect(sql).not.toMatch(/to anon|to public|service_role/);
+  });
+
+  it('only changes draft rows: no table, policy, membership, member or points change', () => {
+    // The COMMENT ON FUNCTION text documents what it never touches; check the code itself.
+    const code = sql.replace(/comment on function[\s\S]*?';/g, '');
+    expect(code).not.toMatch(/\b(create|alter|drop) (table|policy|view|trigger)\b/);
+    expect(code).not.toMatch(/row level security|truncate|delete from|insert into/);
+    expect(code).not.toMatch(/house_memberships|public\.members\b|points|attendance|leaderboard/);
+    expect(code.match(/\bupdate public\.\w+/g)).toEqual(['update public.house_assignment_drafts']);
+  });
+
+  it('refuses anything but a draft, automatic batch, and checks capacity after every change', () => {
+    expect(sql).toMatch(/v_batch\.status <> 'draft'/);
+    expect(sql).toMatch(/v_batch\.assignment_method <> 'timestamp_ranked'/);
+    expect(sql).toMatch(/for update/);
+    expect(sql).toMatch(/v_count > v_capacity/);
+    expect(sql).toMatch(/a reason is required for a manual override/);
+  });
+});
+
+describe('placement exports', () => {
+  it('build rows only from placement fields: no email, phone, birthday, allergy or note column', () => {
+    const source = stripTsComments(read('src/lib/housePlacementExport.ts'));
+    expect(source).not.toMatch(/email|phone|birth|allerg|\.notes\b/i);
   });
 });
 
