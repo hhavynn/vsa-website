@@ -54,4 +54,13 @@ describe('vercel.json deploy-safety policy', () => {
       expect(headersFor(requestPath)[header]).toBeDefined();
     });
   });
+
+  // A one-year policy locked students out on UCSD-GUEST captive-portal Wi-Fi (PR #187) and
+  // was reintroduced by #480. Raising it requires the campus validation in
+  // docs/security-headers-and-csp.md § HSTS decision, then updating this pin.
+  it('pins HSTS to max-age=0 on every page and asset', () => {
+    ['/', '/events', '/admin/members', '/static/js/main.abc123.js'].forEach((requestPath) => {
+      expect(headersFor(requestPath)['strict-transport-security']).toBe('max-age=0');
+    });
+  });
 });

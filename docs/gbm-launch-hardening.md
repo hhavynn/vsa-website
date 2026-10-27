@@ -5,7 +5,8 @@
 The launch audit found mobile contrast/focus/viewport problems, authenticated
 access to raw member/import data, anonymous uploads without an aggregate budget,
 concurrent AI calls bypassing logged-request limits, disabled HSTS, and dependency
-advisories. This change fixes that audit scope for public visitors and admins.
+advisories. This change fixes that audit scope for public visitors and admins,
+except HSTS: disabled HSTS is the accepted policy, not a defect (see below).
 RLS, grants, Storage, and provider spend make it high risk; migrations require
 owner review and manual rollout. No attendance, points, House membership, or
 leaderboard calculations change.
@@ -37,8 +38,12 @@ of source/proxy routes, preserves same-origin resource policy, and defaults to
 loopback. `node --test scripts/start-dev.test.cjs` checks real HTTP behavior,
 invalid host/cross-site denial, source handling, route fallback, and clean shutdown.
 
-HSTS is enabled for this hostname for one year. No subdomain or preload coverage
-is assumed.
+HSTS stays disabled (`Strict-Transport-Security: max-age=0`). This change
+originally shipped a one-year policy, which reversed the accepted decision in
+`docs/security-headers-and-csp.md` § HSTS decision without the campus
+captive-portal validation that decision requires; a one-year policy previously
+locked students out on UCSD-GUEST Wi-Fi (PR #187). The value is restored to
+`max-age=0` and pinned by `src/vercelConfig.test.ts`.
 
 ## Validation evidence
 
@@ -82,7 +87,7 @@ Live read-only simulations using existing ordinary/admin profiles confirmed
 caller-bound helper behavior and the AI RPCs' internal service-role guards, even
 when invoked by the database owner. Profile identifiers were not exported.
 
-The two restrictive migrations and frontend/HSTS deployment remain pending
+The two restrictive migrations and frontend deployment remain pending
 Vercel authentication. Applying those restrictions before the compatible frontend
 is ready would disrupt public lookup and photo submissions. The photo broker
 fails closed for valid requests until its admission RPC exists. No production
@@ -95,7 +100,7 @@ authenticated client verification remains an explicit gate.
    transaction in migration history; do not push unrelated pending migrations.
 3. Verify safe projection and browser/service grants, then promote the compatible
    frontend promptly. Both required Edge Functions are already deployed.
-4. Verify the frontend/HSTS configuration, safe public lookup, admin raw
+4. Verify the frontend configuration (`Strict-Transport-Security: max-age=0`), safe public lookup, admin raw
    access, a real signed upload, direct upload rejection, and concurrent AI quota
    rejection using dedicated approved test data.
 
