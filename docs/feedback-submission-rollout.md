@@ -5,6 +5,12 @@ name/email. Contact fields are self-reported; account attribution comes exclusiv
 from a verified Auth session, or NULL for an anonymous request. Invalid credentials
 fail rather than silently becoming anonymous. Responses contain no stored record.
 
+The hosted runtime's injected `SUPABASE_ANON_KEY` can differ from the still-valid
+public key configured in Vercel. Set `FEEDBACK_PUBLIC_ANON_KEY` to that exact
+published client key when they differ; both explicitly configured public keys
+represent anonymous requests. Other bearer tokens still require Auth verification.
+Production rollout identified and corrected this mismatch before frontend merge.
+
 Bodies are streamed with an 8 KiB ceiling; the server checks required types,
 allowed keys and lengths (100 subject/name, 1,000 description, 254 email).
 No IP address or client-selected rate-limit key is used or stored.

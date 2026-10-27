@@ -3,6 +3,7 @@ import { handler } from "../_shared/server-test-adapter.ts";
 Deno.env.set("SUPABASE_URL", "https://feedback.invalid");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "synthetic-service");
 Deno.env.set("SUPABASE_ANON_KEY", "synthetic-anon");
+Deno.env.set("FEEDBACK_PUBLIC_ANON_KEY", "synthetic-published-client-key");
 await import("./index.ts");
 const userId = "00000000-0000-4000-8000-000000000001";
 function assert(value: unknown, message: string) {
@@ -37,6 +38,7 @@ Deno.test(
       for (const token of [
         undefined,
         "synthetic-anon",
+        "synthetic-published-client-key",
         "valid-user-token",
         "invalid-user-token",
       ]) {
@@ -49,7 +51,7 @@ Deno.test(
               actual === `Bearer ${token}`,
               "verification used wrong bearer token",
             );
-            return token === "invalid-user-token"
+            return token !== "valid-user-token"
               ? json({ msg: "Invalid JWT" }, 401)
               : json({
                   id: userId,

@@ -5,6 +5,7 @@ import { createFeedbackHandler } from "./handler.ts";
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+const publicClientKey = Deno.env.get("FEEDBACK_PUBLIC_ANON_KEY") ?? "";
 const backend =
   url && serviceKey
     ? createClient(url, serviceKey, {
@@ -19,7 +20,8 @@ serve(
         throw new Error("Feedback configuration unavailable");
       const header = request.headers.get("authorization");
       // functions.invoke sends the public anon key when there is no session.
-      if (!header || header === `Bearer ${anonKey}`) return { userId: null };
+      if (!header || header === `Bearer ${anonKey}` ||
+          (publicClientKey && header === `Bearer ${publicClientKey}`)) return { userId: null };
       const match = /^Bearer (\S+)$/i.exec(header);
       if (!match) return null;
       const { data, error } = await backend.auth.getUser(match[1]);
