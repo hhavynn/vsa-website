@@ -196,9 +196,8 @@ export class HouseAssignmentsRepository {
    * none does, with the batch's capacities and the reason rule checked
    * server-side. Returns the updated rows.
    *
-   * Until migration 20261027120000 is applied the function does not exist; a
-   * single move then falls back to one row update (atomic on its own), and a
-   * swap is refused rather than risking a half-applied pair.
+   * The RPC is required for both moves and swaps: a browser row update
+   * cannot enforce batch-wide capacity checks under concurrent requests.
    */
   async applyPlacementOverride(
     batchId: string,
@@ -217,22 +216,10 @@ export class HouseAssignmentsRepository {
       if (!error) return data ?? [];
       if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
 
-      if (changes.length > 1) {
-        throw new ValidationError(
-          'Swaps need the database update in migration 20261027120000, which has not been applied yet. Nothing was changed; move one applicant at a time instead.',
-          'changes',
-        );
-      }
-      const [change] = changes;
-      const drafts = await this.getDrafts(batchId);
-      const current = drafts.find((row) => row.id === change.draftId);
-      if (!current) throw new NotFoundError('That row is not part of this batch.', 'house_assignment_drafts', change.draftId);
-      const backToGenerated = change.houseProfileId === current.generated_house_profile_id;
-      const trimmed = reason?.trim() || null;
-      if (!backToGenerated && !trimmed) throw new ValidationError('A reason is required for a manual override.', 'override_reason');
-      const patch: HouseDraftPatch = { house_profile_id: change.houseProfileId, override_reason: backToGenerated ? null : trimmed };
-      await this.updateDraft(batchId, change.draftId, patch);
-      return [{ ...current, ...patch }];
+      throw new ValidationError(
+        'House placement changes are unavailable. Ask a site administrator to verify database migration 20261027120000 and refresh the API schema cache. Nothing was changed.',
+        'changes',
+      );
     }, 'Failed to change House placement');
   }
 
