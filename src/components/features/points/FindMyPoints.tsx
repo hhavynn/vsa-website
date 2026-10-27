@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Input } from "../../ui/Input";
 import { useAcademicTerms } from "../../../hooks/useAcademicTerms";
@@ -153,6 +153,9 @@ export function FindMyPoints({
   const { yearsWithData, loading: yearsLoading } = useLeaderboardYears();
 
   const [query, setQuery] = useState("");
+  const [announcedQuery, setAnnouncedQuery] = useState<string | null>(null);
+  const searchInputId = useId();
+  const searchHelpId = `${searchInputId}-help`;
   const [selectedYear, setSelectedYear] = useState<SelectedYear | null>(null);
   const [hasUserSelectedYear, setHasUserSelectedYear] = useState(false);
   const [pickedMemberId, setPickedMemberId] = useState<string | null>(null);
@@ -260,11 +263,13 @@ export function FindMyPoints({
   const handleYearChange = (value: string) => {
     setHasUserSelectedYear(true);
     setSelectedYear(value === "all" ? "all" : Number(value));
+    setAnnouncedQuery(null);
   };
 
   const handleClear = () => {
     setQuery("");
     setPickedMemberId(null);
+    setAnnouncedQuery(null);
   };
 
   const selectedYearLabel = useMemo(() => {
@@ -286,6 +291,24 @@ export function FindMyPoints({
     !loadingState &&
     !initializing;
   const showEmptyData = !initializing && !loadingState && entries.length === 0;
+
+  // Only announce after an explicit Enter or blur. Announcing a result for
+  // every intermediate keystroke is especially disruptive to screen readers.
+  const lookupStatus = announcedQuery === trimmedQuery && trimmedQuery
+    ? error
+      ? "Points lookup is unavailable right now."
+      : initializing || loadingState
+        ? "Searching for members."
+        : showEmptyData
+          ? "No member activity is available for the selected year."
+          : showNoResults
+            ? "No matching member found. Try another spelling or year, or request a correction."
+            : resolvedEntry
+              ? "Match found. Your points summary is shown below."
+              : showAmbiguous
+                ? `${matches.length} possible matches found. Choose your profile below.`
+                : ""
+    : "";
 
   const containerClass =
     variant === "panel"
@@ -356,17 +379,30 @@ export function FindMyPoints({
         </div>
       )}
 
+      <label htmlFor={searchInputId} className="sr-only">Search by name</label>
+      <p id={searchHelpId} className="mb-2 font-sans text-xs" style={{ color: "var(--text3)" }}>
+        Search results update as you type. Press Enter or leave the field to hear a summary.
+      </p>
       <div className="relative">
         <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)]" />
         <Input
+          id={searchInputId}
+          aria-describedby={searchHelpId}
           className="pl-11 pr-10 h-12 bg-[var(--surface)] border-2 border-[var(--border)] focus:ring-[var(--brand)]"
           placeholder="Type your name (e.g. Havyn Nguyen)"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setPickedMemberId(null);
+            setAnnouncedQuery(null);
           }}
-          aria-label="Search by name"
+          onBlur={() => setAnnouncedQuery(query.trim() || null)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              setAnnouncedQuery(query.trim() || null);
+            }
+          }}
           autoComplete="off"
           spellCheck={false}
         />
@@ -380,6 +416,10 @@ export function FindMyPoints({
             <CloseIcon className="h-3.5 w-3.5" />
           </button>
         )}
+      </div>
+
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {lookupStatus}
       </div>
 
       <div className="mt-6">
@@ -472,12 +512,20 @@ function NoResultsCard({
         view. If you attended events but don't see yourself, you can request a
         correction below.
       </p>
-      <div className="mt-4">
+      <p className="mt-2 font-sans text-sm" style={{ color: "var(--text2)" }}>
+        A recent event may not have been imported yet, your sign-in name may
+        differ, or an event may not award points. Cabinet can review a correction
+        request; this search does not change anyone's points.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-3">
         <Link
           to={CORRECTION_HREF}
           className="vsa-btn-primary inline-flex whitespace-nowrap"
         >
           Request a correction
+        </Link>
+        <Link to="/points#how-points-work" className="vsa-btn-secondary inline-flex">
+          How points work
         </Link>
       </div>
     </div>
