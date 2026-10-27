@@ -9,6 +9,8 @@ import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
+import { isPublicEditorialRoute } from './publicEditorialTheme';
+import '../../styles/home-editorial.css';
 
 function ScrollManager() {
   const { pathname, search, hash } = useLocation();
@@ -36,7 +38,7 @@ function LayoutShell() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    <div className={`min-h-screen flex flex-col font-sans${isPublicEditorialRoute(location.pathname) ? ' vsa-editorial-shell' : ''}`} style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <ScrollManager />
       <NavigationShell />
 

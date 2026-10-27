@@ -8,20 +8,21 @@ module.exports = {
     extend: {
       // ─── Brand tokens ─────────────────────────────────────────────────────
       colors: {
-        // VSA Teal — primary accent, drawn from the logo's sky palette.
-        // 600 = light-mode primary (#176e63), 400 = dark-mode primary (#3bbdb5).
+        // Keep the original VSA teal in admin; the public editorial shell
+        // supplies blue/periwinkle RGB channels from the Figma concept.
+        // CSS channels preserve Tailwind opacity utilities (brand-600/20, etc).
         brand: {
-          50:  '#eef8f7',
-          100: '#d2efec',
-          200: '#a6deda',
-          300: '#6ccac2',
-          400: '#3bbdb5',  // dark mode primary
-          500: '#207d72',
-          600: '#176e63',  // light mode primary CTA
-          700: '#145a52',  // hover
-          800: '#104b45',
-          900: '#0d3c38',
-          950: '#0a2828',
+          50:  'rgb(var(--vsa-brand-50, 238 248 247) / <alpha-value>)',
+          100: 'rgb(var(--vsa-brand-100, 210 239 236) / <alpha-value>)',
+          200: 'rgb(var(--vsa-brand-200, 166 222 218) / <alpha-value>)',
+          300: 'rgb(var(--vsa-brand-300, 108 202 194) / <alpha-value>)',
+          400: 'rgb(var(--vsa-brand-400, 59 189 181) / <alpha-value>)',
+          500: 'rgb(var(--vsa-brand-500, 32 125 114) / <alpha-value>)',
+          600: 'rgb(var(--vsa-brand-600, 23 110 99) / <alpha-value>)',
+          700: 'rgb(var(--vsa-brand-700, 20 90 82) / <alpha-value>)',
+          800: 'rgb(var(--vsa-brand-800, 16 75 69) / <alpha-value>)',
+          900: 'rgb(var(--vsa-brand-900, 13 60 56) / <alpha-value>)',
+          950: 'rgb(var(--vsa-brand-950, 10 40 40) / <alpha-value>)',
         },
         // Coral accent — lantern red-orange from the logo.
         coral: {
@@ -48,7 +49,7 @@ module.exports = {
       // ─── Typography ───────────────────────────────────────────────────────
       fontFamily: {
         sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
-        serif: ['"DM Serif Display"', 'Georgia', 'serif'],
+        serif: ['var(--vsa-serif-font, "DM Serif Display")', 'Georgia', 'serif'],
         mono:  ['"JetBrains Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
       },
 

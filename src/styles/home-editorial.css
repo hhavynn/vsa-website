@@ -103,6 +103,245 @@
   mask-image: radial-gradient(circle, #000 10%, transparent 70%);
 }
 
+/* Shared public visual language. The exact Figma homepage colors carry into
+   existing public routes through tokens, without touching admin workflows. */
+.vsa-editorial-shell {
+  --vsa-serif-font: "Instrument Serif";
+  --color-bg: #faf9f5;
+  --color-surface: #ffffff;
+  --color-surface2: #f0eef9;
+  --color-surface3: #e7e9f6;
+  --color-border: #dcd9e9;
+  --color-border-strong: #bbb7d0;
+  --color-text: #28354d;
+  --color-text2: #4d5871;
+  --color-text3: #5c6680;
+  --color-nav: rgba(237, 240, 252, 0.96);
+  --color-nav-border: #cdd3ed;
+  --color-input: #f0eef9;
+  --color-sidebar: #ffffff;
+  --color-sidebar-border: #dcd9e9;
+  --color-sidebar-active: #e7eafd;
+  --color-brand: #4356a1;
+  --color-on-brand: #ffffff;
+  --color-accent: #9072b7;
+  --color-accent-text: #69518d;
+  --color-gold: #9886c0;
+  --color-gold-text: #635187;
+  --teal: #718bd4;
+  --teal-l: #a8d9f0;
+  --teal-d: #4356a1;
+  --coral: #dba9cd;
+  --gold: #ad9bd7;
+  --bg: var(--color-bg);
+  --bg2: #f0eef9;
+  --bg3: #e7e9f6;
+  --surface: var(--color-surface);
+  --surface2: var(--color-surface2);
+  --surface3: var(--color-surface3);
+  --border: var(--color-border);
+  --border2: var(--color-border-strong);
+  --text: var(--color-text);
+  --text2: var(--color-text2);
+  --text3: var(--color-text3);
+  --brand: var(--color-brand);
+  --accent: var(--color-accent);
+  --gold-t: var(--color-gold);
+  --nav-bg: var(--color-nav);
+  --card-bg: var(--color-surface);
+  --glow: rgba(68, 86, 161, 0.13);
+  --glow-coral: rgba(219, 169, 205, 0.13);
+  --paper-edge: rgba(188, 188, 214, 0.72);
+  --paper-shadow: 0 10px 32px rgba(51, 65, 112, 0.07);
+  --paper-shadow-hover: 0 16px 40px rgba(51, 65, 112, 0.13);
+  --tape-teal: rgba(168, 217, 240, 0.5);
+  --tape-coral: rgba(240, 204, 217, 0.5);
+  --tape-gold: rgba(200, 184, 232, 0.5);
+  --vsa-brand-50: 245 246 255;
+  --vsa-brand-100: 229 233 253;
+  --vsa-brand-200: 206 214 249;
+  --vsa-brand-300: 180 194 245;
+  --vsa-brand-400: 163 178 236;
+  --vsa-brand-500: 119 139 214;
+  --vsa-brand-600: 67 86 161;
+  --vsa-brand-700: 54 71 138;
+  --vsa-brand-800: 44 58 113;
+  --vsa-brand-900: 31 42 82;
+  --vsa-brand-950: 22 30 61;
+}
+
+html.dark .vsa-editorial-shell {
+  --color-bg: #101a31;
+  --color-surface: #1b2843;
+  --color-surface2: #243354;
+  --color-surface3: #2b395c;
+  --color-border: #3b4a6e;
+  --color-border-strong: #617091;
+  --color-text: #f4f0fc;
+  --color-text2: #d5dcf0;
+  --color-text3: #bfcbe4;
+  --color-nav: rgba(18, 27, 52, 0.96);
+  --color-nav-border: #3b4a6e;
+  --color-input: #243354;
+  --color-sidebar: #1b2843;
+  --color-sidebar-border: #3b4a6e;
+  --color-sidebar-active: #30426c;
+  --color-brand: #c7d1ff;
+  --color-on-brand: #16213f;
+  --color-accent: #d3b8f1;
+  --color-accent-text: #dfc5ff;
+  --color-gold: #dac8f3;
+  --color-gold-text: #dac8f3;
+  --teal: #aeb9eb;
+  --teal-d: #b9c7ff;
+  --coral: #ebc7e5;
+  --gold: #cbb4ec;
+  --bg2: #1b2843;
+  --bg3: #243354;
+  --glow: rgba(171, 185, 239, 0.18);
+  --glow-coral: rgba(228, 185, 232, 0.15);
+  --paper-edge: #3b4a6e;
+  --paper-shadow: 0 10px 32px rgba(0, 0, 0, 0.19);
+  --paper-shadow-hover: 0 16px 40px rgba(0, 0, 0, 0.3);
+  --vsa-brand-50: 31 42 82;
+  --vsa-brand-100: 44 58 113;
+  --vsa-brand-200: 72 87 147;
+  --vsa-brand-300: 150 165 230;
+  --vsa-brand-400: 199 209 255;
+  --vsa-brand-500: 174 187 245;
+  --vsa-brand-600: 168 182 245;
+  --vsa-brand-700: 205 213 255;
+  --vsa-brand-800: 220 225 255;
+  --vsa-brand-900: 233 235 255;
+  --vsa-brand-950: 245 246 255;
+}
+
+/* Gallery, Events, Cabinet, Get Involved, Calendar and Leaderboard share this
+   hero, so they inherit the same sky/periwinkle color story as the homepage. */
+.vsa-editorial-shell .vsa-page-hero {
+  padding-block: clamp(64px, 8vw, 112px) clamp(48px, 6vw, 80px);
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 13% 22%, rgba(168, 217, 240, 0.95), transparent 42%),
+    radial-gradient(ellipse at 86% 6%, rgba(200, 184, 232, 0.86), transparent 43%),
+    linear-gradient(115deg, #edf5fc, #dfe4f9 54%, #efdded);
+}
+
+.vsa-editorial-shell .vsa-page-hero::before {
+  content: "";
+  position: absolute;
+  top: -110px;
+  right: -90px;
+  width: min(42vw, 410px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: radial-gradient(circle at 22% 19%, rgba(255, 255, 255, 0.62), transparent 48%);
+  box-shadow: inset 15px 12px 34px rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.vsa-editorial-shell .vsa-page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.vsa-editorial-shell .vsa-page-title,
+.vsa-editorial-shell .vsa-section-title {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.vsa-editorial-shell .vsa-page-title {
+  font-size: clamp(56px, 8vw, 106px);
+}
+
+.vsa-editorial-shell .vsa-page-title :is(em, span) {
+  color: #69518d;
+}
+
+.vsa-editorial-shell .vsa-btn-primary,
+.vsa-editorial-shell .vsa-btn-ghost {
+  border-radius: 2px;
+}
+
+.vsa-editorial-shell .vsa-btn-primary::before,
+.vsa-editorial-shell .vsa-btn-primary::after,
+.vsa-editorial-shell .vsa-btn-ghost::before,
+.vsa-editorial-shell .vsa-btn-ghost::after {
+  display: none;
+}
+
+/* Program landing pages reuse EditorialHero. ACE retains its bespoke hero. */
+.vsa-editorial-shell .program-app .editorial-hero {
+  --eh-grad-a: #f0ccd9;
+  --eh-grad-b: #a8d9f0;
+  --eh-grad-c: #edf0fd;
+  --eh-grid: rgba(40, 53, 77, 0.02);
+  --eh-grid-2: rgba(40, 53, 77, 0.018);
+  --eh-watermark: rgba(80, 95, 174, 0.09);
+}
+
+.vsa-editorial-shell .program-app .editorial-hero::after {
+  display: none;
+}
+
+.vsa-editorial-shell .program-app .editorial-hero-title,
+.vsa-editorial-shell .program-app .editorial-hero-watermark {
+  font-family: "Instrument Serif", Georgia, serif;
+}
+
+.vsa-editorial-shell .scrapbook-board {
+  background: linear-gradient(140deg, var(--bg) 0%, var(--surface2) 100%);
+}
+
+.vsa-editorial-shell footer.scrapbook-board {
+  background: linear-gradient(120deg, #dce8f8, #c7cdeb 55%, #e3d3ef);
+}
+
+.vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-photo, .scrapbook-score, .scrapbook-yearbook) {
+  border-radius: 3px;
+}
+
+.vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-photo)::before {
+  display: none;
+}
+
+.vsa-editorial-shell .scrapbook-photo {
+  background: var(--surface);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-hero {
+  background:
+    radial-gradient(ellipse at 16% 18%, rgba(62, 92, 161, 0.66), transparent 52%),
+    radial-gradient(ellipse at 87% 4%, rgba(114, 73, 150, 0.52), transparent 50%),
+    linear-gradient(115deg, #142645, #27325c 55%, #372747);
+}
+
+html.dark .vsa-editorial-shell .vsa-page-title :is(em, span) {
+  color: #dfc5ff;
+}
+
+html.dark .vsa-editorial-shell .program-app .editorial-hero {
+  --eh-grad-a: rgba(183, 113, 168, 0.24);
+  --eh-grad-b: rgba(90, 146, 210, 0.25);
+  --eh-grad-c: #142442;
+  --eh-watermark: rgba(190, 183, 244, 0.09);
+}
+
+html.dark .vsa-editorial-shell footer.scrapbook-board {
+  background: linear-gradient(120deg, #1b2f57, #302f62 55%, #3e2a57);
+}
+
+@media (max-width: 640px) {
+  .vsa-editorial-shell .vsa-page-hero::before {
+    top: -42px;
+    right: -80px;
+    width: 220px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-editorial-hero *,
   .home-editorial-gallery * {

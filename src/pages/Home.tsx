@@ -25,7 +25,6 @@ import {
 import { getLosAngelesDateOnly } from "../utils/losAngelesDate";
 import { isEventUpcomingOrOngoing } from "../lib/eventLifecycle";
 import { useEventLifecycleTimer } from "../hooks/useEventLifecycleTimer";
-import "../styles/home-editorial.css";
 
 export function Home() {
   const { content: presidentsContent } = usePresidentsContent();
