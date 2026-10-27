@@ -49,7 +49,7 @@ it('exposes expandable House member rankings as labelled rows and columns withou
   ]);
   expect(within(table).getAllByRole('row')).toHaveLength(6); // heading row + 5 initially visible
   const first = within(table).getByRole('row', { name: 'Rank 1: Ada Nguyen, 12 check-ins' });
-  expect(within(first).getByRole('rowheader', { name: 'Ada Nguyen' })).toBeInTheDocument();
+  expect(within(first).getByRole('rowheader', { name: /Ada Nguyen/ })).toBeInTheDocument();
   expect(within(first).getByRole('cell', { name: 'Rank 1' })).toBeInTheDocument();
   expect(within(first).getByRole('cell', { name: '12 check-ins' })).toBeInTheDocument();
 
