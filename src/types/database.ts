@@ -4139,6 +4139,17 @@ export type Database = {
         Args: { p_source_id: string; p_target_id: string };
         Returns: undefined;
       };
+      submit_feedback_guarded: {
+        Args: {
+          p_description: string;
+          p_email?: string;
+          p_name?: string;
+          p_title: string;
+          p_type: string;
+          p_user_id?: string;
+        };
+        Returns: boolean;
+      };
       sync_active_academic_term: {
         Args: { p_today?: string };
         Returns: undefined;
