@@ -84,4 +84,3 @@ export function createFeedbackHandler(deps: FeedbackDependencies) {
   };
 }
 import { corsHeaders } from '../_shared/cors.ts';
-
