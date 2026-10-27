@@ -77,7 +77,12 @@ function LayoutShell() {
       <Footer />
       <BackToTop />
       <MobileQuickDock />
-      <VsaAiAssistant />
+      {/* Own boundary: without it the assistant's first suspension would be
+          caught by the route-level Suspense above and paint the page loader
+          over the whole shell on first load. */}
+      <Suspense fallback={null}>
+        <VsaAiAssistant />
+      </Suspense>
     </div>
   );
 }
