@@ -28,11 +28,16 @@ export function AlbumFallback({ caption }: { caption?: string }) {
   );
 }
 
-interface AlbumLightboxProps {
+export interface AlbumLightboxProps {
   albums: GalleryAlbum[];
   index: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  nextPageError?: unknown | null;
+  onFetchNextPage?: () => void;
+  totalCount?: number | null;
 }
 
 /**
@@ -41,25 +46,85 @@ interface AlbumLightboxProps {
  * The caller owns open state (browser history), so Back closes it; this adds
  * swipe + arrow-key paging between albums, a thumb-reachable bottom bar, and a
  * graceful fallback when a cover is missing or fails to load.
+ * Now seamlessly navigates across unloaded album pages when hasNextPage is true.
  */
-export function AlbumLightbox({ albums, index, onIndexChange, onClose }: AlbumLightboxProps) {
+export function AlbumLightbox({
+  albums,
+  index,
+  onIndexChange,
+  onClose,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  nextPageError = null,
+  onFetchNextPage,
+  totalCount,
+}: AlbumLightboxProps) {
   const album = albums[index];
   const reduceMotion = useReducedMotion();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   // -1 = went to previous, 1 = went to next; drives the slide-in direction.
   const direction = useRef(0);
 
+  const pendingAdvanceRef = useRef(false);
+  const prevAlbumsCount = useRef(albums.length);
+
+  // When next page loads and user requested to advance, move to next album
+  useEffect(() => {
+    if (albums.length > prevAlbumsCount.current && pendingAdvanceRef.current) {
+      pendingAdvanceRef.current = false;
+      onIndexChange(index + 1);
+    }
+    prevAlbumsCount.current = albums.length;
+  }, [albums.length, index, onIndexChange]);
+
+  // Proactive prefetch as user approaches boundary
+  useEffect(() => {
+    if (
+      hasNextPage &&
+      !isFetchingNextPage &&
+      !nextPageError &&
+      onFetchNextPage &&
+      index >= albums.length - 2
+    ) {
+      onFetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, nextPageError, onFetchNextPage, index, albums.length]);
+
   const hasPrev = index > 0;
-  const hasNext = index < albums.length - 1;
+  const hasNext = index < albums.length - 1 || Boolean(hasNextPage);
+
+  const handleClose = useCallback(() => {
+    pendingAdvanceRef.current = false;
+    onClose();
+  }, [onClose]);
 
   const go = useCallback(
     (delta: -1 | 1) => {
-      const target = index + delta;
-      if (target < 0 || target >= albums.length) return;
-      direction.current = delta;
-      onIndexChange(target);
+      if (delta === -1) {
+        const target = index - 1;
+        if (target < 0) return;
+        direction.current = -1;
+        onIndexChange(target);
+        return;
+      }
+
+      // delta === 1 (Next)
+      if (index < albums.length - 1) {
+        direction.current = 1;
+        onIndexChange(index + 1);
+        return;
+      }
+
+      // At boundary
+      if (hasNextPage) {
+        direction.current = 1;
+        pendingAdvanceRef.current = true;
+        if (nextPageError || !isFetchingNextPage) {
+          onFetchNextPage?.();
+        }
+      }
     },
-    [albums.length, index, onIndexChange],
+    [albums.length, hasNextPage, index, isFetchingNextPage, nextPageError, onFetchNextPage, onIndexChange],
   );
 
   // Keep the key handler stable across re-renders while always seeing fresh `go`.
@@ -101,9 +166,16 @@ export function AlbumLightbox({ albums, index, onIndexChange, onClose }: AlbumLi
       : null;
   const eventLink = getAlbumEventLink(album);
 
+  const counterLabel =
+    totalCount && totalCount > albums.length
+      ? `${index + 1} / ${totalCount}`
+      : hasNextPage
+      ? `${index + 1} / ${albums.length}+`
+      : `${index + 1} / ${albums.length}`;
+
   return (
     <BottomSheet
-      onClose={onClose}
+      onClose={handleClose}
       ariaLabel="Album preview"
       className="border border-[var(--border)] bg-[var(--surface)] sm:max-w-3xl"
     >
@@ -139,7 +211,7 @@ export function AlbumLightbox({ albums, index, onIndexChange, onClose }: AlbumLi
                 {formatDateOnly(album.date, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
               </span>
               <span className="font-mono text-[11px] font-bold text-[var(--text3)]" aria-live="polite">
-                {index + 1} / {albums.length}
+                {counterLabel}
               </span>
             </div>
             <h2 className="break-words font-serif text-xl font-bold leading-tight text-[var(--text)]">{album.title}</h2>
@@ -184,7 +256,7 @@ export function AlbumLightbox({ albums, index, onIndexChange, onClose }: AlbumLi
         </button>
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           className="min-h-[48px] min-w-[96px] rounded-lg bg-[var(--text)] px-5 font-sans text-sm font-semibold text-[var(--surface)]"
         >
           Close
@@ -193,10 +265,23 @@ export function AlbumLightbox({ albums, index, onIndexChange, onClose }: AlbumLi
           type="button"
           onClick={() => go(1)}
           disabled={!hasNext}
-          aria-label="Next album"
+          aria-label={
+            nextPageError && index === albums.length - 1
+              ? 'Retry loading next album'
+              : 'Next album'
+          }
           className="min-h-[48px] rounded-lg border border-[var(--border)] bg-[var(--surface2)] px-3 font-sans text-sm font-semibold text-[var(--text)] disabled:opacity-40"
         >
-          Next →
+          {isFetchingNextPage && index === albums.length - 1 && pendingAdvanceRef.current ? (
+            <span className="flex items-center justify-center gap-1.5">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Loading...
+            </span>
+          ) : nextPageError && index === albums.length - 1 ? (
+            'Retry →'
+          ) : (
+            'Next →'
+          )}
         </button>
       </div>
     </BottomSheet>

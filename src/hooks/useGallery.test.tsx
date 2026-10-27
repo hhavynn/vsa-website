@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import React from 'react';
-import { useGallery, useGalleryStats, useGalleryYears, useGalleryFilteredCount } from './useGallery';
+import { useGallery } from './useGallery';
 import { galleryRepository } from '../data/repos/gallery';
 
 jest.mock('../data/repos/gallery', () => ({

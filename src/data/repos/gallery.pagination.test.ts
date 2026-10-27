@@ -1,4 +1,4 @@
-import { galleryRepository, GalleryAlbum } from './gallery';
+import { galleryRepository } from './gallery';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({

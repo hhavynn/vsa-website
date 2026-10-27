@@ -1,14 +1,21 @@
 import { type CSSProperties, type MouseEvent, useCallback, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateOnly } from '../lib/dateOnly';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PageTitle } from '../components/common/PageTitle';
 import { GallerySkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
-import { useGallery, useGalleryStats } from '../hooks/useGallery';
+import {
+  useGallery,
+  useGalleryStats,
+  useGalleryYears,
+  useGalleryFilteredCount,
+} from '../hooks/useGallery';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import { motion, useReducedMotion } from 'framer-motion';
 import { AlbumFallback, AlbumLightbox } from '../components/features/gallery/AlbumLightbox';
+import { GalleryFilters } from '../components/features/gallery/GalleryFilters';
+import { GalleryLoadMore } from '../components/features/gallery/GalleryLoadMore';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -63,6 +70,12 @@ export default function Gallery() {
   const shouldReduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const rawYear = searchParams.get('year');
+  const selectedYear = rawYear && /^\d{4}$/.test(rawYear) ? parseInt(rawYear, 10) : null;
+  const searchQuery = searchParams.get('search') ?? '';
+
   const { 
     data, 
     isLoading: loading, 
@@ -70,9 +83,50 @@ export default function Gallery() {
     hasNextPage, 
     fetchNextPage, 
     isFetchingNextPage 
-  } = useGallery();
+  } = useGallery({ year: selectedYear, search: searchQuery });
   
   const { data: totalCount = 0 } = useGalleryStats();
+  const { data: years = [] } = useGalleryYears();
+  const { data: filteredCount = null, isLoading: countLoading } = useGalleryFilteredCount({
+    year: selectedYear,
+    search: searchQuery,
+  });
+
+  const isFiltered = Boolean(selectedYear || searchQuery.trim());
+
+  const handleYearChange = useCallback(
+    (year: number | null) => {
+      const nextParams = new URLSearchParams(searchParams);
+      if (year) {
+        nextParams.set('year', String(year));
+      } else {
+        nextParams.delete('year');
+      }
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleSearchChange = useCallback(
+    (search: string) => {
+      const nextParams = new URLSearchParams(searchParams);
+      const trimmed = search.trim();
+      if (trimmed) {
+        nextParams.set('search', trimmed);
+      } else {
+        nextParams.delete('search');
+      }
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleResetFilters = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('year');
+    nextParams.delete('search');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const albums = useMemo(() => {
     return data?.pages.flatMap((page) => ('albums' in page ? page.albums : page)) ?? [];
@@ -110,11 +164,16 @@ export default function Gallery() {
   const useSummerGalleryEmptyState = shouldUseSummerEmptyState(albums.length > 0);
   const summerGalleryMessage = getSummerBreakMessage('gallery');
 
+  const hasLoadedAlbums = Boolean(data?.pages && data.pages.length > 0 && albums.length > 0);
+  const isInitialLoading = loading && !data;
+  const isInitialError = Boolean(error && !hasLoadedAlbums);
+  const nextPageError = error && hasLoadedAlbums ? error : null;
+
   const isDegraded = isSupabaseUnavailable(error);
 
-  if (loading) return <GallerySkeleton />;
+  if (isInitialLoading) return <GallerySkeleton />;
   
-  if (isDegraded) {
+  if (isInitialError && isDegraded) {
     return (
       <>
         <PageTitle title="Gallery" />
@@ -131,7 +190,7 @@ export default function Gallery() {
     );
   }
 
-  if (error) return <PageError message="Failed to load gallery" />;
+  if (isInitialError) return <PageError message="Failed to load gallery" />;
 
   return (
     <>
@@ -143,15 +202,45 @@ export default function Gallery() {
           <span className="scrapbook-sticker scrapbook-sticker-gold mb-4">Memory Wall</span>
           <h1 className="vsa-page-title">Gallery</h1>
           <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
-            {totalCount} albums from GBMs, retreats, cultural programs, and VSA traditions.
+            {isFiltered
+              ? 'Showing memory wall matches from GBMs, retreats, cultural programs, and VSA traditions.'
+              : `${totalCount} albums from GBMs, retreats, cultural programs, and VSA traditions.`}
           </p>
         </div>
       </div>
 
       <div className="vsa-container py-10">
+        <GalleryFilters
+          years={years}
+          selectedYear={selectedYear}
+          onYearChange={handleYearChange}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onReset={handleResetFilters}
+          totalFilteredCount={filteredCount}
+          isFiltered={isFiltered}
+          isLoading={countLoading}
+        />
+
         {albums.length === 0 ? (
           <div className="scrapbook-empty" role="status">
-            {useSummerGalleryEmptyState ? (
+            {isFiltered ? (
+              <div className="mx-auto max-w-xl space-y-4 text-center">
+                <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--text)' }}>
+                  No albums matched your filters
+                </p>
+                <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+                  Try searching with different keywords or clear the current filters to explore all memories.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="vsa-btn-ghost mx-auto"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : useSummerGalleryEmptyState ? (
               <div className="mx-auto max-w-xl space-y-3 text-center">
                 <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex">
                   {summerGalleryMessage.badge}
@@ -274,29 +363,21 @@ export default function Gallery() {
                 index={openAlbumIndex}
                 onIndexChange={showAlbumAt}
                 onClose={closeAlbum}
+                hasNextPage={Boolean(hasNextPage)}
+                isFetchingNextPage={isFetchingNextPage}
+                nextPageError={nextPageError}
+                onFetchNextPage={fetchNextPage}
+                totalCount={isFiltered ? filteredCount : totalCount}
               />
             )}
 
-            {hasNextPage && (
-              <div className="mt-16 flex justify-center">
-                <button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                  className="vsa-btn-ghost group relative min-w-[200px]"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {isFetchingNextPage ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Loading...
-                      </>
-                    ) : (
-                      'Load More Memories'
-                    )}
-                  </span>
-                </button>
-              </div>
-            )}
+            <GalleryLoadMore
+              hasNextPage={Boolean(hasNextPage)}
+              isFetchingNextPage={isFetchingNextPage}
+              fetchNextPage={fetchNextPage}
+              nextPageError={nextPageError}
+              totalLoaded={albums.length}
+            />
           </>
         )}
       </div>

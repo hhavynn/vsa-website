@@ -1,7 +1,6 @@
 import { useInfiniteQuery, useQuery } from 'react-query';
 import {
   galleryRepository,
-  GalleryAlbum,
   GalleryCursor,
   GalleryPage,
 } from '../data/repos/gallery';
