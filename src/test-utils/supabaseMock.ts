@@ -33,6 +33,7 @@
 export interface QueryResult<T = unknown> {
   data: T | null;
   error: unknown | null;
+  count?: number | null;
 }
 
 export interface RecordedCall {
