@@ -14,5 +14,8 @@ DROP POLICY IF EXISTS "Anyone can insert feedback" ON public.feedback;
 DROP POLICY IF EXISTS "feedback insert (self)" ON public.feedback;
 DROP POLICY IF EXISTS "Users can create feedback" ON public.feedback;
 DROP POLICY IF EXISTS "Users can insert feedback" ON public.feedback;
+DROP POLICY IF EXISTS "feedback select (self)" ON public.feedback;
+DROP POLICY IF EXISTS "Users can view their own feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Users can update their own feedback" ON public.feedback;
 -- Existing administrator SELECT/UPDATE policies and grants remain in force.
 COMMIT;

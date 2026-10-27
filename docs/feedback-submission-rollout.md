@@ -45,7 +45,9 @@ migrations; never use `supabase db push`.
 5. Only after the compatible endpoint/frontend work, apply
    `20261027170001_feedback_direct_insert_cutover.sql`. This revokes both table
    and column INSERT grants from PUBLIC/anon/authenticated and removes legacy
-   INSERT policies. Administrator SELECT/UPDATE policies remain unchanged.
+   INSERT policies and legacy self-read/self-update policies. Administrator
+   SELECT/UPDATE policies remain unchanged. Production inspection also found
+   `feedback select (self)`, so its removal is covered by an own-row denial test.
    A stale browser then gets an INSERT error and must refresh; it cannot spoof
    another account.
 6. Verify browser INSERT/EXECUTE denial, administrator review access, and public

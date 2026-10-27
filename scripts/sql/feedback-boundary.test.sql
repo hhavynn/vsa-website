@@ -5,6 +5,7 @@ CREATE ROLE service_role NOLOGIN;
 CREATE SCHEMA auth;
 CREATE TABLE auth.users (id uuid PRIMARY KEY);
 INSERT INTO auth.users VALUES ('00000000-0000-4000-8000-000000000001');
+INSERT INTO auth.users VALUES ('00000000-0000-4000-8000-000000000002');
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$ SELECT current_setting('request.jwt.claim.role', true) $$;
 CREATE FUNCTION public.is_admin_user() RETURNS boolean LANGUAGE sql AS $$ SELECT current_setting('request.jwt.claim.sub', true) = '00000000-0000-4000-8000-000000000001' $$;
 CREATE TABLE public.feedback (
@@ -18,6 +19,7 @@ GRANT SELECT, INSERT, UPDATE ON public.feedback TO anon, authenticated;
 GRANT INSERT (title) ON public.feedback TO anon;
 CREATE POLICY "Anyone can insert feedback" ON public.feedback FOR INSERT WITH CHECK (true);
 CREATE POLICY "feedback insert (self)" ON public.feedback FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "feedback select (self)" ON public.feedback FOR SELECT TO authenticated USING (user_id::text = current_setting('request.jwt.claim.sub', true));
 CREATE POLICY "Admins can view all feedback" ON public.feedback FOR SELECT TO authenticated USING (public.is_admin_user());
 CREATE POLICY "Admins can update feedback" ON public.feedback FOR UPDATE TO authenticated USING (public.is_admin_user()) WITH CHECK (public.is_admin_user());
 \ir ../../supabase/migrations/20261027170000_feedback_submission_boundary.sql
@@ -63,6 +65,7 @@ SET request.jwt.claim.role = 'service_role';
 SET ROLE service_role;
 SELECT public.submit_feedback_guarded('bug',' Anonymous ',' Details ');
 SELECT public.submit_feedback_guarded('feature','Verified user','Details',NULL,NULL,'00000000-0000-4000-8000-000000000001');
+SELECT public.submit_feedback_guarded('feature','Ordinary user','Details',NULL,NULL,'00000000-0000-4000-8000-000000000002');
 RESET ROLE;
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.feedback WHERE user_id IS NULL AND title = 'Anonymous') <> 1
@@ -78,7 +81,7 @@ SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000002';
 DO $$ BEGIN IF (SELECT count(*) FROM public.feedback) <> 0 THEN RAISE EXCEPTION 'ordinary user read private feedback'; END IF; END $$;
 SET request.jwt.claim.sub = '00000000-0000-4000-8000-000000000001';
 UPDATE public.feedback SET status = 'resolved';
-DO $$ BEGIN IF (SELECT count(*) FROM public.feedback WHERE status = 'resolved') <> 2 THEN RAISE EXCEPTION 'admin review broken'; END IF; END $$;
+DO $$ BEGIN IF (SELECT count(*) FROM public.feedback WHERE status = 'resolved') <> 3 THEN RAISE EXCEPTION 'admin review broken'; END IF; END $$;
 RESET ROLE;
 UPDATE private.feedback_submission_limits SET anonymous_hourly = 1, user_hourly = 1;
 DO $$
