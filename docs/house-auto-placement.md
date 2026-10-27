@@ -74,7 +74,7 @@ An override that breaks timestamp priority is shown as a warning, because it is 
 
 ## Data stored
 
-The existing tables are reused, with no new table. Migration `supabase/migrations/20261026180000_house_assignment_timestamp_placement.sql` only adds columns:
+The existing tables are reused, with no new table. Migration `supabase/migrations/20261026230757_house_assignment_timestamp_placement.sql` only adds columns:
 
 | Table | Column | Meaning |
 |---|---|---|
@@ -90,7 +90,7 @@ For automatic rows, `source_order` holds the priority order, `preferences` holds
 
 ## Deploying
 
-1. Apply the migration manually after staging verification (see `supabase/migrations/MIGRATION_CHECKLIST.md`). **It has not been applied to production.**
+1. Apply the migration manually after staging verification (see `supabase/migrations/MIGRATION_CHECKLIST.md`). Applied to production 2026-10-26 as version `20261026230757`.
 2. Deploy the frontend.
 
 If the frontend ships first, manual imports keep working because they never send the new columns. Saving an automatic placement fails cleanly at the batch insert, before any row is written.
