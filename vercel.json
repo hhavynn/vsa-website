@@ -47,6 +47,22 @@
     }
   ],
   "rewrites": [
+    { "source": "/ace", "destination": "/seo/ace.html" },
+    { "source": "/cabinet", "destination": "/seo/cabinet.html" },
+    { "source": "/calendar", "destination": "/seo/calendar.html" },
+    { "source": "/events", "destination": "/seo/events.html" },
+    { "source": "/gallery", "destination": "/seo/gallery.html" },
+    { "source": "/get-involved", "destination": "/seo/get-involved.html" },
+    { "source": "/house", "destination": "/seo/house.html" },
+    { "source": "/house/archive", "destination": "/seo/house/archive.html" },
+    { "source": "/intern-program", "destination": "/seo/intern-program.html" },
+    { "source": "/leaderboard", "destination": "/seo/leaderboard.html" },
+    { "source": "/privacy", "destination": "/seo/privacy.html" },
+    { "source": "/uvsa-network", "destination": "/seo/uvsa-network.html" },
+    { "source": "/vcn", "destination": "/seo/vcn.html" },
+    { "source": "/vcn/archive", "destination": "/seo/vcn/archive.html" },
+    { "source": "/vcn/current", "destination": "/seo/vcn/current.html" },
+    { "source": "/wild-n-culture", "destination": "/seo/wild-n-culture.html" },
     {
       "source": "/((?!static/).*)",
       "destination": "/index.html"

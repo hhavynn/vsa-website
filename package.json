@@ -36,7 +36,9 @@
   "scripts": {
     "start": "node scripts/start-dev.cjs",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild": "node --import tsx scripts/generate-public-seo.ts",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild:production": "npm run postbuild",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",

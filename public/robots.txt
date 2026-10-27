@@ -4,3 +4,5 @@ Disallow: /admin
 Disallow: /profile
 Disallow: /points
 Disallow: /feedback
+Disallow: /seo/
+Sitemap: https://www.vsaatucsd.com/sitemap.xml
