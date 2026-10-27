@@ -181,6 +181,19 @@ it('matches an applicant through a confirmed alternate email', async () => {
   expect(rows[2]).not.toHaveTextContent('Unmatched');
 });
 
+it('does not generate until confirmed member emails have loaded', async () => {
+  type Aliases = Awaited<ReturnType<typeof identityRepo.loadIdentityEmails>>;
+  let resolveAliases: (value: Aliases) => void = () => undefined;
+  identityRepo.loadIdentityEmails.mockImplementation(() => new Promise<Aliases>((resolve) => { resolveAliases = resolve; }));
+  renderWorkflow();
+  await uploadAndValidate();
+  await userEvent.selectOptions(screen.getByLabelText('2nd choice for row 4'), 'p-rarity');
+  expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeDisabled();
+  expect(screen.getByText('Loading confirmed member emails…')).toBeInTheDocument();
+  await act(async () => { resolveAliases([]); });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate Placements' })).toBeEnabled());
+});
+
 it('blocks with a clear message when the year has no active Houses', async () => {
   renderWorkflow({ houseProfiles: [] });
   expect(screen.getByRole('alert')).toHaveTextContent(/No active Houses for 2026/);

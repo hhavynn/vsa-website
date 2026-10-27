@@ -128,12 +128,15 @@ export function HousePlacementPanel({
   });
   // Confirmed alternate emails (member_identity_emails) widen email matching.
   // If they can't be read, matching falls back to each member's main email.
-  const { data: aliases = [], isError: aliasesFailed } = useQuery({
+  // Generate waits for this query, and the alias list is part of the preview
+  // key, so a preview (and the draft saved from it) never uses a partial list.
+  const { data: aliases = [], isError: aliasesFailed, isLoading: loadingAliases } = useQuery({
     queryKey: ['admin', 'member-identity-emails'],
     queryFn: () => memberIdentityRepository.loadIdentityEmails(),
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+  const aliasKey = useMemo(() => aliases.map((alias) => `${alias.member_id}:${alias.email}`).sort().join(','), [aliases]);
   const memberNameById = useMemo(() => new Map(members.map((member) => [member.id, `${member.first_name} ${member.last_name}`.trim()])), [members]);
   const memberName = useCallback((memberId: string) => memberNameById.get(memberId) ?? null, [memberNameById]);
   const placementProfiles = useMemo(
@@ -168,7 +171,7 @@ export function HousePlacementPanel({
     () => (capacities ? validateCapacities(houses, capacities, applicants.length) : []),
     [capacities, houses, applicants.length],
   );
-  const inputKey = `${parseVersion}|${JSON.stringify(edits)}|${JSON.stringify(capacities)}|${houses.map((house) => house.id).join(',')}|${parents.map((parent) => `${parent.house_profile_id}:${parent.display_name}`).join(',')}|${selectedYear}`;
+  const inputKey = `${parseVersion}|${JSON.stringify(edits)}|${JSON.stringify(capacities)}|${houses.map((house) => house.id).join(',')}|${parents.map((parent) => `${parent.house_profile_id}:${parent.display_name}`).join(',')}|${selectedYear}|${aliasesFailed ? 'aliases-failed' : aliasKey}`;
   const current = generated && generated.key === inputKey ? generated : null;
   const stage: PlacementStage = current ? 2 : rawText ? 1 : 0;
   useEffect(() => { onStageChange(stage); }, [stage, onStageChange]);
@@ -327,7 +330,7 @@ export function HousePlacementPanel({
   const detection = parse?.detection ?? null;
   const showMapping = !!detection && (!parse?.ok || Object.keys(overrides).length > 0);
   const rankSlots = Math.max(activeProfiles.length, detection?.columns.ranks.length ?? 0, 1);
-  const canGenerate = !!review?.ready && !!capacities && capacityErrors.length === 0 && !loadingMembers;
+  const canGenerate = !!review?.ready && !!capacities && capacityErrors.length === 0 && !loadingMembers && !loadingAliases;
 
   return (
     <div className="space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
@@ -478,7 +481,9 @@ export function HousePlacementPanel({
                 ? capacityErrors[0].message
                 : loadingMembers
                   ? 'Loading the member directory…'
-                  : 'Generating only previews the result. Nothing is saved until you save the draft.'}
+                  : loadingAliases
+                    ? 'Loading confirmed member emails…'
+                    : 'Generating only previews the result. Nothing is saved until you save the draft.'}
           </p>
         </div>
       )}
