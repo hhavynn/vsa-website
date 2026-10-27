@@ -75,7 +75,7 @@ export default function Gallery() {
   const { data: totalCount = 0 } = useGalleryStats();
 
   const albums = useMemo(() => {
-    return data?.pages.flatMap(page => page) ?? [];
+    return data?.pages.flatMap((page) => ('albums' in page ? page.albums : page)) ?? [];
   }, [data]);
   const openAlbumId = (location.state as AlbumLocationState | null)?.albumQuickLook ?? null;
   const openAlbumIndex = openAlbumId ? albums.findIndex((album) => album.id === openAlbumId) : -1;
