@@ -196,8 +196,9 @@ export default function AdminEvents() {
   const [selectedEventOriginalImageUrl, setSelectedEventOriginalImageUrl] = useState<string | null>(null);
   const [selectedEventOriginalThumbnailUrl, setSelectedEventOriginalThumbnailUrl] = useState<string | null>(null);
   const [selectedEventOriginalPoints, setSelectedEventOriginalPoints] = useState<number>(0);
-  // A `?filter=` deep link (Admin Overview) only means something on the Manage tab.
-  const [activeTab, setActiveTab] = useState<'create' | 'manage'>(statusFilter === 'all' ? 'create' : 'manage');
+  // Routine work is managing existing events, so Manage is the landing view; Create is one click away.
+  // A `?filter=` or `?event=` deep link also lands on Manage.
+  const [activeTab, setActiveTab] = useState<'create' | 'manage'>('manage');
   // Back/Forward or a new deep link can add a filter while the page is mounted.
   useEffect(() => {
     if (statusFilter !== 'all') setActiveTab('manage');
@@ -849,20 +850,34 @@ export default function AdminEvents() {
       <PageTitle title="Events" />
 
       <AdminPageHeader
+        related={['/admin/import', '/admin/members', '/admin/points']}
         description={
           <>
             {events.length} events total. Published events appear on <Link to="/events" className="font-semibold text-[var(--brand)] hover:underline">/events</Link>, homepage previews, and Ask VSA event answers.
           </>
         }
         actions={
-          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-            {(['create', 'manage'] as const).map((tab, i) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className="min-h-[44px] font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
-                style={{ padding: '8px 16px', fontWeight: activeTab === tab ? 600 : 500, background: activeTab === tab ? 'var(--color-surface2)' : 'transparent', color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)', borderLeft: i > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
-                {tab === 'create' ? 'Create Event' : `Manage (${events.length})`}
-              </button>
-            ))}
+          <div role="group" aria-label="Events view" className="inline-flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('manage')}
+              aria-pressed={activeTab === 'manage'}
+              className={`min-h-[44px] rounded-md border px-4 font-sans text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400 sm:text-sm ${
+                activeTab === 'manage' ? 'border-brand-600 bg-brand-50 text-brand-800 dark:border-brand-400 dark:bg-brand-900/40 dark:text-brand-100' : 'border-[var(--color-border)] text-text-secondary hover:bg-surface2'
+              }`}
+            >
+              {`Manage (${events.length})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('create')}
+              aria-pressed={activeTab === 'create'}
+              className={`min-h-[44px] rounded-md border px-4 font-sans text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400 sm:text-sm ${
+                activeTab === 'create' ? 'border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-zinc-900' : 'border-brand-600 text-brand-700 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-300 dark:hover:bg-brand-900/30'
+              }`}
+            >
+              + Create Event
+            </button>
           </div>
         }
       />

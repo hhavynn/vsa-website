@@ -132,10 +132,16 @@ async function fillCreateForm(user: typeof userEvent, type: string) {
   await user.selectOptions(screen.getByLabelText(/Event Type/), type);
 }
 
+// Manage is the landing view; the Create form is one click away.
+function openCreateForm() {
+  fireEvent.click(screen.getByRole('button', { name: '+ Create Event' }));
+}
+
 describe('Create Event', () => {
   it('reveals External Event Details only for the External Event type', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
 
     expect(screen.queryByText('External Event Details')).not.toBeInTheDocument();
     for (const type of ['gbm', 'mixer', 'vcn', 'other']) {
@@ -157,6 +163,7 @@ describe('Create Event', () => {
   it('offers UVSA SoCal then only the active schools as hosts', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await user.selectOptions(screen.getByLabelText(/Event Type/), 'external_event');
 
     const options = within(screen.getByLabelText(/Host \/ Organizer/)).getAllByRole('option').map((o) => o.textContent);
@@ -166,6 +173,7 @@ describe('Create Event', () => {
   it('shows the chosen school host with its logo fallback and inherited social links', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await user.selectOptions(screen.getByLabelText(/Event Type/), 'external_event');
     await user.selectOptions(screen.getByLabelText(/Host \/ Organizer/), 'uci-id');
 
@@ -178,6 +186,7 @@ describe('Create Event', () => {
   it('creates the event and exactly one linked listing for a school host', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await fillCreateForm(user, 'external_event');
     await user.selectOptions(screen.getByLabelText(/Host \/ Organizer/), 'uci-id');
     await user.type(screen.getByLabelText('RSVP / Tickets'), 'https://rsvp.example/fall');
@@ -205,6 +214,7 @@ describe('Create Event', () => {
   it('keeps uvsa_school_id null for a UVSA SoCal-hosted event', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await fillCreateForm(user, 'external_event');
     await user.selectOptions(screen.getByLabelText(/Host \/ Organizer/), 'uvsa_socal');
     expect(screen.getByText('UVSA Southern California')).toBeInTheDocument();
@@ -219,6 +229,7 @@ describe('Create Event', () => {
   it('refuses to create a school-hosted external without a host, and writes nothing', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await fillCreateForm(user, 'external_event');
     await submitForm();
 
@@ -229,6 +240,7 @@ describe('Create Event', () => {
   it('creates a normal event with no listing work', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await fillCreateForm(user, 'gbm');
     await submitForm();
 
@@ -238,6 +250,7 @@ describe('Create Event', () => {
 
   it('creates an event without code fields and keeps the attendance form URL', async () => {
     renderEvents();
+    openCreateForm();
     await fillCreateForm(userEvent, 'gbm');
     await userEvent.type(screen.getByPlaceholderText('https://forms.google.com/...'), 'https://forms.example/attendance');
     await submitForm();
@@ -252,6 +265,7 @@ describe('Create Event', () => {
   it('previews organizer, logo and links without creating or updating any rows', async () => {
     const user = userEvent;
     renderEvents();
+    openCreateForm();
     await fillCreateForm(user, 'external_event');
     await user.selectOptions(screen.getByLabelText(/Host \/ Organizer/), 'uci-id');
     await user.type(screen.getByLabelText('RSVP / Tickets'), 'https://rsvp.example/fall');

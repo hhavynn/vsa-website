@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { FiMenu, FiSearch } from '../../../lib/adminIcons';
+import { adminNavItemFor } from '../../../lib/adminNavigation';
 import { AdminNav } from './AdminNav';
 import { AdminQuickSearch, isQuickSearchShortcut } from './AdminQuickSearch';
+import { AdminSearchContext } from './AdminSearchContext';
+
+const BAR_BUTTON =
+  'flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] text-text-secondary transition-colors hover:bg-surface2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400';
 
 const AdminLayout: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const searchOpener = useMemo(() => ({ openSearch: () => setSearchOpen(true) }), []);
+  const pageLabel = adminNavItemFor(location.pathname)?.label ?? 'Admin';
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -24,29 +32,33 @@ const AdminLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row" style={{ minHeight: 'calc(100vh - 58px)', background: 'var(--color-bg)' }}>
-      {/* Mobile Top Bar */}
-      <div className="flex items-center justify-between border-b px-4 py-3 md:hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="font-sans text-sm font-semibold uppercase tracking-widest text-[var(--brand)]">
-          VSA Admin
-        </div>
-        <button 
-          onClick={() => setMobileNavOpen(true)} 
-          className="flex h-8 w-8 items-center justify-center rounded-md border text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]"
-          style={{ borderColor: 'var(--color-border)' }}
+    <div className="flex flex-col md:flex-row" style={{ minHeight: 'calc(100vh - 60px)', background: 'var(--color-bg)' }}>
+      {/* Mobile top bar: menu, where you are, and search, all one tap away. */}
+      <div className="sticky top-[60px] z-30 flex items-center gap-2 border-b border-[var(--color-border)] bg-surface px-3 py-2 md:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(true)}
+          className={`${BAR_BUTTON} gap-2 px-3 font-sans text-[13px] font-semibold`}
           aria-label="Open admin navigation"
+          aria-haspopup="dialog"
+          aria-expanded={mobileNavOpen}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
+          <FiMenu aria-hidden className="h-5 w-5" />
+          <span aria-hidden>Admin menu</span>
+        </button>
+        <p className="min-w-0 flex-1 truncate text-right font-sans text-sm font-semibold text-text-primary">{pageLabel}</p>
+        <button type="button" onClick={() => setSearchOpen(true)} className={`${BAR_BUTTON} w-10`} aria-label="Search admin">
+          <FiSearch aria-hidden className="h-5 w-5" />
         </button>
       </div>
 
       <AdminNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onSearch={() => setSearchOpen(true)} />
       <AdminQuickSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
-      
-      <div className="flex flex-1 flex-col overflow-hidden relative">
-        <Outlet />
+
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <AdminSearchContext.Provider value={searchOpener}>
+          <Outlet />
+        </AdminSearchContext.Provider>
       </div>
     </div>
   );

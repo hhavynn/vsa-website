@@ -29,6 +29,8 @@ import { ImportAuditPanel } from '../../components/features/admin/ImportAuditPan
 import { HistoricalRecoveryPanel } from '../../components/features/admin/HistoricalRecoveryPanel';
 import { asJson, decisionFromRowStatus, importJobsRepository } from '../../data/repos/importJobs';
 import { ImportJobStatus } from '../../types/database';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
+import { ImportStepper } from '../../components/features/admin/ops/ImportStepper';
 import { AttendanceRowDecision, MemberIdentity } from '../../components/features/admin/LegacyAttendanceRowDecision';
 import {
   DecisionContext,
@@ -702,12 +704,11 @@ export default function LegacyAdminImport() {
       <PageTitle title="Import Attendance" />
       <Toaster position="top-right" />
 
-      <div className="border-b" style={{ padding: '20px 28px 16px', borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>Import Attendance</h1>
-        <p className="font-sans text-xs mt-0.5" style={{ color: 'var(--color-text2)' }}>
-          Match CSV attendance rows to members before applying points.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Import Attendance"
+        related={['/admin/events', '/admin/members', '/admin/merge-suggestions', '/admin/points']}
+        description="Match CSV attendance rows to members, review them, then import. Nothing is saved until you confirm."
+      />
 
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="border rounded-md p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
@@ -718,26 +719,7 @@ export default function LegacyAdminImport() {
             </p>
           </div>
 
-          {/* Step indicator */}
-          <div className="flex items-center gap-3 mb-8">
-            {(['configure', 'preview', 'done'] as Step[]).map((s, i) => {
-              const past = (s === 'configure' && (step === 'preview' || step === 'done')) ||
-                           (s === 'preview' && step === 'done');
-              return (
-                <div key={s} className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                    ${step === s ? 'bg-brand-600 text-white' : past ? 'bg-emerald-500 text-white' : 'bg-zinc-200 dark:bg-zinc-700 text-[var(--color-text3)]'}`}>
-                    {past ? '✓' : i + 1}
-                  </div>
-                  <span className={`text-sm font-medium capitalize
-                    ${step === s ? 'text-brand-600 dark:text-brand-400' : 'text-[var(--color-text3)] dark:text-[var(--color-text3)]'}`}>
-                    {s === 'configure' ? 'Configure' : s === 'preview' ? 'Preview' : 'Done'}
-                  </span>
-                  {i < 2 && <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700 mx-1" />}
-                </div>
-              );
-            })}
-          </div>
+          <ImportStepper step={step} unresolved={summary.unresolved} />
 
           {/* ── Step 1 ── */}
           {step === 'configure' && (

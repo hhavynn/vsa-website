@@ -7,12 +7,21 @@ import { DEFAULT_OVERVIEW_STATS, OverviewSnapshot } from '../../lib/adminOvervie
 import { EMPTY_ATTENTION_SIGNALS } from '../../lib/adminAttention';
 import { ADMIN_HEALTH_QUERY_KEYS } from '../../lib/adminHealthQuery';
 import { buildContentHealthReport } from '../../lib/contentHealth';
+import { useOperationsSummary } from '../../hooks/useOperationsSummary';
+import { AdminSearchContext } from '../../components/features/admin/AdminSearchContext';
+import { ADMIN_NAV_ITEMS, ADMIN_QUICK_ACTIONS } from '../../lib/adminNavigation';
 
 jest.mock('../../data/repos/adminOverview', () => ({ adminOverviewRepository: { load: jest.fn() } }));
-jest.mock('../../components/features/admin/OperationsDashboard', () => ({ OperationsDashboard: () => null }));
+jest.mock('../../components/features/admin/OperationsDashboard', () => ({
+  OperationsDashboard: () => <p>operations details</p>,
+  ContinueWorking: () => null,
+}));
 jest.mock('../../components/features/admin/RecentActivityCard', () => ({ RecentActivityCard: () => null }));
+jest.mock('../../hooks/useOperationsSummary', () => ({ useOperationsSummary: jest.fn() }));
 
 const load = adminOverviewRepository.load as jest.Mock;
+const operations = useOperationsSummary as jest.Mock;
+const OPERATIONS_READY = { summary: null, preflight: [], issues: 0, loading: false, failed: false };
 
 // Every attention source loaded and nothing is waiting, unless a test says otherwise.
 const CLEAR_ATTENTION = { applications: [], draftEventDates: [], photoRequestsPending: 0, dataRightsOpen: 0, aiFeedbackUnresolved: 0, feedbackPending: 0 };
@@ -26,11 +35,25 @@ function snapshot(overrides: Partial<OverviewSnapshot['stats']> = {}, unavailabl
   };
 }
 
-function renderOverview(client = new QueryClient()) {
+// A year with nothing to review in any health area, so "all clear" is reachable.
+const HEALTHY: Partial<OverviewSnapshot['stats']> = {
+  eventsDraft: 0,
+  eventsUpcomingPublished: 3,
+  housesCurrentCount: 4,
+  housesCurrentYearStart: 2026,
+  cabinetActiveYear: { id: 'y1', label: '2026–27' },
+  cabinetMembersActiveYear: 19,
+  vcnCurrentPublishedExists: true,
+  aiLastVerifiedAt: '2026-10-01T00:00:00Z',
+};
+
+function renderOverview(client = new QueryClient(), openSearch = jest.fn()) {
   const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <AdminOverview />
+        <AdminSearchContext.Provider value={{ openSearch }}>
+          <AdminOverview />
+        </AdminSearchContext.Provider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -38,7 +61,9 @@ function renderOverview(client = new QueryClient()) {
 }
 
 beforeEach(() => {
+  load.mockReset();
   load.mockResolvedValue(snapshot());
+  operations.mockReturnValue(OPERATIONS_READY);
 });
 
 describe('Admin Overview health scan', () => {
@@ -46,7 +71,9 @@ describe('Admin Overview health scan', () => {
     renderOverview();
 
     expect(await screen.findByText('820')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show details' }));
     expect(screen.getByText('Published events')).toBeInTheDocument();
+    expect(screen.getByText('operations details')).toBeInTheDocument();
     expect(load).toHaveBeenCalledTimes(1);
   });
 
@@ -141,6 +168,81 @@ describe('Admin Overview health scan', () => {
       await screen.findByText('820');
       expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument();
       expect(screen.getByText(/Could not check: photo requests/)).toBeInTheDocument();
+    });
+  });
+
+  describe('dashboard hierarchy', () => {
+    it('leads with search and quick actions that go to real admin pages', async () => {
+      const openSearch = jest.fn();
+      renderOverview(new QueryClient(), openSearch);
+      await screen.findByText('820');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Search admin' }));
+      expect(openSearch).toHaveBeenCalledTimes(1);
+
+      const actions = screen.getByRole('region', { name: 'Quick actions' });
+      const links = within(actions).getAllByRole('link');
+      expect(links).toHaveLength(6);
+      const navPaths = new Set(ADMIN_NAV_ITEMS.map((item) => item.to));
+      for (const link of links) expect(navPaths.has(link.getAttribute('href') ?? '')).toBe(true);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(ADMIN_QUICK_ACTIONS.map((action) => action.to));
+    });
+
+    it('lists every admin tool in the directory, collapsed until opened', async () => {
+      renderOverview();
+      await screen.findByText('820');
+
+      const directory = screen.getByRole('region', { name: /All admin tools/ });
+      expect(within(directory).queryAllByRole('link')).toHaveLength(0);
+
+      fireEvent.click(within(directory).getByRole('button', { name: 'Expand all' }));
+      const hrefs = within(directory).getAllByRole('link').map((link) => link.getAttribute('href'));
+      expect(hrefs.sort()).toEqual(ADMIN_NAV_ITEMS.map((item) => item.to).filter((to) => to !== '/admin').sort());
+    });
+
+    it('says all clear only when everything loaded and nothing needs a look', async () => {
+      load.mockResolvedValue(snapshot(HEALTHY));
+      renderOverview();
+      expect(await screen.findByText('All clear')).toBeInTheDocument();
+      expect(screen.getByText(/All systems normal/)).toBeInTheDocument();
+    });
+
+    it('never says all clear when the health scan failed', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      load.mockRejectedValue(new Error('down'));
+      renderOverview();
+
+      expect(await screen.findByText('Could not check site health')).toBeInTheDocument();
+      expect(screen.queryByText('All clear')).not.toBeInTheDocument();
+      expect(screen.queryByText(/All systems normal/)).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Health by area' })).not.toBeInTheDocument();
+    });
+
+    it('calls a partly loaded scan partial, not clear', async () => {
+      load.mockResolvedValue(snapshot(HEALTHY, ['events']));
+      renderOverview();
+
+      expect(await screen.findByText('Partly checked')).toBeInTheDocument();
+      expect(screen.queryByText('All clear')).not.toBeInTheDocument();
+    });
+
+    it('does not read as clear when the operations scan failed', async () => {
+      load.mockResolvedValue(snapshot(HEALTHY));
+      operations.mockReturnValue({ ...OPERATIONS_READY, failed: true });
+      renderOverview();
+
+      expect(await screen.findByText('Partly checked')).toBeInTheDocument();
+      expect(screen.getByText(/Operations status could not be loaded/)).toBeInTheDocument();
+    });
+
+    it('counts warnings and links each to the page that fixes it', async () => {
+      load.mockResolvedValue(snapshot({ ...HEALTHY, eventsMissingTerms: 2, galleryAlbumsMissingCover: 1 }));
+      renderOverview();
+
+      const warnings = await screen.findByRole('list', { name: 'Data warnings' });
+      expect(within(warnings).getByRole('link', { name: /2 events missing terms/ })).toHaveAttribute('href', '/admin/events');
+      expect(within(warnings).getByRole('link', { name: /1 albums missing covers/ })).toHaveAttribute('href', '/admin/gallery');
+      expect(screen.queryByText('All clear')).not.toBeInTheDocument();
     });
   });
 });

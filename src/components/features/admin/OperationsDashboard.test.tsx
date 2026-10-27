@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { OperationsDashboard } from './OperationsDashboard';
+import { ContinueWorking, OperationsDashboard } from './OperationsDashboard';
 import { OperationsInputs } from '../../../lib/adminOperations';
 
 const inputs: OperationsInputs = {
@@ -97,5 +97,52 @@ describe('OperationsDashboard', () => {
     renderDashboard(() => Promise.reject(new Error('down')));
     expect(await screen.findByText(/Could not load operations status/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Start/ })).toBeInTheDocument();
+  });
+});
+
+describe('ContinueWorking', () => {
+  function renderContinue(load: () => Promise<OperationsInputs>) {
+    return render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ContinueWorking loadInputs={load} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('lists the resumable workflows with links that resume them', async () => {
+    renderContinue(() => Promise.resolve(inputs));
+    await screen.findByText(/5 Littles still need assignments/);
+    const region = screen.getByRole('region', { name: 'Continue working' });
+    expect(within(region).getAllByRole('link', { name: /Continue/ }).length).toBeGreaterThan(0);
+    expect(within(region).getByText(/5 Littles still need assignments/)).toBeInTheDocument();
+    expect(within(region).getByText(/Draft saved · 3 unresolved rows/)).toBeInTheDocument();
+  });
+
+  it('says nothing is in progress only when the scan loaded and found nothing', async () => {
+    renderContinue(() =>
+      Promise.resolve({
+        ...inputs,
+        ace: { cycleStatus: null, littles: 0, assigned: 0, nodesTotal: 0, nodesLinked: 0 },
+        houses: { batchStatus: null, assigned: 0, unresolved: 0, balance: [] },
+        interns: { cycleStatus: null, accepted: 0, linked: 0 },
+        cabinet: { ...inputs.cabinet!, linked: 19 },
+      }),
+    );
+    expect(await screen.findByText(/Nothing is in progress/)).toBeInTheDocument();
+  });
+
+  it('does not say caught up when a section could not be read', async () => {
+    renderContinue(() => Promise.resolve({ ...inputs, ace: null, houses: null, cabinet: null, interns: null }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not check ACE, Houses, Cabinet, Interns');
+    expect(screen.queryByText(/Nothing is in progress/)).not.toBeInTheDocument();
+  });
+
+  it('never claims nothing is in progress when the scan failed', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderContinue(() => Promise.reject(new Error('down')));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load in-progress work');
+    expect(screen.queryByText(/Nothing is in progress/)).not.toBeInTheDocument();
   });
 });

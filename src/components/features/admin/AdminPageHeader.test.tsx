@@ -10,7 +10,7 @@ describe('AdminPageHeader', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Events' })).toBeInTheDocument();
     const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(trail).toHaveTextContent('Admin');
-    expect(trail).toHaveTextContent('Member Experience');
+    expect(trail).toHaveTextContent('Events & Attendance');
     expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin');
   });
 
@@ -32,5 +32,18 @@ describe('AdminPageHeader', () => {
     at('/admin', <AdminPageHeader title="Welcome" />);
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Welcome' })).toBeInTheDocument();
+  });
+
+  it('shows related tools from the nav config, skipping the current page and unknown paths', () => {
+    at('/admin/events', <AdminPageHeader related={['/admin/events', '/admin/import', '/admin/members', '/admin/nope']} />);
+    const related = screen.getByRole('navigation', { name: 'Related tools' });
+    const links = within(related).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Attendance Imports', 'Members']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/admin/import', '/admin/members']);
+  });
+
+  it('renders no related nav when there is nothing to link', () => {
+    at('/admin/events', <AdminPageHeader />);
+    expect(screen.queryByRole('navigation', { name: 'Related tools' })).toBeNull();
   });
 });

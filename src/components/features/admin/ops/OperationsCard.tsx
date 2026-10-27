@@ -15,7 +15,7 @@ export interface OperationsCardProps {
 export function OperationsCard({ title, to, linkLabel = 'Open', aside, children }: OperationsCardProps) {
   return (
     <section
-      className="scrapbook-paper flex h-full flex-col overflow-hidden border-[var(--color-border)] bg-surface"
+      className="flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-surface"
       aria-label={title}
     >
       <div className="flex items-center justify-between gap-2 border-b px-4 py-3 border-[var(--color-border)]">

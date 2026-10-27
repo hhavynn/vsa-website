@@ -6,8 +6,9 @@
 // Authority: AGENTS.md § "Things to never do"; vsa-change-control § 1 (Forbidden tier).
 import { useEffect, useMemo, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
+import { AdminPageHeader } from '../../components/features/admin/AdminPageHeader';
 import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
 import { HouseImagesManager } from '../../components/features/admin/HouseImagesManager';
 import { HouseParentLinks } from '../../components/features/admin/HouseParentLinks';
@@ -28,6 +29,20 @@ import { HousePageAsset } from '../../types';
 type Member = HouseImportMember;
 
 type AdminHouseTab = 'assignments' | 'backfill' | 'images' | 'events';
+
+/**
+ * The tasks on this page, primary first. The URL carries the choice (`?tab=`) so a
+ * task can be bookmarked or linked; House Assignments is the default and has no
+ * param, which keeps every existing `?batch=&row=` deep link valid.
+ */
+const HOUSE_TABS: ReadonlyArray<{ key: AdminHouseTab; label: string; advanced?: boolean }> = [
+  { key: 'assignments', label: 'House Assignments' },
+  { key: 'images', label: 'Profiles & Images' },
+  { key: 'events', label: 'House Events' },
+  { key: 'backfill', label: 'Historical Backfill', advanced: true },
+];
+
+const isHouseTab = (value: string | null): value is AdminHouseTab => HOUSE_TABS.some((tab) => tab.key === value);
 
 interface BackfillPreview {
   totalMembersWithHouse: number;
@@ -91,7 +106,22 @@ function buildAcademicYearOptions(terms: ReturnType<typeof useAcademicTerms>['te
 }
 
 export default function AdminHouses() {
-  const [activeTab, setActiveTab] = useState<AdminHouseTab>('assignments');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: AdminHouseTab = isHouseTab(tabParam) ? tabParam : 'assignments';
+  // A new history entry per switch, so Back/Forward walk the tabs. Leaving
+  // Assignments drops its draft deep-link params; they would reopen a row on return.
+  const setActiveTab = (tab: AdminHouseTab) =>
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (tab === 'assignments') next.delete('tab');
+      else {
+        next.set('tab', tab);
+        next.delete('batch');
+        next.delete('row');
+      }
+      return next;
+    });
   const { terms } = useAcademicTerms();
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -257,53 +287,52 @@ export default function AdminHouses() {
       <PageTitle title="House Assignments" />
       <Toaster position="top-right" />
 
-      <div className="border-b px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-        <div className="mb-4 sm:mb-0">
-          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: 'var(--color-text)' }}>House Assignments</h1>
-          <p className="mt-2 max-w-3xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-            Manage the selected academic year's House assignments, public House profiles/images, House parents, and House events. Assignments are drafted and locked privately, then revealed. They do not change attendance records or point calculations.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className="rounded border px-2 py-1" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>
+      <AdminPageHeader
+        title="Houses"
+        description="Place members into Houses, then manage public House profiles, images, parents, and events. Assignments are drafted and locked privately, then revealed. They do not change attendance records or point calculations."
+        actions={
+          <>
+            <span className="rounded border border-[var(--color-border)] px-2 py-1 font-sans text-xs text-text-muted">
               Editing: {selectedYear ? formatAcademicYear(selectedYear) : 'choose a year'}
             </span>
-            <Link to="/house" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+            <Link to="/house" className="rounded border border-[var(--color-border)] px-2 py-1 font-sans text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]">
               View public Houses
             </Link>
-            <Link to="/leaderboard?view=houses" className="rounded border px-2 py-1 font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]" style={{ borderColor: 'var(--color-border)' }}>
+            <Link to="/leaderboard?view=houses" className="rounded border border-[var(--color-border)] px-2 py-1 font-sans text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]">
               View standings
             </Link>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded border" style={{ borderColor: 'var(--color-border)' }}>
-            {([
-              ['assignments', 'House Assignments'],
-              ['backfill', 'Legacy Backfill'],
-              ['images', 'Profiles & Images'],
-              ['events', 'House Events'],
-            ] as const).map(([tab, label], index) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className="font-sans text-[13px] font-semibold transition-colors duration-150 sm:text-sm"
-                style={{
-                  padding: '8px 16px',
-                  fontWeight: activeTab === tab ? 600 : 500,
-                  background: activeTab === tab ? 'var(--color-surface2)' : 'transparent',
-                  color: activeTab === tab ? 'var(--color-text)' : 'var(--color-text2)',
-                  borderLeft: index > 0 ? '1px solid var(--color-border)' : 'none',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <Link to="/admin/members" className="rounded border bg-transparent px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-[var(--color-surface2)]" style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)' }}>
-            Members
-          </Link>
-        </div>
+            <Link to="/admin/members" className="rounded border border-[var(--color-border)] px-2 py-1 font-sans text-xs font-semibold text-[var(--brand)] hover:bg-[var(--color-surface2)]">
+              Members
+            </Link>
+          </>
+        }
+      />
+
+      <div role="tablist" aria-label="House tasks" className="flex flex-wrap items-center gap-1 border-b border-[var(--color-border)] bg-surface px-4 sm:px-8">
+        {HOUSE_TABS.map((tab) => {
+          const selected = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => setActiveTab(tab.key)}
+              className={`-mb-px inline-flex min-h-[44px] items-center gap-2 border-b-2 px-3 font-sans text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400 sm:text-sm ${
+                selected
+                  ? 'border-brand-600 font-semibold text-text-primary dark:border-brand-400'
+                  : 'border-transparent font-medium text-text-secondary hover:text-text-primary'
+              } ${tab.advanced ? 'sm:ml-auto' : ''}`}
+            >
+              {tab.label}
+              {tab.advanced && (
+                <span className="rounded-full border border-amber-300 px-1.5 py-px font-mono text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:border-amber-700 dark:text-amber-300">
+                  Advanced
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {activeTab === 'backfill' && (
