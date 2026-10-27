@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Home } from './Home';
 import { eventsRepository, PublicEventPreview } from '../data/repos/events';
+import { galleryRepository } from '../data/repos/gallery';
 import { losAngelesDateTimeToIso } from '../utils/losAngelesDate';
 
 jest.mock('../lib/supabase', () => ({
@@ -55,6 +56,7 @@ describe('Home.tsx Upcoming Events section', () => {
     });
     jest.useFakeTimers();
     jest.setSystemTime(new Date(losAngelesDateTimeToIso('2026-10-20', '12:00')));
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -101,6 +103,33 @@ describe('Home.tsx Upcoming Events section', () => {
     expect(await screen.findByText('Future Social')).toBeInTheDocument();
     expect(screen.getByText('Price Center Ballroom')).toBeInTheDocument();
     expect(screen.getByText('2 points')).toBeInTheDocument();
+  });
+
+  it('links recent photos to actual public gallery albums instead of hardcoded examples', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([
+      {
+        id: 'public-album-1',
+        title: 'Fall General Body Meeting',
+        date: '2026-10-01',
+        description: null,
+        google_photos_url: 'https://photos.google.com/share/public-album-1',
+        cover_image_url: '/images/gallery/fall-26-gbm-1_2026-09-30.webp',
+        cover_thumbnail_url: null,
+        event_id: null,
+        event: null,
+      },
+    ]);
+
+    renderHome(queryClient);
+
+    const albumLink = await screen.findByRole('link', {
+      name: 'Open Fall General Body Meeting photo album',
+    });
+    expect(albumLink).toHaveAttribute('href', 'https://photos.google.com/share/public-album-1');
+    expect(albumLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(galleryRepository.getAlbums).toHaveBeenCalledWith({ limit: 5 });
+    expect(screen.queryByText('La Jolla S’mores')).not.toBeInTheDocument();
   });
 
   it('disappears an event in real-time when the homepage remains open past its scheduled end', async () => {

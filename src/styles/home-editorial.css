@@ -1,0 +1,112 @@
+.home-editorial-hero {
+  background:
+    radial-gradient(
+      circle at 15% 24%,
+      rgba(193, 221, 255, 0.9),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 85% 9%,
+      rgba(201, 172, 244, 0.85),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 59% 91%,
+      rgba(239, 182, 225, 0.76),
+      transparent 34%
+    ),
+    linear-gradient(145deg, #326dbb 0%, #718bd4 47%, #8b72c4 100%);
+}
+
+.home-editorial-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+}
+
+.home-editorial-bubble {
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 30% 23%,
+      rgba(255, 255, 255, 0.9) 0 1.5%,
+      transparent 8%
+    ),
+    radial-gradient(
+      circle at 65% 72%,
+      rgba(244, 188, 238, 0.24),
+      transparent 48%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(169, 229, 255, 0.11),
+      rgba(255, 255, 255, 0.05)
+    );
+  box-shadow:
+    inset 9px 9px 20px rgba(255, 255, 255, 0.25),
+    inset -12px -10px 28px rgba(90, 238, 229, 0.16),
+    0 0 28px rgba(255, 202, 249, 0.18);
+}
+
+.home-editorial-bubble::after {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: rotate(-28deg);
+}
+
+.home-editorial-polaroid {
+  background: #faf9f5;
+  color: #28354d;
+  box-shadow: 0 18px 55px rgba(25, 34, 75, 0.27);
+}
+
+.home-editorial-about {
+  background: linear-gradient(125deg, #b3c49b, #c9d5b9 52%, #eed3df);
+  color: #28354d;
+}
+
+.home-editorial-orb {
+  background: radial-gradient(
+    circle at 35% 25%,
+    #fff,
+    rgba(200, 184, 232, 0.85) 40%,
+    rgba(168, 217, 240, 0.3) 70%
+  );
+  box-shadow:
+    inset -20px -20px 40px rgba(108, 98, 141, 0.22),
+    20px 25px 50px rgba(40, 53, 77, 0.14);
+}
+
+.home-editorial-gallery {
+  background: linear-gradient(145deg, #244e9d, #566cc3 47%, #936fbc);
+}
+
+.home-editorial-involved {
+  background: linear-gradient(145deg, #faf9f5, #e7def3);
+  color: #28354d;
+}
+
+.home-editorial-event-dots {
+  background-image: radial-gradient(
+    rgba(40, 53, 77, 0.18) 1px,
+    transparent 1.5px
+  );
+  background-size: 9px 9px;
+  mask-image: radial-gradient(circle, #000 10%, transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-editorial-hero *,
+  .home-editorial-gallery * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
