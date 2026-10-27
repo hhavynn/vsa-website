@@ -65,7 +65,9 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
 
     it("keys the shared admin-status query by user id and reads it through the repository", () => {
       const source = read("hooks/useAdmin.ts");
-      expect(source).toMatch(/export const adminStatusQuery = \(userId: string\)/);
+      expect(source).toMatch(
+        /export const adminStatusQuery = \(userId: string\)/,
+      );
       expect(source).toMatch(/queryKey: \['admin-status', userId\]/);
       expect(source).toMatch(/authRepository\.isUserAdmin\(userId\)/);
       expect(source).toMatch(/\buseQuery\b/);
@@ -76,7 +78,9 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
 
     it("verifies a fresh sign-in through that same shared query, never a one-off lookup", () => {
       const source = read("components/features/auth/SignInForm.tsx");
-      expect(source).toMatch(/import \{ adminStatusQuery \} from '..\/..\/..\/hooks\/useAdmin'/);
+      expect(source).toMatch(
+        /import \{ adminStatusQuery \} from '..\/..\/..\/hooks\/useAdmin'/,
+      );
       expect(source).toMatch(
         /queryClient\.fetchQuery\(\{ \.\.\.adminStatusQuery\([^)]*\), staleTime: 0 \}\)/,
       );
@@ -100,7 +104,9 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
 
     it("offers resolve/discard of an expired session on the context", () => {
       const source = context();
-      expect(source).toMatch(/resolveExpiredSession: \(userId: string\) => void/);
+      expect(source).toMatch(
+        /resolveExpiredSession: \(userId: string\) => void/,
+      );
       expect(source).toMatch(/discardExpiredSession: \(\) => void/);
       expect(source).toMatch(/const resolveExpiredSession = useCallback/);
       expect(source).toMatch(/const discardExpiredSession = useCallback/);
@@ -112,8 +118,12 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
       // Deliberate sign-out and a different account: nothing outlives the user.
       expect(source).toMatch(/queryClient\.clear\(\)/);
       // Expiry: stale admin verdicts are dropped, mounted queries are kept.
-      expect(source).toMatch(/queryClient\.removeQueries\(\{ inactive: true \}\)/);
-      expect(source).toMatch(/queryClient\.removeQueries\(\['admin-status'\]\)/);
+      expect(source).toMatch(
+        /queryClient\.removeQueries\(\{ inactive: true \}\)/,
+      );
+      expect(source).toMatch(
+        /queryClient\.removeQueries\(\['admin-status'\]\)/,
+      );
       // Same account signing back in revalidates in place.
       expect(source).toMatch(/queryClient\.invalidateQueries\(\)/);
     });
@@ -141,7 +151,9 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
     it("holds the admin page behind a SessionExpiredDialog instead of redirecting", () => {
       const source = route();
       expect(source).toMatch(/import \{ SessionExpiredDialog \}/);
-      expect(source).toMatch(/const promptOpen = sessionExpired && held !== null/);
+      expect(source).toMatch(
+        /const promptOpen = sessionExpired && held !== null/,
+      );
       expect(source).toMatch(/<SessionExpiredDialog/);
       // The held page is made unreachable while the prompt is up.
       expect(source).toMatch(/INERT_PROPS/);
@@ -155,9 +167,11 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
     });
 
     it("renders the re-authentication prompt through the same SignInForm", () => {
-      expect(read("components/features/auth/SessionExpiredDialog.tsx")).toMatch(
-        /<SignInForm/,
-      );
+      const source = read("components/features/auth/SessionExpiredDialog.tsx");
+      // The form is deferred to its own chunk (#300) but must be the shared
+      // SignInForm module, not a parallel implementation.
+      expect(source).toMatch(/import\(['"]\.\/SignInForm['"]/);
+      expect(source).toMatch(/<LazySignInForm/);
     });
 
     it("keeps /admin/login routed and every admin route behind the admin gate", () => {

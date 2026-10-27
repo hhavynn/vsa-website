@@ -1,5 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { SignInForm } from './SignInForm';
+import { Suspense, lazy, useEffect, useRef } from "react";
+
+// SignInForm pulls in react-hook-form + zod (~90 kB raw), the heaviest static
+// chain in this module; this dialog only appears mid-session-expiry, so the
+// form is deferred to its own chunk and arrives a beat after the dialog.
+const LazySignInForm = lazy(() =>
+  import("./SignInForm").then((m) => ({ default: m.SignInForm })),
+);
 
 interface SessionExpiredDialogProps {
   email?: string;
@@ -8,7 +14,8 @@ interface SessionExpiredDialogProps {
   onLeave: () => void;
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * Covers the admin area when its session ends unprompted. The page underneath
@@ -18,24 +25,42 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * focus cannot leave it: the rest of the app (header, footer, widgets) sits
  * outside the inert admin page.
  */
-export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpiredDialogProps) {
+export function SessionExpiredDialog({
+  email,
+  verifying,
+  onLeave,
+}: SessionExpiredDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Take focus from the page underneath, which may have been mid-keystroke in
-  // a textarea: the email is prefilled, so go straight to the password.
+  // a textarea: the email is prefilled, so go straight to the password. The
+  // form is deferred to its own chunk, so the field can appear a few frames
+  // after the dialog mounts — look for it briefly.
   useEffect(() => {
     const field = email ? 'input[type="password"]' : 'input[type="email"]';
-    dialogRef.current?.querySelector<HTMLInputElement>(field)?.focus();
+    let frames = 0;
+    let id: number = 0;
+    const look = () => {
+      const el = dialogRef.current?.querySelector<HTMLInputElement>(field);
+      if (el) {
+        el.focus();
+        return;
+      }
+      if (++frames < 20) id = requestAnimationFrame(look);
+    };
+    look();
+    return () => cancelAnimationFrame(id);
   }, [email]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
 
-    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const focusable = () =>
+      Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
+      if (event.key !== "Tab") return;
       const items = focusable();
       if (items.length === 0) {
         event.preventDefault();
@@ -48,7 +73,10 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
       if (event.shiftKey && (active === first || !dialog.contains(active))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      } else if (
+        !event.shiftKey &&
+        (active === last || !dialog.contains(active))
+      ) {
         event.preventDefault();
         first.focus();
       }
@@ -62,11 +90,11 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
       }
     };
 
-    document.addEventListener('keydown', onKeyDown, true);
-    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("focusin", onFocusIn);
     return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("focusin", onFocusIn);
     };
   }, []);
 
@@ -87,18 +115,27 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
         >
           Your session ended
         </h2>
-        <p id="session-expired-body" className="mb-6 font-sans text-sm text-text-secondary">
-          You were signed out, either because your session expired or because you signed out in another
-          tab. Sign in again with the same account to keep going; anything you hadn&apos;t saved is
-          still on the page. Signing in with a different account discards it.
+        <p
+          id="session-expired-body"
+          className="mb-6 font-sans text-sm text-text-secondary"
+        >
+          You were signed out, either because your session expired or because
+          you signed out in another tab. Sign in again with the same account to
+          keep going; anything you hadn&apos;t saved is still on the page.
+          Signing in with a different account discards it.
         </p>
 
         {verifying && (
-          <p role="status" className="mb-4 font-sans text-sm text-text-secondary">
+          <p
+            role="status"
+            className="mb-4 font-sans text-sm text-text-secondary"
+          >
             Verifying admin access...
           </p>
         )}
-        <SignInForm defaultEmail={email} onSignedIn={() => undefined} />
+        <Suspense fallback={null}>
+          <LazySignInForm defaultEmail={email} onSignedIn={() => undefined} />
+        </Suspense>
         <button
           type="button"
           onClick={onLeave}

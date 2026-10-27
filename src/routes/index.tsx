@@ -4,8 +4,16 @@ import { Layout } from "../components/layout/Layout";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
-import AdminLayout from "../components/features/admin/AdminLayout";
 import RouteTracker from "../components/common/RouteTracker";
+
+// The admin shell is lazy too: its nav, quick search and the repos it indexes
+// otherwise statically enter the public main chunk and ship to anonymous
+// visitors (~30 kB gzip of admin-only code). AdminRoute gates access without
+// rendering its children until the viewer is an admin, so this chunk is
+// fetched only when a real admin opens /admin/*.
+const AdminLayout = lazy(
+  () => import("../components/features/admin/AdminLayout"),
+);
 
 // Lazy load pages
 const Home = lazy(() =>
