@@ -30,6 +30,25 @@ export interface GalleryFilters {
   date_to?: string;
 }
 
+export interface GalleryCursor {
+  date: string;
+  id: string;
+}
+
+export interface GalleryPage {
+  albums: GalleryAlbum[];
+  nextCursor: GalleryCursor | null;
+}
+
+export interface GalleryPageFilters {
+  limit?: number;
+  cursor?: GalleryCursor | null;
+  /** Inclusive "YYYY-MM-DD" bounds — gallery_events.date is a DATE column. */
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+}
+
 /** Upper bound on albums the search index loads (newest first). */
 export const PUBLIC_SEARCH_ALBUM_LIMIT = 300;
 
@@ -40,7 +59,141 @@ export interface PublicSearchAlbum {
   google_photos_url: string;
 }
 
+/**
+ * Strips PostgREST filter metacharacters (, and ()) so a term cannot break .or().
+ */
+export function sanitizeSearchQuery(query: string): string {
+  return query
+    .replace(/[,()]/g, ' ')
+    .trim();
+}
+
+/**
+ * Escapes SQL LIKE / PostgREST ILIKE wildcards so % and _ are matched literally.
+ */
+export function escapeIlikePattern(query: string): string {
+  return query
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_');
+}
+
 export class GalleryRepository {
+  /**
+   * Get gallery albums with cursor-based pagination and deterministic date/id ordering.
+   * Lookahead fetch (limit + 1) computes exact end-of-list nextCursor without an extra request.
+   */
+  async getAlbumPage(filters: GalleryPageFilters = {}): Promise<GalleryPage> {
+    return withErrorHandling(async () => {
+      const limit = filters.limit ?? 12;
+      let query = supabase
+        .from('gallery_events')
+        .select('id, title, description, date, google_photos_url, cover_image_url, cover_thumbnail_url, event_id, event:events(id, name, date, academic_term_id, is_published)')
+        .not('google_photos_url', 'is', null)
+        .order('date', { ascending: false })
+        .order('id', { ascending: false });
+
+      if (filters.cursor?.date && filters.cursor?.id) {
+        // Enforce strict lexicographic cursor order:
+        // date < cursor.date OR (date = cursor.date AND id < cursor.id)
+        query = query.or(
+          `date.lt.${filters.cursor.date},and(date.eq.${filters.cursor.date},id.lt.${filters.cursor.id})`
+        );
+      }
+
+      if (filters.date_from) query = query.gte('date', filters.date_from);
+      if (filters.date_to) query = query.lte('date', filters.date_to);
+
+      if (filters.search) {
+        const clean = sanitizeSearchQuery(filters.search);
+        if (clean.length > 0) {
+          const escaped = escapeIlikePattern(clean);
+          query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
+        }
+      }
+
+      query = query.limit(limit + 1);
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return { albums: [], nextCursor: null };
+      }
+
+      const hasNext = data.length > limit;
+      const rawAlbums = hasNext ? data.slice(0, limit) : data;
+
+      const albums = rawAlbums.map((row: any) => ({
+        ...row,
+        event: Array.isArray(row.event) ? (row.event[0] ?? null) : (row.event ?? null),
+      })) as GalleryAlbum[];
+
+      const lastAlbum = albums[albums.length - 1];
+      const nextCursor: GalleryCursor | null =
+        hasNext && lastAlbum ? { date: lastAlbum.date, id: lastAlbum.id } : null;
+
+      return { albums, nextCursor };
+    }, 'Failed to fetch gallery albums');
+  }
+
+  /**
+   * Returns distinct academic years (start years, sorted newest first)
+   * that have public albums.
+   */
+  async getAlbumYears(): Promise<number[]> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('gallery_events')
+        .select('date')
+        .not('google_photos_url', 'is', null);
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      const yearsSet = new Set<number>();
+      for (const row of data as { date: string }[]) {
+        if (!row.date) continue;
+        const match = /^(\d{4})-(\d{2})/.exec(row.date);
+        if (match) {
+          const year = parseInt(match[1], 10);
+          const month = parseInt(match[2], 10);
+          // September 1 rollover: Sept-Dec is start year, Jan-Aug is previous year
+          const academicYearStart = month >= 9 ? year : year - 1;
+          yearsSet.add(academicYearStart);
+        }
+      }
+
+      return Array.from(yearsSet).sort((a, b) => b - a);
+    }, 'Failed to fetch gallery academic years');
+  }
+
+  /**
+   * Get total or filtered count of public gallery albums.
+   */
+  async getFilteredAlbumCount(filters: { date_from?: string; date_to?: string; search?: string } = {}): Promise<number> {
+    return withErrorHandling(async () => {
+      let query = supabase
+        .from('gallery_events')
+        .select('*', { count: 'exact', head: true })
+        .not('google_photos_url', 'is', null);
+
+      if (filters.date_from) query = query.gte('date', filters.date_from);
+      if (filters.date_to) query = query.lte('date', filters.date_to);
+
+      if (filters.search) {
+        const clean = sanitizeSearchQuery(filters.search);
+        if (clean.length > 0) {
+          const escaped = escapeIlikePattern(clean);
+          query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
+        }
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    }, 'Failed to fetch gallery count');
+  }
   /**
    * Get gallery albums with optional pagination
    */

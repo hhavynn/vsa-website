@@ -5,17 +5,24 @@ import Gallery from './Gallery';
 import type { GalleryAlbum } from '../data/repos/gallery';
 
 let mockAlbums: GalleryAlbum[] = [];
+let mockHasNextPage = false;
+let mockIsFetchingNextPage = false;
+let mockFetchNextPage = jest.fn();
+let mockError: unknown | null = null;
+let mockFilteredCount: number | null = null;
 
 jest.mock('../hooks/useGallery', () => ({
   useGallery: () => ({
-    data: { pages: [mockAlbums] },
+    data: { pages: [{ albums: mockAlbums, nextCursor: null }] },
     isLoading: false,
-    error: null,
-    hasNextPage: false,
-    fetchNextPage: () => undefined,
-    isFetchingNextPage: false,
+    error: mockError,
+    hasNextPage: mockHasNextPage,
+    fetchNextPage: mockFetchNextPage,
+    isFetchingNextPage: mockIsFetchingNextPage,
   }),
   useGalleryStats: () => ({ data: mockAlbums.length }),
+  useGalleryYears: () => ({ data: [2026, 2025] }),
+  useGalleryFilteredCount: () => ({ data: mockFilteredCount, isLoading: false }),
 }));
 
 const album = (id: string, overrides: Partial<GalleryAlbum> = {}): GalleryAlbum => ({
@@ -60,6 +67,11 @@ function swipe(element: HTMLElement, from: [number, number], to: [number, number
 
 beforeEach(() => {
   mockAlbums = [album('a'), album('b'), album('c')];
+  mockHasNextPage = false;
+  mockIsFetchingNextPage = false;
+  mockFetchNextPage = jest.fn();
+  mockError = null;
+  mockFilteredCount = null;
 });
 
 afterEach(() => {
@@ -228,5 +240,89 @@ describe('Gallery album quick-look', () => {
     fireEvent.keyDown(document, { key: 'ArrowRight' });
     expect(within(getDialog()).getByRole('heading', { name: 'Album draft' })).toBeInTheDocument();
     expect(within(getDialog()).queryByText(/Related event/)).not.toBeInTheDocument();
+  });
+
+  it('enables Next and triggers fetchNextPage when navigating past loaded boundary if hasNextPage is true', () => {
+    mockHasNextPage = true;
+    renderGallery();
+    openCard('Album c'); // album 3 of 3
+
+    const dialog = getDialog();
+    expect(within(dialog).getByText('3 / 3+')).toBeInTheDocument();
+    const nextBtn = within(dialog).getByRole('button', { name: 'Next album' });
+    expect(nextBtn).toBeEnabled();
+
+    fireEvent.click(nextBtn);
+    expect(mockFetchNextPage).toHaveBeenCalled();
+  });
+
+  it('triggers proactive prefetch as the user approaches the loaded boundary', () => {
+    mockHasNextPage = true;
+    renderGallery();
+    openCard('Album b'); // album 2 of 3 (approaching boundary >= albums.length - 2)
+
+    expect(mockFetchNextPage).toHaveBeenCalled();
+  });
+
+  it('shows Retry on boundary Next button when next page fetch fails', () => {
+    mockHasNextPage = true;
+    mockError = new Error('Network error');
+    renderGallery();
+    openCard('Album c');
+
+    const dialog = getDialog();
+    const retryBtn = within(dialog).getByRole('button', { name: /Retry loading next album/i });
+    expect(retryBtn).toHaveTextContent('Retry →');
+
+    fireEvent.click(retryBtn);
+    expect(mockFetchNextPage).toHaveBeenCalled();
+  });
+
+  it('preserves query params on browser Back from lightbox', async () => {
+    render(
+      <MemoryRouter initialEntries={['/gallery?year=2025&search=gbm']}>
+        <BackProbe />
+        <Gallery />
+      </MemoryRouter>,
+    );
+
+    openCard('Album a');
+    expect(getDialog()).toBeInTheDocument();
+
+    act(() => goBack());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Filter controls still hold their query parameters
+    const yearSelect = screen.getByLabelText(/Filter by academic year/i) as HTMLSelectElement;
+    expect(yearSelect.value).toBe('2025');
+    const searchInput = screen.getByPlaceholderText(/Search album titles and descriptions/i) as HTMLInputElement;
+    expect(searchInput.value).toBe('gbm');
+  });
+
+  it('cancels pending boundary advancement when user navigates backward before page loads', () => {
+    mockHasNextPage = true;
+    const { rerender } = renderGallery();
+    openCard('Album c'); // index 2 of 3 (loaded boundary)
+
+    const dialog = getDialog();
+    const nextBtn = within(dialog).getByRole('button', { name: 'Next album' });
+    fireEvent.click(nextBtn); // requests next page, pending advance from index 2
+
+    // While request is pending, user clicks Previous to go back to Album b (index 1)
+    const prevBtn = within(dialog).getByRole('button', { name: 'Previous album' });
+    fireEvent.click(prevBtn);
+    expect(within(dialog).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
+
+    // Now page 2 finishes loading, adding album d
+    mockAlbums = [...mockAlbums, album('d')];
+    rerender(
+      <MemoryRouter initialEntries={['/gallery']}>
+        <BackProbe />
+        <Gallery />
+      </MemoryRouter>,
+    );
+
+    // Lightbox must remain on Album b and NOT unexpectedly advance forward
+    expect(within(dialog).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
   });
 });

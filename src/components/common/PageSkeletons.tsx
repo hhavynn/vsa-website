@@ -83,31 +83,37 @@ const GALLERY_SKELETON_PATTERNS = [
   { height: '238px', span: 3 },
 ];
 
+export function GalleryWallSkeleton() {
+  return (
+    <div className="gallery-memory-wall" data-testid="gallery-wall-skeleton">
+      {Array.from({ length: 8 }).map((_, i) => {
+        const pattern = GALLERY_SKELETON_PATTERNS[i % GALLERY_SKELETON_PATTERNS.length];
+        const style = {
+          '--album-image-height': pattern.height,
+          '--album-span': String(pattern.span),
+        } as CSSProperties;
+        return (
+          <div key={i} className="gallery-memory-card" style={style}>
+            <div className="gallery-memory-image">
+              <Skeleton className="h-full w-full rounded-none" />
+            </div>
+            <div className="gallery-memory-caption space-y-2">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-4 w-4/5" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function GallerySkeleton() {
   return (
     <>
       <HeroSkeleton lines={1} />
       <div className="vsa-container py-10">
-        <div className="gallery-memory-wall">
-          {Array.from({ length: 8 }).map((_, i) => {
-            const pattern = GALLERY_SKELETON_PATTERNS[i % GALLERY_SKELETON_PATTERNS.length];
-            const style = {
-              '--album-image-height': pattern.height,
-              '--album-span': String(pattern.span),
-            } as CSSProperties;
-            return (
-              <div key={i} className="gallery-memory-card" style={style}>
-                <div className="gallery-memory-image">
-                  <Skeleton className="h-full w-full rounded-none" />
-                </div>
-                <div className="gallery-memory-caption space-y-2">
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-4 w-4/5" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <GalleryWallSkeleton />
       </div>
     </>
   );
