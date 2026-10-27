@@ -18,6 +18,8 @@ The top-level `headers` rule applies these headers to `/(.*)`. A second `headers
 
 HSTS is intentionally disabled as of PR #187, merged 2026-07-08. That PR changed `Strict-Transport-Security` to `max-age=0` after a cached one-year HSTS policy caused `net::ERR_CERT_AUTHORITY_INVALID` on `UCSD-GUEST` captive-portal Wi-Fi. Students were locked out because the browser rejected the captive portal's interception before the portal could complete.
 
+PR #480 (merged 2026-09-30) reintroduced `max-age=31536000` without that validation, and production served it until the fix that restored `max-age=0`. `src/vercelConfig.test.ts` now pins the exact value so a change fails CI instead of shipping silently. Browsers that cached the one-year policy clear it on their next successful HTTPS visit after the fix deploys.
+
 The tradeoff is known and accepted: the site does not receive HSTS protection against SSL-stripping or downgrade attacks while this header remains `max-age=0`.
 
 Revisit this only after proving that captive-portal detection still works, for example by validating a short, ramped `max-age` against campus Wi-Fi on a Vercel preview before promoting it. `preload` remains deliberately omitted.
