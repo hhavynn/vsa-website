@@ -51,7 +51,7 @@ This is a Create React App (TypeScript) project for the Vietnamese Student Assoc
 
 **Provider hierarchy:** defined in `src/App.tsx` — read it there rather than trusting a copy (it has drifted before). Re-derive the current nesting with `grep -n "Provider" src/App.tsx`.
 
-**Routing** (`src/routes/index.tsx`): React Router v6 with lazy-loaded pages, organized into three tiers — **Public** (e.g. `/`, `/events`, `/leaderboard`), **Protected** (auth required, e.g. `/profile`), and **Admin** (admin flag required, under `/admin/*`). The exact route set changes over time; read `src/routes/index.tsx` for the current list (admin routes: `grep -n "admin/" src/routes/index.tsx`).
+**Routing** (`src/routes/index.tsx`): Re-derive the React Router version from `package.json` and the current public/admin route set from source, including its guards. Do not repeat version numbers or assume retired member-auth routes exist. Run `grep -n "admin/" src/routes/index.tsx` for a narrow admin-route check.
 
 **Data layer** (`src/data/`):
 - `src/data/repos/` — Repository classes (`EventsRepository`, etc.) that wrap all Supabase queries. Use the exported singleton instances (e.g., `eventsRepository`).
@@ -59,9 +59,9 @@ This is a Create React App (TypeScript) project for the Vietnamese Student Assoc
 
 **Auth** (`src/context/AuthContext.tsx`): Wraps Supabase auth. Admin status is checked separately via `useAdmin()` hook which queries the `user_profiles` table for `is_admin`.
 
-**Supabase client** (`src/lib/supabase.ts`): Singleton pattern. Import `supabase` directly for one-off queries, or use the repository layer for structured access.
+**Supabase client** (`src/lib/supabase.ts`): Singleton pattern. All UI data access goes through `src/data/repos/`; do **not** import `supabase` directly into pages/components for one-off queries or instantiate another client. See `AGENTS.md` § Data layer.
 
-**Key Supabase tables**: schema source of truth is `supabase/migrations/` (types mirrored in `src/types/database.ts`). The public leaderboard and the authenticated check-in flow use **different** tables (two coexisting points systems) — see `docs/leaderboard-system.md`. Don't rely on a short table list here; it has been incomplete/misleading before.
+**Key Supabase tables**: schema source of truth is `supabase/migrations/` (types mirrored in `src/types/database.ts`). **Member accounts and code-based check-in are retired.** The active public points/leaderboard system is member-based; legacy account tables are private archives, not an alternate standings source. Read `docs/leaderboard-system.md` and `docs/member-account-retirement.md` for current details. Re-derive any table/view claims from source instead of trusting a copied list.
 
 **Forms**: react-hook-form + zod schemas (defined in `src/schemas/index.ts`).
 
