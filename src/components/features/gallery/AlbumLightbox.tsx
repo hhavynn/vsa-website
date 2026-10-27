@@ -65,17 +65,31 @@ export function AlbumLightbox({
   // -1 = went to previous, 1 = went to next; drives the slide-in direction.
   const direction = useRef(0);
 
-  const pendingAdvanceRef = useRef(false);
+  const pendingAdvanceFromIndexRef = useRef<number | null>(null);
   const prevAlbumsCount = useRef(albums.length);
 
-  // When next page loads and user requested to advance, move to next album
+  // When next page loads and user requested to advance from the boundary, move to next album
+  // only if the user is still at that boundary album
   useEffect(() => {
-    if (albums.length > prevAlbumsCount.current && pendingAdvanceRef.current) {
-      pendingAdvanceRef.current = false;
-      onIndexChange(index + 1);
+    if (
+      albums.length > prevAlbumsCount.current &&
+      pendingAdvanceFromIndexRef.current !== null
+    ) {
+      const fromIndex = pendingAdvanceFromIndexRef.current;
+      pendingAdvanceFromIndexRef.current = null;
+      if (index === fromIndex) {
+        onIndexChange(fromIndex + 1);
+      }
     }
     prevAlbumsCount.current = albums.length;
   }, [albums.length, index, onIndexChange]);
+
+  // Cancel pending advance on error so it does not linger stale for later fetches
+  useEffect(() => {
+    if (nextPageError) {
+      pendingAdvanceFromIndexRef.current = null;
+    }
+  }, [nextPageError]);
 
   // Proactive prefetch as user approaches boundary
   useEffect(() => {
@@ -94,13 +108,15 @@ export function AlbumLightbox({
   const hasNext = index < albums.length - 1 || Boolean(hasNextPage);
 
   const handleClose = useCallback(() => {
-    pendingAdvanceRef.current = false;
+    pendingAdvanceFromIndexRef.current = null;
     onClose();
   }, [onClose]);
 
   const go = useCallback(
     (delta: -1 | 1) => {
       if (delta === -1) {
+        // Cancel any pending boundary advance when navigating backward
+        pendingAdvanceFromIndexRef.current = null;
         const target = index - 1;
         if (target < 0) return;
         direction.current = -1;
@@ -110,6 +126,7 @@ export function AlbumLightbox({
 
       // delta === 1 (Next)
       if (index < albums.length - 1) {
+        pendingAdvanceFromIndexRef.current = null;
         direction.current = 1;
         onIndexChange(index + 1);
         return;
@@ -118,7 +135,7 @@ export function AlbumLightbox({
       // At boundary
       if (hasNextPage) {
         direction.current = 1;
-        pendingAdvanceRef.current = true;
+        pendingAdvanceFromIndexRef.current = index;
         if (nextPageError || !isFetchingNextPage) {
           onFetchNextPage?.();
         }
@@ -272,7 +289,7 @@ export function AlbumLightbox({
           }
           className="min-h-[48px] rounded-lg border border-[var(--border)] bg-[var(--surface2)] px-3 font-sans text-sm font-semibold text-[var(--text)] disabled:opacity-40"
         >
-          {isFetchingNextPage && index === albums.length - 1 && pendingAdvanceRef.current ? (
+          {isFetchingNextPage && index === albums.length - 1 && pendingAdvanceFromIndexRef.current === index ? (
             <span className="flex items-center justify-center gap-1.5">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               Loading...

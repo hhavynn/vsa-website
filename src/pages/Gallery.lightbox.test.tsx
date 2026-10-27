@@ -298,4 +298,31 @@ describe('Gallery album quick-look', () => {
     const searchInput = screen.getByPlaceholderText(/Search album titles and descriptions/i) as HTMLInputElement;
     expect(searchInput.value).toBe('gbm');
   });
+
+  it('cancels pending boundary advancement when user navigates backward before page loads', () => {
+    mockHasNextPage = true;
+    const { rerender } = renderGallery();
+    openCard('Album c'); // index 2 of 3 (loaded boundary)
+
+    const dialog = getDialog();
+    const nextBtn = within(dialog).getByRole('button', { name: 'Next album' });
+    fireEvent.click(nextBtn); // requests next page, pending advance from index 2
+
+    // While request is pending, user clicks Previous to go back to Album b (index 1)
+    const prevBtn = within(dialog).getByRole('button', { name: 'Previous album' });
+    fireEvent.click(prevBtn);
+    expect(within(dialog).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
+
+    // Now page 2 finishes loading, adding album d
+    mockAlbums = [...mockAlbums, album('d')];
+    rerender(
+      <MemoryRouter initialEntries={['/gallery']}>
+        <BackProbe />
+        <Gallery />
+      </MemoryRouter>,
+    );
+
+    // Lightbox must remain on Album b and NOT unexpectedly advance forward
+    expect(within(dialog).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
+  });
 });

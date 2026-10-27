@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateOnly } from '../lib/dateOnly';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import { PageTitle } from '../components/common/PageTitle';
-import { GallerySkeleton } from '../components/common/PageSkeletons';
+import { GalleryWallSkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
 import {
   useGallery,
@@ -171,8 +171,6 @@ export default function Gallery() {
 
   const isDegraded = isSupabaseUnavailable(error);
 
-  if (isInitialLoading) return <GallerySkeleton />;
-  
   if (isInitialError && isDegraded) {
     return (
       <>
@@ -190,7 +188,7 @@ export default function Gallery() {
     );
   }
 
-  if (isInitialError) return <PageError message="Failed to load gallery" />;
+  if (isInitialError && !isFiltered) return <PageError message="Failed to load gallery" />;
 
   return (
     <>
@@ -219,10 +217,30 @@ export default function Gallery() {
           onReset={handleResetFilters}
           totalFilteredCount={filteredCount}
           isFiltered={isFiltered}
-          isLoading={countLoading}
+          isLoading={countLoading || isInitialLoading}
         />
 
-        {albums.length === 0 ? (
+        {isInitialLoading ? (
+          <GalleryWallSkeleton />
+        ) : isInitialError ? (
+          <div className="scrapbook-empty" role="alert">
+            <div className="mx-auto max-w-xl space-y-4 text-center">
+              <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--text)' }}>
+                Could not load matching memories
+              </p>
+              <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--text3)' }}>
+                Please check your network connection or try clearing the filters.
+              </p>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="vsa-btn-ghost mx-auto"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        ) : albums.length === 0 ? (
           <div className="scrapbook-empty" role="status">
             {isFiltered ? (
               <div className="mx-auto max-w-xl space-y-4 text-center">
