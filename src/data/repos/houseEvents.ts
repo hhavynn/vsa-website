@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { Json } from '../../types/database';
-import { HouseEvent } from '../../types';
+import { HouseEvent, HousePageAsset } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
@@ -31,7 +31,10 @@ const PUBLIC_FIELDS = [
   'is_published',
   'created_at',
   'updated_at',
-  'houses:house_event_houses(house:house_page_assets(*))',
+  // The host ids come from the join (public for published events); the
+  // profile embed itself is admin-only, so public reads fill hosts from
+  // published_house_page_assets (mapPublicRelations).
+  'houses:house_event_houses(house_page_asset_id,house:house_page_assets(*))',
 ].join(',');
 
 export class HouseEventsRepository {
@@ -63,7 +66,7 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch upcoming house events');
   }
 
@@ -95,7 +98,7 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch past house events');
   }
 
@@ -111,7 +114,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch house events for year');
   }
 
@@ -128,7 +131,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch past house events for year');
   }
 
@@ -149,7 +152,7 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch upcoming house event previews');
   }
 
@@ -166,7 +169,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch house events for calendar');
   }
 
@@ -290,6 +293,35 @@ export class HouseEventsRepository {
       const { error } = await supabase.from('house_events').delete().eq('id', id);
       if (error) throw error;
     }, 'Failed to delete house event');
+  }
+
+  /**
+   * Hosts for public reads: only published (active) House profiles, primary
+   * host first. Profiles the embed could not return (anon cannot read
+   * house_page_assets) are read from published_house_page_assets in one query.
+   */
+  private async mapPublicRelations(data: any[] | null): Promise<HouseEvent[]> {
+    if (!data) return [];
+    const missing = new Set<string>();
+    for (const item of data) {
+      for (const link of item.houses || []) if (!link.house && link.house_page_asset_id) missing.add(link.house_page_asset_id);
+    }
+    const published = new Map<string, HousePageAsset>();
+    if (missing.size > 0) {
+      const { data: assets, error } = await supabase
+        .from('published_house_page_assets')
+        .select('*')
+        .in('id', Array.from(missing));
+      if (error) throw error;
+      for (const asset of (assets ?? []) as HousePageAsset[]) published.set(asset.id, asset);
+    }
+    return data.map((item) => {
+      const hosts = (item.houses || [])
+        .map((link: any) => (link.house ?? published.get(link.house_page_asset_id)) as HousePageAsset | undefined)
+        .filter((house: HousePageAsset | undefined): house is HousePageAsset => !!house && house.is_active !== false)
+        .sort((a: HousePageAsset, b: HousePageAsset) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
+      return { ...item, houses: hosts };
+    });
   }
 
   private mapRelations(data: any[] | null): HouseEvent[] {
