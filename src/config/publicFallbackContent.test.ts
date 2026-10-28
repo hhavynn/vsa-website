@@ -34,6 +34,13 @@ describe('public offline fallback content', () => {
     }
   });
 
+  it('keeps public program summaries free from hardcoded current-season dates', () => {
+    for (const program of FALLBACK_GET_INVOLVED_PROGRAMS) {
+      expect(program.description).not.toMatch(/20\\d{2}[-–/]20\\d{2}/);
+      expect(program.description).not.toMatch(/applications are open now/i);
+    }
+  });
+
   it('describes ACE as Anh Chị Em mentorship, not a different academic program', () => {
     const ace = FALLBACK_GET_INVOLVED_PROGRAMS.find(({ slug }) => slug === 'ace');
 
