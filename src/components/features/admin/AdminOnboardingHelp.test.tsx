@@ -66,6 +66,7 @@ describe('admin first-run and contextual guidance (#286)', () => {
     const items = [
       resource({ id: 'open' }),
       resource({ id: 'archived', is_archived: true }),
+      resource({ id: 'public', visibility: 'public' }),
       resource({ id: 'past', is_current: false }),
       resource({ id: 'unsafe', url: 'javascript:alert(1)' }),
       resource({ id: 'scoped', program: 'Houses' }),
