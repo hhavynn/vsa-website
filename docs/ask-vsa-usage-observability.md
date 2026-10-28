@@ -2,7 +2,7 @@
 
 The site now has a count-only, administrator-gated daily report at
 `/admin/ai-usage`. It uses `public.admin_ai_usage_daily(p_days)`
-from migration `20261028080000_admin_ai_usage_aggregates.sql`.
+from migration `20261028133000_admin_ai_usage_aggregates.sql`.
 
 ## What is counted
 
