@@ -180,7 +180,7 @@ describe('the session ends while the admin is editing', () => {
     expect(isAriaHidden(draft)).toBe(true);
     // The email is prefilled, so focus lands on the password field, not the
     // textarea that was mid-keystroke when the session ended.
-    expect(screen.getByLabelText(/password/i)).toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText(/password/i)).toHaveFocus());
   });
 
   it('forgets the old admin verdict, so signing back in is verified afresh', async () => {

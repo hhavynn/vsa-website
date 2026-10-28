@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { SignInForm } from './SignInForm';
+import { useEffect, useRef, useState } from "react";
+
+// Import the form only when reauthentication is needed. Handle chunk errors
+// locally so a failed download never reloads and erases unsaved admin edits.
 
 interface SessionExpiredDialogProps {
   email?: string;
@@ -8,7 +10,8 @@ interface SessionExpiredDialogProps {
   onLeave: () => void;
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * Covers the admin area when its session ends unprompted. The page underneath
@@ -18,24 +21,61 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * focus cannot leave it: the rest of the app (header, footer, widgets) sits
  * outside the inert admin page.
  */
-export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpiredDialogProps) {
+export function SessionExpiredDialog({
+  email,
+  verifying,
+  onLeave,
+}: SessionExpiredDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Take focus from the page underneath, which may have been mid-keystroke in
-  // a textarea: the email is prefilled, so go straight to the password.
+  const [LoadedSignInForm, setLoadedSignInForm] = useState<
+    typeof import("./SignInForm")["SignInForm"] | null
+  >(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   useEffect(() => {
-    const field = email ? 'input[type="password"]' : 'input[type="email"]';
-    dialogRef.current?.querySelector<HTMLInputElement>(field)?.focus();
-  }, [email]);
+    let active = true;
+    setLoadError(false);
+    import("./SignInForm")
+      .then((module) => {
+        if (active) setLoadedSignInForm(() => module.SignInForm);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
+      });
+    return () => { active = false; };
+  }, [loadAttempt]);
+
+  // The dialog is focusable immediately, independent of network and chunk
+  // timing. Transfer focus after the deferred form has actually mounted.
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!LoadedSignInForm) return undefined;
+    const id = requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      // A deferred form must not steal focus after the user has started
+      // interacting with another control (e.g. the Leave button).
+      if (dialog.contains(document.activeElement) && document.activeElement !== dialog) return;
+      const field = email ? 'input[type="password"]' : 'input[type="email"]';
+      dialog.querySelector<HTMLInputElement>(field)?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [email, LoadedSignInForm]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
 
-    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const focusable = () =>
+      Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
+      if (event.key !== "Tab") return;
       const items = focusable();
       if (items.length === 0) {
         event.preventDefault();
@@ -48,7 +88,10 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
       if (event.shiftKey && (active === first || !dialog.contains(active))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      } else if (
+        !event.shiftKey &&
+        (active === last || !dialog.contains(active))
+      ) {
         event.preventDefault();
         first.focus();
       }
@@ -62,11 +105,11 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
       }
     };
 
-    document.addEventListener('keydown', onKeyDown, true);
-    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("focusin", onFocusIn);
     return () => {
-      document.removeEventListener('keydown', onKeyDown, true);
-      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("focusin", onFocusIn);
     };
   }, []);
 
@@ -87,18 +130,40 @@ export function SessionExpiredDialog({ email, verifying, onLeave }: SessionExpir
         >
           Your session ended
         </h2>
-        <p id="session-expired-body" className="mb-6 font-sans text-sm text-text-secondary">
-          You were signed out, either because your session expired or because you signed out in another
-          tab. Sign in again with the same account to keep going; anything you hadn&apos;t saved is
-          still on the page. Signing in with a different account discards it.
+        <p
+          id="session-expired-body"
+          className="mb-6 font-sans text-sm text-text-secondary"
+        >
+          You were signed out, either because your session expired or because
+          you signed out in another tab. Sign in again with the same account to
+          keep going; anything you hadn&apos;t saved is still on the page.
+          Signing in with a different account discards it.
         </p>
 
         {verifying && (
-          <p role="status" className="mb-4 font-sans text-sm text-text-secondary">
+          <p
+            role="status"
+            className="mb-4 font-sans text-sm text-text-secondary"
+          >
             Verifying admin access...
           </p>
         )}
-        <SignInForm defaultEmail={email} onSignedIn={() => undefined} />
+        {loadError ? (
+          <div role="alert" className="rounded border border-[var(--color-border)] p-3 text-sm text-text-primary">
+            The sign-in form could not load. Your unsaved edits are still preserved.
+            <button
+              type="button"
+              className="mt-3 block min-h-11 rounded border border-[var(--color-border)] px-3 text-text-secondary underline"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            >
+              Retry loading sign-in
+            </button>
+          </div>
+        ) : LoadedSignInForm ? (
+          <LoadedSignInForm defaultEmail={email} onSignedIn={() => undefined} />
+        ) : (
+          <p role="status" className="text-sm text-text-secondary">Loading sign-in…</p>
+        )}
         <button
           type="button"
           onClick={onLeave}
