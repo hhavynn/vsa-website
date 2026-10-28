@@ -35,7 +35,7 @@ export default function PublicSearchDialog({ onClose }: PublicSearchDialogProps)
       );
     const focusBoundary = (last = false) => {
       const stops = getFocusable();
-      (last ? stops[stops.length - 1] : stops[0] ?? panel)?.focus();
+      (last ? stops[stops.length - 1] ?? panel : stops[0] ?? panel)?.focus();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
