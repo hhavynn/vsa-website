@@ -113,7 +113,7 @@ it('never shows zeros for a failed read, and explains a missing migration', asyn
   unmount();
   overviewRepo.getOverview.mockRejectedValueOnce(new ValidationError(HOUSE_OVERVIEW_UNAVAILABLE, 'year'));
   renderPanel();
-  expect(await screen.findByRole('alert')).toHaveTextContent('20261028100000');
+  expect(await screen.findByRole('alert')).toHaveTextContent('20261028075724');
 });
 
 it('says when the import status could not be checked', async () => {

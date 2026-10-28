@@ -111,7 +111,7 @@ it('never shows a failed read as an empty House, and explains a missing migratio
 it('says plainly when the migration is not applied', async () => {
   repo.getRoster.mockRejectedValueOnce(new ValidationError(HOUSE_ROSTER_UNAVAILABLE, 'house'));
   renderPanel();
-  expect(await screen.findByRole('alert')).toHaveTextContent('20261028110000');
+  expect(await screen.findByRole('alert')).toHaveTextContent('20261028075801');
 });
 
 it('downloads a House Parent copy only after the admin reviews its columns', async () => {

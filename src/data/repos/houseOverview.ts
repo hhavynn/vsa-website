@@ -37,7 +37,7 @@ export interface HouseOverview {
 }
 
 export const HOUSE_OVERVIEW_UNAVAILABLE =
-  'The House overview is not available yet. Ask a site administrator to apply database migration 20261028100000.';
+  'The House overview is not available yet. Ask a site administrator to apply database migration 20261028075724.';
 
 export const houseOverviewRepository = {
   async getOverview(academicYearStart: number, termId: string | null): Promise<HouseOverview> {

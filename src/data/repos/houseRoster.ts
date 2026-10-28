@@ -43,7 +43,7 @@ export interface MemberAttendanceEvent {
 }
 
 export const HOUSE_ROSTER_UNAVAILABLE =
-  'House rosters are not available yet. Ask a site administrator to apply database migration 20261028110000.';
+  'House rosters are not available yet. Ask a site administrator to apply database migration 20261028075801.';
 
 function unavailable(code: string | undefined) {
   return code === 'PGRST202' || code === '42883';
