@@ -39,6 +39,6 @@ end;
 $$;
 
 comment on view public.public_members is
-  'Public member identity + individual points projection. The legacy house cache remains internally stored but its column is not client-readable. Current House identity uses published_house_memberships.';
+  'Public member identity + individual points projection. The legacy house cache remains internally stored but its column is not client-readable. Current House identity uses public_house_memberships after Reveal.';
 
 commit;
