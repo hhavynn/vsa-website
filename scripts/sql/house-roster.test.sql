@@ -29,6 +29,7 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028075801_admin_house_roster.sql
+\ir ../../supabase/migrations/20261028210000_admin_house_member_attendance_overlap.sql
 set client_min_messages = notice;
 insert into public.members select ('30000000-0000-0000-0000-00000000000'||x)::uuid, 'Fictional', upper(x), x||'@example.invalid' from unnest(array['a','b','c','d','e','f']) x;
 
@@ -203,4 +204,28 @@ do $$ begin
   raise exception 'FAIL: the roster VSA count and the drilldown disagree';
  end if;
  raise notice 'PASS: a member who left and came back shows the stint in the period, and the VSA count matches the drilldown.';
+end $$;
+
+-- An accidental overlapping House assignment must never be silently
+-- attributed only to whichever House sorts first in the drilldown.
+reset role;
+insert into public.members values ('30000000-0000-0000-0000-000000000013', 'Fictional', 'Overlap', 'overlap@example.invalid');
+insert into public.house_memberships (member_id, house_profile_id, academic_year_start, effective_start_date, effective_end_date) values
+ ('30000000-0000-0000-0000-000000000013', '20000000-0000-0000-0000-000000000001', 2026, '2026-09-20', null),
+ ('30000000-0000-0000-0000-000000000013', '20000000-0000-0000-0000-000000000002', 2026, '2026-09-20', null);
+insert into public.member_event_attendance values ('30000000-0000-0000-0000-000000000013', '40000000-0000-0000-0000-000000000002', 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare e jsonb;
+begin
+ select x into e from jsonb_array_elements(public.admin_house_member_attendance('30000000-0000-0000-0000-000000000013', 2026)->'events') x
+ where x->>'event_id' = '40000000-0000-0000-0000-000000000002';
+ if e is null or e->>'reason' <> 'overlapping_houses'
+    or e->>'house_name' not like '%Twilight%'
+    or e->>'house_name' not like '%Rarity%'
+    or e->>'house_profile_id' is not null then
+   raise exception 'FAIL: overlapping active Houses must both be shown, without a misleading single House id: %', e;
+ end if;
+ raise notice 'PASS: overlapping active Houses are visible for follow-up, not silently picked.';
 end $$;
