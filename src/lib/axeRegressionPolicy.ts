@@ -5,7 +5,7 @@
 export type AxeTheme = 'light' | 'dark';
 
 export interface AxeNode {
-  target: string[];
+  target: Array<string | string[]>;
   failureSummary?: string | null;
 }
 
@@ -22,7 +22,7 @@ export interface AxeException {
   route: string;
   theme: AxeTheme;
   /** Exact axe node CSS-selector chain; never '*' or a prefix wildcard. */
-  target: string[];
+  target: Array<string | string[]>;
   /** Evidence that the specific finding is a false positive, not just inconvenient. */
   reason: string;
   issueUrl: string;
@@ -41,7 +41,10 @@ function validateException(entry: AxeException, today: string) {
   if (!entry.route.startsWith('/') || entry.route.includes('*') ||
       !entry.ruleId || entry.ruleId.includes('*') ||
       !['light', 'dark'].includes(entry.theme) ||
-      entry.target.length === 0 || entry.target.some((part) => !part.trim() || part.includes('*')) ||
+      entry.target.length === 0 || entry.target.some((part) => {
+        const selectors = Array.isArray(part) ? part : [part];
+        return selectors.length === 0 || selectors.some((selector) => !selector.trim() || selector.includes('*'));
+      }) ||
       entry.reason.trim().length < 20 ||
       !/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/\d+$/.test(entry.issueUrl) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn) ||
@@ -67,8 +70,7 @@ export function withoutReviewedFalsePositives<T extends AxeViolation>(
       entry.route === route &&
       entry.theme === theme &&
       entry.ruleId === violation.id &&
-      entry.target.length === node.target.length &&
-      entry.target.every((selector, index) => selector === node.target[index])
+      JSON.stringify(entry.target) === JSON.stringify(node.target)
     ));
     return nodes.length > 0 ? [{ ...violation, nodes }] : [];
   });
@@ -80,7 +82,7 @@ export function formatAxeViolations(violations: AxeViolation[]): string {
       `${violation.impact?.toUpperCase() ?? 'UNKNOWN'}: ${violation.id} — ${violation.help}`,
       violation.helpUrl ? `  Rule and guidance: ${violation.helpUrl}` : '',
       ...violation.nodes.map((node) =>
-        `  Element: ${node.target.join(' > ')}\n  How to fix: ${node.failureSummary?.trim() || 'Inspect the rule guidance and update this exact element.'}`),
+        `  Element: ${node.target.map((part) => Array.isArray(part) ? part.join(' > ') : part).join(' > ')}\n  How to fix: ${node.failureSummary?.trim() || 'Inspect the rule guidance and update this exact element.'}`),
     ].filter(Boolean).join('\n')
   ).join('\n');
 }
