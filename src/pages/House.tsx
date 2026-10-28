@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
@@ -289,7 +289,7 @@ export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('house');
-  const [isDegradedMode, setIsDegradedMode] = useState(false);
+  const isDegradedMode = false;
   const today = getTodayDateOnly();
 
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
