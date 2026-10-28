@@ -6,7 +6,7 @@ import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 import { AssistantMessageContent } from './formatAssistantMessage';
 
 type Role = 'user' | 'assistant';
-type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
+type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error' | 'unavailable';
 
 interface SourceChip {
   title: string;
@@ -151,7 +151,7 @@ function assistantToneClasses(status?: AssistantStatus) {
   if (status === 'error') {
     return 'border-rose-300/70 bg-rose-50 text-rose-950 shadow-[0_6px_20px_rgba(225,29,72,0.08)] dark:border-rose-500/40 dark:bg-rose-950/30 dark:text-rose-100';
   }
-  if (status === 'fallback') {
+  if (status === 'fallback' || status === 'unavailable') {
     return 'border-sky-200 bg-sky-50 text-sky-950 shadow-[0_6px_20px_rgba(14,165,233,0.08)] dark:border-sky-500/40 dark:bg-sky-950/30 dark:text-sky-100';
   }
   return 'border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text2)] shadow-[0_6px_20px_rgba(15,23,42,0.06)]';
@@ -232,7 +232,7 @@ export function VsaAiAssistant() {
     };
 
     const recentTurns = history
-      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited')
+      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited' && message.status !== 'unavailable')
       .slice(-4)
       .map((message) => ({
         role: message.role,
@@ -276,7 +276,7 @@ export function VsaAiAssistant() {
         content:
           data?.answer ||
           (response.status === 429
-            ? "You've reached today's Ask VSA limit. Try again later!"
+            ? "Ask VSA is busy right now. Try again later, or visit Events and Get Involved."
             : FALLBACK_ASK_VSA.message),
         sources: data?.sources ?? [],
         status: data?.status ?? (response.status === 429 ? 'rate_limited' : 'error'),
@@ -498,6 +498,9 @@ export function VsaAiAssistant() {
                         {message.role === 'assistant' && message.status === 'error' && (
                           <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Quick break</p>
                         )}
+                        {message.role === 'assistant' && message.status === 'unavailable' && (
+                          <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Taking a break</p>
+                        )}
                         {message.role === 'assistant' && isFallbackMessage(message) && (
                           <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Not sure yet</p>
                         )}
@@ -519,18 +522,24 @@ export function VsaAiAssistant() {
                           </button>
                         </div>
                       )}
-                      {message.role === 'assistant' && isFallbackMessage(message) && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {['Events', 'Get Involved', 'Applications'].map((label) => (
-                            <span
-                              key={`${message.id}-${label}`}
-                              className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
-                              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
+                      {message.role === 'assistant' && (isFallbackMessage(message) || message.status === 'rate_limited' || message.status === 'error' || message.status === 'unavailable') && (
+                        <nav aria-label="Other ways to get VSA information" className="mt-2 flex flex-wrap gap-1.5">
+                          {[
+                            { label: 'Events', to: '/events' },
+                            { label: 'Get Involved', to: '/get-involved' },
+                            { label: 'Points', to: '/points' },
+                            { label: 'Send feedback', to: '/feedback' },
+                          ].map(({ label, to }) => (
+                            <Link
+                              key={`${message.id}-${to}`}
+                              to={to}
+                              className="inline-flex min-h-[32px] items-center rounded-full border px-2.5 py-1 font-sans text-[11px] font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
                             >
                               {label}
-                            </span>
+                            </Link>
                           ))}
-                        </div>
+                        </nav>
                       )}
                       {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
