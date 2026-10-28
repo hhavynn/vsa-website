@@ -7,6 +7,20 @@ import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments
 import { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember } from '../../../lib/houseAssignmentImport';
 
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
+import { academicTermsRepository } from '../../../data/repos/academicTerms';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { applicationLinksRepository } from '../../../data/repos/applicationLinks';
+jest.mock('../../../data/repos/academicTerms', () => ({ academicTermsRepository: { getActiveTerm: jest.fn() } }));
+jest.mock('../../../data/repos/houseParents', () => ({ houseParentsRepository: { listForYear: jest.fn() } }));
+jest.mock('../../../data/repos/applicationLinks', () => ({ applicationLinksRepository: { listAdminApplicationLinks: jest.fn() } }));
+jest.mock('../../../data/repos/housePayments', () => ({
+  PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
+  housePaymentsRepository: {
+    listCycles: jest.fn().mockResolvedValue([]),
+    getBatchBlockers: jest.fn().mockResolvedValue([]),
+  },
+}));
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../../data/repos/adminReview', () => ({
   adminReviewRepository: { listReviewed: jest.fn().mockResolvedValue(new Set()), mark: jest.fn().mockResolvedValue(0), unmark: jest.fn() },
@@ -44,12 +58,19 @@ function batch(status: HouseAssignmentBatch['status'] = 'draft'): HouseAssignmen
     id: 'b1', academic_year_start: 2026, academic_year_end: 2027, effective_start_date: '2026-11-08', status,
     source_label: 'Fall sort', created_by: null, locked_at: null, published_at: null,
     assignment_method: 'manual', capacity_config: null, excluded_applicants: null,
+    payment_cycle_id: null,
+    eligibility_mode: null,
+    payment_snapshot_version: null,
+    revised_from_batch_id: null,
+    generation_reason: null,
+    applicant_set_fingerprint: null,
+    eligibility_summary: null,
     created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
   };
 }
 function draft(id: string, overrides: Partial<HouseAssignmentDraft>): HouseAssignmentDraft {
   return {
-    id, batch_id: 'b1', source_name: id, source_house: null, member_id: null, house_profile_id: null,
+    id, batch_id: 'b1', applicant_id: null, source_name: id, source_house: null, member_id: null, house_profile_id: null,
     match_status: 'unmatched', match_method: null, match_score: null, preferences: null, notes: null,
     source_order: 0, submission_timestamp: null, source_row_number: null, generated_house_profile_id: null, override_reason: null,
     created_at: '', updated_at: '', ...overrides,
@@ -84,6 +105,14 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
+
+
+beforeEach(() => {
+  (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
+  (houseParentsRepository.listForYear as jest.Mock).mockResolvedValue([]);
+  (applicationLinksRepository.listAdminApplicationLinks as jest.Mock).mockResolvedValue([]);
+  (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
+});
 
 it('shows live counts and a preflight summary', () => {
   renderEditor([

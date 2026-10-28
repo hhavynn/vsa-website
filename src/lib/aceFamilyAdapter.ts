@@ -2,6 +2,7 @@ import { AceFamily, AceFamilyMember } from '../types';
 import { FamAccent, FamPattern } from '../components/features/ace/FamCover';
 import { TreeNode } from '../components/features/ace/FamilyTree';
 import { MemberAvatarMap, NO_MEMBER_AVATARS, resolveMemberPhoto } from './memberPhotos';
+import { formatPickupLabel, pickupYearOf } from './acePickupYear';
 
 const PATTERNS: FamPattern[] = ['sunburst', 'wave', 'dots', 'arches', 'lantern', 'leaves'];
 const ACCENTS: FamAccent[] = ['teal', 'coral', 'gold'];
@@ -123,19 +124,24 @@ function classifyRole(rawRole: string | null): string {
 /**
  * Convert published members into tree-node shape expected by FamilyTree.
  * Linked members show their shared approved avatar; others keep photo_url,
- * then the initial.
+ * then the initial. Each node carries its own approved pickup year; an
+ * unknown year stays unknown (never the Big's, the generation's or today's).
  */
 export function membersToTreeNodes(
   members: AceFamilyMember[],
   avatars: MemberAvatarMap = NO_MEMBER_AVATARS,
 ): TreeNode[] {
-  return members.map((m) => ({
-    id: m.id,
-    initial: firstInitial(m.name),
-    label: m.name,
-    role: classifyRole(m.role_label),
-    cohort: null,
-    parent: m.parent_member_id ?? null,
-    photoUrl: resolveMemberPhoto(avatars, m.member_id, m.photo_url),
-  }));
+  return members.map((m) => {
+    const pickup = pickupYearOf(m);
+    return {
+      id: m.id,
+      initial: firstInitial(m.name),
+      label: m.name,
+      role: classifyRole(m.role_label),
+      cohort: formatPickupLabel(pickup),
+      pickup,
+      parent: m.parent_member_id ?? null,
+      photoUrl: resolveMemberPhoto(avatars, m.member_id, m.photo_url),
+    };
+  });
 }

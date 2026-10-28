@@ -70,7 +70,7 @@ When running against production, safety is the highest priority:
 
 By default, the script performs read checks and guarded zero-row view probes; base-table mutations require explicit opt-in:
 - **Anon: sensitive columns check** — attempts to select `user_id` and `email` on `members`. Expects access denied.
-- **Anon: safe columns check** — queries `public_members`, the safe allowlist projection needed for leaderboards. Expects success.
+- **Anon: safe columns check** — queries `public_members`, the safe allowlist projection needed for leaderboards. Expects success. From the `RLS_HOUSE_CACHE_PHASE=post-migration` phase on, the legacy `house` column is left out of this projection and asserted denied instead (see [House phases](#house-phases)).
 - **Anon: upload reservation check** — count-only SELECT on `member_photo_upload_reservations` must return permission denied.
 - **User: raw-member privacy checks** — head/count-only reads of `members` and `member_event_attendance` must be denied or return zero rows; the same account must retain SELECT on `public_members`. No private values are printed. Requires existing ordinary test credentials; never create a live account to run this.
 - **Admin: raw-member checks** — head-only reads of both base tables must succeed, preserving import/review permissions.
@@ -152,6 +152,25 @@ RLS_MEMBER_LOOKUP_PHASE=post-migration node scripts/verify-rls-security.mjs
 ```
 
 Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `member_lookup_phase=post-migration`, and once it is green set the repository variable `RLS_MEMBER_LOOKUP_PHASE=post-migration`.
+
+### House phases
+
+Two House privacy migrations follow the same manual rollout, each with its own variable (`pre-migration` default, unknown value exits non-zero):
+
+| Variable | Migration | `post-migration` asserts |
+|---|---|---|
+| `RLS_HOUSE_EMBARGO_PHASE` | `20261028073000_embargo_public_house_scores.sql` (#692) | Anon gets `42501` on `house_yearly_points`, `house_all_time_points`, `house_recent_activity`, `house_member_yearly_points` and `house_member_all_time_points`, and on `admin_private_house_standings`. Those five views are expected to be unreadable, so the write-grant probe (#472) skips them instead of failing. With test accounts: the ordinary user gets the same denials, the admin can read private standings. |
+| `RLS_HOUSE_CACHE_PHASE` | `20261028083000_restrict_public_members_house_cache.sql` (#704) | Anon gets `42501` on `public_members.house` and can still read `id, first_name, last_name, points`; the safe-columns checks drop `house` from the projection. With test accounts: the same for the ordinary user. |
+
+In `pre-migration`, `house` is part of the safe projection and the five score views must be readable for their write grants to be probed, so once a migration is applied the default fails loudly (five `could not be probed (#472)` failures for #692, `anon cannot select safe public columns` for #704). That failure is the reminder to flip the variable.
+
+Neither phase requires the signed-in test accounts. The security claim (anon is denied) is fully asserted by the anon section, and the signed-in variants add coverage whenever `RLS_TEST_*` are configured.
+
+```bash
+RLS_HOUSE_EMBARGO_PHASE=post-migration RLS_HOUSE_CACHE_PHASE=post-migration node scripts/verify-rls-security.mjs
+```
+
+Rollout order: merge, apply the migration, run the **RLS verification** workflow manually with `house_embargo_phase=post-migration` / `house_cache_phase=post-migration`, and once it is green set the matching repository variable. See [the embargo runbook](house-standings-embargo.md) and [the cache runbook](house-cache-privacy-704.md).
 
 ### In CI
 
