@@ -17,7 +17,6 @@ import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useMemberAvatars } from '../hooks/useMemberAvatars';
 import type { MemberAvatarMap } from '../lib/memberPhotos';
 import { getAvatarInitials, getInitialsAvatarColors } from '../lib/initialsAvatar';
-import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { EVENT_TYPE_LABELS } from '../constants/eventTypes';
 import { formatDateOnly } from '../lib/dateOnly';
 import { MemberEventHistoryEntry, MemberHouseBadge } from '../types';
@@ -77,13 +76,6 @@ const BoltIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 448 512" fill="currentColor"><path d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288H175.5L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7H272.5L349.4 44.6z"/></svg>
 );
 
-const TrendUpIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 576 512" fill="currentColor"><path d="M384 160c-17.7 0-32 14.3-32 32s14.3 32 32 32H544c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64.7L443.9 66.8c-12.5-12.5-32.8-12.5-45.3 0L288 177.4l-93.5-93.5c-12.5-12.5-32.8-12.5-45.3 0L7.4 225.4c-9.9 9.9-9.9 26 0 35.9s26 9.9 35.9 0l128-128L264.7 227c12.5 12.5 32.8 12.5 45.3 0L420.7 116.3 544 239.7V160H384z"/></svg>
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LOCAL REUSABLE COMPONENTS (Scrapbook Elements)
-// ─────────────────────────────────────────────────────────────────────────────
 
 function StickerBadge({ children, rotation = 0, color = 'primary', size = 'md' }: { children: React.ReactNode; rotation?: number; color?: 'primary' | 'accent' | 'gold'; size?: 'sm' | 'md' }) {
   const colorClass = color === 'primary' ? 'scrapbook-sticker-teal' : color === 'accent' ? 'scrapbook-sticker-coral' : 'scrapbook-sticker-gold';
