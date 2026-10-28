@@ -18,13 +18,13 @@ describe('NextEventAtGlance (#245)', () => {
     render(<NextEventAtGlance event={event} />);
     const title = screen.getByText(event.name);
     expect(title).toBeInTheDocument();
-    expect(title.className).not.toContain('truncate');
+    expect(title).not.toHaveClass('truncate');
     expect(screen.getByText(/7 PM – 9:30 PM/)).toBeInTheDocument();
     expect(screen.getByText('Price Center Ballroom West')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Event details' })).toHaveAttribute('href', '#next-up');
     const calendarLink = screen.getByRole('link', { name: /Add to Google Calendar/i });
     expect(calendarLink).toHaveAttribute('target', '_blank');
-    expect(calendarLink.getAttribute('href')).toContain('calendar.google.com');
+    expect(calendarLink).toHaveAttribute('href', expect.stringContaining('calendar.google.com'));
   });
 
   it('never invents a time or location when the event does not specify them', () => {
