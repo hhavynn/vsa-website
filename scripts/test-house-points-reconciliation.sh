@@ -37,6 +37,28 @@ case "$summary" in
 esac
 printf '%s\n' "$output" | rtk grep -q '^per_house|Twilight Sparkle|2|2|2$' || { printf 'FAIL: Twilight per-House row\n%s\n' "$output" >&2; exit 1; }
 printf '%s\n' "$output" | rtk grep -q '^per_house|Applejack|1|1|1$' || { printf 'FAIL: Applejack per-House row\n%s\n' "$output" >&2; exit 1; }
+# The admin function (20261028070000) returns the same counts, refuses
+# non-admins and is not executable by anon.
+rtk psql "${psql_args[@]}" -q <<'SQL'
+create role anon;
+create role authenticated;
+create schema auth;
+grant usage on schema public, auth to anon, authenticated;
+grant select on all tables in schema public to authenticated;
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+create function public.is_admin_user(p_id uuid) returns boolean language sql stable as $$ select p_id = '00000000-0000-0000-0000-000000000001' $$;
+SQL
+rtk psql "${psql_args[@]}" -q -f "$script_dir/../supabase/migrations/20261028070000_admin_house_points_reconciliation.sql"
+function_summary="$(rtk psql "${psql_args[@]}" -q -A -t -c "set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; select concat_ws('|', s->>'academic_year_start', s->>'year_credits', s->>'credits_earning_house_points', s->>'credits_member_has_no_house_this_year', s->>'credits_outside_membership_interval', s->>'credits_before_house_start', s->>'credits_event_without_term_near_year', s->>'credits_on_inactive_house_profile', s->>'pacific_vs_utc_boundary_credits', s->>'recomputed_vs_view_mismatch', (select count(*) from jsonb_array_elements(r->'houses'))) from (select public.admin_house_points_reconciliation(2026) r) x, lateral (select r->'summary' s) y;" | tail -1)"
+[ "$function_summary" = "2026|6|3|1|1|1|1|1|1|0|3" ] || { printf 'FAIL: function summary %s\n' "$function_summary" >&2; exit 1; }
+if rtk psql "${psql_args[@]}" -q -c "set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002'; select public.admin_house_points_reconciliation(2026);" >/dev/null 2>&1; then
+  printf 'FAIL: a non-admin ran the check\n' >&2; exit 1
+fi
+if rtk psql "${psql_args[@]}" -q -c "set role anon; select public.admin_house_points_reconciliation(2026);" >/dev/null 2>&1; then
+  printf 'FAIL: anon ran the check\n' >&2; exit 1
+fi
+printf 'PASS: the admin function returns the same counts in UTC, refuses non-admins and anon.\n'
+
 # Read-only: a write inside the script's transaction is refused.
 if rtk psql "${psql_args[@]}" -q -c "begin transaction read only; insert into public.members (id) values ('x'); rollback;" 2>/dev/null; then
   printf 'FAIL: read-only transaction accepted a write\n' >&2; exit 1
