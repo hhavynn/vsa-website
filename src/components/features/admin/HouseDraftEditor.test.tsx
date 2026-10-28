@@ -8,6 +8,12 @@ import { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite } from '..
 import { HouseImportMember } from '../../../lib/houseAssignmentImport';
 
 import { housePaymentsRepository } from '../../../data/repos/housePayments';
+import { academicTermsRepository } from '../../../data/repos/academicTerms';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { applicationLinksRepository } from '../../../data/repos/applicationLinks';
+jest.mock('../../../data/repos/academicTerms', () => ({ academicTermsRepository: { getActiveTerm: jest.fn() } }));
+jest.mock('../../../data/repos/houseParents', () => ({ houseParentsRepository: { listForYear: jest.fn() } }));
+jest.mock('../../../data/repos/applicationLinks', () => ({ applicationLinksRepository: { listAdminApplicationLinks: jest.fn() } }));
 jest.mock('../../../data/repos/housePayments', () => ({
   PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
   housePaymentsRepository: {
@@ -102,6 +108,9 @@ async function settle() {
 
 
 beforeEach(() => {
+  (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
+  (houseParentsRepository.listForYear as jest.Mock).mockResolvedValue([]);
+  (applicationLinksRepository.listAdminApplicationLinks as jest.Mock).mockResolvedValue([]);
   (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
 });
 

@@ -202,6 +202,44 @@ async function runTests() {
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
 
+  // #704: after the coordinated #701 Reveal identity + #704 cache-ACL
+  // rollout, prove the retired cache is not exposed even by a guessed API
+  // column. Never use a real member ID or export rows in test output.
+  const houseCacheRestricted = process.env.RLS_HOUSE_CACHE_PHASE === 'post-migration';
+  async function verifyHouseCacheDenied(client, who) {
+    if (!houseCacheRestricted) return;
+    const { error: cacheError } = await client
+      .from('public_members').select('house').limit(1);
+    if (cacheError?.code === '42501') {
+      reportPass(`${who} cannot read legacy public_members.house (#704)`);
+    } else {
+      reportFail(`${who} legacy public_members.house is not denied (#704): ${cacheError?.code ?? 'success'}`);
+    }
+    const { error: safeError } = await client
+      .from('public_members').select('id, first_name, last_name, points').limit(1);
+    if (safeError) reportFail(`${who} lost safe member projection reads (#704): ${safeError.code}`);
+    else reportPass(`${who} retains public member identity and individual points (#704)`);
+  }
+
+  // #692 must be applied and verified in staging before enabling this mode.
+  // Pre-migration environments retain the old contract until the cutover.
+  const houseEmbargoRequired = process.env.RLS_HOUSE_EMBARGO_PHASE === 'post-migration';
+  const houseScoreViews = [
+    'house_yearly_points', 'house_all_time_points', 'house_recent_activity',
+    'house_member_yearly_points', 'house_member_all_time_points',
+  ];
+  async function verifyHouseEmbargo(client, who) {
+    if (!houseEmbargoRequired) return;
+    for (const view of houseScoreViews) {
+      const { error } = await client.from(view).select('*').limit(1);
+      if (error?.code === '42501') reportPass(`${who} cannot SELECT private ${view} (#692)`);
+      else reportFail(`${who} can SELECT, or cannot conclusively verify denial on, ${view} (#692): ${error?.code ?? 'success'}`);
+    }
+    const { error: rpcError } = await client.rpc('admin_private_house_standings', { p_year: 2026 });
+    if (rpcError?.code === '42501') reportPass(`${who} cannot call private standings RPC (#692)`);
+    else reportFail(`${who} private standings RPC was not denied with 42501 (#692): ${rpcError?.code ?? 'success'}`);
+  }
+
   // Writes through public views (#472). Supabase's default privileges grant
   // ALL on every new view to anon and authenticated. A simple single-table
   // view is auto-updatable and runs as its owner, so a leftover write grant
@@ -484,6 +522,24 @@ async function runTests() {
       else reportPass('anon cannot read house_parents (returned empty list due to RLS)');
     }
 
+    // ACE pickup-year evidence (migration 20261027190000) is admin-only; the public tree reads only
+    // the approved pickup_* columns through published_ace_family_members. Missing objects = not applied.
+    // Constraints, review flow and view projection are covered offline by scripts/test-ace-pickup-year.sh.
+    {
+      const missing = (error) => error && (error.code === 'PGRST205' || error.code === '42P01');
+      const { data: peData, error: peError } = await anon.from('ace_member_pickup_evidence').select('id').limit(1);
+      if (missing(peError)) reportSkip('ace_member_pickup_evidence is not present yet (migration 20261027190000 not applied)');
+      else if (peError) reportPass(`anon cannot read ace_member_pickup_evidence (${peError.message || peError.code})`);
+      else if (peData && peData.length > 0) reportFail('anon read ace_member_pickup_evidence successfully (returned rows)');
+      else reportPass('anon cannot read ace_member_pickup_evidence (returned empty list due to RLS)');
+      const { data: pyData, error: pyError } = await anon.rpc('set_ace_member_pickup_year', {
+        p_ace_member_id: dummyUuid, p_academic_year_start: 2023, p_term: 'FA23', p_evidence_id: null,
+      });
+      if (isMissingFunction(pyError)) reportSkip('set_ace_member_pickup_year is not present yet (migration 20261027190000 not applied)');
+      else if (pyError && (pyError.code === '42501' || pyError.message.includes('permission denied'))) reportPass(`anon cannot call set_ace_member_pickup_year (${pyError.message})`);
+      else reportFail(`anon could call set_ace_member_pickup_year or got unexpected error: ${JSON.stringify(pyError || pyData)}`);
+    }
+
     // Atomic House placement override (migration 20261027120000): EXECUTE is for authenticated only.
     {
       const { data: hoData, error: hoError } = await anon.rpc('admin_apply_house_placement_override', { p_batch_id: dummyUuid, p_changes: [], p_reason: 'RLS verify probe' });
@@ -609,7 +665,11 @@ async function runTests() {
     }
 
     // my_member_photo_requests is readable by signed-in members only.
-    await expectViewWritesDenied(anon, 'anon', { withoutSelect: ['my_member_photo_requests'] });
+    await verifyHouseCacheDenied(anon, 'anon');
+    await verifyHouseEmbargo(anon, 'anon');
+    await expectViewWritesDenied(anon, 'anon', { withoutSelect: [
+      'my_member_photo_requests', ...(houseEmbargoRequired ? houseScoreViews : []),
+    ] });
   } catch (err) {
     reportFail(`Unexpected error during anon checks: ${err.message}`);
   }
@@ -687,7 +747,11 @@ async function runTests() {
         expectNoRowsUpdated(table, data, error);
       }
 
-      await expectViewWritesDenied(userClient, 'ordinary user');
+      await verifyHouseCacheDenied(userClient, 'ordinary user');
+      await verifyHouseEmbargo(userClient, 'ordinary user');
+      await expectViewWritesDenied(userClient, 'ordinary user', {
+        withoutSelect: houseEmbargoRequired ? houseScoreViews : [],
+      });
 
       }
 
@@ -821,6 +885,15 @@ async function runTests() {
         reportFail(`admin cannot read data_rights_requests: ${adminReqError.message}`);
       } else {
         reportPass('admin can read data_rights_requests');
+      }
+
+      if (houseEmbargoRequired) {
+        const { data: privateStandings, error: privateError } = await adminClient.rpc(
+          'admin_private_house_standings', { p_year: 2026 }
+        );
+        if (privateError || !Array.isArray(privateStandings)) {
+          reportFail('approved admin cannot read authoritative private House standings (#692)');
+        } else reportPass('approved admin can read private House standings (#692)');
       }
 
       // Read-only; synthetic values, sent in the POST body.

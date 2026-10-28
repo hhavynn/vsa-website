@@ -247,6 +247,15 @@ export interface AceFamilyMember {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  /**
+   * Approved academic year this person was picked up as a Little (2023 =
+   * 2023–24); null = unknown. Optional because a row read before the
+   * migration has no such column. Read it through pickupYearOf(); change it
+   * only through aceFamiliesRepository.setPickupYear().
+   */
+  pickup_academic_year_start?: number | null;
+  /** Approved exact term (FA23, SP24) when known; null when only the year is. */
+  pickup_term?: string | null;
 }
 
 export type AceAssignmentStatus = 'draft' | 'locked' | 'published' | 'archived';
