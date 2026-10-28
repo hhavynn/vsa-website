@@ -15,6 +15,10 @@ const FOCUSABLE = 'input:not([disabled]), button:not([disabled]), [href], [tabin
  */
 export default function PublicSearchDialog({ onClose }: PublicSearchDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // The parent may pass a fresh callback every render; do not tear down the
+  // focus trap or recapture its opener when unrelated parent state changes.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // The search input autofocuses after the frame mounts. Keep all keyboard
   // focus inside the portal while it is open, including if another script
@@ -41,7 +45,7 @@ export default function PublicSearchDialog({ onClose }: PublicSearchDialogProps)
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !panel) return;
@@ -77,7 +81,7 @@ export default function PublicSearchDialog({ onClose }: PublicSearchDialogProps)
         document.querySelector<HTMLElement>('nav[aria-label="Primary navigation"] a[href]')?.focus();
       }
     };
-  }, [onClose]);
+  }, []);
 
   return createPortal(
     <div
