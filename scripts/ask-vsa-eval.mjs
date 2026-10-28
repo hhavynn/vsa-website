@@ -35,7 +35,7 @@ export function scoreCase(testCase, result) {
   } else if (testCase.kind === 'unknown') {
     if (!['fallback', 'answered'].includes(status)) problems.push('Unknown question has unexpected status');
     if (UNSUPPORTED_DATE.some((pattern) => pattern.test(answer))) problems.push('Unsupported exact date, time, or points claim');
-    if (status === 'answered' && !/\b(?:not (?:available|announced|known|confirmed)|don't know|cannot confirm|no (?:verified|published|announced)|unavailable|check back)\b/i.test(answer)) {
+    if (status === 'answered' && !/\b(?:not (?:been )?(?:available|announced|known|confirmed)|don't know|cannot confirm|no (?:verified|published|announced)|unavailable|check back)\b/i.test(answer)) {
       problems.push('Uncertain question did not explicitly acknowledge missing context');
     }
   } else if (testCase.kind === 'grounded') {
