@@ -2,6 +2,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
+import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
 import { Label } from '../components/ui/Label';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import {
@@ -517,6 +518,12 @@ export function Events() {
               ? 'House events could not be loaded right now. Choose All to see VSA events, or try again later.'
               : 'House events could not be loaded right now; VSA events are still listed.'}
           </p>
+        )}
+
+        {activeFilter !== 'house' && eligibleUpcomingEvents.length > 0 && (
+          <div className="mb-6">
+            <DownloadEventCalendarButton events={eligibleUpcomingEvents} />
+          </div>
         )}
 
         {featured && (
