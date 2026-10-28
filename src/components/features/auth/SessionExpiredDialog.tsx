@@ -158,7 +158,7 @@ export function SessionExpiredDialog({
           <LoadedSignInForm defaultEmail={email} onSignedIn={() => undefined} />
         ) : (
           <p role="status" className="text-sm text-text-secondary">Loading sign-in…</p>
-        )>
+        )}
         <button
           type="button"
           onClick={onLeave}
