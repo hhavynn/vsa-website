@@ -26,6 +26,16 @@ describe('Ask VSA source chips (#241)', () => {
     expect(screen.queryByRole('link', { name: 'Source: Protocol relative' })).not.toBeInTheDocument();
   });
 
+  it('keeps distinct sources with the same title independently clickable', () => {
+    render(<AiSourceChips messageId="duplicate-titles" sources={[
+      { title: 'Official VSA info', source_url: '/events', category: 'events' },
+      { title: 'Official VSA info', source_url: '/ace', category: 'ace' },
+    ]} />);
+    const links = screen.getAllByRole('link', { name: 'Source: Official VSA info' });
+    expect(links).toHaveLength(2);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/events', '/ace']);
+  });
+
   it('blocks backslash host tricks and malformed Unicode from model-provided links', () => {
     expect(safeAssistantSourceUrl('/\\\\evil.example')).toBe('/%5C%5Cevil.example');
     expect(safeAssistantSourceUrl('\uD800')).toBeNull();
