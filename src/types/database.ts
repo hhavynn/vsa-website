@@ -1731,19 +1731,191 @@ export type Database = {
         };
         Relationships: [];
       };
+      house_applicants: {
+        Row: {
+          applicant_key: string;
+          created_at: string;
+          created_by: string | null;
+          cycle_id: string;
+          id: string;
+          match_method: string | null;
+          match_status: string;
+          member_id: string | null;
+          payment_evidence: string | null;
+          payment_note: string | null;
+          payment_reference: string | null;
+          payment_status: string;
+          payment_updated_at: string | null;
+          payment_updated_by: string | null;
+          preferences: Json;
+          source_name: string;
+          source_row_number: number;
+          submission_timestamp: string;
+          updated_at: string;
+          withdrawn_reason: string | null;
+        };
+        Insert: {
+          applicant_key: string;
+          created_at?: string;
+          created_by?: string | null;
+          cycle_id: string;
+          id?: string;
+          match_method?: string | null;
+          match_status?: string;
+          member_id?: string | null;
+          payment_evidence?: string | null;
+          payment_note?: string | null;
+          payment_reference?: string | null;
+          payment_status?: string;
+          payment_updated_at?: string | null;
+          payment_updated_by?: string | null;
+          preferences: Json;
+          source_name: string;
+          source_row_number: number;
+          submission_timestamp: string;
+          updated_at?: string;
+          withdrawn_reason?: string | null;
+        };
+        Update: {
+          applicant_key?: string;
+          created_at?: string;
+          created_by?: string | null;
+          cycle_id?: string;
+          id?: string;
+          match_method?: string | null;
+          match_status?: string;
+          member_id?: string | null;
+          payment_evidence?: string | null;
+          payment_note?: string | null;
+          payment_reference?: string | null;
+          payment_status?: string;
+          payment_updated_at?: string | null;
+          payment_updated_by?: string | null;
+          preferences?: Json;
+          source_name?: string;
+          source_row_number?: number;
+          submission_timestamp?: string;
+          updated_at?: string;
+          withdrawn_reason?: string | null;
+        };
+        Relationships: [];
+      };
+      house_payment_audit: {
+        Row: {
+          actor: string | null;
+          applicant_id: string | null;
+          created_at: string;
+          cycle_id: string;
+          event_type: string;
+          from_value: string | null;
+          id: number;
+          reason: string | null;
+          request_id: string | null;
+          source: string;
+          to_value: string | null;
+        };
+        Insert: {
+          actor?: string | null;
+          applicant_id?: string | null;
+          created_at?: string;
+          cycle_id: string;
+          event_type: string;
+          from_value?: string | null;
+          id?: number;
+          reason?: string | null;
+          request_id?: string | null;
+          source: string;
+          to_value?: string | null;
+        };
+        Update: {
+          actor?: string | null;
+          applicant_id?: string | null;
+          created_at?: string;
+          cycle_id?: string;
+          event_type?: string;
+          from_value?: string | null;
+          id?: number;
+          reason?: string | null;
+          request_id?: string | null;
+          source?: string;
+          to_value?: string | null;
+        };
+        Relationships: [];
+      };
+      house_payment_cycles: {
+        Row: {
+          academic_year_start: number;
+          application_key: string;
+          created_at: string;
+          created_by: string | null;
+          cutoff_authorized_at: string | null;
+          cutoff_authorized_by: string | null;
+          cutoff_authorized_reason: string | null;
+          deadline_note: string | null;
+          grace_until: string | null;
+          id: string;
+          last_change_reason: string | null;
+          payment_deadline: string | null;
+          publishing_batch_id: string | null;
+          status_version: number;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year_start: number;
+          application_key: string;
+          created_at?: string;
+          created_by?: string | null;
+          cutoff_authorized_at?: string | null;
+          cutoff_authorized_by?: string | null;
+          cutoff_authorized_reason?: string | null;
+          deadline_note?: string | null;
+          grace_until?: string | null;
+          id?: string;
+          last_change_reason?: string | null;
+          payment_deadline?: string | null;
+          publishing_batch_id?: string | null;
+          status_version?: number;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year_start?: number;
+          application_key?: string;
+          created_at?: string;
+          created_by?: string | null;
+          cutoff_authorized_at?: string | null;
+          cutoff_authorized_by?: string | null;
+          cutoff_authorized_reason?: string | null;
+          deadline_note?: string | null;
+          grace_until?: string | null;
+          id?: string;
+          last_change_reason?: string | null;
+          payment_deadline?: string | null;
+          publishing_batch_id?: string | null;
+          status_version?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       house_assignment_batches: {
         Row: {
           academic_year_end: number;
           academic_year_start: number;
+          applicant_set_fingerprint: string | null;
           assignment_method: string;
           capacity_config: Json | null;
           created_at: string;
           created_by: string | null;
           effective_start_date: string;
+          eligibility_mode: string | null;
+          eligibility_summary: Json | null;
           excluded_applicants: Json | null;
+          generation_reason: string | null;
           id: string;
           locked_at: string | null;
+          payment_cycle_id: string | null;
+          payment_snapshot_version: number | null;
           published_at: string | null;
+          revised_from_batch_id: string | null;
           source_label: string | null;
           status: string;
           updated_at: string;
@@ -1751,15 +1923,22 @@ export type Database = {
         Insert: {
           academic_year_end: number;
           academic_year_start: number;
+          applicant_set_fingerprint?: string | null;
           assignment_method?: string;
           capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date: string;
+          eligibility_mode?: string | null;
+          eligibility_summary?: Json | null;
           excluded_applicants?: Json | null;
+          generation_reason?: string | null;
           id?: string;
           locked_at?: string | null;
+          payment_cycle_id?: string | null;
+          payment_snapshot_version?: number | null;
           published_at?: string | null;
+          revised_from_batch_id?: string | null;
           source_label?: string | null;
           status?: string;
           updated_at?: string;
@@ -1767,15 +1946,22 @@ export type Database = {
         Update: {
           academic_year_end?: number;
           academic_year_start?: number;
+          applicant_set_fingerprint?: string | null;
           assignment_method?: string;
           capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date?: string;
+          eligibility_mode?: string | null;
+          eligibility_summary?: Json | null;
           excluded_applicants?: Json | null;
+          generation_reason?: string | null;
           id?: string;
           locked_at?: string | null;
+          payment_cycle_id?: string | null;
+          payment_snapshot_version?: number | null;
           published_at?: string | null;
+          revised_from_batch_id?: string | null;
           source_label?: string | null;
           status?: string;
           updated_at?: string;
@@ -1784,6 +1970,7 @@ export type Database = {
       };
       house_assignment_drafts: {
         Row: {
+          applicant_id: string | null;
           batch_id: string;
           created_at: string;
           generated_house_profile_id: string | null;
@@ -1804,6 +1991,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          applicant_id?: string | null;
           batch_id: string;
           created_at?: string;
           generated_house_profile_id?: string | null;
@@ -1824,6 +2012,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          applicant_id?: string | null;
           batch_id?: string;
           created_at?: string;
           generated_house_profile_id?: string | null;
@@ -4072,6 +4261,14 @@ export type Database = {
         Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
         Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];
       };
+      admin_begin_house_batch_publish: {
+        Args: { p_batch_id: string };
+        Returns: undefined;
+      };
+      admin_house_points_reconciliation: {
+        Args: { p_year: number };
+        Returns: Json;
+      };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
         Returns: Json;
@@ -4079,6 +4276,14 @@ export type Database = {
       admin_lookup_members: {
         Args: { p_emails?: string[] | null; p_surnames?: string[] | null };
         Returns: Json;
+      };
+      admin_link_house_applicant_member: {
+        Args: { p_applicant_id: string; p_member_id: string | null; p_reason: string };
+        Returns: number;
+      };
+      admin_register_house_applicants: {
+        Args: { p_cycle_id: string; p_applicants: Json; p_source?: string };
+        Returns: { applicant_key: string; applicant_id: string; created: boolean }[];
       };
       admin_search_members: {
         Args: { p_query: string; p_limit?: number };
@@ -4101,6 +4306,21 @@ export type Database = {
           p_note?: string | null;
         };
         Returns: Json;
+      };
+      admin_set_house_applicant_payments: {
+        Args: {
+          p_cycle_id: string;
+          p_changes: Json;
+          p_source: string;
+          p_reason: string | null;
+          p_request_id: string;
+          p_expected_version?: number | null;
+        };
+        Returns: Json;
+      };
+      house_batch_payment_blockers: {
+        Args: { p_batch_id: string };
+        Returns: string[];
       };
       publish_ace_assignment_cycle: {
         Args: { p_cycle_id: string };

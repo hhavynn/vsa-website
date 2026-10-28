@@ -11,12 +11,20 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { HouseDraftEditor } from './HouseDraftEditor';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite } from '../../../lib/houseAssignmentDraft';
 import { HouseImportMember } from '../../../lib/houseAssignmentImport';
 import { downloadCsv } from '../../../lib/housePlacementExport';
 import toast from 'react-hot-toast';
 
+jest.mock('../../../data/repos/housePayments', () => ({
+  PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
+  housePaymentsRepository: {
+    listCycles: jest.fn().mockResolvedValue([]),
+    getBatchBlockers: jest.fn().mockResolvedValue([]),
+  },
+}));
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
 jest.mock('../../../data/repos/adminReview', () => ({
   adminReviewRepository: { listReviewed: jest.fn().mockResolvedValue(new Set()), mark: jest.fn().mockResolvedValue(0), unmark: jest.fn() },
@@ -58,13 +66,14 @@ function batch(status: HouseAssignmentBatch['status'] = 'draft'): HouseAssignmen
     id: 'b1', academic_year_start: 2026, academic_year_end: 2027, effective_start_date: '2026-11-08', status,
     source_label: 'Fall auto', created_by: null, locked_at: null, published_at: null,
     assignment_method: 'timestamp_ranked', capacity_config: { 'p-rarity': 2, 'p-pinkie': 2 }, excluded_applicants: [{ source_row_number: 9, name: 'Left Out', reason: 'Withdrew' }],
+    payment_cycle_id: null, eligibility_mode: null, payment_snapshot_version: null, revised_from_batch_id: null, generation_reason: null, applicant_set_fingerprint: null, eligibility_summary: null,
     created_at: '2026-10-26T00:00:00Z', updated_at: '2026-10-26T00:00:00Z',
   };
 }
 
 function draft(order: number, name: string, houseId: string, prefs: string[], overrides: Partial<HouseAssignmentDraft> = {}): HouseAssignmentDraft {
   return {
-    id: `d${order}`, batch_id: 'b1', source_name: name, source_house: null, member_id: `m-${'abcd'[order]}`,
+    id: `d${order}`, batch_id: 'b1', applicant_id: null, source_name: name, source_house: null, member_id: `m-${'abcd'[order]}`,
     house_profile_id: houseId, generated_house_profile_id: houseId, override_reason: null,
     match_status: 'match', match_method: 'email', match_score: 100, preferences: prefs, notes: null,
     source_order: order, submission_timestamp: new Date(Date.UTC(2026, 9, 22, 3, order)).toISOString(), source_row_number: order + 2,
@@ -110,6 +119,7 @@ async function settle() {
 const download = downloadCsv as jest.MockedFunction<typeof downloadCsv>;
 
 beforeEach(() => {
+  (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
   jest.clearAllMocks();
   // The real RPC returns the updated rows; mimic that from the requested changes.
   repo.applyPlacementOverride.mockImplementation(async (_batchId, changes, reason) => changes.map((change) => {
@@ -128,7 +138,7 @@ async function openSwapForm() {
   return form;
 }
 
-it('shows priority, submission time, achieved rank and capacities, and hides the balance helper and bulk House edits', () => {
+it('shows priority, submission time, achieved rank and capacities, and hides the balance helper and bulk House edits', async () => {
   renderEditor(placement());
   const rows = screen.getAllByTestId('house-draft-row');
   expect(rows[2]).toHaveTextContent('#3');
@@ -143,7 +153,7 @@ it('shows priority, submission time, achieved rank and capacities, and hides the
   expect(screen.queryByLabelText('House for MemberA Test')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
   expect(screen.queryByText('Add someone manually')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeEnabled();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeEnabled());
 });
 
 it('blocks locking while an included applicant is not linked to a member', () => {
@@ -210,7 +220,7 @@ it('cannot be edited once locked, and revealing still needs the explicit confirm
   const reveal = screen.getByRole('button', { name: 'Reveal House assignments' });
   expect(reveal).toBeDisabled();
   await userEvent.click(screen.getByRole('checkbox', { name: /I confirm: reveal these 4 assignments/ }));
-  expect(reveal).toBeEnabled();
+  await waitFor(() => expect(reveal).toBeEnabled());
   expect(repo.publishBatch).not.toHaveBeenCalled();
 });
 
@@ -300,4 +310,27 @@ it('exports the saved draft for Google Sheets, reflecting overrides, with draft 
   expect(download.mock.calls[1][0]).not.toMatch(/MemberB Test/);
   expect(repo.updateDraft).not.toHaveBeenCalled();
   expect(repo.applyPlacementOverride).not.toHaveBeenCalled();
+});
+
+describe('payment eligibility gate (#660)', () => {
+  const blockers = housePaymentsRepository.getBatchBlockers as jest.MockedFunction<typeof housePaymentsRepository.getBatchBlockers>;
+
+  it('shows the server blockers, a stale-payments banner and keeps Lock disabled', async () => {
+    blockers.mockResolvedValueOnce([
+      'Payments changed since this sort. Rerun sorting with the current payment statuses.',
+      '1 Paid or Waived applicant(s) are missing from this draft.',
+    ]);
+    renderEditor(placement());
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeDisabled();
+    expect(await screen.findByText(/Payments changed since this sort — rerun required/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1 Paid or Waived applicant\(s\) are missing from this draft/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeDisabled();
+  });
+
+  it('treats a failed eligibility check as blocking, never as cleared', async () => {
+    blockers.mockRejectedValueOnce(new Error('network'));
+    renderEditor(placement());
+    expect(await screen.findByText(/Payment eligibility could not be checked. Lock and Reveal stay blocked/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeDisabled();
+  });
 });
