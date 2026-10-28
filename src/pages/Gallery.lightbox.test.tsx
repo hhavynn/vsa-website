@@ -128,6 +128,51 @@ describe('Gallery album quick-look', () => {
     expect(within(getDialog()).getByRole('button', { name: 'Previous album' })).toBeDisabled();
   });
 
+  it('pinch-zooms the cover, supports panning, and suppresses album swipes while zoomed', () => {
+    renderGallery();
+    openCard('Album b');
+    const image = within(getDialog()).getByRole('img', { name: 'Cover photo for Album b' });
+    const zoomArea = screen.getByTestId('album-zoom-area');
+    const surface = screen.getByTestId('album-swipe-area');
+
+    fireEvent.touchStart(zoomArea, {
+      touches: [{ clientX: 40, clientY: 70 }, { clientX: 140, clientY: 70 }],
+    });
+    fireEvent.touchMove(zoomArea, {
+      touches: [{ clientX: 10, clientY: 70 }, { clientX: 210, clientY: 70 }],
+    });
+    expect(image).toHaveStyle({ transform: 'translate(0px, 0px) scale(2)' });
+    expect(within(getDialog()).getByRole('button', { name: 'Reset photo zoom' })).toBeInTheDocument();
+
+    fireEvent.touchEnd(zoomArea, { touches: [], changedTouches: [{ clientX: 10, clientY: 70 }] });
+    swipe(surface, [260, 300], [100, 300]);
+    expect(within(getDialog()).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
+
+    fireEvent.click(within(getDialog()).getByRole('button', { name: 'Reset photo zoom' }));
+    expect(image).toHaveStyle({ transform: 'translate(0px, 0px) scale(1)' });
+    swipe(surface, [260, 300], [100, 300]);
+    expect(within(getDialog()).getByRole('heading', { name: 'Album c' })).toBeInTheDocument();
+  });
+
+  it('clamps pinch zoom, and resets photo zoom when paging to another album', () => {
+    renderGallery();
+    openCard('Album a');
+    const zoomArea = screen.getByTestId('album-zoom-area');
+    fireEvent.touchStart(zoomArea, {
+      touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }],
+    });
+    fireEvent.touchMove(zoomArea, {
+      touches: [{ clientX: 0, clientY: 0 }, { clientX: 900, clientY: 0 }],
+    });
+    const firstImage = within(getDialog()).getByRole('img', { name: 'Cover photo for Album a' });
+    expect(firstImage.style.transform).toContain('scale(3)');
+
+    fireEvent.click(within(getDialog()).getByRole('button', { name: 'Next album' }));
+    const next = within(getDialog()).getByRole('img', { name: 'Cover photo for Album b' });
+    expect(next.style.transform).toContain('scale(1)');
+    expect(within(getDialog()).queryByRole('button', { name: 'Reset photo zoom' })).not.toBeInTheDocument();
+  });
+
   it('pages with the arrow keys and closes on Escape', async () => {
     renderGallery();
     openCard('Album a');
