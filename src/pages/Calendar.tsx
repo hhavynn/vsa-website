@@ -247,7 +247,7 @@ export function Calendar() {
             </div>
           )}
 
-
+          {items.length > 0 && (
             <div className="mt-4">
               <CalendarFilters
                 options={filterOptions}
