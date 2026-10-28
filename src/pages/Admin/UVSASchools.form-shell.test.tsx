@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { MemoryRouter } from 'react-router-dom';
 import AdminUVSASchools from './UVSASchools';
 import { DEFAULT_UVSA_NETWORK_PAGE_SETTINGS } from '../../data/repos/uvsaNetworkSettings';
 
@@ -36,7 +37,7 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <AdminUVSASchools />
+      <MemoryRouter><AdminUVSASchools /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
