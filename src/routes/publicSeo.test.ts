@@ -42,6 +42,13 @@ describe('public sitemap and share previews (#573)', () => {
     expect(previews.every((page) => getSitemapPaths().includes(page.path))).toBe(true);
   });
 
+  it('does not advertise confidential live House standings in share previews (#692)', () => {
+    const leaderboard = getSharePreviewPages().find((page) => page.path === '/leaderboard');
+    expect(leaderboard?.description).toMatch(/House standings are announced at general body meetings/i);
+    expect(leaderboard?.description).not.toMatch(/see member rankings and House standings/i);
+    expect(PUBLIC_ROUTE_DECISIONS['/leaderboard'].description).toMatch(/announcements/i);
+  });
+
   it('sets static metadata in the initial HTML for a direct social preview fetch', () => {
     const template = '<html><head><title>VSA at UCSD</title><meta name="vsa-seo-start" content="1"/><meta name="description" content="generic"/><meta name="vsa-seo-end" content="1"/></head><body><div id="root"></div></body></html>';
     const view = renderSharePreviewHtml(template, {
