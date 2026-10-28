@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { AiSourceChips } from './AiSourceChips';
+import { AiSourceChips, safeAssistantSourceUrl } from './AiSourceChips';
 
 const sources = [
   { title: 'VSA Events', source_url: '/events', category: 'events' },
@@ -24,6 +24,11 @@ describe('Ask VSA source chips (#241)', () => {
     expect(screen.getByText('Protocol relative')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Source: Malicious source' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Source: Protocol relative' })).not.toBeInTheDocument();
+  });
+
+  it('blocks backslash host tricks and malformed Unicode from model-provided links', () => {
+    expect(safeAssistantSourceUrl('/\\\\evil.example')).toBe('/%5Cevil.example');
+    expect(safeAssistantSourceUrl('\uD800')).toBeNull();
   });
 
   it('renders no UI when the model supplies no citations', () => {
