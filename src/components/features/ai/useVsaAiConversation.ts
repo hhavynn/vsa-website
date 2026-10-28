@@ -28,7 +28,7 @@ interface AssistantResponse {
 }
 
 const MAX_MESSAGES = 12;
-const MAX_INPUT_LENGTH = 500;
+export const MAX_INPUT_LENGTH = 500;
 const SESSION_STORAGE_KEY = 'vsa-ai-assistant-session';
 
 function createMessageId() {
