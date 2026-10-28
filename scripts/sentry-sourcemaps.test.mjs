@@ -50,6 +50,21 @@ test('with a token it injects, uploads with the release, then deletes every map'
   assert.equal(existsSync(join(dir, 'static', 'js', 'main.abc.js')), true);
 });
 
+test('accepts the token under SENTRY_AUTH_TOKENS and hands it to sentry-cli, never on argv', () => {
+  const dir = fakeBuild();
+  const calls = [];
+  const result = uploadSourceMaps({
+    env: { SENTRY_AUTH_TOKENS: 'plural-name-token' },
+    buildDir: dir,
+    exec: (args, token) => calls.push({ args, token }),
+    ...quiet,
+  });
+  assert.equal(result, 'uploaded');
+  assert.deepEqual(calls.map((call) => call.token), ['plural-name-token', 'plural-name-token']);
+  assert.equal(calls.flatMap((call) => call.args).includes('plural-name-token'), false);
+  assert.deepEqual(findSourceMaps(dir), []);
+});
+
 test('a failed upload keeps the maps and does not throw', () => {
   const dir = fakeBuild();
   const result = uploadSourceMaps({

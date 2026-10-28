@@ -120,7 +120,7 @@ CRA cannot take the Sentry webpack plugin without ejecting, so the upload runs a
 
 | Variable | Environments | Value |
 | --- | --- | --- |
-| `SENTRY_AUTH_TOKEN` | Production only | A Sentry **organization auth token** (Settings → Developer Settings → Organization Tokens), which can only upload releases and source maps. Mark it Sensitive. The owner creates and pastes it: it is a credential, so an agent never handles it |
+| `SENTRY_AUTH_TOKEN` (the script also accepts `SENTRY_AUTH_TOKENS`, the name the Production variable was created with) | Production only | A Sentry **organization auth token** (Settings → Developer Settings → Organization Tokens), which can only upload releases and source maps. Mark it Sensitive. The owner creates and pastes it: it is a credential, so an agent never handles it |
 | `SENTRY_ORG`, `SENTRY_PROJECT` | Optional | Only needed to override the defaults `havyn` and `vsa-website` |
 
 Previews have no token, so preview deployments still serve their maps. That's harmless, because the repo is public.
@@ -220,5 +220,5 @@ A same-origin Sentry `tunnel` (which keeps ad-blockers from dropping reports) wo
 | 1 | Merge the Phase 1 PR (SDK inert; bundle grows) | Revert | Done 2026-10-28 (#705, `7aedecf8`) |
 | 2 | Create Sentry project and set its privacy settings | Delete project | Done 2026-10-28 (`havyn/vsa-website`) |
 | 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Done 2026-10-28; smoke test `VSA-WEBSITE-1` verified scrubbing, then resolved |
-| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | Merged 2026-10-28 (#711); **token not yet set** |
+| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | Merged 2026-10-28 (#711); the owner set the token as `SENTRY_AUTH_TOKENS`, which the script accepts since #718 |
 | 5 | Phase 3 PR; owner turns on PostHog IP discarding, then sets `REACT_APP_POSTHOG_KEY` / `_HOST` (Production) | Unset the variables | Done 2026-10-28 (#713); `anonymize_ips` on, console capture off, first events verified |
