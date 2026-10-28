@@ -57,8 +57,8 @@ export const PUBLIC_ROUTE_DECISIONS: Record<string, RouteDecision> = {
     placements: ['primary-nav', 'footer', 'contextual'],
     linkedFrom: ['src/pages/House.tsx', 'src/lib/relatedLinks.ts'],
     note: 'Header; related from /points and the House pages.',
-    description: 'Member and House standings.', keywords: ['rankings', 'standings', 'top members', 'house standings', 'points'],
-    seo: { title: 'Leaderboard | VSA at UCSD', description: 'See member rankings and House standings on the VSA at UCSD leaderboard.' },
+    description: 'Member points and official House standings announcements.', keywords: ['rankings', 'standings', 'top members', 'house standings', 'points'],
+    seo: { title: 'Leaderboard | VSA at UCSD', description: 'Explore VSA individual member rankings. House standings are announced at general body meetings rather than published live.' },
   },
   '/points': {
     placements: ['primary-nav', 'dock', 'footer', 'contextual'],
