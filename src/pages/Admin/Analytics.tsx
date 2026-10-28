@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
+import { buildCabinetAnalyticsCsv, buildCabinetAreaInsights } from '../../lib/cabinetAnalyticsInsights';
 
 interface AnalyticsData {
   summary: {
@@ -130,6 +131,20 @@ export default function AdminAnalytics() {
   }, [dateRange]);
 
   const maxTrendValue = data ? Math.max(...data.trend.map(d => d.pageViews), 1) : 1;
+  const areaInsights = data ? buildCabinetAreaInsights(data) : [];
+
+  function exportCabinetSummary() {
+    if (!data) return;
+    const csv = buildCabinetAnalyticsCsv(data, dateRange);
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'vsa-cabinet-analytics-' + dateRange + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -145,7 +160,10 @@ export default function AdminAnalytics() {
           </p>
         </div>
         
-        <select 
+        <div className="flex flex-wrap items-center gap-3">
+        <label className="sr-only" htmlFor="analytics-date-range">Analytics time range</label>
+        <select
+          id="analytics-date-range"
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value)}
           className="text-xs border rounded px-2 py-1 bg-transparent font-sans"
@@ -155,6 +173,15 @@ export default function AdminAnalytics() {
           <option value="30daysAgo">Last 30 Days</option>
           <option value="90daysAgo">Last 90 Days</option>
         </select>
+        <button
+          type="button"
+          onClick={exportCabinetSummary}
+          disabled={loading || !data}
+          className="rounded-md border border-[var(--color-border)] px-3 py-2 font-sans text-xs font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-300"
+        >
+          Export cabinet summary (CSV)
+        </button>
+        </div>
       </div>
 
       <div style={{ padding: '24px 28px' }}>
@@ -177,6 +204,30 @@ export default function AdminAnalytics() {
               <StatCard label="Sessions" value={data.summary.sessions} detail="Total number of visits." />
               <StatCard label="Page Views" value={data.summary.pageViews} detail="Total pages viewed." />
             </div>
+
+            <section aria-labelledby="cabinet-analytics-questions" className="rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+              <h2 id="cabinet-analytics-questions" className="font-serif text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+                What are visitors looking at?
+              </h2>
+              <p className="mt-2 max-w-3xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                Visits to these public areas, summed only from the top-page list returned by GA4. Pages not in that list are not counted here; the categories are not a complete breakdown of traffic.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {areaInsights.map((area) => (
+                  <div key={area.key} className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
+                    <h3 className="font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>{area.label}</h3>
+                    <p className="mt-2 font-serif text-2xl" style={{ color: 'var(--color-text)' }}>{area.views.toLocaleString()}</p>
+                    <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>Views in listed top pages</p>
+                  </div>
+                ))}
+              </div>
+              <h3 className="mt-5 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>What can we conclude?</h3>
+              <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                These numbers show directional interest among consenting visitors, not total VSA participation.
+                We cannot calculate application conversions, on-site search failures, event attendance, admin adoption or mobile-versus-desktop usage from this response.
+                Declined analytics consent is never overridden. Compare date ranges cautiously because different windows can contain different campaigns and event schedules.
+              </p>
+            </section>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="rounded-md border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
