@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useUrlFilter } from '../../hooks/useUrlFilter';
 import { PageTitle } from '../../components/common/PageTitle';
 import { AiFeedback, AiFeedbackFilters, aiFeedbackRepository } from '../../data/repos/aiFeedback';
@@ -9,6 +10,10 @@ export default function AdminAiFeedback() {
   const [feedback, setFeedback] = useState<AiFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const dirtyNotes = useRef<Set<string>>(new Set());
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
   
   const [statusParam, setStatusFilter] = useUrlFilter(['unresolved', 'resolved', 'all'], 'filter', 'unresolved');
   const statusFilter = statusParam as AiFeedbackFilters['status'];
@@ -27,6 +32,15 @@ export default function AdminAiFeedback() {
         });
         if (!mounted) return;
         setFeedback(data);
+        // Keep unsaved notes by ID even when another filter hides the row.
+        setNoteDrafts(current => {
+          const next = { ...current };
+          for (const item of data) {
+            if (!dirtyNotes.current.has(item.id)) next[item.id] = item.admin_notes ?? '';
+          }
+          return next;
+        });
+        setNoteError(null);
       } catch (err) {
         if (!mounted) return;
         console.error(err);
@@ -52,6 +66,22 @@ export default function AdminAiFeedback() {
     }
   }
 
+  async function handleSaveNote(item: AiFeedback) {
+    const draft = (noteDrafts[item.id] ?? item.admin_notes ?? '').trim();
+    setSavingNoteId(item.id);
+    setNoteError(null);
+    try {
+      await aiFeedbackRepository.updateAdminNotes(item.id, draft);
+      setFeedback(current => current.map(row => row.id === item.id ? { ...row, admin_notes: draft || null } : row));
+      dirtyNotes.current.delete(item.id);
+      setNoteDrafts(current => ({ ...current, [item.id]: draft }));
+    } catch {
+      setNoteError(item.id);
+    } finally {
+      setSavingNoteId(null);
+    }
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <PageTitle title="Ask VSA Feedback" />
@@ -65,7 +95,7 @@ export default function AdminAiFeedback() {
             Ask VSA Feedback
           </h1>
           <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-            Review helpfulness ratings and member feedback to improve the Ask VSA knowledge base.
+            Review helpfulness ratings, record next steps, and update the knowledge base. Only short, admin-only review notes are saved; never paste a raw conversation or member identifiers.
           </p>
         </div>
       </div>
@@ -142,7 +172,9 @@ export default function AdminAiFeedback() {
                   {!item.resolved_at && (
                     <button
                       onClick={() => handleMarkResolved(item.id)}
-                      className="shrink-0 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                      disabled={savingNoteId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() !== (item.admin_notes ?? '').trim()}
+                      title="Save any pending review note before resolving"
+                      className="shrink-0 disabled:cursor-not-allowed disabled:opacity-50 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
                     >
                       Mark Resolved
@@ -158,6 +190,58 @@ export default function AdminAiFeedback() {
                     </p>
                   </div>
                 )}
+
+                <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <label htmlFor={'feedback-note-' + item.id} className="font-sans text-xs font-semibold text-text-secondary">
+                      Internal review note
+                    </label>
+                    <Link
+                      to="/admin/ai-knowledge"
+                      className="font-sans text-xs font-semibold text-brand-700 underline hover:no-underline dark:text-brand-300"
+                    >
+                      Review knowledge base →
+                    </Link>
+                  </div>
+                  <p className="mt-1 font-sans text-[11px] text-text-muted">
+                    Describe what to verify or change. Do not include names, emails, hashed identifiers or raw chats.
+                    This note does not automatically mark the feedback resolved.
+                  </p>
+                  <textarea
+                    id={'feedback-note-' + item.id}
+                    value={noteDrafts[item.id] ?? item.admin_notes ?? ''}
+                    onChange={event => {
+                      // Reverting to the server baseline makes this field clean again,
+                      // so a later filter refresh can hydrate another admin's edit.
+                      if (event.target.value.trim() === (item.admin_notes ?? '').trim()) {
+                        dirtyNotes.current.delete(item.id);
+                      } else {
+                        dirtyNotes.current.add(item.id);
+                      }
+                      setNoteDrafts(current => ({ ...current, [item.id]: event.target.value }));
+                    }}
+                    maxLength={1500}
+                    rows={3}
+                    disabled={savingNoteId === item.id}
+                    className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-sans text-sm text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                    placeholder="Example: Update the published FAQ about event check-ins."
+                  />
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveNote(item)}
+                      disabled={savingNoteId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() === (item.admin_notes ?? '').trim()}
+                      className="rounded-md border border-[var(--color-border)] px-3 py-2 font-sans text-xs font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-300"
+                    >
+                      {savingNoteId === item.id ? 'Saving…' : 'Save review note'}
+                    </button>
+                    {noteError === item.id && (
+                      <span role="alert" className="font-sans text-xs text-red-600 dark:text-red-400">
+                        Note could not be saved. Please retry.
+                      </span>
+                    )}
+                  </div>
+                </div>
 
                 {item.answer_excerpt && (
                   <div className="mt-3">
