@@ -265,10 +265,13 @@
         "ace_families",
         "ace_family_images",
         "ace_family_members",
+        "ace_member_pickup_evidence",
         "published_ace_families",
         "published_ace_family_members"
       ],
-      "rpcs": []
+      "rpcs": [
+        "set_ace_member_pickup_year"
+      ]
     },
     {
       "path": "src/data/repos/adminActivity.ts",
@@ -513,9 +516,12 @@
       "path": "src/data/repos/houseEvents.ts",
       "tables": [
         "house_event_houses",
-        "house_events"
+        "house_events",
+        "published_house_page_assets"
       ],
-      "rpcs": []
+      "rpcs": [
+        "admin_save_house_event"
+      ]
     },
     {
       "path": "src/data/repos/houseMembershipWrites.ts",
@@ -528,7 +534,8 @@
     {
       "path": "src/data/repos/houseMemberships.ts",
       "tables": [
-        "house_memberships"
+        "house_memberships",
+        "public_house_memberships"
       ],
       "rpcs": []
     },
@@ -591,7 +598,9 @@
         "member_yearly_points",
         "public_members"
       ],
-      "rpcs": []
+      "rpcs": [
+        "public_member_house_badge"
+      ]
     },
     {
       "path": "src/data/repos/memberIdentity.ts",
@@ -834,9 +843,11 @@
         "external_events",
         "gallery_events",
         "house_event_houses",
-        "house_events"
+        "house_events",
+        "published_house_page_assets"
       ],
       "rpcs": [
+        "admin_save_house_event",
         "record_event_interest"
       ]
     },
@@ -885,6 +896,7 @@
         "house_payment_audit",
         "house_payment_cycles",
         "members",
+        "public_house_memberships",
         "published_house_page_assets"
       ],
       "rpcs": [
@@ -893,6 +905,7 @@
         "admin_house_points_reconciliation",
         "admin_link_house_applicant_member",
         "admin_register_house_applicants",
+        "admin_save_house_event",
         "admin_set_house_applicant_payments",
         "house_batch_payment_blockers"
       ]
