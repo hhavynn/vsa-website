@@ -4,7 +4,9 @@
 -- admin_event_attendance_readiness counted every historical 'pending_review'
 -- row of attendance_reconciliation_log, so an event stayed in Needs review
 -- after an admin resolved those rows. A pending row now counts only while no
--- later entry for the same event and sheet row records another outcome. The
+-- later entry from the SAME run and non-null sheet row records another outcome.
+-- Sheet row numbers can repeat across unrelated imports, so a later run must
+-- not accidentally close someone else's unresolved identity. The
 -- function is otherwise identical (same checks, POST-only, admin-only,
 -- SECURITY DEFINER, pinned search_path, same result shape); grants are
 -- unchanged by CREATE OR REPLACE and restated below.
@@ -131,7 +133,11 @@ begin
            count(*) filter (where l.outcome = 'pending_review' and not exists (
              select 1 from public.attendance_reconciliation_log later
              where later.event_id = l.event_id
-               and later.source_row is not distinct from l.source_row
+               -- Source row is local to the sheet/run; cross-run row numbers
+               -- and NULL event-level actions must never resolve a person.
+               and later.run_id = l.run_id
+               and l.source_row is not null
+               and later.source_row = l.source_row
                and later.created_at > l.created_at
                and later.outcome <> 'pending_review'))::integer as pending_review_rows
     from public.attendance_reconciliation_log l
