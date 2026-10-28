@@ -380,7 +380,7 @@ export function FindMyPoints({
       )}
 
       <label htmlFor={searchInputId} className="sr-only">Search by name</label>
-      <p id={searchHelpId} className="mb-2 font-sans text-xs" style={{ color: "var(--text3)" }}>
+      <p id={searchHelpId} className="mb-2 font-sans text-xs text-[var(--text3)]">
         Search results update as you type. Press Enter or leave the field to hear a summary.
       </p>
       <div className="relative">
