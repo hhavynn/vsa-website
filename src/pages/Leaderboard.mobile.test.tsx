@@ -130,6 +130,35 @@ describe('Leaderboard mobile layout contract', () => {
     expect(within(firstRow).getByText('90')).toBeInTheDocument();
   });
 
+  it('exposes one navigable ARIA table with column headers, rank labels and profile buttons', async () => {
+    await renderLoaded();
+    const table = screen.getByRole('table', { name: /Full member standings for/ });
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers.map((heading) => heading.textContent?.trim())).toEqual([
+      'Rank', 'Member', 'Points', 'Events attended',
+    ]);
+    expect(headers[2]).toHaveAttribute('aria-sort', 'descending');
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(MEMBERS.length);
+    const firstRow = within(table).getByRole('row', {
+      name: `Rank #1: ${LONG_NAME.first} ${LONG_NAME.last}`,
+    });
+    expect(within(firstRow).getByRole('button', {
+      name: `Open profile for ${LONG_NAME.first} ${LONG_NAME.last}`,
+    })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: 'Rank T2: Ada Tie' })).toBeInTheDocument();
+  });
+
+  it('announces the active events ranking through its table header', async () => {
+    await renderLoaded();
+    // The metric tab is the existing keyboard-operable sort control.
+    const eventsTab = screen.getByRole('button', { name: 'EVENTS' });
+    fireEvent.click(eventsTab);
+    const table = screen.getByRole('table', { name: /Full member standings for/ });
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers[2]).toHaveTextContent('Events attended');
+    expect(headers[2]).toHaveAttribute('aria-sort', 'descending');
+  });
+
   it('shows a shared T-rank for a tie and a tie caption in the list', async () => {
     await renderLoaded();
     expect(screen.getAllByText('T2').length).toBeGreaterThanOrEqual(2);

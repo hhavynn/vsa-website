@@ -765,14 +765,32 @@ export function Leaderboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {/* The scrapbook card layout needs flexible widths, so expose one
+                      ARIA table instead of maintaining a separate hidden table. */}
+                  <div role="table" aria-label={'Full member standings for ' + selectedYearLabel}>
+                    <div role="rowgroup" className="sr-only">
+                      <div role="row">
+                        <span role="columnheader">Rank</span>
+                        <span role="columnheader">Member</span>
+                        <span role="columnheader" aria-sort="descending">
+                          {activeTab === 'points' ? 'Points' : 'Events attended'}
+                        </span>
+                        <span role="columnheader">
+                          {activeTab === 'points' ? 'Events attended' : 'Points'}
+                        </span>
+                      </div>
+                    </div>
+                    <div role="rowgroup" className="space-y-3">
               {paginatedData.map((entry) => (
                 <div
                   key={entry.id}
+                  role="row"
+                  aria-label={'Rank ' + formatRank(entry) + ': ' + getMemberDisplayName(entry)}
                   className="group scrapbook-paper flex items-center gap-3 p-3 transition-all sm:gap-4 sm:p-4 hover:-translate-y-0.5 hover:shadow-lg"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                       {/* Rank */}
-                      <div className="flex shrink-0 items-center justify-center sm:w-16">
+                      <div role="cell" className="flex shrink-0 items-center justify-center sm:w-16">
                         <div className={`flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border-2 px-1 font-mono text-sm font-black transition-colors sm:h-10 sm:min-w-[2.5rem] sm:text-base ${
                           isWithinTop(entry, 3) ? 'border-[var(--brand)] text-[var(--text)]' : 'border-[var(--border)] text-[var(--text3)] group-hover:border-[var(--brand)]/30'
                         }`}>
@@ -781,7 +799,7 @@ export function Leaderboard() {
                       </div>
 
                       {/* Member Info */}
-                      <div className="flex flex-1 items-center gap-3 min-w-0">
+                      <div role="rowheader" className="flex flex-1 items-center gap-3 min-w-0">
                         <div className="shrink-0">
                           {memberAvatars.get(entry.id) ? (
                             <Avatar size="sm" avatarUrl={memberAvatars.get(entry.id)} />
@@ -811,7 +829,7 @@ export function Leaderboard() {
                       </div>
 
                       {/* Score */}
-                      <div className="shrink-0 text-right sm:px-4">
+                      <div role="cell" className="shrink-0 text-right sm:px-4">
                         <div className="font-mono text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
                           {activeTab === 'points' ? 'PTS' : 'EVENTS'}
                         </div>
@@ -824,7 +842,7 @@ export function Leaderboard() {
                       </div>
 
                       {/* Secondary Stat (Desktop Only) */}
-                      <div className="hidden text-right shrink-0 border-l px-6 sm:block" style={{ borderColor: 'var(--border)' }}>
+                      <div role="cell" className="hidden text-right shrink-0 border-l px-6 sm:block" style={{ borderColor: 'var(--border)' }}>
                         <div className="font-mono text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>
                           {activeTab === 'points' ? 'EVENTS' : 'POINTS'}
                         </div>
@@ -834,6 +852,8 @@ export function Leaderboard() {
                       </div>
                     </div>
                   ))}
+                    </div>
+                  </div>
 
                   <div className="scrapbook-paper mt-8 p-4">
                     <PaginationControls
