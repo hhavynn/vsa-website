@@ -3,13 +3,12 @@
 // asks for while no House Parent login has been approved. It never adds
 // accounts or permissions: an admin reviews the exact list and downloads it.
 //
-// HOUSE_PARENT_SHARE_FIELDS is the provisional field allowlist. It must be
-// approved by CRC/cabinet before it is relied on (docs/house-parent-access.md);
-// it deliberately leaves out contact details, other Houses, member ids,
-// anything from applications, and any per-member count: House scores sum awarded points; individual credit counts can still
-// reveal participation and must not be shared without a reviewed field list.
-// embargoed House score (#692). Only members publicly revealed in this House
-// are included. Every cell goes through csvCell, which defuses formulas.
+// HOUSE_PARENT_SHARE_FIELDS is provisional and MUST have written CRC/cabinet
+// approval before an admin may export member-level participation. The copy
+// excludes contact details, other Houses, member ids, application responses,
+// and per-member counts. House standings sum awarded points, so individual
+// counts and dates still pose inference risks (#692). Only members publicly
+// revealed in this House are eligible. Every cell uses formula-safe csvCell.
 import type { RosterMember } from '../data/repos/houseRoster';
 import { csvCell } from './adminImportReview';
 
