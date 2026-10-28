@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
+import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
 import { Label } from '../components/ui/Label';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
@@ -209,6 +210,12 @@ export function Calendar() {
   const isLoading = vsaQuery.isLoading || houseQuery.isLoading || applicationsQuery.isLoading;
   const errors = [vsaQuery.error, houseQuery.error, applicationsQuery.error].filter(Boolean);
   const allFailed = errors.length === 3;
+  // Name what is missing, so a failed House source never reads as "no House events".
+  const failedSources = [
+    vsaQuery.error ? 'VSA event' : null,
+    houseQuery.error ? 'House event' : null,
+    applicationsQuery.error ? 'application deadline' : null,
+  ].filter(Boolean).join(' and ');
   const supabaseDown = allFailed && errors.some((e) => isSupabaseUnavailable(e));
   const summerMessage = getSummerBreakMessage('events');
   const showSummerEmpty = shouldUseSummerEmptyState(
@@ -238,6 +245,12 @@ export function Calendar() {
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
               {upcomingThisMonth} {upcomingThisMonth === 1 ? 'thing' : 'things'} left this month
             </p>
+          )}
+
+          {!vsaQuery.isLoading && !vsaQuery.isError && (vsaQuery.data?.length ?? 0) > 0 && (
+            <div className="mt-5">
+              <DownloadEventCalendarButton events={vsaQuery.data ?? []} />
+            </div>
           )}
 
           {items.length > 0 && (
@@ -274,7 +287,7 @@ export function Calendar() {
         ) : (
           <>
             {errors.length > 0 && (
-              <DegradedModeBanner variant="inline" sourceName="some calendar" className="mb-6" />
+              <DegradedModeBanner variant="inline" sourceName={failedSources} className="mb-6" />
             )}
 
             <ThisWeekStrip items={weekItems} todayStr={todayStr} onSelectItem={openItem} />

@@ -95,6 +95,18 @@ if (!RETIREMENT_PHASES.includes(lookupPhase)) {
 }
 const lookupsRequired = lookupPhase === 'post-migration';
 
+// House rollout phases, same two values: RLS_HOUSE_CACHE_PHASE for
+// 20261028083000_restrict_public_members_house_cache.sql (#704) and
+// RLS_HOUSE_EMBARGO_PHASE for 20261028073000_embargo_public_house_scores.sql
+// (#692). Both default to pre-migration. An unknown value must not silently
+// fall back to the weaker pre-migration contract.
+for (const name of ['RLS_HOUSE_CACHE_PHASE', 'RLS_HOUSE_EMBARGO_PHASE']) {
+  if (process.env[name] && !RETIREMENT_PHASES.includes(process.env[name])) {
+    console.error(`\x1b[31mError:\x1b[0m ${name} must be one of ${RETIREMENT_PHASES.join(', ')} (got "${process.env[name]}").`);
+    process.exit(1);
+  }
+}
+
 // Fail closed. Before the migration the signed-in sections are optional (they
 // SKIP without credentials). After it, "the archives are closed" has to be
 // proven for every API audience, so an existing ordinary account and an
@@ -185,6 +197,9 @@ async function runTests() {
   console.log('Running Supabase RLS / Security Hardening Verification');
   console.log(`Target database: ${supabaseUrl}`);
   console.log(`Retirement phase: ${retirementPhase}`);
+  console.log(`Member lookup phase: ${lookupPhase}`);
+  console.log(`House cache phase: ${process.env.RLS_HOUSE_CACHE_PHASE || 'pre-migration'}`);
+  console.log(`House embargo phase: ${process.env.RLS_HOUSE_EMBARGO_PHASE || 'pre-migration'}`);
   console.log('============================================================\n');
 
   const dummyUuid = '00000000-0000-0000-0000-000000000000';
@@ -206,6 +221,13 @@ async function runTests() {
   // rollout, prove the retired cache is not exposed even by a guessed API
   // column. Never use a real member ID or export rows in test output.
   const houseCacheRestricted = process.env.RLS_HOUSE_CACHE_PHASE === 'post-migration';
+  // The public member projection every client must still be able to read.
+  // After #704 the legacy house column leaves it; verifyHouseCacheDenied
+  // asserts that column is denied.
+  const publicMemberColumns = [
+    'id', 'first_name', 'last_name', 'college', 'year',
+    ...(houseCacheRestricted ? [] : ['house']), 'points', 'events_attended',
+  ].join(', ');
   async function verifyHouseCacheDenied(client, who) {
     if (!houseCacheRestricted) return;
     const { error: cacheError } = await client
@@ -394,7 +416,7 @@ async function runTests() {
     // Query members table - attempt to select safe public fields
     const { data: memSafeData, error: memSafeError } = await anon
       .from('public_members')
-      .select('id, first_name, last_name, college, year, house, points, events_attended')
+      .select(publicMemberColumns)
       .limit(1);
 
     if (memSafeError) {
@@ -700,7 +722,7 @@ async function runTests() {
         }
       }
       const { error: publicMemberError } = await userClient.from('public_members')
-        .select('id, first_name, last_name, college, year, house, points, events_attended', { head: true });
+        .select(publicMemberColumns, { head: true });
       if (publicMemberError) reportFail(`ordinary user cannot read public member projection: ${publicMemberError.code}`);
       else reportPass('ordinary user can read public member projection');
 

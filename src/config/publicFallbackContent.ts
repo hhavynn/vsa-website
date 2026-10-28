@@ -108,13 +108,13 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
   {
     name: 'House',
     description:
-      'A year-long community competition inside VSA. Get sorted into a House, meet your crew, and earn points together throughout the year.',
+      'A VSA community program with small-group activities and friendly House competition. Check official VSA announcements for participation and assignment details.',
     slug: 'house',
   },
   {
     name: 'ACE',
     description:
-      'Academic Community and Excellence — study sessions, workshops, and academic support within VSA.',
+      'Anh Chị Em (ACE) brings VSA members together through Big/Little mentorship, family connections, and community events.',
     slug: 'ace',
   },
   {
@@ -132,13 +132,13 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
   {
     name: 'WNC',
     description:
-      "Wild N' Culture — an intercollegiate cultural showcase competition hosted annually by VSA at UCSD.",
+      "Wild N' Culture — an intercollegiate cultural showcase featuring performances by Vietnamese student associations.",
     slug: 'wild-n-culture',
   },
   {
     name: 'Externals',
     description:
-      'Events hosted by other VSAs in the UVSA network that VSA at UCSD members can attend and compete in.',
+      'Connect with other Vietnamese student associations through intercollegiate events and community activities when announced.',
     slug: 'uvsa-network',
   },
 ];
@@ -147,14 +147,14 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
 
 export const FALLBACK_APPLICATIONS = {
   message:
-    'Applications are temporarily unavailable. Please check Instagram or Linktree for current forms.',
+    'Application availability cannot be confirmed right now. Check official VSA announcements for opportunities and deadlines.',
 } as const;
 
 // ── UVSA Network ─────────────────────────────────────────────────────────────
 
 export const FALLBACK_UVSA_NETWORK = {
   message:
-    'External event info is temporarily unavailable. Check official VSA channels for current ride forms and deadlines.',
+    'External event information is temporarily unavailable. Check official VSA announcements for any published event and travel details.',
   description:
     'UVSA (United Vietnamese Student Associations) connects Vietnamese student organizations across Southern California. VSA at UCSD participates in intercollegiate events like WNC, externals, and tournaments.',
 } as const;
@@ -163,26 +163,25 @@ export const FALLBACK_UVSA_NETWORK = {
 
 export const FALLBACK_VCN = {
   description:
-    "Vietnamese Culture Night (VCN) is VSA at UCSD's annual cultural performance featuring traditional Vietnamese dances, music, and a story celebrating Vietnamese heritage. It is one of VSA's biggest events of the year.",
+    "Vietnamese Culture Night (VCN) is a VSA cultural production that celebrates Vietnamese heritage through dance, music, and storytelling. Check official announcements for upcoming performances.",
 } as const;
 
 export const FALLBACK_WNC = {
   description:
-    "Wild N' Culture (WNC) is an intercollegiate cultural showcase competition hosted by VSA at UCSD each year. Schools from across the UVSA network compete in dance, music, and performance.",
+    "Wild N' Culture (WNC) brings Vietnamese student associations together for an intercollegiate cultural showcase of dance, music, and performance. Event schedules are announced separately.",
 } as const;
 
 // ── Points / Leaderboard ─────────────────────────────────────────────────────
 
 export const FALLBACK_POINTS = {
   message:
-    'Points lookup is temporarily unavailable while our live database is down. Check back later or contact VSA if you need help.',
+    'Points lookup is temporarily unavailable. Check back later or contact VSA through an official channel if you need help.',
 } as const;
 
 export const FALLBACK_LEADERBOARD = {
   message:
-    'Individual points lookup is temporarily unavailable.',
-  houseMessage:
-    'Live House data is temporarily unavailable. These are the public 2025-2026 House totals.',
+    'Individual points lookup is temporarily unavailable. No current totals can be confirmed while the live data is unavailable.',
+  houseMessage: FALLBACK_HOUSE_MESSAGE,
 } as const;
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
@@ -317,7 +316,7 @@ export const FALLBACK_CABINET_ROLES = [
     responsibilities: [
       'Plan and lead logistics for larger social events and retreats.',
       'Coordinate with cabinet for event execution, including GBMs and socials.',
-      'Plan and organize the annual Winter Retreat.',
+      'Help plan Winter Retreat when it is scheduled.',
       'Work with Media Chairs to promote VSA social events when relevant.'
     ],
     works_with: ['Secretary', 'Treasurer', 'PR Chair', 'Media Chairs'],

@@ -14,15 +14,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe } from 'jest-axe';
+import { formatAxeViolations, withoutReviewedFalsePositives } from '../lib/axeRegressionPolicy';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { SiteSettingsProvider } from '../context/SiteSettingsContext';
 import { AnalyticsConsentProvider } from '../context/AnalyticsConsentContext';
 import AppRoutes from './index';
 import { supabaseMock } from '../test-utils/supabaseMock';
-
-expect.extend(toHaveNoViolations);
 
 jest.mock('../lib/supabase', () => ({
   get supabase() {
@@ -95,24 +94,6 @@ async function waitForRouteToSettle(queryClient: QueryClient, path: string) {
   );
 }
 
-interface AxeViolation {
-  id: string;
-  impact?: string;
-  help: string;
-  nodes: Array<{ target: string[] }>;
-}
-
-function formatViolations(violations: AxeViolation[]) {
-  return violations
-    .map(
-      (v) =>
-        `• ${v.impact?.toUpperCase() ?? 'UNKNOWN'}: ${v.id} - ${v.help}\n  Elements: ${v.nodes
-          .map((n) => n.target.join(' '))
-          .join(', ')}`
-    )
-    .join('\n');
-}
-
 describe('axe accessibility regression checks (#315)', () => {
   beforeEach(() => {
     supabaseMock.reset();
@@ -136,14 +117,19 @@ describe('axe accessibility regression checks (#315)', () => {
         },
       });
 
-      const seriousOrCritical = results.violations.filter(
+      const violations = withoutReviewedFalsePositives(results.violations, path, theme);
+      const seriousOrCritical = violations.filter(
         (v) => v.impact === 'critical' || v.impact === 'serious'
       );
 
-      expect(seriousOrCritical).toHaveLength(0);
-      if (results.violations.length > 0) {
+      if (seriousOrCritical.length > 0) {
+        throw new Error(
+          `Critical/serious accessibility violations on ${path} (${theme}):\n${formatAxeViolations(seriousOrCritical)}`
+        );
+      }
+      if (violations.length > 0) {
         // eslint-disable-next-line no-console
-        console.warn(`Non-blocking axe findings on ${path} (${theme}):\n${formatViolations(results.violations)}`);
+        console.warn(`Non-blocking axe findings on ${path} (${theme}):\n${formatAxeViolations(violations)}`);
       }
     },
     20000

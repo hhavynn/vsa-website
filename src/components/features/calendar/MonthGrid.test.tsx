@@ -61,7 +61,7 @@ describe('MonthGrid phone tiles', () => {
       makeItem({ key: 'deadline', title: 'Intern Apps Due', startTime: null }),
       makeItem({ key: 'pho', thumbnailUrl: '/images/events/pho_thumb.webp' }),
     ]);
-    const cell = phoneCell(/^Thursday, October 8, 2 events: Intern Apps Due, Pho & Karaoke$/);
+    const cell = phoneCell(/^Thursday, October 8, 2 events: Intern Apps Due \(General Events\), Pho & Karaoke \(General Events\)$/);
 
     expect(within(cell).getByText('Pho & Karaoke')).toBeInTheDocument();
     expect(within(cell).getByRole('presentation')).toHaveAttribute('src', '/images/events/pho_thumb.webp');
@@ -100,11 +100,12 @@ describe('MonthGrid desktop tiles', () => {
 
   it('features the first event with a flyer, with its name, time and place', () => {
     renderGrid([deadline, pho]);
-    const featured = screen.getByRole('button', { name: 'Open Pho & Karaoke, 6 PM, Price Center' });
+    const featured = screen.getByRole('button', { name: 'Open Pho & Karaoke, General Events, 6 PM, Price Center' });
 
     expect(within(featured).getByRole('presentation')).toHaveAttribute('src', '/images/events/pho_thumb.webp');
     expect(within(featured).getByText('Pho & Karaoke')).toBeInTheDocument();
     expect(within(featured).getByText('6 PM')).toBeInTheDocument();
+    expect(within(featured).getByText('General Events')).toBeInTheDocument();
     expect(within(featured).getByText(/Price Center/)).toBeInTheDocument();
   });
 
@@ -133,6 +134,22 @@ describe('MonthGrid desktop tiles', () => {
     expect(onSelectItem).not.toHaveBeenCalled();
   });
 
+  it('gives calendar categories a redundant name even when colors are indistinguishable', () => {
+    renderGrid([makeItem({
+      key: 'gbm',
+      title: 'Student Meeting',
+      category: 'gbm',
+      categoryLabel: 'General Body Meeting',
+    })]);
+
+    const cell = phoneCell(/^Thursday, October 8, 1 event: Student Meeting \(General Body Meeting\)$/);
+    expect(cell).toBeInTheDocument();
+    const featured = screen.getByRole('button', {
+      name: 'Open Student Meeting, General Body Meeting, 6 PM, Price Center',
+    });
+    expect(within(featured).getByText('General Body Meeting')).toBeInTheDocument();
+  });
+
   it('offers no +N for a single event', () => {
     renderGrid([pho]);
     expect(screen.queryByRole('button', { name: /^Show all/ })).not.toBeInTheDocument();
@@ -144,7 +161,7 @@ describe('MonthGrid desktop tiles', () => {
       makeItem({ key: 'broken', imageUrl: '/images/events/missing.webp' }),
     ]);
 
-    const noFlyer = screen.getByRole('button', { name: 'Open Intern Apps Due, All day' });
+    const noFlyer = screen.getByRole('button', { name: 'Open Intern Apps Due, General Events, All day' });
     expect(within(noFlyer).queryByRole('presentation')).not.toBeInTheDocument();
     expect(within(noFlyer).getByText('Intern Apps Due')).toBeInTheDocument();
     expect(within(noFlyer).getByText('All day')).toBeInTheDocument();
@@ -162,7 +179,7 @@ describe('MonthGrid desktop tiles', () => {
 
   it('marks today on both layouts and the selected day on the phone cell', () => {
     renderGrid([pho], { todayStr: '2026-10-08', selectedDateStr: '2026-10-08' });
-    const buttons = screen.getAllByRole('button', { name: /^Thursday, October 8, 1 event: Pho & Karaoke$/ });
+    const buttons = screen.getAllByRole('button', { name: /^Thursday, October 8, 1 event: Pho & Karaoke \(General Events\)$/ });
 
     expect(buttons).toHaveLength(2);
     buttons.forEach((button) => expect(button).toHaveAttribute('aria-current', 'date'));

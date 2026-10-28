@@ -198,3 +198,61 @@ describe("RLS verifier member lookup phases", () => {
     expect(yaml).toMatch(/\(inputs\.member_lookup_phase \|\| vars\.RLS_MEMBER_LOOKUP_PHASE\) == 'post-migration'/);
   });
 });
+
+// Same rollout design for the House privacy migrations: #692 (score embargo,
+// 20261028073000) and #704 (public_members.house cache, 20261028083000). Both
+// are anon-provable, so post-migration does not require signed-in accounts.
+describe("RLS verifier House phases", () => {
+  const PHASES = ["RLS_HOUSE_EMBARGO_PHASE", "RLS_HOUSE_CACHE_PHASE"];
+
+  // Unreachable host: these runs must end before any request is attempted.
+  function run(name: string, phase: string) {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const other of PHASES) delete env[other];
+    return spawnSync(process.execPath, [script], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: 15000,
+      env: {
+        ...env,
+        REACT_APP_SUPABASE_URL: "http://127.0.0.1:9",
+        REACT_APP_SUPABASE_ANON_KEY: "not-a-real-key",
+        RLS_RETIREMENT_PHASE: "pre-migration",
+        RLS_MEMBER_LOOKUP_PHASE: "pre-migration",
+        [name]: phase,
+      },
+    });
+  }
+
+  it.each(PHASES)("rejects an unknown %s instead of falling back to pre-migration", (name) => {
+    const result = run(name, "postmigration");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${name} must be one of`);
+  });
+
+  it("only exempts the score views from the anon write probe after the embargo", () => {
+    const source = fs.readFileSync(script, "utf8");
+    expect(source).toMatch(/process\.env\.RLS_HOUSE_EMBARGO_PHASE === 'post-migration'/);
+    expect(source).toMatch(/withoutSelect: \[\s*'my_member_photo_requests', \.\.\.\(houseEmbargoRequired \? houseScoreViews : \[\]\),/);
+    expect(source).toContain("await verifyHouseEmbargo(anon, 'anon')");
+  });
+
+  it("drops house from the safe projection only once the cache denial is asserted", () => {
+    const source = fs.readFileSync(script, "utf8");
+    expect(source).toMatch(/\.\.\.\(houseCacheRestricted \? \[\] : \['house'\]\)/);
+    expect(source).toContain("await verifyHouseCacheDenied(anon, 'anon')");
+    expect(source).toContain("cannot read legacy public_members.house (#704)");
+  });
+
+  it("lets the workflow follow the rollout without a code change", () => {
+    const yaml = fs.readFileSync(workflow, "utf8");
+    expect(yaml).toContain(
+      "RLS_HOUSE_EMBARGO_PHASE: ${{ inputs.house_embargo_phase || vars.RLS_HOUSE_EMBARGO_PHASE }}",
+    );
+    expect(yaml).toContain(
+      "RLS_HOUSE_CACHE_PHASE: ${{ inputs.house_cache_phase || vars.RLS_HOUSE_CACHE_PHASE }}",
+    );
+    expect(yaml).toMatch(/house_embargo_phase:[\s\S]*post-migration/);
+    expect(yaml).toMatch(/house_cache_phase:[\s\S]*post-migration/);
+  });
+});

@@ -77,3 +77,24 @@ External events can be managed directly within `/admin/events` by selecting **Ev
 - **Lifecycle & Safety**: Changing an event's type away from External Event hides the network listing while preserving details; deleting an event cascade-deletes its mirrored listing. Historical unlinked external events remain editable in `/admin/external-events`.
 - **Database Migration**: Schema changes are defined in `supabase/migrations/20261002060000_link_external_events_to_events.sql` (adds `host_type`, `source_event_id`, and `show_on_network` to `external_events` with constraints, unique index, and column grants).
 - **Flyer on `/uvsa-network`**: Upcoming Externals is flyer-first and appears above Meet the Schools. A linked listing reuses its event's `thumbnail_url` (then `image_url`), so the flyer is uploaded once, in Admin → Events. A standalone listing uses its own `external_events.image_url` ("Flyer Image URL" in Admin → External Events, https only), added by `supabase/migrations/20261002070000_add_external_event_image.sql` — apply it **before** deploying the frontend, because the public select now names that column. The school's logo/PFP is never used as a flyer.
+
+## In-product admin onboarding (#286)
+
+The admin shell has a **New to admin? Help for this page** button. It uses
+`adminNavigation.ts` page summaries (the same source as the dashboard and
+sidebar), lists the five most common cabinet workflows and warns when a
+page affects protected points, attendance, identity matching, Houses or
+academic-year publication. It is optional and never blocks an admin route.
+
+Cabinet can edit or add guidance without a deployment from
+`/admin/resources`. Create a **current, unarchived, admin-only** Resource Link
+in category **Transition Docs**, or set its workflow to **onboarding**. Optionally
+use Program to limit the link to a page's admin-nav label; leave Program empty
+for all pages. Only HTTPS links are shown in this help panel. Never put
+passwords, API keys or credentials into the link title, description or URL.
+
+The fixed five-step quick-start is an introductory summary, not a competing
+source of truth. Detailed approved workflow documents remain authoritative,
+and cabinet-owned links should point to the latest version of those docs.
+No new database table or role/grant was introduced. Continue following
+`vsa-change-control` for attendance/points/House changes.

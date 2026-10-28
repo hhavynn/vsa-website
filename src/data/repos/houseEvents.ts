@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type { Json } from '../../types/database';
-import { HouseEvent } from '../../types';
+import { HouseEvent, HousePageAsset } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
@@ -31,18 +31,23 @@ const PUBLIC_FIELDS = [
   'is_published',
   'created_at',
   'updated_at',
-  'houses:house_event_houses(house:house_page_assets(*))',
+  // The host ids come from the join (public for published events); the
+  // profile embed itself is admin-only, so public reads fill hosts from
+  // published_house_page_assets (mapPublicRelations).
+  // Public join IDs only. Resolve published House profiles in mapPublicRelations.
+  'houses:house_event_houses(house_page_asset_id)',
 ].join(',');
 
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
@@ -63,18 +68,40 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch upcoming house events');
+  }
+
+  /**
+   * One published event of this House, by id: lets a calendar link land on an
+   * event that is beyond the House page's bounded lists. Null when the event is
+   * not published, does not exist, or is not hosted by this House.
+   */
+  async getPublicEventForHouse(eventId: string, houseProfileId: string): Promise<HouseEvent | null> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase
+        .from('house_events')
+        .select(PUBLIC_FIELDS)
+        .eq('is_published', true)
+        .eq('id', eventId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const [event] = await this.mapPublicRelations([data]);
+      const hosted = event.house_profile_id === houseProfileId || (event.houses ?? []).some((house) => house.id === houseProfileId);
+      return hosted ? event : null;
+    }, 'Failed to fetch the linked house event');
   }
 
   async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
@@ -95,7 +122,7 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch past house events');
   }
 
@@ -111,7 +138,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch house events for year');
   }
 
@@ -128,7 +155,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch past house events for year');
   }
 
@@ -149,7 +176,7 @@ export class HouseEventsRepository {
 
       const { data, error } = await query;
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch upcoming house event previews');
   }
 
@@ -166,7 +193,7 @@ export class HouseEventsRepository {
         .limit(limit);
 
       if (error) throw error;
-      return this.mapRelations(data);
+      return this.mapPublicRelations(data);
     }, 'Failed to fetch house events for calendar');
   }
 
@@ -290,6 +317,35 @@ export class HouseEventsRepository {
       const { error } = await supabase.from('house_events').delete().eq('id', id);
       if (error) throw error;
     }, 'Failed to delete house event');
+  }
+
+  /**
+   * Hosts for public reads: only published (active) House profiles, primary
+   * host first. Profiles the embed could not return (anon cannot read
+   * house_page_assets) are read from published_house_page_assets in one query.
+   */
+  private async mapPublicRelations(data: any[] | null): Promise<HouseEvent[]> {
+    if (!data) return [];
+    const missing = new Set<string>();
+    for (const item of data) {
+      for (const link of item.houses || []) if (!link.house && link.house_page_asset_id) missing.add(link.house_page_asset_id);
+    }
+    const published = new Map<string, HousePageAsset>();
+    if (missing.size > 0) {
+      const { data: assets, error } = await supabase
+        .from('published_house_page_assets')
+        .select('*')
+        .in('id', Array.from(missing));
+      if (error) throw error;
+      for (const asset of (assets ?? []) as HousePageAsset[]) published.set(asset.id, asset);
+    }
+    return data.map((item) => {
+      const hosts = (item.houses || [])
+        .map((link: any) => (link.house ?? published.get(link.house_page_asset_id)) as HousePageAsset | undefined)
+        .filter((house: HousePageAsset | undefined): house is HousePageAsset => !!house && house.is_active !== false)
+        .sort((a: HousePageAsset, b: HousePageAsset) => Number(b.id === item.house_profile_id) - Number(a.id === item.house_profile_id));
+      return { ...item, houses: hosts };
+    });
   }
 
   private mapRelations(data: any[] | null): HouseEvent[] {
