@@ -44,6 +44,19 @@ function normalizePublicPath(raw: string): string | null {
   }
 }
 
+/** Drop query strings, member IDs, and unfamiliar paths before showing a GA path. */
+export function safeCabinetPageLabel(raw: string): string {
+  const path = normalizePublicPath(raw);
+  if (!path) return 'Other page';
+  for (const area of CABINET_PAGE_AREAS) {
+    for (const route of area.routes) {
+      if (path === route) return route;
+      if (path.startsWith(route + '/')) return route + '/…';
+    }
+  }
+  return 'Other page';
+}
+
 export function buildCabinetAreaInsights(snapshot: CabinetTrafficSnapshot): CabinetAreaInsight[] {
   const totals = new Map<string, number>(
     CABINET_PAGE_AREAS.map(({ key }) => [key, 0])
