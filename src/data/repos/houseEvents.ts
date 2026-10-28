@@ -27,7 +27,9 @@ const PUBLIC_FIELDS = [
   'is_published',
   'created_at',
   'updated_at',
-  'houses:house_event_houses(house:published_house_page_assets(id,house,house_key,display_name,accent_color))',
+  // Public relation IDs only; never embed the admin-only House profile table.
+  // mapPublicRelations looks up publicly published profiles independently.
+  'houses:house_event_houses(house_page_asset_id)',
 ].join(',');
 
 export class HouseEventsRepository {
