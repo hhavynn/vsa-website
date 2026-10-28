@@ -45,12 +45,15 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
 
     const save = screen.getByRole('button', { name: /Save review note/i });
     expect(save).toBeDisabled();
+    const resolve = screen.getByRole('button', { name: 'Mark Resolved' });
     fireEvent.change(note, { target: { value: '  Confirm current event eligibility.  ' } });
+    expect(resolve).toBeDisabled();
     expect(save).toBeEnabled();
     fireEvent.click(save);
 
     await waitFor(() => expect(update).toHaveBeenCalledWith('synthetic-feedback-1', 'Confirm current event eligibility.'));
     await waitFor(() => expect(save).toBeDisabled());
+    expect(resolve).toBeEnabled();
     expect(aiFeedbackRepository.markResolved).not.toHaveBeenCalled();
   });
 
