@@ -7,12 +7,9 @@ import { useQuery } from 'react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { houseEventsRepository } from '../../../data/repos/houseEvents';
-import { leaderboardRepository } from '../../../data/repos/leaderboard';
 import { galleryRepository } from '../../../data/repos/gallery';
-import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { supabase } from '../../../lib/supabase';
 import { formatDateOnly } from '../../../lib/dateOnly';
-import { getPublicHousePoints, isHousePointOverrideActive } from '../../../utils/housePublicPointOverrides';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { OptimizedImage } from '../../common/OptimizedImage';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
@@ -21,8 +18,7 @@ import { isEventUpcomingOrOngoing } from '../../../lib/eventLifecycle';
 import { UpcomingItem, houseCandidate, mergeUpcoming, upcomingSortMs } from '../../../lib/upcomingEvents';
 import { useEventLifecycleTimer } from '../../../hooks/useEventLifecycleTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../constants/houses';
-import { Event, HouseEvent, HouseYearlyPoints } from '../../../types';
+import { Event, HouseEvent } from '../../../types';
 
 const ArrowUpRightIcon = FiArrowUpRight as ComponentType<IconBaseProps>;
 const StarIcon = FiStar as ComponentType<IconBaseProps>;
@@ -292,119 +288,22 @@ function NextEventCard() {
   );
 }
 
-function HouseStandingsCard({ academicYearStart }: { academicYearStart: number | null }) {
-  const { data: rawStandings = [], isLoading } = useQuery<HouseYearlyPoints[]>({
-    queryKey: ['home', 'house-standings-preview', academicYearStart],
-    queryFn: () =>
-      academicYearStart
-        ? leaderboardRepository.getTopYearlyHouseStandings(academicYearStart, 3)
-        : Promise.resolve([]),
-    enabled: academicYearStart !== null,
-    staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const standings = useMemo(() => {
-    // When the DB has no standings for an override year, inject official placeholder rows
-    const base: HouseYearlyPoints[] =
-      rawStandings.length === 0 &&
-      typeof academicYearStart === 'number' &&
-      isHousePointOverrideActive(academicYearStart)
-        ? (['Bowser', 'Donkey Kong', 'Toad', 'Boo'] as HouseName[]).map((houseName) => ({
-            house: houseName,
-            house_profile_id: '',
-            display_name: houseName,
-            image_url: null,
-            accent_color: HOUSE_COLORS[houseName] as string | null,
-            academic_year_start: academicYearStart,
-            academic_year_end: academicYearStart + 1,
-            total_points: 0,
-            events_attended: 0,
-            unique_events: 0,
-            unique_members: 0,
-            average_points_per_member: null,
-            latest_activity_at: null,
-          }))
-        : rawStandings;
-
-    return base.map((s) => ({
-      ...s,
-      total_points: getPublicHousePoints({
-        houseKey: s.house,
-        houseName: s.display_name,
-        academicYearStart,
-        calculatedPoints: s.total_points,
-      }),
-    })).sort((a, b) => b.total_points - a.total_points);
-  }, [rawStandings, academicYearStart]);
-
-  const hasStandings = standings.some((house) => house.total_points > 0);
-  const useSummerEmptyState = shouldUseSummerEmptyState(hasStandings);
-  const summerMessage = getSummerBreakMessage('houseStandings');
-
+function HouseStandingsCard() {
   return (
     <div className="scrapbook-paper relative flex min-h-[250px] flex-col gap-4 p-5 sm:p-6">
       <TapeStrip color="gold" position="top-right" />
       <div>
-        <SectionLabel>House standings</SectionLabel>
+        <SectionLabel>House competition</SectionLabel>
         <h3 className="mt-1 font-serif text-[24px] leading-tight" style={{ color: 'var(--text)' }}>
-          Current House Standings
+          House standings are announced at GBMs
         </h3>
-        <p className="mt-2 font-sans text-sm" style={{ color: 'var(--text2)' }}>
-          {hasStandings ? 'See which House is leading this week.' : 'A new year of House memories is ahead.'}
+        <p className="mt-3 font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
+          Houses earn points throughout the year. Official standings are shared by House leadership at general body meetings, not live on the website.
         </p>
       </div>
-
-      {isLoading ? (
-        <CardSkeleton />
-      ) : !hasStandings ? (
-        <>
-          <div className="my-auto rounded-lg border border-gold-500/40 bg-gold-400/10 p-5">
-            <span className="mb-3 inline-flex rounded-sm bg-surface px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-label text-text-primary">
-              {useSummerEmptyState ? summerMessage.badge : 'Coming soon'}
-            </span>
-            <p className="font-serif text-3xl leading-tight text-text-primary">
-              {useSummerEmptyState ? summerMessage.title : 'Standings will be back soon'}
-            </p>
-            <p className="mt-3 font-sans text-sm leading-relaxed text-text-primary">
-              {useSummerEmptyState ? summerMessage.body : 'We’ll update this space as House announcements and points are released. Check back for the first standings!'}
-            </p>
-          </div>
-          <Link to="/leaderboard?view=houses" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider text-brand-700 dark:text-brand-400">
-            Full standings
-          </Link>
-        </>
-      ) : (
-        <>
-          <div className="space-y-2">
-            {standings.map((standing, index) => {
-              const houseKey = normalizeHouse(standing.house);
-              const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : standing.display_name || standing.house;
-              const houseColor = houseKey ? HOUSE_COLORS[houseKey] : standing.accent_color || 'var(--border)';
-
-              return (
-                <div key={standing.house_profile_id || standing.house} className="flex items-center justify-between gap-3 rounded-lg border p-3" style={{ borderColor: index === 0 ? houseColor : 'var(--border)', background: 'var(--surface2)' }}>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-semibold" style={{ background: houseColor, color: 'var(--surface)' }}>
-                      {index + 1}
-                    </span>
-                    <span className="truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
-                      {houseLabel}
-                    </span>
-                  </div>
-                  <span className="shrink-0 font-mono text-[11px]" style={{ color: 'var(--text3)' }}>
-                    {standing.total_points.toLocaleString()} house pts
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <Link to="/leaderboard?view=houses" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-            Full standings
-          </Link>
-        </>
-      )}
+      <Link to="/house" className="mt-auto inline-flex min-h-11 items-center font-mono text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
+        Explore the Houses →
+      </Link>
     </div>
   );
 }
@@ -581,9 +480,6 @@ function FindMyPointsCard() {
 }
 
 export function ThisWeekInVSA() {
-  const { terms } = useAcademicTerms();
-  const activeTerm = terms.find((term) => term.is_active);
-  const academicYearStart = activeTerm?.academic_year_start ?? null;
 
   return (
     <section className="vsa-section scrapbook-board" aria-labelledby="this-week-in-vsa-title">
@@ -605,7 +501,7 @@ export function ThisWeekInVSA() {
         <div className="snap-rail-container">
           <div className="snap-rail grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <NextEventCard />
-            <HouseStandingsCard academicYearStart={academicYearStart} />
+            <HouseStandingsCard />
             <LatestMemoryCard />
             <FindMyPointsCard />
           </div>

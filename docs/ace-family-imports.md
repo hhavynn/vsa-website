@@ -38,7 +38,9 @@ by slug). AAF's `(Dead)` prefix puts it in the Fam Graveyard.
   links are unlabeled pairings whose big was already established in that fam
   (`confidence: "inferred-high"`), or ones resolved from strong descendant
   evidence (`"inferred-medium"`). Each member records its link's
-  `added_term` and `confidence`; the importer ignores both.
+  `added_term` and `confidence`. The importer saves both as **unreviewed**
+  pickup-year evidence (admin-only), never as an approved year; see
+  [ace-pickup-years.md](ace-pickup-years.md).
 - **Links left out:** the workbook's 21 `candidate-low` rows (Needs Review
   sheet). They have too little family evidence to place.
 - **AAF / Moon split:** AAF is an archive fam ending SP23. Moon starts FA23 and
