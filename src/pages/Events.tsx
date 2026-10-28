@@ -2,6 +2,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
+import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
 import { Label } from '../components/ui/Label';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import {
@@ -467,6 +468,11 @@ export function Events() {
       </div>
 
       <div className="vsa-container py-8 lg:py-10">
+        {eligibleUpcomingEvents.length > 0 && (
+          <div className="mb-6">
+            <DownloadEventCalendarButton events={eligibleUpcomingEvents} />
+          </div>
+        )}
         {featured && (
           <>
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
