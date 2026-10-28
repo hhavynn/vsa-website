@@ -380,6 +380,14 @@
       "rpcs": []
     },
     {
+      "path": "src/data/repos/attendanceReadiness.ts",
+      "tables": [],
+      "rpcs": [
+        "admin_attest_event_attendance",
+        "admin_event_attendance_readiness"
+      ]
+    },
+    {
       "path": "src/data/repos/attendanceRecovery.ts",
       "tables": [
         "events",
@@ -510,17 +518,17 @@
       "rpcs": []
     },
     {
-      "path": "src/data/repos/houseMembershipWrites.ts",
+      "path": "src/data/repos/houseMemberships.ts",
       "tables": [
-        "house_memberships",
-        "members"
+        "house_memberships"
       ],
       "rpcs": []
     },
     {
-      "path": "src/data/repos/houseMemberships.ts",
+      "path": "src/data/repos/houseMembershipWrites.ts",
       "tables": [
-        "house_memberships"
+        "house_memberships",
+        "members"
       ],
       "rpcs": []
     },
@@ -531,6 +539,28 @@
         "house_parents"
       ],
       "rpcs": []
+    },
+    {
+      "path": "src/data/repos/housePayments.ts",
+      "tables": [
+        "house_applicants",
+        "house_payment_audit",
+        "house_payment_cycles"
+      ],
+      "rpcs": [
+        "admin_begin_house_batch_publish",
+        "admin_link_house_applicant_member",
+        "admin_register_house_applicants",
+        "admin_set_house_applicant_payments",
+        "house_batch_payment_blockers"
+      ]
+    },
+    {
+      "path": "src/data/repos/housePointsCheck.ts",
+      "tables": [],
+      "rpcs": [
+        "admin_house_points_reconciliation"
+      ]
     },
     {
       "path": "src/data/repos/importJobs.ts",
@@ -837,11 +867,14 @@
         "src/data/repos/houseAssets.ts",
         "src/data/repos/houseAssignments.ts",
         "src/data/repos/houseEvents.ts",
-        "src/data/repos/houseMembershipWrites.ts",
         "src/data/repos/houseMemberships.ts",
-        "src/data/repos/houseParents.ts"
+        "src/data/repos/houseMembershipWrites.ts",
+        "src/data/repos/houseParents.ts",
+        "src/data/repos/housePayments.ts",
+        "src/data/repos/housePointsCheck.ts"
       ],
       "tables": [
+        "house_applicants",
         "house_assignment_batches",
         "house_assignment_drafts",
         "house_event_houses",
@@ -849,11 +882,19 @@
         "house_memberships",
         "house_page_assets",
         "house_parents",
+        "house_payment_audit",
+        "house_payment_cycles",
         "members",
         "published_house_page_assets"
       ],
       "rpcs": [
-        "admin_apply_house_placement_override"
+        "admin_apply_house_placement_override",
+        "admin_begin_house_batch_publish",
+        "admin_house_points_reconciliation",
+        "admin_link_house_applicant_member",
+        "admin_register_house_applicants",
+        "admin_set_house_applicant_payments",
+        "house_batch_payment_blockers"
       ]
     },
     {
@@ -871,7 +912,9 @@
         "src/pages/Points.tsx"
       ],
       "repositories": [
-        "src/data/repos/attendanceRecovery.ts"
+        "src/data/repos/attendanceReadiness.ts",
+        "src/data/repos/attendanceRecovery.ts",
+        "src/data/repos/housePointsCheck.ts"
       ],
       "tables": [
         "events",
@@ -881,6 +924,9 @@
         "members"
       ],
       "rpcs": [
+        "admin_attest_event_attendance",
+        "admin_event_attendance_readiness",
+        "admin_house_points_reconciliation",
         "admin_import_recovery_findings",
         "admin_lookup_members",
         "admin_recover_import_row",
