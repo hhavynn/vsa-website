@@ -7,6 +7,9 @@ export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated
   house_ids?: string[];
 };
 
+/** Admin lists read at most this many events per year (#636). */
+export const ADMIN_HOUSE_EVENT_LIMIT = 500;
+
 const PUBLIC_FIELDS = [
   'id',
   'house_profile_id',
@@ -176,7 +179,8 @@ export class HouseEventsRepository {
           houses:house_event_houses(house:house_page_assets(*))
         `)
         .order('event_date', { ascending: false })
-        .order('start_time', { ascending: false });
+        .order('start_time', { ascending: false })
+        .limit(ADMIN_HOUSE_EVENT_LIMIT);
 
       if (academicYearStart) query = query.eq('academic_year_start', academicYearStart);
 

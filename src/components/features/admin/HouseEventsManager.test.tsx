@@ -4,7 +4,7 @@
  * save goes through the atomic database function with one request id per form
  * (so a retry cannot duplicate) and the loaded updated_at on edits.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { HouseEventsManager } from './HouseEventsManager';
@@ -55,10 +55,10 @@ it('starts with no House chosen and as a draft, and saves through the atomic fun
 
   await userEvent.type(screen.getByLabelText('Title *'), 'Fictional Movie Night');
   await userEvent.type(screen.getByLabelText('Date *'), '2026-11-14');
-  await userEvent.click(screen.getByRole('button', { name: /Rarity/ }));
-  await userEvent.click(screen.getByRole('button', { name: /Twilight Sparkle/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Rarity/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Twilight Sparkle/ }));
   expect(screen.getByText(/primary host: Rarity/)).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /Create|Save|Add/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Create|Save|Add/ }));
 
   await waitFor(() => expect(repo.saveEventAtomic).toHaveBeenCalledTimes(1));
   const input = repo.saveEventAtomic.mock.calls[0][0];
@@ -73,7 +73,7 @@ it('refuses to save without a House instead of choosing one', async () => {
   renderManager();
   await userEvent.type(screen.getByLabelText('Title *'), 'No House Night');
   await userEvent.type(screen.getByLabelText('Date *'), '2026-11-14');
-  await userEvent.click(screen.getByRole('button', { name: /Create|Save|Add/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Create|Save|Add/ }));
   expect(repo.saveEventAtomic).not.toHaveBeenCalled();
 });
 
@@ -83,8 +83,8 @@ it('falls back to the previous save only when the database does not have the fun
   renderManager();
   await userEvent.type(screen.getByLabelText('Title *'), 'Legacy Night');
   await userEvent.type(screen.getByLabelText('Date *'), '2026-11-14');
-  await userEvent.click(screen.getByRole('button', { name: /Rarity/ }));
-  await userEvent.click(screen.getByRole('button', { name: /Create|Save|Add/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Rarity/ }));
+  await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: /Create|Save|Add/ }));
   await waitFor(() => expect(repo.createEvent).toHaveBeenCalledTimes(1));
   expect(repo.createEvent.mock.calls[0][0]).toMatchObject({ is_published: false });
 });
