@@ -9,8 +9,10 @@ on:
   # with GITHUB_TOKEN never trigger the push event above.
   workflow_dispatch:
 
+# Main pushes may arrive at Actions out of order. Never let an older commit
+# cancel a newer main deployment; stale runs are rejected at deployment time.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha || 'shared' }}
   cancel-in-progress: true
 
 permissions:
@@ -241,14 +243,32 @@ jobs:
             echo "Vercel token found, proceeding with deployment"
           fi
 
-      - name: Setup Node.js
+      # Never publish a stale commit just because an older push workflow ran
+      # later than a newer one. Failure to check the ref also blocks deployment.
+      - name: Verify commit is current main HEAD
+        id: current-head
         if: steps.check-vercel.outputs.vercel-available == 'true'
+        run: |
+          remote_head="$(git ls-remote --exit-code origin refs/heads/main | cut -f1)"
+          if [ -z "$remote_head" ]; then
+            echo "::error::Could not verify main HEAD; refusing deployment."
+            exit 1
+          fi
+          if [ "$remote_head" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipping stale deployment: main has advanced."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.check-vercel.outputs.vercel-available == 'true' && steps.current-head.outputs.current == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Deploy to Vercel
-        if: steps.check-vercel.outputs.vercel-available == 'true'
+        if: steps.check-vercel.outputs.vercel-available == 'true' && steps.current-head.outputs.current == 'true'
         run: npx vercel@latest --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.ORG_ID }}
