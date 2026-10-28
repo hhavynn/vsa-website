@@ -34,6 +34,10 @@ describe('model-generated assistant link trust boundary (#241)', () => {
     });
   });
 
+  it('renders malformed Unicode destinations as text instead of crashing', () => {
+    expect(classifyAssistantLink(String.fromCharCode(0xD800))).toEqual({ kind: 'text', href: null });
+  });
+
   it('does not allow whitespace-trimmed protocol-relative links', () => {
     expect(classifyAssistantLink(' //evil.example/path ')).toEqual({
       kind: 'text', href: null,
