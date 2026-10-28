@@ -1,11 +1,7 @@
-import { Suspense, lazy, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// SignInForm pulls in react-hook-form + zod (~90 kB raw), the heaviest static
-// chain in this module; this dialog only appears mid-session-expiry, so the
-// form is deferred to its own chunk and arrives a beat after the dialog.
-const LazySignInForm = lazy(() =>
-  import("./SignInForm").then((m) => ({ default: m.SignInForm })),
-);
+// Import the form only when reauthentication is needed. Handle chunk errors
+// locally so a failed download never reloads and erases unsaved admin edits.
 
 interface SessionExpiredDialogProps {
   email?: string;
@@ -32,25 +28,39 @@ export function SessionExpiredDialog({
 }: SessionExpiredDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Take focus from the page underneath, which may have been mid-keystroke in
-  // a textarea: the email is prefilled, so go straight to the password. The
-  // form is deferred to its own chunk, so the field can appear a few frames
-  // after the dialog mounts — look for it briefly.
+  const [LoadedSignInForm, setLoadedSignInForm] = useState<
+    typeof import("./SignInForm")["SignInForm"] | null
+  >(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   useEffect(() => {
-    const field = email ? 'input[type="password"]' : 'input[type="email"]';
-    let frames = 0;
-    let id: number = 0;
-    const look = () => {
-      const el = dialogRef.current?.querySelector<HTMLInputElement>(field);
-      if (el) {
-        el.focus();
-        return;
-      }
-      if (++frames < 20) id = requestAnimationFrame(look);
-    };
-    look();
+    let active = true;
+    setLoadError(false);
+    import("./SignInForm")
+      .then((module) => {
+        if (active) setLoadedSignInForm(() => module.SignInForm);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
+      });
+    return () => { active = false; };
+  }, [loadAttempt]);
+
+  // The dialog is focusable immediately, independent of network and chunk
+  // timing. Transfer focus after the deferred form has actually mounted.
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!LoadedSignInForm) return undefined;
+    const id = requestAnimationFrame(() => {
+      const field = email ? 'input[type="password"]' : 'input[type="email"]';
+      dialogRef.current?.querySelector<HTMLInputElement>(field)?.focus();
+    });
     return () => cancelAnimationFrame(id);
-  }, [email]);
+  }, [email, LoadedSignInForm]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -133,9 +143,22 @@ export function SessionExpiredDialog({
             Verifying admin access...
           </p>
         )}
-        <Suspense fallback={null}>
-          <LazySignInForm defaultEmail={email} onSignedIn={() => undefined} />
-        </Suspense>
+        {loadError ? (
+          <div role="alert" className="rounded border border-[var(--color-border)] p-3 text-sm text-text-primary">
+            The sign-in form could not load. Your unsaved edits are still preserved.
+            <button
+              type="button"
+              className="mt-3 block min-h-11 rounded border border-[var(--color-border)] px-3 text-text-secondary underline"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            >
+              Retry loading sign-in
+            </button>
+          </div>
+        ) : LoadedSignInForm ? (
+          <LoadedSignInForm defaultEmail={email} onSignedIn={() => undefined} />
+        ) : (
+          <p role="status" className="text-sm text-text-secondary">Loading sign-in…</p>
+        )>
         <button
           type="button"
           onClick={onLeave}
