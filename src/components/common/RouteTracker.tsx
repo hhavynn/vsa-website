@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { initGA, isAnalyticsConfigured, setDiagnosticsConsent, trackPageView, trackSafeWebVital } from '../../lib/analytics';
 import reportWebVitals from '../../reportWebVitals';
+import { trackProductPageView } from '../../lib/productAnalytics';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 
 // Register field-vitals observers once per tab. On consent withdrawal, their
@@ -9,7 +10,8 @@ import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
 let vitalsStarted = false;
 
 /**
- * Component that monitors route changes and reports them as GA4 page_view events.
+ * Component that monitors route changes and reports them as GA4 page_view and
+ * PostHog $pageview events, only after analytics consent.
  * Should be placed inside the main Router component.
  */
 const RouteTracker = () => {
@@ -22,6 +24,7 @@ const RouteTracker = () => {
     if (!granted) return;
     initGA();
     trackPageView(location.pathname);
+    trackProductPageView(location.pathname);
     if (!vitalsStarted && isAnalyticsConfigured()) {
       vitalsStarted = true;
       reportWebVitals(trackSafeWebVital);
