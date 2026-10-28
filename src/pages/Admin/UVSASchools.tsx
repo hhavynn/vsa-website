@@ -14,6 +14,9 @@ import { IconBaseProps } from "react-icons";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { PageTitle } from "../../components/common/PageTitle";
 import { AdminPageHeader } from "../../components/features/admin/AdminPageHeader";
+import { AdminFormShell } from "../../components/features/admin/ops/AdminFormShell";
+import { saveStatus } from "../../lib/adminDirty";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { Button } from "../../components/ui/Button";
 import {
   DEFAULT_UVSA_NETWORK_PAGE_SETTINGS,
@@ -210,6 +213,8 @@ export default function AdminUVSASchools() {
     draft: settingsForm,
     setDraft: setSettingsForm,
     markSaved: markSettingsSaved,
+    discard: discardSettingsForm,
+    isDirty: settingsDirty,
   } = useServerSeededDraft<UVSANetworkPageSettingsInput>(
     "settings",
     settingsToInput(settingsQuery.data ?? DEFAULT_UVSA_NETWORK_PAGE_SETTINGS),
@@ -271,6 +276,8 @@ export default function AdminUVSASchools() {
     },
   );
 
+  useUnsavedChangesGuard(settingsDirty, saveSettingsMutation.isLoading);
+
   const handleSchoolSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!schoolForm.school_name.trim() || !schoolForm.short_name.trim()) {
@@ -327,8 +334,18 @@ export default function AdminUVSASchools() {
       />
       <div className="min-h-screen bg-bg px-4 py-8">
         <div className="mx-auto max-w-6xl space-y-8">
-          <form
+          <AdminFormShell
             onSubmit={handleSettingsSubmit}
+            status={saveStatus({
+              dirty: settingsDirty,
+              saving: saveSettingsMutation.isLoading,
+              failed: saveSettingsMutation.isError,
+              justSaved: saveSettingsMutation.isSuccess,
+            })}
+            formError={saveSettingsMutation.isError ? 'Unable to save page copy. Your edits are still here.' : null}
+            onDiscard={discardSettingsForm}
+            saveLabel="Save copy"
+            label="UVSA Network page copy"
             className="rounded-md border border-border bg-surface p-5 shadow-sm"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -341,13 +358,7 @@ export default function AdminUVSASchools() {
                   states.
                 </p>
               </div>
-              <Button
-                type="submit"
-                className="gap-2"
-                loading={saveSettingsMutation.isLoading}
-              >
-                <SaveIcon size={14} /> Save copy
-              </Button>
+              <span className="font-sans text-xs text-text-secondary">Save your changes below</span>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -464,7 +475,7 @@ export default function AdminUVSASchools() {
                 }
               />
             </div>
-          </form>
+          </AdminFormShell>
 
           <form
             onSubmit={handleSchoolSubmit}
