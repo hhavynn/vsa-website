@@ -114,7 +114,7 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-busy={isSubmitting} aria-label="Admin sign-in">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4" aria-busy={isSubmitting} aria-label="Admin sign-in">
       <div>
         <label htmlFor={emailId} className={labelCls}>Email (required)</label>
         <input
