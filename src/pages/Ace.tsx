@@ -21,6 +21,7 @@ import { GhostFamCard } from '../components/features/ace/GhostFamCard';
 import { ACTIVE_FAM_SLOTS } from '../lib/aceFamRoster';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
+import { VietnameseText } from '../components/common/VietnameseText';
 import '../styles/ace.css';
 
 const ROLES = [
@@ -37,8 +38,8 @@ const STEPS = [
 ];
 
 const FAQS = [
-  { q: 'What is a Big?',                          a: 'A Big (Anh/Chị) is a VSA member who helps welcome their Little and show them around the org. Think of a Big as an older sibling, mentor, or trusted friend.' },
-  { q: 'What is a Little?',                       a: 'A Little (Em) is someone paired with a Big during their VSA experience. As a Little, you get a built-in person to ask questions and a connection to a fam.' },
+  { q: 'What is a Big?',                          a: <>A Big (<VietnameseText>Anh/Chị</VietnameseText>) is a VSA member who helps welcome their Little and show them around the org. Think of a Big as an older sibling, mentor, or trusted friend.</> },
+  { q: 'What is a Little?',                       a: <>A Little (<VietnameseText>Em</VietnameseText>) is someone paired with a Big during their VSA experience. As a Little, you get a built-in person to ask questions and a connection to a fam.</> },
   { q: 'What is a Fam?',                          a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
   { q: 'Do requirements change each cycle?',       a: 'Yes. Eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
@@ -167,17 +168,21 @@ export function Ace() {
       <div className={`ace-app ${dark ? 'is-dark' : ''}`}>
         {/* Hero */}
         <EditorialHero
-          eyebrow="ACE · Anh Chị Em"
-          title={<>Anh<EditorialHeroScript> Chị </EditorialHeroScript>Em</>}
+          eyebrow={<>ACE · <VietnameseText>Anh Chị Em</VietnameseText></>}
+          title={
+            <VietnameseText>
+              <>Anh<EditorialHeroScript> Chị </EditorialHeroScript>Em</>
+            </VietnameseText>
+          }
           meta={`VSA's Big/Little family program${heroCycleLine ? ` · ${heroCycleLine}` : ''}`}
-          watermark={<>gia<br />đình</>}
+          watermark={<VietnameseText>gia<br />đình</VietnameseText>}
         />
 
         {/* What is ACE */}
         <section className="ace-section">
           <div className="ace-eyebrow">What is ACE?</div>
           <p className="ace-body">
-            ACE stands for <span className="ace-body-strong">Anh Chị Em</span>, Vietnamese for "older brother, older sister, younger sibling." It is VSA’s Big/Little program, where members get paired into ACE fams and meet people across the org.
+            ACE stands for <span className="ace-body-strong"><VietnameseText>Anh Chị Em</VietnameseText></span>, Vietnamese for "older brother, older sister, younger sibling." It is VSA’s Big/Little program, where members get paired into ACE fams and meet people across the org.
           </p>
         </section>
 
@@ -190,7 +195,7 @@ export function Ace() {
                 <div className="ace-rolerow-head">
                   <span className="ace-rolerow-num">{String(i + 1).padStart(2, '0')}</span>
                   <span className="ace-rolerow-role">{r.role}</span>
-                  <span className="ace-rolerow-viet">{r.viet}</span>
+                  <span className="ace-rolerow-viet"><VietnameseText>{r.viet}</VietnameseText></span>
                 </div>
                 <p className="ace-rolerow-desc">{r.desc}</p>
               </div>

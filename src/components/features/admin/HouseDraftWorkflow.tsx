@@ -22,6 +22,7 @@ import { NextStep, nextStepFor } from '../../../lib/adminNextSteps';
 import { describeYearContext } from '../../../lib/adminYearContext';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { formatAcademicYear } from '../../../lib/academicTerms';
+import { batchLineageLabel } from '../../../lib/housePayments';
 import {
   HouseAssignmentBatch,
   draftInsertFromParsed,
@@ -312,6 +313,7 @@ export function HouseDraftWorkflow({
           onPublished={onMembershipsPublished}
           initialNextStep={editorNextStep}
           highlightRowId={highlightRowId}
+          onOpenBatch={(batchId) => { loadBatches(); openBatch(batchId); }}
         />
       </>
     );
@@ -389,6 +391,12 @@ export function HouseDraftWorkflow({
                 <p className="text-xs text-text-muted">
                   {batch.assignment_method === 'timestamp_ranked' ? 'Automatic placement' : 'Manual import'} · {statusLabel(batch.status)} · effective {batch.effective_start_date} · saved {new Date(batch.created_at).toLocaleDateString()}
                 </p>
+                {batchLineageLabel(batch) && (
+                  <p className="text-xs font-semibold text-text-secondary">
+                    {batchLineageLabel(batch)}
+                    {batch.revised_from_batch_id ? ` · from “${batches.find((other) => other.id === batch.revised_from_batch_id)?.source_label || 'an earlier draft'}”` : ''}
+                  </p>
+                )}
               </div>
               <button
                 type="button"

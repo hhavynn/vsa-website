@@ -53,6 +53,8 @@ async function withEnvironment(
   body: (dispatches: Dispatch[]) => Promise<void>,
 ) {
   const keys = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
     "IMAGE_MIGRATION_WEBHOOK_SECRET",
     "GITHUB_REPOSITORY",
     "GITHUB_DISPATCH_TOKEN",
@@ -68,6 +70,7 @@ async function withEnvironment(
   const dispatches: Dispatch[] = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
+    if (String(input).includes("/rest/v1/rpc/reserve_privileged_edge_quota")) return new Response("true", { headers: { "Content-Type": "application/json" } });
     dispatches.push({
       url: String(input),
       headers: new Headers(init?.headers),
@@ -91,6 +94,8 @@ async function withEnvironment(
 }
 
 const configured = {
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY: "service-test-key",
   IMAGE_MIGRATION_WEBHOOK_SECRET: SECRET,
   GITHUB_REPOSITORY: "example-org/example-repo",
   GITHUB_DISPATCH_TOKEN: GITHUB_TOKEN,
@@ -112,9 +117,10 @@ const ok = () => new Response(null, { status: 204 });
 
 export function defineImageMigrationWebhookTests(contract: WebhookContract) {
   const { label, handler, idField, defaultEventType, eventTypeEnv } = contract;
+  const table = idField === "event_id" ? "events" : "house_events";
   const insert = (imageUrl: string | undefined, extra: Record<string, unknown> = {}) => ({
-    type: "INSERT",
-    record: { id: "record-1", image_url: imageUrl, ...extra },
+    type: "INSERT", table, schema: "public",
+    record: { id: "00000000-0000-4000-8000-000000000001", image_url: imageUrl, ...extra },
     old_record: null,
   });
 
@@ -183,17 +189,15 @@ export function defineImageMigrationWebhookTests(contract: WebhookContract) {
 
   Deno.test(`${label}: ignores payloads that need no migration`, async () => {
     const skipped: Array<[string, unknown]> = [
-      ["DELETE operation", { type: "DELETE", record: { id: "r1", image_url: SUPABASE_URL } }],
-      ["missing id", { type: "INSERT", record: { image_url: SUPABASE_URL } }],
       ["no image url", insert(undefined)],
       ["local /images path", insert("/images/events/flyer.png")],
       ["external (non-Supabase) url", insert("https://cdn.example.com/flyer.png")],
       [
         "unchanged image on update",
         {
-          type: "UPDATE",
-          record: { id: "r1", image_url: SUPABASE_URL },
-          old_record: { id: "r1", image_url: SUPABASE_URL },
+          type: "UPDATE", table, schema: "public",
+          record: { id: "00000000-0000-4000-8000-000000000001", image_url: SUPABASE_URL },
+          old_record: { id: "00000000-0000-4000-8000-000000000001", image_url: SUPABASE_URL },
         },
       ],
     ];
@@ -213,7 +217,7 @@ export function defineImageMigrationWebhookTests(contract: WebhookContract) {
       const response = await handler(webhookRequest(insert(SUPABASE_URL)));
       const json = await response.json();
       assert(response.status === 200 && json.triggered === true, "Expected a triggered dispatch");
-      assert(json[idField] === "record-1", `Response must carry ${idField}`);
+      assert(json[idField] === "00000000-0000-4000-8000-000000000001", `Response must carry ${idField}`);
 
       assert(dispatches.length === 1, "Exactly one dispatch");
       const [dispatch] = dispatches;
@@ -231,9 +235,9 @@ export function defineImageMigrationWebhookTests(contract: WebhookContract) {
     await withEnvironment(configured, ok, async (dispatches) => {
       const response = await handler(
         webhookRequest({
-          type: "UPDATE",
-          record: { id: "r1", image_url: SUPABASE_URL },
-          old_record: { id: "r1", image_url: "https://example.supabase.co/storage/v1/object/public/event-images/old.png" },
+          type: "UPDATE", table, schema: "public",
+          record: { id: "00000000-0000-4000-8000-000000000001", image_url: SUPABASE_URL },
+          old_record: { id: "00000000-0000-4000-8000-000000000001", image_url: "https://example.supabase.co/storage/v1/object/public/event-images/old.png" },
         }),
       );
       assert((await response.json()).triggered === true, "A changed image must dispatch");
@@ -253,7 +257,7 @@ export function defineImageMigrationWebhookTests(contract: WebhookContract) {
       const env: Record<string, string | undefined> = { ...configured, [missing]: undefined };
       await withEnvironment(env, ok, async (dispatches) => {
         const response = await handler(webhookRequest(insert(SUPABASE_URL)));
-        assert(response.status === 500, `${missing} unset: expected 500, got ${response.status}`);
+        assert(response.status === 503, `${missing} unset: expected 503, got ${response.status}`);
         assert(dispatches.length === 0, "No dispatch when misconfigured");
       });
     }
@@ -267,7 +271,7 @@ export function defineImageMigrationWebhookTests(contract: WebhookContract) {
         const response = await handler(webhookRequest(insert(SUPABASE_URL)));
         const text = await response.text();
         assert(response.status === 502, `Expected 502, got ${response.status}`);
-        assert(text.includes("GitHub API error 401"), "Reports the upstream status");
+        assert(text.includes("GitHub dispatch failed"), "Returns a controlled upstream error");
         assert(!text.includes(GITHUB_TOKEN), "Upstream body (and token) must not be echoed");
       },
     );

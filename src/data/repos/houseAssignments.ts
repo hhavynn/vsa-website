@@ -11,6 +11,7 @@ import {
   HouseProfileLite,
   PreflightResult,
   buildBatchPreflight,
+  isTimestampRanked,
   publishableRows,
 } from '../../lib/houseAssignmentDraft';
 import type { ExcludedApplicant } from '../../lib/houseAssignmentDraft';
@@ -18,6 +19,7 @@ import type { Json } from '../../types/database';
 import type { MemberYearMembership } from '../../lib/houseMembershipIntervals';
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
 import { houseMembershipsWriteRepository } from './houseMembershipWrites';
+import { housePaymentsRepository } from './housePayments';
 
 const INSERT_CHUNK = 200;
 
@@ -35,6 +37,20 @@ export interface CreateHouseBatchInput {
   placement?: {
     capacityConfig: Record<string, number>;
     excludedApplicants: ExcludedApplicant[];
+    /**
+     * Set when the placement belongs to a House payment cycle. The database
+     * refuses a final draft whose payment version is stale or whose cutoff
+     * has not been reached, and keeps these fields fixed after saving.
+     */
+    payment?: {
+      cycleId: string;
+      eligibilityMode: 'provisional' | 'final';
+      snapshotVersion: number;
+      generationReason: 'initial' | 'post_payment_rerun';
+      revisedFromBatchId: string | null;
+      fingerprint: string;
+      summary: Record<string, number>;
+    };
   };
 }
 
@@ -49,6 +65,11 @@ export interface HouseBatchSnapshot {
   profiles: HouseProfileLite[];
   existingMemberships: Map<string, MemberYearMembership[]>;
   preflight: PreflightResult;
+  /**
+   * The server's payment-eligibility blockers (already merged into
+   * preflight.blockers). Null when the payment migration is not applied.
+   */
+  paymentBlockers: string[] | null;
 }
 
 export interface PublishHouseBatchResult {
@@ -125,6 +146,17 @@ export class HouseAssignmentsRepository {
                 assignment_method: 'timestamp_ranked',
                 capacity_config: input.placement.capacityConfig,
                 excluded_applicants: input.placement.excludedApplicants as unknown as Json,
+                ...(input.placement.payment
+                  ? {
+                      payment_cycle_id: input.placement.payment.cycleId,
+                      eligibility_mode: input.placement.payment.eligibilityMode,
+                      payment_snapshot_version: input.placement.payment.snapshotVersion,
+                      generation_reason: input.placement.payment.generationReason,
+                      revised_from_batch_id: input.placement.payment.revisedFromBatchId,
+                      applicant_set_fingerprint: input.placement.payment.fingerprint,
+                      eligibility_summary: input.placement.payment.summary,
+                    }
+                  : {}),
               }
             : {}),
         })
@@ -196,9 +228,8 @@ export class HouseAssignmentsRepository {
    * none does, with the batch's capacities and the reason rule checked
    * server-side. Returns the updated rows.
    *
-   * Until migration 20261027120000 is applied the function does not exist; a
-   * single move then falls back to one row update (atomic on its own), and a
-   * swap is refused rather than risking a half-applied pair.
+   * The RPC is required for both moves and swaps: a browser row update
+   * cannot enforce batch-wide capacity checks under concurrent requests.
    */
   async applyPlacementOverride(
     batchId: string,
@@ -217,22 +248,10 @@ export class HouseAssignmentsRepository {
       if (!error) return data ?? [];
       if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
 
-      if (changes.length > 1) {
-        throw new ValidationError(
-          'Swaps need the database update in migration 20261027120000, which has not been applied yet. Nothing was changed; move one applicant at a time instead.',
-          'changes',
-        );
-      }
-      const [change] = changes;
-      const drafts = await this.getDrafts(batchId);
-      const current = drafts.find((row) => row.id === change.draftId);
-      if (!current) throw new NotFoundError('That row is not part of this batch.', 'house_assignment_drafts', change.draftId);
-      const backToGenerated = change.houseProfileId === current.generated_house_profile_id;
-      const trimmed = reason?.trim() || null;
-      if (!backToGenerated && !trimmed) throw new ValidationError('A reason is required for a manual override.', 'override_reason');
-      const patch: HouseDraftPatch = { house_profile_id: change.houseProfileId, override_reason: backToGenerated ? null : trimmed };
-      await this.updateDraft(batchId, change.draftId, patch);
-      return [{ ...current, ...patch }];
+      throw new ValidationError(
+        'House placement changes are unavailable. Ask a site administrator to verify database migration 20261027120000 and refresh the API schema cache. Nothing was changed.',
+        'changes',
+      );
     }, 'Failed to change House placement');
   }
 
@@ -277,17 +296,22 @@ export class HouseAssignmentsRepository {
   async loadSnapshot(batchId: string, memberNames?: Map<string, string>): Promise<HouseBatchSnapshot> {
     return withErrorHandling(async () => {
       const batch = await this.getBatch(batchId);
-      const [drafts, profiles, existingMemberships] = await Promise.all([
+      const [drafts, profiles, existingMemberships, paymentBlockers] = await Promise.all([
         this.getDrafts(batchId),
         this.getProfiles(batch.academic_year_start),
         houseMembershipsWriteRepository.listMembershipsForYear(batch.academic_year_start),
+        isTimestampRanked(batch) ? housePaymentsRepository.getBatchBlockers(batchId) : Promise.resolve(null),
       ]);
-      const preflight = buildBatchPreflight(batch, drafts, profiles, {
+      const base = buildBatchPreflight(batch, drafts, profiles, {
         effectiveStartDate: batch.effective_start_date,
         existingMemberships,
         memberNames,
       });
-      return { batch, drafts, profiles, existingMemberships, preflight };
+      const gate = (paymentBlockers ?? []).map((message) => ({ code: 'payment_gate' as const, message, rowIds: [] }));
+      const preflight = gate.length > 0
+        ? { ...base, blockers: [...gate, ...base.blockers], canLock: false }
+        : base;
+      return { batch, drafts, profiles, existingMemberships, preflight, paymentBlockers };
     }, 'Failed to run House assignment preflight');
   }
 
@@ -352,6 +376,16 @@ export class HouseAssignmentsRepository {
           `Cannot publish: ${snapshot.preflight.blockers[0].message}`,
           'preflight',
         );
+      }
+
+      // Re-checks payment eligibility under a lock and freezes payments until
+      // the batch is published or reopened. Membership rows from a
+      // payment-gated batch are refused by the database outside that window.
+      if (isTimestampRanked(snapshot.batch)) {
+        const started = await housePaymentsRepository.beginPublish(batchId);
+        if (!started && snapshot.batch.payment_cycle_id) {
+          throw new ValidationError('Payment eligibility could not be verified, so nothing was revealed. Ask a site administrator to check migration 20261028050216.', 'status');
+        }
       }
 
       const existingByMember = snapshot.existingMemberships;
