@@ -85,7 +85,7 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
       )}
 
       {item.source === 'house' && (
-        <div className="mt-3 space-y-1 font-sans text-[13px]" style={{ color: 'var(--text2)' }}>
+        <div className="mt-3 space-y-1 font-sans text-[13px] text-text-secondary">
           {item.houses.length > 0 && <p>Hosted by {item.houses.map((house) => house.name).join(' + ')}.</p>}
           <p>House event: it does not award VSA attendance points.</p>
         </div>
@@ -109,8 +109,7 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
             href={sanitizeHref(item.rsvpUrl)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--brand)' }}
+            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400"
           >
             RSVP ↗<span className="sr-only"> (opens in new tab)</span>
           </a>

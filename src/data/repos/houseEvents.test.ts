@@ -38,6 +38,7 @@ const PUBLIC_READ_INVOCATIONS: Record<string, () => Promise<unknown>> = {
   getPublicUpcomingForHouse: () =>
     houseEventsRepository.getPublicUpcomingForHouse(HOUSE_ID, TODAY),
   getPublicPastForHouse: () => houseEventsRepository.getPublicPastForHouse(HOUSE_ID, TODAY),
+  getPublicEventForHouse: () => houseEventsRepository.getPublicEventForHouse('event-1', HOUSE_ID),
   getPublicEventsForYear: () => houseEventsRepository.getPublicEventsForYear(YEAR),
   getPublicPastEventsForYear: () =>
     houseEventsRepository.getPublicPastEventsForYear(TODAY, YEAR),
@@ -82,6 +83,16 @@ describe('HouseEventsRepository — public read surface excludes drafts (#292)',
 });
 
 describe('HouseEventsRepository — behaviour', () => {
+  it('returns a linked event only when this House hosts it', async () => {
+    const row = { id: 'ev-1', house_profile_id: 'hp-other', is_published: true, houses: [{ house_page_asset_id: 'hp-other', house: { id: 'hp-other', is_active: true } }] };
+    supabaseMock.queueResult('house_events', { data: row, error: null });
+    await expect(houseEventsRepository.getPublicEventForHouse('ev-1', HOUSE_ID)).resolves.toBeNull();
+    supabaseMock.queueResult('house_events', { data: { ...row, houses: [...row.houses, { house_page_asset_id: HOUSE_ID, house: { id: HOUSE_ID, is_active: true } }] }, error: null });
+    await expect(houseEventsRepository.getPublicEventForHouse('ev-1', HOUSE_ID)).resolves.toMatchObject({ id: 'ev-1' });
+    supabaseMock.queueResult('house_events', { data: null, error: null });
+    await expect(houseEventsRepository.getPublicEventForHouse('missing', HOUSE_ID)).resolves.toBeNull();
+  });
+
   it('fills hosts the profile embed cannot return from published profiles only, primary first', async () => {
     supabaseMock.queueResult('house_events', {
       data: [{

@@ -1,6 +1,6 @@
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { HouseDetailSkeleton } from '../components/common/PageSkeletons';
@@ -167,12 +167,34 @@ export function HouseDetail() {
   });
 
   // A calendar link (#house-event-<id>) lands on that event's card, expanding
-  // past events when it is beyond the first page.
+  // past events when it is beyond the first page. An event outside the bounded
+  // lists above is fetched on its own (published and hosted by this House only).
   const { hash } = useLocation();
   const targetEventId = hash.startsWith('#house-event-') ? hash.slice('#house-event-'.length) : null;
+  const targetMissing = !!targetEventId && !upcomingLoading && !pastLoading
+    && !upcomingEvents.some((event) => event.id === targetEventId) && !pastEvents.some((event) => event.id === targetEventId);
+  const { data: linkedEvent = null } = useQuery({
+    queryKey: ['house-detail', 'linked-event', house?.id, targetEventId],
+    queryFn: () => houseEventsRepository.getPublicEventForHouse(targetEventId as string, (house as HousePageAsset).id),
+    enabled: !!house && targetMissing,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const shownUpcoming = useMemo(
+    () => (linkedEvent && linkedEvent.event_date >= today && !upcomingEvents.some((event) => event.id === linkedEvent.id)
+      ? [...upcomingEvents, linkedEvent].sort((a, b) => a.event_date.localeCompare(b.event_date))
+      : upcomingEvents),
+    [linkedEvent, upcomingEvents, today],
+  );
+  const shownPast = useMemo(
+    () => (linkedEvent && linkedEvent.event_date < today && !pastEvents.some((event) => event.id === linkedEvent.id)
+      ? [...pastEvents, linkedEvent].sort((a, b) => b.event_date.localeCompare(a.event_date))
+      : pastEvents),
+    [linkedEvent, pastEvents, today],
+  );
   useEffect(() => {
     if (!targetEventId || upcomingLoading || pastLoading) return;
-    const pastIndex = pastEvents.findIndex((event) => event.id === targetEventId);
+    const pastIndex = shownPast.findIndex((event) => event.id === targetEventId);
     if (pastIndex >= 8 && !showAllPastEvents) {
       setShowAllPastEvents(true);
       return;
@@ -182,7 +204,7 @@ export function HouseDetail() {
       card.scrollIntoView({ block: 'start' });
       card.focus({ preventScroll: true });
     }
-  }, [targetEventId, upcomingLoading, pastLoading, pastEvents, showAllPastEvents]);
+  }, [targetEventId, upcomingLoading, pastLoading, shownPast, shownUpcoming, showAllPastEvents]);
 
   const isDegraded = isSupabaseUnavailable(pastError);
 
@@ -241,7 +263,7 @@ export function HouseDetail() {
   const color = getHouseColor(house);
   const label = getHouseLabel(house);
   const heroImage = house.image_thumbnail_url || house.image_url;
-  const visiblePastEvents = showAllPastEvents ? pastEvents : pastEvents.slice(0, 8);
+  const visiblePastEvents = showAllPastEvents ? shownPast : shownPast.slice(0, 8);
 
   return (
     <>
@@ -318,7 +340,7 @@ export function HouseDetail() {
                 <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                   Loading upcoming events...
                 </div>
-              ) : upcomingEvents.length === 0 ? (
+              ) : shownUpcoming.length === 0 ? (
                 <div className="scrapbook-empty py-12 text-center">
                   <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     No upcoming events for {label} just yet. Check back soon!
@@ -326,7 +348,7 @@ export function HouseDetail() {
                 </div>
               ) : (
                 <div className="grid gap-6">
-                  {upcomingEvents.map((event) => (
+                  {shownUpcoming.map((event) => (
                     <HouseEventCard key={event.id} event={event} house={house} isUpcoming />
                   ))}
                 </div>
@@ -357,7 +379,7 @@ export function HouseDetail() {
               <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                 Loading events...
               </div>
-            ) : pastEvents.length === 0 ? (
+            ) : shownPast.length === 0 ? (
               <div className={`scrapbook-empty ${isLegacyArchive ? 'py-8' : 'py-12'} text-center`}>
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                   {isLegacyArchive
@@ -372,7 +394,7 @@ export function HouseDetail() {
                   <HouseEventCard key={event.id} event={event} house={house} isUpcoming={false} />
                   ))}
                 </div>
-                {!showAllPastEvents && pastEvents.length > visiblePastEvents.length && (
+                {!showAllPastEvents && shownPast.length > visiblePastEvents.length && (
                   <div className="mt-6 text-center">
                     <button
                       type="button"
