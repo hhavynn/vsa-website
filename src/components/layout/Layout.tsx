@@ -1,33 +1,33 @@
-import { Outlet, useLocation } from "react-router-dom";
-import { NavigationShell } from "./navigation/NavigationShell";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { BackToTop } from "./BackToTop";
-import { MobileQuickDock } from "./navigation/MobileQuickDock";
-import { Suspense, lazy, useEffect } from "react";
-import Footer from "./Footer";
-import { PageLoader } from "../common/PageLoader";
-import { ErrorBoundary } from "../common/ErrorBoundary";
-import { keepHashTargetInView } from "../../utils/hashScroll";
-import { PublicSearchProvider } from "../features/search/PublicSearchProvider";
+import { Outlet, useLocation } from 'react-router-dom';
+import { NavigationShell } from './navigation/NavigationShell';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { BackToTop } from './BackToTop';
+import { MobileQuickDock } from './navigation/MobileQuickDock';
+import { Suspense, lazy, useEffect } from 'react';
+import Footer from './Footer';
+import { PageLoader } from '../common/PageLoader';
+import { ErrorBoundary } from '../common/ErrorBoundary';
+import { keepHashTargetInView } from '../../utils/hashScroll';
+import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
 
-// The Ask VSA launcher + engine (~24 kB with its feedback repo) is deferred to
-// its own chunk so it is not on the anonymous first-load critical path; the
-// launcher appears as soon as the small async module resolves.
-const VsaAiAssistant = lazy(() =>
-  import("../features/ai/VsaAiAssistant").then((m) => ({
-    default: m.VsaAiAssistant,
-  })),
-);
+// Optional assistant is isolated from the initial public route bundle.
+const VsaAiAssistant = lazy(() => import('../features/ai/VsaAiAssistant').then(m => ({
+  default: m.VsaAiAssistant,
+})));
 
 function ScrollManager() {
-  const { pathname, search, hash } = useLocation();
+  const { pathname, search, hash, state } = useLocation();
+  // An in-page filter change (e.g. /events ?type=) marks its navigation so the
+  // reader stays where they are.
+  const keepScroll = (state as { keepScroll?: boolean } | null)?.keepScroll === true;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
+    if (keepScroll) return;
 
     // No hash: normal behavior — jump to the top on every navigation.
     if (!hash) {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       return;
     }
 
@@ -35,7 +35,7 @@ function ScrollManager() {
     // anchor aligned briefly after it first appears.
     const id = decodeURIComponent(hash.slice(1));
     return keepHashTargetInView(id);
-  }, [pathname, search, hash]);
+  }, [pathname, search, hash, keepScroll]);
 
   return null;
 }
@@ -45,12 +45,11 @@ function LayoutShell() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div
-      className="min-h-screen flex flex-col font-sans"
-      style={{ background: "var(--color-bg)", color: "var(--color-text)" }}
-    >
+    <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <ScrollManager />
-      <NavigationShell />
+      <header>
+        <NavigationShell />
+      </header>
 
       {/* min-h-screen keeps the (tall, mobile) footer below the fold while a route
           chunk or data skeleton is showing, so it does not jump when content lands. */}
@@ -62,11 +61,7 @@ function LayoutShell() {
               initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
-              transition={
-                shouldReduceMotion
-                  ? { duration: 0 }
-                  : { duration: 0.15, ease: "easeInOut" }
-              }
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeInOut' }}
               className="w-full"
             >
               <Outlet />
@@ -78,10 +73,6 @@ function LayoutShell() {
       <Footer />
       <BackToTop />
       <MobileQuickDock />
-      {/* Own boundary: without it the assistant's first suspension would be
-          caught by the route-level Suspense above and paint the page loader
-          over the whole shell on first load. */}
-      {/* The assistant is optional: a failed lazy import must not take down public routes. */}
       <ErrorBoundary fallback={<span role="status" className="sr-only">Ask VSA is temporarily unavailable.</span>}>
         <Suspense fallback={null}>
           <VsaAiAssistant />

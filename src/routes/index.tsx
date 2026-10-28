@@ -4,16 +4,11 @@ import { Layout } from "../components/layout/Layout";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
+
 import RouteTracker from "../components/common/RouteTracker";
 
-// The admin shell is lazy too: its nav, quick search and the repos it indexes
-// otherwise statically enter the public main chunk and ship to anonymous
-// visitors (~30 kB gzip of admin-only code). AdminRoute gates access without
-// rendering its children until the viewer is an admin, so this chunk is
-// fetched only when a real admin opens /admin/*.
-const AdminLayout = lazy(
-  () => import("../components/features/admin/AdminLayout"),
-);
+// Admin shell remains out of the anonymous first-load path.
+const AdminLayout = lazy(() => import("../components/features/admin/AdminLayout"));
 
 // Lazy load pages
 const Home = lazy(() =>
@@ -142,7 +137,7 @@ export default function AppRoutes() {
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:bg-white focus:text-gray-900 focus:p-4 focus:rounded-br-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[60] focus:bg-surface focus:text-text-primary focus:p-4 focus:rounded-br-lg focus:outline-none focus:ring-2 focus:ring-brand-600 dark:focus:ring-brand-400"
         >
           Skip to main content
         </a>

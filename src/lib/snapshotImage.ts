@@ -6,6 +6,13 @@
 export const SNAPSHOT_WIDTH = 1080;
 export const SNAPSHOT_HEIGHT = 1350;
 
+export type SnapshotFormat = 'classic' | 'story' | 'square';
+export const SNAPSHOT_SIZES: Record<SnapshotFormat, { width: number; height: number }> = {
+  classic: { width: SNAPSHOT_WIDTH, height: SNAPSHOT_HEIGHT },
+  story: { width: 1080, height: 1920 },
+  square: { width: 1080, height: 1080 },
+};
+
 const FONTS = {
   serif: '"DM Serif Display", Georgia, serif',
   sans: '"DM Sans", "Helvetica Neue", Arial, sans-serif',
@@ -297,6 +304,31 @@ export function drawSnapshot(ctx: Ctx, data: SnapshotData, avatar: HTMLImageElem
   ctx.fillText('Find yours at vsaatucsd.com/points', left, H - 96);
 }
 
+/**
+ * Reuses the complete 1080×1350 card art for each publication shape, without
+ * clipping any names, ranks, badges, or the attribution footer. The 1:1 card
+ * is reduced uniformly; the 9:16 card is vertically centered. Both draw a
+ * full opaque backdrop rather than adding transparent bars to shared PNGs.
+ */
+export function drawSnapshotForFormat(
+  ctx: Ctx, data: SnapshotData, avatar: HTMLImageElement | null,
+  format: SnapshotFormat = 'classic',
+) {
+  if (format === 'classic') {
+    drawSnapshot(ctx, data, avatar);
+    return;
+  }
+  const { width, height } = SNAPSHOT_SIZES[format];
+  const scale = Math.min(width / SNAPSHOT_WIDTH, height / SNAPSHOT_HEIGHT);
+  ctx.save();
+  ctx.fillStyle = PAPER[0];
+  ctx.fillRect(0, 0, width, height);
+  ctx.translate((width - SNAPSHOT_WIDTH * scale) / 2, (height - SNAPSHOT_HEIGHT * scale) / 2);
+  ctx.scale(scale, scale);
+  drawSnapshot(ctx, data, avatar);
+  ctx.restore();
+}
+
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('The browser could not encode the image.'))), 'image/png');
@@ -304,14 +336,15 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 /** Renders the snapshot to a PNG. Rejects with a readable message if the browser can't draw it. */
-export async function renderSnapshotImage(data: SnapshotData): Promise<Blob> {
+export async function renderSnapshotImage(data: SnapshotData, format: SnapshotFormat = 'classic'): Promise<Blob> {
   const canvas = document.createElement('canvas');
-  canvas.width = SNAPSHOT_WIDTH;
-  canvas.height = SNAPSHOT_HEIGHT;
+  const { width, height } = SNAPSHOT_SIZES[format];
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('This browser cannot draw the snapshot image.');
   const [avatar] = await Promise.all([loadAvatar(data.avatarUrl), ensureFonts()]);
-  drawSnapshot(ctx, data, avatar);
+  drawSnapshotForFormat(ctx, data, avatar, format);
   return canvasToBlob(canvas);
 }
 

@@ -38,10 +38,10 @@ export const SignInSchema = z.object({
 // Feedback schemas
 export const FeedbackSchema = z.object({
   type: z.enum(['bug', 'feature', 'improvement', 'event', 'other']),
-  title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
-  description: z.string().min(1, 'Description is required').max(1000, 'Description must be less than 1000 characters'),
+  title: z.string().trim().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
+  description: z.string().trim().min(1, 'Description is required').max(1000, 'Description must be less than 1000 characters'),
   name: z.string().max(100, 'Name must be less than 100 characters').optional(),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  email: z.string().trim().max(254, 'Email must be 254 characters or fewer').email('Invalid email address').optional().or(z.literal('')),
 });
 
 // Admin schemas

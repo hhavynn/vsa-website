@@ -37,6 +37,13 @@ function batch(status: HouseAssignmentBatch['status']): HouseAssignmentBatch {
     assignment_method: 'manual',
     capacity_config: null,
     excluded_applicants: null,
+    payment_cycle_id: null,
+    eligibility_mode: null,
+    payment_snapshot_version: null,
+    revised_from_batch_id: null,
+    generation_reason: null,
+    applicant_set_fingerprint: null,
+    eligibility_summary: null,
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
   };
@@ -45,7 +52,7 @@ function batch(status: HouseAssignmentBatch['status']): HouseAssignmentBatch {
 function draft(order: number, overrides: Partial<HouseAssignmentDraft> = {}): HouseAssignmentDraft {
   return {
     id: `d${order}`,
-    batch_id: 'batch-1',
+    batch_id: 'batch-1', applicant_id: null,
     source_name: `Person ${order}`,
     source_house: null,
     member_id: `m${order}`,
@@ -340,6 +347,63 @@ describe('timestamp-priority (automatic) batches', () => {
     expect(membershipWrites()).toHaveLength(0);
     expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
   });
+
+  it('merges the database payment gate into preflight and refuses to lock a stale draft', async () => {
+    queuePlacementSnapshot('draft', [placed(1), placed(2)]);
+    supabaseMock.queueResult('rpc:house_batch_payment_blockers', {
+      data: ['Payments changed since this sort. Rerun sorting with the current payment statuses.'],
+      error: null,
+    });
+    await expect(houseAssignmentsRepository.lockBatch('batch-1')).rejects.toThrow(/Payments changed since this sort/);
+    expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
+  });
+
+  it('starts the Reveal through the payment gate and writes no membership when it refuses', async () => {
+    const gated = { ...placementBatch('locked'), payment_cycle_id: 'cycle-1', eligibility_mode: 'final', payment_snapshot_version: 4 };
+    supabaseMock.queueResult('house_assignment_batches', { data: gated, error: null });
+    supabaseMock.queueResult('house_assignment_batches', { data: gated, error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: [placed(1), placed(2)], error: null });
+    supabaseMock.queueResult('house_page_assets', { data: profiles, error: null });
+    supabaseMock.queueResult('house_memberships', { data: [], error: null });
+    supabaseMock.queueResult('rpc:house_batch_payment_blockers', { data: [], error: null });
+    supabaseMock.queueResult('rpc:admin_begin_house_batch_publish', {
+      data: null,
+      error: { code: '23514', message: 'Payment eligibility blocks this Reveal: 1 included applicant(s) are not Paid or Waived, or were withdrawn.', details: '', hint: '' },
+    });
+    await expect(houseAssignmentsRepository.publishBatch('batch-1', 'admin-1')).rejects.toThrow(/not Paid or Waived/);
+    expect(supabaseMock.queriesFor('rpc:admin_begin_house_batch_publish')).toHaveLength(1);
+    expect(membershipWrites()).toHaveLength(0);
+    expect(supabaseMock.usedMethod('house_assignment_batches', 'update')).toBe(false);
+  });
+
+  it('saves a rerun with its payment lineage', async () => {
+    supabaseMock.queueResult('house_assignment_batches', { data: placementBatch('draft'), error: null });
+    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
+    await houseAssignmentsRepository.createBatch({
+      academicYearStart: YEAR,
+      effectiveStartDate: START,
+      sourceLabel: 'Post-payment rerun',
+      userId: 'admin-1',
+      rows: [{ source_name: 'A', applicant_id: 'app-1', source_order: 0 }],
+      placement: {
+        capacityConfig: { 'p-boo': 1 },
+        excludedApplicants: [{ source_row_number: 3, name: 'B', reason: 'Payment: unpaid (confirmed)' }],
+        payment: { cycleId: 'cycle-1', eligibilityMode: 'final', snapshotVersion: 7, generationReason: 'post_payment_rerun', revisedFromBatchId: 'batch-0', fingerprint: 'v1-abc', summary: { included: 1, excluded: 1 } },
+      },
+    });
+    const insert = supabaseMock.queriesFor('house_assignment_batches').flatMap((query) => query.calls).find((call) => call.method === 'insert');
+    expect(insert?.args[0]).toMatchObject({
+      assignment_method: 'timestamp_ranked',
+      payment_cycle_id: 'cycle-1',
+      eligibility_mode: 'final',
+      payment_snapshot_version: 7,
+      generation_reason: 'post_payment_rerun',
+      revised_from_batch_id: 'batch-0',
+      applicant_set_fingerprint: 'v1-abc',
+    });
+    const rows = supabaseMock.queriesFor('house_assignment_drafts').flatMap((query) => query.calls).find((call) => call.method === 'insert');
+    expect(rows?.args[0]).toEqual([expect.objectContaining({ applicant_id: 'app-1', batch_id: 'batch-1' })]);
+  });
 });
 
 describe('applyPlacementOverride', () => {
@@ -374,34 +438,35 @@ describe('applyPlacementOverride', () => {
     expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
   });
 
-  it('refuses a swap when the function is not deployed yet, instead of two separate updates', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+  it.each(['PGRST202', '42883'])('refuses a single move when the RPC is unavailable (%s), without reading or writing rows', async (code) => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code, message: 'Function unavailable' } });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+    ], 'Approved')).rejects.toThrow(/House placement changes are unavailable.*20261027120000.*Nothing was changed/);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('house_assignment_batches')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('refuses a swap when the RPC is unavailable, without recommending unvalidated single moves', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Function unavailable' } });
     await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
       { draftId: 'd1', houseProfileId: 'p-boo' },
       { draftId: 'd2', houseProfileId: 'p-toad' },
-    ], 'Approved')).rejects.toThrow(/20261027120000.*Nothing was changed/);
-    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+    ], 'Approved')).rejects.toThrow(/House placement changes are unavailable.*20261027120000.*Nothing was changed/);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
   });
 
-  it('falls back to one row update for a single move when the function is not deployed yet', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: '42883', message: 'function does not exist' } });
-    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
-    supabaseMock.queueResult('house_assignment_batches', { data: batch('draft'), error: null });
-    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
-
-    const rows = await houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], '  Approved  ');
-
-    expect(rows).toEqual([expect.objectContaining({ id: 'd1', house_profile_id: 'p-boo', override_reason: 'Approved' })]);
-    const updates = supabaseMock.queriesFor('house_assignment_drafts').flatMap((query) => query.calls).filter((call) => call.method === 'update');
-    expect(updates).toEqual([{ method: 'update', args: [{ house_profile_id: 'p-boo', override_reason: 'Approved' }] }]);
-  });
-
-  it('still requires a reason in the fallback unless the row returns to its generated House', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
-    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
-    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], ' '))
-      .rejects.toThrow(/reason is required/);
-    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+  it('sends a single move through the RPC without writing rows directly', async () => {
+    const updated = [auto({ house_profile_id: 'p-boo', override_reason: 'Approved' })];
+    supabaseMock.queueResult(RPC, { data: updated, error: null });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+    ], 'Approved')).resolves.toEqual(updated);
+    expect(supabaseMock.queriesFor(RPC)).toHaveLength(1);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
   });
 
   it('rejects an empty or oversized change list without calling the database', async () => {

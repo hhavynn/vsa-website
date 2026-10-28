@@ -1,8 +1,8 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../hooks/useAuth';
+import { feedbackRepository } from '../../../data/repos/feedback';
+import { toUserMessage } from '../../../data/errors';
 import { toast } from 'react-hot-toast';
 import { FeedbackSchema, type FeedbackFormData } from '../../../schemas';
 import { FieldError, FormAlert } from '../../ui/FieldError';
@@ -18,11 +18,12 @@ const inputCls = 'w-full touch:min-h-11 px-2 py-1 border border-zinc-300 dark:bo
 const labelCls = 'block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1';
 
 export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel, defaultType = 'feature', defaultTitle = '' }) => {
-  const { user } = useAuth();
-
+  const [invalidAttempt, setInvalidAttempt] = useState(0);
+  const [submitSucceeded, setSubmitSucceeded] = useState(false);
   const {
     register,
     handleSubmit,
+    setFocus,
     formState: { errors, isSubmitting },
     reset,
     setError: setFormError,
@@ -37,40 +38,45 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
   });
 
   const onSubmit = async (data: FeedbackFormData) => {
+    setSubmitSucceeded(false);
     try {
-      const { error } = await supabase
-        .from('feedback')
-        .insert([
-          {
-            user_id: user?.id || null,
-            type: data.type,
-            title: data.title.trim(),
-            description: data.description.trim(),
-            name: data.name?.trim() || null,
-            email: data.email?.trim() || null,
-          },
-        ]);
+      await feedbackRepository.submit(data);
 
-      if (error) throw error;
-
+      setSubmitSucceeded(true);
       toast.success('Thank you for your feedback!');
       reset();
       onSuccess?.();
     } catch (error) {
-      console.error('Error submitting feedback:', error);
       setFormError('root', {
         type: 'manual',
-        message: 'Failed to submit feedback. Please try again.',
+        message: toUserMessage(error, 'Failed to submit feedback. Please try again.'),
       });
     }
   };
 
+  const onInvalid = (invalidFields: FieldErrors<FeedbackFormData>) => {
+    setSubmitSucceeded(false);
+    setInvalidAttempt((attempt) => attempt + 1);
+    const order = ['type', 'title', 'description', 'name', 'email'] as const;
+    const firstInvalid = order.find((field) => Boolean(invalidFields[field]));
+    if (firstInvalid) setFocus(firstInvalid);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full" aria-describedby="feedback-privacy-note">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4 w-full" aria-describedby="feedback-privacy-note feedback-required-note">
       <p id="feedback-privacy-note" className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3 text-xs leading-5 text-[var(--color-text2)]">
         Authorized VSA website administrators review submissions. Name and email are optional. Do not include passwords,
         payment information, check-in codes, or other sensitive details.
       </p>
+      <p id="feedback-required-note" className="font-sans text-xs text-[var(--color-text2)]">
+        Category, Subject, and Message are required. Name and Email are optional.
+      </p>
+      <p role="status" aria-live="polite" className="sr-only">
+        {isSubmitting ? 'Submitting feedback.' : submitSucceeded ? 'Feedback submitted successfully.' : ''}
+      </p>
+      {invalidAttempt > 0 && (errors.name || errors.email || errors.type || errors.title || errors.description) && (
+        <FormAlert className="text-xs">Please correct the indicated fields and try again.</FormAlert>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="name" className={labelCls}>Name (Optional)</label>
@@ -84,7 +90,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.name && (
-            <FieldError id="feedback-name-error" message={errors.name.message} />
+            <FieldError id="feedback-name-error" message={errors.name.message} announce={false} />
           )}
         </div>
         <div>
@@ -99,7 +105,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.email && (
-            <FieldError id="feedback-email-error" message={errors.email.message} />
+            <FieldError id="feedback-email-error" message={errors.email.message} announce={false} />
           )}
         </div>
       </div>
@@ -121,7 +127,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             <option value="other">Other</option>
           </select>
           {errors.type && (
-            <FieldError id="feedback-type-error" message={errors.type.message} />
+            <FieldError id="feedback-type-error" message={errors.type.message} announce={false} />
           )}
         </div>
         <div>
@@ -136,7 +142,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
             className={inputCls}
           />
           {errors.title && (
-            <FieldError id="feedback-title-error" message={errors.title.message} />
+            <FieldError id="feedback-title-error" message={errors.title.message} announce={false} />
           )}
         </div>
       </div>
@@ -153,7 +159,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSuccess, onCancel,
           className={`${inputCls} resize-none`}
         />
         {errors.description && (
-          <FieldError id="feedback-description-error" message={errors.description.message} />
+          <FieldError id="feedback-description-error" message={errors.description.message} announce={false} />
         )}
       </div>
 

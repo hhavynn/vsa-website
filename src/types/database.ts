@@ -302,6 +302,8 @@ export type Database = {
           name: string;
           parent_member_id: string | null;
           photo_url: string | null;
+          pickup_academic_year_start: number | null;
+          pickup_term: string | null;
           role_label: string | null;
           updated_at: string;
         };
@@ -315,6 +317,8 @@ export type Database = {
           name: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
+          pickup_academic_year_start?: number | null;
+          pickup_term?: string | null;
           role_label?: string | null;
           updated_at?: string;
         };
@@ -328,6 +332,8 @@ export type Database = {
           name?: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
+          pickup_academic_year_start?: number | null;
+          pickup_term?: string | null;
           role_label?: string | null;
           updated_at?: string;
         };
@@ -365,6 +371,65 @@ export type Database = {
             columns: ["member_id"];
             isOneToOne: false;
             referencedRelation: "members";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ace_member_pickup_evidence: {
+        Row: {
+          ace_member_id: string;
+          candidate_academic_year_start: number | null;
+          candidate_term: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          raw_value: string | null;
+          review_note: string | null;
+          review_status: AcePickupReviewStatus;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          source_confidence: string | null;
+          source_kind: AcePickupSourceKind;
+          source_label: string | null;
+        };
+        Insert: {
+          ace_member_id: string;
+          candidate_academic_year_start?: number | null;
+          candidate_term?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          raw_value?: string | null;
+          review_note?: string | null;
+          review_status?: AcePickupReviewStatus;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_confidence?: string | null;
+          source_kind: AcePickupSourceKind;
+          source_label?: string | null;
+        };
+        Update: {
+          ace_member_id?: string;
+          candidate_academic_year_start?: number | null;
+          candidate_term?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          raw_value?: string | null;
+          review_note?: string | null;
+          review_status?: AcePickupReviewStatus;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_confidence?: string | null;
+          source_kind?: AcePickupSourceKind;
+          source_label?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ace_member_pickup_evidence_ace_member_id_fkey";
+            columns: ["ace_member_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_family_members";
             referencedColumns: ["id"];
           },
         ];
@@ -1666,19 +1731,191 @@ export type Database = {
         };
         Relationships: [];
       };
+      house_applicants: {
+        Row: {
+          applicant_key: string;
+          created_at: string;
+          created_by: string | null;
+          cycle_id: string;
+          id: string;
+          match_method: string | null;
+          match_status: string;
+          member_id: string | null;
+          payment_evidence: string | null;
+          payment_note: string | null;
+          payment_reference: string | null;
+          payment_status: string;
+          payment_updated_at: string | null;
+          payment_updated_by: string | null;
+          preferences: Json;
+          source_name: string;
+          source_row_number: number;
+          submission_timestamp: string;
+          updated_at: string;
+          withdrawn_reason: string | null;
+        };
+        Insert: {
+          applicant_key: string;
+          created_at?: string;
+          created_by?: string | null;
+          cycle_id: string;
+          id?: string;
+          match_method?: string | null;
+          match_status?: string;
+          member_id?: string | null;
+          payment_evidence?: string | null;
+          payment_note?: string | null;
+          payment_reference?: string | null;
+          payment_status?: string;
+          payment_updated_at?: string | null;
+          payment_updated_by?: string | null;
+          preferences: Json;
+          source_name: string;
+          source_row_number: number;
+          submission_timestamp: string;
+          updated_at?: string;
+          withdrawn_reason?: string | null;
+        };
+        Update: {
+          applicant_key?: string;
+          created_at?: string;
+          created_by?: string | null;
+          cycle_id?: string;
+          id?: string;
+          match_method?: string | null;
+          match_status?: string;
+          member_id?: string | null;
+          payment_evidence?: string | null;
+          payment_note?: string | null;
+          payment_reference?: string | null;
+          payment_status?: string;
+          payment_updated_at?: string | null;
+          payment_updated_by?: string | null;
+          preferences?: Json;
+          source_name?: string;
+          source_row_number?: number;
+          submission_timestamp?: string;
+          updated_at?: string;
+          withdrawn_reason?: string | null;
+        };
+        Relationships: [];
+      };
+      house_payment_audit: {
+        Row: {
+          actor: string | null;
+          applicant_id: string | null;
+          created_at: string;
+          cycle_id: string;
+          event_type: string;
+          from_value: string | null;
+          id: number;
+          reason: string | null;
+          request_id: string | null;
+          source: string;
+          to_value: string | null;
+        };
+        Insert: {
+          actor?: string | null;
+          applicant_id?: string | null;
+          created_at?: string;
+          cycle_id: string;
+          event_type: string;
+          from_value?: string | null;
+          id?: number;
+          reason?: string | null;
+          request_id?: string | null;
+          source: string;
+          to_value?: string | null;
+        };
+        Update: {
+          actor?: string | null;
+          applicant_id?: string | null;
+          created_at?: string;
+          cycle_id?: string;
+          event_type?: string;
+          from_value?: string | null;
+          id?: number;
+          reason?: string | null;
+          request_id?: string | null;
+          source?: string;
+          to_value?: string | null;
+        };
+        Relationships: [];
+      };
+      house_payment_cycles: {
+        Row: {
+          academic_year_start: number;
+          application_key: string;
+          created_at: string;
+          created_by: string | null;
+          cutoff_authorized_at: string | null;
+          cutoff_authorized_by: string | null;
+          cutoff_authorized_reason: string | null;
+          deadline_note: string | null;
+          grace_until: string | null;
+          id: string;
+          last_change_reason: string | null;
+          payment_deadline: string | null;
+          publishing_batch_id: string | null;
+          status_version: number;
+          updated_at: string;
+        };
+        Insert: {
+          academic_year_start: number;
+          application_key: string;
+          created_at?: string;
+          created_by?: string | null;
+          cutoff_authorized_at?: string | null;
+          cutoff_authorized_by?: string | null;
+          cutoff_authorized_reason?: string | null;
+          deadline_note?: string | null;
+          grace_until?: string | null;
+          id?: string;
+          last_change_reason?: string | null;
+          payment_deadline?: string | null;
+          publishing_batch_id?: string | null;
+          status_version?: number;
+          updated_at?: string;
+        };
+        Update: {
+          academic_year_start?: number;
+          application_key?: string;
+          created_at?: string;
+          created_by?: string | null;
+          cutoff_authorized_at?: string | null;
+          cutoff_authorized_by?: string | null;
+          cutoff_authorized_reason?: string | null;
+          deadline_note?: string | null;
+          grace_until?: string | null;
+          id?: string;
+          last_change_reason?: string | null;
+          payment_deadline?: string | null;
+          publishing_batch_id?: string | null;
+          status_version?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       house_assignment_batches: {
         Row: {
           academic_year_end: number;
           academic_year_start: number;
+          applicant_set_fingerprint: string | null;
           assignment_method: string;
           capacity_config: Json | null;
           created_at: string;
           created_by: string | null;
           effective_start_date: string;
+          eligibility_mode: string | null;
+          eligibility_summary: Json | null;
           excluded_applicants: Json | null;
+          generation_reason: string | null;
           id: string;
           locked_at: string | null;
+          payment_cycle_id: string | null;
+          payment_snapshot_version: number | null;
           published_at: string | null;
+          revised_from_batch_id: string | null;
           source_label: string | null;
           status: string;
           updated_at: string;
@@ -1686,15 +1923,22 @@ export type Database = {
         Insert: {
           academic_year_end: number;
           academic_year_start: number;
+          applicant_set_fingerprint?: string | null;
           assignment_method?: string;
           capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date: string;
+          eligibility_mode?: string | null;
+          eligibility_summary?: Json | null;
           excluded_applicants?: Json | null;
+          generation_reason?: string | null;
           id?: string;
           locked_at?: string | null;
+          payment_cycle_id?: string | null;
+          payment_snapshot_version?: number | null;
           published_at?: string | null;
+          revised_from_batch_id?: string | null;
           source_label?: string | null;
           status?: string;
           updated_at?: string;
@@ -1702,15 +1946,22 @@ export type Database = {
         Update: {
           academic_year_end?: number;
           academic_year_start?: number;
+          applicant_set_fingerprint?: string | null;
           assignment_method?: string;
           capacity_config?: Json | null;
           created_at?: string;
           created_by?: string | null;
           effective_start_date?: string;
+          eligibility_mode?: string | null;
+          eligibility_summary?: Json | null;
           excluded_applicants?: Json | null;
+          generation_reason?: string | null;
           id?: string;
           locked_at?: string | null;
+          payment_cycle_id?: string | null;
+          payment_snapshot_version?: number | null;
           published_at?: string | null;
+          revised_from_batch_id?: string | null;
           source_label?: string | null;
           status?: string;
           updated_at?: string;
@@ -1719,6 +1970,7 @@ export type Database = {
       };
       house_assignment_drafts: {
         Row: {
+          applicant_id: string | null;
           batch_id: string;
           created_at: string;
           generated_house_profile_id: string | null;
@@ -1739,6 +1991,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          applicant_id?: string | null;
           batch_id: string;
           created_at?: string;
           generated_house_profile_id?: string | null;
@@ -1759,6 +2012,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          applicant_id?: string | null;
           batch_id?: string;
           created_at?: string;
           generated_house_profile_id?: string | null;
@@ -1857,6 +2111,7 @@ export type Database = {
       };
       house_events: {
         Row: {
+          client_request_id: string | null;
           academic_year_end: number;
           academic_year_start: number;
           created_at: string;
@@ -1879,6 +2134,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          client_request_id?: string | null;
           academic_year_end: number;
           academic_year_start: number;
           created_at?: string;
@@ -1901,6 +2157,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          client_request_id?: string | null;
           academic_year_end?: number;
           academic_year_start?: number;
           created_at?: string;
@@ -2983,6 +3240,33 @@ export type Database = {
           },
         ];
       };
+      privileged_edge_quotas: {
+        Row: {
+          caller_hash: string;
+          day_count: number;
+          day_started: string;
+          minute_count: number;
+          minute_started: string;
+          scope: string;
+        };
+        Insert: {
+          caller_hash: string;
+          day_count?: number;
+          day_started: string;
+          minute_count?: number;
+          minute_started: string;
+          scope: string;
+        };
+        Update: {
+          caller_hash?: string;
+          day_count?: number;
+          day_started?: string;
+          minute_count?: number;
+          minute_started?: string;
+          scope?: string;
+        };
+        Relationships: [];
+      };
       program_content: {
         Row: {
           body: string | null;
@@ -3440,6 +3724,20 @@ export type Database = {
       };
     };
     Views: {
+      public_house_memberships: {
+        Row: {
+          academic_year_end: number;
+          academic_year_start: number;
+          accent_color: string | null;
+          display_name: string | null;
+          effective_end_date: string | null;
+          effective_start_date: string;
+          house_key: string | null;
+          house_profile_id: string;
+          member_id: string;
+        };
+        Relationships: [];
+      };
       public_members: {
         Row: {
           id: string;
@@ -3743,6 +4041,8 @@ export type Database = {
           name: string | null;
           parent_member_id: string | null;
           photo_url: string | null;
+          pickup_academic_year_start: number | null;
+          pickup_term: string | null;
           role_label: string | null;
           updated_at: string | null;
         };
@@ -3978,6 +4278,32 @@ export type Database = {
         Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
         Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];
       };
+      admin_save_house_event: {
+        Args: {
+          p_event_id: string | null;
+          p_event: Json;
+          p_host_ids: string[];
+          p_request_id: string | null;
+          p_expected_updated_at?: string | null;
+        };
+        Returns: Database['public']['Tables']['house_events']['Row'];
+      };
+      admin_begin_house_batch_publish: {
+        Args: { p_batch_id: string };
+        Returns: undefined;
+      };
+      admin_house_points_reconciliation: {
+        Args: { p_year: number };
+        Returns: Json;
+      };
+      admin_event_attendance_readiness: {
+        Args: { p_year: number; p_term_id?: string | null };
+        Returns: Json;
+      };
+      admin_attest_event_attendance: {
+        Args: { p_event_id: string; p_status: string; p_note?: string | null };
+        Returns: Json;
+      };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
         Returns: Json;
@@ -3985,6 +4311,14 @@ export type Database = {
       admin_lookup_members: {
         Args: { p_emails?: string[] | null; p_surnames?: string[] | null };
         Returns: Json;
+      };
+      admin_link_house_applicant_member: {
+        Args: { p_applicant_id: string; p_member_id: string | null; p_reason: string };
+        Returns: number;
+      };
+      admin_register_house_applicants: {
+        Args: { p_cycle_id: string; p_applicants: Json; p_source?: string };
+        Returns: { applicant_key: string; applicant_id: string; created: boolean }[];
       };
       admin_search_members: {
         Args: { p_query: string; p_limit?: number };
@@ -4008,8 +4342,32 @@ export type Database = {
         };
         Returns: Json;
       };
+      admin_set_house_applicant_payments: {
+        Args: {
+          p_cycle_id: string;
+          p_changes: Json;
+          p_source: string;
+          p_reason: string | null;
+          p_request_id: string;
+          p_expected_version?: number | null;
+        };
+        Returns: Json;
+      };
+      house_batch_payment_blockers: {
+        Args: { p_batch_id: string };
+        Returns: string[];
+      };
       publish_ace_assignment_cycle: {
         Args: { p_cycle_id: string };
+        Returns: Json;
+      };
+      set_ace_member_pickup_year: {
+        Args: {
+          p_ace_member_id: string;
+          p_academic_year_start: number | null;
+          p_term?: string | null;
+          p_evidence_id?: string | null;
+        };
         Returns: Json;
       };
       publish_cabinet_roster_cycle: {
@@ -4099,9 +4457,29 @@ export type Database = {
         Args: { p_admin_note?: string; p_request_id: string };
         Returns: undefined;
       };
+      reserve_privileged_edge_quota: {
+        Args: {
+          p_caller_hash: string;
+          p_caller_per_minute: number;
+          p_global_per_day: number;
+          p_scope: string;
+        };
+        Returns: boolean;
+      };
       smart_merge_members: {
         Args: { p_source_id: string; p_target_id: string };
         Returns: undefined;
+      };
+      submit_feedback_guarded: {
+        Args: {
+          p_description: string;
+          p_email?: string;
+          p_name?: string;
+          p_title: string;
+          p_type: string;
+          p_user_id?: string;
+        };
+        Returns: boolean;
       };
       sync_active_academic_term: {
         Args: { p_today?: string };
@@ -4289,6 +4667,14 @@ export type ApplicationKey =
   | "vcn_props_team_interest"
   | "wnc_team_form";
 export type ApplicationStatus = "disabled" | "not_open" | "open" | "closed";
+/** Where a historical ACE pickup-year value came from (admin-only evidence). */
+export type AcePickupSourceKind =
+  | "import_json"
+  | "workbook_year_row"
+  | "official_pairing"
+  | "assignment_cycle"
+  | "admin_entry";
+export type AcePickupReviewStatus = "pending" | "approved" | "rejected" | "superseded";
 export type ImportJobStatus = "completed" | "failed";
 export type ImportSourceType =
   "csv_url" | "google_sheets_csv" | "manual" | "unknown";
