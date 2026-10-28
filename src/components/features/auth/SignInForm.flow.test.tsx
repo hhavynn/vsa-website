@@ -129,8 +129,9 @@ describe('SignInForm', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/admins only/i);
-    await waitFor(() => expect(alert.parentElement).toHaveFocus());
-    expect(alert.parentElement).toHaveAttribute('tabindex', '-1');
+    const focusTarget = screen.getByTestId('sign-in-auth-error-focus');
+    await waitFor(() => expect(focusTarget).toHaveFocus());
+    expect(focusTarget).toHaveAttribute('tabindex', '-1');
   });
 
   it('prefills the email when one is supplied', async () => {
