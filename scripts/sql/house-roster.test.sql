@@ -1,4 +1,4 @@
--- Disposable fixture for 20261028110000_admin_house_roster.sql (data shared with the overview test). Stub tables
+-- Disposable fixture for 20261028075801_admin_house_roster.sql (data shared with the overview test). Stub tables
 -- carry only the columns read; house_yearly_points is the production view
 -- definition, so the window credits can be checked against it. Synthetic people.
 \pset tuples_only on
@@ -28,7 +28,7 @@ create view public.house_yearly_points as
  GROUP BY hp.house_key, hp.id, hp.display_name, t.academic_year_start;
 
 set client_min_messages = warning;
-\ir ../../supabase/migrations/20261028110000_admin_house_roster.sql
+\ir ../../supabase/migrations/20261028075801_admin_house_roster.sql
 set client_min_messages = notice;
 insert into public.members select ('30000000-0000-0000-0000-00000000000'||x)::uuid, 'Fictional', upper(x), x||'@example.invalid' from unnest(array['a','b','c','d','e','f']) x;
 
