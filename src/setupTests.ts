@@ -36,6 +36,15 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom has no HTMLCanvasElement 2D context. axe-core uses it for font/ligature
+// detection during color-contrast analysis; returning null lets axe skip that
+// step without filling CI logs with not-implemented warnings.
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  writable: true,
+  configurable: true,
+  value: () => null,
+});
+
 // jsdom has no IntersectionObserver, but every browser the site supports does.
 // framer-motion's whileInView (RevealOnScrollWrapper) constructs one on mount,
 // so without this stub any page using it throws into the ErrorBoundary under
