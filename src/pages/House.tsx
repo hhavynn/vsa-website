@@ -677,7 +677,7 @@ export function House() {
           {/* Year selector */}
           <div className="program-section py-4">
             <div className="program-section-inner">
-              <HouseYearSelector activeStartYear={activeYear} />
+              <HouseYearSelector activeStartYear={activeYear} currentYear={currentYear} />
             </div>
           </div>
 
@@ -746,7 +746,7 @@ export function House() {
         {/* ── Year Selector ── */}
         <div className="program-section py-4">
           <div className="program-section-inner">
-            <HouseYearSelector activeStartYear={activeYear} />
+            <HouseYearSelector activeStartYear={activeYear} currentYear={currentYear} />
           </div>
         </div>
 
