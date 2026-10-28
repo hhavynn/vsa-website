@@ -68,7 +68,7 @@ describe('cross-harness governance parity (#309)', () => {
 
   it('detects a disconnected adapter or a shadow never-do section', () => {
     const sample = read('GEMINI.md');
-    expect(adapterContract(sample.replaceAll('AGENTS.md', 'OTHER.md')).root).toBe(false);
+    expect(adapterContract(sample.split('AGENTS.md').join('OTHER.md')).root).toBe(false);
     expect(adapterContract(sample.replace(workflow, 'other-process.md')).workflow).toBe(false);
     expect(adapterContract(sample + '\n## Things to never do\n- sample').noShadowNeverDo).toBe(false);
   });
