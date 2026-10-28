@@ -6,7 +6,16 @@
  * This file is readable by anyone who opens browser dev tools. Never add private,
  * admin-only, or sensitive data here. Authority: AGENTS.md § "Things to never do"
  * (don't expose private member data, emails, check-in codes, or admin notes publicly).
+ *
+ * Maintenance rule (#272): keep this copy evergreen. A fallback message must never
+ * hardcode an academic year, a quarter, a calendar date, or an event/deadline it
+ * cannot guarantee. When a year is genuinely needed — a past House year's published
+ * standings — derive its label from src/lib/academicTerms.ts instead of typing digits.
+ * Reviewed 2026-10-26.
  */
+
+import { formatAcademicYear } from '../lib/academicTerms';
+import { LEGACY_HOUSE_ARCHIVE } from '../data/legacyHouseArchive';
 
 export const FALLBACK_LINKS = {
   instagram: 'https://www.instagram.com/vsaatucsd/',
@@ -31,7 +40,7 @@ export const FALLBACK_EVENTS = {
   ],
 } as const;
 
-// ── House — 2025-2026 ────────────────────────────────────────────────────────
+// ── House ────────────────────────────────────────────────────────────────────
 
 export interface FallbackHouseStanding {
   name: string;
@@ -40,15 +49,51 @@ export interface FallbackHouseStanding {
   accentColor: string;
 }
 
-export const FALLBACK_HOUSE_STANDINGS_2025_2026: FallbackHouseStanding[] = [
-  { name: 'Bowser', emoji: '🐢', points: 247, accentColor: '#e84393' },
-  { name: 'Donkey Kong', emoji: '🦍', points: 215, accentColor: '#f97316' },
-  { name: 'Toad', emoji: '🍄', points: 158, accentColor: '#8b5cf6' },
-  { name: 'Boo', emoji: '👻', points: 125, accentColor: '#06b6d4' },
+/**
+ * Academic-year start of the House year whose published totals are mirrored below.
+ * Uses the same start-year key as src/lib/academicTerms.ts, so the label is derived
+ * rather than typed.
+ */
+export const FALLBACK_HOUSE_STANDINGS_YEAR_START = 2025;
+
+/**
+ * Published House standings for a completed House year, used when the live standings
+ * query fails. The points are the House Chair's official public totals — the same
+ * figures src/utils/housePublicPointOverrides.ts serves — and the accent colours are
+ * the canonical house colours from src/constants/houses.ts.
+ * src/config/publicFallbackContent.test.ts pins both against those sources so the
+ * fallback can never drift into contradicting the live site.
+ */
+export const FALLBACK_HOUSE_STANDINGS: FallbackHouseStanding[] = [
+  { name: 'Bowser', emoji: '🐢', points: 247, accentColor: '#f97316' },
+  { name: 'Donkey Kong', emoji: '🦍', points: 215, accentColor: '#eab308' },
+  { name: 'Toad', emoji: '🍄', points: 158, accentColor: '#ef4444' },
+  { name: 'Boo', emoji: '👻', points: 125, accentColor: '#94a3b8' },
 ];
 
+/**
+ * The mirrored standings for the requested academic year, or null when that year
+ * has no published snapshot (never invent a total for a year still in progress).
+ */
+export function getFallbackHouseStandings(
+  academicYearStart: number | null | undefined
+): FallbackHouseStanding[] | null {
+  if (academicYearStart !== FALLBACK_HOUSE_STANDINGS_YEAR_START) return null;
+  return FALLBACK_HOUSE_STANDINGS;
+}
+
+/** Academic-year label of the mirrored standings, derived from the shared utility. */
+export function getFallbackHouseStandingsLabel(): string {
+  return formatAcademicYear(FALLBACK_HOUSE_STANDINGS_YEAR_START);
+}
+
+/** Shown above the mirrored standings so nobody reads them as live results. */
+export function getFallbackHouseStandingsNotice(): string {
+  return `Showing the published totals from the ${getFallbackHouseStandingsLabel()} House year. Live House standings are temporarily unavailable.`;
+}
+
 export const FALLBACK_HOUSE_MESSAGE =
-  'Live House data is temporarily unavailable. These are the public 2025-2026 House totals.';
+  'Live House standings are temporarily unavailable. Published standings from past House years are still available in the House archive.';
 
 // ── House Archive ────────────────────────────────────────────────────────────
 
@@ -59,50 +104,24 @@ export interface FallbackLegacyYear {
   verified: boolean;
 }
 
-export const FALLBACK_LEGACY_HOUSE_YEARS: FallbackLegacyYear[] = [
-  {
-    academicYear: '2024-2025',
-    theme: 'Sanrio',
-    houses: ['Badtz-maru', 'Keroppi', 'Kuromi'],
-    verified: true,
-  },
-  {
-    academicYear: '2023-2024',
-    theme: 'Drinks',
-    houses: ['Ca Phe Sua Da', 'Banana Milk', 'Matcha', 'Yakult'],
-    verified: true,
-  },
-  {
-    academicYear: '2022-2023',
-    theme: 'Pokémon',
-    houses: ['Squirtle', 'Pikachu', 'Bulbasaur', 'Charmander'],
-    verified: true,
-  },
-  {
-    academicYear: '2021-2022',
-    theme: 'Mythological Creatures',
-    houses: ['Phoenix', 'Unicorn', 'Dragon', 'Tortoise'],
-    verified: true,
-  },
-  {
-    academicYear: '2019-2020',
-    theme: 'Fashion Brands',
-    houses: ['Gucci', 'Comme des Garçons', 'Supreme', 'Yves Saint Laurent'],
-    verified: true,
-  },
-  {
-    academicYear: '2018-2019',
-    theme: 'Superheroes / Villains',
-    houses: ['Flash', 'Iron', 'Loki', 'Light'],
-    verified: true,
-  },
-];
+/**
+ * House years for the archive fallback, derived from the canonical archive
+ * (src/data/legacyHouseArchive.ts) instead of a second copy of the House history.
+ */
+export const FALLBACK_LEGACY_HOUSE_YEARS: FallbackLegacyYear[] = LEGACY_HOUSE_ARCHIVE.map(
+  (entry) => ({
+    academicYear: entry.academicYear,
+    theme: entry.theme,
+    houses: entry.houses,
+    verified: entry.status !== 'unconfirmed',
+  })
+);
 
 // ── Cabinet ──────────────────────────────────────────────────────────────────
 
 export const FALLBACK_CABINET = {
   message:
-    'Cabinet info is temporarily unavailable. Check official VSA channels for current contacts.',
+    "Cabinet info is temporarily unavailable. Check VSA's Instagram or Linktree for the current cabinet.",
 } as const;
 
 // ── Gallery ──────────────────────────────────────────────────────────────────
@@ -128,27 +147,27 @@ export const FALLBACK_GET_INVOLVED_PROGRAMS: FallbackProgram[] = [
     slug: 'house',
   },
   {
-    name: 'ACE',
+    name: 'Anh Chi Em (ACE)',
     description:
-      'Academic Community and Excellence — study sessions, workshops, and academic support within VSA.',
+      'VSA’s Big/Little program: members are paired with an older sibling, an “Anh” or “Chị”, who shows them the ropes and helps them find their place in the org.',
     slug: 'ace',
   },
   {
     name: 'Intern Program',
     description:
       'A hands-on program for members who want to get involved in running VSA events and operations.',
-    slug: 'internship',
+    slug: 'intern-program',
   },
   {
     name: 'VCN',
     description:
-      "Vietnamese Culture Night — VSA's annual cultural performance showcasing Vietnamese history, traditions, and music.",
+      'Vietnamese Culture Night — VSA’s annual culture show, where students perform Vietnamese dance, theatre, and storytelling on stage and behind the scenes.',
     slug: 'vcn',
   },
   {
     name: 'WNC',
     description:
-      "Wild N' Culture — an intercollegiate cultural showcase competition hosted annually by VSA at UCSD.",
+      "Wild N' Culture — VSA's annual intercollegiate comedy competition, inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture.",
     slug: 'wild-n-culture',
   },
   {
@@ -179,12 +198,12 @@ export const FALLBACK_UVSA_NETWORK = {
 
 export const FALLBACK_VCN = {
   description:
-    "Vietnamese Culture Night (VCN) is VSA at UCSD's annual cultural performance featuring traditional Vietnamese dances, music, and a story celebrating Vietnamese heritage. It is one of VSA's biggest events of the year.",
+    "Vietnamese Culture Night (VCN) is VSA at UCSD's annual culture show: a narrative stage production and dance performances that celebrate Vietnamese culture, built and performed by students.",
 } as const;
 
 export const FALLBACK_WNC = {
   description:
-    "Wild N' Culture (WNC) is an intercollegiate cultural showcase competition hosted by VSA at UCSD each year. Schools from across the UVSA network compete in dance, music, and performance.",
+    "Wild N' Culture (WNC) is VSA at UCSD's annual intercollegiate comedy competition, inspired by Wild 'N Out and rooted in Vietnamese and Asian American culture. Schools face off in live improv-style games and roast battles.",
 } as const;
 
 // ── Points / Leaderboard ─────────────────────────────────────────────────────
@@ -195,10 +214,8 @@ export const FALLBACK_POINTS = {
 } as const;
 
 export const FALLBACK_LEADERBOARD = {
-  message:
-    'Individual points lookup is temporarily unavailable.',
-  houseMessage:
-    'Live House data is temporarily unavailable. These are the public 2025-2026 House totals.',
+  message: 'Individual points lookup is temporarily unavailable.',
+  houseMessage: FALLBACK_HOUSE_MESSAGE,
 } as const;
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
@@ -225,7 +242,7 @@ export const FALLBACK_CABINET_ROLES = [
     short_description: 'The face and primary leader of the organization, responsible for guiding cabinet vision, overseeing all board members, and ensuring VSA meets its cultural, social, and academic goals.',
     responsibilities: [
       'Oversee and manage the entire Executive and General Board.',
-      'Facilitate weekly cabinet and general body meetings.',
+      'Facilitate cabinet and general body meetings.',
       'Serve as the primary liaison to UCSD CSI and the university.',
       'Manage crisis resolution and high-level organizational strategy.'
     ],
@@ -254,7 +271,7 @@ export const FALLBACK_CABINET_ROLES = [
     board_group: 'Executive Board',
     short_description: 'The bridge between UCSD VSA and the broader UVSA Southern California network.',
     responsibilities: [
-      'Represent UCSD at monthly Intercollegiate Council (ICC) meetings.',
+      'Represent UCSD at Intercollegiate Council (ICC) meetings.',
       'Coordinate rides and logistics for members attending external events.',
       'Communicate external opportunities to UCSD members.',
       'Maintain relationships with other university VSAs.'
@@ -287,7 +304,7 @@ export const FALLBACK_CABINET_ROLES = [
     responsibilities: [
       'Take minutes during cabinet meetings.',
       'Track member attendance and update the points leaderboard.',
-      'Write and send the weekly VSA newsletter.',
+      'Write and send the VSA newsletter.',
       'Book rooms for GBMs and events.'
     ],
     works_with: ['President', 'Media Director', 'Events Chair'],
@@ -333,7 +350,7 @@ export const FALLBACK_CABINET_ROLES = [
     responsibilities: [
       'Plan and lead logistics for larger social events and retreats.',
       'Coordinate with cabinet for event execution, including GBMs and socials.',
-      'Plan and organize the annual Winter Retreat.',
+      'Plan and organize the annual winter retreat.',
       'Work with Media Chairs to promote VSA social events when relevant.'
     ],
     works_with: ['Secretary', 'Treasurer', 'PR Chair', 'Media Chairs'],

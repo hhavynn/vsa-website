@@ -43,7 +43,10 @@ import { HouseMemberLeaderboard } from '../components/features/house/HouseMember
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
-import { FALLBACK_HOUSE_STANDINGS_2025_2026 } from '../config/publicFallbackContent';
+import {
+  getFallbackHouseStandings,
+  getFallbackHouseStandingsNotice,
+} from '../config/publicFallbackContent';
 import { Skeleton } from '../components/ui/Skeleton';
 import { readableInk } from '../lib/readableInk';
 import { cn } from '../lib/utils';
@@ -512,6 +515,7 @@ export function Leaderboard() {
   const [houseStandings, setHouseStandings] = useState<HouseStanding[]>([]);
   const [houseActivity, setHouseActivity] = useState<HouseRecentActivity[]>([]);
   const [houseLoading, setHouseLoading] = useState(false);
+  const [houseFallbackNotice, setHouseFallbackNotice] = useState<string | null>(null);
   const [error, setError] = useState<unknown | null>(null);
   const [isDegradedMode, setIsDegradedMode] = useState(false);
   const [activeView, setActiveView] = useState<'individual' | 'houses'>(
@@ -665,6 +669,7 @@ export function Leaderboard() {
           .map((house, index) => ({ ...house, rank: index + 1 }));
 
         setHouseStandings(ranked);
+        setHouseFallbackNotice(null);
 
         if (selectedYear === 'all') {
           setHouseActivity([]);
@@ -677,10 +682,13 @@ export function Leaderboard() {
           setError(err);
           if (isSupabaseUnavailable(err)) {
             setIsDegradedMode(true);
-            
-            // Fallback for 2025-2026 if live query fails
-            if (selectedYear === 2025) {
-              const fallbackStandings: HouseStanding[] = FALLBACK_HOUSE_STANDINGS_2025_2026.map((s, idx) => ({
+
+            // Published totals for a completed House year; null for a year with no
+            // published snapshot, so a live year never shows a made-up standing.
+            const publishedStandings =
+              selectedYear === 'all' ? null : getFallbackHouseStandings(selectedYear);
+            if (publishedStandings) {
+              const fallbackStandings: HouseStanding[] = publishedStandings.map((s, idx) => ({
                 house: s.name.toLowerCase().replace(/\s+/g, '-'),
                 display_name: s.name,
                 emoji: s.emoji,
@@ -693,11 +701,14 @@ export function Leaderboard() {
                 latest_activity_at: null,
               }));
               setHouseStandings(fallbackStandings);
+              setHouseFallbackNotice(getFallbackHouseStandingsNotice());
             } else {
               setHouseStandings([]);
+              setHouseFallbackNotice(null);
             }
           } else {
             setHouseStandings([]);
+            setHouseFallbackNotice(null);
           }
           setHouseActivity([]);
         }
@@ -747,7 +758,7 @@ export function Leaderboard() {
   if (error && !isDegradedMode) {
     return (
       <>
-        <PageTitle title="Leaderboard" />
+        <PageTitle />
         <div className="vsa-container py-20">
           <ContentUnavailableState
             title="Leaderboard temporarily unavailable"
@@ -768,7 +779,7 @@ export function Leaderboard() {
 
   return (
     <>
-      <PageTitle title="Leaderboard" />
+      <PageTitle />
       {isDegradedMode && <DegradedModeBanner sourceName="leaderboard" />}
 
       <div className="vsa-page-hero">
@@ -1001,6 +1012,7 @@ export function Leaderboard() {
               loading={houseLoading}
               selectedYearLabel={selectedYearLabel}
               metric={activeTab}
+              fallbackNotice={houseFallbackNotice}
             />
             {selectedYear !== null && (
               <div className="mt-12">
@@ -1293,13 +1305,15 @@ function HouseStandingsWall({
   activity,
   loading,
   selectedYearLabel,
-  metric
+  metric,
+  fallbackNotice
 }: {
   standings: HouseStanding[];
   activity: HouseRecentActivity[];
   loading: boolean;
   selectedYearLabel: string;
   metric: 'points' | 'events';
+  fallbackNotice?: string | null;
 }) {
   if (loading) return <div className="scrapbook-empty text-sm">Loading house standings...</div>;
   if (standings.length === 0) {
@@ -1312,6 +1326,15 @@ function HouseStandingsWall({
 
   return (
     <div className="space-y-12">
+      {fallbackNotice && (
+        <p
+          className="rounded border px-4 py-3 font-sans text-xs leading-relaxed"
+          style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text3)' }}
+        >
+          {fallbackNotice}
+        </p>
+      )}
+
       <div className="flex items-center gap-3 px-2">
         <div className="h-8 w-2 rounded-full bg-[var(--gold-t)]" />
         <h3 className="font-serif text-2xl font-bold">House Competition</h3>
