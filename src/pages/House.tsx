@@ -98,13 +98,6 @@ function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms'], y
   return terms[0]?.academic_year_start ?? null;
 }
 
-function assetMapByHouse(assets: HousePageAsset[]) {
-  return assets.reduce((map, asset) => {
-    map.set(asset.house_key ?? asset.house, asset);
-    return map;
-  }, new Map<string, HousePageAsset>());
-}
-
 function getHouseLabel(house: string, asset?: HousePageAsset | null, displayName?: string | null) {
   return displayName || asset?.display_name || HOUSE_LABELS[house as HouseName] || house;
 }
@@ -337,7 +330,6 @@ export function House() {
   // that the Houses are unannounced; only say so once the query has succeeded.
   const houseAssetsSettled = !houseAssetsLoading && !houseAssetsError;
   const isDegradedMode = isSupabaseUnavailable(houseAssetsError);
-  const houseAssetsByName = assetMapByHouse(houseAssets);
   const displayedHouses = isFutureYear
     ? []
     : houseAssets.length > 0
