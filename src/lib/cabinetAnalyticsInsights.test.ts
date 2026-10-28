@@ -1,4 +1,4 @@
-import { buildCabinetAreaInsights, buildCabinetAnalyticsCsv, CabinetTrafficSnapshot } from './cabinetAnalyticsInsights';
+import { buildCabinetAreaInsights, buildCabinetAnalyticsCsv, safeCabinetPageLabel, CabinetTrafficSnapshot } from './cabinetAnalyticsInsights';
 
 const sample: CabinetTrafficSnapshot = {
   summary: { users: 41, newUsers: 17, sessions: 63, pageViews: 150 },
@@ -31,6 +31,13 @@ describe('cabinet analytics: consent-aware aggregate reporting (#288)', () => {
     const sum = grouped.reduce((total, area) => total + area.views, 0);
     expect(sum).toBe(67);
     expect(sum).not.toBe(sample.summary.pageViews);
+  });
+
+  it('hides URL parameters, dynamic segments and unknown paths in the existing top-pages list', () => {
+    expect(safeCabinetPageLabel('/events?name=Student+Name')).toBe('/events');
+    expect(safeCabinetPageLabel('/events/private-student-id')).toBe('/events/…');
+    expect(safeCabinetPageLabel('/admin/members?email=student@example.com')).toBe('Other page');
+    expect(safeCabinetPageLabel('https://other.example/points')).toBe('Other page');
   });
 
   it('exports only safe predefined labels and aggregate counts, never individual paths', () => {
