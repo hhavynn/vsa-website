@@ -22,7 +22,8 @@ export function upcomingSortMs(event: EventLifecycleCandidate): number {
   return event.start_time ? start : start + DAY_MS - 1;
 }
 
-function houseCandidate(event: Pick<HouseEvent, 'event_date' | 'start_time' | 'end_time'>): EventLifecycleCandidate {
+/** A House event in the shape the lifecycle helpers (and their timer) take. */
+export function houseCandidate(event: Pick<HouseEvent, 'event_date' | 'start_time' | 'end_time'>): EventLifecycleCandidate {
   return { date: event.event_date, start_time: event.start_time, end_time: event.end_time, end_date: null };
 }
 

@@ -47,7 +47,7 @@ const houseRow = (id: string, date: string, hosts: object[], title: string) => (
 
 function LocationProbe() {
   const location = useLocation();
-  return <output data-testid="location">{location.search}</output>;
+  return <output data-testid="location" data-key={location.key}>{location.search}</output>;
 }
 
 function renderAt(url: string) {
@@ -78,7 +78,7 @@ afterEach(() => jest.useRealTimers());
 
 it('reads published House events without a bogus year filter and merges them in time order', async () => {
   renderAt('/events');
-  const collab = await screen.findByRole('link', { name: /House event hosted by Rarity \+ Applejack: Fictional Pony Picnic/ });
+  const collab = await screen.findByRole('link', { name: /House event.*Rarity.*Applejack.*Fictional Pony Picnic.*Wed, Oct 21, 2026/ });
   expect(collab).toHaveAttribute('href', '/house/year/2026-2027/rarity#house-event-he-collab');
   expect(screen.getAllByText('Fictional Pony Picnic')).toHaveLength(1);
 
@@ -102,6 +102,37 @@ it('keeps the House filter and host in the URL', async () => {
   expect(screen.getByTestId('location')).toHaveTextContent('?type=house&host=rarity');
   expect(screen.getByText('Fictional Pony Picnic')).toBeInTheDocument();
   expect(screen.queryByText('Fictional Apple Bake')).not.toBeInTheDocument();
+});
+
+it('names every host for logged-out visitors, whose profile embed comes back empty', async () => {
+  // Anon cannot read house_page_assets; the join still carries the host ids.
+  supabaseMock.setDefault('house_events', {
+    data: [{ ...houseRow('he-collab', '2026-10-21', [], 'Fictional Pony Picnic'), houses: [
+      { house_page_asset_id: 'hp-applejack', house: null },
+      { house_page_asset_id: 'hp-rarity', house: null },
+    ] }],
+    error: null,
+  });
+  supabaseMock.setDefault('published_house_page_assets', { data: [rarity, applejack], error: null });
+  renderAt('/events');
+  // Primary host (Rarity) first, both named, linked to the primary's card.
+  const link = await screen.findByRole('link', { name: /House event.*Rarity.*Applejack.*Fictional Pony Picnic/ });
+  expect(link).toHaveAttribute('href', '/house/year/2026-2027/rarity#house-event-he-collab');
+});
+
+it('ignores an unknown host instead of hiding every event', async () => {
+  renderAt('/events?type=house&host=not-a-house');
+  expect(await screen.findByText('Fictional Apple Bake')).toBeInTheDocument();
+  expect(screen.getByText('Fictional Pony Picnic')).toBeInTheDocument();
+  expect(screen.getByLabelText('Hosted by')).toHaveValue('');
+});
+
+it('does not navigate when the active filter is clicked again', async () => {
+  renderAt('/events?type=house');
+  await screen.findByText('Fictional Apple Bake');
+  const key = screen.getByTestId('location').getAttribute('data-key');
+  fireEvent.click(screen.getByRole('button', { name: 'House Events' }));
+  expect(screen.getByTestId('location')).toHaveAttribute('data-key', key);
 });
 
 it('opens straight onto a shared House filter link', async () => {

@@ -16,7 +16,7 @@ import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTimeRange } from '../lib/eventTime';
-import { UpcomingItem, mergeUpcoming } from '../lib/upcomingEvents';
+import { UpcomingItem, houseCandidate, mergeUpcoming } from '../lib/upcomingEvents';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import {
   addDaysToDateOnly,
@@ -87,10 +87,9 @@ function HouseEventPreviewCard({ item }: { item: HouseUpcomingItem }) {
   const color = primaryHouse ? houseFill(primaryHouse) : 'var(--brand)';
   const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
   const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
-  const hostNames = eventHouses.map((h) => h.display_name || h.house).join(' + ');
 
   return (
-    <Link to={item.detailPath} aria-label={`House event${hostNames ? ` hosted by ${hostNames}` : ''}: ${event.title}`} className="scrapbook-paper group/spotlight group relative grid min-h-11 gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
+    <Link to={item.detailPath} className="scrapbook-paper group/spotlight group relative grid min-h-11 gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
         <OptimizedImage
           src={imageUrl}
@@ -139,15 +138,16 @@ export function Events() {
   const typeParam = searchParams.get('type');
   const activeFilter: FilterKey = FILTERS.some((filter) => filter.key === typeParam) ? (typeParam as FilterKey) : 'all';
   const hostParam = activeFilter === 'house' ? searchParams.get('host') : null;
-  const updateFilterParams = (type: FilterKey, host: string | null = null) =>
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (type === 'all') next.delete('type');
-      else next.set('type', type);
-      if (host) next.set('host', host);
-      else next.delete('host');
-      return next;
-    });
+  const updateFilterParams = (type: FilterKey, host: string | null = null) => {
+    const next = new URLSearchParams(searchParams);
+    if (type === 'all') next.delete('type');
+    else next.set('type', type);
+    if (host) next.set('host', host);
+    else next.delete('host');
+    // Same filter again: no new history entry. Otherwise keep the scroll position.
+    if (next.toString() === searchParams.toString()) return;
+    setSearchParams(next, { state: { keepScroll: true } });
+  };
   const setActiveFilter = (type: FilterKey) => updateFilterParams(type);
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(
     () => searchParams.get('term')
@@ -180,6 +180,15 @@ export function Events() {
         : eligibleUpcomingEvents.filter((event) => event.event_type === activeFilter),
     [activeFilter, eligibleUpcomingEvents]
   );
+
+  // Published House events only (the repository filters drafts out).
+  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<HouseEvent[]>({
+    queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const { terms, loading: termsLoading, error: termsError } = useAcademicTerms();
 
@@ -232,9 +241,10 @@ export function Events() {
     return pages.filter((event) => isEventPast(event, currentNow));
   }, [pastEventsData, currentNow]);
 
+  // House events too, so one that ends drops out of Upcoming on time.
   const allEventsForTimer = useMemo(() => {
-    return [...unfilteredUpcomingEvents, ...archivedEvents];
-  }, [unfilteredUpcomingEvents, archivedEvents]);
+    return [...unfilteredUpcomingEvents, ...archivedEvents, ...upcomingHouseEvents.map(houseCandidate)];
+  }, [unfilteredUpcomingEvents, archivedEvents, upcomingHouseEvents]);
 
   const timerNow = useEventLifecycleTimer(allEventsForTimer, [['events']]);
 
@@ -293,14 +303,6 @@ export function Events() {
   const summerEventsMessage = getSummerBreakMessage('events');
   const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(currentNow.toISOString())?.code);
   const activeYear = activeTerm?.academic_year_start ?? null;
-  // Published House events only (the repository filters drafts out).
-  const { data: upcomingHouseEvents = [], isError: houseEventsError } = useQuery<HouseEvent[]>({
-    queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
-    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
   const { data: houseAssets = [] } = useQuery<HousePageAsset[]>({
     queryKey: ['events-page', 'house-assets', activeYear],
     queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
@@ -329,14 +331,16 @@ export function Events() {
     }
     return Array.from(byKey, ([slug, label]) => ({ slug, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [houseItems]);
+  // An unknown host (stale or mistyped link) is ignored rather than hiding everything.
+  const effectiveHost = hostParam && hostOptions.some((option) => option.slug === hostParam) ? hostParam : null;
   const upcomingItems = useMemo<UpcomingItem[]>(() => {
     if (activeFilter === 'house') {
-      return hostParam
-        ? houseItems.filter((item) => item.kind === 'house' && (item.event.houses ?? []).some((h) => houseSlugFromKey(h.house_key || h.house) === hostParam))
+      return effectiveHost
+        ? houseItems.filter((item) => item.kind === 'house' && (item.event.houses ?? []).some((h) => houseSlugFromKey(h.house_key || h.house) === effectiveHost))
         : houseItems;
     }
     return mergeUpcoming(upcomingEventsAll, activeFilter === 'all' ? houseEventsWithHosts : [], currentNow);
-  }, [activeFilter, hostParam, houseItems, upcomingEventsAll, houseEventsWithHosts, currentNow]);
+  }, [activeFilter, effectiveHost, houseItems, upcomingEventsAll, houseEventsWithHosts, currentNow]);
   const [featured, ...rest] = upcomingItems;
   const showsHouseEvents = upcomingItems.some((item) => item.kind === 'house');
   const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(eligibleUpcomingEvents.length > 0 || houseItems.length > 0);
@@ -524,7 +528,7 @@ export function Events() {
               </label>
               <select
                 id="events-house-host"
-                value={hostParam ?? ''}
+                value={effectiveHost ?? ''}
                 onChange={(event) => updateFilterParams('house', event.target.value || null)}
                 className="scrapbook-select min-h-11"
               >
@@ -539,7 +543,9 @@ export function Events() {
       <div className="vsa-container py-8 lg:py-10">
         {houseEventsError && (
           <p role="status" className="mb-5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-            House events could not be loaded right now; VSA events are still listed.
+            {activeFilter === 'house'
+              ? 'House events could not be loaded right now. Choose All to see VSA events, or try again later.'
+              : 'House events could not be loaded right now; VSA events are still listed.'}
           </p>
         )}
 
@@ -570,7 +576,11 @@ export function Events() {
           </p>
         )}
 
-        {upcomingItems.length === 0 && (
+        {activeFilter === 'house' && houseEventsLoading && (
+          <p role="status" className="mb-10 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>Loading House events…</p>
+        )}
+
+        {upcomingItems.length === 0 && !(activeFilter === 'house' && (houseEventsLoading || houseEventsError)) && (
           <div
             className="scrapbook-empty mb-10"
           >

@@ -18,7 +18,7 @@ import { OptimizedImage } from '../../common/OptimizedImage';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { isEventUpcomingOrOngoing } from '../../../lib/eventLifecycle';
-import { UpcomingItem, mergeUpcoming, upcomingSortMs } from '../../../lib/upcomingEvents';
+import { UpcomingItem, houseCandidate, mergeUpcoming, upcomingSortMs } from '../../../lib/upcomingEvents';
 import { useEventLifecycleTimer } from '../../../hooks/useEventLifecycleTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName, normalizeHouse } from '../../../constants/houses';
@@ -103,7 +103,8 @@ function NextEventCard() {
     refetchOnWindowFocus: false,
   });
 
-  const now = useEventLifecycleTimer(rawEvents, [
+  const timerEvents = useMemo(() => [...rawEvents, ...houseEvents.map(houseCandidate)], [rawEvents, houseEvents]);
+  const now = useEventLifecycleTimer(timerEvents, [
     ['home', 'upcoming-event-preview'],
   ]);
 

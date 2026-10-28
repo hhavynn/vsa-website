@@ -56,6 +56,8 @@ all-day format with an exclusive end date (`buildGcalAllDayDatesFromDateOnly`).
 - `/events` lists both under Next Up / All Upcoming. **House Events** is a filter (`?type=house`), with **Hosted by** (`&host=<slug>`) when more than one House has events; both stay in the URL. House events are not in the Memory Wall.
 - Home's Next Event card shows the next House event first when it happens before the next all-VSA event, otherwise below it, linking to the event's card.
 - If House events cannot load, regular events still show, with a notice.
+- **Hosts for logged-out visitors:** `house_page_assets` is admin-only, so its embed is empty for the public. Public House event reads take the host ids from `house_event_houses` and fill the profiles from `published_house_page_assets` (active profiles only) in one query; a not-yet-public profile is never shown, even to an admin viewing public pages. This also fixes host chips on the calendar and House pages.
+- Filter changes keep the scroll position (navigation state `keepScroll`, honored by the layout's scroll manager), clicking the active filter adds no history entry, and an unknown `host` is ignored.
 - House events never award VSA attendance points; the page says so.
 - Fixed: both pages called the House preview read with the row limit in the academic-year slot, so no House event ever appeared.
 
