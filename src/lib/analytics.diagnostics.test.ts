@@ -33,7 +33,13 @@ describe('consent-gated, redacted GA4 diagnostics (#302)', () => {
     window.history.replaceState({}, '', '/points?name=private-student-name');
     a.trackSafeDiagnosticError('render_failure');
     expect(window.gtag).toHaveBeenCalledWith('event', 'exception', {
-      description: 'render_failure', page_area: 'public', fatal: true, send_to: 'G-SYNTHETIC',
+      description: 'render_failure',
+      page_area: 'public',
+      page_path: '/',
+      page_location: window.location.origin + '/',
+      page_referrer: window.location.origin + '/',
+      fatal: true,
+      send_to: 'G-SYNTHETIC',
     });
     expect(JSON.stringify((window.gtag as jest.Mock).mock.calls)).not.toContain('private-student-name');
     expect(JSON.stringify((window.gtag as jest.Mock).mock.calls)).not.toContain('/points');
@@ -49,7 +55,13 @@ describe('consent-gated, redacted GA4 diagnostics (#302)', () => {
     a.trackSafeWebVital({ name: 'TTFB', value: -1 });
     expect(window.gtag).toHaveBeenCalledTimes(1);
     expect(window.gtag).toHaveBeenCalledWith('event', 'web_vital', {
-      metric_name: 'LCP', metric_value: 1304.157, send_to: 'G-SYNTHETIC',
+      metric_name: 'LCP',
+      metric_value: 1304.157,
+      page_area: 'public',
+      page_path: '/',
+      page_location: window.location.origin + '/',
+      page_referrer: window.location.origin + '/',
+      send_to: 'G-SYNTHETIC',
     });
   });
 
