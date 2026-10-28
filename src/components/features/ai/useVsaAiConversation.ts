@@ -4,7 +4,7 @@ import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 // Conversation lifecycle only. Panel focus, open/minimized state, feedback
 // and all live regions remain in VsaAiAssistant; this preserves their behavior.
 export type Role = 'user' | 'assistant';
-export type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
+export type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error' | 'unavailable';
 
 export interface SourceChip {
   title: string;
