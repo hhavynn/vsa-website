@@ -28,7 +28,7 @@ depcheck — depcheck-style tools false-positive on exactly these cases.
 | `react-dropzone` | Admin image upload (Members, ACE families) needs drag-drop + file-type rules; hand-rolling a compliant dropzone is not worth it. |
 | `react-hook-form` | Form state for signin, feedback, photo request and admin ops forms (`useAdminForm`). |
 | `react-hot-toast` | Project-wide toast surface (60+ call sites) with a11y-safe defaults. |
-| `react-icons` | Icon set for events/gallery/UVSA/admin surfaces, imported per-set (e.g. `react-icons/fa`) with named icons only. Known behavior under this build: the entry chunk keeps *every function of a set module once the set is imported from it* (webpack does not fully DCE `react-icons/fi` inside the concatenated module), so per-set and per-icon discipline matters and the public main chunk avoids `react-icons` entirely (lazy-boundary work in #300). |
+| `react-icons` | Icon set for events/gallery/UVSA/admin surfaces, imported per-set (e.g. `react-icons/fa`) with named icons only. Webpack does not fully eliminate unused icons from every imported set, so import and bundle discipline matters. Lazy-boundary work is proposed in #581. |
 | `react-query` | Server-state hooks (caching, invalidations) for the whole data layer. v3 — the project's long-term data API; upgrades are a #301 change-control item. |
 | `react-router-dom` | Routing for every surface (data routerless BrowserRouter usage). |
 | `tailwind-merge` | The other half of `cn()`: resolves Tailwind class conflicts so later utilities win. Can't be hand-trivially replicated. |
@@ -68,11 +68,10 @@ depcheck — depcheck-style tools false-positive on exactly these cases.
 
 ## Provenance (anti-slop-squatting review, registry check on 2026-10-26)
 
-Each row was verified against the live npm registry (`package@latest` →
-description, `repository`, maintainers). All 25 names resolved to projects with
-the maintainer history and repository you would expect — no lookalikes, no
-lookalike spellings, nothing registered later than the package it imitates.
-The pinned ranges are within the real latest versions.
+The original 25 names were checked on October 26. The eight existing development
+dependencies were checked on October 27. Registry repository, current maintainers,
+and package creation dates were checked; the maintainer names below are a
+spot-check, not proof of uninterrupted ownership history.
 
 | Package | Registry identity | Maintainers (spot-check) |
 | --- | --- | --- |
@@ -83,9 +82,12 @@ The pinned ranges are within the real latest versions.
 | `@types/jest` | `DefinitelyTyped/DefinitelyTyped` | types |
 | `@types/node` | `DefinitelyTyped/DefinitelyTyped` | types |
 | `@types/react`, `@types/react-dom` | `DefinitelyTyped/DefinitelyTyped` | types |
+| `autoprefixer` | `postcss/autoprefixer` | ai |
 | `clsx` | `lukeed/clsx` | lukeed |
 | `date-fns` | `date-fns/date-fns` | kossnocorp |
 | `framer-motion` | `motiondivision/motion` | nvh, popmotion |
+| `postcss` | `postcss/postcss` | ai |
+| `prettier` | `prettier/prettier` | jlongster, lydell, thorn0, … |
 | `react`, `react-dom` | `react/react` (Meta) | fb, react-bot |
 | `react-dropzone` | `react-dropzone/react-dropzone` | rolandjitsu, okonet, rxmarbles |
 | `react-hook-form` | `react-hook-form/react-hook-form` | bluebill1049 |
@@ -93,7 +95,12 @@ The pinned ranges are within the real latest versions.
 | `react-icons` | `react-icons/react-icons` | nwwells, tusbar, gorangajic, kamijin_fanta |
 | `react-query` | `tannerlinsley/react-query` (upstream name for v3; the package lives at `@tanstack/react-query` from v4) | tannerlinsley, tkdodo |
 | `react-router-dom` | `remix-run/react-router` | brophdawg11, mjackson |
+| `react-scripts` | `facebook/create-react-app` | fb, gaearon, timer, … |
+| `sharp` | `lovell/sharp` | lovell |
+| `source-map-explorer` | `danvk/source-map-explorer` | danvk, hypercubed, nikolay-borzov |
+| `tailwindcss` | `tailwindlabs/tailwindcss` | adamwathan, reinink, malfaitrobin |
 | `tailwind-merge` | `dcastil/tailwind-merge` | dcastil (aka dcas) |
+| `tsx` | `privatenumber/tsx` | hirokiosame |
 | `typescript` | `microsoft/TypeScript` | microsoft1es, typescript-bot, jakebailey |
 | `web-vitals` | `GoogleChrome/web-vitals` | philipwalton, tunetheweb (Google) |
 | `zod` | `colinhacks/zod` | colinhacks |
