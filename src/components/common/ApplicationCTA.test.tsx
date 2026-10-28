@@ -66,3 +66,54 @@ describe('ApplicationCTA message precedence', () => {
     expect(await screen.findByText('Page fallback: not open.')).toBeInTheDocument();
   });
 });
+
+
+  it('keeps closed form URLs out of the DOM while offering useful next steps', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [linkRow({ status: 'closed', target_url: 'https://hidden-form.invalid/sensitive' })],
+      error: null,
+    });
+    const { container } = renderCTA();
+
+    expect(await screen.findByText('House applications have closed for fall.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /VSA on Instagram/i })).toHaveAttribute('href', expect.stringContaining('instagram'));
+    expect(screen.getByRole('link', { name: /explore VSA programs/i })).toHaveAttribute('href', '/get-involved#programs');
+    expect(container.innerHTML).not.toContain('hidden-form.invalid');
+  });
+
+  it('announces only real configured upcoming dates, not invented deadlines', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [linkRow({ before_open_message: null, open_at: '2026-11-21T08:00:00Z' })],
+      error: null,
+    });
+    renderCTA();
+    expect(await screen.findByText(/Scheduled to open Nov 21, 2026/i)).toBeInTheDocument();
+    expect(screen.getByText('Page fallback: not open.')).toBeInTheDocument();
+  });
+
+  it('points closed-window visitors to a different genuinely open program page, never its form URL', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [
+        linkRow({ status: 'closed' }),
+        linkRow({ id: 'ace', application_key: 'ace_application', status: 'open', target_url: 'https://open-form.invalid/ace' }),
+      ],
+      error: null,
+    });
+    const { container } = renderCTA();
+    expect(await screen.findByRole('complementary', { name: /Other open VSA opportunities/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ACE Application' })).toHaveAttribute('href', '/ace');
+    expect(container.innerHTML).not.toContain('open-form.invalid');
+  });
+
+  it('does not suggest other programs when this application window is already open', async () => {
+    supabaseMock.setDefault('public_application_links', {
+      data: [
+        linkRow({ status: 'open', target_url: 'https://open-form.invalid/house' }),
+        linkRow({ id: 'ace', application_key: 'ace_application', status: 'open', target_url: 'https://open-form.invalid/ace' }),
+      ],
+      error: null,
+    });
+    renderCTA();
+    expect(await screen.findByRole('link', { name: /Apply for a House/i })).toHaveAttribute('href', 'https://open-form.invalid/house');
+    expect(screen.queryByRole('complementary', { name: /Other open VSA opportunities/i })).not.toBeInTheDocument();
+  });
