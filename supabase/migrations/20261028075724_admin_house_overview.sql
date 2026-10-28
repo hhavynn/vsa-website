@@ -90,7 +90,7 @@ begin
   ),
   -- Same attribution as house_yearly_points, limited to the window's events.
   credited as (
-    select hp.id as house_profile_id, a.member_id, e.date as event_at
+    select hp.id as house_profile_id, a.member_id, e.date as event_at, a.points_earned
     from public.member_event_attendance a
     join public.events e on e.id = a.event_id
     join public.academic_terms t on t.id = e.academic_term_id
@@ -158,7 +158,7 @@ begin
     'year_latest_activity_at', s.latest_activity_at,
     'rank', s.rank,
     'matches_view', case when p_term_id is not null then null
-      else coalesce(s.total_points, 0) = (select count(*) from credited c where c.house_profile_id = p.id) end,
+      else coalesce(s.total_points, 0) = coalesce((select sum(c.points_earned) from credited c where c.house_profile_id = p.id), 0) end,
     'parents_listed', (select count(*) from public.house_parents hp2 where hp2.house_profile_id = p.id),
     'parents_linked', (select count(*) from public.house_parents hp2 where hp2.house_profile_id = p.id and hp2.member_id is not null),
     'hosted_events', (select count(distinct h.event_id) from hosted h where h.house_profile_id = p.id),
