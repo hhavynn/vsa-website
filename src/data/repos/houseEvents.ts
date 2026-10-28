@@ -27,18 +27,19 @@ const PUBLIC_FIELDS = [
   'is_published',
   'created_at',
   'updated_at',
-  'houses:house_event_houses(house:house_page_assets(*))',
+  'houses:house_event_houses(house:published_house_page_assets(id,house,house_key,display_name,accent_color))',
 ].join(',');
 
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
@@ -66,11 +67,12 @@ export class HouseEventsRepository {
   async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
