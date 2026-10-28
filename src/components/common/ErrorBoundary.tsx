@@ -3,6 +3,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { PageError } from "./PageError";
 import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkLoadRecovery";
 import { trackSafeDiagnosticError } from '../../lib/analytics';
+import { reportError } from '../../lib/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -37,6 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // this analytics boundary. It is entirely gated by the existing GA4 consent.
     trackSafeDiagnosticError(isChunkLoadError(error) ? 'chunk_load' : 'render_failure');
     console.error('Uncaught error:', error, errorInfo);
+    reportError(error, errorInfo.componentStack);
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
