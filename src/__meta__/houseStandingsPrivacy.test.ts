@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const read = (file: string) => readFileSync(resolve(__dirname, '../..', file), 'utf8');
-const migration = read('supabase/migrations/20261028060000_embargo_public_house_scores.sql');
+const migration = read('supabase/migrations/20261028073000_embargo_public_house_scores.sql');
 const privateViews = [
   'house_yearly_points',
   'house_all_time_points',

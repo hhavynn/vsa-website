@@ -99,17 +99,6 @@ function PushPin({ color = 'accent', className = '' }: { color?: 'primary' | 'ac
   );
 }
 
-function TapeAccent({ position = 'top-left', color = 'primary' }: { position?: 'top-left' | 'top-right'; color?: 'primary' | 'accent' | 'gold' }) {
-  const bg = color === 'primary' ? 'var(--tape-teal)' : color === 'accent' ? 'var(--tape-coral)' : 'var(--tape-gold)';
-  const rotation = position === 'top-left' ? '-15deg' : '15deg';
-  return (
-    <div
-      className={`absolute z-10 h-5 w-16 opacity-60 ${position === 'top-left' ? 'left-[-12px] top-0' : 'right-[-12px] top-0'}`}
-      style={{ background: bg, transform: `rotate(${rotation})`, borderRadius: '2px' }}
-    />
-  );
-}
-
 // Small "distance to the rank above" caption, purely derived from the
 // already-fetched, already-ranked entries array — reads entry.rank and the
 // neighboring entry's already-computed points/events_attended, no new

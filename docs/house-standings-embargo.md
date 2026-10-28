@@ -10,7 +10,7 @@ that future freeze, review and export workflow; do not invent snapshots here.
 
 - PostgreSQL authority: five `house_*_points` / `house_recent_activity`
   views, still using existing qualifying attendance and effective memberships.
-  Migration `20261028060000_embargo_public_house_scores.sql` **revokes
+  Migration `20261028073000_embargo_public_house_scores.sql` **revokes
   SELECT from PUBLIC, anon and authenticated**. Database owners and approved
   admins may still compute/review scores; no formulas, triggers, attendance
   or membership writes are changed.
@@ -40,7 +40,7 @@ that future freeze, review and export workflow; do not invent snapshots here.
 1. Save a sanitized/synthetic baseline in isolated staging. Record the existing
    House view definitions and totals using a read-only snapshot; compare them
    to the same totals after migration to prove the scoring math did not move.
-2. Apply `20261028060000_embargo_public_house_scores.sql` in staging.
+2. Apply `20261028073000_embargo_public_house_scores.sql` in staging.
    Never re-run historical migrations, weaken policies, or mutate production.
 3. **API negative tests:** using anon key and a test non-admin authenticated
    account, attempt `GET /rest/v1/house_yearly_points?select=*` and the other

@@ -9,7 +9,7 @@ import { ProgramContentCallout } from '../components/features/program/ProgramCon
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseEventsRepository } from '../data/repos/houseEvents';
-import { getAcademicTermMeta, formatAcademicYear, parseYearSlug } from '../lib/academicTerms';
+import { getAcademicTermMeta, formatAcademicYear, parseYearSlug, resolveCurrentAcademicYearStart } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTimeRange } from '../lib/eventTime';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
@@ -291,7 +291,7 @@ export function House() {
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
 
   // Determine the "real" current year even when terms haven't loaded yet
-  const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
+  const currentYear = resolveCurrentAcademicYearStart(activeTermYear, new Date());
   const isArchive = activeYear !== null && activeYear < currentYear;
   const isPastYear = activeYear !== null && activeYear === currentYear - 1;
   const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
@@ -381,7 +381,7 @@ export function House() {
           {/* Year selector */}
           <div className="program-section py-4">
             <div className="program-section-inner">
-              <HouseYearSelector activeStartYear={activeYear} />
+              <HouseYearSelector activeStartYear={activeYear} currentYear={currentYear} />
             </div>
           </div>
 
@@ -446,7 +446,7 @@ export function House() {
         {/* ── Year Selector ── */}
         <div className="program-section py-4">
           <div className="program-section-inner">
-            <HouseYearSelector activeStartYear={activeYear} />
+            <HouseYearSelector activeStartYear={activeYear} currentYear={currentYear} />
           </div>
         </div>
 
@@ -510,14 +510,30 @@ export function House() {
             </div>
             {displayedHouses.length === 0 && !isArchive && houseAssetsSettled && (
               <div className="scrapbook-empty mb-5 p-6 text-center">
-                <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
-                  {activeYearLabel} Houses have not been announced yet
-                </p>
-                <p className="mx-auto mt-2 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                  Check back after House Reveal for the official theme, assignments, and House Parents. Follow{' '}
-                  <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a>{' '}
-                  on Instagram for announcements.
-                </p>
+                {showSummerTransition ? (
+                  <>
+                    <span className="scrapbook-sticker scrapbook-sticker-gold inline-flex mb-2">
+                      {summerHouseMessage.badge}
+                    </span>
+                    <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                      {summerHouseMessage.title}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                      {summerHouseMessage.body}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
+                      {activeYearLabel} Houses have not been announced yet
+                    </p>
+                    <p className="mx-auto mt-2 max-w-lg font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
+                      Check back after House Reveal for the official theme, assignments, and House Parents. Follow{' '}
+                      <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a>{' '}
+                      on Instagram for announcements.
+                    </p>
+                  </>
+                )}
                 <Link to={`/house/year/${formatAcademicYear(currentYear - 1)}`} className="vsa-btn-ghost mt-5 inline-flex font-sans text-sm">
                   View {formatAcademicYear(currentYear - 1)} Houses →
                 </Link>

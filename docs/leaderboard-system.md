@@ -41,7 +41,7 @@ The five private views `house_yearly_points`,
 `house_all_time_points`, `house_recent_activity`,
 `house_member_yearly_points`, and `house_member_all_time_points`
 have anonymous/ordinary-authenticated SELECT privileges revoked by migration
-`20261028060000_embargo_public_house_scores.sql`. Approved admins can obtain
+`20261028073000_embargo_public_house_scores.sql`. Approved admins can obtain
 live aggregate scores through a permission-checked
 `admin_private_house_standings(p_year)` RPC after the migration is deployed.
 This RPC is **not** an automatic public snapshot or House Parent grant.
@@ -183,6 +183,8 @@ psql "$DATABASE_URL" -v year=2026 -f scripts/sql/house-points-reconciliation.sql
 ```
 
 It prints counts and House names only (no member names, emails or notes). **Expected, not discrepancies:** `credits_member_has_no_house_this_year`, `credits_outside_membership_interval`, `credits_before_house_start` (attendance before a member's effective House start keeps its individual points and earns no House points), `credits_event_without_term_near_year`, `members_transferred_this_year`, `future_dated_memberships`. **Investigate:** `house_member_vs_house_total_mismatch` and `recomputed_vs_view_mismatch` (the two views, or the views and the script's own attribution, disagree), `overlapping_memberships`, `credits_attributed_to_two_houses`, `credits_on_inactive_house_profile`, and `pacific_vs_utc_boundary_credits`.
+
+**In the admin site:** Admin → Houses → **Points check** runs the same measurement through `admin_house_points_reconciliation(year)` (migration `20261028070000`, read-only, admin-only, UTC pinned; **not yet applied**). Each finding explains whether it is expected by rule or needs investigating and links to the page that fixes it. It never changes points.
 
 **Time zone rule.** The views cast each event's instant to a date in the database session's time zone. Production serves them in UTC (server and API roles, checked 2026-10-28), so an event after 4–5 PM Pacific counts as the next calendar day. An evening event the night before a member's effective start date therefore earns that House a point. `pacific_vs_utc_boundary_credits` counts those credits. Changing the rule to Pacific dates would be a protected scoring change needing its own owner-approved PR; this script only reports it.
 

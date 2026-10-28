@@ -60,6 +60,7 @@ A future CSP must cover only the services confirmed in production:
 - `https://www.googletagmanager.com` for the consent-gated GA4 script, plus the GA4 collection origins observed in the browser (commonly `https://www.google-analytics.com` and regional collection hosts).
 - `https://fonts.googleapis.com` for font CSS and `https://fonts.gstatic.com` for font files.
 - `https://o<org-id>.ingest.us.sentry.io` (the exact host in `REACT_APP_SENTRY_DSN`) for Sentry error reports, once that variable is set. The SDK is a same-origin lazy chunk, so it needs no `script-src` entry. See [the observability plan](observability-instrumentation-plan.md).
+- `https://us.i.posthog.com` for PostHog events, after analytics consent. The SDK is a same-origin lazy chunk with `disable_external_dependency_loading`, so it needs no `script-src` or `worker-src` entry while Session Replay stays off.
 - Approved image origins currently stored in public content, including Supabase Storage and any Google-hosted or migrated gallery/cabinet images. `data:` and `blob:` may be needed for previews and locally generated image uploads.
 - Approved frame origins for VCN/WNC video embeds, such as the exact YouTube domains observed in production.
 - Google Photos and Google Calendar are outbound links and normally need no CSP source. Google Drive/Docs/Sheets may need `connect-src` only where an admin workflow fetches them from the browser.
@@ -75,7 +76,7 @@ script-src 'self' 'sha256-Ly1WRgypBlCo+zVJxALqOhWaWZTLVdAzid4xLq3bnBk=' https://
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src 'self' https://fonts.gstatic.com data:;
 img-src 'self' data: blob: https:;
-connect-src 'self' https://<project-ref>.supabase.co wss://<project-ref>.supabase.co https://www.google-analytics.com https://o<org-id>.ingest.us.sentry.io;
+connect-src 'self' https://<project-ref>.supabase.co wss://<project-ref>.supabase.co https://www.google-analytics.com https://o<org-id>.ingest.us.sentry.io https://us.i.posthog.com;
 frame-src https://www.youtube.com https://www.youtube-nocookie.com;
 manifest-src 'self';
 ```
