@@ -4,8 +4,6 @@ import { Badge, BadgeColor } from '../../ui/Badge';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { EventInterestButtons } from './EventInterestButtons';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
-import { readableInk } from '../../../lib/readableInk';
 import { getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../../../lib/eventTime';
 import { parseDateOnly } from '../../../lib/dateOnly';
@@ -27,18 +25,9 @@ export const TYPE_COLOR: Record<string, BadgeColor> = {
   external_event: 'gray',
 };
 
-const HOUSE_EMOJI: Record<string, string> = {
-  Bowser: '🐢',
-  'Donkey Kong': '🦍',
-  Boo: '👻',
-  Toad: '🍄',
-};
-
 export interface EventMemoryStats {
   totalPoints: number;
   memberCount: number;
-  topHouse: string | null;
-  topHouseCount: number;
 }
 
 // The San Diego calendar day of an event, as a local-midnight Date for
@@ -142,10 +131,6 @@ export function PastEventMemoryCard({
   const d = eventDay(event);
   const termCode = getEventTermCode(event, terms);
   const termLabel = getEventTermLabel(event, terms);
-  const houseKey = stats?.topHouse ? normalizeHouse(stats.topHouse) : null;
-  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : stats?.topHouse?.trim() || null;
-  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : houseLabel ? 'var(--brand)' : null;
-  const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '') : '';
   const hasPoints = event.points > 0;
   const hasTotalPoints = stats && stats.totalPoints > 0;
 
@@ -213,25 +198,14 @@ export function PastEventMemoryCard({
           </div>
         )}
 
-        {/* Stats row */}
-        {(hasPoints || hasTotalPoints || houseKey) && (
+        {/* Published event points are not House standings. */}
+        {(hasPoints || hasTotalPoints) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            {(hasPoints || hasTotalPoints) && (
-              <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
-                {hasPoints ? `+${event.points} pts each` : ''}
-                {hasPoints && hasTotalPoints ? ' · ' : ''}
-                {hasTotalPoints ? `${stats!.totalPoints.toLocaleString()} total` : ''}
-              </span>
-            )}
-            {houseLabel && houseColor && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider"
-                style={{ background: houseColor, color: readableInk(houseColor) }}
-                title={`${houseLabel} had the most members attend`}
-              >
-                {houseEmoji} {houseLabel} led
-              </span>
-            )}
+            <span className="scrapbook-sticker scrapbook-sticker-teal px-2 py-0.5 text-[9px]">
+              {hasPoints ? `+${event.points} pts each` : ''}
+              {hasPoints && hasTotalPoints ? ' · ' : ''}
+              {hasTotalPoints ? `${stats!.totalPoints.toLocaleString()} total` : ''}
+            </span>
           </div>
         )}
 

@@ -2,6 +2,8 @@
 
 Single source of truth for AI coding agents working in this repo.
 
+**Security review:** The repo is public. Read [THREAT_MODEL.md](THREAT_MODEL.md) when changing a feature or trust boundary; update its controls/evidence in the same PR. Do not disclose real member data or secrets in the issue, documentation, tests or commits.
+
 ---
 
 ## Project overview

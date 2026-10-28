@@ -41,6 +41,14 @@ export function getAcademicYearStart(date: Date): number {
   return getAcademicQuarter(date) === 'fall' ? calendarYear : calendarYear - 1;
 }
 
+/** Prefer the admin-selected active year; use the calendar when terms are unavailable. */
+export function resolveCurrentAcademicYearStart(
+  activeYearStart: number | null,
+  date: Date
+): number {
+  return activeYearStart ?? getAcademicYearStart(date);
+}
+
 export function formatAcademicYear(startYear: number): string {
   return `${startYear}-${startYear + 1}`;
 }
