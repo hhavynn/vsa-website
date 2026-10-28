@@ -105,6 +105,35 @@ describe('SignInForm', () => {
     expect(screen.queryByTestId('admin-home')).not.toBeInTheDocument();
   });
 
+  it('announces validation errors and focuses the first invalid required field', async () => {
+    renderForm();
+    const email = await screen.findByRole('textbox', { name: /email \(required\)/i });
+    const password = screen.getByLabelText(/password \(required\)/i);
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(password).toHaveAttribute('autocomplete', 'current-password');
+    expect(email).toBeRequired();
+    expect(password).toBeRequired();
+
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    const errorId = email.getAttribute('aria-describedby');
+    expect(errorId).toBeTruthy();
+    expect(document.getElementById(errorId!)).toHaveAttribute('role', 'alert');
+  });
+
+  it('moves focus to the non-enumerating auth alert after an async access failure', async () => {
+    supabaseMock.queueResult('user_profiles', { data: { is_admin: false }, error: null });
+    renderForm();
+    await submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/admins only/i);
+    await waitFor(() => expect(alert.parentElement).toHaveFocus());
+    expect(alert.parentElement).toHaveAttribute('tabindex', '-1');
+  });
+
   it('prefills the email when one is supplied', async () => {
     const client = new QueryClient();
     render(
