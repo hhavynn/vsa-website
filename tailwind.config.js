@@ -44,6 +44,16 @@ module.exports = {
         'text-primary':  'var(--color-text)',
         'text-secondary':'var(--color-text2)',
         'text-muted':    'var(--color-text3)',
+        // Figma editorial palette (public shell). Fallbacks keep admin readable
+        // if a class leaks outside .vsa-editorial-shell.
+        ed: {
+          ink:    'var(--ed-ink, #28354d)',
+          paper:  'var(--ed-paper, #faf9f5)',
+          line:   'var(--ed-line, rgba(40, 53, 77, 0.22))',
+          muted:  'var(--ed-muted, #4f5a74)',
+          accent: 'var(--ed-accent, #6c628d)',
+          'on-ink': 'var(--ed-on-ink, #ffffff)',
+        },
       },
 
       // ─── Typography ───────────────────────────────────────────────────────
@@ -51,6 +61,8 @@ module.exports = {
         sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
         serif: ['var(--vsa-serif-font, "DM Serif Display")', 'Georgia', 'serif'],
         mono:  ['"JetBrains Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
+        // Figma editorial display face (loaded in public/index.html).
+        display: ['"Instrument Serif"', 'Georgia', 'serif'],
       },
 
       // ─── Type scale ───────────────────────────────────────────────────────

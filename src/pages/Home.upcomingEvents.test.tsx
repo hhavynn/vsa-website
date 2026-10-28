@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Home } from './Home';
@@ -71,6 +71,48 @@ describe('Home.tsx Upcoming Events section', () => {
 
     expect(await screen.findByText('No upcoming events posted yet.')).toBeInTheDocument();
     expect(screen.getByText('View past events')).toBeInTheDocument();
+  });
+
+  it('shows an accessible loading state while upcoming events are pending', () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockReturnValue(new Promise(() => undefined));
+
+    renderHome(queryClient);
+
+    expect(screen.getByText('Loading upcoming events…')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Upcoming Events' })).toBeInTheDocument();
+  });
+
+  it('degrades to fallback links when the events query fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockRejectedValue(new Error('offline'));
+    jest.spyOn(galleryRepository, 'getAlbums').mockRejectedValue(new Error('offline'));
+
+    renderHome(queryClient);
+    // Home's queries retry once; let the retry delay elapse.
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        jest.advanceTimersByTime(1500);
+      });
+    }
+
+    expect(await screen.findByText('Events are temporarily unavailable')).toBeInTheDocument();
+    // The section fallback and the degraded-mode banner both point to Instagram.
+    for (const link of screen.getAllByRole('link', { name: 'Instagram' })) {
+      expect(link).toHaveAttribute('target', '_blank');
+    }
+    expect(await screen.findByText('Recent photos are temporarily unavailable.')).toBeInTheDocument();
+  });
+
+  it('keeps the Figma program list pointing at real program routes', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+
+    renderHome(queryClient);
+
+    const programs = await screen.findByRole('navigation', { name: 'VSA programs' });
+    const hrefs = within(programs).getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(hrefs).toEqual(['/house', '/ace', '/intern-program', '/vcn']);
+    expect(screen.getByRole('heading', { level: 2, name: /There’s more\s*to explore\./ })).toBeInTheDocument();
   });
 
   it('renders upcoming event cards with details and interest buttons', async () => {

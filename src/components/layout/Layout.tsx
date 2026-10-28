@@ -10,7 +10,7 @@ import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
 import { isPublicEditorialRoute } from './publicEditorialTheme';
-import '../../styles/home-editorial.css';
+import '../../styles/public-editorial.css';
 
 function ScrollManager() {
   const { pathname, search, hash } = useLocation();
