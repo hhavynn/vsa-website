@@ -50,7 +50,7 @@ function renderDoc(map) {
   return lines.join('\n');
 }
 const paths=[...list('.claude/agents'),...list('.claude/skills'),...list('src/data/repos')];
-const sources=Object.fromEntries(paths.filter(p=>/^src\\/data\\/repos\\/[^/]+\\.ts$/.test(p)&&!p.endsWith('.test.ts')).map(p=>[p,read(p)]));
+const sources=Object.fromEntries(paths.filter(p=>/^src\/data\/repos\/[^/]+\.ts$/.test(p)&&!p.endsWith('.test.ts')).map(p=>[p,read(p)]));
 const result=createIndex(paths,read('src/routes/index.tsx'),sources);
 const outputs={'docs/ai/repo-map.json':JSON.stringify(result,null,2)+'\n','docs/ai/repo-map.md':renderDoc(result)};
 let stale=false;
