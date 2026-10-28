@@ -44,6 +44,14 @@ describe('public route manifest', () => {
     });
   });
 
+  it('does not advertise unpublished House standings in static SEO previews (#692)', () => {
+    for (const path of ['/leaderboard', '/house']) {
+      const route = findPublicRouteSeo(path);
+      expect(route?.description).toMatch(/House standings.*announced at general body meetings/i);
+      expect(route?.description).not.toMatch(/see how.*Houses rank|live House rankings/i);
+    }
+  });
+
   it('gives every route a unique title and description', () => {
     const titles = PUBLIC_ROUTE_SEO.map((route) => route.title);
     const descriptions = PUBLIC_ROUTE_SEO.map((route) => route.description);
