@@ -40,7 +40,8 @@ const credentialSignals = [
 ];
 const jwtCandidates = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
 const assignments = /\b(REACT_APP_[A-Z0-9_]+)\s*=\s*([^\r\n#]+)/gi;
-const references = /\b(?:process\.env\.|import\.meta\.env\.)(REACT_APP_[A-Z0-9_]+)/gi;
+const references = /\b(?:process\.env|import\.meta\.env)\s*(?:\?\.|\.)\s*(REACT_APP_[A-Z0-9_]+)/gi;
+const bracketReferences = /\b(?:process\.env|import\.meta\.env)\s*(?:\?\.)?\s*\[\s*(['"\x60])(REACT_APP_[A-Z0-9_]+)\1\s*\]/gi;
 const isPlaceholder = (value) => /^(?:your_|example|placeholder|dummy|test_|<|\$\{|G-XXXXXXXX|https:\/\/example)/i.test(value.trim().replace(/^['"]|['"]$/g,''));
 
 function jwtRole(value) {
@@ -101,6 +102,13 @@ export function inspectText(file, source) {
   if (isClient) {
     references.lastIndex=0;
     for (const [, rawKey] of source.matchAll(references)) {
+      const key = rawKey.toUpperCase();
+      if (!isAllowedVar(key)) errors.push(file + ': unreviewed public variable reference ' + key);
+    }
+    // Bracket notation is equivalent to the dot form in client code, and
+    // must not bypass the public-env allowlist.
+    bracketReferences.lastIndex = 0;
+    for (const [, , rawKey] of source.matchAll(bracketReferences)) {
       const key = rawKey.toUpperCase();
       if (!isAllowedVar(key)) errors.push(file + ': unreviewed public variable reference ' + key);
     }
