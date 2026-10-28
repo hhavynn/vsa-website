@@ -60,6 +60,15 @@ describe('Admin Settings shared form shell (#258)', () => {
     expect(screen.getByRole('button', { name: 'Save Settings' })).toBeDisabled();
   });
 
+  it('rejects a non-http logo URL without writing settings', async () => {
+    render(<MemoryRouter><AdminSettings /></MemoryRouter>);
+    const logoUrl = screen.getByRole('textbox', { name: 'Logo URL' });
+    fireEvent.change(logoUrl, { target: { value: 'javascript:alert(1)' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Use a valid HTTP(S) logo URL');
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
   it('preserves edits and announces a failed save', async () => {
     mockUpsert.mockResolvedValueOnce({ error: { message: 'synthetic rejection' } });
     render(<MemoryRouter><AdminSettings /></MemoryRouter>);
