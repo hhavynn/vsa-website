@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageTitle } from '../../components/common/PageTitle';
 import { supabase } from '../../lib/supabase';
-import { buildCabinetAnalyticsCsv, buildCabinetAreaInsights } from '../../lib/cabinetAnalyticsInsights';
+import { buildCabinetAnalyticsCsv, buildCabinetAreaInsights, safeCabinetPageLabel } from '../../lib/cabinetAnalyticsInsights';
 
 interface AnalyticsData {
   summary: {
@@ -265,8 +265,8 @@ export default function AdminAnalytics() {
                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                   {data.topPages.map((page) => (
                     <div key={page.path} className="px-5 py-3 flex justify-between items-center">
-                      <span className="text-xs truncate mr-4 font-sans" style={{ color: 'var(--color-text2)' }} title={page.path}>
-                        {page.path}
+                      <span className="text-xs truncate mr-4 font-sans" style={{ color: 'var(--color-text2)' }} title={safeCabinetPageLabel(page.path)}>
+                        {safeCabinetPageLabel(page.path)}
                       </span>
                       <span className="text-xs font-medium font-sans" style={{ color: 'var(--color-text)' }}>
                         {page.views.toLocaleString()}
