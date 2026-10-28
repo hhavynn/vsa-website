@@ -1,6 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { reportError } from '../../lib/monitoring';
+
+jest.mock('../../lib/monitoring', () => ({ reportError: jest.fn() }));
 
 function Boom({ error }: { error: Error }): React.ReactElement {
   throw error;
@@ -18,6 +21,7 @@ describe('ErrorBoundary', () => {
 
   beforeEach(() => {
     reload.mockClear();
+    (reportError as jest.Mock).mockClear();
     window.sessionStorage.clear();
     Object.defineProperty(window, 'location', { configurable: true, value: { ...originalLocation, reload } });
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -37,6 +41,7 @@ describe('ErrorBoundary', () => {
 
     expect(reload).toHaveBeenCalledTimes(1);
     expect(container).toBeEmptyDOMElement();
+    expect(reportError).not.toHaveBeenCalled();
   });
 
   it('does not reload again inside the window and shows an update prompt that reloads on retry', () => {
@@ -64,5 +69,6 @@ describe('ErrorBoundary', () => {
 
     expect(reload).not.toHaveBeenCalled();
     expect(screen.getByText('Application Error')).toBeInTheDocument();
+    expect(reportError).toHaveBeenCalledWith(expect.any(TypeError), expect.any(String));
   });
 });

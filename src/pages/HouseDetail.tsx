@@ -1,23 +1,21 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { HouseDetailSkeleton } from '../components/common/PageSkeletons';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
-import { leaderboardRepository } from '../data/repos/leaderboard';
 import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta, parseYearSlug } from '../lib/academicTerms';
 import { OptimizedImage } from '../components/common/OptimizedImage';
-import { HousePageAsset, HouseYearlyPoints } from '../types';
+import { HousePageAsset } from '../types';
 import { houseSlugFromKey, matchesHouseSlug } from '../utils/houseSlug';
 import { getLosAngelesDateOnly } from '../utils/losAngelesDate';
 import { Label } from '../components/ui/Label';
 import { HouseEventCard } from '../components/features/house/HouseEventCard';
 import { RevealOnScrollWrapper } from '../components/common/RevealOnScrollWrapper';
-import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -148,59 +146,7 @@ export function HouseDetail() {
     ) ?? null
     : null;
 
-  const { data: rawStandings = [] } = useQuery({
-    queryKey: ['house-detail', 'standings', activeYear],
-    queryFn: () => activeYear ? leaderboardRepository.getYearlyHouseLeaderboard(activeYear) : Promise.resolve([]),
-    enabled: activeYear !== null,
-    staleTime: 10 * 60 * 1000,
-    cacheTime: 20 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const standings = useMemo((): HouseYearlyPoints[] => {
-    // When the DB has no calculated standings for an override year, inject
-    // official placeholder rows keyed to the loaded house assets.
-    const base: HouseYearlyPoints[] =
-      rawStandings.length === 0 &&
-      typeof activeYear === 'number' &&
-      isHousePointOverrideActive(activeYear) &&
-      houses.length > 0
-        ? houses.flatMap((asset) => {
-            const pts = getPublicHousePoints({
-              houseKey: asset.house_key ?? asset.house,
-              houseName: asset.house,
-              academicYearStart: activeYear,
-              calculatedPoints: 0,
-            });
-            if (!pts) return [];
-            return [{
-              house: asset.house_key ?? asset.house,
-              house_profile_id: asset.id,
-              display_name: asset.display_name ?? asset.house,
-              image_url: asset.image_url ?? null,
-              accent_color: asset.accent_color ?? null,
-              academic_year_start: activeYear,
-              academic_year_end: activeYear + 1,
-              total_points: pts,
-              events_attended: 0,
-              unique_events: 0,
-              unique_members: 0,
-              average_points_per_member: null,
-              latest_activity_at: null,
-            } as HouseYearlyPoints];
-          })
-        : rawStandings;
-
-    return base.map((s) => ({
-      ...s,
-      total_points: getPublicHousePoints({
-        houseKey: s.house,
-        houseName: s.display_name,
-        academicYearStart: s.academic_year_start,
-        calculatedPoints: s.total_points,
-      }),
-    })).sort((a, b) => b.total_points - a.total_points);
-  }, [rawStandings, activeYear, houses]);
+  // Competition totals are private: public House detail pages never query score views.
 
   const { data: upcomingEvents = [], isLoading: upcomingLoading } = useQuery({
     queryKey: ['house-detail', 'upcoming-events', house?.id, today],
@@ -219,6 +165,46 @@ export function HouseDetail() {
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // A calendar link (#house-event-<id>) lands on that event's card, expanding
+  // past events when it is beyond the first page. An event outside the bounded
+  // lists above is fetched on its own (published and hosted by this House only).
+  const { hash } = useLocation();
+  const targetEventId = hash.startsWith('#house-event-') ? hash.slice('#house-event-'.length) : null;
+  const targetMissing = !!targetEventId && !upcomingLoading && !pastLoading
+    && !upcomingEvents.some((event) => event.id === targetEventId) && !pastEvents.some((event) => event.id === targetEventId);
+  const { data: linkedEvent = null } = useQuery({
+    queryKey: ['house-detail', 'linked-event', house?.id, targetEventId],
+    queryFn: () => houseEventsRepository.getPublicEventForHouse(targetEventId as string, (house as HousePageAsset).id),
+    enabled: !!house && targetMissing,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const shownUpcoming = useMemo(
+    () => (linkedEvent && linkedEvent.event_date >= today && !upcomingEvents.some((event) => event.id === linkedEvent.id)
+      ? [...upcomingEvents, linkedEvent].sort((a, b) => a.event_date.localeCompare(b.event_date))
+      : upcomingEvents),
+    [linkedEvent, upcomingEvents, today],
+  );
+  const shownPast = useMemo(
+    () => (linkedEvent && linkedEvent.event_date < today && !pastEvents.some((event) => event.id === linkedEvent.id)
+      ? [...pastEvents, linkedEvent].sort((a, b) => b.event_date.localeCompare(a.event_date))
+      : pastEvents),
+    [linkedEvent, pastEvents, today],
+  );
+  useEffect(() => {
+    if (!targetEventId || upcomingLoading || pastLoading) return;
+    const pastIndex = shownPast.findIndex((event) => event.id === targetEventId);
+    if (pastIndex >= 8 && !showAllPastEvents) {
+      setShowAllPastEvents(true);
+      return;
+    }
+    const card = document.getElementById(`house-event-${targetEventId}`);
+    if (card) {
+      card.scrollIntoView({ block: 'start' });
+      card.focus({ preventScroll: true });
+    }
+  }, [targetEventId, upcomingLoading, pastLoading, shownPast, shownUpcoming, showAllPastEvents]);
 
   const isDegraded = isSupabaseUnavailable(pastError);
 
@@ -276,10 +262,8 @@ export function HouseDetail() {
 
   const color = getHouseColor(house);
   const label = getHouseLabel(house);
-  const standing = standings.find((item) => item.house_profile_id === house.id || item.house === house.house_key);
-  const rank = standing ? standings.findIndex((item) => item.house_profile_id === standing.house_profile_id) + 1 : null;
   const heroImage = house.image_thumbnail_url || house.image_url;
-  const visiblePastEvents = showAllPastEvents ? pastEvents : pastEvents.slice(0, 8);
+  const visiblePastEvents = showAllPastEvents ? shownPast : shownPast.slice(0, 8);
 
   return (
     <>
@@ -296,8 +280,6 @@ export function HouseDetail() {
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>
                 {isArchive && <span className="scrapbook-sticker scrapbook-sticker-gold">Archive</span>}
-                {rank && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-coral">Rank #{rank}</span>}
-                {standing && !isArchive && <span className="scrapbook-sticker scrapbook-sticker-teal">{standing.total_points.toLocaleString()} house pts</span>}
               </div>
               <h1 className="vsa-page-title">{house.emoji ? `${house.emoji} ` : ''}{label}</h1>
               <p className="mt-5 max-w-2xl font-sans text-[16px] leading-[1.75]" style={{ color: 'var(--text2)' }}>
@@ -335,21 +317,10 @@ export function HouseDetail() {
       </div>
 
       <div className="vsa-container py-12 lg:py-16">
-        {standing && !isArchive && (
-          <div className="mb-12 grid gap-3 sm:grid-cols-3">
-            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Rank</div>
-              <div className="mt-1 font-serif text-2xl" style={{ color }}>#{rank}</div>
-            </div>
-            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Points</div>
-              <div className="mt-1 font-serif text-2xl" style={{ color }}>{standing.total_points.toLocaleString()}</div>
-            </div>
-            <div className="rounded border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <div className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>Members</div>
-              <div className="mt-1 font-serif text-2xl" style={{ color }}>{standing.unique_members.toLocaleString()}</div>
-            </div>
-          </div>
+        {!isArchive && (
+          <p className="mb-8 font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+            House standings are announced at GBMs. Scores and ranks remain private on the website.
+          </p>
         )}
 
         <RevealOnScrollWrapper>
@@ -369,7 +340,7 @@ export function HouseDetail() {
                 <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                   Loading upcoming events...
                 </div>
-              ) : upcomingEvents.length === 0 ? (
+              ) : shownUpcoming.length === 0 ? (
                 <div className="scrapbook-empty py-12 text-center">
                   <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                     No upcoming events for {label} just yet. Check back soon!
@@ -377,7 +348,7 @@ export function HouseDetail() {
                 </div>
               ) : (
                 <div className="grid gap-6">
-                  {upcomingEvents.map((event) => (
+                  {shownUpcoming.map((event) => (
                     <HouseEventCard key={event.id} event={event} house={house} isUpcoming />
                   ))}
                 </div>
@@ -408,7 +379,7 @@ export function HouseDetail() {
               <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                 Loading events...
               </div>
-            ) : pastEvents.length === 0 ? (
+            ) : shownPast.length === 0 ? (
               <div className={`scrapbook-empty ${isLegacyArchive ? 'py-8' : 'py-12'} text-center`}>
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
                   {isLegacyArchive
@@ -423,7 +394,7 @@ export function HouseDetail() {
                   <HouseEventCard key={event.id} event={event} house={house} isUpcoming={false} />
                   ))}
                 </div>
-                {!showAllPastEvents && pastEvents.length > visiblePastEvents.length && (
+                {!showAllPastEvents && shownPast.length > visiblePastEvents.length && (
                   <div className="mt-6 text-center">
                     <button
                       type="button"

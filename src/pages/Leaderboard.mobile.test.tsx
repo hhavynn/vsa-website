@@ -108,6 +108,15 @@ afterEach(() => {
 });
 
 describe('Leaderboard mobile layout contract', () => {
+  it('has one page h1 and sibling h2s for Top Performers and Full Standings', async () => {
+    await renderLoaded();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Top Performers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Full Standings' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /Top Performers|Full Standings/ })).not.toBeInTheDocument();
+  });
+
   it('keeps rank, name and points on every compact podium row', async () => {
     await renderLoaded();
     // Each top-3 member renders once in the phone podium, once in the desktop
@@ -128,6 +137,35 @@ describe('Leaderboard mobile layout contract', () => {
     expect(within(firstRow).getByText('1')).toBeInTheDocument();
     expect(within(firstRow).getByText(`${LONG_NAME.first} ${LONG_NAME.last}`)).toBeInTheDocument();
     expect(within(firstRow).getByText('90')).toBeInTheDocument();
+  });
+
+  it('exposes one navigable ARIA table with column headers, rank labels and profile buttons', async () => {
+    await renderLoaded();
+    const table = screen.getByRole('table', { name: /Full member standings for/ });
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers.map((heading) => heading.textContent?.trim())).toEqual([
+      'Rank', 'Member', 'Points', 'Events attended',
+    ]);
+    expect(headers[2]).toHaveAttribute('aria-sort', 'descending');
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(MEMBERS.length);
+    const firstRow = within(table).getByRole('row', {
+      name: `Rank #1: ${LONG_NAME.first} ${LONG_NAME.last}`,
+    });
+    expect(within(firstRow).getByRole('button', {
+      name: `Open profile for ${LONG_NAME.first} ${LONG_NAME.last}`,
+    })).toBeInTheDocument();
+    expect(within(table).getByRole('row', { name: 'Rank T2: Ada Tie' })).toBeInTheDocument();
+  });
+
+  it('announces the active events ranking through its table header', async () => {
+    await renderLoaded();
+    // The metric tab is the existing keyboard-operable sort control.
+    const eventsTab = screen.getByRole('button', { name: 'EVENTS' });
+    fireEvent.click(eventsTab);
+    const table = screen.getByRole('table', { name: /Full member standings for/ });
+    const headers = within(table).getAllByRole('columnheader');
+    expect(headers[2]).toHaveTextContent('Events attended');
+    expect(headers[2]).toHaveAttribute('aria-sort', 'descending');
   });
 
   it('shows a shared T-rank for a tie and a tie caption in the list', async () => {
@@ -170,20 +208,14 @@ describe('Leaderboard mobile layout contract', () => {
     }
   });
 
-  it('does not clip the House stats line on narrow viewports', async () => {
-    jest.spyOn(leaderboardRepository, 'getAllTimeHouseLeaderboard').mockResolvedValue([
-      {
-        house: 'Bowser', house_profile_id: 'h1', display_name: 'Bowser', image_url: null,
-        accent_color: '#c0392b', academic_year_start: 2025, academic_year_end: 2026,
-        total_points: 120, events_attended: 80, unique_events: 10, unique_members: 40,
-        average_points_per_member: 3, latest_activity_at: null,
-      },
-    ] as never);
+  it('does not load or reveal live House totals even for a direct House tab link', async () => {
+    const read = jest.spyOn(leaderboardRepository, 'getAllTimeHouseLeaderboard');
+    const yearlyRead = jest.spyOn(leaderboardRepository, 'getYearlyHouseLeaderboard');
     renderLeaderboard('/leaderboard?view=houses');
-    const stats = await screen.findByText(/40 MEMBERS/);
-    expect(stats.parentElement!.className).toMatch(/flex-wrap/);
-    // House identity is carried by the name, not only by its colour.
-    expect(screen.getByText('Bowser')).toBeInTheDocument();
+    expect(await screen.findByText(/House standings are announced at GBMs/i)).toBeInTheDocument();
+    expect(screen.queryByText(/40 MEMBERS/)).not.toBeInTheDocument();
+    expect(read).not.toHaveBeenCalled();
+    expect(yearlyRead).not.toHaveBeenCalled();
   });
 });
 

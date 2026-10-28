@@ -221,6 +221,15 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                     </div>
                   ) : (
                     <div>
+                      <div role="table" aria-label={`${label} member rankings · ${selectedYearLabel}`}>
+                        <div role="rowgroup" className="sr-only">
+                          <div role="row">
+                            <span role="columnheader">Rank</span>
+                            <span role="columnheader">Member</span>
+                            <span role="columnheader">Check-ins</span>
+                          </div>
+                        </div>
+                        <div role="rowgroup">
                       {visible.map((member, idx) => {
                         const { rank, tiedCount } = member;
                         const isPodium = isWithinTop(member, 3);
@@ -232,6 +241,8 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                         return (
                           <div
                             key={member.member_id}
+                            role="row"
+                            aria-label={`${tiedCount > 1 ? 'Tied rank' : 'Rank'} ${rank}: ${name}, ${member.total_points} check-ins`}
                             className={`flex items-center gap-3 px-4 py-3 ${idx < visible.length - 1 ? 'border-b' : ''}`}
                             style={{
                               borderColor: 'var(--color-border)',
@@ -240,6 +251,8 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                           >
                             {/* Rank badge */}
                             <div
+                              role="cell"
+                              aria-label={`${tiedCount > 1 ? 'Tied rank' : 'Rank'} ${rank}`}
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-black"
                               style={{
                                 background: isPodium ? color : 'var(--color-surface2)',
@@ -251,14 +264,16 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                             </div>
 
                             {/* Avatar */}
-                            <MemberAvatar
-                              name={name}
-                              color={color}
-                              avatarUrl={resolveMemberPhoto(memberAvatars, member.member_id)}
-                            />
+                            <span aria-hidden="true">
+                              <MemberAvatar
+                                name={name}
+                                color={color}
+                                avatarUrl={resolveMemberPhoto(memberAvatars, member.member_id)}
+                              />
+                            </span>
 
                             {/* Name + meta */}
-                            <div className="min-w-0 flex-1">
+                            <div role="rowheader" className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="break-words font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
                                   {name}
@@ -280,7 +295,7 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                             </div>
 
                             {/* Points */}
-                            <div className="shrink-0 text-right">
+                            <div role="cell" aria-label={`${member.total_points} check-ins`} className="shrink-0 text-right">
                               <div className="font-mono text-sm font-black" style={{ color }}>
                                 {member.total_points.toLocaleString()}
                               </div>
@@ -291,6 +306,8 @@ export function HouseMemberLeaderboard({ selectedYear, selectedYearLabel, showLe
                           </div>
                         );
                       })}
+                        </div>
+                      </div>
 
                       {/* Show more / less */}
                       {hiddenCount > 0 && (

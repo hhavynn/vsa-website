@@ -168,7 +168,26 @@ export function BottomSheet({
         else element.setAttribute("inert", inert);
       });
       portalRoot.remove();
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      // A sheet can close after deleting the row/button that opened it.
+      // Returning focus to body strands keyboard users; prefer the app's
+      // main landmark when the original trigger is no longer available.
+      if (
+        previouslyFocused?.isConnected &&
+        previouslyFocused !== document.body &&
+        !previouslyFocused.matches(":disabled") &&
+        !previouslyFocused.closest("[hidden], [inert]")
+      ) {
+        previouslyFocused.focus();
+      } else {
+        const landmark = document.querySelector<HTMLElement>("main, [role='main']");
+        if (landmark) {
+          const savedTabIndex = landmark.getAttribute("tabindex");
+          landmark.setAttribute("tabindex", "-1");
+          landmark.focus();
+          if (savedTabIndex === null) landmark.removeAttribute("tabindex");
+          else landmark.setAttribute("tabindex", savedTabIndex);
+        }
+      }
     };
   }, [beginClose, portalRoot]);
 
