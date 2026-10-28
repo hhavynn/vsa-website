@@ -110,7 +110,7 @@ create table if not exists public.ace_member_pickup_evidence (
       )
     ),
   constraint ace_member_pickup_evidence_status_check
-    check (review_status in ('pending', 'approved', 'rejected')),
+    check (review_status in ('pending', 'approved', 'rejected', 'superseded')),
   constraint ace_member_pickup_evidence_approved_has_year
     check (review_status <> 'approved' or candidate_academic_year_start is not null),
   constraint ace_member_pickup_evidence_review_stamp
@@ -134,10 +134,18 @@ create policy "Admins can view ace pickup evidence"
   on public.ace_member_pickup_evidence for select to authenticated
   using (public.is_admin_user(auth.uid()));
 
+-- New evidence is always an unreviewed claim recorded by the caller;
+-- approval happens only through set_ace_member_pickup_year.
 drop policy if exists "Admins can insert ace pickup evidence" on public.ace_member_pickup_evidence;
 create policy "Admins can insert ace pickup evidence"
   on public.ace_member_pickup_evidence for insert to authenticated
-  with check (public.is_admin_user(auth.uid()));
+  with check (
+    public.is_admin_user(auth.uid())
+    and review_status = 'pending'
+    and reviewed_by is null
+    and reviewed_at is null
+    and created_by = auth.uid()
+  );
 
 drop policy if exists "Admins can review ace pickup evidence" on public.ace_member_pickup_evidence;
 create policy "Admins can review ace pickup evidence"
@@ -151,15 +159,16 @@ revoke all on public.ace_member_pickup_evidence from anon, authenticated;
 grant select, insert, update on public.ace_member_pickup_evidence to authenticated;
 
 comment on table public.ace_member_pickup_evidence is
-  'Admin-only historical pickup-year evidence and review history for ace_family_members. Never public. Approved values are copied to ace_family_members.pickup_* by set_ace_member_pickup_year.';
+  'Admin-only historical pickup-year evidence and review history for ace_family_members. Never public. Approved values are copied to ace_family_members.pickup_* by set_ace_member_pickup_year; an approval the node no longer matches becomes superseded.';
 
 -- ─── Review: approve, correct or clear one node's pickup year ───────────────
 
 -- SECURITY INVOKER: the caller's own RLS applies, so only admins can change
 -- anything. Writes only pickup_academic_year_start and pickup_term on the node
 -- (never name, parent, family, member link, photo or publication), plus the
--- review stamp on the evidence row it approves. Idempotent: re-applying the
--- current value changes nothing and reports changed = false.
+-- review stamp on the evidence row it approves and `superseded` on earlier
+-- approvals the new value replaces. Idempotent: re-applying the current
+-- value changes nothing and reports changed = false.
 create or replace function public.set_ace_member_pickup_year(
   p_ace_member_id uuid,
   p_academic_year_start integer,
@@ -222,6 +231,14 @@ begin
     set pickup_academic_year_start = p_academic_year_start,
         pickup_term = v_term
     where id = p_ace_member_id;
+
+    -- Keep the review history consistent with the live value.
+    update public.ace_member_pickup_evidence
+    set review_status = 'superseded'
+    where ace_member_id = p_ace_member_id
+      and review_status = 'approved'
+      and (candidate_academic_year_start is distinct from p_academic_year_start
+           or candidate_term is distinct from v_term);
   end if;
 
   return jsonb_build_object(

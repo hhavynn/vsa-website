@@ -2,8 +2,10 @@
 -- prerequisites are stubs; every ACE table, view, policy and the publish
 -- function come from the exact repo migrations. All people are synthetic.
 
--- Supabase grants ALL on new relations to anon and authenticated by default.
+-- Supabase grants ALL on new relations, and EXECUTE on new functions, to anon
+-- and authenticated by default.
 alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant execute on functions to anon, authenticated;
 
 create schema auth;
 create schema storage;

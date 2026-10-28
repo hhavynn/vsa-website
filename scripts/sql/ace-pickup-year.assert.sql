@@ -155,6 +155,17 @@ select pg_temp.check_true('re-recording the same source value is a no-op',
   and (select count(*) from public.ace_member_pickup_evidence) = 3);
 select pg_temp.check_true('importing evidence did not approve anything',
   not exists (select 1 from public.ace_family_members where pickup_academic_year_start is not null));
+select pg_temp.check_true('an admin cannot insert evidence that is already approved',
+  pg_temp.try_as(:admin, 'authenticated', $q$
+    insert into public.ace_member_pickup_evidence
+      (ace_member_id, source_kind, raw_value, candidate_academic_year_start, candidate_term, review_status, reviewed_at)
+    values ('30000000-0000-0000-0000-000000000003', 'admin_entry', 'FA22', 2022, 'FA22', 'approved', now())
+  $q$) like '42501%row-level security%');
+select pg_temp.check_true('an admin cannot record evidence as someone else',
+  pg_temp.try_as(:admin, 'authenticated', $q$
+    insert into public.ace_member_pickup_evidence (ace_member_id, source_kind, raw_value, created_by)
+    values ('30000000-0000-0000-0000-000000000003', 'admin_entry', 'FA22', '00000000-0000-0000-0000-0000000000b2')
+  $q$) like '42501%row-level security%');
 select pg_temp.check_true('evidence rejects links and Drive references as labels',
   pg_temp.try_as(:admin, 'authenticated', $q$
     insert into public.ace_member_pickup_evidence (ace_member_id, source_kind, source_label)
@@ -330,6 +341,12 @@ select pg_temp.check_true('admin can clear a year back to unknown',
 select pg_temp.check_true('the cleared node reads as unknown',
   (select pickup_academic_year_start is null and pickup_term is null
    from public.ace_family_members where id = '30000000-0000-0000-0000-000000000002'));
+select pg_temp.check_true('the approval the correction replaced is marked superseded',
+  (select review_status from public.ace_member_pickup_evidence
+   where id = '40000000-0000-0000-0000-000000000003') = 'superseded');
+select pg_temp.check_true('unrelated evidence keeps its status',
+  (select review_status from public.ace_member_pickup_evidence
+   where id = '40000000-0000-0000-0000-000000000002') = 'pending');
 
 -- Deleting a node takes its evidence with it ------------------------------
 delete from public.ace_family_members where id = '30000000-0000-0000-0000-000000000003';

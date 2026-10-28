@@ -4419,7 +4419,7 @@ export type AcePickupSourceKind =
   | "official_pairing"
   | "assignment_cycle"
   | "admin_entry";
-export type AcePickupReviewStatus = "pending" | "approved" | "rejected";
+export type AcePickupReviewStatus = "pending" | "approved" | "rejected" | "superseded";
 export type ImportJobStatus = "completed" | "failed";
 export type ImportSourceType =
   "csv_url" | "google_sheets_csv" | "manual" | "unknown";

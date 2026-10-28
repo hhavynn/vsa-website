@@ -156,7 +156,18 @@ export function buildImportPlan(json: SweatpantsJson): ImportPlan {
   json.members.forEach((m) => {
     const evidence = pickupEvidenceOf(m);
     if (!evidence) return;
-    pickupByKey.set(explicitKey(m), evidence);
+    const key = explicitKey(m);
+    const earlier = pickupByKey.get(key);
+    if (earlier) {
+      // Same name without id_hint: both rows become one node (warned above).
+      if (earlier.rawValue !== evidence.rawValue) {
+        warnings.push(
+          `"${m.name}" is listed more than once with different added_term values ("${earlier.rawValue}", "${evidence.rawValue}"). Kept "${earlier.rawValue}".`,
+        );
+      }
+      return;
+    }
+    pickupByKey.set(key, evidence);
     if (evidence.parsed.kind === 'needs_review') {
       warnings.push(
         `"${m.name}" has added_term "${evidence.rawValue}" that cannot be placed (${evidence.parsed.issue.replace(/_/g, ' ')}). It is kept for review, not as a year.`,
@@ -339,6 +350,8 @@ export function describePickupEvidence(plan: Pick<ImportPlan, 'people'>): string
 
 const MAX_EVIDENCE_TEXT = 64;
 const MAX_SOURCE_LABEL = 200;
+/** Mirrors ace_member_pickup_evidence_source_label_check. */
+const LINK_LIKE = /(https?:\/\/|drive\.google|docs\.google)/i;
 
 /**
  * Evidence rows for every person whose source gave a term, all `pending`.
@@ -348,7 +361,10 @@ const MAX_SOURCE_LABEL = 200;
 export function pickupEvidenceRows(
   plan: Pick<ImportPlan, 'familyName' | 'people'>,
 ): TablesInsert<'ace_member_pickup_evidence'>[] {
-  const sourceLabel = `JSON import: ${plan.familyName}`.slice(0, MAX_SOURCE_LABEL);
+  // The database rejects links in labels; a fam name that looks like one is left out.
+  const sourceLabel = LINK_LIKE.test(plan.familyName)
+    ? 'JSON import'
+    : `JSON import: ${plan.familyName}`.slice(0, MAX_SOURCE_LABEL);
   return plan.people.flatMap((p) => {
     if (!p.pickup) return [];
     const candidate = pickupCandidateOf(p.pickup.parsed);

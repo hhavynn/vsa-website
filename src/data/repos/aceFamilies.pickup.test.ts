@@ -89,13 +89,27 @@ describe('bulkCreateFamily pickup evidence', () => {
   });
 
   it('removes the half-imported fam when evidence cannot be saved', async () => {
-    supabaseMock.setDefault('ace_member_pickup_evidence', {
-      data: null,
-      error: postgrestError('permission denied for table ace_member_pickup_evidence', '42501'),
-    });
+    supabaseMock
+      .queueResult('ace_member_pickup_evidence', { data: [], error: null })
+      .queueResult('ace_member_pickup_evidence', {
+        data: null,
+        error: postgrestError('new row violates row-level security policy', '42501'),
+      });
     await expect(aceFamiliesRepository.bulkCreateFamily(famFields, plan())).rejects.toBeTruthy();
     expect(supabaseMock.usedMethod('ace_families', 'delete')).toBe(true);
     expect(supabaseMock.filtersFor('ace_families')).toContainEqual(['id', 'fam-1']);
+  });
+
+  it('refuses before writing anything when the evidence table is not deployed yet', async () => {
+    supabaseMock.setDefault('ace_member_pickup_evidence', {
+      data: null,
+      error: postgrestError("Could not find the table 'public.ace_member_pickup_evidence'", 'PGRST205'),
+    });
+    await expect(aceFamiliesRepository.bulkCreateFamily(famFields, plan())).rejects.toThrow(
+      /pickup-year database update is not applied yet/,
+    );
+    expect(supabaseMock.queriesFor('ace_families')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('ace_family_members')).toHaveLength(0);
   });
 });
 

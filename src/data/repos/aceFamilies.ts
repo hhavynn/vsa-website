@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { runBulkWrites } from '../../lib/bulkWrites';
 import { AceFamily, AceFamilyMember } from '../../types';
-import { withErrorHandling } from '../errors';
+import { ValidationError, withErrorHandling } from '../errors';
 import { ImportPlan, pickupEvidenceRows } from '../../lib/aceFamilyImport';
 import { getUploadExtension } from '../../lib/imageUpload';
 import { AceMemberLinkChange, AceMemberLinkRef } from '../../lib/aceMemberLinks';
@@ -260,6 +260,21 @@ export class AceFamiliesRepository {
     plan: ImportPlan,
   ): Promise<{ family: AceFamily; memberCount: number }> {
     return withErrorHandling(async () => {
+      // 0. Pickup evidence needs migration 20261027190000. Check before writing
+      // anything, so a frontend deployed ahead of it refuses cleanly instead of
+      // creating and then deleting the fam (or dropping the terms).
+      const evidence = pickupEvidenceRows(plan);
+      if (evidence.length > 0) {
+        const { error: probeErr } = await supabase.from('ace_member_pickup_evidence').select('id').limit(1);
+        if (probeErr?.code === 'PGRST205' || probeErr?.code === '42P01') {
+          throw new ValidationError(
+            'This file has pickup terms, but the pickup-year database update is not applied yet. Nothing was imported.',
+            'added_term',
+          );
+        }
+        if (probeErr) throw probeErr;
+      }
+
       // 1. Family row.
       const { data: famRow, error: famErr } = await supabase
         .from('ace_families')
@@ -316,7 +331,6 @@ export class AceFamiliesRepository {
       }
 
       // 4. The source's added_term values, as pending evidence only.
-      const evidence = pickupEvidenceRows(plan);
       if (evidence.length > 0) {
         const { error: evErr } = await supabase.from('ace_member_pickup_evidence').insert(evidence);
         if (evErr) {

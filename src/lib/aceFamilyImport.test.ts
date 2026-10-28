@@ -585,6 +585,29 @@ describe("added_term pickup evidence", () => {
     expect(plan.warnings).toHaveLength(1);
   });
 
+  it("never puts a link into the evidence source label", () => {
+    const plan = buildImportPlan({
+      family: "https://docs.google.com/spreadsheets/d/x",
+      members: [{ name: "Root", big: null, added_term: "FA23" }],
+    });
+    expect(pickupEvidenceRows(plan)[0].source_label).toBe("JSON import");
+  });
+
+  it("warns when an unhinted duplicate name carries two different terms", () => {
+    const plan = buildImportPlan({
+      family: "Synthetic",
+      members: [
+        { name: "Root", big: null },
+        { name: "Twin", big: "Root", added_term: "FA22" },
+        { name: "Twin", big: "Root", added_term: "FA24" },
+      ],
+    });
+    expect(plan.warnings).toContain(
+      '"Twin" is listed more than once with different added_term values ("FA22", "FA24"). Kept "FA22".',
+    );
+    expect(plan.people.filter((p) => p.name === "Twin").map((p) => p.pickup?.rawValue)).toEqual(["FA22"]);
+  });
+
   it("describes the evidence without calling any of it approved", () => {
     const plan = buildImportPlan({
       family: "Synthetic",
