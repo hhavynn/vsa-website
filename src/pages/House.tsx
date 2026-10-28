@@ -290,7 +290,6 @@ export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('house');
-  const isDegradedMode = false;
   const today = getTodayDateOnly();
 
   const activeTermYear = terms.find((term) => term.is_active)?.academic_year_start ?? null;
@@ -337,6 +336,7 @@ export function House() {
   // An empty list while loading (or after a failed request) is not evidence
   // that the Houses are unannounced; only say so once the query has succeeded.
   const houseAssetsSettled = !houseAssetsLoading && !houseAssetsError;
+  const isDegradedMode = isSupabaseUnavailable(houseAssetsError);
   const houseAssetsByName = assetMapByHouse(houseAssets);
   const displayedHouses = isFutureYear
     ? []
