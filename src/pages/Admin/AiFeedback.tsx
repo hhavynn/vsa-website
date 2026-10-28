@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUrlFilter } from '../../hooks/useUrlFilter';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -11,6 +11,7 @@ export default function AdminAiFeedback() {
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const dirtyNotes = useRef<Set<string>>(new Set());
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
   
@@ -31,7 +32,14 @@ export default function AdminAiFeedback() {
         });
         if (!mounted) return;
         setFeedback(data);
-        setNoteDrafts(Object.fromEntries(data.map(item => [item.id, item.admin_notes ?? ''])));
+        // Keep unsaved notes by ID even when another filter hides the row.
+        setNoteDrafts(current => {
+          const next = { ...current };
+          for (const item of data) {
+            if (!dirtyNotes.current.has(item.id)) next[item.id] = item.admin_notes ?? '';
+          }
+          return next;
+        });
         setNoteError(null);
       } catch (err) {
         if (!mounted) return;
@@ -65,6 +73,7 @@ export default function AdminAiFeedback() {
     try {
       await aiFeedbackRepository.updateAdminNotes(item.id, draft);
       setFeedback(current => current.map(row => row.id === item.id ? { ...row, admin_notes: draft || null } : row));
+      dirtyNotes.current.delete(item.id);
       setNoteDrafts(current => ({ ...current, [item.id]: draft }));
     } catch {
       setNoteError(item.id);
@@ -184,7 +193,7 @@ export default function AdminAiFeedback() {
 
                 <div className="mt-4 border-t border-[var(--color-border)] pt-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <label htmlFor={'feedback-note-' + item.id} className="font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>
+                    <label htmlFor={'feedback-note-' + item.id} className="font-sans text-xs font-semibold text-text-secondary">
                       Internal review note
                     </label>
                     <Link
@@ -194,14 +203,17 @@ export default function AdminAiFeedback() {
                       Review knowledge base →
                     </Link>
                   </div>
-                  <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
+                  <p className="mt-1 font-sans text-[11px] text-text-muted">
                     Describe what to verify or change. Do not include names, emails, hashed identifiers or raw chats.
                     This note does not automatically mark the feedback resolved.
                   </p>
                   <textarea
                     id={'feedback-note-' + item.id}
                     value={noteDrafts[item.id] ?? item.admin_notes ?? ''}
-                    onChange={event => setNoteDrafts(current => ({ ...current, [item.id]: event.target.value }))}
+                    onChange={event => {
+                      dirtyNotes.current.add(item.id);
+                      setNoteDrafts(current => ({ ...current, [item.id]: event.target.value }));
+                    }}
                     maxLength={1500}
                     rows={3}
                     disabled={savingNoteId === item.id}
