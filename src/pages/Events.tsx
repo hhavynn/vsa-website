@@ -441,7 +441,7 @@ export function Events() {
           <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
           {featured && <NextEventAtGlance event={featured} />}
-          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] hidden sm:block" style={{ color: 'var(--text2)' }}>
+          <p className={`mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] ${featured ? 'hidden sm:block' : ''}`} style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions.
           </p>
           {activeTerm && (
