@@ -10,7 +10,7 @@ import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { leaderboardRepository } from '../data/repos/leaderboard';
-import { getAcademicTermMeta, formatAcademicYear, parseYearSlug } from '../lib/academicTerms';
+import { getAcademicTermMeta, formatAcademicYear, parseYearSlug, resolveCurrentAcademicYearStart } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTimeRange } from '../lib/eventTime';
 import { getSummerBreakMessage, isSummerBreak } from '../utils/seasonalState';
@@ -499,7 +499,7 @@ export function House() {
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
 
   // Determine the "real" current year even when terms haven't loaded yet
-  const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
+  const currentYear = resolveCurrentAcademicYearStart(activeTermYear, new Date());
   const isArchive = activeYear !== null && activeYear < currentYear;
   const isPastYear = activeYear !== null && activeYear === currentYear - 1;
   const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
