@@ -35,6 +35,7 @@ One `ace_family_members` row per Little:
 | `name` | the Little's name |
 | `role_label` | `Little` (the importer's convention) |
 | `is_published` | `true` (the fam must also be live to show publicly) |
+| `pickup_academic_year_start` / `pickup_term` | null (unknown) for now; stamping the cycle's term is #674. The Big's own pickup year is never changed. See [ace-pickup-years.md](ace-pickup-years.md). |
 
 The new node id is stamped on the draft (`published_ace_member_id`). Existing
 nodes, including the Big's own `role_label`, are never edited. A Big who was a
