@@ -1,33 +1,10 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 import { AssistantMessageContent } from './formatAssistantMessage';
-
-type Role = 'user' | 'assistant';
-type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
-
-interface SourceChip {
-  title: string;
-  source_url: string | null;
-  category: string;
-}
-
-interface ChatMessage {
-  id: string;
-  role: Role;
-  content: string;
-  sources?: SourceChip[];
-  status?: AssistantStatus;
-  feedbackSubmitted?: boolean;
-}
-
-interface AssistantResponse {
-  answer: string;
-  sources?: SourceChip[];
-  status: AssistantStatus;
-}
+import { AiSourceChips } from './AiSourceChips';
+import { AssistantStatus, ChatMessage, MAX_INPUT_LENGTH, useVsaAiConversation } from './useVsaAiConversation';
 
 const STARTER_QUESTIONS = [
   'What events are coming up?',
@@ -38,31 +15,6 @@ const STARTER_QUESTIONS = [
   'Who is on cabinet?',
   'What is VCN?'
 ];
-
-const MAX_MESSAGES = 12;
-const MAX_INPUT_LENGTH = 500;
-const SESSION_STORAGE_KEY = 'vsa-ai-assistant-session';
-
-function createMessageId() {
-  if (typeof crypto !== 'undefined') {
-    if ('randomUUID' in crypto) return crypto.randomUUID();
-    const bytes = new Uint8Array(16);
-    (crypto as Crypto).getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
-  return `${Date.now()}-${String(Math.random()).slice(2)}`;
-}
-
-function getSessionId() {
-  if (typeof window === 'undefined') return createMessageId();
-
-  const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (existing) return existing;
-
-  const next = createMessageId();
-  window.localStorage.setItem(SESSION_STORAGE_KEY, next);
-  return next;
-}
 
 function ChatSparkIcon({ className = 'h-5 w-5' }: { className?: string }) {
   return (
@@ -123,19 +75,6 @@ function InfoDotIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   );
 }
 
-function SourceIcon({ className = 'h-3 w-3' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="M6.3 10.55 4.95 11.9a3.1 3.1 0 0 0 4.38 4.38l2.1-2.1a3.1 3.1 0 0 0 0-4.38M13.7 9.45l1.35-1.35a3.1 3.1 0 0 0-4.38-4.38l-2.1 2.1a3.1 3.1 0 0 0 0 4.38"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function isFallbackMessage(message: ChatMessage) {
   return (
     message.status === 'fallback' ||
@@ -161,10 +100,8 @@ export function VsaAiAssistant() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [sessionId, setSessionId] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { messages, setMessages, input, setInput, loading, sendMessage, handleRetry, handleSubmit } =
+    useVsaAiConversation(location.pathname);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const assistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -177,10 +114,6 @@ export function VsaAiAssistant() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
-
-  useEffect(() => {
-    setSessionId(getSessionId());
-  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -218,99 +151,6 @@ export function VsaAiAssistant() {
   }, [loading, messages]);
 
   if (isAdminRoute) return null;
-
-  async function sendMessage(rawMessage: string, history: ChatMessage[] = messages) {
-    const nextMessage = rawMessage.trim().slice(0, MAX_INPUT_LENGTH);
-    if (!nextMessage || loading || !sessionId) return;
-
-    setInput('');
-
-    const userMessage: ChatMessage = {
-      id: createMessageId(),
-      role: 'user',
-      content: nextMessage,
-    };
-
-    const recentTurns = history
-      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited')
-      .slice(-4)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, MAX_INPUT_LENGTH),
-      }));
-
-    setMessages([...history, userMessage].slice(-MAX_MESSAGES));
-    setLoading(true);
-
-    try {
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error(FALLBACK_ASK_VSA.message);
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/vsa-ai-assistant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-          message: nextMessage,
-          sessionId,
-          recentTurns,
-          currentPage: location.pathname,
-        }),
-      });
-
-      const data = (await response.json().catch(() => null)) as AssistantResponse | null;
-
-      if (!response.ok && response.status !== 429) {
-        throw new Error(`Ask VSA request failed (HTTP ${response.status})`);
-      }
-
-      const assistantMessage: ChatMessage = {
-        id: createMessageId(),
-        role: 'assistant',
-        content:
-          data?.answer ||
-          (response.status === 429
-            ? "You've reached today's Ask VSA limit. Try again later!"
-            : FALLBACK_ASK_VSA.message),
-        sources: data?.sources ?? [],
-        status: data?.status ?? (response.status === 429 ? 'rate_limited' : 'error'),
-      };
-
-      setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
-    } catch (error) {
-      console.error('Ask VSA request failed:', error);
-      const assistantMessage: ChatMessage = {
-        id: createMessageId(),
-        role: 'assistant',
-        content: FALLBACK_ASK_VSA.message,
-        status: 'error',
-      };
-      setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRetry(messageIndex: number) {
-    const userMessageIndex = messages
-      .slice(0, messageIndex)
-      .map((message) => message.role)
-      .lastIndexOf('user');
-    if (userMessageIndex < 0) return;
-
-    await sendMessage(messages[userMessageIndex].content, messages.slice(0, userMessageIndex));
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    sendMessage(input);
-  }
 
   function minimizeAssistant() {
     setIsOpen(false);
@@ -533,32 +373,7 @@ export function VsaAiAssistant() {
                         </div>
                       )}
                       {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {message.sources.slice(0, 4).map((source) => {
-                            const label = source.title.length > 28 ? `${source.title.slice(0, 25)}...` : source.title;
-                            return source.source_url ? (
-                              <a
-                                key={`${message.id}-${source.title}`}
-                                href={source.source_url}
-                                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold transition-colors hover:border-brand-600 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
-                                aria-label={`Source: ${source.title}`}
-                              >
-                                <SourceIcon />
-                                {label}
-                              </a>
-                            ) : (
-                              <span
-                                key={`${message.id}-${source.title}`}
-                                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
-                                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
-                              >
-                                <SourceIcon />
-                                {label}
-                              </span>
-                            );
-                          })}
-                        </div>
+                        <AiSourceChips messageId={message.id} sources={message.sources} />
                       )}
                       
                       {/* Feedback UI */}
