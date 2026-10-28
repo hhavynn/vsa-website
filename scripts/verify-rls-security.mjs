@@ -221,9 +221,10 @@ async function runTests() {
     else reportPass(`${who} retains public member identity and individual points (#704)`);
   }
 
-  // #692 must be applied and verified in staging before enabling this mode.
-  // Pre-migration environments retain the old contract until the cutover.
-  const houseEmbargoRequired = process.env.RLS_HOUSE_EMBARGO_PHASE === 'post-migration';
+  // #692's embargo is now the default security contract: shipped House scores
+  // are private. Explicit pre-migration staging may opt out while rehearsing
+  // the SQL cutover. Never assume PUBLIC SELECT just because CI has no env flag.
+  const houseEmbargoRequired = process.env.RLS_HOUSE_EMBARGO_PHASE !== 'pre-migration';
   const houseScoreViews = [
     'house_yearly_points', 'house_all_time_points', 'house_recent_activity',
     'house_member_yearly_points', 'house_member_all_time_points',
@@ -391,16 +392,18 @@ async function runTests() {
     // is probed on its own; the safe public projection is asserted readable below.
     reportResults(await checkAnonCannotReadMemberPii(anon));
 
-    // Query members table - attempt to select safe public fields
-    const { data: memSafeData, error: memSafeError } = await anon
+    // #704: the retired members.house display cache is NOT a public-safe
+    // column. Public member identity and individual points must remain
+    // readable even when the legacy House field is denied by its column ACL.
+    const { error: memSafeError } = await anon
       .from('public_members')
-      .select('id, first_name, last_name, college, year, house, points, events_attended')
+      .select('id, first_name, last_name, college, year, points, events_attended')
       .limit(1);
 
     if (memSafeError) {
       reportFail(`anon cannot select safe public columns from members: ${memSafeError.message}`);
     } else {
-      reportPass('anon can read safe public member fields needed for leaderboard/House pages');
+      reportPass('anon can read safe public member identity and individual points without legacy House cache');
     }
 
     // Only count checks; values from private member tables never enter logs.
