@@ -16,6 +16,7 @@ import { OptimizedImage } from '../../common/OptimizedImage';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../../../utils/seasonalState';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { isEventUpcomingOrOngoing } from '../../../lib/eventLifecycle';
+import { UpcomingItem, houseCandidate, mergeUpcoming, upcomingSortMs } from '../../../lib/upcomingEvents';
 import { useEventLifecycleTimer } from '../../../hooks/useEventLifecycleTimer';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
 import { Event, HouseEvent } from '../../../types';
@@ -63,6 +64,23 @@ function getEventTimeLabel(event: Pick<Event, 'start_time' | 'end_time'>): strin
   return null;
 }
 
+/** The next House event, linking to its own card on its House page. */
+function HouseEventPreviewLink({ item, lead }: { item: Extract<UpcomingItem, { kind: 'house' }>; lead: string }) {
+  const { event } = item;
+  const hosts = (event.houses ?? []).map((h) => h.display_name || h.house).join(' + ');
+  const time = event.start_time ? getEventTimeLabel(event) : null;
+  return (
+    <Link to={item.detailPath} className="flex min-h-11 flex-col justify-center rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
+      <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
+        {lead}{hosts ? ` · ${hosts}` : ''} / {formatDateOnly(event.event_date, 'MMM d')}{time ? ` · ${time}` : ''}
+      </div>
+      <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
+        {event.title}
+      </div>
+    </Link>
+  );
+}
+
 function NextEventCard() {
   const today = getLosAngelesDateOnly();
   const { data: rawEvents = [], isLoading } = useQuery<PublicEventPreview[]>({
@@ -75,13 +93,15 @@ function NextEventCard() {
   const todayDateOnly = today;
   const { data: houseEvents = [] } = useQuery<HouseEvent[]>({
     queryKey: ['home', 'upcoming-house-event-preview', todayDateOnly],
-    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 1),
+    // A few, so one that already ended today can be skipped.
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 3),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const now = useEventLifecycleTimer(rawEvents, [
+  const timerEvents = useMemo(() => [...rawEvents, ...houseEvents.map(houseCandidate)], [rawEvents, houseEvents]);
+  const now = useEventLifecycleTimer(timerEvents, [
     ['home', 'upcoming-event-preview'],
   ]);
 
@@ -95,7 +115,13 @@ function NextEventCard() {
   const [activeIndex, setActiveIndex] = useState(0);
   const safeIndex = stack.length > 0 ? Math.min(activeIndex, stack.length - 1) : 0;
   const nextEvent = stack[safeIndex] ?? null;
-  const nextHouseEvent = houseEvents[0] ?? null;
+  const nextHouseItem = useMemo(() => {
+    const [first] = mergeUpcoming([], houseEvents, now);
+    return first?.kind === 'house' ? first : null;
+  }, [houseEvents, now]);
+  const nextHouseEvent = nextHouseItem?.event ?? null;
+  // Same order as /events: the House event goes first when it happens first.
+  const houseFirst = !!nextHouseItem && !!stack[0] && nextHouseItem.sortMs < upcomingSortMs(stack[0]);
   const timeLabel = nextEvent ? getEventTimeLabel(nextEvent) : null;
   const useSummerEmptyState = shouldUseSummerEmptyState(Boolean(nextEvent || nextHouseEvent));
   const summerMessage = getSummerBreakMessage('homepage');
@@ -143,17 +169,10 @@ function NextEventCard() {
               ? summerMessage.body
               : 'Check back soon or follow VSA channels for updates.'}
           </p>
-          {nextHouseEvent && (
-            <Link to="/house-system" className="mt-4 rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
-              <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
-                {nextHouseEvent.houses && nextHouseEvent.houses.length > 1
-                  ? `${nextHouseEvent.houses.map(h => h.display_name || h.house).join(' + ')} event`
-                  : 'House event'} / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
-              </div>
-              <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
-                {nextHouseEvent.title}
-              </div>
-            </Link>
+          {nextHouseItem && (
+            <div className="mt-4">
+              <HouseEventPreviewLink item={nextHouseItem} lead="House event" />
+            </div>
           )}
           <div className="mt-4 flex flex-wrap gap-3">
             {useSummerEmptyState && (
@@ -168,6 +187,7 @@ function NextEventCard() {
         </div>
       ) : (
         <>
+          {houseFirst && nextHouseItem && <HouseEventPreviewLink item={nextHouseItem} lead="First up: House event" />}
           <div className="relative">
             {/* Ghost cards peeking out behind the active one — only when there's
                 more than one upcoming event to stack. Decorative, aria-hidden. */}
@@ -258,16 +278,7 @@ function NextEventCard() {
             {stack.length > 1 ? `Showing event ${safeIndex + 1} of ${stack.length}: ${nextEvent.name}` : ''}
           </span>
 
-          {nextHouseEvent && (
-            <Link to="/house-system" className="rounded-lg border p-3 transition-colors hover:bg-[var(--surface2)]" style={{ borderColor: 'var(--border)' }}>
-              <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
-                Next House event / {formatDateOnly(nextHouseEvent.event_date, 'MMM d')}
-              </div>
-              <div className="mt-1 truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--text)' }}>
-                {nextHouseEvent.title}
-              </div>
-            </Link>
-          )}
+          {!houseFirst && nextHouseItem && <HouseEventPreviewLink item={nextHouseItem} lead="Next House event" />}
 
           <Link to="/events" className="mt-auto touch:flex touch:min-h-11 touch:items-center font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
             View event

@@ -105,6 +105,35 @@ describe('SignInForm', () => {
     expect(screen.queryByTestId('admin-home')).not.toBeInTheDocument();
   });
 
+  it('announces validation errors and focuses the first invalid required field', async () => {
+    renderForm();
+    const email = await screen.findByRole('textbox', { name: 'Email' });
+    const password = screen.getByLabelText('Password');
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(password).toHaveAttribute('autocomplete', 'current-password');
+    expect(email).toBeRequired();
+    expect(password).toBeRequired();
+
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(email).toHaveAccessibleDescription('Invalid email address');
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
+  });
+
+  it('moves focus to the non-enumerating auth alert after an async access failure', async () => {
+    supabaseMock.queueResult('user_profiles', { data: { is_admin: false }, error: null });
+    renderForm();
+    await submit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/admins only/i);
+    const focusTarget = screen.getByTestId('sign-in-auth-error-focus');
+    await waitFor(() => expect(focusTarget).toHaveFocus());
+    expect(focusTarget).toHaveAttribute('tabindex', '-1');
+  });
+
   it('prefills the email when one is supplied', async () => {
     const client = new QueryClient();
     render(
