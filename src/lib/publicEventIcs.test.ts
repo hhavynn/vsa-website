@@ -48,7 +48,7 @@ describe('published VSA calendar snapshot (#278)', () => {
       fixture({ id: 'overnight', date: '2026-11-05', start_time: '23:00:00', end_time: '01:00:00', end_date: null }),
     ], now));
     // Pacific Standard Time: 11 PM Nov 5 to 1 AM Nov 6.
-    expect(text).toContain('DTSTART:20261106T070000Z\\r\\nDTEND:20261106T090000Z'.replace(/\\r/g, '\r').replace(/\\n/g, '\n'));
+    expect(text).toContain('DTSTART:20261106T070000Z\r\nDTEND:20261106T090000Z');
   });
 
   it('handles all-day and multi-day events with exclusive DATE end boundaries', () => {
