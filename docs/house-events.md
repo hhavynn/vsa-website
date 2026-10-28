@@ -9,6 +9,10 @@ Admin → Houses → House Events creates and edits `house_events` and their hos
 - **Retries and two editors.** A create retried with the same form session returns the same event (no duplicate). An update is refused if someone else saved the event after it was opened ("reload and try again").
 - **Before the migration** the editor falls back to the previous two-step save, with the new no-default and draft-default form behavior.
 
+## In Admin → Events (#630)
+
+Create Event starts with a category: **General VSA Event**, **External Event** (the External Event type and its UVSA listing) or **House Event**. House Event opens the same House event editor, so a House event is saved only as a House event: never as a regular VSA event, and it never awards attendance points. A House social that should also count for points needs a separate, deliberately created regular event. Manage Events lists the year's House events (hosts, draft or published) from the same records Admin → Houses shows, with a button to open the editor.
+
 Offline proof: `bash scripts/test-house-event-save.sh`.
 
-**Migration status:** `20261028080000_house_event_atomic_save.sql` is **not applied**; it needs owner approval and staging first.
+**Migration status:** `20261028080000_house_event_atomic_save.sql` is verified applied to production (2026-10-28).
