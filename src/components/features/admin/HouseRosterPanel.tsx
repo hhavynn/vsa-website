@@ -23,6 +23,7 @@ const FILTERS: { key: Filter; label: string; test: (m: RosterMember) => boolean 
 
 const REASON: Record<AttendanceReason, string> = {
   counted: 'Counted',
+  overlapping_houses: 'Overlapping active Houses — review assignments',
   before_house_start: 'Before their House start date',
   no_house: 'Not in a House on that date',
   house_not_public: 'House profile not public yet',
@@ -59,7 +60,9 @@ function MemberAttendance({ memberId, year }: { memberId: string; year: number }
         <li key={event.event_id} className="flex flex-wrap justify-between gap-2">
           <span className="text-text-primary">{event.name} <span className="text-text-muted">{laDate(event.date)}{creditedDay(event.date) ? ` (counted as ${creditedDay(event.date)}, by UTC date)` : ''}</span></span>
           <span className={event.reason === 'counted' ? 'text-emerald-800 dark:text-emerald-300' : 'text-text-muted'}>
-            {event.reason === 'counted' ? `Counted for ${event.house_name}` : REASON[event.reason]}
+            {event.reason === 'overlapping_houses'
+              ? `Credited to multiple Houses: ${event.house_name ?? 'unknown'} — review overlapping memberships`
+              : event.reason === 'counted' ? `Counted for ${event.house_name}` : REASON[event.reason]}
           </span>
         </li>
       ))}
