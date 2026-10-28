@@ -110,6 +110,47 @@ it('publishes only after confirming, keeping the host Houses and the loaded vers
   await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
 });
 
+it('unpublishes with a plain update that leaves the host Houses alone', async () => {
+  repo.getAdminEvents.mockResolvedValue([event('live', { houses: [twilight, rarity] })]);
+  repo.updateEvent.mockResolvedValue(event('live', { is_published: false }));
+  renderManager();
+  await userEvent.click(await screen.findByRole('button', { name: /^Upcoming/ }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Unpublish Fictional live' }));
+  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Unpublish' }));
+  await waitFor(() => expect(repo.updateEvent).toHaveBeenCalledWith('live', { is_published: false }));
+  expect(repo.saveEventAtomic).not.toHaveBeenCalled();
+});
+
+it('keeps an open edit of the same event in step after publishing it from the list', async () => {
+  repo.getAdminEvents.mockResolvedValue([event('draft', { is_published: false })]);
+  repo.saveEventAtomic.mockImplementation(async ({ eventId, formData }) =>
+    event(eventId ?? 'new', { is_published: !!formData.is_published, updated_at: '2026-11-02T00:00:00Z' }));
+  renderManager();
+  await userEvent.click(await screen.findByRole('button', { name: /^Drafts/ }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit Fictional draft' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Publish Fictional draft' }));
+  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+  const form = screen.getByRole('form');
+  expect(within(form).getByRole('checkbox', { name: /Publish now/ })).toBeChecked();
+  await userEvent.click(within(form).getByRole('button', { name: /Save Changes/ }));
+  await waitFor(() => expect(repo.saveEventAtomic).toHaveBeenCalledTimes(2));
+  // The form save carries the version the publish returned, not the stale one.
+  expect(repo.saveEventAtomic.mock.calls[1][0]).toMatchObject({ eventId: 'draft', expectedUpdatedAt: '2026-11-02T00:00:00Z' });
+});
+
+it('clears the host filter when the year changes', async () => {
+  repo.getAdminEvents.mockResolvedValue([event('solo')]);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { rerender } = render(
+    <QueryClientProvider client={client}><HouseEventsManager selectedYear={2026} onYearChange={jest.fn()} /></QueryClientProvider>,
+  );
+  await userEvent.selectOptions(await screen.findByLabelText('Host House'), 'hp-rarity');
+  rerender(<QueryClientProvider client={client}><HouseEventsManager selectedYear={2025} onYearChange={jest.fn()} /></QueryClientProvider>);
+  expect(screen.getByLabelText('Host House')).toHaveValue('');
+});
+
 it('cancelling the confirmation changes nothing', async () => {
   repo.getAdminEvents.mockResolvedValue([event('live')]);
   renderManager();

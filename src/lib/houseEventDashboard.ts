@@ -77,7 +77,7 @@ export function houseEventIssues(event: HouseEvent, today: string): HouseEventIs
   }
   if (!event.is_published && !upcoming) {
     issues.push({ id: 'draft_past', level: 'warn', message: 'Still a draft, and its date has passed.' });
-  } else if (!event.is_published && daysBetween(today, event.event_date) <= 7) {
+  } else if (!event.is_published && daysBetween(today, event.event_date) <= 6) {
     const days = daysBetween(today, event.event_date);
     issues.push({ id: 'draft_soon', level: 'warn', message: days === 0 ? 'Happens today and is still a draft.' : `Happens in ${days} day${days === 1 ? '' : 's'} and is still a draft.` });
   }

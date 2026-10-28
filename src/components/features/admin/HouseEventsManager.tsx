@@ -222,9 +222,12 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     else action();
   }
 
+  // Deferred so it runs after a closing dialog has restored its own focus.
   function showForm() {
-    formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-    formRef.current?.querySelector<HTMLInputElement>('#house-event-title')?.focus({ preventScroll: true });
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      formRef.current?.querySelector<HTMLInputElement>('#house-event-title')?.focus({ preventScroll: true });
+    }, 0);
   }
 
   function editEvent(event: HouseEvent) {
@@ -251,13 +254,16 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     });
   }
 
+  // Publishing goes through the atomic save, so the server re-checks the hosts
+  // and refuses a stale version. Unpublishing only hides the event: a plain
+  // update that leaves the hosts alone, so it works even when they need fixing.
   async function setPublished(event: HouseEvent, publish: boolean) {
     const hostIds = hostIdsOf(event);
     if (publish && hostIds.length === 0) throw new Error('Link a host House (Edit) before publishing.');
-    const saved = hostIds.length > 0
+    const saved = publish
       ? await houseEventsRepository.saveEventAtomic({
         eventId: event.id,
-        formData: { is_published: publish, house_ids: hostIds },
+        formData: { is_published: true, house_ids: hostIds },
         requestId: crypto.randomUUID(),
         expectedUpdatedAt: event.updated_at,
       })
@@ -595,6 +601,8 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
       </form>
 
       <HouseEventsDashboard
+        // A new year starts with no host filter (its Houses are different).
+        key={selectedYear ?? 'none'}
         selectedYear={selectedYear}
         events={events}
         profiles={houseProfiles}
