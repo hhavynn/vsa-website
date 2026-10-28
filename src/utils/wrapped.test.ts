@@ -129,45 +129,15 @@ describe('house standings helpers', () => {
   });
 });
 
-describe('buildPublicHouseStandings', () => {
-  it('injects official 2025–2026 placeholder rows when the view is empty', () => {
-    const standings = buildPublicHouseStandings([], 2025);
-    expect(standings).toHaveLength(4);
-    // House Chair's official public totals — same overrides as /leaderboard.
-    expect(pickHouseWinner(standings)?.house).toBe('Bowser');
-    expect(pickHouseWinner(standings)?.total_points).toBe(247);
-    expect(sumCommunityPoints(standings)).toBe(247 + 215 + 158 + 125);
+describe('buildPublicHouseStandings after House scoring embargo', () => {
+  it('never fabricates historical House score rows when the view is empty', () => {
+    expect(buildPublicHouseStandings([], 2025)).toEqual([]);
   });
 
-  it('applies overrides on top of calculated rows for the override year', () => {
-    const standings = buildPublicHouseStandings(
-      [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2025 })],
-      2025
-    );
-    expect(standings[0].total_points).toBe(125);
-  });
-
-  it('overrides Houses by the row\'s own academic_year_start; the argument only decides placeholder injection', () => {
-    // Characterization: a 2026 row passed with academicYearStart 2025 is not overridden.
-    const rows = [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2026 })];
-    expect(buildPublicHouseStandings(rows, 2025)[0].total_points).toBe(999);
-  });
-
-  it('keeps an unknown House at its calculated total in the override year', () => {
-    const rows = [makeHouse({ house: 'Test House', display_name: 'Test House', total_points: 12, academic_year_start: 2025 })];
-    expect(buildPublicHouseStandings(rows, 2025)[0].total_points).toBe(12);
-  });
-
-  it('does not mutate the input rows', () => {
-    const rows = [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2025 })];
-    buildPublicHouseStandings(rows, 2025);
-    expect(rows[0].total_points).toBe(999);
-  });
-
-  it('leaves non-override years untouched', () => {
-    const rows = [makeHouse({ house: 'Boo', total_points: 999, academic_year_start: 2026 })];
-    expect(buildPublicHouseStandings(rows, 2026)).toEqual(rows);
-    expect(buildPublicHouseStandings([], 2026)).toEqual([]);
+  it('does not replace calculated values with a historical public override', () => {
+    const rows = [makeHouse({ house: 'synthetic-house', total_points: 7, academic_year_start: 2025 })];
+    expect(buildPublicHouseStandings(rows, 2025)).toEqual(rows);
+    expect(rows[0].total_points).toBe(7);
   });
 });
 

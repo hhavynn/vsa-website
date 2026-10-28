@@ -153,35 +153,28 @@ export class LeaderboardRepository {
     }, 'Failed to fetch member event history');
   }
 
-  /** A member's House for the given year (or all-time), if they have one. */
+  /**
+   * Published affiliation only; NEVER use per-member House points to draw a
+   * badge. A single-row, publication-gated RPC prevents a roster or score leak.
+   */
   async getMemberHouseBadge(memberId: string, academicYearStart: number | 'all'): Promise<MemberHouseBadge | null> {
     return withErrorHandling(async () => {
-      const table = academicYearStart === 'all' ? 'house_member_all_time_points' : 'house_member_yearly_points';
-      let query = supabase
-        .from(table)
-        .select('house, house_profile_id, display_name, accent_color, academic_year_start, latest_activity_at')
-        .eq('member_id', memberId);
-
-      if (academicYearStart !== 'all') {
-        query = query.eq('academic_year_start', academicYearStart);
-      }
-
-      // Both views can return more than one row per member -- house_member_
-      // all_time_points has one row per (member, House, academic year), and
-      // house_member_yearly_points can too if a member switched Houses
-      // mid-year. Order deterministically (newest year, then most recent
-      // activity) before taking the top row so the badge is stable rather
-      // than whatever PostgREST happens to return first.
-      query = query
-        .order('academic_year_start', { ascending: false })
-        .order('latest_activity_at', { ascending: false, nullsFirst: false })
-        .limit(1);
-
-      const { data, error } = await query;
+      // The new SQL RPC is staged but src/types/database.ts is generated from
+      // the deployed schema. Keep a narrowly typed call until the types are
+      // regenerated from the staged/production database after migration.
+      const badgeClient = supabase as unknown as {
+        rpc: (fn: 'public_member_house_badge', args: {
+          p_member_id: string; p_year: number | null;
+        }) => PromiseLike<{ data: unknown; error: unknown }>;
+      };
+      const { data, error } = await badgeClient.rpc('public_member_house_badge', {
+        p_member_id: memberId,
+        p_year: academicYearStart === 'all' ? null : academicYearStart,
+      });
       if (error) throw error;
-      const row = data?.[0] as MemberHouseBadge | undefined;
-      return row ?? null;
-    }, 'Failed to fetch member house badge');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+      return data as unknown as MemberHouseBadge;
+    }, 'Failed to fetch published House affiliation');
   }
 
   async getYearsWithData(): Promise<number[]> {
