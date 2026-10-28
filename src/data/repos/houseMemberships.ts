@@ -28,7 +28,91 @@ function readHouseLabel(embedded: HouseMembershipRow['house_page_assets']): stri
   return profile?.display_name ?? profile?.house_key ?? null;
 }
 
+/** A member's publicly announced House for one academic year. No points. */
+export interface PublicMemberHouse {
+  houseProfileId: string;
+  houseKey: string | null;
+  label: string;
+  accentColor: string | null;
+  academicYearStart: number;
+}
+
+interface PublicHouseMembershipRow {
+  member_id: string;
+  academic_year_start: number;
+  effective_start_date: string;
+  effective_end_date: string | null;
+  house_profile_id: string;
+  house_key: string | null;
+  display_name: string | null;
+  accent_color: string | null;
+}
+
+const PUBLIC_PAGE = 1000;
+
+/**
+ * The membership to show for a member, from their newest academic year: the
+ * one in effect on `onDate`; for a year that is over, the one they ended it
+ * in; for a year still running, the next upcoming one (announced at Reveal,
+ * starting later). A membership that ended this year with no successor shows
+ * nothing rather than a House the member left.
+ */
+function pickRow(rows: PublicHouseMembershipRow[], onDate: string): PublicHouseMembershipRow | null {
+  const sorted = [...rows].sort((a, b) =>
+    b.academic_year_start - a.academic_year_start || b.effective_start_date.localeCompare(a.effective_start_date));
+  const newestYear = sorted[0].academic_year_start;
+  const inYear = sorted.filter((row) => row.academic_year_start === newestYear);
+  const inEffect = inYear.find((row) => row.effective_start_date <= onDate && (!row.effective_end_date || row.effective_end_date > onDate));
+  if (inEffect) return inEffect;
+  const yearOver = onDate >= `${newestYear + 1}-07-01`;
+  if (yearOver) return inYear.find((row) => row.effective_start_date <= onDate) ?? null;
+  return [...inYear].reverse().find((row) => row.effective_start_date > onDate) ?? null;
+}
+
 export class HouseMembershipsRepository {
+  /**
+   * Publicly announced House per member, from public_house_memberships
+   * (Reveal-gated and score-free). Never reads the members.house cache, which
+   * can hold a previous year's House. `academicYearStart = 'all'` shows each
+   * member's most recent revealed House. Every page is read; a failed page
+   * fails the whole read.
+   */
+  async getPublicHousesByMemberId(academicYearStart: number | 'all', onDate: string): Promise<Map<string, PublicMemberHouse>> {
+    return withErrorHandling(async () => {
+      const rows: PublicHouseMembershipRow[] = [];
+      for (let from = 0; ; from += PUBLIC_PAGE) {
+        let query = supabase
+          .from('public_house_memberships')
+          .select('member_id, academic_year_start, effective_start_date, effective_end_date, house_profile_id, house_key, display_name, accent_color');
+        if (academicYearStart !== 'all') query = query.eq('academic_year_start', academicYearStart);
+        const { data, error } = await query
+          .order('member_id', { ascending: true })
+          .order('academic_year_start', { ascending: true })
+          .order('effective_start_date', { ascending: true })
+          .range(from, from + PUBLIC_PAGE - 1);
+        if (error) throw error;
+        const page = (data ?? []) as PublicHouseMembershipRow[];
+        rows.push(...page);
+        if (page.length < PUBLIC_PAGE) break;
+      }
+      const byMember = new Map<string, PublicHouseMembershipRow[]>();
+      rows.forEach((row) => byMember.set(row.member_id, [...(byMember.get(row.member_id) ?? []), row]));
+      const houses = new Map<string, PublicMemberHouse>();
+      byMember.forEach((memberRows, memberId) => {
+        const row = pickRow(memberRows, onDate);
+        if (!row) return;
+        houses.set(memberId, {
+          houseProfileId: row.house_profile_id,
+          houseKey: row.house_key,
+          label: row.display_name || row.house_key || 'House',
+          accentColor: row.accent_color,
+          academicYearStart: row.academic_year_start,
+        });
+      });
+      return houses;
+    }, 'Failed to fetch public House memberships');
+  }
+
   /**
    * House label per member for the membership in effect on `onDate`.
    *

@@ -20,7 +20,7 @@ import {
   aceFamiliesRepository,
 } from '../../data/repos/aceFamilies';
 import { AceFamily, AceFamilyMember } from '../../types';
-import { ImportPlan, buildImportPlan, validateJson } from '../../lib/aceFamilyImport';
+import { ImportPlan, buildImportPlan, describePickupEvidence, validateJson } from '../../lib/aceFamilyImport';
 import { extractSupabasePublicObjectName, prepareImageForUpload } from '../../lib/imageUpload';
 import { isRenamed } from '../../lib/memberPhotos';
 import { supabase } from '../../lib/supabase';
@@ -1120,6 +1120,9 @@ export default function AdminAceFamilies() {
                     {importPreview.people.filter((p) => p.role_label === 'Big').length} bigs ·{' '}
                     {importPreview.people.filter((p) => p.role_label === 'Little').length} littles ·{' '}
                     {importPreview.people.filter((p) => p.parent_id === null).length} roots
+                  </div>
+                  <div className="mt-1" style={{ color: 'var(--color-text3)' }}>
+                    {describePickupEvidence(importPreview)}
                   </div>
                   {importPreview.description && (
                     <div className="mt-1" style={{ color: 'var(--color-text3)' }}>

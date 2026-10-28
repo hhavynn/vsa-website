@@ -503,6 +503,24 @@ async function runTests() {
       else reportPass('anon cannot read house_parents (returned empty list due to RLS)');
     }
 
+    // ACE pickup-year evidence (migration 20261027190000) is admin-only; the public tree reads only
+    // the approved pickup_* columns through published_ace_family_members. Missing objects = not applied.
+    // Constraints, review flow and view projection are covered offline by scripts/test-ace-pickup-year.sh.
+    {
+      const missing = (error) => error && (error.code === 'PGRST205' || error.code === '42P01');
+      const { data: peData, error: peError } = await anon.from('ace_member_pickup_evidence').select('id').limit(1);
+      if (missing(peError)) reportSkip('ace_member_pickup_evidence is not present yet (migration 20261027190000 not applied)');
+      else if (peError) reportPass(`anon cannot read ace_member_pickup_evidence (${peError.message || peError.code})`);
+      else if (peData && peData.length > 0) reportFail('anon read ace_member_pickup_evidence successfully (returned rows)');
+      else reportPass('anon cannot read ace_member_pickup_evidence (returned empty list due to RLS)');
+      const { data: pyData, error: pyError } = await anon.rpc('set_ace_member_pickup_year', {
+        p_ace_member_id: dummyUuid, p_academic_year_start: 2023, p_term: 'FA23', p_evidence_id: null,
+      });
+      if (isMissingFunction(pyError)) reportSkip('set_ace_member_pickup_year is not present yet (migration 20261027190000 not applied)');
+      else if (pyError && (pyError.code === '42501' || pyError.message.includes('permission denied'))) reportPass(`anon cannot call set_ace_member_pickup_year (${pyError.message})`);
+      else reportFail(`anon could call set_ace_member_pickup_year or got unexpected error: ${JSON.stringify(pyError || pyData)}`);
+    }
+
     // Atomic House placement override (migration 20261027120000): EXECUTE is for authenticated only.
     {
       const { data: hoData, error: hoError } = await anon.rpc('admin_apply_house_placement_override', { p_batch_id: dummyUuid, p_changes: [], p_reason: 'RLS verify probe' });
