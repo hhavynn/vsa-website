@@ -124,7 +124,7 @@ describe('HouseEventsRepository — public association data minimization (#640)'
 
       expect(selects).toHaveLength(1);
       expect(selects[0]).toContain(
-        'houses:house_event_houses(house:published_house_page_assets(id,house,house_key,display_name,accent_color))'
+        'houses:house_event_houses(house_page_asset_id)'
       );
       expect(selects[0]).not.toContain('*');
       expect(selects[0]).not.toMatch(/internal_notes|source_doc_url|house_parent_body|house_parent_image_url/);
