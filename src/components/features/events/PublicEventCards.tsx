@@ -4,7 +4,6 @@ import { Badge, BadgeColor } from '../../ui/Badge';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { EventInterestButtons } from './EventInterestButtons';
 import { EVENT_TYPE_LABELS } from '../../../constants/eventTypes';
-import { readableInk } from '../../../lib/readableInk';
 import { getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatEventDateRange, formatEventTimeRange, getEventDateOnly } from '../../../lib/eventTime';
 import { parseDateOnly } from '../../../lib/dateOnly';
