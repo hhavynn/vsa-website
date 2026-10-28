@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import AdminAiUsage, { summarizeAiUsage } from './AiUsage';
 import { supabase } from '../../lib/supabase';
 
@@ -13,9 +14,14 @@ const rows = [
 
 beforeEach(() => { rpc.mockReset().mockResolvedValue({ data: rows, error: null }); });
 
+function mount() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}><AdminAiUsage /></QueryClientProvider>);
+}
+
 describe('Ask VSA admin aggregate usage report (#240)', () => {
   it('loads only daily counts from the privileged RPC and renders no identities', async () => {
-    render(<AdminAiUsage />);
+    mount();
     await waitFor(() => expect(rpc).toHaveBeenCalledWith('admin_ai_usage_daily', { p_days: 30 }));
     expect(await screen.findByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Estimated AI spend')).toBeInTheDocument();
@@ -27,7 +33,7 @@ describe('Ask VSA admin aggregate usage report (#240)', () => {
 
   it('fails closed if the migration is missing or permission is denied', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'permission denied' } });
-    render(<AdminAiUsage />);
+    mount();
     expect(await screen.findByRole('alert')).toHaveTextContent('Usage report unavailable');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(rpc).toHaveBeenCalledTimes(1);
