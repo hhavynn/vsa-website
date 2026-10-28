@@ -91,7 +91,12 @@ begin
       )
     )
     and hm.effective_start_date <= current_date
-    and (hm.effective_end_date is null or hm.effective_end_date > current_date)
+    and (
+      hm.effective_end_date is null or hm.effective_end_date > current_date
+      -- Historical badges represent a published assignment, even if it later
+      -- ended. Current-year badges must use the active effective interval.
+      or hm.academic_year_start < extract(year from current_date)::integer - 1
+    )
   order by hm.academic_year_start desc, hm.effective_start_date desc, hm.id
   limit 1;
   return v_result;
