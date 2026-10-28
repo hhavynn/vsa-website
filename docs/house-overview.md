@@ -15,6 +15,9 @@ For the year, or one term (**Period**), one card per House profile of that year 
 
 A banner uses the Attendance status read (#653) to say whether past point-earning events are still waiting on an import or review, because then the numbers may be low.
 
+
+**Forward-only data-integrity correction:** The original migration `20261028075724` is preserved unchanged because its application status must be treated as potentially applied. Migration `20261028200000_admin_house_overview_weighted_reconciliation.sql` replaces the same admin-only function so whole-year reconciliation compares the **sum of `points_earned`**, not the number of attendance rows. Both migrations are exercised by `scripts/test-house-overview.sh` using a synthetic two-point attendance record. The new migration has **not** been applied or verified on a hosted database in this review; run the disposable PostgreSQL fixture and staged role/POST checks before production rollout.
+
 ## Data and safety
 
 `admin_house_overview(p_year, p_term_id)` (migration `20261028075724`, applied to production 2026-10-28; written as `20261028100000` and renamed to its recorded version): admin-only, SECURITY DEFINER (the score views are private to the API since #692), POST-only like `admin_private_house_standings`, STABLE, pinned `search_path`; counts and House names only, no member names or rows. Proof: `bash scripts/test-house-overview.sh` (mid-quarter join, transfer, inactive profile, collab counted once globally, drafts excluded, term window, tie ranks, totals equal the view).
