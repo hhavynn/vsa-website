@@ -11,7 +11,8 @@ import { HOUSE_COLORS, normalizeHouse } from '../constants/houses';
 import { buildGcalTimedDates, getEventDateOnly } from '../lib/eventTime';
 import { parseDateOnly, toDateOnlyString } from '../lib/dateOnly';
 import { getLosAngelesDateOnly } from './losAngelesDate';
-import { getHousePagePath } from './houseSlug';
+import { houseSlugFromKey } from './houseSlug';
+import { formatAcademicYear } from '../lib/academicTerms';
 
 export type CalendarSource = 'vsa' | 'house' | 'application';
 
@@ -48,6 +49,10 @@ export interface CalendarItem {
   applicationStatus: ApplicationStatus | null;
   /** For application items: marks the window opening vs. the deadline */
   deadlineKind: 'opens' | 'due' | null;
+  /** False hides "Add to Google Calendar" (a House event can turn it off). Default: shown. */
+  googleCalendarEnabled?: boolean;
+  /** Public RSVP link, when the event has one. */
+  rsvpUrl?: string | null;
 }
 
 // ── Date-only math ───────────────────────────────────────────────────────────
@@ -115,7 +120,9 @@ export function houseEventToCalendarItem(event: HouseEvent): CalendarItem {
       houses.push({
         name,
         color: asset.accent_color || (known ? HOUSE_COLORS[known] : 'var(--brand)'),
-        pagePath: getHousePagePath(asset),
+        // The event's own year: a past event links to that year's House, not
+        // whichever House has the same name today.
+        pagePath: `/house/year/${formatAcademicYear(event.academic_year_start)}/${houseSlugFromKey(asset.house_key || asset.house || asset.display_name)}`,
       });
     }
   }
@@ -136,9 +143,14 @@ export function houseEventToCalendarItem(event: HouseEvent): CalendarItem {
     imageUrl: event.image_url,
     thumbnailUrl: event.image_thumbnail_url,
     houses,
-    detailPath: houses[0]?.pagePath ?? '/house',
+    // Lands on this event's card on its (primary) host House page.
+    detailPath: houses[0]
+      ? `${houses[0].pagePath}#house-event-${event.id}`
+      : `/house/year/${formatAcademicYear(event.academic_year_start)}`,
     applicationStatus: null,
     deadlineKind: null,
+    googleCalendarEnabled: event.google_calendar_enabled !== false,
+    rsvpUrl: event.rsvp_url || null,
   };
 }
 

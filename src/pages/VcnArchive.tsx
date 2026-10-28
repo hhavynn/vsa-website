@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
+import { VCNNativeName } from '../components/features/vcn/VCNNativeName';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { VcnArchiveSkeleton } from '../components/common/PageSkeletons';
 import { PageError } from '../components/common/PageError';
@@ -183,7 +184,7 @@ export function VCNArchive() {
         <EditorialHero
           eyebrow="Poster Archive"
           title={<>VCN <EditorialHeroScript>Archive</EditorialHeroScript></>}
-          meta="Past productions, preserved through official videos, albums, and production notes."
+          meta={<>Past productions of <VCNNativeName />, preserved through official videos, albums, and production notes.</>}
           watermark="archive"
         />
 
