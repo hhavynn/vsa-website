@@ -8,6 +8,29 @@ const allowedPublicVars = new Set([
   'REACT_APP_GA4_MEASUREMENT_ID', 'REACT_APP_SUPABASE_IMAGE_TRANSFORMS',
   'REACT_APP_ATTENDANCE_IDENTITY_V2',
 ]);
+const vercelSystemVars = new Set([
+  'REACT_APP_VERCEL_ENV',
+  'REACT_APP_VERCEL_URL',
+  'REACT_APP_VERCEL_PROJECT_PRODUCTION_URL',
+  'REACT_APP_VERCEL_BRANCH_URL',
+  'REACT_APP_VERCEL_REGION',
+  'REACT_APP_VERCEL_DEPLOYMENT_ID',
+  'REACT_APP_VERCEL_PROJECT_ID',
+  'REACT_APP_VERCEL_TARGET_ENV',
+  'REACT_APP_VERCEL_SKEW_PROTECTION_ENABLED',
+  'REACT_APP_VERCEL_OBSERVABILITY_CLIENT_CONFIG',
+  'REACT_APP_VERCEL_GIT_PROVIDER',
+  'REACT_APP_VERCEL_GIT_REPO_SLUG',
+  'REACT_APP_VERCEL_GIT_REPO_OWNER',
+  'REACT_APP_VERCEL_GIT_REPO_ID',
+  'REACT_APP_VERCEL_GIT_COMMIT_REF',
+  'REACT_APP_VERCEL_GIT_COMMIT_SHA',
+  'REACT_APP_VERCEL_GIT_COMMIT_MESSAGE',
+  'REACT_APP_VERCEL_GIT_COMMIT_AUTHOR_LOGIN',
+  'REACT_APP_VERCEL_GIT_COMMIT_AUTHOR_NAME',
+  'REACT_APP_VERCEL_GIT_PULL_REQUEST_ID',
+]);
+const isAllowedVar = (key) => allowedPublicVars.has(key) || vercelSystemVars.has(key);
 const credentialSignals = [
   /\b(?:sk-(?:proj-|test-|live-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{35,})\b/g,
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g,
@@ -39,7 +62,10 @@ export function inspectEnvironment(env, label = 'build environment') {
   const problems = [];
   for (const [key, value] of Object.entries(env)) {
     if (!/^REACT_APP_/i.test(key) || typeof value !== 'string') continue;
-    if (value.includes('$')) problems.push(label + ': public environment interpolation is not allowed ' + key);
+    const upperKey = key.toUpperCase();
+    if (!vercelSystemVars.has(upperKey) && value.includes('$')) {
+      problems.push(label + ': public environment interpolation is not allowed ' + key);
+    }
     problems.push(...inspectText(label, `${key}=${value}`));
   }
   return problems;
@@ -65,8 +91,8 @@ export function inspectText(file, source) {
   for (const match of source.matchAll(assignments)) {
     const [, rawKey, value] = match;
     const key = rawKey.toUpperCase();
-    if (!allowedPublicVars.has(key)) errors.push(file + ': unreviewed client environment variable ' + key);
-    if (sensitiveAssignment(value)) errors.push(file + ': sensitive-looking public assignment ' + key);
+    if (!isAllowedVar(key)) errors.push(file + ': unreviewed client environment variable ' + key);
+    if (!vercelSystemVars.has(key) && sensitiveAssignment(value)) errors.push(file + ': sensitive-looking public assignment ' + key);
     if (key === 'REACT_APP_SUPABASE_ANON_KEY') {
       const role = jwtRole(value);
       if (role && role !== 'anon') errors.push(file + ': public anon-key variable contains a non-anon JWT');
@@ -76,7 +102,7 @@ export function inspectText(file, source) {
     references.lastIndex=0;
     for (const [, rawKey] of source.matchAll(references)) {
       const key = rawKey.toUpperCase();
-      if (!allowedPublicVars.has(key)) errors.push(file + ': unreviewed public variable reference ' + key);
+      if (!isAllowedVar(key)) errors.push(file + ': unreviewed public variable reference ' + key);
     }
   }
   return [...new Set(errors)];

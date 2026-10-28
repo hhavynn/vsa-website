@@ -53,3 +53,27 @@ test('npm build rejects a privileged environment value without printing it', () 
   assert.equal(result.status, 1);
   assert.equal((result.stdout + result.stderr).includes(token), false);
 });
+test('allows Vercel platform environment variables while detecting credentials in them', () => {
+  const cleanVercelEnv = {
+    REACT_APP_VERCEL_ENV: 'preview',
+    REACT_APP_VERCEL_URL: 'vsa-website-git-security-client-s-fb2ff5-havyn-nguyens-projects.vercel.app',
+    REACT_APP_VERCEL_GIT_COMMIT_REF: 'security/client-secret-tripwire-348',
+    REACT_APP_VERCEL_GIT_COMMIT_MESSAGE: 'security(ci): reject accidental client-bundle credentials (#348)',
+  };
+  assert.deepEqual(inspectEnvironment(cleanVercelEnv), []);
+
+  const credentialInVercel = {
+    REACT_APP_VERCEL_GIT_COMMIT_MESSAGE: 'AIza' + 'A'.repeat(35),
+  };
+  assert.ok(inspectEnvironment(credentialInVercel).length);
+
+  const jwtInVercel = {
+    REACT_APP_VERCEL_GIT_COMMIT_REF: jwt('service_role'),
+  };
+  assert.ok(inspectEnvironment(jwtInVercel).length);
+
+  const spoofedVercel = {
+    REACT_APP_VERCEL_UNREVIEWED_KEY: 'some-value',
+  };
+  assert.ok(inspectEnvironment(spoofedVercel).length);
+});
