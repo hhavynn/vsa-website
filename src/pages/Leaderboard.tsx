@@ -737,7 +737,7 @@ export function Leaderboard() {
             <div className="mt-8 md:mt-12">
               <div className="mb-4 flex items-center gap-3 px-2 md:mb-6">
                 <div className="h-8 w-2 rounded-full bg-[var(--brand)]" />
-                <h3 className="font-serif text-2xl font-bold">Full Standings</h3>
+                <h2 className="font-serif text-2xl font-bold">Full Standings</h2>
               </div>
 
               <div className="mb-6 relative">
@@ -983,7 +983,7 @@ function PodiumIndividual({
     <div className="mt-6">
       <div className="mb-4 flex items-center gap-3 px-2 md:mb-8">
         <div className="h-8 w-2 rounded-full bg-[var(--accent)]" />
-        <h3 className="font-serif text-2xl font-bold">Top Performers</h3>
+        <h2 className="font-serif text-2xl font-bold">Top Performers</h2>
         <StarIcon className="h-5 w-5 text-[color:var(--color-accent-text)]" />
       </div>
 
