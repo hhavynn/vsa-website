@@ -1,6 +1,8 @@
 import { useQuery } from 'react-query';
 import { supabase } from '../lib/supabase';
 import { leaderboardRepository } from '../data/repos/leaderboard';
+import { houseMembershipsRepository } from '../data/repos/houseMemberships';
+import type { PublicMemberHouse } from '../data/repos/houseMemberships';
 import {
   assignTiedRanks,
   compareMemberNames,
@@ -17,7 +19,8 @@ interface UnrankedEntry {
   full_name: string;
   college: string | null;
   graduation_year: string | null;
-  house: string | null;
+  /** The House announced for the selected year (or the latest, for all-time). Never the members.house cache. */
+  house: PublicMemberHouse | null;
   total_points: number;
   events_attended: number;
   all_time_points: number;
@@ -47,12 +50,19 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
     queryFn: async () => {
       if (selectedYear === null) return [];
 
+      // Membership dates are Pacific calendar days.
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+      // A failed House read shows no House rather than a stale or guessed one.
+      const housesRead = houseMembershipsRepository.getPublicHousesByMemberId(selectedYear, today)
+        .catch(() => new Map<string, PublicMemberHouse>());
+
       if (selectedYear === 'all') {
         const { data, error } = await supabase
           .from('public_members')
-          .select('id, first_name, last_name, college, year, house, points, events_attended')
+          .select('id, first_name, last_name, college, year, points, events_attended')
           .order('points', { ascending: false });
         if (error) throw error;
+        const houses = await housesRead;
 
         return rankEntries((data ?? []).map((m: any) => ({
           member_id: m.id,
@@ -61,30 +71,27 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           full_name: `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(),
           college: m.college ?? null,
           graduation_year: m.year ?? null,
-          house: m.house ?? null,
+          house: houses.get(m.id) ?? null,
           total_points: m.points ?? 0,
           events_attended: m.events_attended ?? 0,
           all_time_points: m.points ?? 0,
         })));
       }
 
-      const yearly = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+      const [yearly, houses] = await Promise.all([leaderboardRepository.getYearlyLeaderboard(selectedYear), housesRead]);
 
       // Build an enrichment map of member_id -> { house, all-time points }.
       // We fetch the full members table here (bounded, small) instead of
       // .in(id, [...big list]) because PostgREST rejects URLs longer than
       // ~8KB and the yearly leaderboard can easily exceed that.
-      const enrichment = new Map<string, { house: string | null; allTime: number }>();
+      const enrichment = new Map<string, { allTime: number }>();
       if (yearly.length > 0) {
         const { data: enrichRows, error: enrichError } = await supabase
           .from('public_members')
-          .select('id, house, points');
+          .select('id, points');
         if (enrichError) throw enrichError;
         for (const row of enrichRows ?? []) {
-          enrichment.set((row as any).id, {
-            house: (row as any).house ?? null,
-            allTime: (row as any).points ?? 0,
-          });
+          enrichment.set((row as any).id, { allTime: (row as any).points ?? 0 });
         }
       }
 
@@ -97,7 +104,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           full_name: `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(),
           college: m.college ?? null,
           graduation_year: m.graduation_year ?? null,
-          house: extra?.house ?? null,
+          house: houses.get(m.member_id) ?? null,
           total_points: m.total_points,
           events_attended: m.events_attended,
           all_time_points: extra?.allTime ?? m.total_points,

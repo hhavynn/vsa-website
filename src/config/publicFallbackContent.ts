@@ -31,24 +31,8 @@ export const FALLBACK_EVENTS = {
   ],
 } as const;
 
-// ── House — 2025-2026 ────────────────────────────────────────────────────────
-
-export interface FallbackHouseStanding {
-  name: string;
-  emoji: string;
-  points: number;
-  accentColor: string;
-}
-
-export const FALLBACK_HOUSE_STANDINGS_2025_2026: FallbackHouseStanding[] = [
-  { name: 'Bowser', emoji: '🐢', points: 247, accentColor: '#e84393' },
-  { name: 'Donkey Kong', emoji: '🦍', points: 215, accentColor: '#f97316' },
-  { name: 'Toad', emoji: '🍄', points: 158, accentColor: '#8b5cf6' },
-  { name: 'Boo', emoji: '👻', points: 125, accentColor: '#06b6d4' },
-];
-
-export const FALLBACK_HOUSE_MESSAGE =
-  'Live House data is temporarily unavailable. These are the public 2025-2026 House totals.';
+// Private House scoring policy (#692): no historical standing totals in the public bundle.
+export const FALLBACK_HOUSE_MESSAGE = 'House standings are announced at GBMs, not posted live.';
 
 // ── House Archive ────────────────────────────────────────────────────────────
 
