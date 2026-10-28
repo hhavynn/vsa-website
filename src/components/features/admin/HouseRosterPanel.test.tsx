@@ -18,18 +18,23 @@ jest.mock('../../../data/repos/houseRoster', () => ({
   houseRosterRepository: { getRoster: jest.fn(), getMemberAttendance: jest.fn() },
 }));
 jest.mock('../../../lib/housePlacementExport', () => ({ downloadCsv: jest.fn() }));
+jest.mock('../../../data/repos/houseMemberships', () => ({ houseMembershipsRepository: { getPublicHousesByMemberId: jest.fn() } }));
 jest.mock('../../../lib/supabase', () => ({
   supabase: { from: jest.fn(() => { throw new Error('components must not query Supabase directly'); }) },
 }));
 
 const repo = houseRosterRepository as jest.Mocked<typeof houseRosterRepository>;
 const { downloadCsv } = jest.requireMock('../../../lib/housePlacementExport');
+const { houseMembershipsRepository } = jest.requireMock('../../../data/repos/houseMemberships');
+const publicHouse = (houseProfileId: string) => ({ houseProfileId, houseKey: null, label: 'x', accentColor: null, academicYearStart: 2026 });
 const member = (extra: Partial<RosterMember>): RosterMember => ({
   member_id: 'm', first_name: 'Fictional', last_name: 'Person', start_date: '2026-09-20', end_date: null, stints: 1, joined_in_period: false,
   other_house_memberships: 0, credited_attendance: 0, last_credited_at: null, events_attended: 0, ...extra,
 });
 
 beforeEach(() => {
+  // Ana and Bao are publicly revealed in this House; Cam has transferred out.
+  houseMembershipsRepository.getPublicHousesByMemberId.mockResolvedValue(new Map([['a', publicHouse('hp-r')], ['b', publicHouse('hp-r')], ['c', publicHouse('hp-other')]]));
   repo.getRoster.mockResolvedValue({
     house: { id: 'hp-r', displayName: 'Fictional Rarity', isActive: true, academicYearStart: 2026 },
     termLabel: null,
@@ -114,14 +119,15 @@ it('downloads a House Parent copy only after the admin reviews its columns', asy
   await userEvent.click(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' }));
   expect(downloadCsv).not.toHaveBeenCalled();
   const dialog = screen.getByRole('alertdialog');
-  expect(within(dialog).getByText(/no contact details, no other House and no House points or rank/)).toBeInTheDocument();
-  expect(within(dialog).getByText(/House-credited events: How many qualifying VSA events/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/2 members publicly revealed in this House \(of 3 on this roster\)/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/no counts that could add up to House points or rank/)).toBeInTheDocument();
   await userEvent.click(within(dialog).getByRole('button', { name: 'Download' }));
   await waitFor(() => expect(downloadCsv).toHaveBeenCalledTimes(1));
   const [csv, filename] = downloadCsv.mock.calls[0];
   expect(filename).toBe('fictional-rarity-2026-2027-house-parents.csv');
-  expect(csv.split('\n')[0]).toBe('Name,In the House since,Attended a House-credited event,House-credited events,Last House-credited event');
+  expect(csv.replace(/^\uFEFF/, '').split('\n')[0]).toBe('Name,In the House since,Attended a House-credited event,Last House-credited event');
   expect(csv).toContain('Ana Example');
+  expect(csv).not.toContain('Cam Example');
 });
 
 it('says plainly when the House profile is not public, so zeros are not read as absence', async () => {
@@ -135,7 +141,7 @@ it('says plainly when the House profile is not public, so zeros are not read as 
   expect(await screen.findByRole('note')).toHaveTextContent(/zeros below do not mean nobody came/);
   expect(screen.queryByRole('button', { name: /No House-credited attendance yet/ })).not.toBeInTheDocument();
   // Nothing goes to House Parents before the Reveal.
-  expect(screen.getByRole('button', { name: 'Prepare a copy for House Parents' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' })).toBeDisabled();
 });
 
 it('shows the names to copy by hand when the clipboard is blocked', async () => {
@@ -153,4 +159,19 @@ it('shows the UTC date an evening event was counted on', async () => {
   renderPanel();
   await userEvent.click(await screen.findByRole('button', { name: 'Events for Ana Example' }));
   expect(await screen.findByText(/Oct 15 \(counted as Oct 16, by UTC date\)/)).toBeInTheDocument();
+});
+
+it('offers no copy until members are publicly revealed, and says why', async () => {
+  houseMembershipsRepository.getPublicHousesByMemberId.mockResolvedValue(new Map());
+  renderPanel();
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  await waitFor(() => expect(button).toHaveAccessibleDescription(/Available once this House’s members are revealed publicly/));
+  expect(button).toBeDisabled();
+});
+
+it('cancelling the review downloads nothing', async () => {
+  renderPanel();
+  await userEvent.click(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' }));
+  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+  expect(downloadCsv).not.toHaveBeenCalled();
 });
