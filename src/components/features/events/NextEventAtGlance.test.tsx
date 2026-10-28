@@ -27,6 +27,11 @@ describe('NextEventAtGlance (#245)', () => {
     expect(calendarLink).toHaveAttribute('href', expect.stringContaining('calendar.google.com'));
   });
 
+  it('shows both dates while a multi-day event remains ongoing', () => {
+    render(<NextEventAtGlance event={{ ...event, date: '2026-10-30', end_date: '2026-11-01', start_time: null, end_time: null } as Event} />);
+    expect(screen.getByText(/Oct 30 – Nov 1/)).toBeInTheDocument();
+  });
+
   it('never invents a time or location when the event does not specify them', () => {
     render(<NextEventAtGlance event={{ ...event, start_time: null, end_time: null, location: null } as Event} />);
     expect(screen.getByText(/Time to be announced/)).toBeInTheDocument();
