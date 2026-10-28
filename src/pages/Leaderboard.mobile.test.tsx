@@ -170,20 +170,14 @@ describe('Leaderboard mobile layout contract', () => {
     }
   });
 
-  it('does not clip the House stats line on narrow viewports', async () => {
-    jest.spyOn(leaderboardRepository, 'getAllTimeHouseLeaderboard').mockResolvedValue([
-      {
-        house: 'Bowser', house_profile_id: 'h1', display_name: 'Bowser', image_url: null,
-        accent_color: '#c0392b', academic_year_start: 2025, academic_year_end: 2026,
-        total_points: 120, events_attended: 80, unique_events: 10, unique_members: 40,
-        average_points_per_member: 3, latest_activity_at: null,
-      },
-    ] as never);
+  it('does not load or reveal live House totals even for a direct House tab link', async () => {
+    const read = jest.spyOn(leaderboardRepository, 'getAllTimeHouseLeaderboard');
+    const yearlyRead = jest.spyOn(leaderboardRepository, 'getYearlyHouseLeaderboard');
     renderLeaderboard('/leaderboard?view=houses');
-    const stats = await screen.findByText(/40 MEMBERS/);
-    expect(stats.parentElement!.className).toMatch(/flex-wrap/);
-    // House identity is carried by the name, not only by its colour.
-    expect(screen.getByText('Bowser')).toBeInTheDocument();
+    expect(await screen.findByText(/House standings are announced at GBMs/i)).toBeInTheDocument();
+    expect(screen.queryByText(/40 MEMBERS/)).not.toBeInTheDocument();
+    expect(read).not.toHaveBeenCalled();
+    expect(yearlyRead).not.toHaveBeenCalled();
   });
 });
 
