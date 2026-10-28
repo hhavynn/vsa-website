@@ -424,6 +424,12 @@ export default function LaunchChecklist() {
               forceStatus="manual"
               link="/admin/years"
             />
+            <CheckItem
+              label="Create and activate the new academic term without changing last year's records"
+              forceStatus="manual"
+              link="/admin/years"
+              note="Keep the previous term for archive and leaderboard verification"
+            />
           </Section>
 
           {/* ── Homepage & Presidents ── */}
@@ -444,6 +450,18 @@ export default function LaunchChecklist() {
               link="/admin/settings"
               note="Verify logo and site-wide settings before launch"
             />
+            <CheckItem
+              label="Review homepage, footer and navigation for last year's messages"
+              forceStatus="manual"
+              link="/admin/content"
+              note="Review published Wrapped edition separately: do not relabel a past edition as the new year"
+            />
+            <CheckItem
+              label="Check public-safe fallback content when live data is unavailable"
+              forceStatus="manual"
+              link="/admin/content-health"
+              note="Fallback House standings must retain their original academic year and never look live"
+            />
           </Section>
 
           {/* ── Cabinet ── */}
@@ -462,6 +480,12 @@ export default function LaunchChecklist() {
               label="Review cabinet member roles and bios before launch"
               forceStatus="manual"
               link="/admin/cabinet"
+            />
+            <CheckItem
+              label="Rehearse cabinet year rollover and confirm the previous roster remains archived"
+              forceStatus="manual"
+              link="/admin/cabinet/rollover"
+              note="Verify preview/staging before changing the active cabinet year"
             />
           </Section>
 
@@ -483,6 +507,12 @@ export default function LaunchChecklist() {
                   label="Confirm open/close windows are set correctly for each program"
                   forceStatus="manual"
                   link="/admin/applications"
+                />
+                <CheckItem
+                  label="Review ACE, House Fall/Winter/Spring, Intern, Cabinet, VCN and WNC windows"
+                  forceStatus="manual"
+                  link="/admin/applications"
+                  note="Confirm Pacific open/close times; closed and future form URLs must stay masked"
                 />
               </>
             ) : (
@@ -511,6 +541,12 @@ export default function LaunchChecklist() {
               label="Confirm prior-year archive is not mixed with current year"
               forceStatus="manual"
               link="/admin/houses"
+            />
+            <CheckItem
+              label="Review new-year ACE families separately from House teams"
+              forceStatus="manual"
+              link="/admin/ace"
+              note="Only publish approved ACE members/lineages; do not reveal private matching drafts"
             />
           </Section>
 
@@ -619,6 +655,17 @@ export default function LaunchChecklist() {
             <CheckItem
               label="Test application windows (open and closed behavior)"
               forceStatus="manual"
+            />
+            <CheckItem
+              label="On staging, confirm last year's leaderboard totals and archive routes are unchanged"
+              forceStatus="manual"
+              link="/leaderboard"
+              note="Capture before/after totals and screenshots; never overwrite historical standings"
+            />
+            <CheckItem
+              label="Record a named owner, outcome, and evidence for each manual check"
+              forceStatus="manual"
+              note="Use docs/academic-year-launch-runbook.md; this page is read-only and does not save signoffs"
             />
             <CheckItem
               label="Confirm no private or admin data is visible on public routes"

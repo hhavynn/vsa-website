@@ -6,7 +6,8 @@ import { createRequire } from 'node:module';
 const allowedPublicVars = new Set([
   'REACT_APP_SUPABASE_URL', 'REACT_APP_SUPABASE_ANON_KEY',
   'REACT_APP_GA4_MEASUREMENT_ID', 'REACT_APP_SUPABASE_IMAGE_TRANSFORMS',
-  'REACT_APP_ATTENDANCE_IDENTITY_V2',
+  'REACT_APP_ATTENDANCE_IDENTITY_V2', 'REACT_APP_SENTRY_DSN',
+  'REACT_APP_POSTHOG_KEY', 'REACT_APP_POSTHOG_HOST',
 ]);
 const vercelSystemVars = new Set([
   'REACT_APP_VERCEL_ENV',
@@ -37,10 +38,13 @@ const credentialSignals = [
   /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,
   /\bAIza[A-Za-z0-9_-]{35}\b/g,
   /\bsb_secret_[A-Za-z0-9_-]{20,}\b/g,
+  /\bsntry[su]_[A-Za-z0-9_=+/-]{20,}/g,
+  /\bphx_[A-Za-z0-9]{20,}\b/g,
 ];
 const jwtCandidates = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
 const assignments = /\b(REACT_APP_[A-Z0-9_]+)\s*=\s*([^\r\n#]+)/gi;
-const references = /\b(?:process\.env\.|import\.meta\.env\.)(REACT_APP_[A-Z0-9_]+)/gi;
+const references = /\b(?:process\s*(?:\?\.|\.)\s*env|import\s*\.\s*meta\s*(?:\?\.|\.)\s*env)\s*(?:\?\.|\.)\s*(REACT_APP_[A-Z0-9_]+)/gi;
+const bracketReferences = /\b(?:process\s*(?:\?\.|\.)\s*env|import\s*\.\s*meta\s*(?:\?\.|\.)\s*env)\s*(?:\?\.)?\s*\[\s*(['"\x60])(REACT_APP_[A-Z0-9_]+)\1\s*\]/gi;
 const isPlaceholder = (value) => /^(?:your_|example|placeholder|dummy|test_|<|\$\{|G-XXXXXXXX|https:\/\/example)/i.test(value.trim().replace(/^['"]|['"]$/g,''));
 
 function jwtRole(value) {
@@ -101,6 +105,13 @@ export function inspectText(file, source) {
   if (isClient) {
     references.lastIndex=0;
     for (const [, rawKey] of source.matchAll(references)) {
+      const key = rawKey.toUpperCase();
+      if (!isAllowedVar(key)) errors.push(file + ': unreviewed public variable reference ' + key);
+    }
+    // Bracket notation and optional chaining of the env object itself must
+    // use the same reviewed public-env allowlist as direct dot references.
+    bracketReferences.lastIndex = 0;
+    for (const [, , rawKey] of source.matchAll(bracketReferences)) {
       const key = rawKey.toUpperCase();
       if (!isAllowedVar(key)) errors.push(file + ': unreviewed public variable reference ' + key);
     }

@@ -79,6 +79,22 @@ describe('layoutTree', () => {
   });
 });
 
+describe('FamilyTree pickup label', () => {
+  it('shows an approved pickup term and nothing for an unknown year', () => {
+    render(
+      <FamilyTree
+        nodes={[
+          { ...node('dated', null, 'Big'), cohort: 'FA23' },
+          { ...node('undated', 'dated', 'Little'), cohort: null },
+        ]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getByText('BIG · FA23')).toBeInTheDocument();
+    expect(screen.getByText('LITTLE')).toBeInTheDocument();
+  });
+});
+
 describe('FamilyTree lineage spotlight', () => {
   beforeEach(() => {
     mockReduceMotion = false;

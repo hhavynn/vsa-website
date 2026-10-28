@@ -74,3 +74,28 @@ it("shows a controlled rejection, preserves input and never announces success", 
   expect(screen.getByLabelText("Subject")).toHaveValue("Feedback subject");
   expect(mockSuccess).not.toHaveBeenCalled();
 });
+
+it("announces required fields once and focuses the first invalid field on submit", async () => {
+  render(<FeedbackForm />);
+
+  expect(screen.getByText("Category, Subject, and Message are required. Name and Email are optional.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Submit Feedback" }));
+
+  const summary = await screen.findByRole("alert");
+  expect(summary).toHaveTextContent("Please correct the indicated fields and try again.");
+  const subject = screen.getByLabelText("Subject");
+  expect(subject).toHaveFocus();
+  expect(subject).toHaveAttribute("aria-invalid", "true");
+  expect(subject).toHaveAttribute("aria-describedby", "feedback-title-error");
+  expect(mockSubmit).not.toHaveBeenCalled();
+});
+
+it("announces submitting and completion without replacing form labels", async () => {
+  let finish: () => void = () => undefined;
+  mockSubmit.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+  render(<FeedbackForm />);
+  await fillAndSubmit();
+  expect(screen.getByRole("status")).toHaveTextContent("Submitting feedback.");
+  await act(async () => { finish(); });
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Feedback submitted successfully."));
+});
