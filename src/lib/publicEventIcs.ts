@@ -1,5 +1,5 @@
 import type { Event } from '../types';
-import { getEventDateOnly } from './eventTime';
+import { getEventLifecycleBounds } from './eventLifecycle';
 import { addDaysToDateOnly, isExistingLosAngelesWallClock, losAngelesDateTimeToIso } from '../utils/losAngelesDate';
 
 type PublicCalendarEvent = Pick<Event, 'id' | 'name' | 'description' | 'date' | 'end_date' | 'start_time' | 'end_time' | 'location' | 'is_published'>;
@@ -40,8 +40,9 @@ function foldLine(line: string): string {
 }
 
 function eventLines(event: PublicCalendarEvent, stamp: string): string[] {
-  const date = getEventDateOnly(event.date, event.start_time);
-  const endDay = event.end_date && event.end_date > date ? event.end_date : date;
+  // Match the site's canonical event lifecycle, including overnight events
+  // whose end time falls on the next day without an explicit end_date.
+  const { startDate: date, endDate: endDay } = getEventLifecycleBounds(event);
   const lines = [
     'BEGIN:VEVENT',
     `UID:${escapeIcs(event.id)}@vsaatucsd.com`,
