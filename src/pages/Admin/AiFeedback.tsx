@@ -211,7 +211,13 @@ export default function AdminAiFeedback() {
                     id={'feedback-note-' + item.id}
                     value={noteDrafts[item.id] ?? item.admin_notes ?? ''}
                     onChange={event => {
-                      dirtyNotes.current.add(item.id);
+                      // Reverting to the server baseline makes this field clean again,
+                      // so a later filter refresh can hydrate another admin's edit.
+                      if (event.target.value.trim() === (item.admin_notes ?? '').trim()) {
+                        dirtyNotes.current.delete(item.id);
+                      } else {
+                        dirtyNotes.current.add(item.id);
+                      }
                       setNoteDrafts(current => ({ ...current, [item.id]: event.target.value }));
                     }}
                     maxLength={1500}
