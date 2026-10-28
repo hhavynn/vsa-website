@@ -14,6 +14,21 @@ function SourceIcon({ className = 'h-3 w-3' }: { className?: string }) {
   );
 }
 
+/** Sanitize model-returned source URLs before they become browser navigations. */
+export function safeAssistantSourceUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    // encodeURI preserves safe path separators but protects backslashes from
+    // being interpreted as a second leading slash by browser URL parsing.
+    const encoded = encodeURI(raw.trim()).replace(/%25([0-9A-Fa-f]{2})/g, '%$1');
+    const href = sanitizeHref(encoded);
+    return href === '#' ? null : href;
+  } catch {
+    // Malformed Unicode or unexpected model output must never crash the panel.
+    return null;
+  }
+}
+
 /**
  * Render up to four cabinet-approved knowledge citations. Source URLs arrive
  * from an AI response; never interpolate an unsupported scheme into href.
@@ -25,8 +40,8 @@ export function AiSourceChips({ messageId, sources }: { messageId: string; sourc
     <div className="mt-2 flex flex-wrap gap-1.5">
       {sources.slice(0, 4).map((source) => {
         const label = source.title.length > 28 ? `${source.title.slice(0, 25)}...` : source.title;
-        const safeUrl = sanitizeHref(source.source_url ?? '');
-        return safeUrl !== '#' ? (
+        const safeUrl = safeAssistantSourceUrl(source.source_url);
+        return safeUrl ? (
           <a
             key={`${messageId}-${source.title}`}
             href={safeUrl}
