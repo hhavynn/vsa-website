@@ -4,6 +4,7 @@ import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../
 import { OptimizedImage } from '../../common/OptimizedImage';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
+import { sanitizeHref } from '../../../utils/sanitizeUrl';
 import { getDetailLinkLabel, getItemColor } from './calendarTheme';
 import { readableInk } from '../../../lib/readableInk';
 
@@ -91,6 +92,13 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
         </p>
       )}
 
+      {item.source === 'house' && (
+        <div className="mt-3 space-y-1 font-sans text-[13px]" style={{ color: 'var(--text2)' }}>
+          {item.houses.length > 0 && <p>Hosted by {item.houses.map((house) => house.name).join(' + ')}.</p>}
+          <p>House event: it does not award VSA attendance points.</p>
+        </div>
+      )}
+
       {item.applicationStatus === 'open' && (
         <p className="mt-3 font-sans text-[13px] font-semibold" style={{ color: 'var(--brand)' }}>
           This application window is open — apply from the Get Involved page.
@@ -104,6 +112,17 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
 
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
         <AddToGoogleCalendarLink item={item} />
+        {item.rsvpUrl && sanitizeHref(item.rsvpUrl) !== '#' && (
+          <a
+            href={sanitizeHref(item.rsvpUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--brand)' }}
+          >
+            RSVP ↗<span className="sr-only"> (opens in new tab)</span>
+          </a>
+        )}
         {item.detailPath && (
           <Link
             to={item.detailPath}
