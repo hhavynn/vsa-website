@@ -59,7 +59,7 @@ export function safeCabinetPageLabel(raw: string): string {
 
 export function buildCabinetAreaInsights(snapshot: CabinetTrafficSnapshot): CabinetAreaInsight[] {
   const totals = new Map<string, number>(
-    CABINET_PAGE_AREAS.map(({ key }) => [key, 0])
+    CABINET_PAGE_AREAS.map(({ key }): [string, number] => [key, 0])
   );
   for (const page of snapshot.topPages) {
     const path = normalizePublicPath(page.path);
