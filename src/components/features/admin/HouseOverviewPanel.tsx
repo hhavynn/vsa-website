@@ -4,9 +4,10 @@
 // comparison table. Read-only; every number comes from admin_house_overview or
 // the attendance status read (#653). Never shown publicly (#692).
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { HOUSE_OVERVIEW_UNAVAILABLE, HouseOverviewHouse, houseOverviewRepository } from '../../../data/repos/houseOverview';
+import { HouseRosterPanel } from './HouseRosterPanel';
 import { attendanceReadinessRepository } from '../../../data/repos/attendanceReadiness';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { formatAcademicYear } from '../../../lib/academicTerms';
@@ -45,6 +46,14 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
   const { terms } = useAcademicTerms();
   const yearTerms = useMemo(() => terms.filter((term) => term.academic_year_start === selectedYear), [terms, selectedYear]);
   const [termId, setTermId] = useState<string | null>(null);
+  // The open roster is an id in the URL (never a name), so it can be linked.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openHouseId = searchParams.get('house');
+  const setOpenHouse = (id: string | null) => setSearchParams((prev) => {
+    const next = new URLSearchParams(prev);
+    if (id) next.set('house', id); else next.delete('house');
+    return next;
+  });
 
   const overview = useQuery(
     ['admin', 'house-overview', selectedYear, termId],
@@ -142,6 +151,14 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
                     <dt className="text-text-muted">House events hosted</dt>
                     <dd className="text-right font-mono text-text-primary">{house.hosted_events}</dd>
                   </dl>
+                  <button
+                    type="button"
+                    aria-expanded={openHouseId === house.house_profile_id}
+                    onClick={() => setOpenHouse(openHouseId === house.house_profile_id ? null : house.house_profile_id)}
+                    className="min-h-[36px] touch:min-h-11 rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)]"
+                  >
+                    {openHouseId === house.house_profile_id ? 'Hide roster' : 'Open roster'}<span className="sr-only"> for {house.display_name}</span>
+                  </button>
                   {items.length > 0 ? (
                     <ul className="space-y-0.5 text-xs text-amber-800 dark:text-amber-300" aria-label={`Needs attention: ${house.display_name}`}>
                       {items.map((item) => <li key={item}>{item}</li>)}
@@ -153,6 +170,10 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
               );
             })}
           </ul>
+
+          {openHouseId && houses.some((house) => house.house_profile_id === openHouseId) && (
+            <HouseRosterPanel houseProfileId={openHouseId} termId={termId} year={selectedYear} onClose={() => setOpenHouse(null)} />
+          )}
 
           <div className="overflow-x-auto rounded border border-[var(--color-border)] bg-surface">
             <table className="w-full min-w-[560px] text-left text-xs">
