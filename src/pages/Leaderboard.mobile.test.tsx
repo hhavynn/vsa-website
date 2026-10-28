@@ -108,6 +108,15 @@ afterEach(() => {
 });
 
 describe('Leaderboard mobile layout contract', () => {
+  it('has one page h1 and sibling h2s for Top Performers and Full Standings', async () => {
+    await renderLoaded();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Top Performers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Full Standings' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /Top Performers|Full Standings/ })).not.toBeInTheDocument();
+  });
+
   it('keeps rank, name and points on every compact podium row', async () => {
     await renderLoaded();
     // Each top-3 member renders once in the phone podium, once in the desktop
