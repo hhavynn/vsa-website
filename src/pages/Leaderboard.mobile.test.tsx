@@ -140,7 +140,7 @@ describe('Leaderboard mobile layout contract', () => {
     expect(headers[2]).toHaveAttribute('aria-sort', 'descending');
     expect(within(table).getAllByRole('rowheader')).toHaveLength(MEMBERS.length);
     const firstRow = within(table).getByRole('row', {
-      name: `Rank 1: ${LONG_NAME.first} ${LONG_NAME.last}`,
+      name: `Rank #1: ${LONG_NAME.first} ${LONG_NAME.last}`,
     });
     expect(within(firstRow).getByRole('button', {
       name: `Open profile for ${LONG_NAME.first} ${LONG_NAME.last}`,
