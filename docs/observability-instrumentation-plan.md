@@ -1,6 +1,6 @@
 # Observability instrumentation plan (Sentry, PostHog)
 
-**Status:** proposed 2026-10-27. Phase 1 code is in the PR that adds this file. Every production step below (creating projects, setting Vercel variables, deploying) waits for explicit owner approval.
+**Status:** Phase 1 is live in production (2026-10-28, #705). Phase 2 and Phase 3 code is in their own PRs. Every production step (creating projects, setting Vercel variables, deploying) waits for explicit owner approval.
 
 **Goal:** give the Sentry and PostHog connectors real production data, so debugging can start from observed evidence. Today both are empty because the site was never instrumented, and an empty connector is "no evidence", not "no problem".
 
@@ -93,30 +93,45 @@ Measured on this branch with `npm run build`, gzip:
 
 **Rollback:** remove `REACT_APP_SENTRY_DSN` in Vercel and redeploy (the SDK goes inert), or revert the PR.
 
-## Phase 2: source maps to Sentry, not to the public (separate PR)
+## Phase 2: source maps to Sentry, not to the public
 
-CRA cannot take the Sentry webpack plugin without ejecting, so upload runs as an npm `postbuild` step that Vercel executes after `npm run build`.
+**Status:** code in the Phase 2 PR. Inert until `SENTRY_AUTH_TOKEN` is set in Vercel.
+
+CRA cannot take the Sentry webpack plugin without ejecting, so the upload runs as an npm `postbuild` step. Vercel runs it automatically after `npm run build`.
 
 **Files**
 
-- `package.json`: add the `@sentry/cli` devDependency and `"postbuild": "node scripts/sentry-sourcemaps.mjs"`. This repo's npm enforces `allow-scripts`, which blocks `@sentry/cli`'s binary-download postinstall. That PR must approve it (`npm approve-scripts @sentry/cli`, checked in) or invoke the CLI another way, and it must be verified in a Vercel preview build.
-- `scripts/sentry-sourcemaps.mjs`:
-  - `SENTRY_AUTH_TOKEN` unset (local builds, GitHub CI, the Docker image): print "skipped" and exit 0. Maps stay, so `npm run analyze` keeps working.
-  - Set (Vercel): `sentry-cli sourcemaps inject build/static/js`, then `sentry-cli sourcemaps upload --release "$VERCEL_GIT_COMMIT_SHA" build/static/js`, then delete `build/**/*.map` **only after** the upload succeeds.
-  - Upload fails: warn and keep the build green with maps kept, which is today's behavior, so a Sentry outage cannot block a deploy.
-- A test for the skip and delete branches. `npm run check:csp-hashes` must still pass: `inject` edits only `.js` files, never `index.html`.
+- `package.json`: the `@sentry/cli` devDependency, plus `postbuild` and `postbuild:production` hooks that run `node scripts/sentry-sourcemaps.mjs`.
+  - npm 11.16 only *warns* about unreviewed install scripts; it doesn't block them yet.
+  - `@sentry/cli` 3.x doesn't need its postinstall anyway. The binary comes from an optional platform package (`@sentry/cli-linux-x64` on Vercel), and the postinstall is only a download fallback.
+  - So no `allowScripts` entry is added, and a test pins that the binary resolves.
+- `scripts/sentry-sourcemaps.mjs` behaves in three ways:
+  - **No `SENTRY_AUTH_TOKEN`** (local builds, GitHub CI, the Docker image): logs "skipped" and does nothing. The maps stay, so `npm run analyze` keeps working.
+  - **Token set** (Vercel):
+    1. Runs `sentry-cli sourcemaps inject build/static/js`.
+    2. Runs `sentry-cli sourcemaps upload --org havyn --project vsa-website --release <commit SHA> build/static/js`.
+    3. Deletes every `build/**/*.map` (JS and CSS), and only after the upload succeeds.
+    4. The token reaches `sentry-cli` through the environment, never on the command line.
+  - **Upload fails:** logs a warning and keeps the maps (today's behavior). The build stays green, so a Sentry outage cannot block a deploy.
+- `scripts/sentry-sourcemaps.test.mjs`: tests the skip, upload-then-delete and failure paths, the org/project overrides, and that the real binary resolves. It runs in the `test` job of `.github/workflows/deploy.yml`.
+- `npm run check:csp-hashes` still passes: `inject` edits only `.js` files, never `index.html`.
 
 **Vercel build variables** (server-side, not `REACT_APP_*`, never in the bundle)
 
 | Variable | Environments | Value |
 | --- | --- | --- |
-| `SENTRY_AUTH_TOKEN` | Production (and Preview only if previews report) | Sentry **organization auth token**, release/source-map upload scope only. Sensitive |
-| `SENTRY_ORG` | same | `havyn` |
-| `SENTRY_PROJECT` | same | `vsa-website` |
+| `SENTRY_AUTH_TOKEN` | Production only | A Sentry **organization auth token** (Settings → Developer Settings → Organization Tokens), which can only upload releases and source maps. Mark it Sensitive. The owner creates and pastes it: it is a credential, so an agent never handles it |
+| `SENTRY_ORG`, `SENTRY_PROJECT` | Optional | Only needed to override the defaults `havyn` and `vsa-website` |
 
-**Verification:** `curl -sI https://www.vsaatucsd.com/static/js/main.<hash>.js.map` returns `404` (`200` today; the SPA rewrite already excludes `/static/`). The smoke-test issue shows original TypeScript frames, and `sentry-cli sourcemaps explain <event-id>` passes.
+Previews have no token, so preview deployments still serve their maps. That's harmless, because the repo is public.
 
-**Rollback:** remove `SENTRY_AUTH_TOKEN`; the script skips and maps are served again.
+**Verification**
+
+- After the next production deploy, `curl -sI https://www.vsaatucsd.com/static/js/main.<hash>.js.map` returns `404` (`200` today; the SPA rewrite already excludes `/static/`).
+- The Vercel build log shows "uploaded, then removed N .map files".
+- A new smoke-test issue shows original TypeScript frames.
+
+**Rollback:** remove `SENTRY_AUTH_TOKEN` and redeploy. The script skips and the maps are served again.
 
 ## Phase 3: PostHog alongside GA4 (deferred; separate approval)
 
@@ -151,8 +166,8 @@ A same-origin Sentry `tunnel` (which keeps ad-blockers from dropping reports) wo
 
 | # | Action | Reversible | Status |
 | --- | --- | --- | --- |
-| 1 | Merge the Phase 1 PR (SDK inert; bundle grows) | Revert | Awaiting review |
-| 2 | Create Sentry project and set its privacy settings | Delete project | Needs approval |
-| 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Needs approval |
-| 4 | Phase 2 PR, then set `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` | Unset | Not started |
+| 1 | Merge the Phase 1 PR (SDK inert; bundle grows) | Revert | Done 2026-10-28 (#705, `7aedecf8`) |
+| 2 | Create Sentry project and set its privacy settings | Delete project | Done 2026-10-28 (`havyn/vsa-website`) |
+| 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Done 2026-10-28; smoke test `VSA-WEBSITE-1` verified scrubbing, then resolved |
+| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | PR open |
 | 5 | Phase 3 PostHog decision | — | Deferred |
