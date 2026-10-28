@@ -38,7 +38,9 @@ by slug). AAF's `(Dead)` prefix puts it in the Fam Graveyard.
   links are unlabeled pairings whose big was already established in that fam
   (`confidence: "inferred-high"`), or ones resolved from strong descendant
   evidence (`"inferred-medium"`). Each member records its link's
-  `added_term` and `confidence`; the importer ignores both.
+  `added_term` and `confidence`. The importer saves both as **unreviewed**
+  pickup-year evidence (admin-only), never as an approved year; see
+  [ace-pickup-years.md](ace-pickup-years.md).
 - **Links left out:** the workbook's 21 `candidate-low` rows (Needs Review
   sheet). They have too little family evidence to place.
 - **AAF / Moon split:** AAF is an archive fam ending SP23. Moon starts FA23 and
@@ -113,3 +115,7 @@ These sources were not readable when the workbook was built, so pairings
 recorded only there are missing: Spring 2022, Fall 2023 and Spring 2024 ACE
 responses, and the SP25 official pairings. Nothing earlier than the legacy
 family-tree sheet was found.
+
+Each member's `added_term` is also evidence for their pickup year. Recovering
+years for the live nodes, without reimporting a fam or touching any link, is
+[ace-historical-pickup-years.md](ace-historical-pickup-years.md) (#670).

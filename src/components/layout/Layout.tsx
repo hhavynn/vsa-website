@@ -11,10 +11,14 @@ import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
 
 function ScrollManager() {
-  const { pathname, search, hash } = useLocation();
+  const { pathname, search, hash, state } = useLocation();
+  // An in-page filter change (e.g. /events ?type=) marks its navigation so the
+  // reader stays where they are.
+  const keepScroll = (state as { keepScroll?: boolean } | null)?.keepScroll === true;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (keepScroll) return;
 
     // No hash: normal behavior — jump to the top on every navigation.
     if (!hash) {
@@ -26,7 +30,7 @@ function ScrollManager() {
     // anchor aligned briefly after it first appears.
     const id = decodeURIComponent(hash.slice(1));
     return keepHashTargetInView(id);
-  }, [pathname, search, hash]);
+  }, [pathname, search, hash, keepScroll]);
 
   return null;
 }
