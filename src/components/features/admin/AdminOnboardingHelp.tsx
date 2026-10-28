@@ -34,7 +34,7 @@ function safeResourceHref(resource: ResourceLink): string | null {
 
 export function selectOnboardingResources(resources: ResourceLink[], page: string) {
   return resources
-    .filter((resource) => resource.is_current && !resource.is_archived)
+    .filter((resource) => resource.is_current && !resource.is_archived && resource.visibility === 'admin_only')
     .filter((resource) => resource.category === 'Transition Docs' || resource.workflow?.trim().toLowerCase() === 'onboarding')
     .filter((resource) => !resource.role || resource.role === 'All Cabinet')
     .filter((resource) => !resource.program || resource.program === page || resource.program === 'All')
