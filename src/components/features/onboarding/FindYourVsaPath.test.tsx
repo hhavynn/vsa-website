@@ -90,8 +90,11 @@ describe('new member VSA path guide (#283)', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('does not treat an open status with no authorized URL as an actionable window', () => {
-    expect(getPathWindowStatus(['ace_application'], [link('ace_application', 'open', null)])).toBe('No application window announced yet');
+  it('identifies a missing public link on an open window without claiming it is actionable', () => {
+    expect(getPathWindowStatus(['ace_application'], [link('ace_application', 'open', null)])).toBe('Application window is open, but its link is currently unavailable');
+    expect(getPathWindowStatus(['house_fall', 'house_winter'], [
+      link('house_fall', 'closed'), link('house_winter', 'open', null),
+    ])).toBe('Application window is open, but its link is currently unavailable');
     expect(getPathWindowStatus(['house_fall'], [link('house_fall', 'closed', 'https://secret.invalid/form')])).toBe('This application cycle has closed');
     expect(getPathWindowStatus([], [])).toBeNull();
   });
