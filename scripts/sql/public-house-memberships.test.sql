@@ -29,10 +29,16 @@ insert into house_page_assets values
  ('11111111-0000-0000-0000-000000000001', 'twilight', 'Twilight Sparkle', '#7b5ea7', true),
  ('11111111-0000-0000-0000-000000000002', 'retired', 'Retired', '#000000', false),
  ('11111111-0000-0000-0000-000000000024', 'toad', 'Toad', '#ff0000', true);
-insert into house_memberships (member_id, house_profile_id, academic_year_start, academic_year_end, effective_start_date, notes) values
- ('22222222-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 2026, 2027, '2026-11-08', 'private admin note'),
- ('22222222-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000002', 2026, 2027, '2026-11-08', null),
- ('22222222-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000024', 2024, 2025, '2024-11-01', null);
+-- Fall and Winter batches for 2026; memberships written by each, one by hand.
+insert into house_assignment_batches (id, academic_year_start, academic_year_end, effective_start_date) values
+ ('33333333-0000-0000-0000-00000000fa11', 2026, 2027, '2026-11-08'),
+ ('33333333-0000-0000-0000-0000000a1e72', 2026, 2027, '2027-01-10');
+insert into house_memberships (member_id, house_profile_id, academic_year_start, academic_year_end, effective_start_date, source, source_import_id, notes) values
+ ('22222222-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 2026, 2027, '2026-11-08', 'house_assignment_batch', '33333333-0000-0000-0000-00000000fa11', 'private admin note'),
+ ('22222222-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000002', 2026, 2027, '2026-11-08', 'house_assignment_batch', '33333333-0000-0000-0000-00000000fa11', null),
+ ('22222222-0000-0000-0000-000000000004', '11111111-0000-0000-0000-000000000001', 2026, 2027, '2027-01-10', 'house_assignment_batch', '33333333-0000-0000-0000-0000000a1e72', null),
+ ('22222222-0000-0000-0000-000000000005', '11111111-0000-0000-0000-000000000001', 2026, 2027, '2026-12-01', 'admin', null, null),
+ ('22222222-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000024', 2024, 2025, '2024-11-01', 'legacy_backfill', null, null);
 
 set role anon;
 do $$ begin
@@ -46,7 +52,6 @@ do $$ begin
 end $$;
 reset role;
 
-insert into house_assignment_batches (academic_year_start, academic_year_end, effective_start_date, status) values (2026, 2027, '2026-11-08', 'draft');
 update house_assignment_batches set status = 'locked';
 set role anon;
 do $$ begin
@@ -57,12 +62,39 @@ do $$ begin
 end $$;
 reset role;
 
-update house_assignment_batches set status = 'published';
+-- Fall is revealed; Winter's Reveal failed partway (its rows exist, batch still locked).
+update house_assignment_batches set status = 'published' where id = '33333333-0000-0000-0000-00000000fa11';
 set role anon;
 do $$ begin
- if (select count(*) from public.public_house_memberships where academic_year_start = 2026) <> 1 then
-  raise exception 'FAIL: expected exactly the active-House 2026 membership after the Reveal';
+ if exists (select 1 from public.public_house_memberships where member_id = '22222222-0000-0000-0000-000000000004') then
+  raise exception 'FAIL: a row from the unrevealed Winter batch is public because Fall was revealed';
  end if;
+ if (select count(*) from public.public_house_memberships where academic_year_start = 2026) <> 2 then
+  raise exception 'FAIL: expected the Fall row and the hand-added row (year revealed) only';
+ end if;
+ raise notice 'PASS: each batch''s rows wait for that batch''s own Reveal; a hand-added row follows the year.';
+end $$;
+reset role;
+
+-- Archiving the revealed Fall batch must not hide it; moving the active term
+-- forward must not reveal Winter's unpublished rows.
+update house_assignment_batches set status = 'archived' where id = '33333333-0000-0000-0000-00000000fa11';
+update academic_terms set academic_year_start = 2027;
+set role anon;
+do $$ begin
+ if not exists (select 1 from public.public_house_memberships where member_id = '22222222-0000-0000-0000-000000000001') then
+  raise exception 'FAIL: archiving a revealed batch hid its Houses';
+ end if;
+ if exists (select 1 from public.public_house_memberships where member_id = '22222222-0000-0000-0000-000000000004') then
+  raise exception 'FAIL: rollover revealed an unpublished batch''s rows';
+ end if;
+ raise notice 'PASS: an archived Reveal stays public; rollover never reveals an unpublished batch.';
+end $$;
+reset role;
+update academic_terms set academic_year_start = 2026;
+
+set role anon;
+do $$ begin
  if exists (select 1 from public.public_house_memberships where house_profile_id = '11111111-0000-0000-0000-000000000002') then
   raise exception 'FAIL: an inactive House profile is public';
  end if;
@@ -83,6 +115,9 @@ do $$ declare cols text; begin
  end if;
  if (select is_updatable from information_schema.views where table_name = 'public_house_memberships') <> 'NO' then
   raise exception 'FAIL: the view is auto-updatable';
+ end if;
+ if not exists (select 1 from pg_class where relname = 'public_house_memberships' and 'security_barrier=true' = any(reloptions)) then
+  raise exception 'FAIL: the view is not a security barrier';
  end if;
  raise notice 'PASS: score-free columns only (no notes, source, batch); read-only and not auto-updatable.';
 end $$;

@@ -51,18 +51,22 @@ interface PublicHouseMembershipRow {
 const PUBLIC_PAGE = 1000;
 
 /**
- * The membership to show for a member: the one in effect on `onDate`, else
- * the latest that started before it (a historical year shows where the member
- * ended it), else the earliest upcoming one. Newer academic years win.
+ * The membership to show for a member, from their newest academic year: the
+ * one in effect on `onDate`; for a year that is over, the one they ended it
+ * in; for a year still running, the next upcoming one (announced at Reveal,
+ * starting later). A membership that ended this year with no successor shows
+ * nothing rather than a House the member left.
  */
-function pickRow(rows: PublicHouseMembershipRow[], onDate: string): PublicHouseMembershipRow {
+function pickRow(rows: PublicHouseMembershipRow[], onDate: string): PublicHouseMembershipRow | null {
   const sorted = [...rows].sort((a, b) =>
     b.academic_year_start - a.academic_year_start || b.effective_start_date.localeCompare(a.effective_start_date));
   const newestYear = sorted[0].academic_year_start;
   const inYear = sorted.filter((row) => row.academic_year_start === newestYear);
-  return inYear.find((row) => row.effective_start_date <= onDate && (!row.effective_end_date || row.effective_end_date > onDate))
-    ?? inYear.find((row) => row.effective_start_date <= onDate)
-    ?? inYear[inYear.length - 1];
+  const inEffect = inYear.find((row) => row.effective_start_date <= onDate && (!row.effective_end_date || row.effective_end_date > onDate));
+  if (inEffect) return inEffect;
+  const yearOver = onDate >= `${newestYear + 1}-07-01`;
+  if (yearOver) return inYear.find((row) => row.effective_start_date <= onDate) ?? null;
+  return [...inYear].reverse().find((row) => row.effective_start_date > onDate) ?? null;
 }
 
 export class HouseMembershipsRepository {
@@ -96,6 +100,7 @@ export class HouseMembershipsRepository {
       const houses = new Map<string, PublicMemberHouse>();
       byMember.forEach((memberRows, memberId) => {
         const row = pickRow(memberRows, onDate);
+        if (!row) return;
         houses.set(memberId, {
           houseProfileId: row.house_profile_id,
           houseKey: row.house_key,

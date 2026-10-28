@@ -694,6 +694,7 @@ export function HouseDraftEditor({
   }
 
   function reveal() {
+    if (!readiness.canReveal) return Promise.resolve();
     return run(async () => {
       const result = await houseAssignmentsRepository.publishBatch(batch.id, userId);
       await refreshBatch();
@@ -713,7 +714,11 @@ export function HouseDraftEditor({
           : `Revealed: ${result.applied} membership${result.applied === 1 ? '' : 's'} created${result.skipped ? `, ${result.skipped} already in place` : ''}.`,
       );
       // Public lookups and House pages in this browser show the new Houses at once.
-      queryClient.invalidateQueries({ predicate: (query) => JSON.stringify(query.queryKey).includes('house') || JSON.stringify(query.queryKey).includes('find-my-points') });
+      queryClient.invalidateQueries('find-my-points');
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const [first, second] = Array.isArray(query.queryKey) ? query.queryKey : [query.queryKey];
+        return [first, second].some((part) => typeof part === 'string' && part.startsWith('house'));
+      } });
       onPublished();
     }, 'Failed to reveal. Nothing was lost; fix the issue and reveal again.');
   }

@@ -79,4 +79,15 @@ describe('buildRevealReadiness', () => {
     expect(readiness.items.find((item) => item.id === 'members')).toMatchObject({ state: 'needs_review' });
     expect(readiness.items.find((item) => item.id === 'payment')).toMatchObject({ state: 'complete' });
   });
+
+  it('never calls an automatic batch payment-cleared when the check cannot run, and ignores unlinked rows for inactive Houses', () => {
+    expect(buildRevealReadiness(input({ paymentBlockers: null })).items.find((item) => item.id === 'payment')?.state).toBe('needs_review');
+    const readiness = buildRevealReadiness(input({
+      batch: { academic_year_start: 2026, status: 'locked', assignment_method: 'manual', effective_start_date: '2026-11-08' },
+      profiles: [{ ...profiles[0], is_active: false }, profiles[1]],
+      drafts: [{ member_id: null, match_status: 'unmatched', house_profile_id: 'twilight' }, { member_id: 'm2', match_status: 'match', house_profile_id: 'rarity' }],
+      paymentBlockers: null,
+    }));
+    expect(readiness.items.find((item) => item.id === 'profiles')?.state).not.toBe('blocked');
+  });
 });

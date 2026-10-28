@@ -61,7 +61,9 @@ export function buildRevealReadiness(input: RevealReadinessInput): RevealReadine
 
   const active = input.profiles.filter((profile) => profile.is_active);
   const usedProfiles = new Set(input.drafts.map((row) => row.house_profile_id).filter((id): id is string => !!id));
-  const assignedToInactive = input.drafts.filter((row) => row.house_profile_id && !active.some((profile) => profile.id === row.house_profile_id)).length;
+  // Only rows the Reveal would actually write: linked to a confirmed member.
+  const assignedToInactive = input.drafts.filter((row) => row.member_id && LINKED.has(row.match_status)
+    && row.house_profile_id && !active.some((profile) => profile.id === row.house_profile_id)).length;
   if (active.length === 0 || assignedToInactive > 0) {
     items.push({
       id: 'profiles',
@@ -102,7 +104,9 @@ export function buildRevealReadiness(input: RevealReadinessInput): RevealReadine
   if (input.paymentBlockers === undefined) {
     items.push({ id: 'payment', label: 'Payment eligibility', state: 'unknown', detail: 'Payment eligibility could not be checked.' });
   } else if (input.paymentBlockers === null) {
-    items.push({ id: 'payment', label: 'Payment eligibility', state: 'complete', detail: 'This draft is not payment-gated.' });
+    items.push(autoBatch
+      ? { id: 'payment', label: 'Payment eligibility', state: 'needs_review', detail: 'The payment check is not available in this database (migration 20261028050216 missing), so payment could not be verified.' }
+      : { id: 'payment', label: 'Payment eligibility', state: 'complete', detail: 'Manual imports are not payment-gated.' });
   } else {
     items.push(input.paymentBlockers.length > 0
       ? { id: 'payment', label: 'Payment eligibility', state: 'blocked', detail: input.paymentBlockers.join(' ') }

@@ -9,6 +9,7 @@ import { houseParentsRepository } from '../../../data/repos/houseParents';
 import type { HouseAssignmentBatch, HouseAssignmentDraft, HouseProfileLite, PreflightResult } from '../../../lib/houseAssignmentDraft';
 import { READINESS_LABEL, ReadinessState, RevealReadiness, buildRevealReadiness } from '../../../lib/houseRevealReadiness';
 import { cn } from '../../../lib/utils';
+import { ADMIN_APPLICATION_LINKS_QUERY_KEY } from '../../../hooks/useApplicationLinks';
 
 const TONE: Record<ReadinessState, string> = {
   complete: 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300',
@@ -25,17 +26,20 @@ export function useRevealReadiness(input: {
   paymentBlockers: string[] | null | undefined;
 }): RevealReadiness {
   const year = input.batch.academic_year_start;
-  const term = useQuery(['admin', 'active-term'], () => academicTermsRepository.getActiveTerm(), { retry: false });
-  const parents = useQuery(['admin', 'house-parents', year], () => houseParentsRepository.listForYear(year), { retry: false });
-  const links = useQuery(['admin', 'application-links'], () => applicationLinksRepository.listAdminApplicationLinks(), { retry: false });
-  const parentCounts = parents.data
+  // Only a locked batch can be revealed, so only then is readiness read.
+  const enabled = input.batch.status === 'locked';
+  const term = useQuery(['admin', 'active-term'], () => academicTermsRepository.getActiveTerm(), { retry: false, enabled, staleTime: 0 });
+  const parents = useQuery(['admin', 'house-parents', year], () => houseParentsRepository.listForYear(year), { retry: false, enabled, staleTime: 0 });
+  const links = useQuery(ADMIN_APPLICATION_LINKS_QUERY_KEY, () => applicationLinksRepository.listAdminApplicationLinks(), { retry: false, enabled, staleTime: 0 });
+  // A failed refetch is Unknown even if older data is still cached.
+  const parentCounts = parents.isSuccess && parents.data
     ? parents.data.reduce((map, parent) => map.set(parent.house_profile_id, (map.get(parent.house_profile_id) ?? 0) + 1), new Map<string, number>())
     : undefined;
   return buildRevealReadiness({
     ...input,
     activeTermYear: term.isSuccess ? term.data?.academic_year_start ?? null : undefined,
     parentCounts,
-    applicationLinks: links.data,
+    applicationLinks: links.isSuccess ? links.data : undefined,
     nowMs: Date.now(),
   });
 }

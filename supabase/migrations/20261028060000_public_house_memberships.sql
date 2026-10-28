@@ -16,13 +16,17 @@
 --   No points, attendance, notes, source, batch or creator columns.
 --
 -- REVEAL BOUNDARY
---   A membership row is public only when its House profile is active AND
---     (a) a House assignment batch for that academic year is published
---         (the Reveal happened), or
---     (b) the academic year is earlier than the active academic term's year
---         (historical years stay visible after rollover).
---   A locked-but-not-revealed batch writes no memberships, and any membership
---   an admin adds by hand for the upcoming year stays hidden until (a) or (b).
+--   A membership row is public only when its House profile is active AND:
+--     - written by an assignment batch (source 'house_assignment_batch'):
+--       that exact batch has been published (published_at set). One year can
+--       hold several windows' batches (Fall, Winter, Spring), and Reveal
+--       writes rows before it marks the batch published, so a partly written
+--       or failed Reveal stays private, whatever else is published, and
+--       even after the year becomes historical.
+--     - any other source (Admin -> Houses by hand, legacy backfill): some
+--       batch for that year has been published, or the year is earlier than
+--       the active term's year (rollover makes past years history).
+--   published_at, not status, so archiving a revealed batch does not hide it.
 --
 -- SECURITY
 --   Owner-rights view over admin-only tables, filtered as above. It joins
@@ -36,7 +40,8 @@
 --   lookup shows no House (never the stale cache). Verify:
 --   bash scripts/test-public-house-memberships.sh
 
-create or replace view public.public_house_memberships as
+create or replace view public.public_house_memberships
+with (security_barrier = true) as
 select
   hm.member_id,
   hm.academic_year_start,
@@ -51,14 +56,23 @@ from public.house_memberships hm
 join public.house_page_assets hp on hp.id = hm.house_profile_id
 where hp.is_active = true
   and (
-    exists (
-      select 1 from public.house_assignment_batches b
-      where b.academic_year_start = hm.academic_year_start
-        and b.status = 'published'
-    )
-    or hm.academic_year_start < (
-      select max(t.academic_year_start) from public.academic_terms t where t.is_active
-    )
+    case
+      when hm.source = 'house_assignment_batch' then exists (
+        select 1 from public.house_assignment_batches b
+        where b.id = hm.source_import_id
+          and b.published_at is not null
+      )
+      else (
+        exists (
+          select 1 from public.house_assignment_batches b
+          where b.academic_year_start = hm.academic_year_start
+            and b.published_at is not null
+        )
+        or hm.academic_year_start < (
+          select max(t.academic_year_start) from public.academic_terms t where t.is_active
+        )
+      )
+    end
   );
 
 revoke all on public.public_house_memberships from public, anon, authenticated;

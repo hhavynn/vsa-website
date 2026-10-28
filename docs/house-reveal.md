@@ -19,9 +19,19 @@ Admin → Houses → open a **locked** batch. The **Ready to Reveal?** panel is 
 
 ## Public House identity (`public_house_memberships`)
 
-`house_memberships` is admin-only. The public site reads a member's House from `public_house_memberships`, a read-only, score-free view (member, year, effective interval, House id/key/name/accent). A row is public only when its House profile is active **and** either that year's assignment batch is **published** or the year is earlier than the active term's year. A locked batch writes no memberships, and a membership an admin adds by hand for the upcoming year stays hidden until the Reveal.
+`house_memberships` is admin-only. The public site reads a member's House from `public_house_memberships`, a read-only, score-free view (member, year, effective interval, House id/key/name/accent). A row is public only when its House profile is active **and**:
+
+- **written by an assignment batch:** that exact batch has been published (`published_at` set). One year can hold Fall, Winter and Spring batches, and a Reveal writes rows before marking the batch published, so a partly written or failed Reveal stays private no matter what else is published, and even after rollover.
+- **added by hand or backfilled:** some batch for that year has been published, or the year is earlier than the active term's year.
+
+`published_at`, not status, so archiving a revealed batch keeps it public. The view is a `security_barrier`. For the current year, a membership that ended with no successor shows no House; the all-time view dates the House (e.g. "Rarity · 2026-2027") so an old House never reads as current.
 
 Find My Points shows the House announced for the selected year (or each member's most recent revealed House for all-time) and links to that year's House page. It never reads `members.house`: that legacy display cache still held 221 members' 2025–26 Houses (with no 2025–26 membership rows) in production on 2026-10-28. A failed House read shows no House, never a guessed one.
+
+## Known gaps (tracked separately)
+
+- `public_members.house` (the legacy cache) is still anon-readable and is written during Reveal before the batch is marked published; the public Events page still shows a "top House" from it. See the follow-up issue linked in PR #701.
+- `house_member_yearly_points` is anon-readable and joins memberships without this Reveal gate, and public per-member points plus public Houses let anyone sum House totals: both need an owner decision under the score embargo (#692).
 
 ## Migrations
 

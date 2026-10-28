@@ -50,9 +50,10 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
     queryFn: async () => {
       if (selectedYear === null) return [];
 
-      const today = new Date().toISOString().slice(0, 10);
+      // Membership dates are Pacific calendar days.
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
       // A failed House read shows no House rather than a stale or guessed one.
-      const houses = await houseMembershipsRepository.getPublicHousesByMemberId(selectedYear, today)
+      const housesRead = houseMembershipsRepository.getPublicHousesByMemberId(selectedYear, today)
         .catch(() => new Map<string, PublicMemberHouse>());
 
       if (selectedYear === 'all') {
@@ -61,6 +62,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
           .select('id, first_name, last_name, college, year, points, events_attended')
           .order('points', { ascending: false });
         if (error) throw error;
+        const houses = await housesRead;
 
         return rankEntries((data ?? []).map((m: any) => ({
           member_id: m.id,
@@ -76,7 +78,7 @@ export function useFindMyPoints(selectedYear: SelectedYear | null) {
         })));
       }
 
-      const yearly = await leaderboardRepository.getYearlyLeaderboard(selectedYear);
+      const [yearly, houses] = await Promise.all([leaderboardRepository.getYearlyLeaderboard(selectedYear), housesRead]);
 
       // Build an enrichment map of member_id -> { house, all-time points }.
       // We fetch the full members table here (bounded, small) instead of

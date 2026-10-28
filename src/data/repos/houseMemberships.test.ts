@@ -163,3 +163,17 @@ describe('getPublicHousesByMemberId', () => {
     await expect(houseMembershipsRepository.getPublicHousesByMemberId(2026, '2026-12-01')).rejects.toThrow(/statement timeout/);
   });
 });
+
+describe('getPublicHousesByMemberId — ended memberships', () => {
+  const row = (start: string, end: string | null) => ({
+    member_id: 'm-left', academic_year_start: 2026, effective_start_date: start, effective_end_date: end,
+    house_profile_id: 'hp-rarity', house_key: 'rarity', display_name: 'Rarity', accent_color: null,
+  });
+
+  it('shows no House for a membership that ended this year with no successor, but keeps it once the year is over', async () => {
+    supabaseMock.queueResult('public_house_memberships', { data: [row('2026-11-08', '2027-02-01')], error: null });
+    expect((await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-03-01')).has('m-left')).toBe(false);
+    supabaseMock.queueResult('public_house_memberships', { data: [row('2026-11-08', '2027-02-01')], error: null });
+    expect((await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-08-01')).get('m-left')?.label).toBe('Rarity');
+  });
+});

@@ -408,7 +408,8 @@ export function MyVSACard({
   const { data: attended = [] } = useRecentAttendance(entry.member_id);
   
   const house = entry.house;
-  const houseLabel = house?.label ?? null;
+  // All-time shows the member's latest revealed House: date it so an old House never reads as current.
+  const houseLabel = house ? (isAllTime ? `${house.label} · ${formatAcademicYear(house.academicYearStart)}` : house.label) : null;
   const houseColor = house ? house.accentColor ?? 'var(--brand)' : null;
   const legacyHouse = normalizeHouse(house?.houseKey ?? house?.label);
   const houseEmoji = house ? (legacyHouse ? HOUSE_EMOJI[legacyHouse] ?? '🏠' : '🏠') : null;
