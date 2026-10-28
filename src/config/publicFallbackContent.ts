@@ -197,8 +197,7 @@ export const FALLBACK_POINTS = {
 export const FALLBACK_LEADERBOARD = {
   message:
     'Individual points lookup is temporarily unavailable. No current totals can be confirmed while the live data is unavailable.',
-  houseMessage:
-    'Live House standings are temporarily unavailable. Any archived numbers shown are historical snapshots, not current results.',
+  houseMessage: FALLBACK_HOUSE_MESSAGE,
 } as const;
 
 // ── Feedback ─────────────────────────────────────────────────────────────────
