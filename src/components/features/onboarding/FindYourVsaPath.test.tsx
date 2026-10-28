@@ -66,6 +66,22 @@ describe('new member VSA path guide (#283)', () => {
     expect(within(choices).getByRole('button', { name: 'Create or perform' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('does not advertise open Intern applications when only Cabinet is recruiting', async () => {
+    mockUsePublicApplicationLinks.mockReturnValue({
+      links: [
+        link('intern_application', 'closed'),
+        link('cabinet_application', 'open', 'https://example.invalid/cabinet-only'),
+      ],
+      loading: false,
+      error: null,
+    });
+    mount();
+    await userEvent.click(screen.getByRole('button', { name: 'Try out leadership' }));
+    expect(screen.getByRole('heading', { name: 'Explore the Intern Program' })).toBeInTheDocument();
+    expect(screen.getByText('This application cycle has closed')).toBeInTheDocument();
+    expect(screen.queryByText('Application or interest form open now')).not.toBeInTheDocument();
+  });
+
   it('handles missing application data without claiming an open window', async () => {
     mockUsePublicApplicationLinks.mockReturnValue({ links: [], loading: true, error: null });
     mount();
