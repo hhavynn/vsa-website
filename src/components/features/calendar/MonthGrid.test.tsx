@@ -161,7 +161,7 @@ describe('MonthGrid desktop tiles', () => {
       makeItem({ key: 'broken', imageUrl: '/images/events/missing.webp' }),
     ]);
 
-    const noFlyer = screen.getByRole('button', { name: 'Open Intern Apps Due, All day' });
+    const noFlyer = screen.getByRole('button', { name: 'Open Intern Apps Due, General Events, All day' });
     expect(within(noFlyer).queryByRole('presentation')).not.toBeInTheDocument();
     expect(within(noFlyer).getByText('Intern Apps Due')).toBeInTheDocument();
     expect(within(noFlyer).getByText('All day')).toBeInTheDocument();
