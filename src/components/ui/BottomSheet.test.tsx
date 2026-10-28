@@ -49,6 +49,20 @@ function NestedSheetsHarness() {
   );
 }
 
+function RemovedTriggerHarness() {
+  const [open, setOpen] = useState(false);
+  return (
+    <main data-testid="sheet-focus-fallback">
+      {!open && <button onClick={() => setOpen(true)}>Open and remove trigger</button>}
+      {open && (
+        <BottomSheet ariaLabel="Delete details" onClose={() => setOpen(false)}>
+          <button onClick={() => setOpen(false)}>Close details</button>
+        </BottomSheet>
+      )}
+    </main>
+  );
+}
+
 describe("BottomSheet keyboard accessibility", () => {
   it("suspends an inert sheet's trap while a separate nested portal is active", async () => {
     render(<NestedSheetsHarness />);
@@ -107,6 +121,17 @@ describe("BottomSheet keyboard accessibility", () => {
     expect(
       screen.getByRole("button", { name: "Close member details" }),
     ).toHaveFocus();
+  });
+
+  it("restores keyboard focus to main when the original trigger has unmounted", async () => {
+    render(<RemovedTriggerHarness />);
+    await userEvent.click(screen.getByRole("button", { name: "Open and remove trigger" }));
+    expect(screen.queryByRole("button", { name: "Open and remove trigger" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close details" })).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete details" })).not.toBeInTheDocument());
+    expect(screen.getByTestId("sheet-focus-fallback")).toHaveFocus();
   });
 
   it("wraps Tab and Shift-Tab around enabled sheet controls", async () => {

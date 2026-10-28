@@ -17,7 +17,10 @@ function assert(condition: unknown, message: string): asserts condition {
 
 const FALLBACK =
   "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates.";
-const RATE_LIMIT = "You've reached today's Ask VSA limit. Try again later!";
+const RATE_LIMITS: Record<string, string> = {
+  session_5_minute_limit: "Give Ask VSA about five minutes",
+  session_daily_limit: "Try again in about a day",
+};
 const RESERVATION_ID = "00000000-0000-4000-8000-000000000002";
 const RAW_SESSION_ID = "raw-session-id-for-privacy-test";
 const RAW_IP = "203.0.113.77";
@@ -308,7 +311,13 @@ Deno.test("every quota limit reason is a 429 with no retrieval or provider call"
   for (const reason of reasons) {
     const outcome = await ask("How do I join VSA?", { blockedReason: reason });
     assert(outcome.status === 429, `${reason}: expected 429, got ${outcome.status}`);
-    assert(outcome.answer === RATE_LIMIT, `${reason}: expected the rate-limit message`);
+    if (reason in RATE_LIMITS) {
+      assert(outcome.answer.includes(RATE_LIMITS[reason]), `${reason}: expected retry guidance`);
+    } else {
+      assert(outcome.answer.includes("Ask VSA is busy right now"), `${reason}: expected generic shared-limit copy`);
+    }
+    assert(!outcome.answer.includes(reason), `${reason}: internal limit code leaked`);
+    assert(!outcome.answer.includes("IP") && !outcome.answer.includes("global_"), `${reason}: internal limit class leaked`);
     assert(outcome.responseStatus === "rate_limited", `${reason}: expected rate_limited`);
     assert(!outcome.retrieved && !outcome.calledProvider, `${reason}: no downstream calls`);
     assert(outcome.blockedReason === reason, `${reason}: reason must be recorded`);

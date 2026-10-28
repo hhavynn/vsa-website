@@ -113,6 +113,7 @@ const HOUSE_ISSUE: Partial<Record<HouseIssue['code'], { detail: string; fix?: Is
   override_reason: { detail: 'Use Override on the row and record why it moved.' },
   priority_override: { detail: 'Allowed with a documented reason, but it departs from first-come, first-served.' },
   manual_override: { detail: 'Shown as manual overrides, not automatic results.' },
+  payment_gate: { detail: 'Checked by the database: Lock and Reveal refuse until it passes. Use Rerun sorting with eligible applicants.' },
 };
 
 export function houseIssues(preflight: Pick<PreflightResult, 'blockers' | 'warnings'>): UnifiedIssue[] {

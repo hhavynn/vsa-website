@@ -2,6 +2,8 @@
 
 Single source of truth for AI coding agents working in this repo.
 
+**Security review:** The repo is public. Read [THREAT_MODEL.md](THREAT_MODEL.md) when changing a feature or trust boundary; update its controls/evidence in the same PR. Do not disclose real member data or secrets in the issue, documentation, tests or commits.
+
 ---
 
 ## Project overview
@@ -11,6 +13,8 @@ Vietnamese Student Association (VSA) at UCSD member website. This is a productio
 **Tech stack:** Create React App · TypeScript · React 18 · React Router v6 · React Query v3 · Supabase (Auth + PostgreSQL + Storage) · Tailwind CSS v3 · Framer Motion · react-hook-form + Zod · react-hot-toast
 
 **Deployed to:** Vercel (zero-config CRA build, SPA fallback in `vercel.json`)
+
+**Cheap ownership lookup:** `docs/ai/repo-map.json` (run `npm run repo-map:check` to verify freshness); confirm candidates against Graphify, playbooks, and real source.
 
 ---
 

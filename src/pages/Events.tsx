@@ -2,6 +2,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { EventsSkeleton } from '../components/common/PageSkeletons';
 import { PageTitle } from '../components/common/PageTitle';
+import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
 import { Label } from '../components/ui/Label';
 import { OptimizedImage } from '../components/common/OptimizedImage';
 import {
@@ -11,10 +12,13 @@ import {
   type EventMemoryStats,
 } from '../components/features/events/PublicEventCards';
 import { HOUSE_COLORS } from '../constants/houses';
+import { NextEventAtGlance } from '../components/features/events/NextEventAtGlance';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
+import { formatEventTimeRange } from '../lib/eventTime';
+import { UpcomingItem, houseCandidate, mergeUpcoming } from '../lib/upcomingEvents';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import {
   addDaysToDateOnly,
@@ -49,10 +53,11 @@ import { readableInk } from '../lib/readableInk';
 // Upper bound on archive pages fetched to reach a deep-linked event.
 const MAX_PAGES_FOR_EVENT_LINK = 10;
 
-type FilterKey = 'all' | Event['event_type'];
+type FilterKey = 'all' | 'house' | Event['event_type'];
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
+  { key: 'house', label: 'House Events' },
   { key: 'gbm', label: 'GBM' },
   { key: 'mixer', label: 'Mixer' },
   { key: 'vcn', label: 'VCN' },
@@ -74,15 +79,19 @@ function houseFill(h: Pick<HousePageAsset, 'accent_color' | 'house'>): string {
   return h.accent_color || HOUSE_COLORS[h.house as keyof typeof HOUSE_COLORS] || 'var(--brand)';
 }
 
-function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: HousePageAsset }) {
-  const eventHouses = event.houses && event.houses.length > 0 ? event.houses : house ? [house] : [];
-  const primaryHouse = eventHouses[0] || house;
+type HouseUpcomingItem = Extract<UpcomingItem, { kind: 'house' }>;
+
+/** A published House event in the upcoming list; links to its own card on its House page. */
+function HouseEventPreviewCard({ item }: { item: HouseUpcomingItem }) {
+  const { event } = item;
+  const eventHouses = event.houses ?? [];
+  const primaryHouse = eventHouses[0];
   const color = primaryHouse ? houseFill(primaryHouse) : 'var(--brand)';
   const imageUrl = event.image_thumbnail_url || event.image_url || primaryHouse?.image_thumbnail_url || primaryHouse?.image_url;
-  const href = primaryHouse ? `/house/${houseSlugFromKey(primaryHouse.house_key || primaryHouse.house || primaryHouse.display_name)}` : '/house';
+  const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
 
   return (
-    <Link to={href} className="scrapbook-paper group/spotlight group relative grid gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
+    <Link to={item.detailPath} className="scrapbook-paper group/spotlight group relative grid min-h-11 gap-4 overflow-hidden p-4 transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:z-0 before:bg-[radial-gradient(circle_at_50%_0%,rgba(59,189,181,0.2),transparent_48%)] before:opacity-55 before:transition-opacity before:duration-300 after:pointer-events-none after:absolute after:inset-0 after:z-0 after:bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.08)_44%,transparent_58%)] after:opacity-0 after:transition-opacity after:duration-300 active:scale-[0.98] active:border-brand-400/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 hover:-translate-y-1 hover:border-brand-400/70 hover:shadow-[0_18px_42px_rgba(15,23,42,0.16)] hover:before:opacity-100 hover:after:opacity-100 sm:grid-cols-[120px_minmax(0,1fr)] sm:before:opacity-0 dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.34)] [&>*]:relative [&>*]:z-10" style={{ borderColor: `${color}55` }}>
       <div className="relative overflow-hidden rounded bg-[var(--color-surface2)]">
         <OptimizedImage
           src={imageUrl}
@@ -90,7 +99,7 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
           width={320}
           height={240}
           sizes="(min-width: 640px) 120px, 100vw"
-          alt={event.title}
+          alt=""
           className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-105"
           fallback={
             <div className="flex aspect-[4/3] items-center justify-center">
@@ -110,12 +119,12 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
             ))}
           </div>
         </div>
-        <h3 className="truncate font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</h3>
+        <h3 className="font-sans text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</h3>
         <p className="mt-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-          {formatDateOnly(event.event_date, 'MMM d, yyyy')}
+          {formatDateOnly(event.event_date, 'EEE, MMM d, yyyy')}{timeLabel ? ` · ${timeLabel}` : ''}
         </p>
         {event.location && (
-          <p className="mt-2 truncate font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{event.location}</p>
+          <p className="mt-2 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>{event.location}</p>
         )}
       </div>
     </Link>
@@ -123,10 +132,25 @@ function HouseEventPreviewCard({ event, house }: { event: HouseEvent; house?: Ho
 }
 
 export function Events() {
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  // `?type=` (and `?host=` for House events) keep the upcoming filter in the
+  // URL, so it survives a reload and Back returns to the previous filter.
   // `?term=` deep-links straight to a past term's archive (used by Gallery's
   // "related event" link). An unknown term falls back to the latest archive.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const typeParam = searchParams.get('type');
+  const activeFilter: FilterKey = FILTERS.some((filter) => filter.key === typeParam) ? (typeParam as FilterKey) : 'all';
+  const hostParam = activeFilter === 'house' ? searchParams.get('host') : null;
+  const updateFilterParams = (type: FilterKey, host: string | null = null) => {
+    const next = new URLSearchParams(searchParams);
+    if (type === 'all') next.delete('type');
+    else next.set('type', type);
+    if (host) next.set('host', host);
+    else next.delete('host');
+    // Same filter again: no new history entry. Otherwise keep the scroll position.
+    if (next.toString() === searchParams.toString()) return;
+    setSearchParams(next, { state: { keepScroll: true } });
+  };
+  const setActiveFilter = (type: FilterKey) => updateFilterParams(type);
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(
     () => searchParams.get('term')
   );
@@ -153,9 +177,20 @@ export function Events() {
   const upcomingEventsAll = useMemo(
     () => activeFilter === 'all'
       ? eligibleUpcomingEvents
-      : eligibleUpcomingEvents.filter((event) => event.event_type === activeFilter),
+      : activeFilter === 'house'
+        ? []
+        : eligibleUpcomingEvents.filter((event) => event.event_type === activeFilter),
     [activeFilter, eligibleUpcomingEvents]
   );
+
+  // Published House events only (the repository filters drafts out).
+  const { data: upcomingHouseEvents = [], isError: houseEventsError, isLoading: houseEventsLoading } = useQuery<HouseEvent[]>({
+    queryKey: ['events-page', 'upcoming-house-events', todayDateOnly],
+    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, null, 24),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const { terms, loading: termsLoading, error: termsError } = useAcademicTerms();
 
@@ -197,7 +232,8 @@ export function Events() {
     isFetchingNextPage: fetchingMorePast
   } = useInfiniteEvents({
     date_to: archiveDateTo,
-    event_type: activeFilter === 'all' ? undefined : activeFilter,
+    // House events are not in the Memory Wall; that filter shows every past event.
+    event_type: activeFilter === 'all' || activeFilter === 'house' ? undefined : activeFilter,
     academic_term_id: effectiveArchiveTermId === 'unassigned' ? null : effectiveArchiveTermId,
     sort_ascending: false
   });
@@ -207,9 +243,10 @@ export function Events() {
     return pages.filter((event) => isEventPast(event, currentNow));
   }, [pastEventsData, currentNow]);
 
+  // House events too, so one that ends drops out of Upcoming on time.
   const allEventsForTimer = useMemo(() => {
-    return [...unfilteredUpcomingEvents, ...archivedEvents];
-  }, [unfilteredUpcomingEvents, archivedEvents]);
+    return [...unfilteredUpcomingEvents, ...archivedEvents, ...upcomingHouseEvents.map(houseCandidate)];
+  }, [unfilteredUpcomingEvents, archivedEvents, upcomingHouseEvents]);
 
   const timerNow = useEventLifecycleTimer(allEventsForTimer, [['events']]);
 
@@ -265,18 +302,9 @@ export function Events() {
     .map((event) => event.id);
   const externalListings = useLinkedExternalListings(externalEventIds);
 
-  const [featured, ...rest] = upcomingEventsAll;
-  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(eligibleUpcomingEvents.length > 0);
   const summerEventsMessage = getSummerBreakMessage('events');
   const activeTerm = terms.find((term) => term.is_active) ?? terms.find((term) => term.code === getAcademicTermMeta(currentNow.toISOString())?.code);
   const activeYear = activeTerm?.academic_year_start ?? null;
-  const { data: houseEventPreviews = [] } = useQuery<HouseEvent[]>({
-    queryKey: ['events-page', 'house-event-previews', todayDateOnly],
-    queryFn: () => houseEventsRepository.getPublicUpcomingPreview(todayDateOnly, 4),
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
   const { data: houseAssets = [] } = useQuery<HousePageAsset[]>({
     queryKey: ['events-page', 'house-assets', activeYear],
     queryFn: () => activeYear ? houseAssetsRepository.getPublishedAssets(activeYear) : Promise.resolve([]),
@@ -286,6 +314,38 @@ export function Events() {
     refetchOnWindowFocus: false,
   });
   const houseAssetsById = useMemo(() => new Map(houseAssets.map((asset) => [asset.id, asset])), [houseAssets]);
+  // When the host embed comes back empty, name the primary host from the
+  // published House profiles (never an unpublished one).
+  const houseEventsWithHosts = useMemo(
+    () => upcomingHouseEvents.map((event) => {
+      if (event.houses && event.houses.length > 0) return event;
+      const fallback = houseAssetsById.get(event.house_profile_id);
+      return { ...event, houses: fallback ? [fallback] : [] };
+    }),
+    [upcomingHouseEvents, houseAssetsById]
+  );
+  const houseItems = useMemo(() => mergeUpcoming([], houseEventsWithHosts, currentNow), [houseEventsWithHosts, currentNow]);
+  const hostOptions = useMemo(() => {
+    const byKey = new Map<string, string>();
+    for (const item of houseItems) {
+      if (item.kind !== 'house') continue;
+      for (const h of item.event.houses ?? []) byKey.set(houseSlugFromKey(h.house_key || h.house), h.display_name || h.house);
+    }
+    return Array.from(byKey, ([slug, label]) => ({ slug, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [houseItems]);
+  // An unknown host (stale or mistyped link) is ignored rather than hiding everything.
+  const effectiveHost = hostParam && hostOptions.some((option) => option.slug === hostParam) ? hostParam : null;
+  const upcomingItems = useMemo<UpcomingItem[]>(() => {
+    if (activeFilter === 'house') {
+      return effectiveHost
+        ? houseItems.filter((item) => item.kind === 'house' && (item.event.houses ?? []).some((h) => houseSlugFromKey(h.house_key || h.house) === effectiveHost))
+        : houseItems;
+    }
+    return mergeUpcoming(upcomingEventsAll, activeFilter === 'all' ? houseEventsWithHosts : [], currentNow);
+  }, [activeFilter, effectiveHost, houseItems, upcomingEventsAll, houseEventsWithHosts, currentNow]);
+  const [featured, ...rest] = upcomingItems;
+  const showsHouseEvents = upcomingItems.some((item) => item.kind === 'house');
+  const useSummerUpcomingEmptyState = shouldUseSummerEmptyState(eligibleUpcomingEvents.length > 0 || houseItems.length > 0);
 
   const selectedArchiveTerm = archiveOptions.find((term) => term.id === effectiveArchiveTermId);
   const latestArchiveTerm = archiveOptions[0] ?? null;
@@ -324,53 +384,23 @@ export function Events() {
         });
       });
 
-    // 2. Attendance stats
+    // Aggregate published regular-event attendance without identifying members
+    // or joining the retired members.house cache. House competition rankings
+    // are embargoed until the CRC's private GBM announcements (#692/#704).
     supabase
-      // member_event_history, not the raw ledger: anon lost SELECT on
-      // member_event_attendance in 20260820000001 (#380). The view carries the
-      // same three columns and additionally filters to published events.
       .from('member_event_history')
-      .select('event_id, member_id, points_earned')
+      .select('event_id, points_earned')
       .in('event_id', archivedEventIds)
-      .then(async ({ data: attendanceRows }) => {
-        if (cancelled || !attendanceRows || attendanceRows.length === 0) return;
-
-        const rows = attendanceRows as Array<{ event_id: string; member_id: string; points_earned: number }>;
-        const uniqueMemberIds = Array.from(new Set(rows.map((r) => r.member_id)));
-
-        const { data: memberRows } = await supabase
-          .from('public_members')
-          .select('id, house')
-          .in('id', uniqueMemberIds);
-
-        if (cancelled) return;
-
-        const houseByMember = new Map<string, string | null>();
-        for (const m of (memberRows ?? []) as Array<{ id: string; house: string | null }>) {
-          houseByMember.set(m.id, m.house ?? null);
+      .then(({ data: attendanceRows }) => {
+        if (cancelled || !attendanceRows) return;
+        const totals: Record<string, EventMemoryStats> = {};
+        for (const row of attendanceRows as Array<{ event_id: string; points_earned: number }>) {
+          const stats = totals[row.event_id] ?? { totalPoints: 0, memberCount: 0 };
+          stats.totalPoints += row.points_earned;
+          stats.memberCount += 1;
+          totals[row.event_id] = stats;
         }
-
-        const agg: Record<string, { totalPoints: number; memberCount: number; houseCounts: Record<string, number> }> = {};
-        for (const r of rows) {
-          if (!agg[r.event_id]) agg[r.event_id] = { totalPoints: 0, memberCount: 0, houseCounts: {} };
-          agg[r.event_id].totalPoints += r.points_earned;
-          agg[r.event_id].memberCount++;
-          const house = houseByMember.get(r.member_id);
-          if (house) agg[r.event_id].houseCounts[house] = (agg[r.event_id].houseCounts[house] ?? 0) + 1;
-        }
-
-        const stats: Record<string, EventMemoryStats> = {};
-        for (const [eventId, data] of Object.entries(agg)) {
-          const sorted = Object.entries(data.houseCounts).sort((a, b) => b[1] - a[1]);
-          stats[eventId] = {
-            totalPoints: data.totalPoints,
-            memberCount: data.memberCount,
-            topHouse: sorted[0]?.[0] ?? null,
-            topHouseCount: sorted[0]?.[1] ?? 0,
-          };
-        }
-
-        setMemoryStats((prev) => ({ ...prev, ...stats }));
+        if (!cancelled) setMemoryStats((prev) => ({ ...prev, ...totals }));
       });
 
     return () => { cancelled = true; };
@@ -439,7 +469,10 @@ export function Events() {
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
-          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+          {featured && (featured.kind === 'vsa'
+            ? <NextEventAtGlance event={featured.event} />
+            : <NextEventAtGlance houseItem={featured} />)}
+          <p className={`mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] ${featured ? 'hidden sm:block' : ''}`} style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions.
           </p>
           {activeTerm && (
@@ -448,7 +481,7 @@ export function Events() {
             </p>
           )}
 
-          {unfilteredUpcomingEvents.length > 0 && (
+          {(unfilteredUpcomingEvents.length > 0 || houseItems.length > 0) && (
             <div className="vsa-filter-bar" role="group" aria-label="Filter events by type">
               {FILTERS.map((filter) => (
                 <button
@@ -463,29 +496,72 @@ export function Events() {
               ))}
             </div>
           )}
+          {activeFilter === 'house' && hostOptions.length > 1 && (
+            <div className="mt-3">
+              <label htmlFor="events-house-host" className="mb-1 block font-sans text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--color-text3)' }}>
+                Hosted by
+              </label>
+              <select
+                id="events-house-host"
+                value={effectiveHost ?? ''}
+                onChange={(event) => updateFilterParams('house', event.target.value || null)}
+                className="scrapbook-select min-h-11"
+              >
+                <option value="">Every House</option>
+                {hostOptions.map((option) => <option key={option.slug} value={option.slug}>{option.label}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="vsa-container py-8 lg:py-10">
+        {houseEventsError && (
+          <p role="status" className="mb-5 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+            {activeFilter === 'house'
+              ? 'House events could not be loaded right now. Choose All to see VSA events, or try again later.'
+              : 'House events could not be loaded right now; VSA events are still listed.'}
+          </p>
+        )}
+
+        {activeFilter !== 'house' && eligibleUpcomingEvents.length > 0 && (
+          <div className="mb-6">
+            <DownloadEventCalendarButton events={eligibleUpcomingEvents} />
+          </div>
+        )}
+
         {featured && (
-          <>
+          <div id="next-up" className="scroll-mt-24">
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
-            <FeaturedEventCard event={featured} external={externalListings.get(featured.id)} />
-          </>
+            {featured.kind === 'vsa'
+              ? <FeaturedEventCard event={featured.event} external={externalListings.get(featured.event.id)} />
+              : <div className="mb-10"><HouseEventPreviewCard item={featured} /></div>}
+          </div>
         )}
 
         {rest.length > 0 && (
           <>
             <Label className="mb-0">All Upcoming</Label>
             <div className="mt-5 mb-10 grid gap-4">
-              {rest.map((event: Event) => (
-                <UpcomingEventRow key={event.id} event={event} external={externalListings.get(event.id)} />
-              ))}
+              {rest.map((item) => item.kind === 'vsa'
+                ? <UpcomingEventRow key={item.key} event={item.event} external={externalListings.get(item.event.id)} />
+                : <HouseEventPreviewCard key={item.key} item={item} />)}
             </div>
           </>
         )}
 
-        {upcomingEventsAll.length === 0 && (
+        {showsHouseEvents && (
+          <p className="-mt-6 mb-10 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
+            House events are hosted by Houses for their members and friends. They do not award VSA attendance points.{' '}
+            <Link to="/house" className="font-semibold text-brand-600 dark:text-brand-400">About Houses</Link>
+          </p>
+        )}
+
+        {activeFilter === 'house' && houseEventsLoading && (
+          <p role="status" className="mb-10 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>Loading House events…</p>
+        )}
+
+        {upcomingItems.length === 0 && !(activeFilter === 'house' && (houseEventsLoading || houseEventsError)) && (
           <div
             className="scrapbook-empty mb-10"
           >
@@ -520,32 +596,11 @@ export function Events() {
                   {latestArchiveActionLabel}
                 </a>
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  No upcoming events posted yet. Check back soon.
+                  {activeFilter === 'house' ? 'No upcoming House events posted yet.' : 'No upcoming events posted yet.'} Check back soon.
                 </p>
               </div>
             )}
           </div>
-        )}
-
-        {houseEventPreviews.length > 0 && (
-          <section className="mb-10">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <Label className="mb-2">Upcoming House Events</Label>
-                <p className="max-w-xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-                  House-specific hangouts and socials are separate from all-VSA events.
-                </p>
-              </div>
-              <Link to="/house-system" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">
-                See Houses
-              </Link>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {houseEventPreviews.map((event) => (
-                <HouseEventPreviewCard key={event.id} event={event} house={houseAssetsById.get(event.house_profile_id)} />
-              ))}
-            </div>
-          </section>
         )}
 
         {/* Memory Wall / Past Events Section */}
@@ -587,7 +642,7 @@ export function Events() {
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
               >
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  No {activeFilter === 'all' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
+                  No {activeFilter === 'all' || activeFilter === 'house' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
                   events found for {selectedArchiveTerm?.label ?? 'this term'}.
                 </p>
                 {latestArchiveTerm && (
