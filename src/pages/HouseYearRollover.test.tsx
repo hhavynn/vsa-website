@@ -12,6 +12,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { HouseDetail } from './HouseDetail';
 import { House } from './House';
+import * as academicTerms from '../lib/academicTerms';
 import { supabaseMock } from '../test-utils/supabaseMock';
 
 // Framer Motion's whileInView needs IntersectionObserver, which jsdom lacks.
@@ -83,6 +84,7 @@ function renderAt(path: string) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/house" element={<House />} />
+          <Route path="/house/year/:yearSlug" element={<House />} />
           <Route path="/house/year/:yearSlug/:houseSlug" element={<HouseDetail />} />
           <Route path="/house/:houseSlug" element={<HouseDetail />} />
         </Routes>
@@ -165,4 +167,37 @@ describe('House pages once the 2026-2027 My Little Pony Houses are published', (
     renderAt('/house/year/2025-2026/bowser');
     expect(await screen.findByRole('heading', { level: 1, name: /bowser/i })).toBeInTheDocument();
   }, 15000);
+});
+
+describe('House current-year source unavailable (#596)', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('uses the calendar year when academic terms are absent/loading', async () => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('academic_terms', { data: [], error: null });
+    jest.spyOn(academicTerms, 'getAcademicTermMeta').mockReturnValue({
+      code: 'FA27',
+      label: 'Fall 2027',
+      academicYearStart: 2027,
+      academicYearEnd: 2028,
+      academicYearLabel: '2027-2028',
+      quarter: 'fall',
+      calendarYear: 2027,
+    });
+    renderAt('/house/year/2026-2027');
+    expect(await screen.findByText(/Exploring the memories, standings, and houses from the 2026-2027 school year/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Not announced yet/i)).not.toBeInTheDocument();
+  });
+
+  it('does not invent a current or previous year when both sources are unknown', async () => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('academic_terms', { data: [], error: null });
+    jest.spyOn(academicTerms, 'getAcademicTermMeta').mockReturnValue(null);
+    renderAt('/house');
+    expect(await screen.findByText(/Houses have not been announced yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /View .* Houses/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Archived \/ /i)).not.toBeInTheDocument();
+  });
 });

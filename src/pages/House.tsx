@@ -97,7 +97,9 @@ function resolveHouseYear(terms: ReturnType<typeof useAcademicTerms>['terms'], y
   if (activeTermYear) return activeTermYear;
   const currentYear = getCurrentAcademicYearStart();
   if (currentYear) return currentYear;
-  return terms[0]?.academic_year_start ?? null;
+  // Without an active term or a valid calendar year, the current year is unknown.
+  // Do not promote the first historical term to the live House year.
+  return null;
 }
 
 function assetMapByHouse(assets: HousePageAsset[]) {
@@ -499,11 +501,11 @@ export function House() {
   const activeYearLabel = activeYear ? formatAcademicYear(activeYear) : '';
 
   // Determine the "real" current year even when terms haven't loaded yet
-  const currentYear = activeTermYear ?? getAcademicTermMeta(new Date())?.academicYearStart ?? 2025;
-  const isArchive = activeYear !== null && activeYear < currentYear;
-  const isPastYear = activeYear !== null && activeYear === currentYear - 1;
-  const isLegacyArchive = activeYear !== null && activeYear < currentYear - 1;
-  const isFutureYear = activeYear !== null && activeYear > currentYear;
+  const currentYear = activeTermYear ?? getCurrentAcademicYearStart();
+  const isArchive = currentYear !== null && activeYear !== null && activeYear < currentYear;
+  const isPastYear = currentYear !== null && activeYear !== null && activeYear === currentYear - 1;
+  const isLegacyArchive = currentYear !== null && activeYear !== null && activeYear < currentYear - 1;
+  const isFutureYear = currentYear !== null && activeYear !== null && activeYear > currentYear;
   const legacyArchiveEntry = activeYearLabel ? getLegacyHouseArchiveByYear(activeYearLabel) : null;
 
   const { data: upcomingHouseEvents = [] } = useQuery<HouseEvent[]>({
@@ -664,7 +666,7 @@ export function House() {
     return (
       <>
         <PageTitle title={`House Program ${activeYearLabel}`} />
-        <PublicBreadcrumbs context={{ currentYear }} />
+        <PublicBreadcrumbs context={{ currentYear: currentYear ?? undefined }} />
         <div className="program-app">
           <EditorialHero
             eyebrow="Not announced yet"
@@ -712,7 +714,7 @@ export function House() {
     <>
       <PageTitle title={isArchive ? `House Archive ${activeYearLabel}` : 'House Program'} />
       {isDegradedMode && <DegradedModeBanner sourceName="house" />}
-      <PublicBreadcrumbs context={{ currentYear }} />
+      <PublicBreadcrumbs context={{ currentYear: currentYear ?? undefined }} />
 
       <div className="program-app">
 
@@ -818,9 +820,11 @@ export function House() {
                   <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline" style={{ color: 'var(--brand)' }}>@vsaatucsd</a>{' '}
                   on Instagram for announcements.
                 </p>
-                <Link to={`/house/year/${formatAcademicYear(currentYear - 1)}`} className="vsa-btn-ghost mt-5 inline-flex font-sans text-sm">
-                  View {formatAcademicYear(currentYear - 1)} Houses →
-                </Link>
+                {currentYear !== null && (
+                  <Link to={`/house/year/${formatAcademicYear(currentYear - 1)}`} className="vsa-btn-ghost mt-5 inline-flex font-sans text-sm">
+                    View {formatAcademicYear(currentYear - 1)} Houses →
+                  </Link>
+                )}
               </div>
             )}
             {displayedHouses.length === 0 && isArchive && (
