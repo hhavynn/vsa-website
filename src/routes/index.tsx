@@ -4,8 +4,11 @@ import { Layout } from "../components/layout/Layout";
 import { AdminRoute } from "./AdminRoute";
 import { PageLoader } from "../components/common/PageLoader";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
-import AdminLayout from "../components/features/admin/AdminLayout";
+
 import RouteTracker from "../components/common/RouteTracker";
+
+// Admin shell deferred outside anonymous public bundles.
+const AdminLayout = lazy(() => import("../components/features/admin/AdminLayout"));
 
 // Lazy load pages
 const Home = lazy(() =>

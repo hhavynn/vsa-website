@@ -81,6 +81,10 @@ jobs:
         # theme bootstrap or admit a new inline script (#222).
         run: npm run check:csp-hashes
 
+      - name: Check initial-load bundle budget
+        # Keep anonymous first-load JavaScript within the recorded gzip budget (#300).
+        run: node scripts/check-bundle-budget.mjs
+
   # Edge Functions (Deno): type-check and unit tests (#296)
   #
   # Nothing here can reach production. The tests replace `fetch`, point
