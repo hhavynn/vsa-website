@@ -21,8 +21,12 @@ function laDate(value: string | null | undefined) {
   return new Date(value).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' });
 }
 
+/** Never rounds up to 100% or down to 0% while that is not exactly true. */
 function percent(part: number, whole: number) {
-  return whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—';
+  if (whole <= 0) return '—';
+  if (part === whole) return '100%';
+  const value = Math.floor((part / whole) * 100);
+  return part > 0 && value === 0 ? '<1%' : `${value}%`;
 }
 
 function attention(house: HouseOverviewHouse): string[] {
@@ -32,7 +36,7 @@ function attention(house: HouseOverviewHouse): string[] {
   if (house.is_active && idle > 0) items.push(`${idle} member${idle === 1 ? ' has' : 's have'} no House-credited attendance in this period.`);
   if (house.parents_listed === 0) items.push('No House Parents listed.');
   else if (house.parents_linked < house.parents_listed) items.push(`${house.parents_listed - house.parents_linked} House Parent${house.parents_listed - house.parents_linked === 1 ? ' is' : 's are'} not linked to a member.`);
-  if (house.overlapping_members > 0) items.push(`${house.overlapping_members} member${house.overlapping_members === 1 ? ' is' : 's are'} in two Houses at once.`);
+  if (house.overlapping_members > 0) items.push(`${house.overlapping_members} member${house.overlapping_members === 1 ? ' has' : 's have'} overlapping House memberships this year (two Houses, or the same House twice).`);
   if (house.matches_view === false) items.push('Its credits disagree with the standings view.');
   return items;
 }
@@ -54,7 +58,8 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
     { enabled: selectedYear !== null, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
   );
   const outstanding = useMemo(() => {
-    if (!readiness.data) return null;
+    // A cut-off read cannot vouch for every event.
+    if (!readiness.data || readiness.data.truncated) return null;
     const qualifying = readiness.data.events.filter(isQualifying);
     return summarize(qualifying, new Date(readiness.data.checkedAt)).outstanding;
   }, [readiness.data]);
@@ -107,6 +112,11 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
         </p>
       ) : (
         <>
+          {!overview.data.window.dated && (
+            <p role="note" className="rounded border p-3 text-xs border-amber-400 text-amber-800 dark:border-amber-700 dark:text-amber-300">
+              {overview.data.window.termLabel} has no start and end dates, so members and House events below cover the whole year; credits count only that term&rsquo;s events. Add the dates in Years &amp; Terms for a true term view.
+            </p>
+          )}
           <ul className="grid gap-3 sm:grid-cols-2" aria-label="Houses">
             {houses.map((house) => {
               const items = attention(house);

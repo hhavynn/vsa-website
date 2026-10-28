@@ -100,6 +100,9 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 select pg_temp.expect($$select public.admin_house_overview(2026)$$, '42501', 'a signed-in non-admin cannot read it');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 select pg_temp.expect($$select public.admin_house_overview(2026, '10000000-0000-0000-0000-000000000025')$$, '22023', 'a term from another year is refused');
+set request.method = 'GET';
+select pg_temp.expect($$select public.admin_house_overview(2026)$$, '42501', 'private standings are never served to a GET');
+reset request.method;
 
 create temp table yr as select h from jsonb_array_elements(public.admin_house_overview(2026)->'houses') h;
 create temp table fall as select h from jsonb_array_elements(public.admin_house_overview(2026, '10000000-0000-0000-0000-000000000001')->'houses') h;
@@ -127,6 +130,7 @@ do $$ begin
  -- Fall only: F (joins Jan) is not on Rarity's fall roster; B joined inside fall.
  if pg_temp.f('fall','rarity','roster_members') <> '1' or pg_temp.f('fall','rarity','joined_in_window') <> '1' or pg_temp.f('fall','rarity','credited_attendance') <> '1' then raise exception 'FAIL: Rarity fall %', (select h from fall where h->>'house_key'='rarity'); end if;
  if pg_temp.f('fall','twilight','roster_members') <> '2' then raise exception 'FAIL: a member who left mid-term must stay on that term''s roster'; end if;
+ if pg_temp.f('fall','twilight','joined_in_window') <> '0' then raise exception 'FAIL: members assigned on the term''s first day are not new joiners'; end if;
  if pg_temp.f('fall','applejack','hosted_events') <> '0' or pg_temp.f('fall','twilight','matches_view') is not null then raise exception 'FAIL: fall window events or matches_view'; end if;
  raise notice 'PASS: a term window scopes rosters, joins, credits and House events.';
 end $$;
@@ -143,3 +147,22 @@ do $$ declare h jsonb := public.admin_house_overview(2026)->'houses'; begin
  raise notice 'PASS: tied Houses share a rank (no winner inferred from a tie).';
 end $$;
 
+-- A term without dates says so; an event dated after its term keeps
+-- participation at or under 100%.
+reset role;
+insert into public.academic_terms values ('10000000-0000-0000-0000-000000000003', 'Spring 2027', 2026, null, null);
+insert into public.events values ('40000000-0000-0000-0000-000000000009', '2026-12-20 19:00+00', '10000000-0000-0000-0000-000000000001');
+insert into public.house_memberships (member_id, house_profile_id, academic_year_start, effective_start_date, effective_end_date)
+ values ('30000000-0000-0000-0000-000000000010', '20000000-0000-0000-0000-000000000002', 2026, '2026-12-16', null);
+insert into public.member_event_attendance values ('30000000-0000-0000-0000-000000000010', '40000000-0000-0000-0000-000000000009', 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare o jsonb := public.admin_house_overview(2026, '10000000-0000-0000-0000-000000000003'); h jsonb;
+begin
+ if (o->'window'->>'dated')::boolean is not false then raise exception 'FAIL: an undated term must be flagged %', o->'window'; end if;
+ if (public.admin_house_overview(2026)->'window'->>'dated')::boolean is not true then raise exception 'FAIL: the whole year is dated'; end if;
+ select x into h from jsonb_array_elements(public.admin_house_overview(2026, '10000000-0000-0000-0000-000000000001')->'houses') x where x->>'house_key' = 'rarity';
+ if (h->>'participating_members')::int > (h->>'roster_members')::int then raise exception 'FAIL: participation above 100%%: %', h; end if;
+ raise notice 'PASS: an undated term is flagged, and credited members always count in the roster (never over 100%%).';
+end $$;

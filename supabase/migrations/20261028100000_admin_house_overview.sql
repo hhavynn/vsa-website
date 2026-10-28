@@ -10,7 +10,10 @@
 --   public.admin_house_overview(p_year, p_term_id) returns, per House profile
 --   of the academic year (active or not):
 --     - roster: members with a House membership overlapping the window (the
---       term's dates, or the whole year), how many joined inside it;
+--       term's dates, or the whole year), plus anyone credited for the House
+--       on the window's events, and how many joined after the window began.
+--       A term without dates cannot bound memberships or House events: they
+--       then cover the whole year, and the result says so ('dated': false);
 --     - participation: roster members with at least one House-credited
 --       attendance in the window, and how many credits. Credits use exactly
 --       the attribution of house_yearly_points (active profile, effective
@@ -56,6 +59,11 @@ begin
   if auth.uid() is null or not public.is_admin_user(auth.uid()) then
     raise exception 'Only admins can read the House overview.' using errcode = '42501';
   end if;
+  -- Same rule as admin_private_house_standings: private House standings are
+  -- never served to a cacheable GET.
+  if coalesce(current_setting('request.method', true), '') not in ('', 'POST') then
+    raise exception 'The House overview requires POST' using errcode = '42501';
+  end if;
   if p_year is null or p_year < 2000 or p_year > 2100 then
     raise exception 'Academic year is required.' using errcode = '22023';
   end if;
@@ -73,8 +81,8 @@ begin
     from public.house_page_assets hp
     where hp.academic_year_start = p_year
   ),
-  roster as (
-    select hm.house_profile_id, hm.member_id, hm.effective_start_date, hm.effective_end_date
+  dated_roster as (
+    select hm.house_profile_id, hm.member_id, hm.effective_start_date
     from public.house_memberships hm
     where hm.academic_year_start = p_year
       and (v_to is null or hm.effective_start_date <= v_to)
@@ -98,6 +106,13 @@ begin
       and hp.is_active = true
       and a.points_earned > 0
       and (t.academic_year_start <> 2025 or (e.date)::date >= date '2025-11-08')
+  ),
+  -- Anyone credited for a House on the window's events is on its roster, so
+  -- participation can never exceed 100% (e.g. an event dated after its term).
+  roster as (
+    select house_profile_id, member_id, effective_start_date from dated_roster
+    union
+    select c.house_profile_id, c.member_id, null::date from credited c
   ),
   standings as (
     select v.house_profile_id, v.total_points, v.unique_members, v.latest_activity_at,
@@ -134,7 +149,7 @@ begin
     'is_active', p.is_active,
     'roster_members', (select count(distinct r.member_id) from roster r where r.house_profile_id = p.id),
     'joined_in_window', case when v_from is null then null else
-      (select count(distinct r.member_id) from roster r where r.house_profile_id = p.id and r.effective_start_date >= v_from) end,
+      (select count(distinct r.member_id) from dated_roster r where r.house_profile_id = p.id and r.effective_start_date > v_from) end,
     'participating_members', (select count(distinct c.member_id) from credited c join roster r on r.member_id = c.member_id and r.house_profile_id = c.house_profile_id where c.house_profile_id = p.id),
     'credited_attendance', (select count(*) from credited c where c.house_profile_id = p.id),
     'window_latest_activity_at', (select max(c.event_at) from credited c where c.house_profile_id = p.id),
@@ -163,7 +178,8 @@ begin
 
   return jsonb_build_object(
     'houses', v_houses,
-    'window', jsonb_build_object('term_id', p_term_id, 'term_label', v_term.label, 'starts_on', v_from, 'ends_on', v_to),
+    'window', jsonb_build_object('term_id', p_term_id, 'term_label', v_term.label, 'starts_on', v_from, 'ends_on', v_to,
+                                 'dated', p_term_id is null or (v_from is not null and v_to is not null)),
     'distinct_house_events', v_distinct_events,
     'checked_at', now()
   );

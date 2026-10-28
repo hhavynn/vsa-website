@@ -30,7 +30,8 @@ export interface HouseOverviewHouse {
 
 export interface HouseOverview {
   houses: HouseOverviewHouse[];
-  window: { termId: string | null; termLabel: string | null; startsOn: string | null; endsOn: string | null };
+  /** dated: false when the chosen term has no dates (rosters and House events then cover the whole year). */
+  window: { termId: string | null; termLabel: string | null; startsOn: string | null; endsOn: string | null; dated: boolean };
   distinctHouseEvents: number;
   checkedAt: string;
 }
@@ -48,7 +49,7 @@ export const houseOverviewRepository = {
       }
       const result = (data ?? {}) as {
         houses?: HouseOverviewHouse[];
-        window?: { term_id: string | null; term_label: string | null; starts_on: string | null; ends_on: string | null };
+        window?: { term_id: string | null; term_label: string | null; starts_on: string | null; ends_on: string | null; dated?: boolean };
         distinct_house_events?: number;
         checked_at?: string;
       };
@@ -60,6 +61,7 @@ export const houseOverviewRepository = {
           termLabel: result.window?.term_label ?? null,
           startsOn: result.window?.starts_on ?? null,
           endsOn: result.window?.ends_on ?? null,
+          dated: result.window?.dated !== false,
         },
         distinctHouseEvents: result.distinct_house_events ?? 0,
         checkedAt: result.checked_at ?? new Date().toISOString(),

@@ -48,7 +48,7 @@ beforeEach(() => {
       house({ house_profile_id: 'c', display_name: 'Fictional Applejack', roster_members: 0, participating_members: 0, credited_attendance: 0, year_total_points: null, rank: null, parents_listed: 0, parents_linked: 0 }),
       house({ house_profile_id: 'd', display_name: 'Fictional Pinkie', is_active: false, rank: null, roster_members: 12, participating_members: 0, matches_view: false }),
     ],
-    window: { termId: null, termLabel: null, startsOn: null, endsOn: null },
+    window: { termId: null, termLabel: null, startsOn: null, endsOn: null, dated: true },
     distinctHouseEvents: 5,
     checkedAt: '2026-10-28T12:00:00Z',
   });
@@ -115,4 +115,28 @@ it('says when the import status could not be checked', async () => {
   readinessRepo.getReadiness.mockRejectedValue(new Error('network'));
   renderPanel();
   expect(await screen.findByText(/Event import status could not be checked/)).toBeInTheDocument();
+});
+
+it('flags an undated term, and never rounds to 100% or 0% when that is not exact', async () => {
+  overviewRepo.getOverview.mockResolvedValue({
+    houses: [
+      house({ house_profile_id: 'a', display_name: 'Fictional Almost', roster_members: 300, participating_members: 299 }),
+      house({ house_profile_id: 'b', display_name: 'Fictional Barely', roster_members: 250, participating_members: 1 }),
+    ],
+    window: { termId: 'term-f26', termLabel: 'Spring 2025', startsOn: null, endsOn: null, dated: false },
+    distinctHouseEvents: 0,
+    checkedAt: '2026-10-28T12:00:00Z',
+  });
+  renderPanel();
+  expect(await screen.findByRole('note')).toHaveTextContent('Spring 2025 has no start and end dates');
+  const cards = screen.getByRole('list', { name: 'Houses' });
+  expect(within(cards).getByText('299 · 99%')).toBeInTheDocument();
+  expect(within(cards).getByText('1 · <1%')).toBeInTheDocument();
+});
+
+it('does not vouch for imports when the status read was cut off', async () => {
+  readinessRepo.getReadiness.mockResolvedValue({ events: [], totalEvents: 900, truncated: true, checkedAt: '2026-10-28T12:00:00Z' });
+  renderPanel();
+  expect(await screen.findByText(/Event import status could not be checked/)).toBeInTheDocument();
+  expect(screen.queryByText(/Every past point-earning event/)).not.toBeInTheDocument();
 });

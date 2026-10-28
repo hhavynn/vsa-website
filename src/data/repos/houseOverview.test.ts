@@ -20,7 +20,7 @@ it('reads through the admin RPC and maps the window', async () => {
     error: null,
   });
   await expect(houseOverviewRepository.getOverview(2026, 't')).resolves.toEqual({
-    houses: [], window: { termId: 't', termLabel: 'Fall 2026', startsOn: '2026-09-20', endsOn: '2026-12-15' }, distinctHouseEvents: 2, checkedAt: '2026-10-28T00:00:00Z',
+    houses: [], window: { termId: 't', termLabel: 'Fall 2026', startsOn: '2026-09-20', endsOn: '2026-12-15', dated: true }, distinctHouseEvents: 2, checkedAt: '2026-10-28T00:00:00Z',
   });
   expect(supabaseMock.queriesFor('rpc:admin_house_overview')[0].calls[0].args).toEqual([{ p_year: 2026, p_term_id: 't' }]);
 });
