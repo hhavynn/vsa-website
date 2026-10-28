@@ -84,6 +84,9 @@ export function getPathWindowStatus(keys: ApplicationKey[], links: PublicApplica
   if (keys.length === 0) return null;
   const matching = links.filter((link) => keys.includes(link.application_key));
   if (matching.some((link) => link.status === 'open' && link.target_url)) return 'Application or interest form open now';
+  // An open status with no public URL is a broken/unavailable link, not an unannounced cycle.
+  // Never expose the private target or imply that the user can apply successfully.
+  if (matching.some((link) => link.status === 'open')) return 'Application window is open, but its link is currently unavailable';
   if (matching.some((link) => link.status === 'not_open')) return 'Application window announced, not open yet';
   if (matching.some((link) => link.status === 'closed')) return 'This application cycle has closed';
   return 'No application window announced yet';
