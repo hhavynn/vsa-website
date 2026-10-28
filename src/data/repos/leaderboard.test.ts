@@ -590,75 +590,34 @@ describe('LeaderboardRepository.getMemberEventHistory', () => {
   });
 });
 
-describe('LeaderboardRepository.getMemberHouseBadge', () => {
-  const badgeRow = {
-    house: 'test-house',
-    house_profile_id: 'house-profile-1',
-    display_name: 'Test House',
-    accent_color: '#112233',
-    academic_year_start: 2025,
-    latest_activity_at: '2025-12-01T00:00:00Z',
+describe('LeaderboardRepository.getMemberHouseBadge (#692)', () => {
+  const badge = {
+    house: 'synthetic-house',
+    house_profile_id: 'profile-synthetic',
+    display_name: 'Synthetic House',
+    accent_color: '#223344',
+    academic_year_start: 2026,
+    latest_activity_at: null,
   };
 
-  it('numeric year reads house_member_yearly_points, filtered by member and year, limit 1', async () => {
-    supabaseMock.queueResult('house_member_yearly_points', { data: [badgeRow], error: null });
-
-    const result = await leaderboardRepository.getMemberHouseBadge('member-aaa', 2025);
-
-    expect(result).toEqual(badgeRow);
-    expect(supabaseMock.queries().map((q) => q.table)).toEqual(['house_member_yearly_points']);
-    expect(supabaseMock.filtersFor('house_member_yearly_points')).toEqual([
-      ['member_id', 'member-aaa'],
-      ['academic_year_start', 2025],
-    ]);
-    expect(limitArgs('house_member_yearly_points')).toEqual([1]);
+  it.each([2026, 'all'] as const)('uses only published-identity RPC for %s, never member contribution views', async (year) => {
+    supabaseMock.queueResult('rpc:public_member_house_badge', { data: badge, error: null });
+    await expect(leaderboardRepository.getMemberHouseBadge('member-synthetic', year)).resolves.toEqual(badge);
+    expect(supabaseMock.queries().map((q) => q.table)).toEqual(['rpc:public_member_house_badge']);
+    expect(supabaseMock.queriesFor('rpc:public_member_house_badge')[0].calls[0].args[0]).toEqual({
+      p_member_id: 'member-synthetic', p_year: year === 'all' ? null : year,
+    });
   });
 
-  it("'all' reads house_member_all_time_points, filtered by member only (no year), limit 1", async () => {
-    supabaseMock.queueResult('house_member_all_time_points', { data: [badgeRow], error: null });
-
-    const result = await leaderboardRepository.getMemberHouseBadge('member-aaa', 'all');
-
-    expect(result).toEqual(badgeRow);
-    expect(supabaseMock.queries().map((q) => q.table)).toEqual(['house_member_all_time_points']);
-    expect(supabaseMock.filtersFor('house_member_all_time_points')).toEqual([['member_id', 'member-aaa']]);
-    expect(limitArgs('house_member_all_time_points')).toEqual([1]);
+  it('returns null when the year is unrevealed or no House is assigned', async () => {
+    supabaseMock.queueResult('rpc:public_member_house_badge', { data: null, error: null });
+    await expect(leaderboardRepository.getMemberHouseBadge('member-synthetic', 2026)).resolves.toBeNull();
   });
 
-  it('orders newest year first, then most recent activity, before taking one row', async () => {
-    await leaderboardRepository.getMemberHouseBadge('member-aaa', 'all');
-
-    expect(orderCalls('house_member_all_time_points')).toEqual([
-      ['academic_year_start', { ascending: false }],
-      ['latest_activity_at', { ascending: false, nullsFirst: false }],
-    ]);
-  });
-
-  it('selects an explicit column list rather than *', async () => {
-    await leaderboardRepository.getMemberHouseBadge('member-aaa', 2025);
-
-    expect(selectArg('house_member_yearly_points')).not.toContain('*');
-    expect(selectArg('house_member_yearly_points')).not.toContain('member_id');
-  });
-
-  it('returns the first row when the view returns several', async () => {
-    const older = { ...badgeRow, house: 'older-house', academic_year_start: 2024 };
-    supabaseMock.queueResult('house_member_all_time_points', { data: [badgeRow, older], error: null });
-
-    await expect(leaderboardRepository.getMemberHouseBadge('member-aaa', 'all')).resolves.toEqual(badgeRow);
-  });
-
-  it('returns null for a member in no House (empty and null data)', async () => {
-    supabaseMock.queueResult('house_member_yearly_points', { data: [], error: null });
-    supabaseMock.queueResult('house_member_yearly_points', { data: null, error: null });
-
-    await expect(leaderboardRepository.getMemberHouseBadge('member-aaa', 2025)).resolves.toBeNull();
-    await expect(leaderboardRepository.getMemberHouseBadge('member-aaa', 2025)).resolves.toBeNull();
-  });
-
-  it('rejects with a DatabaseError on a database error', async () => {
-    supabaseMock.queueResult('house_member_yearly_points', { data: null, error: denied() });
-    await expect(leaderboardRepository.getMemberHouseBadge('member-aaa', 2025)).rejects.toBeInstanceOf(DatabaseError);
+  it('rejects unprivileged RPC errors instead of making a direct fallback query', async () => {
+    supabaseMock.queueResult('rpc:public_member_house_badge', { data: null, error: denied() });
+    await expect(leaderboardRepository.getMemberHouseBadge('member-synthetic', 2026)).rejects.toBeInstanceOf(DatabaseError);
+    expect(supabaseMock.queriesFor('house_member_yearly_points')).toHaveLength(0);
   });
 });
 

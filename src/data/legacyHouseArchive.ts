@@ -41,9 +41,9 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     title: 'Streetwear Era',
     theme: 'Designers / streetwear',
     houses: ['Gucci', 'Comme des Garçons', 'Supreme', 'Yves Saint Laurent'],
-    note: 'This year had a full House Spirit Week, with Gucci taking the top spot.',
+    note: 'This year had a full House Spirit Week with memorable streetwear-themed houses.',
     status: 'verified',
-    detail: 'Gucci won House Spirit Week 2020 with 414 points, giving this era one of the clearest recovered competition moments.',
+    detail: 'House Spirit Week 2020 remains a documented part of this era. Official House competition results are shared through GBM announcements, not this public archive.',
     currentHouseLinks: {
       Gucci: '/house/year/2019-2020/gucci',
       'Comme des Garçons': '/house/year/2019-2020/cdg',
@@ -133,7 +133,7 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     houses: ['Bowser', 'Donkey Kong', 'Boo', 'Toad'],
     note: 'The Mario names started as temporary station themes before becoming the official Houses.',
     status: 'verified',
-    detail: 'The first House cycle with dedicated pages, events, standings, and House Parent announcements. Its pages and final standings stay in the archive.',
+    detail: 'The first House cycle with dedicated pages, events, and House Parent announcements. Live and archived House point standings are not publicly listed.',
     currentHouseLinks: {
       Bowser: '/house/year/2025-2026/bowser',
       'Donkey Kong': '/house/year/2025-2026/donkey-kong',
@@ -149,7 +149,7 @@ export const LEGACY_HOUSE_ARCHIVE: LegacyHouseArchiveYear[] = [
     houses: ['Twilight Sparkle', 'Applejack', 'Pinkie Pie', 'Rarity'],
     note: 'The current House cycle.',
     status: 'current',
-    detail: 'This is the current public House cycle, with dedicated pages, events, standings, and House Parent announcements.',
+    detail: 'This is the current House cycle, with dedicated pages, events, and House Parent announcements. Official standings are announced at GBMs.',
     currentHouseLinks: {
       'Twilight Sparkle': '/house/year/2026-2027/twilight-sparkle',
       Applejack: '/house/year/2026-2027/applejack',

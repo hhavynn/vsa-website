@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import { disableGA, isAnalyticsConfigured } from '../lib/analytics';
+import { disableProductAnalytics, isProductAnalyticsConfigured } from '../lib/productAnalytics';
 
 type AnalyticsConsent = 'granted' | 'declined' | null;
 
@@ -29,7 +30,7 @@ function readStoredConsent(): AnalyticsConsent {
 export function AnalyticsConsentProvider({ children }: { children: React.ReactNode }) {
   const [consent, setConsent] = useState<AnalyticsConsent>(readStoredConsent);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const isConfigured = isAnalyticsConfigured();
+  const isConfigured = isAnalyticsConfigured() || isProductAnalyticsConfigured();
 
   const saveConsent = (nextConsent: Exclude<AnalyticsConsent, null>) => {
     setConsent(nextConsent);
@@ -44,6 +45,7 @@ export function AnalyticsConsentProvider({ children }: { children: React.ReactNo
   const allowAnalytics = () => saveConsent('granted');
   const declineAnalytics = () => {
     disableGA();
+    disableProductAnalytics();
     saveConsent('declined');
   };
 
