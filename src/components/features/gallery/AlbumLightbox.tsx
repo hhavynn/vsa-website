@@ -292,8 +292,7 @@ export function AlbumLightbox({
           transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
           <div
-            className="relative mx-4 mt-1 aspect-[3/2] overflow-hidden rounded bg-[var(--surface2)] sm:mx-6 sm:mt-4"
-            
+            className="relative mx-4 mt-1 aspect-[3/2] touch-none overflow-hidden rounded bg-[var(--surface2)] sm:mx-6 sm:mt-4"
             onTouchStart={handleImageTouchStart}
             onTouchMove={handleImageTouchMove}
             onTouchEnd={handleImageTouchEnd}
