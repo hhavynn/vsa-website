@@ -6,12 +6,17 @@
 // HOUSE_PARENT_SHARE_FIELDS is the provisional field allowlist. It must be
 // approved by CRC/cabinet before it is relied on (docs/house-parent-access.md);
 // it deliberately leaves out contact details, other Houses, member ids,
-// anything from applications, and any per-member count: House points are a
-// count of credited attendance, so per-member counts would add up to the
+// anything from applications, and any per-member count: House scores sum awarded points; individual credit counts can still
+// reveal participation and must not be shared without a reviewed field list.
 // embargoed House score (#692). Only members publicly revealed in this House
 // are included. Every cell goes through csvCell, which defuses formulas.
 import type { RosterMember } from '../data/repos/houseRoster';
 import { csvCell } from './adminImportReview';
+
+// Default-off governance gate: no member-level participation export until
+// CRC/cabinet record the date and approved fields in docs/house-parent-access.md.
+// This constant is intentionally not exposed as a public/admin setting.
+export const HOUSE_PARENT_SHARE_APPROVED = false;
 
 export const HOUSE_PARENT_SHARE_FIELDS = [
   { header: 'Name', describe: 'First and last name' },
