@@ -43,6 +43,14 @@ describe('published VSA calendar snapshot (#278)', () => {
     expect(text).toContain('DTSTART:20260708T020000Z\r\nDTEND:20260708T040000Z');
   });
 
+  it('exports overnight events with a next-day DTEND even without end_date', () => {
+    const text = unfold(buildPublicEventIcs([
+      fixture({ id: 'overnight', date: '2026-11-05', start_time: '23:00:00', end_time: '01:00:00', end_date: null }),
+    ], now));
+    // Pacific Standard Time: 11 PM Nov 5 to 1 AM Nov 6.
+    expect(text).toContain('DTSTART:20261106T070000Z\\r\\nDTEND:20261106T090000Z'.replace(/\\r/g, '\r').replace(/\\n/g, '\n'));
+  });
+
   it('handles all-day and multi-day events with exclusive DATE end boundaries', () => {
     const text = unfold(buildPublicEventIcs([
       fixture({ start_time: null, end_time: null, date: '2026-11-05', end_date: '2026-11-07' }),
