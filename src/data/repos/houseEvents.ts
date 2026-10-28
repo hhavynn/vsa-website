@@ -34,18 +34,20 @@ const PUBLIC_FIELDS = [
   // The host ids come from the join (public for published events); the
   // profile embed itself is admin-only, so public reads fill hosts from
   // published_house_page_assets (mapPublicRelations).
-  'houses:house_event_houses(house_page_asset_id,house:house_page_assets(*))',
+  // Public join IDs only. Resolve published House profiles in mapPublicRelations.
+  'houses:house_event_houses(house_page_asset_id)',
 ].join(',');
 
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
@@ -94,11 +96,12 @@ export class HouseEventsRepository {
   async getPublicPastForHouse(houseProfileId: string, today: string, limit = 24): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
       // Find event IDs associated with this house via join table
-      const { data: associations } = await supabase
+      const { data: associations, error: associationError } = await supabase
         .from('house_event_houses')
         .select('house_event_id')
         .eq('house_page_asset_id', houseProfileId);
 
+      if (associationError) throw associationError;
       const associatedEventIds = (associations ?? []).map((a) => a.house_event_id);
 
       let query = supabase
