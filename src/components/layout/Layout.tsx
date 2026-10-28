@@ -6,6 +6,7 @@ import { MobileQuickDock } from "./navigation/MobileQuickDock";
 import { Suspense, lazy, useEffect } from "react";
 import Footer from "./Footer";
 import { PageLoader } from "../common/PageLoader";
+import { ErrorBoundary } from "../common/ErrorBoundary";
 import { keepHashTargetInView } from "../../utils/hashScroll";
 import { PublicSearchProvider } from "../features/search/PublicSearchProvider";
 
@@ -80,9 +81,12 @@ function LayoutShell() {
       {/* Own boundary: without it the assistant's first suspension would be
           caught by the route-level Suspense above and paint the page loader
           over the whole shell on first load. */}
-      <Suspense fallback={null}>
-        <VsaAiAssistant />
-      </Suspense>
+      {/* The assistant is optional: a failed lazy import must not take down public routes. */}
+      <ErrorBoundary fallback={<span role="status" className="sr-only">Ask VSA is temporarily unavailable.</span>}>
+        <Suspense fallback={null}>
+          <VsaAiAssistant />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
