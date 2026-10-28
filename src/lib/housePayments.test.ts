@@ -200,6 +200,24 @@ describe('payment checklist import', () => {
     expect(unpaid.changes.filter((change) => change.payment_status === 'unpaid')).toHaveLength(3);
   });
 
+  it('refuses "absent means Unpaid" while any listed row is unmatched, so a nickname never turns a payer Unpaid', () => {
+    const parsed = parseChecklistCsv('Name,Status\nKathy Tran,paid\nFictional Applicant 1,paid\n');
+    if (!parsed.ok) throw new Error(parsed.error);
+    const roster = [applicant(1, { payment_status: 'unverified' }), applicant(2, { payment_status: 'unverified', source_name: 'Katherine Tran' })];
+    const plan = planChecklistImport(parsed.rows, { applicants: roster, membersByEmail: new Map(), mode: 'paid_roster', absentPolicy: 'unpaid', confirmedSuggestions: {} });
+    expect(plan.absentToUnpaid).toEqual(['app-002']);
+    expect(plan.blocked).toBe(true);
+    expect(plan.blockReasons.join(' ')).toMatch(/not matched to an applicant yet/);
+    // With absence meaning Unknown, the same file can be applied for the rows that did match.
+    const safe = planChecklistImport(parsed.rows, { applicants: roster, membersByEmail: new Map(), mode: 'paid_roster', absentPolicy: 'unknown', confirmedSuggestions: {} });
+    expect(safe.blocked).toBe(false);
+  });
+
+  it('never reads a checklist\'s own "Row" numbering as the application row', () => {
+    const parsed = parseChecklistCsv('Row,Name,Status\n1,Fictional Applicant 9,paid\n');
+    expect(parsed.ok && parsed.columns.sheetRow).toBeNull();
+  });
+
   it('counts a repeated row once and blocks on conflicting statuses', () => {
     const parsed = parseChecklistCsv('Application row,Status\n7,Unpaid\n7,unpaid\n3,paid\n3,unpaid\n');
     if (!parsed.ok) throw new Error(parsed.error);
@@ -335,10 +353,14 @@ describe('post-payment rerun and comparison', () => {
     expect(comparison.entries.map((entry) => [entry.applicantId, entry.needsIdentity])).toEqual([['app-001', false], ['app-002', true]]);
   });
 
-  it('prefers a member link an admin confirmed in the source draft over the saved application match', () => {
-    const saved = applicant(1, { member_id: 'member-guess', match_status: 'review', match_method: 'name' });
-    expect(rerunMemberLink(saved, undefined)).toEqual({ memberId: 'member-guess', status: 'review', method: 'name' });
-    expect(rerunMemberLink(saved, { member_id: 'member-confirmed', match_status: 'manual', match_method: 'manual' }))
+  it('keeps the application\'s confirmed member, and otherwise uses a link an admin confirmed in the source draft', () => {
+    const guessed = applicant(1, { member_id: 'member-guess', match_status: 'review', match_method: 'name' });
+    expect(rerunMemberLink(guessed, undefined)).toEqual({ memberId: 'member-guess', status: 'review', method: 'name' });
+    expect(rerunMemberLink(guessed, { member_id: 'member-confirmed', match_status: 'manual', match_method: 'manual' }))
       .toEqual({ memberId: 'member-confirmed', status: 'manual', method: 'manual' });
+    // A wrong pick in the source draft never overrides the application's confirmed member.
+    const confirmed = applicant(2, { member_id: 'member-2', match_status: 'match', match_method: 'email' });
+    expect(rerunMemberLink(confirmed, { member_id: 'member-7', match_status: 'manual', match_method: 'manual' }))
+      .toEqual({ memberId: 'member-2', status: 'match', method: 'email' });
   });
 });

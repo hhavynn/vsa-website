@@ -216,7 +216,12 @@ export function HousePaymentChecklistImport({ cycle, applicants, membersByEmail,
                 {applying ? 'Applying…' : `Apply ${plan.changes.length} change${plan.changes.length === 1 ? '' : 's'}`}
               </button>
             </div>
-            {plan.blocked && <p role="alert" className="text-xs text-red-700 dark:text-red-300">Fix the conflicting or unreadable rows in the file and upload it again. Nothing is applied while any remain.</p>}
+            {plan.blocked && (
+              <ul role="alert" className="space-y-0.5 text-xs text-red-700 dark:text-red-300">
+                {plan.blockReasons.map((reason) => <li key={reason}>{reason}</li>)}
+                <li>Nothing is applied while any remain.</li>
+              </ul>
+            )}
             {stale && <p role="alert" className="text-xs text-amber-800 dark:text-amber-300">Payments changed since this preview. Upload the file again to review against current statuses.</p>}
           </div>
         )}

@@ -155,7 +155,8 @@ export function HousePlacementPanel({
   });
   const paymentsUnavailable = cyclesQuery.error instanceof Error && cyclesQuery.error.message === PAYMENTS_UNAVAILABLE;
   const cycles = useMemo(() => cyclesQuery.data ?? [], [cyclesQuery.data]);
-  const paymentCycleId = paymentCycleChoice || (cycles.length === 1 ? cycles[0].id : '');
+  // Always an explicit choice: registering a Winter CSV into the Fall roster cannot be undone.
+  const paymentCycleId = cycles.some((cycle) => cycle.id === paymentCycleChoice) ? paymentCycleChoice : '';
   const cyclesBlocked = cyclesQuery.isLoading || (cyclesQuery.isError && !paymentsUnavailable) || (cycles.length > 0 && !paymentCycleId);
   const aliasKey = useMemo(() => aliases.map((alias) => `${alias.member_id}:${alias.email}`).sort().join(','), [aliases]);
   const memberNameById = useMemo(() => new Map(members.map((member) => [member.id, `${member.first_name} ${member.last_name}`.trim()])), [members]);

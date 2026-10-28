@@ -252,7 +252,8 @@ export type ChecklistParse =
   | { ok: false; error: string };
 
 const HEADER_PATTERNS: Array<[keyof ChecklistColumns, RegExp]> = [
-  ['sheetRow', /^(application|sheet|response|form)\s*(row|id|#|number)|^row(\s*(#|number))?$|^app(lication)?\s*id$/],
+  // Only an explicit application/sheet row: a checklist's own "Row" or "#" numbering must not match applicants.
+  ['sheetRow', /^(application|sheet|response|form)\s*(row|id|#|number)|^app(lication)?\s*id$/],
   ['email', /e-?mail/],
   ['status', /status|paid|payment/],
   ['note', /note|comment|memo/],
@@ -339,6 +340,8 @@ export interface ChecklistPlan {
   counts: Record<ChecklistOutcome, number>;
   /** Conflicts or unreadable statuses: nothing may be applied until they are fixed. */
   blocked: boolean;
+  /** Why it is blocked, in the admin's words; empty when it is not. */
+  blockReasons: string[];
 }
 
 export interface ChecklistContext {
@@ -477,7 +480,16 @@ export function planChecklistImport(rows: readonly ChecklistRow[], context: Chec
     change: 0, unchanged: 0, suggested: 0, ambiguous: 0, unmatched: 0, duplicate: 0, conflict: 0, kept_waiver: 0, bad_status: 0,
   } as Record<ChecklistOutcome, number>;
   items.forEach((item) => { counts[item.outcome] += 1; });
-  return { items, changes, absentToUnpaid, paidButAbsent, counts, blocked: counts.conflict > 0 || counts.bad_status > 0 };
+  const blockReasons: string[] = [];
+  if (counts.conflict > 0) blockReasons.push('Some rows give one applicant different statuses.');
+  if (counts.bad_status > 0) blockReasons.push('Some statuses could not be read.');
+  // "Absent means Unpaid" is only safe when every listed person was found:
+  // an unmatched "Kathy Tran" would otherwise turn a paid "Katherine Tran" Unpaid.
+  const unresolved = counts.unmatched + counts.ambiguous + counts.suggested;
+  if (context.mode === 'paid_roster' && context.absentPolicy === 'unpaid' && unresolved > 0) {
+    blockReasons.push(`${unresolved} checklist row${unresolved === 1 ? ' is' : 's are'} not matched to an applicant yet. Confirm or fix ${unresolved === 1 ? 'it' : 'them'} before marking absent applicants Unpaid.`);
+  }
+  return { items, changes, absentToUnpaid, paidButAbsent, counts, blocked: blockReasons.length > 0, blockReasons };
 }
 
 /** Admin-only checklist for CRC review: matching fields, status, reason, date. */
@@ -556,25 +568,24 @@ export interface RerunMemberLink {
 }
 
 /**
- * The member link for a rerun row: the one confirmed in the source draft when
- * there is one (an admin may have linked it there), otherwise the link saved
- * with the application. Identity is never guessed here.
+ * The member link for a rerun row. The application's confirmed link wins (the
+ * database refuses a row that places anyone else); otherwise a link an admin
+ * confirmed in the source draft; otherwise the application's unconfirmed
+ * suggestion, still marked for review. Identity is never guessed here.
  */
 export function rerunMemberLink(
   applicant: Pick<HouseApplicant, 'member_id' | 'match_status' | 'match_method'>,
   sourceRow: Pick<HouseAssignmentDraft, 'member_id' | 'match_status' | 'match_method'> | undefined,
 ): RerunMemberLink {
+  const method = (value: string | null) => (value === 'email' || value === 'name' || value === 'manual' ? value : null);
+  if (applicant.member_id && (applicant.match_status === 'match' || applicant.match_status === 'manual')) {
+    return { memberId: applicant.member_id, status: applicant.match_status, method: method(applicant.match_method) };
+  }
   if (sourceRow?.member_id && (sourceRow.match_status === 'match' || sourceRow.match_status === 'manual')) {
-    return {
-      memberId: sourceRow.member_id,
-      status: sourceRow.match_status,
-      method: sourceRow.match_method === 'email' || sourceRow.match_method === 'name' || sourceRow.match_method === 'manual' ? sourceRow.match_method : null,
-    };
+    return { memberId: sourceRow.member_id, status: sourceRow.match_status, method: method(sourceRow.match_method) };
   }
   if (!applicant.member_id) return { memberId: null, status: 'unmatched', method: null };
-  const status = applicant.match_status === 'match' || applicant.match_status === 'manual' ? applicant.match_status : 'review';
-  const method = applicant.match_method === 'email' || applicant.match_method === 'name' || applicant.match_method === 'manual' ? applicant.match_method : null;
-  return { memberId: applicant.member_id, status, method };
+  return { memberId: applicant.member_id, status: 'review', method: method(applicant.match_method) };
 }
 
 /** A Draft B row. Stores no email or other form answers. */

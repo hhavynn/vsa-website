@@ -70,7 +70,8 @@ do $$ begin
  end if;
  if has_column_privilege('authenticated', 'public.house_applicants', 'payment_status', 'update')
    or has_column_privilege('authenticated', 'public.house_payment_cycles', 'status_version', 'update')
-   or has_column_privilege('authenticated', 'public.house_payment_cycles', 'publishing_batch_id', 'update') then
+   or has_column_privilege('authenticated', 'public.house_payment_cycles', 'publishing_batch_id', 'update')
+   or has_column_privilege('authenticated', 'public.house_applicants', 'member_id', 'update') then
   raise exception 'FAIL: payment status or version is directly writable';
  end if;
  if has_table_privilege('authenticated', 'public.house_applicants', 'delete')
@@ -179,14 +180,19 @@ select pg_temp.expect_error($s$select public.admin_set_house_applicant_payments(
 -- Before the deadline exists, a final draft cannot be saved.
 select pg_temp.expect_error($s$insert into public.house_assignment_batches (academic_year_start, academic_year_end, effective_start_date, assignment_method, payment_cycle_id, eligibility_mode, payment_snapshot_version)
  values (2026, 2027, '2026-11-01', 'timestamp_ranked', '50000000-0000-0000-0000-000000000001', 'final', 2)$s$, '23514', 'a final draft needs the cutoff');
-update public.house_payment_cycles set payment_deadline = now() - interval '1 day' where id = '50000000-0000-0000-0000-000000000001';
+select pg_temp.expect_error($s$update public.house_payment_cycles set payment_deadline = now() - interval '1 day' where id = '50000000-0000-0000-0000-000000000001'$s$,
+ '23514', 'ending payments now (an early cutoff) needs a reason');
+select pg_temp.expect_error($s$insert into public.house_payment_cycles (academic_year_start, application_key, payment_deadline) values (2026, 'house_winter', now())$s$,
+ '23514', 'a deadline cannot be set at creation, unaudited');
+update public.house_payment_cycles set payment_deadline = now() - interval '1 day', last_change_reason = 'Deadline was 10/31; recorded late'
+where id = '50000000-0000-0000-0000-000000000001';
 select pg_temp.expect_error($s$update public.house_payment_cycles set payment_deadline = now() + interval '1 day' where id = '50000000-0000-0000-0000-000000000001'$s$,
  '23514', 'moving a passed deadline needs a reason');
 do $$ begin
- if exists (select 1 from public.house_payment_audit where event_type = 'deadline_changed' and reason is not null) then
-  raise exception 'FAIL: unexpected reasoned deadline audit';
+ if not exists (select 1 from public.house_payment_audit where event_type = 'deadline_changed' and reason = 'Deadline was 10/31; recorded late') then
+  raise exception 'FAIL: the early cutoff was not audited with its reason';
  end if;
- raise notice 'PASS: setting a first deadline is audited; moving it after the cutoff is refused without a reason.';
+ raise notice 'PASS: an early cutoff is audited with its reason; moving a passed deadline needs one too.';
 end $$;
 
 -- ─── Draft A (provisional, all 8) and Draft B (final, 6 paid) ───────────────
@@ -211,9 +217,13 @@ select pg_temp.expect_error($s$insert into public.house_assignment_batches (acad
 select pg_temp.expect_error($s$update public.house_assignment_batches set eligibility_mode = 'final' where id = '10000000-0000-0000-0000-00000000000a'$s$,
  '42501', 'eligibility and lineage are fixed after save');
 select pg_temp.expect_error($s$delete from public.house_assignment_batches where id = '10000000-0000-0000-0000-00000000000a'$s$,
- '23001', 'Draft A cannot be deleted while Draft B revises it');
+ '55006', 'Draft A cannot be deleted while Draft B revises it');
 select pg_temp.expect_error($s$insert into public.house_assignment_drafts (batch_id, source_order, applicant_id) values ('10000000-0000-0000-0000-00000000000b', 99, gen_random_uuid())$s$,
  '23514', 'a draft row cannot point at an applicant outside its roster');
+select pg_temp.expect_error($s$update public.house_assignment_drafts set notes = 'edited' where batch_id = '10000000-0000-0000-0000-00000000000a'$s$,
+ '55006', 'Draft A rows are frozen once Draft B revises it');
+select pg_temp.expect_error($s$delete from public.house_assignment_drafts where batch_id = '10000000-0000-0000-0000-00000000000a'$s$,
+ '55006', 'Draft A rows cannot be deleted once revised');
 
 -- Unlinked timestamp batch in a gated year is refused; a manual batch is not.
 insert into public.house_assignment_batches (id, academic_year_start, academic_year_end, effective_start_date, assignment_method)
@@ -260,14 +270,32 @@ values ('10000000-0000-0000-0000-0000000000c1', 2026, 2027, '2026-11-01', 'times
 insert into public.house_assignment_drafts (batch_id, member_id, house_profile_id, generated_house_profile_id, match_status, source_order, applicant_id)
 select '10000000-0000-0000-0000-0000000000c1', a.member_id, (a.preferences->>0)::uuid, (a.preferences->>0)::uuid, 'match', a.source_row_number - 2, a.id
 from public.house_applicants a where a.payment_status = 'paid';
+-- Review P1: re-linking a paid applicant's row to the unpaid member m7 must block.
+update public.house_assignment_drafts set member_id = '40000000-0000-0000-0000-000000000007'
+where batch_id = '10000000-0000-0000-0000-0000000000c1' and source_order = 0;
+do $$ begin
+ if cardinality(public.house_batch_payment_blockers('10000000-0000-0000-0000-0000000000c1')) < 2 then
+  raise exception 'FAIL: a swapped member identity passed the gate: %', public.house_batch_payment_blockers('10000000-0000-0000-0000-0000000000c1');
+ end if;
+ raise notice 'PASS: a row placing another member than its confirmed application, or an unpaid applicant''s member, blocks Lock: %', public.house_batch_payment_blockers('10000000-0000-0000-0000-0000000000c1');
+end $$;
+select pg_temp.expect_error($s$update public.house_assignment_batches set status = 'locked' where id = '10000000-0000-0000-0000-0000000000c1'$s$,
+ '23514', 'the database refuses to lock the swapped draft');
+update public.house_assignment_drafts set member_id = '40000000-0000-0000-0000-000000000001'
+where batch_id = '10000000-0000-0000-0000-0000000000c1' and source_order = 0;
 update public.house_assignment_batches set status = 'locked' where id = '10000000-0000-0000-0000-0000000000c1';
 select public.admin_begin_house_batch_publish('10000000-0000-0000-0000-0000000000c1');
 select public.admin_begin_house_batch_publish('10000000-0000-0000-0000-0000000000c1');
 select pg_temp.expect_error($s$select public.admin_set_house_applicant_payments('50000000-0000-0000-0000-000000000001',
  (select jsonb_agg(jsonb_build_object('applicant_id', id, 'payment_status', 'unpaid')) from public.house_applicants where source_row_number = 2),
  'single', 'refund', gen_random_uuid())$s$, '55006', 'payment statuses are frozen during the Reveal');
-select pg_temp.expect_error($s$update public.house_payment_cycles set payment_deadline = now() where id = '50000000-0000-0000-0000-000000000001'$s$,
+select pg_temp.expect_error($s$update public.house_payment_cycles set payment_deadline = now(), last_change_reason = 'x' where id = '50000000-0000-0000-0000-000000000001'$s$,
  '55006', 'the deadline is frozen during the Reveal');
+select pg_temp.expect_error($s$select public.admin_link_house_applicant_member((select id from public.house_applicants where source_row_number = 2), '40000000-0000-0000-0000-000000000003', 'swap')$s$,
+ '55006', 'identities are frozen during the Reveal');
+select pg_temp.expect_error($s$insert into public.house_memberships (member_id, house_profile_id, academic_year_start, source, source_import_id)
+ values ('40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 2026, 'house_assignment_batch', null)$s$,
+ '42501', 'a batch-sourced membership must name its batch');
 select pg_temp.expect_error($s$insert into public.house_memberships (member_id, house_profile_id, academic_year_start, source, source_import_id)
  values ('40000000-0000-0000-0000-000000000007', '20000000-0000-0000-0000-000000000003', 2026, 'house_assignment_batch', '10000000-0000-0000-0000-0000000000c1')$s$,
  '42501', 'an unpaid member cannot be written from the gated batch');
@@ -295,6 +323,25 @@ do $$ declare r jsonb; begin
   raise exception 'FAIL: post-Reveal audit note missing';
  end if;
  raise notice 'PASS: a post-Reveal refund is audited for leadership review and changes no membership.';
+end $$;
+
+-- One roster, one Reveal; a note-only edit does not make sorts stale.
+insert into public.house_assignment_batches (id, academic_year_start, academic_year_end, effective_start_date, assignment_method, capacity_config, payment_cycle_id, eligibility_mode, payment_snapshot_version, generation_reason)
+select '10000000-0000-0000-0000-0000000000d1', 2026, 2027, '2026-12-01', 'timestamp_ranked', '{}', id, 'final', status_version, 'post_payment_rerun'
+from public.house_payment_cycles where id = '50000000-0000-0000-0000-000000000001';
+do $$ declare v bigint; begin
+ if not exists (select 1 from unnest(public.house_batch_payment_blockers('10000000-0000-0000-0000-0000000000d1')) b where b like '%already revealed%') then
+  raise exception 'FAIL: a second Reveal for the roster is not blocked';
+ end if;
+ select status_version into v from public.house_payment_cycles;
+ perform public.admin_set_house_applicant_payments('50000000-0000-0000-0000-000000000001',
+  (select jsonb_agg(jsonb_build_object('applicant_id', id, 'payment_note', 'Paid via CRC table')) from public.house_applicants where source_row_number = 3),
+  'single', null, gen_random_uuid());
+ if (select status_version from public.house_payment_cycles) <> v then raise exception 'FAIL: a note-only edit bumped the version'; end if;
+ perform public.admin_link_house_applicant_member((select id from public.house_applicants where source_row_number = 3), null, 'Identity under review');
+ if (select status_version from public.house_payment_cycles) <> v + 1 then raise exception 'FAIL: an identity change did not bump the version'; end if;
+ if not exists (select 1 from public.house_payment_audit where event_type = 'member_link_changed') then raise exception 'FAIL: identity change not audited'; end if;
+ raise notice 'PASS: a second Reveal is blocked; note edits keep the version; identity changes are audited and make sorts stale.';
 end $$;
 
 -- Checklist imports never reverse an approved waiver.

@@ -374,7 +374,10 @@ describe('payment roster (#656, #657)', () => {
     await uploadAndValidate(CLEAN);
     await userEvent.click(screen.getByRole('button', { name: 'Generate Placements' }));
     await screen.findAllByTestId('placement-result-row');
-    expect(await screen.findByLabelText('Payment roster')).toHaveValue('cycle-fall');
+    const roster = await screen.findByLabelText('Payment roster');
+    expect(roster).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Save Private Placement Draft' })).toBeDisabled();
+    await userEvent.selectOptions(roster, 'cycle-fall');
     await userEvent.click(screen.getByRole('button', { name: 'Save Private Placement Draft' }));
     await waitFor(() => expect(repo.createBatch).toHaveBeenCalledTimes(1));
 

@@ -47,11 +47,14 @@
 --   included applicant who is not Paid/Waived, an unresolved applicant, or an
 --   eligible applicant missing from the draft. The batch status trigger
 --   refuses draft -> locked and locked -> published while any blocker exists.
+--   A row must place its application's confirmed member, never a member who
+--   is also an uncleared applicant, and a roster is revealed at most once.
 --   Reveal must start with admin_begin_house_batch_publish, which re-checks
---   the gate under a row lock on the cycle and freezes the cycle's payment
---   statuses until the batch is published or reopened; house_memberships rows
---   sourced from a gated batch are refused outside that window or for anyone
---   not cleared. After Reveal nothing is changed automatically: later payment
+--   the gate under row locks and freezes the cycle's payments and identities
+--   until the batch is published or reopened; house_memberships rows sourced
+--   from a gated batch (inserted, or moved to another House or batch) are refused
+--   outside that window or for anyone not cleared. A draft revised by a rerun
+--   is frozen. After Reveal nothing is changed automatically: later payment
 --   edits are recorded for leadership review only.
 --
 -- SECURITY
@@ -172,7 +175,7 @@ create table if not exists public.house_payment_audit (
   created_at timestamptz not null default now(),
   constraint house_payment_audit_event_check check (event_type in (
     'status_changed', 'withdrawal_changed', 'applicants_registered',
-    'deadline_changed', 'cutoff_authorized', 'cutoff_revoked',
+    'deadline_changed', 'cutoff_authorized', 'cutoff_revoked', 'member_link_changed',
     'publish_started', 'publish_released'
   )),
   constraint house_payment_audit_source_check check (source in (
@@ -361,6 +364,41 @@ begin
     v_blockers := v_blockers || format('%s Paid or Waived applicant(s) are missing from this draft.', v_count);
   end if;
 
+  -- Payment is judged per application, but the person revealed is the row's
+  -- member. A row may not place someone other than its application's
+  -- confirmed member, nor a member who is also an uncleared applicant.
+  select count(*) into v_count
+  from public.house_assignment_drafts d
+  join public.house_applicants a on a.id = d.applicant_id
+  where d.batch_id = v_batch.id
+    and a.member_id is not null
+    and a.match_status in ('match', 'manual')
+    and d.member_id is distinct from a.member_id;
+  if v_count > 0 then
+    v_blockers := v_blockers || format('%s draft row(s) place a different member than their application''s confirmed member. Fix the link on the payment roster and rerun.', v_count);
+  end if;
+
+  select count(*) into v_count
+  from public.house_assignment_drafts d
+  where d.batch_id = v_batch.id
+    and d.member_id is not null
+    and exists (
+      select 1 from public.house_applicants o
+      where o.cycle_id = v_cycle.id
+        and o.member_id = d.member_id
+        and (o.payment_status not in ('paid', 'waived') or o.withdrawn_reason is not null)
+    );
+  if v_count > 0 then
+    v_blockers := v_blockers || format('%s placed member(s) are also linked to an application that is not Paid or Waived.', v_count);
+  end if;
+
+  if exists (
+    select 1 from public.house_assignment_batches b
+    where b.payment_cycle_id = v_cycle.id and b.status = 'published' and b.id <> v_batch.id
+  ) then
+    v_blockers := v_blockers || 'Houses for this payment roster were already revealed. Later corrections go through leadership review, not a second Reveal.'::text;
+  end if;
+
   return v_blockers;
 end;
 $$;
@@ -469,6 +507,33 @@ begin
 end;
 $$;
 
+-- A draft that a rerun revised is the audit record of the original sort: its
+-- rows never change again (deleting the batch is refused by the foreign key).
+create or replace function public.guard_house_revised_draft()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_batch_id uuid := case when tg_op = 'INSERT' then new.batch_id else old.batch_id end;
+begin
+  if exists (select 1 from public.house_assignment_batches b where b.revised_from_batch_id = v_batch_id) then
+    raise exception 'This draft was revised by a rerun and is kept unchanged. Edit the newer draft instead.' using errcode = '55006';
+  end if;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_house_revised_draft on public.house_assignment_drafts;
+create trigger guard_house_revised_draft
+  before insert or update or delete on public.house_assignment_drafts
+  for each row
+  execute function public.guard_house_revised_draft();
+
 drop trigger if exists guard_house_draft_applicant on public.house_assignment_drafts;
 create trigger guard_house_draft_applicant
   before insert or update of applicant_id, batch_id on public.house_assignment_drafts
@@ -489,8 +554,9 @@ declare
   v_authorization_changed boolean;
 begin
   if tg_op = 'INSERT' then
-    if new.status_version <> 0 or new.publishing_batch_id is not null or new.cutoff_authorized_at is not null then
-      raise exception 'A new payment cycle starts unversioned, unauthorized and not publishing.' using errcode = '23514';
+    if new.status_version <> 0 or new.publishing_batch_id is not null or new.cutoff_authorized_at is not null
+      or new.payment_deadline is not null or new.grace_until is not null then
+      raise exception 'Create the payment roster first, then set its deadline (so the change is recorded).' using errcode = '23514';
     end if;
     new.last_change_reason := null;
     return new;
@@ -508,8 +574,11 @@ begin
   if (v_deadline_changed or v_authorization_changed) and old.publishing_batch_id is not null then
     raise exception 'A Reveal is in progress for this payment cycle; the deadline cannot change now.' using errcode = '55006';
   end if;
-  if v_deadline_changed and public.house_payment_cutoff_reached(old) and v_reason is null then
-    raise exception 'The payment cutoff has passed. Give a reason to change the deadline.' using errcode = '23514';
+  if v_deadline_changed and v_reason is null and (
+    public.house_payment_cutoff_reached(old)
+    or (new.payment_deadline is not null and coalesce(new.grace_until, new.payment_deadline) <= now())
+  ) then
+    raise exception 'Give a reason: the deadline has passed, or this change would end payments now.' using errcode = '23514';
   end if;
 
   if v_authorization_changed then
@@ -578,12 +647,15 @@ declare
   v_batch public.house_assignment_batches%rowtype;
   v_cycle_id uuid;
 begin
-  if new.source is distinct from 'house_assignment_batch' or new.source_import_id is null then
+  if new.source is distinct from 'house_assignment_batch' then
     return new;
+  end if;
+  if new.source_import_id is null then
+    raise exception 'A House membership from an assignment batch must name its batch.' using errcode = '42501';
   end if;
   select * into v_batch from public.house_assignment_batches where id = new.source_import_id;
   if not found then
-    return new;
+    raise exception 'The House assignment batch for this membership does not exist.' using errcode = '42501';
   end if;
   v_cycle_id := public.house_batch_payment_cycle(v_batch);
   if v_cycle_id is null then
@@ -604,6 +676,12 @@ begin
       and d.house_profile_id = new.house_profile_id
       and a.payment_status in ('paid', 'waived')
       and a.withdrawn_reason is null
+      and (a.member_id is null or a.match_status not in ('match', 'manual') or a.member_id = new.member_id)
+  ) or exists (
+    select 1 from public.house_applicants o
+    where o.cycle_id = v_batch.payment_cycle_id
+      and o.member_id = new.member_id
+      and (o.payment_status not in ('paid', 'waived') or o.withdrawn_reason is not null)
   ) then
     raise exception 'This member is not a payment-cleared placement in the draft being revealed.' using errcode = '42501';
   end if;
@@ -612,8 +690,10 @@ end;
 $$;
 
 drop trigger if exists guard_house_membership_payment on public.house_memberships;
+-- Not on member_id updates: smart_merge_members repoints memberships to the
+-- surviving member, which must keep working after a Reveal.
 create trigger guard_house_membership_payment
-  before insert on public.house_memberships
+  before insert or update of house_profile_id, source, source_import_id on public.house_memberships
   for each row
   execute function public.guard_house_membership_payment();
 
@@ -755,6 +835,7 @@ declare
   v_unchanged integer := 0;
   v_kept_waivers integer := 0;
   v_changed boolean;
+  v_bump boolean := false;
   v_result jsonb;
   v_post_reveal boolean;
 begin
@@ -824,7 +905,8 @@ begin
       v_kept_waivers := v_kept_waivers + 1;
       continue;
     end if;
-    if v_status = 'waived' and v_applicant.payment_status <> 'waived' and coalesce(v_reason, v_note) is null then
+    if v_status = 'waived' and v_applicant.payment_status <> 'waived'
+      and v_reason is null and not (v_item ? 'payment_note' and v_note is not null) then
       raise exception 'A waiver needs a documented authorization reason.' using errcode = '23514';
     end if;
 
@@ -848,6 +930,9 @@ begin
         payment_updated_at = now()
     where id = v_applicant.id;
 
+    if v_status <> v_applicant.payment_status or v_withdrawn is distinct from v_applicant.withdrawn_reason then
+      v_bump := true;
+    end if;
     if v_status <> v_applicant.payment_status then
       insert into public.house_payment_audit (cycle_id, applicant_id, event_type, from_value, to_value, reason, source, request_id, actor)
       values (p_cycle_id, v_applicant.id, 'status_changed', v_applicant.payment_status, v_status,
@@ -861,7 +946,8 @@ begin
     v_applied := v_applied + 1;
   end loop;
 
-  if v_applied > 0 then
+  -- Only eligibility changes make saved sorts stale; a note or evidence edit does not.
+  if v_bump then
     update public.house_payment_cycles set status_version = status_version + 1 where id = p_cycle_id
     returning * into v_cycle;
   end if;
@@ -877,6 +963,62 @@ begin
   insert into public.house_payment_requests (request_id, cycle_id, result, actor)
   values (p_request_id, p_cycle_id, v_result, auth.uid());
   return v_result;
+end;
+$$;
+
+-- ─── RPC: confirm or correct an applicant's member link ─────────────────────
+-- Identity decides who a cleared application reveals, so a change is audited,
+-- refused during a Reveal, and makes every saved sort for the roster stale.
+
+create or replace function public.admin_link_house_applicant_member(
+  p_applicant_id uuid,
+  p_member_id uuid,
+  p_reason text
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_applicant public.house_applicants%rowtype;
+  v_cycle public.house_payment_cycles%rowtype;
+  v_reason text := nullif(btrim(coalesce(p_reason, '')), '');
+begin
+  if not public.is_admin_user(auth.uid()) then
+    raise exception 'Only admins can link House applicants.' using errcode = '42501';
+  end if;
+  if v_reason is null or char_length(v_reason) > 500 then
+    raise exception 'Give a reason (up to 500 characters) for the identity change.' using errcode = '22023';
+  end if;
+  select * into v_applicant from public.house_applicants where id = p_applicant_id;
+  if not found then
+    raise exception 'Applicant not found.' using errcode = 'P0002';
+  end if;
+  select * into v_cycle from public.house_payment_cycles where id = v_applicant.cycle_id for update;
+  if v_cycle.publishing_batch_id is not null then
+    raise exception 'A Reveal is in progress for this payment cycle; identities are frozen until it finishes.' using errcode = '55006';
+  end if;
+  if p_member_id is not distinct from v_applicant.member_id and v_applicant.match_status = 'manual' then
+    return v_cycle.status_version;
+  end if;
+  if p_member_id is not null and exists (
+    select 1 from public.house_applicants o
+    where o.cycle_id = v_applicant.cycle_id and o.member_id = p_member_id and o.id <> v_applicant.id
+      and o.match_status in ('match', 'manual')
+  ) then
+    raise exception 'That member is already the confirmed member of another application in this roster.' using errcode = '23514';
+  end if;
+  update public.house_applicants
+  set member_id = p_member_id,
+      match_status = case when p_member_id is null then 'unmatched' else 'manual' end,
+      match_method = case when p_member_id is null then null else 'manual' end
+  where id = v_applicant.id;
+  update public.house_payment_cycles set status_version = status_version + 1 where id = v_cycle.id
+  returning * into v_cycle;
+  insert into public.house_payment_audit (cycle_id, applicant_id, event_type, from_value, to_value, reason, source, actor)
+  values (v_cycle.id, v_applicant.id, 'member_link_changed', v_applicant.member_id::text, p_member_id::text, v_reason, 'single', auth.uid());
+  return v_cycle.status_version;
 end;
 $$;
 
@@ -906,8 +1048,9 @@ begin
   if v_batch.payment_cycle_id is null then
     raise exception 'This draft is not linked to the payment roster. Rerun sorting with payment-cleared applicants.' using errcode = '23514';
   end if;
-  select * into v_cycle from public.house_payment_cycles where id = v_batch.payment_cycle_id for update;
+  -- Same lock order as the batch status trigger (batch, then cycle).
   select * into v_batch from public.house_assignment_batches where id = p_batch_id for update;
+  select * into v_cycle from public.house_payment_cycles where id = v_batch.payment_cycle_id for update;
   if v_batch.status <> 'locked' then
     raise exception 'Only a locked batch can be revealed (this one is %).', v_batch.status using errcode = '23514';
   end if;
@@ -943,7 +1086,6 @@ grant select, insert on public.house_payment_cycles to authenticated;
 grant update (payment_deadline, grace_until, deadline_note, cutoff_authorized_at, cutoff_authorized_reason, last_change_reason)
   on public.house_payment_cycles to authenticated;
 grant select on public.house_applicants to authenticated;
-grant update (member_id, match_status, match_method) on public.house_applicants to authenticated;
 grant select on public.house_payment_audit to authenticated;
 
 drop policy if exists "Admins can view House payment cycles" on public.house_payment_cycles;
@@ -964,11 +1106,6 @@ drop policy if exists "Admins can view House applicants" on public.house_applica
 create policy "Admins can view House applicants"
   on public.house_applicants for select to authenticated
   using (public.is_admin_user(auth.uid()));
-drop policy if exists "Admins can link House applicants to members" on public.house_applicants;
-create policy "Admins can link House applicants to members"
-  on public.house_applicants for update to authenticated
-  using (public.is_admin_user(auth.uid()))
-  with check (public.is_admin_user(auth.uid()));
 
 drop policy if exists "Admins can view House payment audit" on public.house_payment_audit;
 create policy "Admins can view House payment audit"
@@ -986,6 +1123,7 @@ grant execute on function public.house_batch_payment_blockers(uuid) to authentic
 
 revoke execute on function public.guard_house_batch_payment() from public, anon, authenticated;
 revoke execute on function public.guard_house_draft_applicant() from public, anon, authenticated;
+revoke execute on function public.guard_house_revised_draft() from public, anon, authenticated;
 revoke execute on function public.guard_house_payment_cycle() from public, anon, authenticated;
 revoke execute on function public.guard_house_membership_payment() from public, anon, authenticated;
 
@@ -993,6 +1131,8 @@ revoke execute on function public.admin_register_house_applicants(uuid, jsonb, t
 grant execute on function public.admin_register_house_applicants(uuid, jsonb, text) to authenticated;
 revoke execute on function public.admin_set_house_applicant_payments(uuid, jsonb, text, text, uuid, bigint) from public, anon;
 grant execute on function public.admin_set_house_applicant_payments(uuid, jsonb, text, text, uuid, bigint) to authenticated;
+revoke execute on function public.admin_link_house_applicant_member(uuid, uuid, text) from public, anon;
+grant execute on function public.admin_link_house_applicant_member(uuid, uuid, text) to authenticated;
 revoke execute on function public.admin_begin_house_batch_publish(uuid) from public, anon;
 grant execute on function public.admin_begin_house_batch_publish(uuid) to authenticated;
 

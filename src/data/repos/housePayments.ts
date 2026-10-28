@@ -231,15 +231,20 @@ export class HousePaymentsRepository {
     }, 'Failed to change payment eligibility');
   }
 
-  async linkApplicantMember(applicantId: string, memberId: string | null): Promise<void> {
+  /**
+   * Confirms or corrects which member an application reveals. Audited,
+   * refused during a Reveal, and makes saved sorts for the roster stale.
+   * Returns the new payment version.
+   */
+  async linkApplicantMember(applicantId: string, memberId: string | null, reason: string): Promise<number> {
     return withErrorHandling(async () => {
-      const { error } = await supabase
-        .from('house_applicants')
-        .update(memberId
-          ? { member_id: memberId, match_status: 'manual', match_method: 'manual' }
-          : { member_id: null, match_status: 'unmatched', match_method: null })
-        .eq('id', applicantId);
+      const { data, error } = await supabase.rpc('admin_link_house_applicant_member', {
+        p_applicant_id: applicantId,
+        p_member_id: memberId,
+        p_reason: reason.trim(),
+      });
       if (error) rethrow(error, 'member_id');
+      return Number(data ?? 0);
     }, 'Failed to link the applicant');
   }
 

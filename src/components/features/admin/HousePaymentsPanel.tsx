@@ -45,6 +45,7 @@ import { HousePageAsset } from '../../../types';
 import { cn } from '../../../lib/utils';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { HousePaymentChecklistImport } from './HousePaymentChecklistImport';
+import { MemberSearchSelect } from './MemberSearchSelect';
 
 const KEYS: HouseApplicationKey[] = ['house_fall', 'house_winter', 'house_spring'];
 const fieldCls = 'w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-xs text-[var(--color-text)] border-[var(--color-border)] focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] disabled:opacity-60';
@@ -477,6 +478,14 @@ export function HousePaymentsPanel({ selectedYear, houseProfiles, members }: Hou
           {editing && (
             <SingleEditor
               applicant={editing}
+              members={members}
+              memberName={(id) => memberName.get(id) ?? null}
+              onLink={async (memberId, reason) => {
+                await housePaymentsRepository.linkApplicantMember(editing.id, memberId, reason);
+                toast.success('Member link saved and recorded. Any saved sort for this roster now needs a rerun.');
+                refresh();
+                setEditing(null);
+              }}
               onClose={() => setEditing(null)}
               onSave={async (change, reason) => {
                 await submit([change], 'single', reason);
@@ -520,11 +529,28 @@ function isStatus(value: string | null): value is PaymentStatus {
   return PAYMENT_STATUSES.includes(value as PaymentStatus);
 }
 
-function SingleEditor({ applicant, onClose, onSave }: {
+function SingleEditor({ applicant, members, memberName, onLink, onClose, onSave }: {
   applicant: HouseApplicant;
+  members: HouseImportMember[];
+  memberName: (memberId: string) => string | null;
+  onLink: (memberId: string | null, reason: string) => Promise<void>;
   onClose: () => void;
   onSave: (change: PaymentChange, reason: string) => Promise<void>;
 }) {
+  const [linkMemberId, setLinkMemberId] = useState<string | null>(applicant.member_id);
+  const [linkReason, setLinkReason] = useState('');
+  const [linking, setLinking] = useState(false);
+  const confirmed = applicant.match_status === 'match' || applicant.match_status === 'manual';
+  async function link() {
+    setLinking(true);
+    try {
+      await onLink(linkMemberId, linkReason);
+    } catch (err) {
+      toast.error(err instanceof Error && err.message ? err.message : 'Failed to save the member link. Nothing was changed.');
+    } finally {
+      setLinking(false);
+    }
+  }
   const [status, setStatus] = useState<PaymentStatus>(readPaymentStatus(applicant));
   const [evidence, setEvidence] = useState<PaymentEvidence | ''>((applicant.payment_evidence as PaymentEvidence | null) ?? '');
   const [note, setNote] = useState(applicant.payment_note ?? '');
@@ -586,6 +612,24 @@ function SingleEditor({ applicant, onClose, onSave }: {
           {saving ? 'Saving…' : 'Save'}
         </button>
       </div>
+      <fieldset className="space-y-2 border-t pt-3 border-[var(--color-border)]">
+        <legend className={labelCls}>Member this application reveals</legend>
+        <p className="text-xs text-text-secondary">
+          {applicant.member_id
+            ? `${confirmed ? 'Confirmed' : 'Suggested, not confirmed'}: ${memberName(applicant.member_id) ?? 'a member'}.`
+            : 'Not linked to a member.'} A placement may only reveal this application&rsquo;s confirmed member. Changing it is recorded and makes saved sorts need a rerun.
+        </p>
+        <MemberSearchSelect members={members} value={linkMemberId} onChange={setLinkMemberId} label={`${applicant.source_name}'s member`} disabled={linking} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label htmlFor="link-reason" className={labelCls}>Reason (required)</label>
+            <input id="link-reason" value={linkReason} maxLength={500} onChange={(event) => setLinkReason(event.target.value)} className={fieldCls} placeholder="e.g. Confirmed by UCSD email with CRC" />
+          </div>
+          <button type="button" onClick={link} disabled={linking || !linkReason.trim() || (linkMemberId === applicant.member_id && applicant.match_status === 'manual')} className={ghostBtn}>
+            {linking ? 'Saving…' : linkMemberId ? 'Confirm member' : 'Remove link'}
+          </button>
+        </div>
+      </fieldset>
     </section>
   );
 }

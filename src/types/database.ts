@@ -4206,6 +4206,10 @@ export type Database = {
         Args: { p_emails?: string[] | null; p_surnames?: string[] | null };
         Returns: Json;
       };
+      admin_link_house_applicant_member: {
+        Args: { p_applicant_id: string; p_member_id: string | null; p_reason: string };
+        Returns: number;
+      };
       admin_register_house_applicants: {
         Args: { p_cycle_id: string; p_applicants: Json; p_source?: string };
         Returns: { applicant_key: string; applicant_id: string; created: boolean }[];

@@ -80,7 +80,7 @@ export function HouseRerunPanel({ batch, drafts, profiles, userId, onSaved, onCl
   const cutoff = useMemo(() => (cycle ? cutoffState(cycle, Date.now()) : null), [cycle]);
   const finalBlockers = useMemo(() => (cutoff ? finalSortBlockers(cutoff, counts) : []), [cutoff, counts]);
   const [modeChoice, setModeChoice] = useState<EligibilityMode | null>(null);
-  const mode: EligibilityMode = modeChoice ?? (finalBlockers.length === 0 ? 'final' : 'provisional');
+  const mode: EligibilityMode = finalBlockers.length > 0 ? 'provisional' : modeChoice ?? 'final';
 
   const houses = useMemo<PlacementHouse[]>(
     () => profiles.filter((profile) => profile.is_active).map((profile, index) => ({ id: profile.id, label: houseLabel(profile), displayOrder: index })),
