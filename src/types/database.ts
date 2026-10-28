@@ -4198,6 +4198,10 @@ export type Database = {
         Args: { p_batch_id: string };
         Returns: undefined;
       };
+      admin_house_points_reconciliation: {
+        Args: { p_year: number };
+        Returns: Json;
+      };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
         Returns: Json;

@@ -29,8 +29,10 @@
     "start": "node scripts/start-dev.cjs",
     "prebuild": "node scripts/check-client-secrets.mjs --build",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild": "node scripts/sentry-sourcemaps.mjs",
     "prebuild:production": "node scripts/check-client-secrets.mjs --build",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild:production": "node scripts/sentry-sourcemaps.mjs",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
@@ -83,6 +85,7 @@
   },
   "devDependencies": {
     "@types/jest-axe": "^3.5.9",
+    "@sentry/cli": "^3.8.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
