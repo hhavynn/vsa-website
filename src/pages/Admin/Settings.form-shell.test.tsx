@@ -27,7 +27,17 @@ beforeEach(() => {
   mockSettings = { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' };
   jest.clearAllMocks();
   mockUpsert.mockResolvedValue({ error: null });
-  mockRefresh.mockResolvedValue(undefined);
+  mockRefresh.mockImplementation(async () => {
+    const lastWrite = mockUpsert.mock.calls[mockUpsert.mock.calls.length - 1]?.[0] as
+      | { logo_url?: string | null; logo_alt?: string | null }
+      | undefined;
+    if (lastWrite) {
+      mockSettings = {
+        logoUrl: lastWrite.logo_url ?? '',
+        logoAlt: lastWrite.logo_alt ?? 'VSA logo',
+      };
+    }
+  });
 });
 
 describe('Admin Settings shared form shell (#258)', () => {
