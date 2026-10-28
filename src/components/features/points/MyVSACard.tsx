@@ -8,7 +8,9 @@ import { format, parseISO } from 'date-fns';
 import { useQuery } from 'react-query';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { type FindMyPointsEntry } from '../../../hooks/useFindMyPoints';
-import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { normalizeHouse } from '../../../constants/houses';
+import { formatAcademicYear } from '../../../lib/academicTerms';
+import { houseSlugFromKey } from '../../../utils/houseSlug';
 import { supabase } from '../../../lib/supabase';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
@@ -405,10 +407,16 @@ export function MyVSACard({
 }: MyVSACardProps) {
   const { data: attended = [] } = useRecentAttendance(entry.member_id);
   
-  const houseKey = normalizeHouse(entry.house);
-  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : null;
-  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : null;
-  const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '🏠') : null;
+  const house = entry.house;
+  const houseLabel = house?.label ?? null;
+  const houseColor = house ? house.accentColor ?? 'var(--brand)' : null;
+  const legacyHouse = normalizeHouse(house?.houseKey ?? house?.label);
+  const houseEmoji = house ? (legacyHouse ? HOUSE_EMOJI[legacyHouse] ?? '🏠' : '🏠') : null;
+  // The share image appends hex alpha (`${color}22`), so it needs a real hex colour.
+  const snapshotHouseColor = house?.accentColor && /^#[0-9a-f]{6}$/i.test(house.accentColor) ? house.accentColor : null;
+  const houseHref = house
+    ? `/house/year/${formatAcademicYear(house.academicYearStart)}/${houseSlugFromKey(house.houseKey || house.label)}`
+    : null;
 
   const subline = [entry.graduation_year, entry.college].filter(Boolean).join(' • ');
   const top10Gap = getTop10Gap(entry, allEntries);
@@ -427,12 +435,12 @@ export function MyVSACard({
       checkIns: entry.events_attended,
       allTimePoints: entry.all_time_points,
       houseLabel,
-      houseColor,
+      houseColor: snapshotHouseColor,
       top10Gap,
       badges,
       avatarUrl,
     }),
-    [entry, subline, isAllTime, yearLabel, houseLabel, houseColor, top10Gap, badges, avatarUrl],
+    [entry, subline, isAllTime, yearLabel, houseLabel, snapshotHouseColor, top10Gap, badges, avatarUrl],
   );
   const shareText = `I'm ranked ${formatRank(entry)} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! Find yours: ${window.location.origin}/points`;
 
@@ -470,8 +478,8 @@ export function MyVSACard({
               </div>
             </div>
 
-            {houseKey && houseColor && houseLabel && (
-              <Link to={`/house/${houseKey.toLowerCase().replace(/\s+/g, '-')}`} className="group flex items-center gap-2 rounded-full border-2 px-3 py-1.5 transition-all hover:scale-105 active:scale-95" style={{ borderColor: `${houseColor}44`, background: `${houseColor}11` }}>
+            {houseHref && houseColor && houseLabel && (
+              <Link to={houseHref} className="group flex items-center gap-2 rounded-full border-2 px-3 py-1.5 transition-all hover:scale-105 active:scale-95" style={{ borderColor: `${houseColor}44`, background: `${houseColor}11` }}>
                 <span className="text-lg leading-none">{houseEmoji}</span>
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider" style={{ color: houseColor }}>{houseLabel}</span>
               </Link>

@@ -112,3 +112,54 @@ describe('HouseMembershipsRepository — only the membership in effect today', (
     ).rejects.toBeInstanceOf(DatabaseError);
   });
 });
+
+describe('getPublicHousesByMemberId', () => {
+  const row = (memberId: string, year: number, start: string, end: string | null, key: string) => ({
+    member_id: memberId, academic_year_start: year, effective_start_date: start, effective_end_date: end,
+    house_profile_id: `hp-${key}-${year}`, house_key: key, display_name: key.toUpperCase(), accent_color: '#123456',
+  });
+
+  it('reads the Reveal-gated public view (never members.house) and picks the membership in effect, after a transfer', async () => {
+    supabaseMock.queueResult('public_house_memberships', {
+      data: [
+        row('m-transfer', 2026, '2026-11-08', '2027-01-10', 'rarity'),
+        row('m-transfer', 2026, '2027-01-10', null, 'applejack'),
+        row('m-future', 2026, '2026-11-08', '2027-04-01', 'pinkie'),
+        row('m-future', 2026, '2027-04-01', null, 'twilight'),
+      ],
+      error: null,
+    });
+    const houses = await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2027-02-01');
+    expect(houses.get('m-transfer')?.label).toBe('APPLEJACK');
+    expect(houses.get('m-future')?.label).toBe('PINKIE');
+    expect(supabaseMock.queries().map((query) => query.table)).toEqual(['public_house_memberships']);
+    expect(supabaseMock.filtersFor('public_house_memberships')).toContainEqual(['academic_year_start', 2026]);
+  });
+
+  it('shows where a member ended a historical year, and the newest year for all-time', async () => {
+    supabaseMock.queueResult('public_house_memberships', {
+      data: [
+        row('m-1', 2024, '2024-11-01', '2025-02-01', 'toad'),
+        row('m-1', 2024, '2025-02-01', null, 'boo'),
+        row('m-1', 2026, '2026-11-08', null, 'rarity'),
+      ],
+      error: null,
+    });
+    const houses = await houseMembershipsRepository.getPublicHousesByMemberId('all', '2026-12-01');
+    expect(houses.get('m-1')).toEqual({ houseProfileId: 'hp-rarity-2026', houseKey: 'rarity', label: 'RARITY', accentColor: '#123456', academicYearStart: 2026 });
+    expect(supabaseMock.filtersFor('public_house_memberships')).toEqual([]);
+  });
+
+  it('reads every page past 1,000 rows and fails the whole read on a failed page', async () => {
+    const page = Array.from({ length: 1000 }, (_, index) => row(`m-${index}`, 2026, '2026-11-08', null, 'rarity'));
+    supabaseMock.queueResult('public_house_memberships', { data: page, error: null });
+    supabaseMock.queueResult('public_house_memberships', { data: [row('m-last', 2026, '2026-11-08', null, 'boo')], error: null });
+    const houses = await houseMembershipsRepository.getPublicHousesByMemberId(2026, '2026-12-01');
+    expect(houses.size).toBe(1001);
+
+    supabaseMock.reset();
+    supabaseMock.queueResult('public_house_memberships', { data: page, error: null });
+    supabaseMock.queueResult('public_house_memberships', { data: null, error: { code: '57014', message: 'statement timeout', details: '', hint: '' } });
+    await expect(houseMembershipsRepository.getPublicHousesByMemberId(2026, '2026-12-01')).rejects.toThrow(/statement timeout/);
+  });
+});

@@ -3656,6 +3656,20 @@ export type Database = {
       };
     };
     Views: {
+      public_house_memberships: {
+        Row: {
+          academic_year_end: number;
+          academic_year_start: number;
+          accent_color: string | null;
+          display_name: string | null;
+          effective_end_date: string | null;
+          effective_start_date: string;
+          house_key: string | null;
+          house_profile_id: string;
+          member_id: string;
+        };
+        Relationships: [];
+      };
       public_members: {
         Row: {
           id: string;
