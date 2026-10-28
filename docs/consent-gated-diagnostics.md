@@ -11,6 +11,12 @@ origin is introduced.
 | `exception` | `description`: fixed `render_failure` or `chunk_load`, `page_area`: fixed `public` or `admin`, `fatal: true` | error messages, component stack, call stack, raw path, query/hash, member ID, provider payload |
 | `web_vital` | `metric_name`: CLS/FCP/INP/LCP/TTFB allowlist; `metric_value`: finite nonnegative number, rounded to three decimals | metric ID, navigation URL, resource timing, attribution, cookies, user properties |
 
+Custom events override GA4's automatically inferred `page_location` and
+`page_referrer` with origin-only/coarse-path values, and set `page_path` to
+`/` or `/admin`, so diagnostic events cannot carry a student's name/search
+in URL metadata. Verify the **actual** outgoing GA4 request after opt-in:
+the configuration/runtime may still add dimensions the code does not control.
+
 Tracking stays disabled when consent is absent or declined. The first granted
 consent loads GA4 and installs Web Vitals observers once per tab; later
 withdrawal stops emitting even if the browser performance observers remain.
