@@ -152,7 +152,7 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
       </div>
 
       {errors.root && (
-        <div ref={authErrorRef} tabIndex={-1}>
+        <div ref={authErrorRef} tabIndex={-1} data-testid="sign-in-auth-error-focus">
           <FormAlert>{errors.root.message}</FormAlert>
         </div>
       )}
