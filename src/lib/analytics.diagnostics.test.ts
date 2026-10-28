@@ -74,3 +74,6 @@ describe('consent-gated, redacted GA4 diagnostics (#302)', () => {
     expect(window.gtag).not.toHaveBeenCalled();
   });
 });
+
+// Mark this Jest test as a TypeScript module for isolatedModules/CRA builds.
+export {};
