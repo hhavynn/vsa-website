@@ -164,16 +164,17 @@ Generic methodology must not silently override repository-specific safety or Git
 Default order, but **skip straight to a direct read when you already know the exact file** — the goal is token efficiency, not ritual:
 
 1. Governing instructions (already in context) + owning skill (§4) + relevant playbook (§5).
-2. **Graphify** for structural questions — uncertain ownership, broad architecture, callers/callees, impact radius, data flow, authorization paths, or unfamiliar module relationships — before any broad grep. Ask specific questions, e.g.:
+2. **Generated repo map** (`docs/ai/repo-map.json` / `.md`) to quickly shortlist routes, repos, and a candidate owner. Run `npm run repo-map:generate` when sources change; do not treat name matches as authority.
+3. **Graphify** for structural questions — uncertain ownership, broad architecture, callers/callees, impact radius, data flow, authorization paths, or unfamiliar module relationships — before any broad grep. Ask specific questions, e.g.:
    - `./scripts/graphify-run query "what renders the public leaderboard?"`
    - `./scripts/graphify-run query "what code path calculates House standings?"`
    - `./scripts/graphify-run path "src/context/AuthContext.tsx" "src/pages/Leaderboard.tsx"`
    - `./scripts/graphify-run explain "eventsRepository"`
    Direct reads are preferred when the exact file is known, the user names an obviously owned page/component, you are reading instructions/config, you are verifying an identified source location, or the task is low-risk and narrow. Graphify is for **navigation**, not final truth — verify implementation-critical claims against source before editing. Do not require a graph query before every read. Check freshness with `.claude/skills/vsa-diagnostics-and-measurement/scripts/check-graph-freshness.sh`; only refresh if the relevant area actually changed. Never rebuild the graph inside a feature PR.
-3. **Repomix** — only *after* scope is narrowed, to pack one coherent slice (route + hook + repo + types + closest analogue + tests). Run via `npx repomix` (it is not a repo dependency). Ask yourself: *what exact uncertainty will this pack resolve?* Never dump the whole repo; never include secrets, `node_modules`, `build/`, `graphify-out/`, or unrelated migrations.
-4. **Direct source reads** to verify exact code before editing.
-5. Targeted `grep`/`glob` for a specific string.
-6. Broad repository search only as a last resort.
+4. **Repomix** — only *after* scope is narrowed, to pack one coherent slice (route + hook + repo + types + closest analogue + tests). Run via `npx repomix` (it is not a repo dependency). Ask yourself: *what exact uncertainty will this pack resolve?* Never dump the whole repo; never include secrets, `node_modules`, `build/`, `graphify-out/`, or unrelated migrations.
+5. **Direct source reads** to verify exact code before editing.
+6. Targeted `grep`/`glob` for a specific string.
+7. Broad repository search only as a last resort.
 
 ---
 

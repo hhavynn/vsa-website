@@ -1,0 +1,941 @@
+{
+  "schema_version": 1,
+  "notice": "Generated candidate ownership only. Match-by-name may miss owners or overmatch; verify AGENTS.md, owning playbooks, Graphify and source. Never treat this index as access control or a protected-domain edit grant.",
+  "generated_from": [
+    "src/routes/index.tsx",
+    "src/data/repos/",
+    ".claude/agents/",
+    ".claude/skills/"
+  ],
+  "routes": [
+    {
+      "path": "*",
+      "page": "src/pages/NotFound.tsx"
+    },
+    {
+      "path": "/",
+      "page": "src/pages/Home.tsx"
+    },
+    {
+      "path": "/ace",
+      "page": "src/pages/Ace.tsx"
+    },
+    {
+      "path": "/admin",
+      "page": "src/pages/Admin/Overview.tsx"
+    },
+    {
+      "path": "/admin/ace",
+      "page": "src/pages/Admin/AceFamilies.tsx"
+    },
+    {
+      "path": "/admin/ai-feedback",
+      "page": "src/pages/Admin/AiFeedback.tsx"
+    },
+    {
+      "path": "/admin/ai-knowledge",
+      "page": "src/pages/Admin/AiKnowledge.tsx"
+    },
+    {
+      "path": "/admin/analytics",
+      "page": "src/pages/Admin/Analytics.tsx"
+    },
+    {
+      "path": "/admin/applications",
+      "page": "src/pages/Admin/Applications.tsx"
+    },
+    {
+      "path": "/admin/cabinet",
+      "page": "src/pages/Admin/Cabinet.tsx"
+    },
+    {
+      "path": "/admin/cabinet/rollover",
+      "page": "src/pages/Admin/CabinetRollover.tsx"
+    },
+    {
+      "path": "/admin/content",
+      "page": "src/pages/Admin/Content.tsx"
+    },
+    {
+      "path": "/admin/content-calendar",
+      "page": "src/pages/Admin/ContentCalendar.tsx"
+    },
+    {
+      "path": "/admin/content-health",
+      "page": "src/pages/Admin/ContentHealth.tsx"
+    },
+    {
+      "path": "/admin/data-rights",
+      "page": "src/pages/Admin/DataRightsRequests.tsx"
+    },
+    {
+      "path": "/admin/events",
+      "page": "src/pages/Admin/Events.tsx"
+    },
+    {
+      "path": "/admin/external-events",
+      "page": "src/pages/Admin/ExternalEvents.tsx"
+    },
+    {
+      "path": "/admin/feedback",
+      "page": "src/pages/Admin/Feedback.tsx"
+    },
+    {
+      "path": "/admin/gallery",
+      "page": "src/pages/Admin/Gallery.tsx"
+    },
+    {
+      "path": "/admin/houses",
+      "page": "src/pages/Admin/Houses.tsx"
+    },
+    {
+      "path": "/admin/import",
+      "page": "src/pages/Admin/Import.tsx"
+    },
+    {
+      "path": "/admin/interns",
+      "page": "src/pages/Admin/Interns.tsx"
+    },
+    {
+      "path": "/admin/launch-checklist",
+      "page": "src/pages/Admin/LaunchChecklist.tsx"
+    },
+    {
+      "path": "/admin/login",
+      "page": "src/pages/SignIn.tsx"
+    },
+    {
+      "path": "/admin/members",
+      "page": "src/pages/Admin/Members.tsx"
+    },
+    {
+      "path": "/admin/merge-suggestions",
+      "page": "src/pages/Admin/MergeSuggestions.tsx"
+    },
+    {
+      "path": "/admin/photo-requests",
+      "page": "src/pages/Admin/PhotoRequests.tsx"
+    },
+    {
+      "path": "/admin/points",
+      "page": "src/pages/Admin/Points.tsx"
+    },
+    {
+      "path": "/admin/recent-changes",
+      "page": "src/pages/Admin/RecentChanges.tsx"
+    },
+    {
+      "path": "/admin/resources",
+      "page": "src/pages/Admin/Resources.tsx"
+    },
+    {
+      "path": "/admin/settings",
+      "page": "src/pages/Admin/Settings.tsx"
+    },
+    {
+      "path": "/admin/uvsa-schools",
+      "page": "src/pages/Admin/UVSASchools.tsx"
+    },
+    {
+      "path": "/admin/vcn",
+      "page": "src/pages/Admin/VcnArchives.tsx"
+    },
+    {
+      "path": "/admin/year-setup",
+      "page": "src/pages/Admin/YearSetup.tsx"
+    },
+    {
+      "path": "/admin/years",
+      "page": "src/pages/Admin/YearsTerms.tsx"
+    },
+    {
+      "path": "/cabinet",
+      "page": "src/pages/Cabinet.tsx"
+    },
+    {
+      "path": "/calendar",
+      "page": "src/pages/Calendar.tsx"
+    },
+    {
+      "path": "/events",
+      "page": "src/pages/Events.tsx"
+    },
+    {
+      "path": "/feedback",
+      "page": "src/pages/Feedback.tsx"
+    },
+    {
+      "path": "/gallery",
+      "page": "src/pages/Gallery.tsx"
+    },
+    {
+      "path": "/get-involved",
+      "page": "src/pages/GetInvolved.tsx"
+    },
+    {
+      "path": "/house",
+      "page": "src/pages/House.tsx"
+    },
+    {
+      "path": "/house-system",
+      "page": "src/pages/House.tsx"
+    },
+    {
+      "path": "/house/:houseSlug",
+      "page": "src/pages/HouseDetail.tsx"
+    },
+    {
+      "path": "/house/archive",
+      "page": "src/pages/HouseArchive.tsx"
+    },
+    {
+      "path": "/house/archive/:yearSlug",
+      "page": "src/pages/House.tsx"
+    },
+    {
+      "path": "/house/archive/:yearSlug/:houseSlug",
+      "page": "src/pages/HouseDetail.tsx"
+    },
+    {
+      "path": "/house/year/:yearSlug",
+      "page": "src/pages/House.tsx"
+    },
+    {
+      "path": "/house/year/:yearSlug/:houseSlug",
+      "page": "src/pages/HouseDetail.tsx"
+    },
+    {
+      "path": "/intern-program",
+      "page": "src/pages/Internship.tsx"
+    },
+    {
+      "path": "/leaderboard",
+      "page": "src/pages/Leaderboard.tsx"
+    },
+    {
+      "path": "/points",
+      "page": "src/pages/Points.tsx"
+    },
+    {
+      "path": "/privacy",
+      "page": "src/pages/Privacy.tsx"
+    },
+    {
+      "path": "/uvsa-network",
+      "page": "src/pages/UVSANetwork.tsx"
+    },
+    {
+      "path": "/vcn",
+      "page": "src/pages/Vcn.tsx"
+    },
+    {
+      "path": "/vcn/archive",
+      "page": "src/pages/VcnArchive.tsx"
+    },
+    {
+      "path": "/vcn/current",
+      "page": "src/pages/VcnCurrent.tsx"
+    },
+    {
+      "path": "/wild-n-culture",
+      "page": "src/pages/WildNCulture.tsx"
+    }
+  ],
+  "repositories": [
+    {
+      "path": "src/data/repos/academicTerms.ts",
+      "tables": [
+        "academic_terms"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/aceAssignments.ts",
+      "tables": [
+        "ace_assignment_cycles",
+        "ace_assignment_drafts"
+      ],
+      "rpcs": [
+        "publish_ace_assignment_cycle"
+      ]
+    },
+    {
+      "path": "src/data/repos/aceFamilies.ts",
+      "tables": [
+        "ace_families",
+        "ace_family_images",
+        "ace_family_members",
+        "published_ace_families",
+        "published_ace_family_members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminActivity.ts",
+      "tables": [
+        "admin_activity_log"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminMembers.ts",
+      "tables": [
+        "events",
+        "member_event_attendance",
+        "member_yearly_points",
+        "members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminOperations.ts",
+      "tables": [
+        "ace_families",
+        "ace_family_members",
+        "cabinet_members",
+        "events",
+        "house_page_assets",
+        "members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminOverview.ts",
+      "tables": [
+        "academic_terms",
+        "ai_feedback",
+        "ai_knowledge_base",
+        "application_links",
+        "cabinet_members",
+        "cabinet_years",
+        "data_rights_requests",
+        "events",
+        "feedback",
+        "gallery_events",
+        "house_events",
+        "house_page_assets",
+        "member_photo_requests",
+        "members",
+        "program_content",
+        "site_settings",
+        "vcn_archives"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminReview.ts",
+      "tables": [
+        "admin_review_marks"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminSearch.ts",
+      "tables": [
+        "ace_families",
+        "ace_family_members",
+        "cabinet_members",
+        "events",
+        "house_page_assets",
+        "intern_cohort_cycles",
+        "intern_cohort_drafts"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/adminUndo.ts",
+      "tables": [
+        "ace_assignment_cycles",
+        "ace_assignment_drafts",
+        "ace_family_members",
+        "house_assignment_batches",
+        "house_assignment_drafts",
+        "intern_cohort_cycles",
+        "intern_cohort_drafts"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/aiFeedback.ts",
+      "tables": [
+        "ai_feedback"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/aiKnowledge.ts",
+      "tables": [
+        "ai_knowledge_base",
+        "application_links",
+        "events"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/applicationLinks.ts",
+      "tables": [
+        "application_links",
+        "public_application_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/attendanceRecovery.ts",
+      "tables": [
+        "events",
+        "import_job_rows",
+        "import_recovery_actions",
+        "member_event_attendance",
+        "members"
+      ],
+      "rpcs": [
+        "admin_import_recovery_findings",
+        "admin_lookup_members",
+        "admin_recover_import_row",
+        "admin_search_members"
+      ]
+    },
+    {
+      "path": "src/data/repos/auth.ts",
+      "tables": [
+        "user_profiles"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/cabinetRolesRepository.ts",
+      "tables": [
+        "cabinet_role_descriptions"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/cabinetRoster.ts",
+      "tables": [
+        "cabinet_members",
+        "cabinet_roster_cycles",
+        "cabinet_roster_drafts"
+      ],
+      "rpcs": [
+        "publish_cabinet_roster_cycle"
+      ]
+    },
+    {
+      "path": "src/data/repos/cabinetYears.ts",
+      "tables": [
+        "cabinet_years"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/contentHealth.ts",
+      "tables": [
+        "content_health_state"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/dataRightsRequests.ts",
+      "tables": [
+        "data_rights_request_events",
+        "data_rights_requests",
+        "user_profiles"
+      ],
+      "rpcs": [
+        "generate_data_rights_export",
+        "get_data_rights_dependency_preview"
+      ]
+    },
+    {
+      "path": "src/data/repos/eventRecaps.ts",
+      "tables": [
+        "event_recaps"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/events.ts",
+      "tables": [
+        "event_interest_counts",
+        "events"
+      ],
+      "rpcs": [
+        "record_event_interest"
+      ]
+    },
+    {
+      "path": "src/data/repos/externalEvents.ts",
+      "tables": [
+        "external_events"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/feedback.ts",
+      "tables": [],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/gallery.ts",
+      "tables": [
+        "gallery_events"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseAssets.ts",
+      "tables": [
+        "house_page_assets",
+        "published_house_page_assets"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseAssignments.ts",
+      "tables": [
+        "house_assignment_batches",
+        "house_assignment_drafts",
+        "house_page_assets"
+      ],
+      "rpcs": [
+        "admin_apply_house_placement_override"
+      ]
+    },
+    {
+      "path": "src/data/repos/houseEvents.ts",
+      "tables": [
+        "house_event_houses",
+        "house_events"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseMembershipWrites.ts",
+      "tables": [
+        "house_memberships",
+        "members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseMemberships.ts",
+      "tables": [
+        "house_memberships"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/houseParents.ts",
+      "tables": [
+        "house_page_assets",
+        "house_parents"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/importJobs.ts",
+      "tables": [
+        "import_job_rows",
+        "import_jobs"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/internCohort.ts",
+      "tables": [
+        "cabinet_members",
+        "intern_cohort_cycles",
+        "intern_cohort_drafts"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/leaderboard.ts",
+      "tables": [
+        "house_all_time_points",
+        "house_member_all_time_points",
+        "house_member_yearly_points",
+        "house_recent_activity",
+        "house_yearly_points",
+        "member_event_history",
+        "member_yearly_points",
+        "public_members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/memberIdentity.ts",
+      "tables": [
+        "academic_terms",
+        "events",
+        "member_event_attendance",
+        "member_identity_emails",
+        "member_year_observations",
+        "members",
+        "merge_exclusions"
+      ],
+      "rpcs": [
+        "admin_apply_attendance_import",
+        "smart_merge_members"
+      ]
+    },
+    {
+      "path": "src/data/repos/memberLookup.ts",
+      "tables": [
+        "members",
+        "public_members"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/photoRequests.ts",
+      "tables": [
+        "member_photo_request_events",
+        "member_photo_requests",
+        "members",
+        "my_member_photo_requests",
+        "public_member_avatars"
+      ],
+      "rpcs": [
+        "admin_publish_member_photo",
+        "approve_member_photo_request",
+        "reject_member_photo_request",
+        "remove_member_photo_request"
+      ]
+    },
+    {
+      "path": "src/data/repos/programContent.ts",
+      "tables": [
+        "program_content"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/resourceLinks.ts",
+      "tables": [
+        "resource_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/uvsaNetworkSettings.ts",
+      "tables": [
+        "uvsa_network_page_settings"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/uvsaSchools.ts",
+      "tables": [
+        "uvsa_schools"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/vcnArchives.ts",
+      "tables": [
+        "published_vcn_archives",
+        "vcn_archives"
+      ],
+      "rpcs": []
+    },
+    {
+      "path": "src/data/repos/yearSetup.ts",
+      "tables": [
+        "academic_terms",
+        "ace_assignment_cycles",
+        "application_links",
+        "cabinet_roster_cycles",
+        "cabinet_years",
+        "house_assignment_batches",
+        "house_page_assets",
+        "intern_cohort_cycles"
+      ],
+      "rpcs": []
+    }
+  ],
+  "domains": [
+    {
+      "domain": "admin-workflows",
+      "owning_subagent": "vsa-admin-workflows",
+      "owning_playbook": ".claude/agents/vsa-admin-workflows.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [],
+      "pages": [],
+      "repositories": [],
+      "tables": [],
+      "rpcs": []
+    },
+    {
+      "domain": "ai-knowledge",
+      "owning_subagent": "vsa-ai-knowledge",
+      "owning_playbook": ".claude/agents/vsa-ai-knowledge.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [
+        "/admin/ai-knowledge"
+      ],
+      "pages": [
+        "src/pages/Admin/AiKnowledge.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/aiKnowledge.ts"
+      ],
+      "tables": [
+        "ai_knowledge_base",
+        "application_links",
+        "events"
+      ],
+      "rpcs": []
+    },
+    {
+      "domain": "applications-forms",
+      "owning_subagent": "vsa-applications-forms",
+      "owning_playbook": ".claude/agents/vsa-applications-forms.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [
+        "/admin/applications"
+      ],
+      "pages": [
+        "src/pages/Admin/Applications.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/applicationLinks.ts"
+      ],
+      "tables": [
+        "application_links",
+        "public_application_links"
+      ],
+      "rpcs": []
+    },
+    {
+      "domain": "architecture-guardian",
+      "owning_subagent": "vsa-architecture-guardian",
+      "owning_playbook": ".claude/agents/vsa-architecture-guardian.md",
+      "owning_skills": [
+        ".claude/skills/vsa-architecture-contract/SKILL.md"
+      ],
+      "protected_domain": false,
+      "routes": [],
+      "pages": [],
+      "repositories": [],
+      "tables": [],
+      "rpcs": []
+    },
+    {
+      "domain": "cabinet-leadership",
+      "owning_subagent": "vsa-cabinet-leadership",
+      "owning_playbook": ".claude/agents/vsa-cabinet-leadership.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [
+        "/admin/cabinet",
+        "/admin/cabinet/rollover",
+        "/cabinet"
+      ],
+      "pages": [
+        "src/pages/Admin/Cabinet.tsx",
+        "src/pages/Admin/CabinetRollover.tsx",
+        "src/pages/Cabinet.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/cabinetRolesRepository.ts",
+        "src/data/repos/cabinetRoster.ts",
+        "src/data/repos/cabinetYears.ts"
+      ],
+      "tables": [
+        "cabinet_members",
+        "cabinet_role_descriptions",
+        "cabinet_roster_cycles",
+        "cabinet_roster_drafts",
+        "cabinet_years"
+      ],
+      "rpcs": [
+        "publish_cabinet_roster_cycle"
+      ]
+    },
+    {
+      "domain": "docs-acceptance",
+      "owning_subagent": "vsa-docs-acceptance",
+      "owning_playbook": ".claude/agents/vsa-docs-acceptance.md",
+      "owning_skills": [
+        ".claude/skills/vsa-docs-and-writing/SKILL.md"
+      ],
+      "protected_domain": false,
+      "routes": [],
+      "pages": [],
+      "repositories": [],
+      "tables": [],
+      "rpcs": []
+    },
+    {
+      "domain": "events-gallery",
+      "owning_subagent": "vsa-events-gallery",
+      "owning_playbook": ".claude/agents/vsa-events-gallery.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [
+        "/admin/events",
+        "/admin/external-events",
+        "/admin/gallery",
+        "/events",
+        "/gallery"
+      ],
+      "pages": [
+        "src/pages/Admin/Events.tsx",
+        "src/pages/Admin/ExternalEvents.tsx",
+        "src/pages/Admin/Gallery.tsx",
+        "src/pages/Events.tsx",
+        "src/pages/Gallery.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/eventRecaps.ts",
+        "src/data/repos/events.ts",
+        "src/data/repos/externalEvents.ts",
+        "src/data/repos/gallery.ts",
+        "src/data/repos/houseEvents.ts"
+      ],
+      "tables": [
+        "event_interest_counts",
+        "event_recaps",
+        "events",
+        "external_events",
+        "gallery_events",
+        "house_event_houses",
+        "house_events"
+      ],
+      "rpcs": [
+        "record_event_interest"
+      ]
+    },
+    {
+      "domain": "house-system",
+      "owning_subagent": "vsa-house-system",
+      "owning_playbook": ".claude/agents/vsa-house-system.md",
+      "owning_skills": [],
+      "protected_domain": true,
+      "routes": [
+        "/admin/houses",
+        "/house",
+        "/house-system",
+        "/house/:houseSlug",
+        "/house/archive",
+        "/house/archive/:yearSlug",
+        "/house/archive/:yearSlug/:houseSlug",
+        "/house/year/:yearSlug",
+        "/house/year/:yearSlug/:houseSlug"
+      ],
+      "pages": [
+        "src/pages/Admin/Houses.tsx",
+        "src/pages/House.tsx",
+        "src/pages/HouseArchive.tsx",
+        "src/pages/HouseDetail.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/houseAssets.ts",
+        "src/data/repos/houseAssignments.ts",
+        "src/data/repos/houseEvents.ts",
+        "src/data/repos/houseMembershipWrites.ts",
+        "src/data/repos/houseMemberships.ts",
+        "src/data/repos/houseParents.ts"
+      ],
+      "tables": [
+        "house_assignment_batches",
+        "house_assignment_drafts",
+        "house_event_houses",
+        "house_events",
+        "house_memberships",
+        "house_page_assets",
+        "house_parents",
+        "members",
+        "published_house_page_assets"
+      ],
+      "rpcs": [
+        "admin_apply_house_placement_override"
+      ]
+    },
+    {
+      "domain": "points-attendance-guardian",
+      "owning_subagent": "vsa-points-attendance-guardian",
+      "owning_playbook": ".claude/agents/vsa-points-attendance-guardian.md",
+      "owning_skills": [],
+      "protected_domain": true,
+      "routes": [
+        "/admin/points",
+        "/points"
+      ],
+      "pages": [
+        "src/pages/Admin/Points.tsx",
+        "src/pages/Points.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/attendanceRecovery.ts"
+      ],
+      "tables": [
+        "events",
+        "import_job_rows",
+        "import_recovery_actions",
+        "member_event_attendance",
+        "members"
+      ],
+      "rpcs": [
+        "admin_import_recovery_findings",
+        "admin_lookup_members",
+        "admin_recover_import_row",
+        "admin_search_members"
+      ]
+    },
+    {
+      "domain": "public-content",
+      "owning_subagent": "vsa-public-content",
+      "owning_playbook": ".claude/agents/vsa-public-content.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [
+        "/admin/content",
+        "/admin/content-calendar",
+        "/admin/content-health"
+      ],
+      "pages": [
+        "src/pages/Admin/Content.tsx",
+        "src/pages/Admin/ContentCalendar.tsx",
+        "src/pages/Admin/ContentHealth.tsx"
+      ],
+      "repositories": [
+        "src/data/repos/contentHealth.ts",
+        "src/data/repos/programContent.ts"
+      ],
+      "tables": [
+        "content_health_state",
+        "program_content"
+      ],
+      "rpcs": []
+    },
+    {
+      "domain": "storage-egress",
+      "owning_subagent": "vsa-storage-egress",
+      "owning_playbook": ".claude/agents/vsa-storage-egress.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [],
+      "pages": [],
+      "repositories": [],
+      "tables": [],
+      "rpcs": []
+    },
+    {
+      "domain": "testing-qa",
+      "owning_subagent": "vsa-testing-qa",
+      "owning_playbook": ".claude/agents/vsa-testing-qa.md",
+      "owning_skills": [],
+      "protected_domain": false,
+      "routes": [],
+      "pages": [],
+      "repositories": [],
+      "tables": [],
+      "rpcs": []
+    }
+  ]
+}

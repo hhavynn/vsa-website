@@ -12,6 +12,8 @@ Vietnamese Student Association (VSA) at UCSD member website. This is a productio
 
 **Deployed to:** Vercel (zero-config CRA build, SPA fallback in `vercel.json`)
 
+**Cheap ownership lookup:** `docs/ai/repo-map.json` (run `npm run repo-map:check` to verify freshness); confirm candidates against Graphify, playbooks, and real source.
+
 ---
 
 ## Current project phase
