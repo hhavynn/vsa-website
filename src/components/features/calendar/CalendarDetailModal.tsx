@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CalendarItem, compareCalendarItems, formatDayGroupLabel } from '../../../utils/calendar';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { getDetailLinkLabel, getItemColor } from './calendarTheme';
@@ -26,11 +26,19 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
     <>
       {image && (
         <div className="scrapbook-photo -rotate-1 overflow-hidden">
-          <img
-            src={getSupabaseImageUrl(image, { width: 800 }) || image}
+          <OptimizedImage
+            src={image}
             alt=""
+            width={800}
+            height={450}
+            sizes="(min-width: 640px) 520px, calc(100vw - 40px)"
+            widths={[360, 520, 800]}
             className="max-h-56 w-full object-cover"
-            loading="lazy"
+            fallback={
+              <div className="flex min-h-28 items-center justify-center bg-[var(--surface2)] px-4 text-center font-sans text-xs text-[var(--text3)]">
+                Event image unavailable
+              </div>
+            }
           />
         </div>
       )}
