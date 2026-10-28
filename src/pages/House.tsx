@@ -1,5 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { readableInk } from '../lib/readableInk';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { PageTitle } from '../components/common/PageTitle';
@@ -9,7 +8,6 @@ import { ProgramContentCallout } from '../components/features/program/ProgramCon
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../constants/houses';
 import { houseEventsRepository } from '../data/repos/houseEvents';
-import { leaderboardRepository } from '../data/repos/leaderboard';
 import { getAcademicTermMeta, formatAcademicYear, parseYearSlug } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
 import { formatEventTimeRange } from '../lib/eventTime';
@@ -18,9 +16,8 @@ import { useAcademicTerms } from '../hooks/useAcademicTerms';
 import { usePublishedHouseAssets } from '../hooks/useHouseAssets';
 import { useProgramContent } from '../hooks/useProgramContent';
 import { OptimizedImage } from '../components/common/OptimizedImage';
-import { HouseEvent, HousePageAsset, HouseRecentActivity, HouseYearlyPoints } from '../types';
+import { HouseEvent, HousePageAsset } from '../types';
 import { getHousePagePath, houseSlugFromKey } from '../utils/houseSlug';
-import { getPublicHousePoints, isHousePointOverrideActive } from '../utils/housePublicPointOverrides';
 import { getLegacyHouseArchiveByYear, getLegacyHouseArchiveYears, getVerifiedLegacyHouseYears } from '../data/legacyHouseArchive';
 import { HouseYearSelector } from '../components/features/house/HouseYearSelector';
 
@@ -28,7 +25,7 @@ import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ProfileSpotlightCard } from '../components/ui/ProfileSpotlightCard';
 import { RelatedLinks } from '../components/common/RelatedLinks';
-import { houseRelatedLinks, POINTS_HELP_ANCHOR } from '../lib/relatedLinks';
+import { houseRelatedLinks } from '../lib/relatedLinks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HOUSE PERSONALITY — Flavor copy per house. Update each cycle as needed.
@@ -115,173 +112,12 @@ function getHouseColor(house: string, asset?: HousePageAsset | null, accentColor
   return accentColor || asset?.accent_color || HOUSE_COLORS[house as HouseName] || 'var(--brand)';
 }
 
-interface AutoBadges {
-  mostEvents: HouseYearlyPoints | null;
-  mostMembers: HouseYearlyPoints | null;
-  mostEfficient: HouseYearlyPoints | null;
-}
-
-function computeBadges(standings: HouseYearlyPoints[]): AutoBadges {
-  if (standings.length === 0) return { mostEvents: null, mostMembers: null, mostEfficient: null };
-  const withPoints = standings.filter((s) => s.total_points > 0);
-  if (withPoints.length === 0) return { mostEvents: null, mostMembers: null, mostEfficient: null };
-
-  const mostEvents = [...withPoints].sort((a, b) => b.events_attended - a.events_attended)[0] ?? null;
-  const mostMembers = [...withPoints].sort((a, b) => b.unique_members - a.unique_members)[0] ?? null;
-  const withEfficiency = withPoints.filter((s) => (s.average_points_per_member ?? 0) > 0);
-  const mostEfficient = withEfficiency.length > 0
-    ? [...withEfficiency].sort((a, b) => (b.average_points_per_member ?? 0) - (a.average_points_per_member ?? 0))[0]
-    : null;
-
-  return { mostEvents, mostMembers, mostEfficient };
-}
-
-const RANK_MEDALS = ['🥇', '🥈', '🥉', '4️⃣'];
-
 function getTodayDateOnly(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function HousePulseCard({
-  title,
-  children,
-  footer,
-}: {
-  title: string;
-  children: ReactNode;
-  footer?: ReactNode;
-}) {
-  return (
-    <div className="scrapbook-paper flex min-h-[280px] flex-col p-5 sm:p-6">
-      <h3 className="program-eyebrow mb-3">{title}</h3>
-      <div className="min-h-0 flex-1">{children}</div>
-      {footer && <div className="mt-5 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>{footer}</div>}
-    </div>
-  );
-}
-
-function PulseLoading() {
-  return (
-    <div className="space-y-3 py-2" aria-hidden>
-      <div className="h-4 w-24 rounded bg-[var(--color-surface2)]" />
-      <div className="h-5 w-4/5 rounded bg-[var(--color-surface2)]" />
-      <div className="h-4 w-2/3 rounded bg-[var(--color-surface2)]" />
-    </div>
-  );
-}
-
-function PulseEmpty({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-full min-h-[150px] items-center">
-      <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-        {children}
-      </p>
-    </div>
-  );
-}
-
-function RecentActivityPulse({
-  activity,
-  loading,
-  assetsByHouse,
-}: {
-  activity: HouseRecentActivity[];
-  loading: boolean;
-  assetsByHouse: Map<string, HousePageAsset>;
-}) {
-  return (
-    <HousePulseCard
-      title="Recent activity"
-      footer={<Link to="/leaderboard?view=houses" className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400">Full leaderboard →</Link>}
-    >
-      {loading ? (
-        <PulseLoading />
-      ) : activity.length === 0 ? (
-        <PulseEmpty>House activity will show up here after events are processed.</PulseEmpty>
-      ) : (
-        <div className="space-y-3">
-          {activity.slice(0, 5).map((item) => {
-            const asset = assetsByHouse.get(item.house);
-            const color = getHouseColor(item.house, asset, item.accent_color);
-            const label = getHouseLabel(item.house, asset, item.display_name);
-            const emoji = HOUSE_EMOJI[item.house as HouseName] ?? '';
-            return (
-              <div key={`${item.event_id}-${item.house}`} className="flex gap-3 rounded-lg border p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)' }}>
-                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                <div className="min-w-0 flex-1">
-                  <p className="font-sans text-[13px] font-semibold leading-snug" style={{ color: 'var(--color-text)' }}>
-                    {emoji} {label} earned {item.total_points.toLocaleString()} points at {item.event_name}.
-                  </p>
-                  <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                    {formatDateOnly(item.event_date, 'MMM d')}
-                    {item.contributing_members > 0 ? ` / ${item.contributing_members} members` : ''}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </HousePulseCard>
-  );
-}
-
-function LatestShowingPulse({
-  activity,
-  loading,
-  assetsByHouse,
-}: {
-  activity: HouseRecentActivity[];
-  loading: boolean;
-  assetsByHouse: Map<string, HousePageAsset>;
-}) {
-  const latestEventId = activity[0]?.event_id ?? null;
-  const latestShowing = latestEventId
-    ? activity.filter((item) => item.event_id === latestEventId).sort((a, b) => b.contributing_members - a.contributing_members || b.total_points - a.total_points)
-    : [];
-  const eventName = latestShowing[0]?.event_name ?? '';
-  const eventDate = latestShowing[0]?.event_date ?? '';
-
-  return (
-    <HousePulseCard title="Latest showing">
-      {loading ? (
-        <PulseLoading />
-      ) : latestShowing.length === 0 ? (
-        <PulseEmpty>Streaks will appear once Houses have a few events logged.</PulseEmpty>
-      ) : (
-        <div>
-          <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-            {eventName}
-            {eventDate ? ` / ${formatDateOnly(eventDate, 'MMM d')}` : ''}
-          </p>
-          <div className="mt-4 space-y-2">
-            {latestShowing.slice(0, 4).map((item) => {
-              const asset = assetsByHouse.get(item.house);
-              const color = getHouseColor(item.house, asset, item.accent_color);
-              const label = getHouseLabel(item.house, asset, item.display_name);
-              return (
-                <div key={`${item.event_id}-${item.house}-showing`} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--color-border)' }}>
-                  <span className="truncate font-sans text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {label}
-                  </span>
-                  <span className="shrink-0 font-mono text-[11px]" style={{ color }}>
-                    {item.contributing_members} members / {item.total_points} pts
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-4 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-            This uses the latest processed House event activity.
-          </p>
-        </div>
-      )}
-    </HousePulseCard>
-  );
 }
 
 function HouseLegacyPreview() {
@@ -351,43 +187,10 @@ function HouseLegacyPreview() {
   );
 }
 
-function HousePulseSection({
-  recentActivity,
-  recentActivityLoading,
-  assetsByHouse,
-}: {
-  recentActivity: HouseRecentActivity[];
-  recentActivityLoading: boolean;
-  assetsByHouse: Map<string, HousePageAsset>;
-}) {
-  return (
-    <section id="activity" className="program-section scroll-mt-24" aria-labelledby="house-pulse-title">
-      <div className="program-section-inner">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 id="house-pulse-title" className="font-serif text-4xl leading-none tracking-[-0.03em] sm:text-5xl" style={{ color: 'var(--color-text)' }}>
-              House Pulse
-            </h2>
-          </div>
-          <p className="max-w-sm font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
-            See what each House has been up to lately.
-          </p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <RecentActivityPulse activity={recentActivity} loading={recentActivityLoading} assetsByHouse={assetsByHouse} />
-          <LatestShowingPulse activity={recentActivity} loading={recentActivityLoading} assetsByHouse={assetsByHouse} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function HouseAnchorNav() {
   const items = [
     { href: '#houses', label: 'Houses' },
     { href: '#standings', label: 'Standings' },
-    { href: '#activity', label: 'Activity' },
     { href: '#archive', label: 'Archive' },
   ];
 
@@ -486,10 +289,6 @@ export function House() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { terms } = useAcademicTerms();
   const { content: cycleContent } = useProgramContent('house');
-  const [standings, setStandings] = useState<HouseYearlyPoints[]>([]);
-  const [standingsLoading, setStandingsLoading] = useState(true);
-  const [recentActivity, setRecentActivity] = useState<HouseRecentActivity[]>([]);
-  const [recentActivityLoading, setRecentActivityLoading] = useState(true);
   const [isDegradedMode, setIsDegradedMode] = useState(false);
   const today = getTodayDateOnly();
 
@@ -546,95 +345,7 @@ export function House() {
         ? (legacyArchiveEntry?.houses ?? []).map((house) => ({ house, asset: undefined }))
         : [];
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      if (invalidYearSlug || !activeYear) {
-        setStandingsLoading(false);
-        setRecentActivityLoading(false);
-        return;
-      }
-      setStandingsLoading(true);
-      setRecentActivityLoading(true);
-      
-      try {
-        const [rawStandings, activityData] = await Promise.all([
-          leaderboardRepository.getYearlyHouseLeaderboard(activeYear),
-          leaderboardRepository.getRecentHouseActivity(activeYear, 6)
-        ]);
-        
-        // Apply official public point overrides for 2025-2026
-        const standingsData = rawStandings.map((s) => ({
-          ...s,
-          total_points: getPublicHousePoints({
-            houseKey: s.house,
-            houseName: s.display_name,
-            academicYearStart: s.academic_year_start,
-            calculatedPoints: s.total_points,
-          }),
-        })).sort((a, b) => b.total_points - a.total_points);
-
-        if (isMounted) {
-          setStandings(standingsData);
-          setRecentActivity(activityData);
-        }
-      } catch (err) {
-        console.error('Error loading house data:', err);
-        if (isMounted) {
-          setStandings([]);
-          setRecentActivity([]);
-          if (isSupabaseUnavailable(err)) {
-            setIsDegradedMode(true);
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setStandingsLoading(false);
-          setRecentActivityLoading(false);
-        }
-      }
-    }
-    loadData();
-    return () => { isMounted = false; };
-  }, [activeYear, invalidYearSlug]);
-
-  // When the DB returns no calculated standings for an override year, inject
-  // official placeholder rows keyed to the published house assets so that
-  // getPublicHousePoints can fill in the correct totals.
-  const displayStandings = useMemo<HouseYearlyPoints[]>(() => {
-    if (standingsLoading || standings.length > 0) return standings;
-    if (!isHousePointOverrideActive(activeYear)) return standings;
-    const fallback = houseAssets.flatMap((asset) => {
-      const pts = getPublicHousePoints({
-        houseKey: asset.house_key ?? asset.house,
-        houseName: asset.house,
-        academicYearStart: activeYear,
-        calculatedPoints: 0,
-      });
-      if (!pts) return [];
-      return [{
-        house: asset.house_key ?? asset.house,
-        house_profile_id: asset.id,
-        display_name: asset.display_name ?? asset.house,
-        image_url: asset.image_url ?? null,
-        accent_color: asset.accent_color ?? null,
-        academic_year_start: activeYear!,
-        academic_year_end: (activeYear ?? 0) + 1,
-        total_points: pts,
-        events_attended: 0,
-        unique_events: 0,
-        unique_members: 0,
-        average_points_per_member: null,
-        latest_activity_at: null,
-      } as HouseYearlyPoints];
-    }).sort((a, b) => b.total_points - a.total_points);
-    return fallback.length > 0 ? fallback : standings;
-  }, [standings, standingsLoading, houseAssets, activeYear]);
-
-  const hasLiveStandings = displayStandings.length > 0 && displayStandings.some((s) => s.total_points > 0);
-  const leader = hasLiveStandings ? displayStandings[0] : null;
-  const maxPoints = hasLiveStandings ? displayStandings[0].total_points : 1;
-  const badges = computeBadges(displayStandings);
+  // Live House standings are private. Never request aggregates from a public page.
   const summerBreak = isSummerBreak();
   const summerHouseMessage = getSummerBreakMessage('house');
 
@@ -669,7 +380,7 @@ export function House() {
           <EditorialHero
             eyebrow="Not announced yet"
             title={<>House <EditorialHeroScript><span className="whitespace-nowrap">{activeYearLabel}</span></EditorialHeroScript></>}
-            meta={`${activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, standings, and House Parent updates.`}
+            meta={`${activeYearLabel} Houses have not been announced yet. Check back after House Reveal for the official theme, assignments, and House Parent updates.`}
             watermark="houses"
             actions={<span className="scrapbook-sticker scrapbook-sticker-gold">Check back after House Reveal</span>}
           />
@@ -721,7 +432,7 @@ export function House() {
           eyebrow={isArchive ? `Archived / ${activeYearLabel}` : 'House Board'}
           title={<>House <EditorialHeroScript>{isArchive ? 'Archive' : 'Program'}</EditorialHeroScript></>}
           meta={isArchive
-            ? `Exploring the memories, standings, and houses from the ${activeYearLabel} school year.`
+            ? `Exploring the House memories and communities from the ${activeYearLabel} school year.`
             : 'Year-long community competition inside VSA at UCSD. Get sorted, meet your house, show up for qualifying events, and help your team climb the board.'}
           watermark="houses"
           actions={
@@ -734,11 +445,7 @@ export function House() {
               {activeYearLabel && <span className="scrapbook-sticker scrapbook-sticker-gold">{activeYearLabel}</span>}
               {summerBreak && !isArchive ? (
                 <span className="scrapbook-sticker scrapbook-sticker-gold">Summer break</span>
-              ) : leader && (
-                <span className="scrapbook-sticker scrapbook-sticker-coral">
-                  {HOUSE_EMOJI[leader.house as HouseName] ?? '🏆'} {getHouseLabel(leader.house, houseAssetsByName.get(leader.house), leader.display_name)} leading
-                </span>
-              )}
+              ) : null}
             </>
           }
         />
@@ -836,10 +543,8 @@ export function House() {
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {displayedHouses.map(({ house, asset }, index) => {
                 const color = getHouseColor(house, asset);
-                const standing = standings.find((s) => s.house === house);
-                const rank = standing && hasLiveStandings ? standings.indexOf(standing) + 1 : null;
                 const emoji = asset?.emoji || HOUSE_EMOJI[house as HouseName] || '';
-                const label = getHouseLabel(house, asset, standing?.display_name);
+                const label = getHouseLabel(house, asset);
                 const imageUrl = asset?.image_thumbnail_url || asset?.image_url;
                 const tagline = asset?.description || HOUSE_TAGLINES[house as HouseName] || 'Show up, earn points, and help your house climb the board.';
 
@@ -892,25 +597,6 @@ export function House() {
                           />
                         ) : null}
 
-                        {/* Rank badge overlay */}
-                        {rank !== null && !isArchive && (
-                          <div
-                            className="absolute top-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-black shadow-md"
-                            style={{ background: color, color: readableInk(color) }}
-                          >
-                            #{rank}
-                          </div>
-                        )}
-
-                        {/* Points overlay */}
-                        {standing && standing.total_points > 0 && !isArchive && (
-                          <div className="absolute bottom-2.5 right-2.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-right backdrop-blur-sm">
-                            <div className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/60">house pts</div>
-                            <div className="font-mono text-lg font-black leading-none text-white">
-                              {standing.total_points.toLocaleString()}
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Card body */}
@@ -924,46 +610,6 @@ export function House() {
                           {tagline}
                         </p>
 
-                        {/* Live mini stats */}
-                        {!isArchive && (
-                          <>
-                            {standing && standing.total_points > 0 ? (
-                              <div className="mt-3 flex gap-4 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                                <div className="text-center">
-                                  <div className="font-mono text-[14px] font-black" style={{ color }}>{standing.unique_members}</div>
-                                  <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>members</div>
-                                </div>
-                                {standing.average_points_per_member !== null && (
-                                  <div className="text-center">
-                                    <div className="font-mono text-[14px] font-black" style={{ color }}>
-                                      {standing.average_points_per_member.toFixed(1)}
-                                    </div>
-                                    <div className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>avg/member</div>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="mt-3 border-t pt-3" style={{ borderColor: `${color}33` }}>
-                                <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--color-text3)' }}>
-                                  Season not yet started
-                                </p>
-                              </div>
-                            )}
-
-                            {/* House color bar */}
-                            <div className="mt-3 h-1.5 rounded-full" style={{ background: `${color}55` }}>
-                              {hasLiveStandings && standing && (
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{
-                                    width: `${Math.round((standing.total_points / maxPoints) * 100)}%`,
-                                    background: color,
-                                  }}
-                                />
-                              )}
-                            </div>
-                          </>
-                        )}
                         <span
                           className="mt-4 inline-flex font-mono text-[10px] font-bold uppercase tracking-wider transition-opacity group-hover:opacity-80"
                           style={{ color }}
@@ -1024,174 +670,18 @@ export function House() {
           </section>
         )}
 
-        {/* ── Live Standings ── */}
-        {!isArchive && (
-          <section id="standings" className="program-section scroll-mt-24">
-            <div className="program-section-inner">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="program-eyebrow mb-1">
-                    Live Scoreboard{activeYearLabel ? ` / ${activeYearLabel}` : ''}
-                  </div>
-                  <p className="max-w-xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                    House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <span className="hidden font-sans text-[10px] font-medium opacity-60 sm:inline" style={{ color: 'var(--color-text)' }}>
-                    {isHousePointOverrideActive(activeYear) 
-                      ? "Totals reflect official public count for the year" 
-                      : "House points = qualifying event attendance count"}
-                  </span>
-                  <Link
-                    to={isArchive ? `/leaderboard?year=${activeYear}` : "/leaderboard"}
-                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
-                  >
-                    Full Leaderboard →
-                  </Link>
-                  <Link
-                    to="/leaderboard?view=houses"
-                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
-                  >
-                    Full member rankings →
-                  </Link>
-                  <Link
-                    to={`/points#${POINTS_HELP_ANCHOR}`}
-                    className="inline-flex touch:min-h-11 items-center font-sans text-xs font-semibold text-brand-600 dark:text-brand-400"
-                  >
-                    How points work →
-                  </Link>
-                </div>
-              </div>
-
-              <div className="program-scoreboard-card">
-                {standingsLoading ? (
-                  <div className="py-10 text-center font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                    Loading standings...
-                  </div>
-                ) : displayStandings.length === 0 ? (
-                  <div className="scrapbook-empty mx-4 my-4 font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                    {showSummerTransition ? (
-                      <div className="mx-auto max-w-xl space-y-2 text-center">
-                        <p className="font-serif text-2xl leading-tight" style={{ color: 'var(--color-text)' }}>
-                          {summerHouseMessage.title}
-                        </p>
-                        <p className="font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                          New standings will appear once fall events start.
-                        </p>
-                      </div>
-                    ) : houseAssets.length > 0 ? (
-                      <>
-                        <p style={{ color: 'var(--color-text2)' }}>
-                          House profiles exist, but no members have been assigned yet.
-                        </p>
-                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                          House standings are still being updated for this year. Check back soon.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p style={{ color: 'var(--color-text2)' }}>
-                          House standings are still being updated for this year. Check back soon.
-                        </p>
-                        {activeYearLabel && (
-                          <p className="mt-1 text-xs" style={{ color: 'var(--color-text3)' }}>
-                            No house points recorded for {activeYearLabel}.
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    {summerBreak && !isArchive && (
-                      <div className="border-b px-4 py-3" style={{ borderColor: 'var(--color-border)' }}>
-                        <p className="font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text3)' }}>
-                          Summer note: House activity is paused until the next school year.
-                        </p>
-                      </div>
-                    )}
-                    {displayStandings.map((standing, index) => {
-                      const asset = houseAssetsByName.get(standing.house);
-                      const houseKey = standing.house as HouseName;
-                      const color = getHouseColor(standing.house, asset, standing.accent_color);
-                      const label = getHouseLabel(standing.house, asset, standing.display_name);
-                      const emoji = HOUSE_EMOJI[houseKey] ?? '';
-                      const pct = maxPoints > 0 ? Math.round((standing.total_points / maxPoints) * 100) : 0;
-                      const houseBadges: string[] = [];
-                      if (badges.mostEvents?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Events');
-                      if (badges.mostMembers?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Members');
-                      if (badges.mostEfficient?.house === standing.house && standing.total_points > 0) houseBadges.push('Most Efficient');
-
-                      return (
-                        <div
-                          key={standing.house_profile_id ?? standing.house}
-                          className="group border-b last:border-0"
-                          style={{ borderColor: 'var(--color-border)' }}
-                        >
-                          <div className="flex items-center gap-3 px-4 py-4 sm:gap-4">
-                            {/* Rank medal */}
-                            <div className="flex w-10 shrink-0 items-center justify-center">
-                              <span className="text-xl" title={`#${index + 1}`}>{RANK_MEDALS[index] ?? `#${index + 1}`}</span>
-                            </div>
-
-                            {/* House info + progress */}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-sans text-sm font-bold" style={{ color: 'var(--color-text)' }}>
-                                  {emoji} {label}
-                                </span>
-                                {houseBadges.map((badge) => (
-                                  <span
-                                    key={badge}
-                                    className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white"
-                                    style={{ background: color }}
-                                  >
-                                    {badge}
-                                  </span>
-                                ))}
-                              </div>
-                              <div className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                                {standing.unique_members} members · {standing.events_attended} check-ins
-                              </div>
-                              {/* Progress bar */}
-                              <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'var(--color-border)' }}>
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{ width: `${pct}%`, background: color }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Points */}
-                            <div className="shrink-0 text-right">
-                              <div className="font-serif leading-none" style={{ fontSize: 26, color: 'var(--color-text)' }}>
-                                {standing.total_points.toLocaleString()}
-                              </div>
-                              <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider" style={{ color: 'var(--color-text3)' }}>
-                                pts
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
+        <section id="standings" className="program-section scroll-mt-24">
+          <div className="program-section-inner">
+            <div className="scrapbook-paper p-6 sm:p-8">
+              <h2 className="font-serif text-2xl font-bold" style={{ color: 'var(--color-text)' }}>House standings are announced at GBMs</h2>
+              <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+                House competition points are still tracked privately. Official standings are announced by House leadership during general body meetings.
+              </p>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        {!isArchive && (
-          <HousePulseSection
-            recentActivity={recentActivity}
-            recentActivityLoading={recentActivityLoading}
-            assetsByHouse={houseAssetsByName}
-          />
-        )}
-
-        {/* ── Archive Events ── */}
+        {/* ── Archive Events ── */}        {/* ── Archive Events ── */}
         {isArchive && (archiveEvents.length > 0 || isPastYear || archiveEventsLoading) && (
           <section className="program-section">
             <div className="program-section-inner">
