@@ -49,6 +49,16 @@ all-day format with an exclusive end date (`buildGcalAllDayDatesFromDateOnly`).
 - Optional admin fields (`host_house`, `audience`, ACE/Intern tags on
   `events`) if programming wants first-party ACE/Intern calendar items.
 
+## Upcoming events on /events and Home (#634)
+
+`src/lib/upcomingEvents.ts` merges regular events and published House events into one list, ordered by Los Angeles start time with the same lifecycle rules as regular events (ongoing kept, ended dropped, overnight handled; ties put the all-VSA event first; an event without a start time follows that day's timed events). Each House event keeps its own id, is listed once even when several Houses host it, shows every host, and links to its card on its year's House page.
+
+- `/events` lists both under Next Up / All Upcoming. **House Events** is a filter (`?type=house`), with **Hosted by** (`&host=<slug>`) when more than one House has events; both stay in the URL. House events are not in the Memory Wall.
+- Home's Next Event card shows the next House event first when it happens before the next all-VSA event, otherwise below it, linking to the event's card.
+- If House events cannot load, regular events still show, with a notice.
+- House events never award VSA attendance points; the page says so.
+- Fixed: both pages called the House preview read with the row limit in the academic-year slot, so no House event ever appeared.
+
 ## Files
 
 - `src/pages/Calendar.tsx` — page orchestration
