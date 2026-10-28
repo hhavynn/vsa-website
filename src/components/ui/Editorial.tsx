@@ -88,7 +88,7 @@ export function SectionHeading({
         {accent && (
           <>
             {' '}
-            <em className={cn('font-normal', inverse ? 'text-[#f0ccd9]' : 'text-ed-accent')}>{accent}</em>
+            <em className={cn('font-normal', inverse ? 'text-figma-pink' : 'text-ed-accent')}>{accent}</em>
           </>
         )}
       </Tag>

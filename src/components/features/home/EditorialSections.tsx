@@ -102,7 +102,7 @@ export function EditorialHero({
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6 lg:ml-[5.5rem]">
             <Link
               to="/get-involved"
-              className="inline-flex min-h-12 items-center gap-10 bg-white px-5 py-3 text-[13px] font-semibold text-[#28354d] shadow-[0_8px_30px_rgba(21,34,74,0.18)] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transform-none"
+              className="inline-flex min-h-12 items-center gap-10 bg-white px-5 py-3 text-[13px] font-semibold text-figma-ink shadow-[0_8px_30px_rgba(21,34,74,0.18)] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transform-none"
             >
               Join VSA <Arrow />
             </Link>
@@ -430,23 +430,23 @@ export function EditorialAbout() {
         </span>
       </div>
       <div className="relative z-10 min-w-0">
-        <Eyebrow className="text-[#28354d]">About VSA</Eyebrow>
+        <Eyebrow className="text-figma-ink">About VSA</Eyebrow>
         <h2
           id="about-vsa-title"
-          className={`${editorialFont} my-5 text-[clamp(3.25rem,7vw,7.5rem)] leading-[0.86] text-[#28354d]`}
+          className={`${editorialFont} my-5 text-[clamp(3.25rem,7vw,7.5rem)] leading-[0.86] text-figma-ink`}
         >
           Vietnamese Student
           <br className="hidden sm:block" /> Association{" "}
-          <em className="font-normal text-[#6c628d]">at UCSD</em>
+          <em className="font-normal text-figma-accent">at UCSD</em>
         </h2>
-        <p className="my-8 max-w-[42rem] text-[15px] leading-[1.8] text-[#28354d] sm:my-10">
+        <p className="my-8 max-w-[42rem] text-[15px] leading-[1.8] text-figma-ink sm:my-10">
           VSA at UC San Diego is a cultural and social student organization
           established in 1977. Our programming includes general body meetings,
           cultural events, community programs, and academic support.
         </p>
         <Link
           to="/get-involved"
-          className="inline-flex min-h-11 items-center gap-4 border-b border-[#28354d] text-[13px] font-semibold text-[#28354d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#28354d]"
+          className="inline-flex min-h-11 items-center gap-4 border-b border-figma-ink text-[13px] font-semibold text-figma-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-figma-ink"
         >
           Learn about VSA <Arrow />
         </Link>

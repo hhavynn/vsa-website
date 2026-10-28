@@ -54,6 +54,13 @@ module.exports = {
           accent: 'var(--ed-accent, #6c628d)',
           'on-ink': 'var(--ed-on-ink, #ffffff)',
         },
+        // Fixed Figma swatches for surfaces that stay light in both themes
+        // (homepage About band, hero CTA, gallery accent on the blue band).
+        figma: {
+          ink:    '#28354d',
+          accent: '#6c628d',
+          pink:   '#f0ccd9',
+        },
       },
 
       // ─── Typography ───────────────────────────────────────────────────────
