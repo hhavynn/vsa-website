@@ -8,11 +8,11 @@ const mockUpsert = jest.fn();
 jest.mock('../../context/SiteSettingsContext', () => ({
   useSiteSettings: () => ({
     settings: { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' },
-    mockRefresh,
+    refresh: mockRefresh,
   }),
 }));
 jest.mock('../../lib/supabase', () => ({
-  supabase: { from: () => ({ mockUpsert }) },
+  supabase: { from: () => ({ upsert: mockUpsert }) },
 }));
 jest.mock('../../components/features/admin/ImageDropzone', () => ({
   ImageDropzone: () => <div data-testid="mock-logo-upload" />,
