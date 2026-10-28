@@ -57,6 +57,16 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
     expect(aiFeedbackRepository.markResolved).not.toHaveBeenCalled();
   });
 
+  it('keeps an unsaved note when a filter reloads the same feedback', async () => {
+    renderPage();
+    const note = await screen.findByRole('textbox', { name: 'Internal review note' });
+    fireEvent.change(note, { target: { value: 'Keep this draft while filtering' } });
+    fireEvent.change(screen.getByLabelText('Rating'), { target: { value: 'not_helpful' } });
+    await waitFor(() => expect(list).toHaveBeenCalledWith({ status: 'unresolved', rating: 'not_helpful' }));
+    expect(await screen.findByRole('textbox', { name: 'Internal review note' })).toHaveValue('Keep this draft while filtering');
+    expect(screen.getByRole('button', { name: /Save review note/i })).toBeEnabled();
+  });
+
   it('keeps the note editable and exposes a retry message when saving fails', async () => {
     update.mockRejectedValueOnce(new Error('simulated server error'));
     renderPage();
