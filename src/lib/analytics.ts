@@ -44,9 +44,44 @@ export const initGA = () => {
   }
 };
 
+// Diagnostics are never considered essential tracking. Only the existing
+// AnalyticsConsentProvider / RouteTracker may enable them, after opt-in.
+let diagnosticsConsented = false;
+export const setDiagnosticsConsent = (granted: boolean) => {
+  diagnosticsConsented = granted && Boolean(GA_ID);
+};
+
+function maySendDiagnostic(): boolean {
+  return Boolean(GA_ID && diagnosticsConsented && typeof window !== 'undefined' && window.gtag);
+}
+
+/** Report an exception category, NEVER the Error, stack, URL or member details. */
+export const trackSafeDiagnosticError = (kind: 'render_failure' | 'chunk_load') => {
+  if (!maySendDiagnostic()) return;
+  window.gtag('event', 'exception', {
+    description: kind,
+    page_area: window.location.pathname.startsWith('/admin') ? 'admin' : 'public',
+    fatal: true,
+    send_to: GA_ID,
+  });
+};
+
+const VITAL_NAMES = new Set(['CLS', 'FCP', 'INP', 'LCP', 'TTFB']);
+
+/** The web-vitals ID, navigation URL and attribution are deliberately omitted. */
+export const trackSafeWebVital = (metric: { name: string; value: number }) => {
+  if (!maySendDiagnostic() || !VITAL_NAMES.has(metric.name) || !Number.isFinite(metric.value) || metric.value < 0) return;
+  window.gtag('event', 'web_vital', {
+    metric_name: metric.name,
+    metric_value: Math.round(metric.value * 1000) / 1000,
+    send_to: GA_ID,
+  });
+};
+
 export const isAnalyticsConfigured = () => Boolean(GA_ID);
 
 export const disableGA = () => {
+  diagnosticsConsented = false;
   if (!GA_ID || typeof window === 'undefined') return;
   const disableKey = `ga-disable-${GA_ID}`;
   (window as unknown as Record<string, boolean>)[disableKey] = true;
