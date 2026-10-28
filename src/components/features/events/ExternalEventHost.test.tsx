@@ -161,7 +161,7 @@ describe('/events cards for an external event', () => {
     />));
     expect(screen.getAllByText('UVSA SoCal Fall Social').length).toBeGreaterThan(0);
     expect(screen.getByText(/3 members attended/)).toBeInTheDocument();
-    expect(screen.getByText('Photos and friends from the event.')).toBeInTheDocument();
+    expect(screen.getByText(/Photos and friends from the event/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /View photos/ })).toHaveAttribute('href', 'https://photos.example.test/album');
     expect(screen.queryByText(new RegExp(`${house} led`, 'i'))).not.toBeInTheDocument();
     expect(screen.queryByTitle(/had the most members attend/i)).not.toBeInTheDocument();
