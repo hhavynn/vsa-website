@@ -17,17 +17,24 @@ jest.mock('../../../data/repos/houseRoster', () => ({
   ...jest.requireActual('../../../data/repos/houseRoster'),
   houseRosterRepository: { getRoster: jest.fn(), getMemberAttendance: jest.fn() },
 }));
+jest.mock('../../../lib/housePlacementExport', () => ({ downloadCsv: jest.fn() }));
+jest.mock('../../../data/repos/houseMemberships', () => ({ houseMembershipsRepository: { getPublicHousesByMemberId: jest.fn() } }));
 jest.mock('../../../lib/supabase', () => ({
   supabase: { from: jest.fn(() => { throw new Error('components must not query Supabase directly'); }) },
 }));
 
 const repo = houseRosterRepository as jest.Mocked<typeof houseRosterRepository>;
+const { downloadCsv } = jest.requireMock('../../../lib/housePlacementExport');
+const { houseMembershipsRepository } = jest.requireMock('../../../data/repos/houseMemberships');
+const publicHouse = (houseProfileId: string) => ({ houseProfileId, houseKey: null, label: 'x', accentColor: null, academicYearStart: 2026 });
 const member = (extra: Partial<RosterMember>): RosterMember => ({
   member_id: 'm', first_name: 'Fictional', last_name: 'Person', start_date: '2026-09-20', end_date: null, stints: 1, joined_in_period: false,
   other_house_memberships: 0, credited_attendance: 0, last_credited_at: null, events_attended: 0, ...extra,
 });
 
 beforeEach(() => {
+  // Ana and Bao are publicly revealed in this House; Cam has transferred out.
+  houseMembershipsRepository.getPublicHousesByMemberId.mockResolvedValue(new Map([['a', publicHouse('hp-r')], ['b', publicHouse('hp-r')], ['c', publicHouse('hp-other')]]));
   repo.getRoster.mockResolvedValue({
     house: { id: 'hp-r', displayName: 'Fictional Rarity', isActive: true, academicYearStart: 2026 },
     termLabel: null,
@@ -119,6 +126,16 @@ it('says plainly when the migration is not applied', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('20261028075801');
 });
 
+it('keeps House Parent exports disabled until CRC/cabinet approve the fields', async () => {
+  renderPanel();
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(/Disabled until CRC\/cabinet approve the field list in writing/);
+  expect(houseMembershipsRepository.getPublicHousesByMemberId).not.toHaveBeenCalled();
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  expect(downloadCsv).not.toHaveBeenCalled();
+});
+
 it('says plainly when the House profile is not public, so zeros are not read as absence', async () => {
   repo.getRoster.mockResolvedValue({
     house: { id: 'hp-p', displayName: 'Fictional Pinkie', isActive: false, academicYearStart: 2026 },
@@ -129,6 +146,8 @@ it('says plainly when the House profile is not public, so zeros are not read as 
   renderPanel();
   expect(await screen.findByRole('note')).toHaveTextContent(/zeros below do not mean nobody came/);
   expect(screen.queryByRole('button', { name: /No House-credited attendance yet/ })).not.toBeInTheDocument();
+  // Nothing goes to House Parents before the Reveal.
+  expect(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' })).toBeDisabled();
 });
 
 it('shows the names to copy by hand when the clipboard is blocked', async () => {
@@ -146,4 +165,21 @@ it('shows the UTC date an evening event was counted on', async () => {
   renderPanel();
   await userEvent.click(await screen.findByRole('button', { name: 'Events for Ana Example' }));
   expect(await screen.findByText(/Oct 15 \(counted as Oct 16, by UTC date\)/)).toBeInTheDocument();
+});
+
+it('does not bypass governance when no House assignments are revealed', async () => {
+  houseMembershipsRepository.getPublicHousesByMemberId.mockResolvedValue(new Map());
+  renderPanel();
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(/Disabled until CRC\/cabinet approve/);
+  expect(downloadCsv).not.toHaveBeenCalled();
+});
+
+it('never opens a review/download dialog while sharing approval is pending', async () => {
+  renderPanel();
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  expect(button).toBeDisabled();
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  expect(downloadCsv).not.toHaveBeenCalled();
 });

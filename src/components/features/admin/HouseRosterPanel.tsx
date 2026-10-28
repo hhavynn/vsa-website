@@ -7,6 +7,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AttendanceReason, HOUSE_ROSTER_UNAVAILABLE, RosterMember, houseRosterRepository } from '../../../data/repos/houseRoster';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HOUSE_PARENT_SHARE_APPROVED, HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from '../../../lib/houseParentShare';
+import { downloadCsv } from '../../../lib/housePlacementExport';
+import { houseMembershipsRepository } from '../../../data/repos/houseMemberships';
+import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 import { cn } from '../../../lib/utils';
 
 const btn = 'min-h-[36px] touch:min-h-11 rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50';
@@ -77,6 +82,7 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
   const [open, setOpen] = useState<string | null>(null);
   const [invite, setInvite] = useState<Set<string>>(() => new Set());
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   // Opening a roster below the cards moves focus there, so keyboard and
@@ -87,6 +93,22 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
   }, []);
 
   const members = useMemo(() => roster.data?.members ?? [], [roster.data]);
+  // The share copy follows the public Reveal boundary (published House
+  // assignments, public_house_memberships): only members publicly in this
+  // House today, never unrevealed or transferred-out members.
+  const revealed = useQuery(
+    ['admin', 'house-parent-share-revealed', roster.data?.house.academicYearStart],
+    () => houseMembershipsRepository.getPublicHousesByMemberId(roster.data!.house.academicYearStart, getLosAngelesDateOnly()),
+    { enabled: HOUSE_PARENT_SHARE_APPROVED && !!roster.data, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
+  );
+  const revealedIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!revealed.data || !roster.data) return ids;
+    for (const member of members) {
+      if (revealed.data.get(member.member_id)?.houseProfileId === roster.data.house.id) ids.add(member.member_id);
+    }
+    return ids;
+  }, [revealed.data, roster.data, members]);
   const rows = useMemo(() => {
     const test = FILTERS.find((f) => f.key === filter)?.test ?? (() => true);
     const query = search.trim().toLowerCase();
@@ -210,7 +232,41 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
               </div>
             )}
           </div>
-          <p className="text-xs text-text-muted">{members.length} members · checked {new Date(roster.data.checkedAt).toLocaleString()}.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* House Parents get nothing before the Reveal (docs/house-parent-access.md). */}
+            <button
+              type="button"
+              className={btn}
+              onClick={() => setSharing(true)}
+              disabled={!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0}
+              aria-describedby={!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0 ? 'house-share-unavailable' : undefined}
+            >
+              Prepare a copy for House Parents
+            </button>
+            {(!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0) && (
+              <p id="house-share-unavailable" className="text-xs text-text-muted">
+                {!HOUSE_PARENT_SHARE_APPROVED ? 'Disabled until CRC/cabinet approve the field list in writing.'
+                  : revealed.isLoading ? 'Checking which members are revealed…'
+                  : revealed.isError ? 'Could not check the Reveal, so no copy can be made.'
+                  : 'Available once this House\u2019s members are revealed publicly.'}
+              </p>
+            )}
+            <p className="text-xs text-text-muted">{members.length} members · checked {new Date(roster.data.checkedAt).toLocaleString()}.</p>
+          </div>
+          {sharing && HOUSE_PARENT_SHARE_APPROVED && (
+            <ConfirmDialog
+              open
+              danger={false}
+              title={`Download a copy for ${roster.data.house.displayName}'s House Parents?`}
+              description={<>A CSV of the {revealedIds.size} member{revealedIds.size === 1 ? '' : 's'} publicly revealed in this House{revealedIds.size < members.length ? ` (of ${members.length} on this roster)` : ''}{roster.data.termLabel ? `, for ${roster.data.termLabel}` : ''}, with only these columns. Share it only with this House&rsquo;s own House Parents, privately; never post it. It has no contact details, no other House, and no counts that could add up to House points or rank (embargoed).</>}
+              consequences={HOUSE_PARENT_SHARE_FIELDS.map((field) => `${field.header}: ${field.describe}`)}
+              confirmLabel="Download"
+              onConfirm={() => {
+                downloadCsv(houseParentShareCsv(members, revealedIds), houseParentShareFilename(roster.data.house.displayName, roster.data.house.academicYearStart, roster.data.termLabel));
+              }}
+              onClose={() => setSharing(false)}
+            />
+          )}
         </>
       )}
     </section>
