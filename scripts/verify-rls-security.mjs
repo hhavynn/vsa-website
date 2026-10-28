@@ -202,6 +202,25 @@ async function runTests() {
   const testEventId = process.env.RLS_TEST_EVENT_ID || dummyUuid;
   const allowMutations = process.env.RLS_ALLOW_MUTATION_TESTS === 'true';
 
+  // #704: after the coordinated #701 Reveal identity + #704 cache-ACL
+  // rollout, prove the retired cache is not exposed even by a guessed API
+  // column. Never use a real member ID or export rows in test output.
+  const houseCacheRestricted = process.env.RLS_HOUSE_CACHE_PHASE === 'post-migration';
+  async function verifyHouseCacheDenied(client, who) {
+    if (!houseCacheRestricted) return;
+    const { error: cacheError } = await client
+      .from('public_members').select('house').limit(1);
+    if (cacheError?.code === '42501') {
+      reportPass(`${who} cannot read legacy public_members.house (#704)`);
+    } else {
+      reportFail(`${who} legacy public_members.house is not denied (#704): ${cacheError?.code ?? 'success'}`);
+    }
+    const { error: safeError } = await client
+      .from('public_members').select('id, first_name, last_name, points').limit(1);
+    if (safeError) reportFail(`${who} lost safe member projection reads (#704): ${safeError.code}`);
+    else reportPass(`${who} retains public member identity and individual points (#704)`);
+  }
+
   // Writes through public views (#472). Supabase's default privileges grant
   // ALL on every new view to anon and authenticated. A simple single-table
   // view is auto-updatable and runs as its owner, so a leftover write grant
@@ -609,6 +628,7 @@ async function runTests() {
     }
 
     // my_member_photo_requests is readable by signed-in members only.
+    await verifyHouseCacheDenied(anon, 'anon');
     await expectViewWritesDenied(anon, 'anon', { withoutSelect: ['my_member_photo_requests'] });
   } catch (err) {
     reportFail(`Unexpected error during anon checks: ${err.message}`);
@@ -687,6 +707,7 @@ async function runTests() {
         expectNoRowsUpdated(table, data, error);
       }
 
+      await verifyHouseCacheDenied(userClient, 'ordinary user');
       await expectViewWritesDenied(userClient, 'ordinary user');
 
       }
