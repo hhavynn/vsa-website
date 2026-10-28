@@ -37,6 +37,10 @@
       "page": "src/pages/Admin/AiKnowledge.tsx"
     },
     {
+      "path": "/admin/ai-usage",
+      "page": "src/pages/Admin/AiUsage.tsx"
+    },
+    {
       "path": "/admin/analytics",
       "page": "src/pages/Admin/Analytics.tsx"
     },
@@ -373,6 +377,13 @@
         "events"
       ],
       "rpcs": []
+    },
+    {
+      "path": "src/data/repos/aiUsage.ts",
+      "tables": [],
+      "rpcs": [
+        "admin_ai_usage_daily"
+      ]
     },
     {
       "path": "src/data/repos/applicationLinks.ts",
