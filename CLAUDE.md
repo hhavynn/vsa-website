@@ -21,10 +21,10 @@ These are attached to the owner's Claude account, not the repo (there is no `.mc
 | Need | Connector | Status (checked 2026-10-28) |
 |---|---|---|
 | Issues, PRs, reviews, CI | GitHub | Plugin MCP fails auth → use `gh` CLI (authenticated for `hhavynn/vsa-website`) |
-| Prod exceptions, error trends | Sentry | **Live since 2026-10-28 (#705).** Org `havyn`, project `vsa-website` (US region). Errors only, scrubbed before sending (`src/lib/monitoring.ts`). `REACT_APP_SENTRY_DSN` is set in Vercel Production only, so previews don't report. Stack traces are de-minified only after the owner adds `SENTRY_AUTH_TOKEN` (#711); until then Sentry reads the public source maps |
+| Prod exceptions, error trends | Sentry | **Live since 2026-10-28 (#705).** Project `havyn/vsa-website` (org/project, US region). Errors only, scrubbed before sending (`src/lib/monitoring.ts`). `REACT_APP_SENTRY_DSN` is set in Vercel Production only, so previews don't report. Stack traces are de-minified only after the owner adds `SENTRY_AUTH_TOKEN` (#711); until then Sentry reads the public source maps |
 | Real user behavior, funnels | PostHog | **Live since 2026-10-28 (#713).** "Default project" (`693174`, `https://us.i.posthog.com`). Only visitors who allowed analytics; anonymous (`person_profiles: 'never'`), path-only URLs, IPs discarded, no `/admin` or `/signin` events, no replays (`src/lib/productAnalytics.ts`). GA4 still runs alongside and feeds `/admin/analytics`. Query aggregates only |
 | Schema, migrations, RLS, auth, logs, advisors | Supabase | Works; prod project `vsawebsite` (`sxephkrekdztmkptyzca`) |
-| Deployments, build/runtime logs | Vercel | claude.ai connector works (team `havyn-nguyens-projects`, project `vsa-website`); the Vercel *plugin* server sees no teams — don't use it |
+| Deployments, build/runtime logs | Vercel | claude.ai connector works (project `havyn-nguyens-projects/vsa-website`); the Vercel *plugin* server sees no teams — don't use it |
 | Design context for UI | Figma | Works; use when a Figma file/URL is provided. Repo design system still wins (`vsa-design-system-reference`) |
 | Current library API behavior | Context7 | Works; prefer it over web search or memory for library docs |
 | External docs / research | Parallel Search, Firecrawl | Work; Parallel to search, Firecrawl to scrape a specific page |
