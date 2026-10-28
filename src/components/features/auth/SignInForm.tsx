@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -50,6 +51,9 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { signIn, signOut } = useAuth();
+  const emailId = useId();
+  const passwordId = useId();
+  const authErrorRef = useRef<HTMLDivElement>(null);
   const {
     register,
     handleSubmit,
@@ -59,6 +63,13 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
     resolver: zodResolver(SignInSchema),
     defaultValues: defaultEmail ? { email: defaultEmail } : undefined,
   });
+
+  // React Hook Form already focuses the first invalid field after a failed
+  // client-side submission. An async authentication failure has no invalid
+  // field, so move focus to its form-level alert exactly when it appears.
+  useEffect(() => {
+    if (errors.root) authErrorRef.current?.focus();
+  }, [errors.root]);
 
   const locationState = location.state as { from?: { pathname?: string; search?: string } } | null;
   const requestedPath = locationState?.from?.pathname || '/admin';
@@ -103,42 +114,52 @@ export function SignInForm({ onSignedIn, defaultEmail }: SignInFormProps = {}) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-busy={isSubmitting} aria-label="Admin sign-in">
       <div>
-        <label htmlFor="email" className={labelCls}>Email</label>
+        <label htmlFor={emailId} className={labelCls}>Email (required)</label>
         <input
-          id="email"
+          id={emailId}
           type="email"
+          autoComplete="username"
+          required
           {...register('email')}
           aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? 'sign-in-email-error' : undefined}
+          aria-describedby={errors.email ? emailId + '-error' : undefined}
           className={inputCls}
           placeholder="Enter your email"
         />
         {errors.email && (
-          <FieldError id="sign-in-email-error" message={errors.email.message} />
+          <FieldError id={emailId + '-error'} message={errors.email.message} />
         )}
       </div>
 
       <div>
-        <label htmlFor="password" className={labelCls}>Password</label>
+        <label htmlFor={passwordId} className={labelCls}>Password (required)</label>
         <input
-          id="password"
+          id={passwordId}
           type="password"
+          autoComplete="current-password"
+          required
           {...register('password')}
           aria-invalid={Boolean(errors.password)}
-          aria-describedby={errors.password ? 'sign-in-password-error' : undefined}
+          aria-describedby={errors.password ? passwordId + '-error' : undefined}
           className={inputCls}
           placeholder="Enter your password"
         />
         {errors.password && (
-          <FieldError id="sign-in-password-error" message={errors.password.message} />
+          <FieldError id={passwordId + '-error'} message={errors.password.message} />
         )}
       </div>
 
       {errors.root && (
-        <FormAlert>{errors.root.message}</FormAlert>
+        <div ref={authErrorRef} tabIndex={-1}>
+          <FormAlert>{errors.root.message}</FormAlert>
+        </div>
       )}
+
+      <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {isSubmitting ? 'Signing in and verifying admin access…' : ''}
+      </span>
 
       <button
         type="submit"
