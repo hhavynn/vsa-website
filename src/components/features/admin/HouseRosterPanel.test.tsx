@@ -85,6 +85,18 @@ it('explains per event why attendance did or did not count', async () => {
   expect(repo.getMemberAttendance).toHaveBeenCalledWith('b', 2026);
 });
 
+it('shows both active Houses when overlapping memberships can double-credit an event', async () => {
+  repo.getMemberAttendance.mockResolvedValueOnce([{
+    event_id: 'e-overlap', name: 'Fictional overlap GBM', date: '2026-10-20T02:00:00Z',
+    term_label: 'Fall 2026', points_earned: 1, house_name: 'Fictional Rarity, Fictional Twilight',
+    reason: 'overlapping_houses',
+  }]);
+  renderPanel();
+  await userEvent.click(await screen.findByRole('button', { name: 'Events for Ana Example' }));
+  expect(await screen.findByText(/Credited to multiple Houses: Fictional Rarity, Fictional Twilight/)).toBeInTheDocument();
+  expect(screen.getByText(/review overlapping memberships/i)).toBeInTheDocument();
+});
+
 it('keeps an unsaved invitation list and copies names only', async () => {
   const writeText = jest.fn().mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText } });
