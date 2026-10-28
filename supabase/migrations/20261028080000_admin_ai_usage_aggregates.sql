@@ -34,8 +34,16 @@ begin
       count(*) filter (where coalesce(l.metadata->>'status', '') not in
         ('answered', 'fallback', 'rate_limited', 'error')) as other
     from public.ai_chat_usage_logs l
-    where (l.created_at at time zone 'America/Los_Angeles')::date
-      >= (pg_catalog.now() at time zone 'America/Los_Angeles')::date - (p_days - 1)
+    -- Keep created_at bare so a timestamp index remains usable. Bound the
+    -- local calendar range as timestamptz so midnight/DST is unambiguous.
+    where l.created_at >= (
+      ((pg_catalog.now() at time zone 'America/Los_Angeles')::date - (p_days - 1))
+      ::timestamp at time zone 'America/Los_Angeles'
+    )
+      and l.created_at < (
+        ((pg_catalog.now() at time zone 'America/Los_Angeles')::date + 1)
+        ::timestamp at time zone 'America/Los_Angeles'
+      )
     group by 1
     order by 1 desc;
 end;
