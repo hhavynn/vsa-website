@@ -16,6 +16,8 @@ export interface RosterMember {
   joined_in_period: boolean;
   other_house_memberships: number;
   credited_attendance: number;
+  /** Sum of awarded points, distinct from attendance/event count. */
+  credited_points?: number;
   last_credited_at: string | null;
   events_attended: number;
 }
