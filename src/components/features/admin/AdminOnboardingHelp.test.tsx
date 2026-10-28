@@ -66,7 +66,8 @@ describe('admin first-run and contextual guidance (#286)', () => {
     const items = [
       resource({ id: 'open' }),
       resource({ id: 'archived', is_archived: true }),
-      resource({ id: 'public', visibility: 'public' }),
+      // Defensive runtime guard: a malformed server row must not appear here.
+      resource({ id: 'public', visibility: 'public' as unknown as ResourceLink['visibility'] }),
       resource({ id: 'past', is_current: false }),
       resource({ id: 'unsafe', url: 'javascript:alert(1)' }),
       resource({ id: 'scoped', program: 'Houses' }),
