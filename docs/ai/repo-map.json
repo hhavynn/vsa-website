@@ -551,6 +551,13 @@
       "rpcs": []
     },
     {
+      "path": "src/data/repos/houseOverview.ts",
+      "tables": [],
+      "rpcs": [
+        "admin_house_overview"
+      ]
+    },
+    {
       "path": "src/data/repos/houseParents.ts",
       "tables": [
         "house_page_assets",
@@ -891,6 +898,7 @@
         "src/data/repos/houseEvents.ts",
         "src/data/repos/houseMembershipWrites.ts",
         "src/data/repos/houseMemberships.ts",
+        "src/data/repos/houseOverview.ts",
         "src/data/repos/houseParents.ts",
         "src/data/repos/housePayments.ts",
         "src/data/repos/housePointsCheck.ts"
@@ -913,6 +921,7 @@
       "rpcs": [
         "admin_apply_house_placement_override",
         "admin_begin_house_batch_publish",
+        "admin_house_overview",
         "admin_house_points_reconciliation",
         "admin_link_house_applicant_member",
         "admin_register_house_applicants",

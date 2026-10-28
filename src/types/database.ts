@@ -4296,6 +4296,10 @@ export type Database = {
         Args: { p_year: number };
         Returns: Json;
       };
+      admin_house_overview: {
+        Args: { p_year: number; p_term_id?: string | null };
+        Returns: Json;
+      };
       admin_event_attendance_readiness: {
         Args: { p_year: number; p_term_id?: string | null };
         Returns: Json;
