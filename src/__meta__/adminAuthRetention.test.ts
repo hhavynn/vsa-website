@@ -171,7 +171,11 @@ describe("retirement removes member accounts, not the admin lifecycle", () => {
       // The form is deferred to its own chunk (#300) but must be the shared
       // SignInForm module, not a parallel implementation.
       expect(source).toMatch(/import\(['"]\.\/SignInForm['"]/);
-      expect(source).toMatch(/<LazySignInForm/);
+      expect(source).toMatch(/<LoadedSignInForm/);
+      // A failed deferred chunk is handled in the dialog, preserving the editor.
+      expect(source).toMatch(/\.catch\(\(\) =>/);
+      expect(source).toMatch(/Retry loading sign-in/);
+      expect(source).toMatch(/dialogRef\.current\?\.focus\(\)/);
     });
 
     it("keeps /admin/login routed and every admin route behind the admin gate", () => {
