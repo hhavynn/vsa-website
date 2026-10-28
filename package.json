@@ -55,7 +55,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "react/no-danger": "error"
+    }
   },
   "jest": {
     "transformIgnorePatterns": [
