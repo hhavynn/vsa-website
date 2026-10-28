@@ -17,7 +17,7 @@ A banner uses the Attendance status read (#653) to say whether past point-earnin
 
 ## Data and safety
 
-`admin_house_overview(p_year, p_term_id)` (migration `20261028100000`): admin-only, SECURITY DEFINER (the score views are private to the API since #692), POST-only like `admin_private_house_standings`, STABLE, pinned `search_path`; counts and House names only, no member names or rows. Proof: `bash scripts/test-house-overview.sh` (mid-quarter join, transfer, inactive profile, collab counted once globally, drafts excluded, term window, tie ranks, totals equal the view).
+`admin_house_overview(p_year, p_term_id)` (migration `20261028075724`, applied to production 2026-10-28; written as `20261028100000` and renamed to its recorded version): admin-only, SECURITY DEFINER (the score views are private to the API since #692), POST-only like `admin_private_house_standings`, STABLE, pinned `search_path`; counts and House names only, no member names or rows. Proof: `bash scripts/test-house-overview.sh` (mid-quarter join, transfer, inactive profile, collab counted once globally, drafts excluded, term window, tie ranks, totals equal the view).
 
 ## House roster (#652)
 
