@@ -47,6 +47,8 @@ describe('Ask VSA admin aggregate usage report (#240)', () => {
     expect(sql).toMatch(/revoke all on function public\.admin_ai_usage_daily\(integer\) from public, anon, authenticated/i);
     expect(sql).toMatch(/grant execute on function public\.admin_ai_usage_daily\(integer\) to authenticated/i);
     expect(sql).toMatch(/from public\.ai_chat_usage_logs l/i);
+    expect(sql).toContain('where l.created_at >=');
+    expect(sql).toContain('and l.created_at <');
     expect(sql).not.toMatch(/grant\s+(select|all)\s+on\s+public\.ai_chat_usage_logs/i);
     expect(sql).not.toMatch(/return\s+query\s+select\s+\*/i);
   });
