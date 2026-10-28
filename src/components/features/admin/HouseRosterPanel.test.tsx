@@ -114,20 +114,14 @@ it('says plainly when the migration is not applied', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('20261028075801');
 });
 
-it('downloads a House Parent copy only after the admin reviews its columns', async () => {
+it('keeps House Parent exports disabled until CRC/cabinet approve the fields', async () => {
   renderPanel();
-  await userEvent.click(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' }));
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(/Disabled until CRC\/cabinet approve the field list in writing/);
+  expect(houseMembershipsRepository.getPublicHousesByMemberId).not.toHaveBeenCalled();
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   expect(downloadCsv).not.toHaveBeenCalled();
-  const dialog = screen.getByRole('alertdialog');
-  expect(within(dialog).getByText(/2 members publicly revealed in this House \(of 3 on this roster\)/)).toBeInTheDocument();
-  expect(within(dialog).getByText(/no counts that could add up to House points or rank/)).toBeInTheDocument();
-  await userEvent.click(within(dialog).getByRole('button', { name: 'Download' }));
-  await waitFor(() => expect(downloadCsv).toHaveBeenCalledTimes(1));
-  const [csv, filename] = downloadCsv.mock.calls[0];
-  expect(filename).toBe('fictional-rarity-2026-2027-house-parents.csv');
-  expect(csv.replace(/^\uFEFF/, '').split('\n')[0]).toBe('Name,In the House since,Attended a House-credited event,Last House-credited event');
-  expect(csv).toContain('Ana Example');
-  expect(csv).not.toContain('Cam Example');
 });
 
 it('says plainly when the House profile is not public, so zeros are not read as absence', async () => {
@@ -161,17 +155,19 @@ it('shows the UTC date an evening event was counted on', async () => {
   expect(await screen.findByText(/Oct 15 \(counted as Oct 16, by UTC date\)/)).toBeInTheDocument();
 });
 
-it('offers no copy until members are publicly revealed, and says why', async () => {
+it('does not bypass governance when no House assignments are revealed', async () => {
   houseMembershipsRepository.getPublicHousesByMemberId.mockResolvedValue(new Map());
   renderPanel();
   const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
-  await waitFor(() => expect(button).toHaveAccessibleDescription(/Available once this House’s members are revealed publicly/));
   expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(/Disabled until CRC\/cabinet approve/);
+  expect(downloadCsv).not.toHaveBeenCalled();
 });
 
-it('cancelling the review downloads nothing', async () => {
+it('never opens a review/download dialog while sharing approval is pending', async () => {
   renderPanel();
-  await userEvent.click(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' }));
-  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+  const button = await screen.findByRole('button', { name: 'Prepare a copy for House Parents' });
+  expect(button).toBeDisabled();
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   expect(downloadCsv).not.toHaveBeenCalled();
 });
