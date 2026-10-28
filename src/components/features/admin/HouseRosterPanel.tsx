@@ -3,7 +3,7 @@
 // period, who has come, and who may welcome an invitation. Not a ranking of
 // people: counts are shown without judgment and nothing here is public.
 // Read-only; corrections happen in Members, Import and House Assignments.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AttendanceReason, HOUSE_ROSTER_UNAVAILABLE, RosterMember, houseRosterRepository } from '../../../data/repos/houseRoster';
@@ -36,6 +36,13 @@ function name(m: Pick<RosterMember, 'first_name' | 'last_name'>) {
   return [m.first_name, m.last_name].filter(Boolean).join(' ') || 'Unnamed member';
 }
 
+/** The UTC calendar date the standings use to credit an event, when it differs from the Los Angeles date. */
+function creditedDay(value: string | null) {
+  if (!value || value.length === 10) return null;
+  const utc = new Date(value).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  return utc === laDate(value) ? null : utc;
+}
+
 function laDate(value: string | null | undefined) {
   if (!value) return '—';
   return new Date(value.length === 10 ? `${value}T12:00:00Z` : value).toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' });
@@ -50,7 +57,7 @@ function MemberAttendance({ memberId, year }: { memberId: string; year: number }
     <ul className="space-y-0.5 text-xs" aria-label={`Events attended`}>
       {events.data.map((event) => (
         <li key={event.event_id} className="flex flex-wrap justify-between gap-2">
-          <span className="text-text-primary">{event.name} <span className="text-text-muted">{laDate(event.date)}</span></span>
+          <span className="text-text-primary">{event.name} <span className="text-text-muted">{laDate(event.date)}{creditedDay(event.date) ? ` (counted as ${creditedDay(event.date)}, by UTC date)` : ''}</span></span>
           <span className={event.reason === 'counted' ? 'text-emerald-800 dark:text-emerald-300' : 'text-text-muted'}>
             {event.reason === 'counted' ? `Counted for ${event.house_name}` : REASON[event.reason]}
           </span>
@@ -60,13 +67,21 @@ function MemberAttendance({ memberId, year }: { memberId: string; year: number }
   );
 }
 
-export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { houseProfileId: string; termId: string | null; year: number; onClose: () => void }) {
+export function HouseRosterPanel({ houseProfileId, termId, onClose }: { houseProfileId: string; termId: string | null; onClose: () => void }) {
   const roster = useQuery(['admin', 'house-roster', houseProfileId, termId], () => houseRosterRepository.getRoster(houseProfileId, termId), { retry: false, staleTime: 0, refetchOnWindowFocus: false });
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [invite, setInvite] = useState<Set<string>>(() => new Set());
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  // Opening a roster below the cards moves focus there, so keyboard and
+  // screen-reader users land on it.
+  useEffect(() => {
+    sectionRef.current?.focus({ preventScroll: true });
+    sectionRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const members = useMemo(() => roster.data?.members ?? [], [roster.data]);
   const rows = useMemo(() => {
@@ -87,16 +102,19 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
 
   async function copyInvites() {
     try {
+      if (!navigator.clipboard) throw new Error('no clipboard');
       await navigator.clipboard.writeText(invited.map(name).join('\n'));
       setCopied(true);
+      setCopyFailed(false);
     } catch {
       setCopied(false);
+      setCopyFailed(true);
     }
   }
 
   const title = roster.data ? `${roster.data.house.displayName} roster` : 'House roster';
   return (
-    <section className="scrapbook-paper space-y-3 p-4 sm:p-5 border-[var(--color-border)] bg-surface" aria-label={title}>
+    <section ref={sectionRef} tabIndex={-1} id={`house-roster-${houseProfileId}`} className="scrapbook-paper space-y-3 p-4 sm:p-5 border-[var(--color-border)] bg-surface focus:outline-none" aria-label={title}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="font-serif text-lg font-bold text-text-primary">{title}{roster.data?.termLabel ? ` · ${roster.data.termLabel}` : ''}</h3>
@@ -115,6 +133,11 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
         </p>
       ) : (
         <>
+          {!roster.data.house.isActive && (
+            <p role="note" className="rounded border p-2 text-xs border-amber-400 text-amber-800 dark:border-amber-700 dark:text-amber-300">
+              This House&rsquo;s profile is not public yet, so no attendance is House-credited for anyone: the zeros below do not mean nobody came. See each member&rsquo;s VSA events.
+            </p>
+          )}
           {!roster.data.dated && (
             <p role="note" className="text-xs text-amber-800 dark:text-amber-300">
               {roster.data.termLabel} has no dates, so this roster is everyone in the House this year; House-credited counts are for that term&rsquo;s events only.
@@ -126,7 +149,7 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
               <input id="roster-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} className="mt-1 min-h-[36px] rounded border px-2 py-1 text-sm bg-[var(--color-surface2)] border-[var(--color-border)] text-text-primary" />
             </div>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter members">
-              {FILTERS.map((f) => (
+              {FILTERS.filter((f) => roster.data.house.isActive || f.key !== 'none').map((f) => (
                 <button key={f.key} type="button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)} className={cn(btn, filter === f.key && 'border-[var(--brand)] bg-[var(--color-surface2)]')}>
                   {f.label} ({members.filter(f.test).length})
                 </button>
@@ -155,6 +178,7 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
                   <p className="text-xs text-text-secondary">
                     {m.credited_attendance} House-credited · {m.events_attended} VSA event{m.events_attended === 1 ? '' : 's'} · last credited {laDate(m.last_credited_at)} · in this House from {laDate(m.start_date)}{m.end_date ? ` to ${laDate(m.end_date)}` : ''}
                     {m.joined_in_period ? ' · joined this period' : ''}
+                    {m.stints > 1 ? ` · ${m.stints} separate stints in this House this year` : ''}
                   </p>
                   {m.other_house_memberships > 0 && (
                     <p className="text-xs text-amber-800 dark:text-amber-300">Also in {m.other_house_memberships} other House{m.other_house_memberships === 1 ? '' : 's'} this year (a transfer, or an overlap to fix in House Assignments).</p>
@@ -174,6 +198,12 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
                 <button type="button" className={btn} onClick={copyInvites}>Copy names</button>
                 <button type="button" className={btn} onClick={() => { setInvite(new Set()); setCopied(false); }}>Clear list</button>
                 {copied && <span className="text-text-muted">Copied.</span>}
+              </div>
+            )}
+            {copyFailed && invited.length > 0 && (
+              <div className="mt-2">
+                <p role="alert" className="text-red-700 dark:text-red-300">Copying is blocked in this browser. Select the names below and copy them.</p>
+                <textarea readOnly aria-label="Invitation names" value={invited.map(name).join('\n')} rows={Math.min(8, invited.length)} className="mt-1 block w-full rounded border px-2 py-1 text-xs bg-[var(--color-surface)] border-[var(--color-border)] text-text-primary" />
               </div>
             )}
           </div>

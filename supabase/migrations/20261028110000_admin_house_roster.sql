@@ -108,22 +108,38 @@ begin
   ),
   -- Anyone credited for the House in the period is on its roster, even if an
   -- event is dated outside its term, so the counts always reconcile.
-  roster as (
-    select hm.member_id,
-           min(hm.effective_start_date) as start_date,
-           case when bool_or(hm.effective_end_date is null) then null else max(hm.effective_end_date) end as end_date
+  -- Dates come from the memberships in this House that overlap the period
+  -- (all of the year's when none does), so a gap is not hidden and "joined"
+  -- matches the overview.
+  memberships as (
+    select hm.member_id, hm.effective_start_date, hm.effective_end_date,
+           (v_to is null or hm.effective_start_date <= v_to)
+             and (v_from is null or hm.effective_end_date is null or hm.effective_end_date > v_from) as in_period
     from public.house_memberships hm
     where hm.house_profile_id = v_house.id
       and hm.academic_year_start = v_house.academic_year_start
       and hm.member_id in (select member_id from dated union select member_id from credited)
-    group by hm.member_id
   ),
+  roster as (
+    select m.member_id,
+           min(m.effective_start_date) filter (where m.in_period or not x.any_in_period) as start_date,
+           case when bool_or(m.effective_end_date is null) filter (where m.in_period or not x.any_in_period) then null
+                else max(m.effective_end_date) filter (where m.in_period or not x.any_in_period) end as end_date,
+           count(*)::integer as stints
+    from memberships m
+    join (select member_id, bool_or(in_period) as any_in_period from memberships group by member_id) x on x.member_id = m.member_id
+    group by m.member_id
+  ),
+  -- The same events the drilldown lists: the period's termed events, plus,
+  -- for the whole year, dated events with no term in the July-to-July year.
   period_events as (
     select e.id, e.date
     from public.events e
-    join public.academic_terms t on t.id = e.academic_term_id
-    where t.academic_year_start = v_house.academic_year_start
-      and (p_term_id is null or e.academic_term_id = p_term_id)
+    left join public.academic_terms t on t.id = e.academic_term_id
+    where (t.academic_year_start = v_house.academic_year_start and (p_term_id is null or e.academic_term_id = p_term_id))
+       or (p_term_id is null and t.id is null and e.date is not null
+           and (e.date)::date >= make_date(v_house.academic_year_start, 7, 1)
+           and (e.date)::date < make_date(v_house.academic_year_start + 1, 7, 1))
   ),
   attended as (
     select a.member_id, count(*)::integer as events_attended
@@ -146,6 +162,7 @@ begin
     'last_name', m.last_name,
     'start_date', r.start_date,
     'end_date', r.end_date,
+    'stints', r.stints,
     'joined_in_period', v_from is not null and r.start_date > v_from,
     'other_house_memberships', coalesce(o.other_house_count, 0),
     'credited_attendance', coalesce(c.credited, 0),
