@@ -135,7 +135,7 @@ export default function AppRoutes() {
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:bg-white focus:text-gray-900 focus:p-4 focus:rounded-br-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[60] focus:bg-surface focus:text-text-primary focus:p-4 focus:rounded-br-lg focus:outline-none focus:ring-2 focus:ring-brand-600 dark:focus:ring-brand-400"
         >
           Skip to main content
         </a>

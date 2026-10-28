@@ -22,6 +22,18 @@ function DrawerHarness() {
 }
 
 describe('MobileDrawer keyboard accessibility', () => {
+  it('exposes the visible drawer groups as real headings and named regions', async () => {
+    render(<MemoryRouter><DrawerHarness /></MemoryRouter>);
+    await userEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }));
+
+    for (const label of ['Quick links', 'Get Involved', 'Explore']) {
+      const region = screen.getByRole('region', { name: label });
+      expect(region).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: label, level: 2 })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('dialog', { name: 'Navigation menu' })).toBeInTheDocument();
+  });
+
   it('traps Tab within the drawer and restores focus to its opener after Escape', async () => {
     render(
       <MemoryRouter>

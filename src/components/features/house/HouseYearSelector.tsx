@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
+import { formatAcademicYear } from '../../../lib/academicTerms';
 
 interface YearOption {
   startYear: number;
@@ -8,27 +9,39 @@ interface YearOption {
   route: string;
 }
 
-// Update this list each year when a new House cycle is added or completed.
-const PRIMARY_YEAR_OPTIONS: YearOption[] = [
-  { startYear: 2026, label: '2026-2027', badge: 'Current', route: '/house' },
-  { startYear: 2025, label: '2025-2026', badge: 'Archive', route: '/house/year/2025-2026' },
-  { startYear: 2024, label: '2024-2025', badge: 'Archive',     route: '/house/year/2024-2025' },
-];
+// Only the active academic year is the Current route. Existing published and
+// verified prior years retain their own archive URLs.
+export function buildHouseYearOptions(currentYear: number | null): YearOption[] {
+  const archivalYears = getVerifiedLegacyHouseYears()
+    .filter((year) => currentYear === null
+      ? year.status === 'verified'
+      : year.startYear <= currentYear)
+    .map((year) => year.startYear);
+  const years = new Set(archivalYears);
+  if (currentYear !== null) years.add(currentYear);
+
+  return Array.from(years)
+    .sort((a, b) => b - a)
+    .map((startYear) => ({
+      startYear,
+      label: formatAcademicYear(startYear),
+      badge: startYear === currentYear ? 'Current' : 'Archive',
+      route: startYear === currentYear ? '/house' : `/house/year/${formatAcademicYear(startYear)}`,
+    }));
+}
 
 interface HouseYearSelectorProps {
   /** The academic year start integer (e.g. 2025 for 2025-2026). */
   activeStartYear: number | null;
+  currentYear: number | null;
   className?: string;
 }
 
-export function HouseYearSelector({ activeStartYear, className = '' }: HouseYearSelectorProps) {
+export function HouseYearSelector({ activeStartYear, currentYear, className = '' }: HouseYearSelectorProps) {
   const navigate = useNavigate();
-  const verifiedYears = getVerifiedLegacyHouseYears();
-  
-  // Filter out years already in PRIMARY_YEAR_OPTIONS
-  const moreYears = verifiedYears
-    .filter(y => !PRIMARY_YEAR_OPTIONS.some(opt => opt.startYear === y.startYear))
-    .sort((a, b) => b.startYear - a.startYear);
+  const options = buildHouseYearOptions(currentYear);
+  const primaryYearOptions = options.slice(0, 3);
+  const moreYears = options.slice(3);
 
   return (
     <div
@@ -44,7 +57,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
       </span>
 
       <div className="flex flex-wrap items-center gap-2">
-        {PRIMARY_YEAR_OPTIONS.map((opt) => {
+        {primaryYearOptions.map((opt) => {
           const isActive = activeStartYear === opt.startYear;
           return (
             <Link
@@ -78,7 +91,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
           <div className="relative inline-block">
             <select
               className="appearance-none touch:min-h-11 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-              value={activeStartYear && !PRIMARY_YEAR_OPTIONS.some(o => o.startYear === activeStartYear) ? activeStartYear : ""}
+              value={activeStartYear && !primaryYearOptions.some(o => o.startYear === activeStartYear) ? activeStartYear : ""}
               onChange={(e) => {
                 if (e.target.value) {
                   navigate(`/house/year/${e.target.value}-${parseInt(e.target.value) + 1}`);
@@ -89,7 +102,7 @@ export function HouseYearSelector({ activeStartYear, className = '' }: HouseYear
               <option value="" disabled>More Years</option>
               {moreYears.map((y) => (
                 <option key={y.startYear} value={y.startYear}>
-                  {y.academicYear}
+                  {y.label}
                 </option>
               ))}
             </select>
