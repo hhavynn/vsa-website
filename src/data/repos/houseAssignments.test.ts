@@ -374,34 +374,35 @@ describe('applyPlacementOverride', () => {
     expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
   });
 
-  it('refuses a swap when the function is not deployed yet, instead of two separate updates', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+  it.each(['PGRST202', '42883'])('refuses a single move when the RPC is unavailable (%s), without reading or writing rows', async (code) => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code, message: 'Function unavailable' } });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+    ], 'Approved')).rejects.toThrow(/House placement changes are unavailable.*20261027120000.*Nothing was changed/);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(supabaseMock.queriesFor('house_assignment_batches')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
+  });
+
+  it('refuses a swap when the RPC is unavailable, without recommending unvalidated single moves', async () => {
+    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Function unavailable' } });
     await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
       { draftId: 'd1', houseProfileId: 'p-boo' },
       { draftId: 'd2', houseProfileId: 'p-toad' },
-    ], 'Approved')).rejects.toThrow(/20261027120000.*Nothing was changed/);
-    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+    ], 'Approved')).rejects.toThrow(/House placement changes are unavailable.*20261027120000.*Nothing was changed/);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
   });
 
-  it('falls back to one row update for a single move when the function is not deployed yet', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: '42883', message: 'function does not exist' } });
-    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
-    supabaseMock.queueResult('house_assignment_batches', { data: batch('draft'), error: null });
-    supabaseMock.queueResult('house_assignment_drafts', { data: null, error: null });
-
-    const rows = await houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], '  Approved  ');
-
-    expect(rows).toEqual([expect.objectContaining({ id: 'd1', house_profile_id: 'p-boo', override_reason: 'Approved' })]);
-    const updates = supabaseMock.queriesFor('house_assignment_drafts').flatMap((query) => query.calls).filter((call) => call.method === 'update');
-    expect(updates).toEqual([{ method: 'update', args: [{ house_profile_id: 'p-boo', override_reason: 'Approved' }] }]);
-  });
-
-  it('still requires a reason in the fallback unless the row returns to its generated House', async () => {
-    supabaseMock.queueResult(RPC, { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
-    supabaseMock.queueResult('house_assignment_drafts', { data: [auto()], error: null });
-    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [{ draftId: 'd1', houseProfileId: 'p-boo' }], ' '))
-      .rejects.toThrow(/reason is required/);
-    expect(supabaseMock.usedMethod('house_assignment_drafts', 'update')).toBe(false);
+  it('sends a single move through the RPC without writing rows directly', async () => {
+    const updated = [auto({ house_profile_id: 'p-boo', override_reason: 'Approved' })];
+    supabaseMock.queueResult(RPC, { data: updated, error: null });
+    await expect(houseAssignmentsRepository.applyPlacementOverride('batch-1', [
+      { draftId: 'd1', houseProfileId: 'p-boo' },
+    ], 'Approved')).resolves.toEqual(updated);
+    expect(supabaseMock.queriesFor(RPC)).toHaveLength(1);
+    expect(supabaseMock.queriesFor('house_assignment_drafts')).toHaveLength(0);
+    expect(membershipWrites()).toHaveLength(0);
   });
 
   it('rejects an empty or oversized change list without calling the database', async () => {
