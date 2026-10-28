@@ -1,0 +1,21 @@
+name: Graphify freshness advisory
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-graph-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Test Graphify freshness checker
+        run: bash scripts/test-graph-freshness.sh
+      - name: Report stale Graphify index (warning only)
+        run: bash scripts/check-graph-freshness.sh

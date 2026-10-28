@@ -5,6 +5,7 @@ import { adminNavItemFor } from '../../../lib/adminNavigation';
 import { AdminNav } from './AdminNav';
 import { AdminQuickSearch, isQuickSearchShortcut } from './AdminQuickSearch';
 import { AdminSearchContext } from './AdminSearchContext';
+import { AdminOnboardingHelp } from './AdminOnboardingHelp';
 
 const BAR_BUTTON =
   'flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] text-text-secondary transition-colors hover:bg-surface2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:focus-visible:outline-brand-400';
@@ -57,6 +58,7 @@ const AdminLayout: React.FC = () => {
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <AdminSearchContext.Provider value={searchOpener}>
+          <AdminOnboardingHelp />
           <Outlet />
         </AdminSearchContext.Provider>
       </div>

@@ -75,7 +75,7 @@ export function useVsaAiConversation(currentPage: string) {
     };
 
     const recentTurns = history
-      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited')
+      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited' && message.status !== 'unavailable')
       .slice(-4)
       .map((message) => ({
         role: message.role,
@@ -119,7 +119,7 @@ export function useVsaAiConversation(currentPage: string) {
         content:
           data?.answer ||
           (response.status === 429
-            ? "You've reached today's Ask VSA limit. Try again later!"
+            ? "Ask VSA is busy right now. Try again later, or visit Events and Get Involved."
             : FALLBACK_ASK_VSA.message),
         sources: data?.sources ?? [],
         status: data?.status ?? (response.status === 429 ? 'rate_limited' : 'error'),

@@ -41,6 +41,39 @@ direction as `events/AddToCalendarButton` (no dropdown). Timed items use
 `buildGcalTimedDates` + `ctz=America/Los_Angeles`; date-only items use
 all-day format with an exclusive end date (`buildGcalAllDayDatesFromDateOnly`).
 
+## One-time .ics export (#278, first slice)
+
+The Calendar and Events pages offer **Download VSA events (.ics)** based on the
+already loaded, published, first-party VSA events. This is a **snapshot**, not
+a subscribable `webcal:` address. Editing or canceling events later **does not
+update an imported snapshot**: students must download and re-import to get
+new information, and some calendar apps may keep old entries when importing a
+second time. Keep the single-event Google Calendar buttons for one-offs.
+
+The export serializes an explicit public allowlist: stable synthetic UID
+(`events.id`), event name, dates/times, public location and public description.
+It never serializes unpublished events or other event fields such as check-in
+codes, attendance, payment or internal notes. The UI excludes House events and
+application/deadline markers from this file; those are different public-data
+contracts and **not** part of this export.
+
+The serializer is `src/lib/publicEventIcs.ts`. Timed events are converted from
+San Diego wall-clock to UTC, so daylight-saving transitions do not depend on the
+visitor's browser timezone. Unknown time becomes an all-day event, never an
+invented start clock. Multi-day date-only events use an exclusive end date.
+Fields are escaped to prevent ICS property injection; lines are folded to a
+75-UTF-8-octet limit. Export is generated client-side and requires **no**
+storage bucket, new backend or automatic polling.
+
+### Still required to complete #278
+
+A real auto-refreshing subscription needs a **public, cacheable, unauthenticated**
+`.ics` endpoint (and feed URL) that reads published rows through an allowlisted
+backend projection, never trusts a client-supplied list, and correctly handles
+cancellation/updates. It needs Apple, Google and Outlook subscription verification
+including DST and refresh behavior. **Do not label the snapshot as a subscription**
+or expose `webcal:` without that endpoint.
+
 ## Follow-ups (not in v1)
 
 - UVSA `external_events` on the calendar — excluded because rows carry
@@ -48,6 +81,18 @@ all-day format with an exclusive end date (`buildGcalAllDayDatesFromDateOnly`).
   publish-confidence policy first.
 - Optional admin fields (`host_house`, `audience`, ACE/Intern tags on
   `events`) if programming wants first-party ACE/Intern calendar items.
+
+## Upcoming events on /events and Home (#634)
+
+`src/lib/upcomingEvents.ts` merges regular events and published House events into one list, ordered by Los Angeles start time with the same lifecycle rules as regular events (ongoing kept, ended dropped, overnight handled; ties put the all-VSA event first; an event without a start time follows that day's timed events). Each House event keeps its own id, is listed once even when several Houses host it, shows every host, and links to its card on its year's House page.
+
+- `/events` lists both under Next Up / All Upcoming. **House Events** is a filter (`?type=house`), with **Hosted by** (`&host=<slug>`) when more than one House has events; both stay in the URL. House events are not in the Memory Wall.
+- Home's Next Event card shows the next House event first when it happens before the next all-VSA event, otherwise below it, linking to the event's card.
+- If House events cannot load, regular events still show, with a notice.
+- **Hosts for logged-out visitors:** `house_page_assets` is admin-only, so its embed is empty for the public. Public House event reads take the host ids from `house_event_houses` and fill the profiles from `published_house_page_assets` (active profiles only) in one query; a not-yet-public profile is never shown, even to an admin viewing public pages. This also fixes host chips on the calendar and House pages.
+- Filter changes keep the scroll position (navigation state `keepScroll`, honored by the layout's scroll manager), clicking the active filter adds no history entry, and an unknown `host` is ignored.
+- House events never award VSA attendance points; the page says so.
+- Fixed: both pages called the House preview read with the row limit in the academic-year slot, so no House event ever appeared.
 
 ## Files
 

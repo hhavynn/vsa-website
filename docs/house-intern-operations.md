@@ -4,7 +4,7 @@ Two private, admin-only workflows. Both follow **draft → lock → publish**; l
 
 ## House assignments (`/admin/houses` → House Assignments)
 
-Flow: Import → Match → Save draft → Review → Preflight → Lock → Reveal.
+Flow: Import → Match → Save draft → Review → Preflight → Lock → Reveal. When the year has a payment roster, the first sort is provisional and only a payment-cleared rerun can be locked and revealed ([house-payment-eligibility.md](house-payment-eligibility.md)).
 
 - **Import House Applications** (the Google Form responses CSV, timestamp priority: first-come, first-served, then ranked choices, within capacities) is the default, primary import for every year, with stricter lock/reveal checks for those batches. See [house-auto-placement.md](house-auto-placement.md).
 - The older wide/long sheet parser (`src/lib/houseAssignmentImport.ts`) is kept under the collapsed **Historical / Advanced Import** section for re-importing a sort decided by hand. It does not use timestamp-priority placement. It saves a **draft batch** (`house_assignment_batches` / `house_assignment_drafts`) instead of writing `house_memberships`. Emails are used to match and are never stored.
@@ -32,6 +32,7 @@ Flow: Import → Match → Save draft → Review → Preflight → Lock → Reve
 3. `20261026230757_house_assignment_timestamp_placement.sql` — additive placement metadata columns for automatic House placement ([house-auto-placement.md](house-auto-placement.md#deploying)). Applied to production 2026-10-26 (recorded version `20261026230757`; the file was renamed from `20261026180000` to match).
 4. `20261026200000_house_2026_my_little_pony.sql` — the 2026-2027 My Little Pony House profiles and the admin-only `house_parents` member links ([house-2026-my-little-pony.md](house-2026-my-little-pony.md)). Applied to production 2026-10-26 in the SQL Editor; its history row was inserted under the file's own version `20261026200000`.
 5. `20261027120000_house_placement_override_rpc.sql` — `admin_apply_house_placement_override`, the atomic move/swap for automatic placement drafts (SECURITY INVOKER, EXECUTE for `authenticated` only; writes only draft rows). **Applied to production 2026-10-26 (Los Angeles), recorded version `20261027120000`.** The frontend requires this RPC for both moves and swaps; either operation fails closed until it is applied ([house-auto-placement.md](house-auto-placement.md#deploying)).
+6. `20261028050216_house_payment_eligibility.sql` — private payment eligibility roster, post-payment reruns and the payment-cleared Lock/Reveal gate ([house-payment-eligibility.md](house-payment-eligibility.md)). Applied to production 2026-10-28 (recorded version `20261028050216`; renamed from `20261028000000` to match), after staging verification against the production schema.
 
 Both are additive: RLS enabled, `revoke all` from `anon, authenticated` then admin-only policies via `is_admin_user()`, plus triggers that stop a locked/published batch or cohort from being edited or deleted and enforce legal status transitions. Apply them **before** deploying the frontend (the pages need the tables).
 
