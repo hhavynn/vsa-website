@@ -56,7 +56,7 @@ describe('House standings embargo release invariants (#692)', () => {
     expect(leaderboard).toContain(".from('member_yearly_points')");
     expect(leaderboard).toContain(".from('public_members')");
     const badge = leaderboard.slice(leaderboard.indexOf('async getMemberHouseBadge('), leaderboard.indexOf('async getYearsWithData('));
-    expect(badge).toContain("supabase.rpc('public_member_house_badge'");
+    expect(badge).toContain("badgeClient.rpc('public_member_house_badge'");
     expect(badge).not.toContain(".from('house_member_");
   });
 });
