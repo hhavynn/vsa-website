@@ -15,7 +15,7 @@ See [the retirement decision and rollout](./member-account-retirement.md).
 | Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members`, Historical Recovery (`admin_recover_import_row`) |
 | Recalculation | Statement triggers `trg_sync_member_points_{insert,update,delete}` → `recalculate_members_points` (locks members, then recalculates); `trg_attendance_points_from_event` stores the event's current points; event edits use `sync_attendance_points_on_event_update` |
 | Readers | `/points`, `/leaderboard`, House standings, member cards/history, Wrapped, Admin Points |
-| Public projections | `member_yearly_points`, `house_member_yearly_points`, House aggregate views, `member_event_history`, `public_members` |
+| Public projections | `member_yearly_points`, `member_event_history`, `public_members`; published House identity is a *single-member* badge RPC (never House scores) |
 | Authentication | Existing/invited approved admins only; students use public lookup without accounts |
 
 The legacy `event_attendance`, `user_points`, and code-storage tables remain
@@ -27,6 +27,36 @@ Do not write or transfer archive totals into the member ledger.
 `pointsModelBoundary.test.ts` exercises every leaderboard repository method and
 guards against archive/RPC dependencies. `memberAccountRetirement.test.ts` guards
 the application against restoring obsolete APIs, components, hooks, or providers.
+
+## House scoring privacy / GBM-only announcements (#692)
+
+The House competition remains computed by the **unchanged** source-of-truth
+attendance ledger, effective-dated House memberships and authoritative House
+views. However, House-wide and member House-contribution scores, ranks, recent
+scored activity, winners and all-time standings are **not public**, including
+older school years. The previous published 2025–26 numeric fallbacks and
+public override constants are intentionally removed from browser JavaScript.
+
+The five private views `house_yearly_points`,
+`house_all_time_points`, `house_recent_activity`,
+`house_member_yearly_points`, and `house_member_all_time_points`
+have anonymous/ordinary-authenticated SELECT privileges revoked by migration
+`20261028060000_embargo_public_house_scores.sql`. Approved admins can obtain
+live aggregate scores through a permission-checked
+`admin_private_house_standings(p_year)` RPC after the migration is deployed.
+This RPC is **not** an automatic public snapshot or House Parent grant.
+The `public_member_house_badge` RPC exposes just one approved published
+House identity, gated on Reveal, not a House point value or member ranking.
+The ordinary individual points leaderboard remains unchanged.
+
+All House competition official standings are announced at GBMs by authorized
+House leadership; the reviewed, private GBM snapshot/export lifecycle is
+separate issue #693. **No public online standings for any year** until explicit
+cabinet approval and a separately reviewed release path.
+
+See [the release and privacy checklist](./house-standings-embargo.md). A PR
+containing this migration is not evidence that it was applied in staging or
+production. Real API/RLS and inference review must pass before merge and rollout.
 
 ## Overview
 
