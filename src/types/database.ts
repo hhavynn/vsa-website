@@ -302,6 +302,8 @@ export type Database = {
           name: string;
           parent_member_id: string | null;
           photo_url: string | null;
+          pickup_academic_year_start: number | null;
+          pickup_term: string | null;
           role_label: string | null;
           updated_at: string;
         };
@@ -315,6 +317,8 @@ export type Database = {
           name: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
+          pickup_academic_year_start?: number | null;
+          pickup_term?: string | null;
           role_label?: string | null;
           updated_at?: string;
         };
@@ -328,6 +332,8 @@ export type Database = {
           name?: string;
           parent_member_id?: string | null;
           photo_url?: string | null;
+          pickup_academic_year_start?: number | null;
+          pickup_term?: string | null;
           role_label?: string | null;
           updated_at?: string;
         };
@@ -365,6 +371,65 @@ export type Database = {
             columns: ["member_id"];
             isOneToOne: false;
             referencedRelation: "members";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ace_member_pickup_evidence: {
+        Row: {
+          ace_member_id: string;
+          candidate_academic_year_start: number | null;
+          candidate_term: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          raw_value: string | null;
+          review_note: string | null;
+          review_status: AcePickupReviewStatus;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          source_confidence: string | null;
+          source_kind: AcePickupSourceKind;
+          source_label: string | null;
+        };
+        Insert: {
+          ace_member_id: string;
+          candidate_academic_year_start?: number | null;
+          candidate_term?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          raw_value?: string | null;
+          review_note?: string | null;
+          review_status?: AcePickupReviewStatus;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_confidence?: string | null;
+          source_kind: AcePickupSourceKind;
+          source_label?: string | null;
+        };
+        Update: {
+          ace_member_id?: string;
+          candidate_academic_year_start?: number | null;
+          candidate_term?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          raw_value?: string | null;
+          review_note?: string | null;
+          review_status?: AcePickupReviewStatus;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          source_confidence?: string | null;
+          source_kind?: AcePickupSourceKind;
+          source_label?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ace_member_pickup_evidence_ace_member_id_fkey";
+            columns: ["ace_member_id"];
+            isOneToOne: false;
+            referencedRelation: "ace_family_members";
             referencedColumns: ["id"];
           },
         ];
@@ -3973,6 +4038,8 @@ export type Database = {
           name: string | null;
           parent_member_id: string | null;
           photo_url: string | null;
+          pickup_academic_year_start: number | null;
+          pickup_term: string | null;
           role_label: string | null;
           updated_at: string | null;
         };
@@ -4273,6 +4340,15 @@ export type Database = {
         Args: { p_cycle_id: string };
         Returns: Json;
       };
+      set_ace_member_pickup_year: {
+        Args: {
+          p_ace_member_id: string;
+          p_academic_year_start: number | null;
+          p_term?: string | null;
+          p_evidence_id?: string | null;
+        };
+        Returns: Json;
+      };
       publish_cabinet_roster_cycle: {
         Args: { p_cycle_id: string };
         Returns: Json;
@@ -4570,6 +4646,14 @@ export type ApplicationKey =
   | "vcn_props_team_interest"
   | "wnc_team_form";
 export type ApplicationStatus = "disabled" | "not_open" | "open" | "closed";
+/** Where a historical ACE pickup-year value came from (admin-only evidence). */
+export type AcePickupSourceKind =
+  | "import_json"
+  | "workbook_year_row"
+  | "official_pairing"
+  | "assignment_cycle"
+  | "admin_entry";
+export type AcePickupReviewStatus = "pending" | "approved" | "rejected" | "superseded";
 export type ImportJobStatus = "completed" | "failed";
 export type ImportSourceType =
   "csv_url" | "google_sheets_csv" | "manual" | "unknown";
