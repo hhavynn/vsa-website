@@ -55,12 +55,21 @@ function maySendDiagnostic(): boolean {
   return Boolean(GA_ID && diagnosticsConsented && typeof window !== 'undefined' && window.gtag);
 }
 
+// GA4 can infer page_location/referrer automatically even when our event does
+// not send a URL. Override both using only the origin and a coarse fixed path.
+function diagnosticPageContext() {
+  const page_area = window.location.pathname.startsWith('/admin') ? 'admin' : 'public';
+  const page_path = page_area === 'admin' ? '/admin' : '/';
+  const safeLocation = window.location.origin + page_path;
+  return { page_area, page_path, page_location: safeLocation, page_referrer: window.location.origin + '/' };
+}
+
 /** Report an exception category, NEVER the Error, stack, URL or member details. */
 export const trackSafeDiagnosticError = (kind: 'render_failure' | 'chunk_load') => {
   if (!maySendDiagnostic()) return;
   window.gtag('event', 'exception', {
     description: kind,
-    page_area: window.location.pathname.startsWith('/admin') ? 'admin' : 'public',
+    ...diagnosticPageContext(),
     fatal: true,
     send_to: GA_ID,
   });
@@ -74,6 +83,7 @@ export const trackSafeWebVital = (metric: { name: string; value: number }) => {
   window.gtag('event', 'web_vital', {
     metric_name: metric.name,
     metric_value: Math.round(metric.value * 1000) / 1000,
+    ...diagnosticPageContext(),
     send_to: GA_ID,
   });
 };
