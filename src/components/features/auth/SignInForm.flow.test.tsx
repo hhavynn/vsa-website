@@ -107,8 +107,8 @@ describe('SignInForm', () => {
 
   it('announces validation errors and focuses the first invalid required field', async () => {
     renderForm();
-    const email = await screen.findByRole('textbox', { name: /email \(required\)/i });
-    const password = screen.getByLabelText(/password \(required\)/i);
+    const email = await screen.findByRole('textbox', { name: 'Email' });
+    const password = screen.getByLabelText('Password');
     expect(email).toHaveAttribute('autocomplete', 'username');
     expect(password).toHaveAttribute('autocomplete', 'current-password');
     expect(email).toBeRequired();
