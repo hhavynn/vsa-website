@@ -15,4 +15,4 @@ Create Event starts with a category: **General VSA Event**, **External Event** (
 
 Offline proof: `bash scripts/test-house-event-save.sh`.
 
-**Migration status:** `20261028080000_house_event_atomic_save.sql` is **not applied**; it needs owner approval and staging first.
+**Migration status:** `20261028080000_house_event_atomic_save.sql` is verified applied to production (2026-10-28).
