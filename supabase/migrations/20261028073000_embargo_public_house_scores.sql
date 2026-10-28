@@ -180,7 +180,7 @@ language plpgsql
 stable
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_result jsonb;
 begin
@@ -219,7 +219,7 @@ begin
   limit 1;
   return v_result;
 end;
-$;
+$$;
 
 revoke all on function public.public_member_house_badge(uuid, integer) from public, anon, authenticated;
 grant execute on function public.public_member_house_badge(uuid, integer) to anon, authenticated;
