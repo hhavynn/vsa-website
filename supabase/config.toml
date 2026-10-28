@@ -318,6 +318,10 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.member-photo-upload]
 verify_jwt = false
 
+# Public submission boundary verifies optional sessions itself and derives identity.
+[functions.submit-feedback]
+verify_jwt = false
+
 # Called by the image-migration triggers (private.request_image_migration, which
 # reads the secret from Vault). The x-image-migration-secret header is their only
 # authorization, so callers send no Authorization header and never the

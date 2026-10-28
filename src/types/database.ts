@@ -2983,6 +2983,33 @@ export type Database = {
           },
         ];
       };
+      privileged_edge_quotas: {
+        Row: {
+          caller_hash: string;
+          day_count: number;
+          day_started: string;
+          minute_count: number;
+          minute_started: string;
+          scope: string;
+        };
+        Insert: {
+          caller_hash: string;
+          day_count?: number;
+          day_started: string;
+          minute_count?: number;
+          minute_started: string;
+          scope: string;
+        };
+        Update: {
+          caller_hash?: string;
+          day_count?: number;
+          day_started?: string;
+          minute_count?: number;
+          minute_started?: string;
+          scope?: string;
+        };
+        Relationships: [];
+      };
       program_content: {
         Row: {
           body: string | null;
@@ -4099,9 +4126,29 @@ export type Database = {
         Args: { p_admin_note?: string; p_request_id: string };
         Returns: undefined;
       };
+      reserve_privileged_edge_quota: {
+        Args: {
+          p_caller_hash: string;
+          p_caller_per_minute: number;
+          p_global_per_day: number;
+          p_scope: string;
+        };
+        Returns: boolean;
+      };
       smart_merge_members: {
         Args: { p_source_id: string; p_target_id: string };
         Returns: undefined;
+      };
+      submit_feedback_guarded: {
+        Args: {
+          p_description: string;
+          p_email?: string;
+          p_name?: string;
+          p_title: string;
+          p_type: string;
+          p_user_id?: string;
+        };
+        Returns: boolean;
       };
       sync_active_academic_term: {
         Args: { p_today?: string };
