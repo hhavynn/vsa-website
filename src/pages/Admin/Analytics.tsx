@@ -161,7 +161,7 @@ export default function AdminAnalytics() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-        <label className="sr-only" htmlFor="analytics-date-range">Analytics time range</label>
+          <label className="sr-only" htmlFor="analytics-date-range">Analytics time range</label>
         <select
           id="analytics-date-range"
           value={dateRange}
