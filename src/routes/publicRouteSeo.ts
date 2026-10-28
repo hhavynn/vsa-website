@@ -72,7 +72,7 @@ export const PUBLIC_ROUTE_SEO: PublicRouteSeo[] = [
     path: '/leaderboard',
     title: 'Leaderboard',
     description:
-      'The VSA points leaderboard and House standings at UC San Diego: see how members and Houses rank by the points they earn across the academic year.',
+      'Explore individual VSA member points at UC San Diego. House standings are privately tracked and officially announced at general body meetings.',
     priority: 0.8,
     changeFrequency: 'daily',
   },
@@ -112,7 +112,7 @@ export const PUBLIC_ROUTE_SEO: PublicRouteSeo[] = [
     path: '/house',
     title: 'House Program',
     description:
-      'The VSA House system at UC San Diego: year-long teams with their own identity, events, and points standings, competing together across the academic year.',
+      'Explore VSA at UC San Diego Houses, their year-long communities and events. House standings are announced at general body meetings rather than posted live.',
     priority: 0.9,
     changeFrequency: 'weekly',
   },
