@@ -151,7 +151,14 @@ export function AlbumLightbox({
       if (distance > 0) {
         const next = Math.min(MAX_ZOOM, Math.max(1, pinch.current.scale * distance / pinch.current.distance));
         setZoom(next);
-        if (next === 1) setOffset({ x: 0, y: 0 });
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const maxX = (bounds.width * (next - 1)) / 2;
+        const maxY = (bounds.height * (next - 1)) / 2;
+        // A smaller zoom also shrinks the legal pan extent.
+        setOffset(current => ({
+          x: Math.max(-maxX, Math.min(maxX, current.x)),
+          y: Math.max(-maxY, Math.min(maxY, current.y)),
+        }));
       }
       if (event.cancelable) event.preventDefault();
     } else if (pan.current && event.touches.length === 1 && zoom > 1) {
@@ -286,7 +293,7 @@ export function AlbumLightbox({
         >
           <div
             className="relative mx-4 mt-1 aspect-[3/2] overflow-hidden rounded bg-[var(--surface2)] sm:mx-6 sm:mt-4"
-            style={{ touchAction: 'none' }}
+            
             onTouchStart={handleImageTouchStart}
             onTouchMove={handleImageTouchMove}
             onTouchEnd={handleImageTouchEnd}
