@@ -11,6 +11,7 @@ import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
 import { AdminFormShell } from '../../components/features/admin/ops/AdminFormShell';
 import { isDirty, saveStatus } from '../../lib/adminDirty';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
+import { SiteLogoUrlSchema } from '../../schemas/siteBranding';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -71,6 +72,13 @@ export default function AdminSettings() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!logoFile) {
+      const url = SiteLogoUrlSchema.safeParse(logoUrl);
+      if (!url.success) {
+        setSaveError(url.error.issues[0]?.message ?? 'Invalid logo URL.');
+        return;
+      }
+    }
     try {
       setLoading(true);
       setSaveError(null);
