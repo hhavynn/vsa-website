@@ -33,6 +33,22 @@ name: RLS verification
 # member_lookup_phase=post-migration, then set the repository variable
 # RLS_MEMBER_LOOKUP_PHASE=post-migration. See docs/rls-verification-checklist.md.
 #
+# House rollout phases: the same sequence for two House privacy migrations.
+# RLS_HOUSE_EMBARGO_PHASE covers 20261028073000_embargo_public_house_scores.sql
+# (#692): post-migration requires the five House score views and
+# admin_private_house_standings to be denied to anon (42501) and leaves those
+# views out of anon's write-grant probe, since a role without SELECT cannot be
+# probed there. RLS_HOUSE_CACHE_PHASE covers
+# 20261028083000_restrict_public_members_house_cache.sql (#704): post-migration
+# requires anon to be denied public_members.house and to keep the rest of the
+# public member projection. Neither requires the signed-in test accounts: the
+# anon contract is fully asserted, and the ordinary-user and admin variants run
+# whenever RLS_TEST_* are configured. The pre-migration default fails loudly
+# once a migration is applied; that failure is the reminder to flip the
+# variable. Sequence: merge, apply the migration, run this workflow manually
+# with house_embargo_phase / house_cache_phase=post-migration, then set the
+# repository variable. See docs/rls-verification-checklist.md.
+#
 # Why a schedule as well as PRs: RLS regressions here have come from database
 # changes made outside PRs (#422, #423 found dashboard-created policies), which
 # no code change would trigger. The daily run catches those.
@@ -60,6 +76,22 @@ on:
           - post-migration
       member_lookup_phase:
         description: 'Member lookup RPC migration phase to verify (default: repository variable RLS_MEMBER_LOOKUP_PHASE, else pre-migration)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - pre-migration
+          - post-migration
+      house_embargo_phase:
+        description: 'House score embargo migration phase to verify (default: repository variable RLS_HOUSE_EMBARGO_PHASE, else pre-migration)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - pre-migration
+          - post-migration
+      house_cache_phase:
+        description: 'public_members.house cache migration phase to verify (default: repository variable RLS_HOUSE_CACHE_PHASE, else pre-migration)'
         required: false
         type: choice
         options:
@@ -133,3 +165,5 @@ jobs:
           RLS_TEST_MEMBER_ID: ${{ secrets.RLS_TEST_MEMBER_ID }}
           RLS_RETIREMENT_PHASE: ${{ inputs.retirement_phase || vars.RLS_RETIREMENT_PHASE }}
           RLS_MEMBER_LOOKUP_PHASE: ${{ inputs.member_lookup_phase || vars.RLS_MEMBER_LOOKUP_PHASE }}
+          RLS_HOUSE_EMBARGO_PHASE: ${{ inputs.house_embargo_phase || vars.RLS_HOUSE_EMBARGO_PHASE }}
+          RLS_HOUSE_CACHE_PHASE: ${{ inputs.house_cache_phase || vars.RLS_HOUSE_CACHE_PHASE }}

@@ -1,4 +1,5 @@
-// Runs as `postbuild`. On Vercel production builds (SENTRY_AUTH_TOKEN set) it
+// Runs as `postbuild`. On Vercel production builds (SENTRY_AUTH_TOKEN set; the
+// Vercel variable is named SENTRY_AUTH_TOKENS, which is also accepted) it
 // injects debug IDs, uploads the source maps to Sentry, then deletes them from
 // build/ so they are no longer served publicly. Without the token (local
 // builds, GitHub CI, the Docker image) it does nothing and the maps stay, so
@@ -29,10 +30,13 @@ export function findSourceMaps(dir) {
   });
 }
 
-function runSentryCli(args) {
+function runSentryCli(args, token) {
   const require = createRequire(import.meta.url);
-  // The token reaches sentry-cli through the inherited environment, never argv.
-  execFileSync(require('@sentry/cli').SentryCli.getPath(), args, { stdio: 'inherit' });
+  // The token reaches sentry-cli through its environment, never argv.
+  execFileSync(require('@sentry/cli').SentryCli.getPath(), args, {
+    stdio: 'inherit',
+    env: { ...process.env, SENTRY_AUTH_TOKEN: token },
+  });
 }
 
 export function uploadSourceMaps({
@@ -43,7 +47,8 @@ export function uploadSourceMaps({
   log = console.log,
   warn = console.warn,
 } = {}) {
-  if (!env.SENTRY_AUTH_TOKEN) {
+  const token = env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKENS;
+  if (!token) {
     log('Sentry source maps: SENTRY_AUTH_TOKEN is not set, so nothing was uploaded and the maps were kept.');
     return 'skipped';
   }
@@ -57,14 +62,14 @@ export function uploadSourceMaps({
   const jsDir = join(buildDir, 'static', 'js');
   const release = env.VERCEL_GIT_COMMIT_SHA || env.REACT_APP_VERCEL_GIT_COMMIT_SHA;
   try {
-    exec(['sourcemaps', 'inject', jsDir]);
+    exec(['sourcemaps', 'inject', jsDir], token);
     exec([
       'sourcemaps', 'upload',
       '--org', env.SENTRY_ORG || DEFAULT_ORG,
       '--project', env.SENTRY_PROJECT || DEFAULT_PROJECT,
       ...(release ? ['--release', release] : []),
       jsDir,
-    ]);
+    ], token);
   } catch (error) {
     warn(`Sentry source maps: upload failed (${error.message}); keeping the maps so this deploy is unaffected.`);
     return 'failed';
