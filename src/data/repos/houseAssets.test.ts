@@ -1,4 +1,4 @@
-import { houseAssetsRepository } from './houseAssets';
+import { houseAssetsRepository, type HousePageAssetFormData } from './houseAssets';
 import { postgrestError, supabaseMock } from '../../test-utils/supabaseMock';
 
 jest.mock('../../lib/supabase', () => ({
@@ -86,9 +86,30 @@ describe('houseAssetsRepository existing public/admin behavior (#291)', () => {
   });
 
   it('pins the current academic-year and house-key upsert conflict key without changing assets', async () => {
-    const asset = { ...row('Rarity', 1), house_key: 'rarity' };
+    const asset: HousePageAssetFormData = {
+      id: 'rarity',
+      house: 'Rarity',
+      house_key: 'rarity',
+      display_name: 'Rarity',
+      academic_year_start: 2026,
+      academic_year_end: 2027,
+      display_order: 1,
+      is_active: true,
+      description: null,
+      image_url: null,
+      image_thumbnail_url: null,
+      image_alt: null,
+      cover_image_url: null,
+      accent_color: null,
+      emoji: null,
+      house_parent_image_url: null,
+      house_parent_heading: null,
+      house_parent_body: null,
+      source_doc_url: null,
+      internal_notes: null,
+    };
     supabaseMock.queueResult('house_page_assets', { data: asset, error: null });
-    await expect(houseAssetsRepository.upsertAsset(asset as Parameters<typeof houseAssetsRepository.upsertAsset>[0]))
+    await expect(houseAssetsRepository.upsertAsset(asset))
       .resolves.toEqual(asset);
     const call = supabaseMock.queriesFor('house_page_assets')[0].calls.find(x => x.method === 'upsert');
     expect(call?.args).toEqual([
