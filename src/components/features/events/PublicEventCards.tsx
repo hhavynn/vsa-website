@@ -264,7 +264,7 @@ export function FeaturedEventCard({ event, external }: { event: Event; external?
     <motion.div
       initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="scrapbook-paper mb-9 flex flex-col-reverse overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
+      className="scrapbook-paper mb-9 flex flex-col overflow-hidden lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,1.08fr)]"
       style={{ borderColor: 'var(--color-border)' }}
     >
       <span className="scrapbook-pin" aria-hidden />

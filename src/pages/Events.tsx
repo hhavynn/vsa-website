@@ -15,6 +15,7 @@ import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
 import { formatDateOnly } from '../lib/dateOnly';
+import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../lib/eventTime';
 import { getSummerBreakMessage, shouldUseSummerEmptyState } from '../utils/seasonalState';
 import {
   addDaysToDateOnly,
@@ -448,15 +449,35 @@ export function Events() {
             </p>
           )}
 
+          {featured && (
+            <a
+              href="#next-up-event"
+              aria-label={'Next event: ' + featured.name + '. Jump to event details'}
+              className="mt-5 block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 font-sans text-sm text-[var(--text)] transition-colors hover:border-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+            >
+              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--text3)]">Next event</span>
+              <strong className="mt-1 block break-words text-base">{featured.name}</strong>
+              <span className="mt-1 block leading-relaxed">
+                {formatEventDateRange(featured.date, featured.end_date, featured.start_time)}
+                {featured.start_time && (
+                  ' · ' + (featured.end_time
+                    ? formatEventTimeRange(featured.start_time, featured.end_time)
+                    : formatEventTime(featured.start_time))
+                )}
+                {' · '}{featured.location || 'Location not announced yet'}
+              </span>
+              <span className="mt-1 block text-xs font-semibold text-[var(--brand)]">Full details and add to calendar ↓</span>
+            </a>
+          )}
           {unfilteredUpcomingEvents.length > 0 && (
-            <div className="vsa-filter-bar" role="group" aria-label="Filter events by type">
+            <div className="vsa-filter-bar mt-4 flex max-w-full gap-2 overflow-x-auto pb-2" role="group" aria-label="Filter events by type">
               {FILTERS.map((filter) => (
                 <button
                   type="button"
                   key={filter.key}
                   onClick={() => setActiveFilter(filter.key)}
                   aria-pressed={activeFilter === filter.key}
-                  className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
+                  className={`vsa-filter-btn min-h-11 shrink-0 ${activeFilter === filter.key ? 'active' : ''}`}
                 >
                   {filter.label}
                 </button>
@@ -469,8 +490,10 @@ export function Events() {
       <div className="vsa-container py-8 lg:py-10">
         {featured && (
           <>
-            <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
+            <div id="next-up-event" className="scroll-mt-24">
+              <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <FeaturedEventCard event={featured} external={externalListings.get(featured.id)} />
+            </div>
           </>
         )}
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Events } from './Events';
@@ -137,6 +137,13 @@ describe('/events lifecycle classification', () => {
 
     // Urban Matcha and Next Day Mixer are upcoming/ongoing
     const urbanMatchaElements = await screen.findAllByText('Urban Matcha Study Jams');
+    const nextEvent = screen.getByRole('link', { name: /Next event: Urban Matcha Study Jams/ });
+    expect(nextEvent).toHaveAttribute('href', '#next-up-event');
+    expect(nextEvent).toHaveTextContent('Oct 20');
+    expect(nextEvent).toHaveTextContent('10 AM – 10 PM');
+    expect(nextEvent).toHaveTextContent('Urban Matcha');
+    expect(within(screen.getByRole('group', { name: 'Filter events by type' })).getAllByRole('button')).toHaveLength(8);
+
     expect(urbanMatchaElements.length).toBeGreaterThanOrEqual(1);
 
     const nextDayElements = await screen.findAllByText('Next Day Mixer');
