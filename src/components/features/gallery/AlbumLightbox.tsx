@@ -13,7 +13,7 @@ const SWIPE_MIN_DISTANCE = 48;
 const SWIPE_AXIS_RATIO = 1.5;
 const MAX_ZOOM = 3;
 
-const pinchDistance = (touches: TouchList) => {
+const pinchDistance = (touches: React.TouchList) => {
   const a = touches[0], b = touches[1];
   return a && b ? Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY) : 0;
 };
