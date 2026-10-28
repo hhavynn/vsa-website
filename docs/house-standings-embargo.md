@@ -56,8 +56,15 @@ that future freeze, review and export workflow; do not invent snapshots here.
    An ordinary user must not become an admin simply by signing in.
 5. Execute `RLS_HOUSE_EMBARGO_PHASE=post-migration node
    scripts/verify-rls-security.mjs` against staging, with test credentials
-   configured through secrets. This check runs SELECT-denial probes and an
-   approved-admin positive RPC test; it does not apply migrations.
+   configured through secrets. After the #692 cutover, the verifier assumes
+   **post-migration by default** even if the CI environment variable is
+   absent. Only an explicitly marked, isolated *pre-migration* staging
+   environment may opt out with `RLS_HOUSE_EMBARGO_PHASE=pre-migration`.
+   This check runs SELECT-denial probes and an approved-admin positive RPC
+   test; it does not apply migrations. The safe public member projection
+   excludes the retired `public_members.house` cache (#704). A real failure
+   to read approved individual member fields remains a security/availability
+   blocker and must never be suppressed by this phase switch.
 6. Verify public Home, House, House detail, `/leaderboard?view=houses`,
    `/points`, Wrapped and Top-3 Story at desktop and mobile sizes, logged
    out and as a normal user. Inspect Network and the **serialized response**
