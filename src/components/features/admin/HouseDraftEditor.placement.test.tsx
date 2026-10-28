@@ -18,6 +18,12 @@ import { HouseImportMember } from '../../../lib/houseAssignmentImport';
 import { downloadCsv } from '../../../lib/housePlacementExport';
 import toast from 'react-hot-toast';
 
+import { academicTermsRepository } from '../../../data/repos/academicTerms';
+import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { applicationLinksRepository } from '../../../data/repos/applicationLinks';
+jest.mock('../../../data/repos/academicTerms', () => ({ academicTermsRepository: { getActiveTerm: jest.fn() } }));
+jest.mock('../../../data/repos/houseParents', () => ({ houseParentsRepository: { listForYear: jest.fn() } }));
+jest.mock('../../../data/repos/applicationLinks', () => ({ applicationLinksRepository: { listAdminApplicationLinks: jest.fn() } }));
 jest.mock('../../../data/repos/housePayments', () => ({
   PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
   housePaymentsRepository: {
@@ -119,6 +125,9 @@ async function settle() {
 const download = downloadCsv as jest.MockedFunction<typeof downloadCsv>;
 
 beforeEach(() => {
+  (academicTermsRepository.getActiveTerm as jest.Mock).mockResolvedValue({ academic_year_start: 2026 });
+  (houseParentsRepository.listForYear as jest.Mock).mockResolvedValue([]);
+  (applicationLinksRepository.listAdminApplicationLinks as jest.Mock).mockResolvedValue([]);
   (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
   jest.clearAllMocks();
   // The real RPC returns the updated rows; mimic that from the requested changes.
@@ -332,5 +341,30 @@ describe('payment eligibility gate (#660)', () => {
     renderEditor(placement());
     expect(await screen.findByText(/Payment eligibility could not be checked. Lock and Reveal stay blocked/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock assignments' })).toBeDisabled();
+  });
+});
+
+describe('Ready to Reveal (#635)', () => {
+  it('lists what becomes public, with no House points, and keeps Reveal disabled while a check is Unknown', async () => {
+    (academicTermsRepository.getActiveTerm as jest.Mock).mockRejectedValue(new Error('network'));
+    renderEditor(placement(), 'locked');
+    const panel = await screen.findByRole('region', { name: 'Ready to Reveal' });
+    expect(panel).toHaveTextContent('no House points or standings');
+    await waitFor(() => expect(within(panel).getByRole('status')).toHaveTextContent('Unknown'));
+    await userEvent.click(screen.getByRole('checkbox', { name: /I confirm: reveal these 4 assignments/ }));
+    expect(screen.getByRole('button', { name: 'Reveal House assignments' })).toBeDisabled();
+    expect(repo.publishBatch).not.toHaveBeenCalled();
+  });
+
+  it('flags an open House application window without blocking the Reveal', async () => {
+    (applicationLinksRepository.listAdminApplicationLinks as jest.Mock).mockResolvedValue([{
+      id: 'l1', application_key: 'house_fall', title: 'Fall House application', is_enabled: true,
+      open_at: '2020-01-01T00:00:00Z', due_at: '2999-01-01T00:00:00Z',
+    }]);
+    renderEditor(placement(), 'locked');
+    const panel = await screen.findByRole('region', { name: 'Ready to Reveal' });
+    await waitFor(() => expect(panel).toHaveTextContent('Fall House application is still open'));
+    await userEvent.click(screen.getByRole('checkbox', { name: /I confirm: reveal these 4 assignments/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reveal House assignments' })).toBeEnabled());
   });
 });
