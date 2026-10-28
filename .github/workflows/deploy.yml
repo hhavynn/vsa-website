@@ -63,6 +63,11 @@ jobs:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
 
+      - name: Test the Sentry source-map upload script
+        # postbuild skips without SENTRY_AUTH_TOKEN (never set in GitHub), so
+        # the build above kept its maps; this pins the upload/delete branch.
+        run: node --test scripts/sentry-sourcemaps.test.mjs
+
       - name: Check CSP inline-script hashes
         # build/index.html must contain exactly the inline scripts allowlisted in
         # config/csp-script-hashes.json (and the doc's draft script-src must name

@@ -13,6 +13,6 @@ Public build values must be literal: the build guard rejects dollar signs in the
 | GitHub dispatch token / webhook secret | Repo owner / Supabase Function secrets | Image migration workflows |
 | Google Analytics OAuth tokens | Google Cloud owner / Supabase Function secrets | Admin analytics |
 | Vercel deployment token | Vercel owner / GitHub Actions secrets | Deployment |
-| Sentry auth token (source-map upload, once added) | Sentry org owner / Vercel build env (Production, not `REACT_APP_*`) | Release and artifact writes in the Sentry org |
+| Sentry organization auth token (`SENTRY_AUTH_TOKEN`, read only by `scripts/sentry-sourcemaps.mjs` at build time) | Sentry org owner / Vercel build env (Production, Sensitive, never `REACT_APP_*`) | Release and source-map uploads in the Sentry org |
 
 Review downstream services before revocation and redeploy affected public bundles after removal.
