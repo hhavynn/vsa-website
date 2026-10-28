@@ -49,6 +49,8 @@ describe('House standings embargo release invariants (#692)', () => {
     const wrapped = read('src/components/features/home/WrappedRecapCard.tsx');
     expect(wrapped).not.toContain('Bowser House finished first');
     expect(wrapped).not.toContain('Final Standings');
+    const archive = read('src/data/legacyHouseArchive.ts');
+    expect(archive).not.toMatch(/Gucci won House Spirit Week|414 points|final standings stay in the archive/i);
   });
 
   it('keeps public individual leaderboard reads available and House badges independent of points', () => {
