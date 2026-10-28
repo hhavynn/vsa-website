@@ -1,6 +1,6 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { HouseDetailSkeleton } from '../components/common/PageSkeletons';
@@ -219,6 +219,24 @@ export function HouseDetail() {
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // A calendar link (#house-event-<id>) lands on that event's card, expanding
+  // past events when it is beyond the first page.
+  const { hash } = useLocation();
+  const targetEventId = hash.startsWith('#house-event-') ? hash.slice('#house-event-'.length) : null;
+  useEffect(() => {
+    if (!targetEventId || upcomingLoading || pastLoading) return;
+    const pastIndex = pastEvents.findIndex((event) => event.id === targetEventId);
+    if (pastIndex >= 8 && !showAllPastEvents) {
+      setShowAllPastEvents(true);
+      return;
+    }
+    const card = document.getElementById(`house-event-${targetEventId}`);
+    if (card) {
+      card.scrollIntoView({ block: 'start' });
+      card.focus({ preventScroll: true });
+    }
+  }, [targetEventId, upcomingLoading, pastLoading, pastEvents, showAllPastEvents]);
 
   const isDegraded = isSupabaseUnavailable(pastError);
 
