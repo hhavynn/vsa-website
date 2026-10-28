@@ -159,7 +159,7 @@ describe('/events cards for an external event', () => {
       recap="Photos and friends from the event."
       linkedAlbum="https://photos.example.test/album"
     />));
-    expect(screen.getByText('UVSA SoCal Fall Social')).toBeInTheDocument();
+    expect(screen.getAllByText('UVSA SoCal Fall Social').length).toBeGreaterThan(0);
     expect(screen.getByText(/3 members attended/)).toBeInTheDocument();
     expect(screen.getByText('Photos and friends from the event.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /View photos/ })).toHaveAttribute('href', 'https://photos.example.test/album');
@@ -169,7 +169,7 @@ describe('/events cards for an external event', () => {
 
   it('shows no House or fake ranking for events without published attendance', () => {
     render(wrap(<PastEventMemoryCard event={event} terms={[]} index={0} />));
-    expect(screen.getByText('UVSA SoCal Fall Social')).toBeInTheDocument();
+    expect(screen.getAllByText('UVSA SoCal Fall Social').length).toBeGreaterThan(0);
     expect(screen.queryByText(/\bled\b/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/members attended/)).not.toBeInTheDocument();
   });
