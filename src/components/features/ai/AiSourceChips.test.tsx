@@ -27,7 +27,7 @@ describe('Ask VSA source chips (#241)', () => {
   });
 
   it('blocks backslash host tricks and malformed Unicode from model-provided links', () => {
-    expect(safeAssistantSourceUrl('/\\\\evil.example')).toBe('/%5Cevil.example');
+    expect(safeAssistantSourceUrl('/\\\\evil.example')).toBe('/%5C%5Cevil.example');
     expect(safeAssistantSourceUrl('\uD800')).toBeNull();
   });
 
