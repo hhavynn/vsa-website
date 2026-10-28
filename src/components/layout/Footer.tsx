@@ -25,7 +25,7 @@ const socialLinks = [
 ];
 
 const editorialLink =
-  'block w-fit py-1 text-[13px] text-ed-ink underline-offset-4 transition-opacity duration-150 hover:underline touch:flex touch:min-h-11 touch:items-center';
+  'block w-fit py-1 text-[13px] text-ed-ink underline-offset-4 transition-opacity duration-150 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-ink touch:flex touch:min-h-11 touch:items-center';
 const editorialLabel = 'mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ed-muted';
 
 /** Figma footer: periwinkle field, large serif wordmark | mono-labelled link columns. */

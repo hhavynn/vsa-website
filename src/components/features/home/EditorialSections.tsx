@@ -82,7 +82,7 @@ export function EditorialHero({
 
       <div className="relative z-10 mx-auto grid w-full max-w-[1520px] grid-cols-1 items-center gap-10 px-5 pb-10 pt-[92px] sm:px-10 sm:pt-28 lg:min-h-[max(740px,calc(100svh-60px))] lg:grid-cols-[52%_48%] lg:gap-0 lg:px-[4vw] lg:py-[clamp(3rem,7vw,7.5rem)]">
         <div className="relative z-20 min-w-0 lg:pr-0">
-          <Eyebrow className="mb-6 text-white/95">
+          <Eyebrow className="mb-6 text-white [text-shadow:0_1px_14px_rgba(20,35,86,0.45)]">
             Vietnamese Student Association · UC San Diego
           </Eyebrow>
           <h1
@@ -240,7 +240,8 @@ function EditorialEventRow({
               width={360}
               height={270}
               sizes="(min-width: 1024px) 19vw, 28vw"
-              widths={[360]}
+              widths={[360, 540]}
+              resize="contain"
               alt={`${event.name} flyer`}
               className="home-editorial-flyer relative h-full w-full object-contain"
             />
@@ -305,6 +306,7 @@ function EditorialEventRow({
         </div>
         <Link
           to={`/events#event-${event.id}`}
+          aria-label={`Event details for ${event.name}`}
           className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-ed-ink underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-ed-ink lg:hidden"
         >
           Event details <Arrow />

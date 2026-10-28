@@ -5,7 +5,7 @@ describe('public editorial theme routing', () => {
     expect(isPublicEditorialRoute(pathname)).toBe(true);
   });
 
-  it.each(['/admin', '/admin/', '/admin/login', '/admin/events', '/signin'])('preserves the existing non-public theme on %s', (pathname) => {
+  it.each(['/admin', '/admin/', '/admin/login', '/admin/events', '/signin', '/ADMIN', '/Admin/Events', '/SignIn'])('preserves the existing non-public theme on %s', (pathname) => {
     expect(isPublicEditorialRoute(pathname)).toBe(false);
   });
 

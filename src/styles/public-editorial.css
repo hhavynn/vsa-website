@@ -397,9 +397,11 @@ html.dark .vsa-editorial-shell {
   box-shadow: 0 18px 50px rgba(25, 34, 75, 0.18);
 }
 
+/* Dark mode keeps the index.css surface Polaroid: children read --text etc.,
+   which stay light in dark mode, so a white card would hide them. */
 html.dark .vsa-editorial-shell .scrapbook-photo {
-  background: #f4f0fc;
-  color: #28354d;
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
 }
 
 .vsa-editorial-shell :is(.scrapbook-paper, .scrapbook-note, .scrapbook-photo)::before,

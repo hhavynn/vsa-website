@@ -66,7 +66,7 @@ export const NavigationShell = memo(function NavigationShell() {
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation-drawer"
               aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              className={`flex h-11 w-11 items-center justify-center border border-[var(--border2)] bg-[var(--surface2)] ${editorial ? 'rounded-none' : 'rounded-lg'} text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600`}
+              className={`flex h-11 w-11 items-center justify-center border border-[var(--border2)] bg-[var(--surface2)] ${editorial ? 'rounded-none' : 'rounded-lg'} text-[var(--text2)] shadow-[0_1px_0_rgba(196,184,168,0.35)] transition-colors duration-150 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400`}
             >
               {isMobileMenuOpen ? (
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
