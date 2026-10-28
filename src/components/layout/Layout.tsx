@@ -40,7 +40,9 @@ function LayoutShell() {
   return (
     <div className={`min-h-screen flex flex-col font-sans${isPublicEditorialRoute(location.pathname) ? ' vsa-editorial-shell' : ''}`} style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <ScrollManager />
-      <NavigationShell />
+      <header>
+        <NavigationShell />
+      </header>
 
       {/* min-h-screen keeps the (tall, mobile) footer below the fold while a route
           chunk or data skeleton is showing, so it does not jump when content lands. */}

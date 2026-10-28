@@ -106,7 +106,7 @@ function placedDrafts(): HouseAssignmentDraft[] {
     if (!applicant) throw new Error('missing applicant');
     return {
       id: `draft-${placement.applicantId}`,
-      batch_id: 'batch-2026',
+      batch_id: 'batch-2026', applicant_id: null,
       created_at: '2026-10-27T00:00:00Z',
       updated_at: '2026-10-27T00:00:00Z',
       source_name: applicant.name,

@@ -8,18 +8,12 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
-    "@supabase/ssr": "^0.12.7",
+    "@sentry/react": "^11.9.0",
     "@supabase/supabase-js": "^2.118.0",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.8",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^26.6.5",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "framer-motion": "^14.4.0",
+    "posthog-js": "^1.440.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^20.1.4",
@@ -29,14 +23,17 @@
     "react-query": "^3.39.3",
     "react-router-dom": "^7.18.4",
     "tailwind-merge": "^3.7.0",
-    "typescript": "^4.9.5",
     "web-vitals": "^6.2.3",
     "zod": "^3.25.76"
   },
   "scripts": {
     "start": "node scripts/start-dev.cjs",
+    "prebuild": "node scripts/check-client-secrets.mjs --build",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild": "node scripts/sentry-sourcemaps.mjs",
+    "prebuild:production": "node scripts/check-client-secrets.mjs --build",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "postbuild:production": "node scripts/sentry-sourcemaps.mjs",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
     "analyze": "npm run build && npx source-map-explorer 'build/static/js/*.js'",
@@ -55,6 +52,7 @@
     "migrate:images:relink": "tsx scripts/migrate-supabase-images-to-public.ts",
     "audit:storage-content": "tsx scripts/audit-storage-backed-content.ts",
     "check:csp-hashes": "node scripts/check-csp-inline-hashes.mjs",
+    "ace:years": "tsx scripts/ace-historical-years.ts",
     "check:content-links": "tsx scripts/check-content-links.ts",
     "test:timezones": "for tz in UTC America/New_York Asia/Ho_Chi_Minh America/Los_Angeles; do echo \"TZ=$tz\"; TZ=$tz CI=true node ./node_modules/react-scripts/bin/react-scripts.js test --watchAll=false src/lib/applicationWindowBoundaries src/lib/applicationWindows src/lib/adminAttention src/components/features/home/ClosingSoon src/pages/Admin/Applications.window src/utils/seasonalBoundaries src/utils/losAngelesDate src/lib/eventDayLabel src/pages/Admin/Events.bulk || exit 1; done"
   },
@@ -62,7 +60,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "react/no-danger": "error"
+    }
   },
   "jest": {
     "transformIgnorePatterns": [
@@ -85,14 +86,25 @@
     ]
   },
   "devDependencies": {
+    "@types/jest-axe": "^3.5.9",
+    "@sentry/cli": "^3.8.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.6.1",
+    "jest-axe": "^11.0.0",
     "postcss": "^8.5.31",
     "prettier": "^3.9.10",
     "react-scripts": "^5.0.1",
     "sharp": "^0.35.5",
     "source-map-explorer": "^2.5.3",
     "tailwindcss": "^3.3.5",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "typescript": "^4.9.5"
   },
   "overrides": {
     "@svgr/webpack": "6.5.1",

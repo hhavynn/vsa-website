@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
 import { houseParentsRepository } from '../../../data/repos/houseParents';
+import { PAYMENTS_UNAVAILABLE, housePaymentsRepository } from '../../../data/repos/housePayments';
 import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { ACTIVITY_ACTIONS } from '../../../lib/adminActivity';
@@ -36,6 +37,12 @@ import {
   parsePlacementCsv,
   placementApplicants,
 } from '../../../lib/housePlacementImport';
+import {
+  APPLICATION_KEY_LABEL,
+  HouseApplicationKey,
+  applicantKey,
+  applicantSetFingerprint,
+} from '../../../lib/housePayments';
 import { HousePageAsset } from '../../../types';
 import { HousePlacementCapacityEditor, parseCapacityInput } from './HousePlacementCapacityEditor';
 import { HousePlacementResults, PlacementPreviewRow } from './HousePlacementResults';
@@ -116,6 +123,7 @@ export function HousePlacementPanel({
   const [generateErrors, setGenerateErrors] = useState<AllocationError[]>([]);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const [paymentCycleChoice, setPaymentCycleChoice] = useState('');
 
   const activeProfiles = useMemo(() => houseProfiles.filter((profile) => profile.is_active), [houseProfiles]);
   // House Parents let "Pinky Pie (Ingyin & Martin)" resolve to Pinkie Pie. Without
@@ -136,6 +144,20 @@ export function HousePlacementPanel({
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+  // A year with a payment roster gates Lock and Reveal on payment (#660), so a
+  // placement saved there must belong to a roster. Before the payment
+  // migration exists, saving works exactly as it did.
+  const cyclesQuery = useQuery({
+    queryKey: ['admin', 'house-payment-cycles', selectedYear],
+    queryFn: () => housePaymentsRepository.listCycles(selectedYear as number),
+    enabled: selectedYear !== null,
+    retry: false,
+  });
+  const paymentsUnavailable = cyclesQuery.error instanceof Error && cyclesQuery.error.message === PAYMENTS_UNAVAILABLE;
+  const cycles = useMemo(() => cyclesQuery.data ?? [], [cyclesQuery.data]);
+  // Always an explicit choice: registering a Winter CSV into the Fall roster cannot be undone.
+  const paymentCycleId = cycles.some((cycle) => cycle.id === paymentCycleChoice) ? paymentCycleChoice : '';
+  const cyclesBlocked = cyclesQuery.isLoading || (cyclesQuery.isError && !paymentsUnavailable) || (cycles.length > 0 && !paymentCycleId);
   const aliasKey = useMemo(() => aliases.map((alias) => `${alias.member_id}:${alias.email}`).sort().join(','), [aliases]);
   const memberNameById = useMemo(() => new Map(members.map((member) => [member.id, `${member.first_name} ${member.last_name}`.trim()])), [members]);
   const memberName = useCallback((memberId: string) => memberNameById.get(memberId) ?? null, [memberNameById]);
@@ -261,16 +283,39 @@ export function HousePlacementPanel({
   }
 
   async function handleSave() {
-    if (!current || !review || !selectedYear || !effectiveStartDate || savingRef.current) return;
+    if (!current || !review || !selectedYear || !effectiveStartDate || savingRef.current || cyclesBlocked) return;
     savingRef.current = true;
     setSaving(true);
     try {
       const byId = new Map(review.applicants.map((row) => [row.id, row]));
       const preferenceById = new Map(applicants.map((item) => [item.id, [...item.preferences]]));
+      // The minimal snapshot a payment rerun needs (#657): name, original
+      // time, sheet row, ranking, member link. No email or other answers.
+      let applicantIds: Map<string, string> | null = null;
+      let paymentVersion = 0;
+      if (paymentCycleId) {
+        applicantIds = await housePaymentsRepository.registerApplicants(paymentCycleId, current.rows.map((row) => {
+          const source = byId.get(row.id);
+          if (!source?.submittedAtIso) throw new Error(`Row ${row.id} lost its submission time; validate again.`);
+          return {
+            applicant_key: applicantKey(source.submittedAtIso, source.sourceRow),
+            source_name: row.name,
+            submission_timestamp: source.submittedAtIso,
+            source_row_number: source.sourceRow,
+            preferences: preferenceById.get(row.id) ?? [],
+            member_id: row.match.memberId,
+            match_status: row.match.memberId ? row.match.status : 'unmatched',
+            match_method: row.match.memberId ? row.match.method : null,
+          };
+        }), 'placement_import');
+        paymentVersion = (await housePaymentsRepository.getCycle(paymentCycleId)).status_version;
+      }
       const rows = current.rows.map((row) => {
         const source = byId.get(row.id);
         if (!source?.submittedAtIso) throw new Error(`Row ${row.id} lost its submission time; validate again.`);
-        return draftInsertFromPlacement({
+        const applicantId = applicantIds?.get(applicantKey(source.submittedAtIso, source.sourceRow)) ?? null;
+        if (applicantIds && !applicantId) throw new Error(`Row ${source.sourceRow} was not saved to the payment roster; nothing was saved.`);
+        return { ...(applicantId ? { applicant_id: applicantId } : {}), ...draftInsertFromPlacement({
           name: row.name,
           submittedAtIso: source.submittedAtIso,
           sourceRow: source.sourceRow,
@@ -280,7 +325,7 @@ export function HousePlacementPanel({
           explanation: row.explanation,
           corrected: row.corrected,
           match: row.match,
-        });
+        }) };
       });
       // Repeat submissions are recorded too, so the saved draft shows which sheet rows were not placed and why.
       const excludedApplicants = review.applicants
@@ -299,7 +344,23 @@ export function HousePlacementPanel({
         sourceLabel: sourceLabel.trim() || `Auto placement${fileName ? ` · ${fileName}` : ''}`,
         userId,
         rows,
-        placement: { capacityConfig: current.capacities, excludedApplicants },
+        placement: {
+          capacityConfig: current.capacities,
+          excludedApplicants,
+          ...(paymentCycleId
+            ? {
+                payment: {
+                  cycleId: paymentCycleId,
+                  eligibilityMode: 'provisional' as const,
+                  snapshotVersion: paymentVersion,
+                  generationReason: 'initial' as const,
+                  revisedFromBatchId: null,
+                  fingerprint: applicantSetFingerprint(applicants, current.capacities),
+                  summary: { included: rows.length, excluded: excludedApplicants.length },
+                },
+              }
+            : {}),
+        },
       });
       const issues = current.rows.filter((row) => row.match.status !== 'match').length;
       logAdminActivity({
@@ -509,10 +570,36 @@ export function HousePlacementPanel({
             memberName={memberName}
           />
           <div className="scrapbook-paper flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between border-[var(--color-border)] bg-surface">
-            <p className="text-xs text-text-secondary">
-              Saving creates one private draft for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. No House membership changes and nothing is revealed. Unmatched members must be linked in the draft before it can be locked.
-            </p>
-            <button type="button" onClick={handleSave} disabled={saving || !selectedYear || !effectiveStartDate} className="vsa-btn-primary px-6 py-3 text-xs disabled:opacity-50">
+            <div className="space-y-2">
+              <p className="text-xs text-text-secondary">
+                Saving creates one private draft for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. No House membership changes and nothing is revealed. Unmatched members must be linked in the draft before it can be locked.
+              </p>
+              {cycles.length > 0 ? (
+                <div>
+                  <label htmlFor="placement-payment-cycle" className={`${labelCls} text-text-muted`}>Payment roster</label>
+                  <select
+                    id="placement-payment-cycle"
+                    value={paymentCycleId}
+                    onChange={(event) => setPaymentCycleChoice(event.target.value)}
+                    disabled={saving}
+                    className={`${fieldCls} border-[var(--color-border)] sm:max-w-xs`}
+                  >
+                    <option value="">Choose…</option>
+                    {cycles.map((cycle) => (
+                      <option key={cycle.id} value={cycle.id}>{APPLICATION_KEY_LABEL[cycle.application_key as HouseApplicationKey] ?? cycle.application_key}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-text-muted">
+                    This first sort is provisional: it includes everyone, paid or not, and can never be locked. After the payment cutoff, open the draft and rerun with payment-cleared applicants.
+                  </p>
+                </div>
+              ) : cyclesQuery.isError && !paymentsUnavailable ? (
+                <p role="alert" className="text-xs text-red-700 dark:text-red-300">The payment rosters could not be loaded, so this draft cannot be saved yet. Refresh and try again.</p>
+              ) : !cyclesQuery.isLoading && !paymentsUnavailable ? (
+                <p className="text-xs text-text-muted">No payment roster exists for this year, so payment eligibility will not be checked. If House fees apply, create the roster in the Payments tab before saving.</p>
+              ) : null}
+            </div>
+            <button type="button" onClick={handleSave} disabled={saving || !selectedYear || !effectiveStartDate || cyclesBlocked} className="vsa-btn-primary px-6 py-3 text-xs disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Private Placement Draft'}
             </button>
           </div>
