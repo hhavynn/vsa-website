@@ -173,11 +173,11 @@ describe('Gallery album quick-look', () => {
     fireEvent.touchEnd(area, { touches: [], changedTouches: [] });
     fireEvent.touchStart(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 200, clientY: 100 }] });
     fireEvent.touchMove(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 140, clientY: 100 }] });
-    const match = image.style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);
+    const match = image.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
     expect(match).not.toBeNull();
     expect(Math.abs(Number(match?.[1]))).toBeLessThanOrEqual(30.01);
     expect(Math.abs(Number(match?.[2]))).toBeLessThanOrEqual(20.01);
-    expect(image.style.transform).toContain('scale(1.2000000000000002)');
+    expect(Number(image.style.transform.match(/scale\(([-\d.]+)\)/)?.[1])).toBeCloseTo(1.2);
   });
 
   it('clamps pinch zoom, and resets photo zoom when paging to another album', () => {
