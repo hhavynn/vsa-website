@@ -38,12 +38,12 @@ export function AiSourceChips({ messageId, sources }: { messageId: string; sourc
   if (sources.length === 0) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {sources.slice(0, 4).map((source) => {
+      {sources.slice(0, 4).map((source, index) => {
         const label = source.title.length > 28 ? `${source.title.slice(0, 25)}...` : source.title;
         const safeUrl = safeAssistantSourceUrl(source.source_url);
         return safeUrl ? (
           <a
-            key={`${messageId}-${source.title}`}
+            key={`${messageId}-${index}-${source.title}`}
             href={safeUrl}
             className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold transition-colors hover:border-brand-600 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
@@ -54,7 +54,7 @@ export function AiSourceChips({ messageId, sources }: { messageId: string; sourc
           </a>
         ) : (
           <span
-            key={`${messageId}-${source.title}`}
+            key={`${messageId}-${index}-${source.title}`}
             className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
           >
