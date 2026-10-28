@@ -111,6 +111,7 @@ const AdminUVSASchools = lazy(() => import("../pages/Admin/UVSASchools"));
 const AdminExternalEvents = lazy(() => import("../pages/Admin/ExternalEvents"));
 const AdminAiKnowledge = lazy(() => import("../pages/Admin/AiKnowledge"));
 const AdminAiFeedback = lazy(() => import("../pages/Admin/AiFeedback"));
+const AdminAiUsage = lazy(() => import("../pages/Admin/AiUsage"));
 const AdminContentHealth = lazy(() => import("../pages/Admin/ContentHealth"));
 const AdminApplications = lazy(() => import("../pages/Admin/Applications"));
 const AdminLaunchChecklist = lazy(
@@ -238,6 +239,7 @@ export default function AppRoutes() {
                   path="/admin/ai-feedback"
                   element={<AdminAiFeedback />}
                 />
+                <Route path="/admin/ai-usage" element={<AdminAiUsage />} />
                 <Route
                   path="/admin/content-health"
                   element={<AdminContentHealth />}

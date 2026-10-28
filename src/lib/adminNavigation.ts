@@ -348,6 +348,13 @@ export const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
         summary: 'Review ratings and feedback on Ask VSA answers.',
       },
       {
+        to: '/admin/ai-usage',
+        label: 'Ask VSA Usage',
+        icon: FiBarChart2,
+        keywords: ['ai', 'ask vsa', 'usage', 'rate limit', 'cost', 'requests'],
+        summary: 'See privacy-safe usage counts and rate-limit impact; no member-level logs or invented cost.',
+      },
+      {
         to: '/admin/data-rights',
         label: 'Data Rights',
         icon: FiShield,

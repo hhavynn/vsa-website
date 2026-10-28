@@ -39,8 +39,12 @@ describe('vercel.json deploy-safety policy', () => {
     expect(rewriteFor('/static/js/123.deadbeef.chunk.js')).toBeUndefined();
   });
 
-  it.each(['/', '/events', '/house/2025', '/admin/members'])('still serves deep link %s from the SPA shell', (requestPath) => {
+  it.each(['/', '/house/2025', '/admin/members'])('still serves deep link %s from the SPA shell', (requestPath) => {
     expect(rewriteFor(requestPath)).toBe('/index.html');
+  });
+
+  it('serves public share-preview routes through their generated SPA HTML', () => {
+    expect(rewriteFor('/events')).toBe('/seo/events.html');
   });
 
   it.each([
