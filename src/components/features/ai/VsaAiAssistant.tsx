@@ -4,6 +4,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 import { AssistantMessageContent } from './formatAssistantMessage';
 import { AiSourceChips } from './AiSourceChips';
+import { AiAssistantLauncher } from './AiAssistantLauncher';
+import { ChatSparkIcon, CloseIcon } from './AiAssistantIcons';
 import { AssistantStatus, ChatMessage, MAX_INPUT_LENGTH, useVsaAiConversation } from './useVsaAiConversation';
 
 const STARTER_QUESTIONS = [
@@ -16,25 +18,6 @@ const STARTER_QUESTIONS = [
   'What is VCN?'
 ];
 
-function ChatSparkIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M5.5 7.25A4.25 4.25 0 0 1 9.75 3h4.5a4.25 4.25 0 0 1 4.25 4.25v4.1a4.25 4.25 0 0 1-4.25 4.25h-3.8l-4.1 3.15a.7.7 0 0 1-1.12-.56V15.1a4.23 4.23 0 0 1-1.48-3.2V7.25Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M17.8 3.25l.52 1.2 1.18.52-1.18.52-.52 1.18-.52-1.18-1.2-.52 1.2-.52.52-1.2ZM9.1 8.15h5.2M9.1 11.1h3.65"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function SendIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -44,19 +27,6 @@ function SendIcon({ className = 'h-4 w-4' }: { className?: string }) {
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="m5.25 5.25 9.5 9.5M14.75 5.25l-9.5 9.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -504,51 +474,16 @@ export function VsaAiAssistant() {
         )}
       </AnimatePresence>
 
-      {isMinimized ? (
-        <motion.button
-          ref={minimizedButtonRef}
-          whileHover={shouldReduceMotion ? undefined : { y: -2 }}
-          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
-          type="button"
-          onClick={restoreAssistant}
-          className="inline-flex h-10 w-10 touch:h-11 touch:w-11 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
-          style={{ borderColor: 'var(--color-border)' }}
-          aria-label="Restore Ask VSA"
-        >
-          <ChatSparkIcon className="h-4 w-4" />
-        </motion.button>
-      ) : (
-        <div className="relative">
-          <motion.button
-            ref={launcherRef}
-            whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
-            whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-            type="button"
-            onClick={() => setIsOpen((open) => !open)}
-            className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors active:scale-[0.97] hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
-            style={{ borderColor: 'var(--color-border)' }}
-            aria-expanded={isOpen}
-            aria-controls="vsa-ai-assistant-panel"
-            aria-label={isOpen ? 'Ask VSA (close assistant)' : 'Ask VSA (open assistant)'}
-          >
-            <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">
-              <ChatSparkIcon className="h-5 w-5" />
-            </span>
-            <span className="hidden sm:inline">Ask VSA</span>
-            <span className="sm:hidden">Ask</span>
-          </motion.button>
-          <button
-            type="button"
-            onClick={minimizeAssistant}
-            className="touch-hit absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface)] text-[var(--color-text2)] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-            aria-label="Minimize Ask VSA"
-          >
-            <CloseIcon className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      <AiAssistantLauncher
+        isMinimized={isMinimized}
+        isOpen={isOpen}
+        shouldReduceMotion={shouldReduceMotion}
+        launcherRef={launcherRef}
+        minimizedButtonRef={minimizedButtonRef}
+        onRestore={restoreAssistant}
+        onToggle={() => setIsOpen((open) => !open)}
+        onMinimize={minimizeAssistant}
+      />
     </div>
   );
 }
