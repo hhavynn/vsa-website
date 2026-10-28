@@ -4296,6 +4296,14 @@ export type Database = {
         Args: { p_year: number };
         Returns: Json;
       };
+      admin_event_attendance_readiness: {
+        Args: { p_year: number; p_term_id?: string | null };
+        Returns: Json;
+      };
+      admin_attest_event_attendance: {
+        Args: { p_event_id: string; p_status: string; p_note?: string | null };
+        Returns: Json;
+      };
       admin_import_recovery_findings: {
         Args: Record<string, never>;
         Returns: Json;
