@@ -15,7 +15,7 @@ export interface CabinetTrafficSnapshot {
 export const CABINET_PAGE_AREAS = [
   { key: 'events', label: 'Events and calendar', routes: ['/events', '/calendar'] },
   { key: 'tools', label: 'Points and leaderboard', routes: ['/points', '/leaderboard'] },
-  { key: 'programs', label: 'Program discovery', routes: ['/get-involved', '/intern', '/vcn', '/wild-n-culture', '/uvsa-network'] },
+  { key: 'programs', label: 'Program discovery', routes: ['/get-involved', '/intern-program', '/vcn', '/wild-n-culture', '/uvsa-network'] },
   { key: 'memories', label: 'Gallery and memories', routes: ['/gallery'] },
 ] as const;
 
