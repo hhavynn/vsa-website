@@ -53,6 +53,26 @@ describe('House standings embargo release invariants (#692)', () => {
     expect(archive).not.toMatch(/Gucci won House Spirit Week|414 points|final standings stay in the archive/i);
   });
 
+  it('CI verifies private House views by default instead of requiring a missing rollout flag', () => {
+    const verifier = read('scripts/verify-rls-security.mjs');
+    expect(verifier).toContain("process.env.RLS_HOUSE_EMBARGO_PHASE !== 'pre-migration'");
+    expect(verifier).toContain("await verifyHouseEmbargo(anon, 'anon')");
+    expect(verifier).toContain("...(houseEmbargoRequired ? houseScoreViews : [])");
+    expect(verifier).toContain("error?.code === '42501'");
+  });
+
+  it('CI verifies only safe public member identity, never the retired House cache', () => {
+    const verifier = read('scripts/verify-rls-security.mjs');
+    const start = verifier.indexOf('// #704: the retired members.house display cache');
+    const end = verifier.indexOf('// Only count checks;', start);
+    const safeProbe = verifier.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(safeProbe).toContain(".select('id, first_name, last_name, college, year, points, events_attended')");
+    expect(safeProbe).not.toContain("year, house, points");
+    expect(verifier).toContain("RLS_HOUSE_CACHE_PHASE");
+    expect(verifier).toContain(".from('public_members').select('house').limit(1)");
+  });
+
   it('keeps public individual leaderboard reads available and House badges independent of points', () => {
     const leaderboard = read('src/data/repos/leaderboard.ts');
     expect(leaderboard).toContain(".from('member_yearly_points')");
