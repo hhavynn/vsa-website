@@ -1857,6 +1857,7 @@ export type Database = {
       };
       house_events: {
         Row: {
+          client_request_id: string | null;
           academic_year_end: number;
           academic_year_start: number;
           created_at: string;
@@ -1879,6 +1880,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          client_request_id?: string | null;
           academic_year_end: number;
           academic_year_start: number;
           created_at?: string;
@@ -1901,6 +1903,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          client_request_id?: string | null;
           academic_year_end?: number;
           academic_year_start?: number;
           created_at?: string;
@@ -4004,6 +4007,16 @@ export type Database = {
       admin_apply_house_placement_override: {
         Args: { p_batch_id: string; p_changes: Json; p_reason?: string | null };
         Returns: Database['public']['Tables']['house_assignment_drafts']['Row'][];
+      };
+      admin_save_house_event: {
+        Args: {
+          p_event_id: string | null;
+          p_event: Json;
+          p_host_ids: string[];
+          p_request_id: string | null;
+          p_expected_updated_at?: string | null;
+        };
+        Returns: Database['public']['Tables']['house_events']['Row'];
       };
       admin_import_recovery_findings: {
         Args: Record<string, never>;

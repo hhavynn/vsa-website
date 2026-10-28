@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
@@ -96,7 +96,8 @@ function emptyDraft(): HouseEventDraft {
     recap_url: '',
     rsvp_url: '',
     google_calendar_enabled: true,
-    is_published: true,
+    // A new event is a draft until an admin deliberately publishes it.
+    is_published: false,
   };
 }
 
@@ -176,17 +177,21 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     refetchOnWindowFocus: false,
   });
 
+  // No House is ever chosen for the admin. When the year (and so the House
+  // list) changes, drop any selection that is not a House of that year.
   useEffect(() => {
-    if (draft.house_profile_ids.length === 0 && houseProfiles[0] && !editingEvent) {
-      setDraft((current) => ({ ...current, house_profile_ids: [houseProfiles[0].id] }));
-    }
-  }, [draft.house_profile_ids.length, houseProfiles, editingEvent]);
+    setDraft((current) => {
+      const kept = current.house_profile_ids.filter((id) => profilesById.has(id));
+      return kept.length === current.house_profile_ids.length ? current : { ...current, house_profile_ids: kept };
+    });
+  }, [profilesById]);
+
+  // One id per form session, so a retried create cannot make a second event.
+  const requestIdRef = useRef<string>(crypto.randomUUID());
 
   function resetForm() {
-    setDraft({
-      ...emptyDraft(),
-      house_profile_ids: houseProfiles[0] ? [houseProfiles[0].id] : [],
-    });
+    setDraft(emptyDraft());
+    requestIdRef.current = crypto.randomUUID();
     setEditingEvent(null);
     setImageFile(null);
     setImagePreview(null);
@@ -276,6 +281,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     }
 
     setSaving(true);
+    let stage = 'uploading the image';
     try {
       const uploadedImage = imageFile ? await uploadImage(imageFile, primaryProfile) : null;
       const payload = toPayload(uploadedImage);
@@ -289,25 +295,39 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
           draft.image_url === (editingEvent.image_url ?? '') &&
           draft.image_thumbnail_url === (editingEvent.image_thumbnail_url ?? '');
         const { image_url, image_thumbnail_url, ...rest } = payload;
-        await houseEventsRepository.updateEvent(
-          editingEvent.id,
-          imageUnchanged ? rest : payload,
-        );
+        stage = 'saving the event';
+        const saved = await houseEventsRepository.saveEventAtomic({
+          eventId: editingEvent.id,
+          formData: imageUnchanged ? rest : payload,
+          requestId: requestIdRef.current,
+          expectedUpdatedAt: editingEvent.updated_at,
+        });
+        if (saved === false) {
+          await houseEventsRepository.updateEvent(editingEvent.id, imageUnchanged ? rest : payload);
+        }
         if (uploadedImage) {
           await removeHouseEventImage(editingEvent.image_url);
           await removeHouseEventImage(editingEvent.image_thumbnail_url);
         }
         toast.success('House event updated.');
       } else {
-        await houseEventsRepository.createEvent(payload);
-        toast.success('House event created.');
+        stage = 'saving the event';
+        const saved = await houseEventsRepository.saveEventAtomic({
+          eventId: null,
+          formData: payload,
+          requestId: requestIdRef.current,
+          expectedUpdatedAt: null,
+        });
+        if (saved === false) await houseEventsRepository.createEvent(payload);
+        toast.success(payload.is_published ? 'House event created and published.' : 'House event saved as a draft.');
       }
 
       resetForm();
       refetch();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save House event.');
+      const detail = err instanceof Error && err.message ? err.message : 'Unknown error.';
+      toast.error(`Failed while ${stage}. ${detail}`);
     } finally {
       setSaving(false);
     }
@@ -374,7 +394,12 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
 
           <div>
             <label className={labelCls}>Hosting House(s) *</label>
-            <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>Select multiple for collab events.</p>
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--color-text3)' }}>
+              Select multiple for collab events. The first one you pick is the primary host
+              {draft.house_profile_ids[0] && profilesById.get(draft.house_profile_ids[0])
+                ? `: ${profilesById.get(draft.house_profile_ids[0])?.display_name || profilesById.get(draft.house_profile_ids[0])?.house_key}`
+                : ' (none chosen yet)'}.
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {houseProfiles.map((profile) => {
                 const isSelected = draft.house_profile_ids.includes(profile.id);
@@ -412,8 +437,8 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
           </div>
 
           <div>
-            <label className={labelCls}>Title *</label>
-            <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className={inputCls} required placeholder="Bowser beach bonfire" />
+            <label htmlFor="house-event-title" className={labelCls}>Title *</label>
+            <input id="house-event-title" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} className={inputCls} required placeholder="Bowser beach bonfire" />
           </div>
 
           <div>
@@ -423,8 +448,8 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelCls}>Date *</label>
-              <input type="date" value={draft.event_date} onChange={(event) => setDraft({ ...draft, event_date: event.target.value })} className={inputCls} required />
+              <label htmlFor="house-event-date" className={labelCls}>Date *</label>
+              <input id="house-event-date" type="date" value={draft.event_date} onChange={(event) => setDraft({ ...draft, event_date: event.target.value })} className={inputCls} required />
             </div>
             <div>
               <label className={labelCls}>Location</label>
@@ -485,7 +510,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
             </label>
             <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text2)' }}>
               <input type="checkbox" checked={draft.is_published} onChange={(event) => setDraft({ ...draft, is_published: event.target.checked })} />
-              Show publicly
+              Publish now (otherwise saved as a draft)
             </label>
           </div>
 
