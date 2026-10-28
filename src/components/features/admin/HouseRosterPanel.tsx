@@ -7,6 +7,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AttendanceReason, HOUSE_ROSTER_UNAVAILABLE, RosterMember, houseRosterRepository } from '../../../data/repos/houseRoster';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from '../../../lib/houseParentShare';
+import { downloadCsv } from '../../../lib/housePlacementExport';
 import { cn } from '../../../lib/utils';
 
 const btn = 'min-h-[36px] touch:min-h-11 rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50';
@@ -67,6 +70,7 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
   const [open, setOpen] = useState<string | null>(null);
   const [invite, setInvite] = useState<Set<string>>(() => new Set());
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const members = useMemo(() => roster.data?.members ?? [], [roster.data]);
   const rows = useMemo(() => {
@@ -177,7 +181,26 @@ export function HouseRosterPanel({ houseProfileId, termId, year, onClose }: { ho
               </div>
             )}
           </div>
-          <p className="text-xs text-text-muted">{members.length} members · checked {new Date(roster.data.checkedAt).toLocaleString()}.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={btn} onClick={() => setSharing(true)} disabled={members.length === 0}>
+              Prepare a copy for House Parents
+            </button>
+            <p className="text-xs text-text-muted">{members.length} members · checked {new Date(roster.data.checkedAt).toLocaleString()}.</p>
+          </div>
+          {sharing && (
+            <ConfirmDialog
+              open
+              danger={false}
+              title={`Download a copy for ${roster.data.house.displayName}'s House Parents?`}
+              description={<>A CSV of this House&rsquo;s {members.length} members{roster.data.termLabel ? ` for ${roster.data.termLabel}` : ''} with only these columns. Share it only with this House&rsquo;s own House Parents, privately; never post it. It contains no contact details, no other House and no House points or rank (those are embargoed).</>}
+              consequences={HOUSE_PARENT_SHARE_FIELDS.map((field) => `${field.header}: ${field.describe}`)}
+              confirmLabel="Download"
+              onConfirm={() => {
+                downloadCsv(houseParentShareCsv(members), houseParentShareFilename(roster.data.house.displayName, roster.data.house.academicYearStart, roster.data.termLabel));
+              }}
+              onClose={() => setSharing(false)}
+            />
+          )}
         </>
       )}
     </section>

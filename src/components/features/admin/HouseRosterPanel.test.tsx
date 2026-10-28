@@ -17,11 +17,13 @@ jest.mock('../../../data/repos/houseRoster', () => ({
   ...jest.requireActual('../../../data/repos/houseRoster'),
   houseRosterRepository: { getRoster: jest.fn(), getMemberAttendance: jest.fn() },
 }));
+jest.mock('../../../lib/housePlacementExport', () => ({ downloadCsv: jest.fn() }));
 jest.mock('../../../lib/supabase', () => ({
   supabase: { from: jest.fn(() => { throw new Error('components must not query Supabase directly'); }) },
 }));
 
 const repo = houseRosterRepository as jest.Mocked<typeof houseRosterRepository>;
+const { downloadCsv } = jest.requireMock('../../../lib/housePlacementExport');
 const member = (extra: Partial<RosterMember>): RosterMember => ({
   member_id: 'm', first_name: 'Fictional', last_name: 'Person', start_date: '2026-09-20', end_date: null, joined_in_period: false,
   other_house_memberships: 0, credited_attendance: 0, last_credited_at: null, events_attended: 0, ...extra,
@@ -105,4 +107,19 @@ it('says plainly when the migration is not applied', async () => {
   repo.getRoster.mockRejectedValueOnce(new ValidationError(HOUSE_ROSTER_UNAVAILABLE, 'house'));
   renderPanel();
   expect(await screen.findByRole('alert')).toHaveTextContent('20261028110000');
+});
+
+it('downloads a House Parent copy only after the admin reviews its columns', async () => {
+  renderPanel();
+  await userEvent.click(await screen.findByRole('button', { name: 'Prepare a copy for House Parents' }));
+  expect(downloadCsv).not.toHaveBeenCalled();
+  const dialog = screen.getByRole('alertdialog');
+  expect(within(dialog).getByText(/no contact details, no other House and no House points or rank/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/House-credited events: How many qualifying VSA events/)).toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Download' }));
+  await waitFor(() => expect(downloadCsv).toHaveBeenCalledTimes(1));
+  const [csv, filename] = downloadCsv.mock.calls[0];
+  expect(filename).toBe('fictional-rarity-2026-2027-house-parents.csv');
+  expect(csv.split('\n')[0]).toBe('Name,In the House since,Attended a House-credited event,House-credited events,Last House-credited event');
+  expect(csv).toContain('Ana Example');
 });
