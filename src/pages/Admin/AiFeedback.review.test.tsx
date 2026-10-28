@@ -67,6 +67,20 @@ describe('Ask VSA feedback: private review notes (#237)', () => {
     expect(screen.getByRole('button', { name: /Save review note/i })).toBeEnabled();
   });
 
+  it('hydrates remote notes after a draft is reverted to its original value', async () => {
+    list.mockReset()
+      .mockResolvedValueOnce([example])
+      .mockResolvedValue([{ ...example, admin_notes: 'Updated by another admin' }]);
+    renderPage();
+    const note = await screen.findByRole('textbox', { name: 'Internal review note' });
+    fireEvent.change(note, { target: { value: 'Temporary draft' } });
+    fireEvent.change(note, { target: { value: '' } });
+    expect(screen.getByRole('button', { name: /Save review note/i })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Rating'), { target: { value: 'not_helpful' } });
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Internal review note' })).toHaveValue('Updated by another admin'));
+  });
+
   it('keeps the note editable and exposes a retry message when saving fails', async () => {
     update.mockRejectedValueOnce(new Error('simulated server error'));
     renderPage();
