@@ -2,7 +2,7 @@
 
 The GitHub `security` job runs `node --test scripts/check-client-secrets.test.mjs` and `node scripts/check-client-secrets.mjs` on pull requests to main. It inspects tracked source and committed `.env*` files for high-confidence credential signatures, privileged JWTs and unreviewed public variables. The build lifecycle additionally checks the actual process environment and CRA production env files, including local files. Reports include only the file and issue category, never a secret value.
 
-Allowed names are `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_ANON_KEY`, `REACT_APP_GA4_MEASUREMENT_ID`, `REACT_APP_SUPABASE_IMAGE_TRANSFORMS`, and `REACT_APP_ATTENDANCE_IDENTITY_V2`. Supabase's **anon** key is deliberately public. A new public variable must receive a security review before extending the allowlist; private credentials always belong in server secrets. Standard Vercel deployment system variables (`REACT_APP_VERCEL_*`) are recognized in the build environment to support preview deployments without relaxing credential detection.
+Allowed names are `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_ANON_KEY`, `REACT_APP_GA4_MEASUREMENT_ID`, `REACT_APP_SUPABASE_IMAGE_TRANSFORMS`, `REACT_APP_ATTENDANCE_IDENTITY_V2`, and `REACT_APP_SENTRY_DSN` (a Sentry DSN only allows sending events to one project; it was reviewed in [the observability plan](observability-instrumentation-plan.md)). Supabase's **anon** key is deliberately public. A new public variable must receive a security review before extending the allowlist; private credentials always belong in server secrets. Standard Vercel deployment system variables (`REACT_APP_VERCEL_*`) are recognized in the build environment to support preview deployments without relaxing credential detection.
 
 Public build values must be literal: the build guard rejects dollar signs in them because CRA can expand variables after the guard runs. This narrow tripwire does not inspect history, generated bundles, binary files or test files, and cannot detect every credential. Its build-time mode checks the environment and root production env files; the CI security job separately scans tracked source. It is not proof that a bundle contains no secrets. If it fires, investigate privately, **rotate any exposed credential before removing it**, update its trusted consumers, then remove it from exposed bundles and repository history through the incident process. Never paste a real value into a PR, comment or test fixture.
 
@@ -13,5 +13,6 @@ Public build values must be literal: the build guard rejects dollar signs in the
 | GitHub dispatch token / webhook secret | Repo owner / Supabase Function secrets | Image migration workflows |
 | Google Analytics OAuth tokens | Google Cloud owner / Supabase Function secrets | Admin analytics |
 | Vercel deployment token | Vercel owner / GitHub Actions secrets | Deployment |
+| Sentry auth token (source-map upload, once added) | Sentry org owner / Vercel build env (Production, not `REACT_APP_*`) | Release and artifact writes in the Sentry org |
 
 Review downstream services before revocation and redeploy affected public bundles after removal.

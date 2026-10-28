@@ -2,6 +2,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { PageError } from "./PageError";
 import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkLoadRecovery";
+import { reportError } from "../../lib/monitoring";
 
 interface Props {
   children: ReactNode;
@@ -33,6 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     console.error('Uncaught error:', error, errorInfo);
+    reportError(error, errorInfo.componentStack);
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);

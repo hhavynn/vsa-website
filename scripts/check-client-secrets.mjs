@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const allowedPublicVars = new Set([
   'REACT_APP_SUPABASE_URL', 'REACT_APP_SUPABASE_ANON_KEY',
   'REACT_APP_GA4_MEASUREMENT_ID', 'REACT_APP_SUPABASE_IMAGE_TRANSFORMS',
-  'REACT_APP_ATTENDANCE_IDENTITY_V2',
+  'REACT_APP_ATTENDANCE_IDENTITY_V2', 'REACT_APP_SENTRY_DSN',
 ]);
 const vercelSystemVars = new Set([
   'REACT_APP_VERCEL_ENV',
@@ -37,6 +37,7 @@ const credentialSignals = [
   /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,
   /\bAIza[A-Za-z0-9_-]{35}\b/g,
   /\bsb_secret_[A-Za-z0-9_-]{20,}\b/g,
+  /\bsntry[su]_[A-Za-z0-9_=+/-]{20,}/g,
 ];
 const jwtCandidates = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
 const assignments = /\b(REACT_APP_[A-Z0-9_]+)\s*=\s*([^\r\n#]+)/gi;
