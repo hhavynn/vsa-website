@@ -10,6 +10,23 @@ test('rejects unknown public environment variable assignment and reference', () 
   assert.equal(inspectText('.env.local', 'REACT_APP_PAYMENT_PRIVATE_KEY=dummy')[0].includes('unreviewed'), true);
   assert.equal(inspectText('src/config.ts', 'process.env.REACT_APP_NEW_TOKEN')[0].includes('unreviewed'), true);
 });
+test('blocks unreviewed literal bracket and optional-chained client variables', () => {
+  const forms = [
+    "process.env['REACT_APP_PRIVATE_ACCESS_KEY']",
+    'process.env?.["REACT_APP_PRIVATE_ACCESS_KEY"]',
+    'import.meta.env[`REACT_APP_PRIVATE_ACCESS_KEY`]',
+    'process.env?.REACT_APP_PRIVATE_ACCESS_KEY',
+    'import.meta.env . REACT_APP_PRIVATE_ACCESS_KEY',
+  ];
+  for (const form of forms) {
+    const problems = inspectText('src/config.ts', `const value = ${form};`);
+    assert.ok(problems.some((value) => value.includes('unreviewed public variable reference')), form);
+  }
+  assert.deepEqual(inspectText('src/config.ts', 'process.env["REACT_APP_SUPABASE_ANON_KEY"]'), []);
+  assert.deepEqual(inspectText('src/config.ts', "import.meta.env?.['REACT_APP_GA4_MEASUREMENT_ID']"), []);
+  assert.deepEqual(inspectText('docs/README.md', 'process.env["REACT_APP_PRIVATE_ACCESS_KEY"]'), []);
+});
+
 test('rejects high confidence token signatures without printing their contents', () => {
   const token = 'sk-' + 'A'.repeat(30);
   const violations = inspectText('src/secret.ts', 'const key = ' + token + ';');
