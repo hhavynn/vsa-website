@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Footer from './Footer';
 
@@ -27,6 +27,15 @@ describe('Footer public destinations', () => {
     expect(screen.getAllByRole('link', { name: 'Feedback' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Feedback' })).toHaveAttribute('href', '/feedback');
     expect(screen.getByRole('link', { name: 'Privacy Notice' })).toHaveAttribute('href', '/privacy');
+  });
+
+  it('makes all footer navigation groups discoverable by named landmarks and headings', () => {
+    renderFooter();
+    for (const label of ['Navigate', 'Programs', 'Connect']) {
+      const nav = screen.getByRole('navigation', { name: label });
+      expect(within(nav).getByRole('heading', { name: label, level: 2 })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('navigation')).toHaveLength(3);
   });
 
   it('never links into the admin area', () => {
