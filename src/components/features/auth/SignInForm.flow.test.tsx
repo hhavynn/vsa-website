@@ -118,9 +118,8 @@ describe('SignInForm', () => {
     await waitFor(() => expect(email).toHaveFocus());
     expect(email).toHaveAttribute('aria-invalid', 'true');
     expect(password).toHaveAttribute('aria-invalid', 'true');
-    const errorId = email.getAttribute('aria-describedby');
-    expect(errorId).toBeTruthy();
-    expect(document.getElementById(errorId!)).toHaveAttribute('role', 'alert');
+    expect(email).toHaveAccessibleDescription('Invalid email address');
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
   });
 
   it('moves focus to the non-enumerating auth alert after an async access failure', async () => {
