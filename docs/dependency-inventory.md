@@ -43,9 +43,11 @@ depcheck — depcheck-style tools false-positive on exactly these cases.
 | `@testing-library/react` | React component testing (122 import sites — all test files). Moved from `dependencies`. |
 | `@testing-library/user-event` | Realistic interaction simulation in tests (34 import sites). Moved from `dependencies`. |
 | `@types/jest` | Types for test files so `tsc` accepts jest globals. Moved from `dependencies`. |
+| `@types/jest-axe` | Type definitions for the accessibility regression tests. |
 | `@types/node` | Type definitions consumed by Deno's `typecheck:edge` (Deno reads project `@types/node`) and `tsx` script authoring. Moved from `dependencies`. |
 | `@types/react`, `@types/react-dom` | Types used by the React 18 type checking the project runs in dev; no runtime byte. Moved from `dependencies`. |
 | `autoprefixer` | PostCSS plugin chain in `postcss.config.js` below Tailwind. Required for `npm run build`. |
+| `jest-axe` | Runs automated accessibility checks against rendered public routes in Jest. |
 | `postcss` | Same chain, declared explicitly as `postcss.config.js` is a project config. |
 | `prettier` | `npm run format`. |
 | `react-scripts` | The CRA build/test host; every npm script drives it. |
@@ -69,7 +71,7 @@ depcheck — depcheck-style tools false-positive on exactly these cases.
 ## Provenance (anti-slop-squatting review, registry check on 2026-10-26)
 
 The original 25 names were checked on October 26. The eight existing development
-dependencies were checked on October 27. Registry repository, current maintainers,
+dependencies and the axe test dependencies were checked on October 27. Registry repository, current maintainers,
 and package creation dates were checked; the maintainer names below are a
 spot-check, not proof of uninterrupted ownership history.
 
@@ -80,12 +82,14 @@ spot-check, not proof of uninterrupted ownership history.
 | `@supabase/ssr` (removed) | `supabase/ssr` | (supabase org) |
 | `@testing-library/*` ×3 | `testing-library/*` repos | testing-library-bot, kentcdodds, eps1lon, … |
 | `@types/jest` | `DefinitelyTyped/DefinitelyTyped` | types |
+| `@types/jest-axe` | `DefinitelyTyped/DefinitelyTyped` | types |
 | `@types/node` | `DefinitelyTyped/DefinitelyTyped` | types |
 | `@types/react`, `@types/react-dom` | `DefinitelyTyped/DefinitelyTyped` | types |
 | `autoprefixer` | `postcss/autoprefixer` | ai |
 | `clsx` | `lukeed/clsx` | lukeed |
 | `date-fns` | `date-fns/date-fns` | kossnocorp |
 | `framer-motion` | `motiondivision/motion` | nvh, popmotion |
+| `jest-axe` | `NickColley/jest-axe` | nickcolley |
 | `postcss` | `postcss/postcss` | ai |
 | `prettier` | `prettier/prettier` | jlongster, lydell, thorn0, … |
 | `react`, `react-dom` | `react/react` (Meta) | fb, react-bot |

@@ -24,7 +24,7 @@ export default function Privacy() {
           </h1>
           <p className="mt-5 font-sans text-base leading-7 text-[var(--color-text2)]">
             This plain-language notice explains how the VSA at UCSD website uses information. It is a transparency notice,
-            not a contract or a substitute for UC San Diego policies. Last updated June 19, 2026.
+            not a contract or a substitute for UC San Diego policies. Last updated October 27, 2026.
           </p>
 
           <div className="mt-12 space-y-10">
@@ -77,6 +77,13 @@ export default function Privacy() {
                 If Google Analytics is configured, it remains off until you select “Allow analytics.” When allowed, VSA uses limited
                 page-view information without URL query strings to understand site usage. Google Analytics may then use analytics
                 identifiers in cookies or browser storage. You can change that choice from the footer.
+              </p>
+              <p>
+                If error monitoring is configured, the site reports application errors to VSA's error-monitoring provider (Sentry) so
+                they can be fixed. A report includes the error, the page path without query strings, the browser type, and recent
+                technical steps such as pages opened, buttons clicked, and requests made, also without query strings. Reports are
+                not linked to your account, email addresses are removed before sending, and the service is configured not to store
+                IP addresses. Error monitoring sets no cookies or browser storage, and the analytics choice does not affect it.
               </p>
               <p>
                 The site also uses browser storage for functional choices and features, including theme, analytics preference, temporary
