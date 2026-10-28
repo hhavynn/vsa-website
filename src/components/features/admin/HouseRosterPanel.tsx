@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AttendanceReason, HOUSE_ROSTER_UNAVAILABLE, RosterMember, houseRosterRepository } from '../../../data/repos/houseRoster';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
-import { HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from '../../../lib/houseParentShare';
+import { HOUSE_PARENT_SHARE_APPROVED, HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from '../../../lib/houseParentShare';
 import { downloadCsv } from '../../../lib/housePlacementExport';
 import { houseMembershipsRepository } from '../../../data/repos/houseMemberships';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
@@ -96,7 +96,7 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
   const revealed = useQuery(
     ['admin', 'house-parent-share-revealed', roster.data?.house.academicYearStart],
     () => houseMembershipsRepository.getPublicHousesByMemberId(roster.data!.house.academicYearStart, getLosAngelesDateOnly()),
-    { enabled: !!roster.data, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
+    { enabled: HOUSE_PARENT_SHARE_APPROVED && !!roster.data, retry: false, staleTime: 60 * 1000, refetchOnWindowFocus: false },
   );
   const revealedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -235,21 +235,22 @@ export function HouseRosterPanel({ houseProfileId, termId, onClose }: { housePro
               type="button"
               className={btn}
               onClick={() => setSharing(true)}
-              disabled={revealedIds.size === 0}
-              aria-describedby={revealedIds.size === 0 ? 'house-share-unavailable' : undefined}
+              disabled={!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0}
+              aria-describedby={!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0 ? 'house-share-unavailable' : undefined}
             >
               Prepare a copy for House Parents
             </button>
-            {revealedIds.size === 0 && (
+            {(!HOUSE_PARENT_SHARE_APPROVED || revealedIds.size === 0) && (
               <p id="house-share-unavailable" className="text-xs text-text-muted">
-                {revealed.isLoading ? 'Checking which members are revealed…'
+                {!HOUSE_PARENT_SHARE_APPROVED ? 'Disabled until CRC/cabinet approve the field list in writing.'
+                  : revealed.isLoading ? 'Checking which members are revealed…'
                   : revealed.isError ? 'Could not check the Reveal, so no copy can be made.'
                   : 'Available once this House\u2019s members are revealed publicly.'}
               </p>
             )}
             <p className="text-xs text-text-muted">{members.length} members · checked {new Date(roster.data.checkedAt).toLocaleString()}.</p>
           </div>
-          {sharing && (
+          {sharing && HOUSE_PARENT_SHARE_APPROVED && (
             <ConfirmDialog
               open
               danger={false}
