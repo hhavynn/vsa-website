@@ -7,6 +7,7 @@ const allowedPublicVars = new Set([
   'REACT_APP_SUPABASE_URL', 'REACT_APP_SUPABASE_ANON_KEY',
   'REACT_APP_GA4_MEASUREMENT_ID', 'REACT_APP_SUPABASE_IMAGE_TRANSFORMS',
   'REACT_APP_ATTENDANCE_IDENTITY_V2', 'REACT_APP_SENTRY_DSN',
+  'REACT_APP_POSTHOG_KEY', 'REACT_APP_POSTHOG_HOST',
 ]);
 const vercelSystemVars = new Set([
   'REACT_APP_VERCEL_ENV',
@@ -38,6 +39,7 @@ const credentialSignals = [
   /\bAIza[A-Za-z0-9_-]{35}\b/g,
   /\bsb_secret_[A-Za-z0-9_-]{20,}\b/g,
   /\bsntry[su]_[A-Za-z0-9_=+/-]{20,}/g,
+  /\bphx_[A-Za-z0-9]{20,}\b/g,
 ];
 const jwtCandidates = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
 const assignments = /\b(REACT_APP_[A-Z0-9_]+)\s*=\s*([^\r\n#]+)/gi;

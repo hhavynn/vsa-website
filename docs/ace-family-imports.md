@@ -113,3 +113,7 @@ These sources were not readable when the workbook was built, so pairings
 recorded only there are missing: Spring 2022, Fall 2023 and Spring 2024 ACE
 responses, and the SP25 official pairings. Nothing earlier than the legacy
 family-tree sheet was found.
+
+Each member's `added_term` is also evidence for their pickup year. Recovering
+years for the live nodes, without reimporting a fam or touching any link, is
+[ace-historical-pickup-years.md](ace-historical-pickup-years.md) (#670).

@@ -4,6 +4,14 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { HouseDraftWorkflow } from './HouseDraftWorkflow';
 import { houseAssignmentsRepository, HouseBatchSnapshot } from '../../../data/repos/houseAssignments';
 
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
+jest.mock('../../../data/repos/housePayments', () => ({
+  PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
+  housePaymentsRepository: {
+    listCycles: jest.fn().mockResolvedValue([]),
+    getBatchBlockers: jest.fn().mockResolvedValue([]),
+  },
+}));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }));
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
@@ -71,6 +79,8 @@ function renderWorkflow(url: string, onYearChange = jest.fn()) {
 }
 
 beforeEach(() => {
+  (housePaymentsRepository.listCycles as jest.Mock).mockResolvedValue([]);
+  (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
   repo.listBatches.mockResolvedValue([]);
   repo.loadSnapshot.mockResolvedValue({
     batch,

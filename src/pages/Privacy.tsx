@@ -24,7 +24,7 @@ export default function Privacy() {
           </h1>
           <p className="mt-5 font-sans text-base leading-7 text-[var(--color-text2)]">
             This plain-language notice explains how the VSA at UCSD website uses information. It is a transparency notice,
-            not a contract or a substitute for UC San Diego policies. Last updated October 27, 2026.
+            not a contract or a substitute for UC San Diego policies. Last updated October 28, 2026.
           </p>
 
           <div className="mt-12 space-y-10">
@@ -74,9 +74,12 @@ export default function Privacy() {
 
             <NoticeSection title="Analytics and browser storage">
               <p>
-                If Google Analytics is configured, it remains off until you select “Allow analytics.” When allowed, VSA uses limited
-                page-view information without URL query strings to understand site usage. Google Analytics may then use analytics
-                identifiers in cookies or browser storage. You can change that choice from the footer.
+                If Google Analytics or PostHog is configured, it remains off until you select “Allow analytics.” When allowed, VSA uses
+                limited page-view information without URL query strings to understand site usage. PostHog also records which links and
+                buttons are clicked, without their text or attributes, and never on admin or sign-in pages. These events use a random
+                identifier, are not linked to your account or name, and PostHog is configured to discard IP addresses. Google
+                Analytics may use analytics identifiers in cookies or browser storage, and PostHog keeps its identifier in browser
+                storage. You can change that choice from the footer; declining clears the PostHog identifier.
               </p>
               <p>
                 If error monitoring is configured, the site reports application errors to VSA's error-monitoring provider (Sentry) so
