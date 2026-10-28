@@ -159,7 +159,15 @@ export class LeaderboardRepository {
    */
   async getMemberHouseBadge(memberId: string, academicYearStart: number | 'all'): Promise<MemberHouseBadge | null> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase.rpc('public_member_house_badge', {
+      // The new SQL RPC is staged but src/types/database.ts is generated from
+      // the deployed schema. Keep a narrowly typed call until the types are
+      // regenerated from the staged/production database after migration.
+      const badgeClient = supabase as unknown as {
+        rpc: (fn: 'public_member_house_badge', args: {
+          p_member_id: string; p_year: number | null;
+        }) => PromiseLike<{ data: unknown; error: unknown }>;
+      };
+      const { data, error } = await badgeClient.rpc('public_member_house_badge', {
         p_member_id: memberId,
         p_year: academicYearStart === 'all' ? null : academicYearStart,
       });
