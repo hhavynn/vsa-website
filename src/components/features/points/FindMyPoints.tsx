@@ -512,7 +512,7 @@ function NoResultsCard({
         view. If you attended events but don't see yourself, you can request a
         correction below.
       </p>
-      <p className="mt-2 font-sans text-sm" style={{ color: "var(--text2)" }}>
+      <p className="mt-2 font-sans text-sm text-[var(--text2)]">
         A recent event may not have been imported yet, your sign-in name may
         differ, or an event may not award points. Cabinet can review a correction
         request; this search does not change anyone's points.
