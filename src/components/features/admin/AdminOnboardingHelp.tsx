@@ -53,7 +53,7 @@ function EditedGuidance({ page }: { page: string }) {
         {' '}under Transition Docs or workflow “onboarding.” Changes do not require redeploying the site.
       </p>
       {loading && <p className="mt-2 font-sans text-xs text-text-muted">Loading cabinet resources…</p>}
-      {error && <p className="mt-2 font-sans text-xs text-text-muted">Resources unavailable. The quick guide above still works.</p>}
+      {Boolean(error) && <p className="mt-2 font-sans text-xs text-text-muted">Resources unavailable. The quick guide above still works.</p>}
       {!loading && !error && links.length === 0 && (
         <p className="mt-2 font-sans text-xs text-text-muted">No current onboarding resources have been added yet.</p>
       )}
