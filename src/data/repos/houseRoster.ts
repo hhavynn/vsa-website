@@ -11,6 +11,8 @@ export interface RosterMember {
   last_name: string | null;
   start_date: string;
   end_date: string | null;
+  /** Separate memberships in this House this year (more than 1 = left and came back). */
+  stints: number;
   joined_in_period: boolean;
   other_house_memberships: number;
   credited_attendance: number;

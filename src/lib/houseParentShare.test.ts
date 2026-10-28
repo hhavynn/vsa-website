@@ -7,7 +7,7 @@ import type { RosterMember } from '../data/repos/houseRoster';
 import { HOUSE_PARENT_SHARE_FIELDS, houseParentShareCsv, houseParentShareFilename } from './houseParentShare';
 
 const member = (extra: Partial<RosterMember>): RosterMember => ({
-  member_id: '30000000-0000-0000-0000-00000000000a', first_name: 'Fictional', last_name: 'Person', start_date: '2026-10-15', end_date: null,
+  member_id: '30000000-0000-0000-0000-00000000000a', first_name: 'Fictional', last_name: 'Person', start_date: '2026-10-15', end_date: null, stints: 1,
   joined_in_period: false, other_house_memberships: 1, credited_attendance: 0, last_credited_at: null, events_attended: 7, ...extra,
 });
 

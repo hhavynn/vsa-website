@@ -25,6 +25,11 @@ jest.mock('../../../data/repos/attendanceReadiness', () => ({
   ...jest.requireActual('../../../data/repos/attendanceReadiness'),
   attendanceReadinessRepository: { getReadiness: jest.fn(), attest: jest.fn() },
 }));
+jest.mock('./HouseRosterPanel', () => ({
+  HouseRosterPanel: ({ houseProfileId, onClose }: { houseProfileId: string; onClose: () => void }) => (
+    <section aria-label="roster stub">roster for {houseProfileId}<button type="button" onClick={onClose}>Close roster</button></section>
+  ),
+}));
 jest.mock('../../../lib/supabase', () => ({
   supabase: { from: jest.fn(() => { throw new Error('components must not query Supabase directly'); }) },
 }));
@@ -139,4 +144,13 @@ it('does not vouch for imports when the status read was cut off', async () => {
   renderPanel();
   expect(await screen.findByText(/Event import status could not be checked/)).toBeInTheDocument();
   expect(screen.queryByText(/Every past point-earning event/)).not.toBeInTheDocument();
+});
+
+it('opens and closes one House roster from its card', async () => {
+  renderPanel();
+  await userEvent.click(await screen.findByRole('button', { name: 'Open roster for Fictional Rarity' }));
+  expect(screen.getByRole('region', { name: 'roster stub' })).toHaveTextContent('roster for b');
+  expect(screen.getByRole('button', { name: 'Hide roster for Fictional Rarity' })).toHaveAttribute('aria-expanded', 'true');
+  await userEvent.click(screen.getByRole('button', { name: 'Close roster' }));
+  expect(screen.queryByRole('region', { name: 'roster stub' })).not.toBeInTheDocument();
 });

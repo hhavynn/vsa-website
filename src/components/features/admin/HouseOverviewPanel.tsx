@@ -154,6 +154,7 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
                   <button
                     type="button"
                     aria-expanded={openHouseId === house.house_profile_id}
+                    aria-controls={`house-roster-${house.house_profile_id}`}
                     onClick={() => setOpenHouse(openHouseId === house.house_profile_id ? null : house.house_profile_id)}
                     className="min-h-[36px] touch:min-h-11 rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)]"
                   >
@@ -171,9 +172,12 @@ export function HouseOverviewPanel({ selectedYear }: { selectedYear: number | nu
             })}
           </ul>
 
-          {openHouseId && houses.some((house) => house.house_profile_id === openHouseId) && (
-            <HouseRosterPanel houseProfileId={openHouseId} termId={termId} year={selectedYear} onClose={() => setOpenHouse(null)} />
-          )}
+          {openHouseId && (houses.some((house) => house.house_profile_id === openHouseId) ? (
+            // A new House or period starts a fresh roster (filters, open rows, invitation list).
+            <HouseRosterPanel key={`${openHouseId}:${termId ?? 'year'}`} houseProfileId={openHouseId} termId={termId} onClose={() => setOpenHouse(null)} />
+          ) : (
+            <p role="status" className="text-xs text-text-muted">The linked House is not one of this year&rsquo;s Houses. <button type="button" className="font-semibold text-[var(--brand)] underline-offset-2 hover:underline" onClick={() => setOpenHouse(null)}>Clear it</button>.</p>
+          ))}
 
           <div className="overflow-x-auto rounded border border-[var(--color-border)] bg-surface">
             <table className="w-full min-w-[560px] text-left text-xs">

@@ -25,7 +25,7 @@ jest.mock('../../../lib/supabase', () => ({
 const repo = houseRosterRepository as jest.Mocked<typeof houseRosterRepository>;
 const { downloadCsv } = jest.requireMock('../../../lib/housePlacementExport');
 const member = (extra: Partial<RosterMember>): RosterMember => ({
-  member_id: 'm', first_name: 'Fictional', last_name: 'Person', start_date: '2026-09-20', end_date: null, joined_in_period: false,
+  member_id: 'm', first_name: 'Fictional', last_name: 'Person', start_date: '2026-09-20', end_date: null, stints: 1, joined_in_period: false,
   other_house_memberships: 0, credited_attendance: 0, last_credited_at: null, events_attended: 0, ...extra,
 });
 
@@ -50,7 +50,7 @@ beforeEach(() => {
 function renderPanel(onClose = jest.fn()) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter><HouseRosterPanel houseProfileId="hp-r" termId={null} year={2026} onClose={onClose} /></MemoryRouter>
+      <MemoryRouter><HouseRosterPanel houseProfileId="hp-r" termId={null} onClose={onClose} /></MemoryRouter>
     </QueryClientProvider>,
   );
   return onClose;
@@ -122,4 +122,35 @@ it('downloads a House Parent copy only after the admin reviews its columns', asy
   expect(filename).toBe('fictional-rarity-2026-2027-house-parents.csv');
   expect(csv.split('\n')[0]).toBe('Name,In the House since,Attended a House-credited event,House-credited events,Last House-credited event');
   expect(csv).toContain('Ana Example');
+});
+
+it('says plainly when the House profile is not public, so zeros are not read as absence', async () => {
+  repo.getRoster.mockResolvedValue({
+    house: { id: 'hp-p', displayName: 'Fictional Pinkie', isActive: false, academicYearStart: 2026 },
+    termLabel: null, dated: true,
+    members: [member({ member_id: 'x', first_name: 'Xu', last_name: 'Example', events_attended: 6 })],
+    checkedAt: '2026-10-28T12:00:00Z',
+  });
+  renderPanel();
+  expect(await screen.findByRole('note')).toHaveTextContent(/zeros below do not mean nobody came/);
+  expect(screen.queryByRole('button', { name: /No House-credited attendance yet/ })).not.toBeInTheDocument();
+  // Nothing goes to House Parents before the Reveal.
+  expect(screen.getByRole('button', { name: 'Prepare a copy for House Parents' })).toBeDisabled();
+});
+
+it('shows the names to copy by hand when the clipboard is blocked', async () => {
+  Object.assign(navigator, { clipboard: { writeText: jest.fn().mockRejectedValue(new Error('denied')) } });
+  renderPanel();
+  await userEvent.click(await screen.findByRole('checkbox', { name: /Ana Example/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Copy names' }));
+  expect(await screen.findByRole('textbox', { name: 'Invitation names' })).toHaveValue('Ana Example');
+});
+
+it('shows the UTC date an evening event was counted on', async () => {
+  repo.getMemberAttendance.mockResolvedValue([
+    { event_id: 'e3', name: 'Fictional Night GBM', date: '2026-10-16T02:00:00Z', term_label: 'Fall 2026', points_earned: 1, house_name: 'Fictional Rarity', reason: 'counted' },
+  ]);
+  renderPanel();
+  await userEvent.click(await screen.findByRole('button', { name: 'Events for Ana Example' }));
+  expect(await screen.findByText(/Oct 15 \(counted as Oct 16, by UTC date\)/)).toBeInTheDocument();
 });

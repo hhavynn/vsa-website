@@ -179,3 +179,28 @@ do $$ begin
  end if;
  raise notice 'PASS: an undated term is flagged, and anyone credited in the period is on the roster.';
 end $$;
+
+-- Left and came back: Twilight Sep 20 - Oct 1, Rarity Oct 1 - Jan 10, Twilight from Jan 10.
+reset role;
+insert into public.members values ('30000000-0000-0000-0000-000000000011', 'Fictional', 'Return', 'r@example.invalid');
+insert into public.house_memberships (member_id, house_profile_id, academic_year_start, effective_start_date, effective_end_date) values
+ ('30000000-0000-0000-0000-000000000011', '20000000-0000-0000-0000-000000000001', 2026, '2026-09-20', '2026-10-01'),
+ ('30000000-0000-0000-0000-000000000011', '20000000-0000-0000-0000-000000000002', 2026, '2026-10-01', '2027-01-10'),
+ ('30000000-0000-0000-0000-000000000011', '20000000-0000-0000-0000-000000000001', 2026, '2027-01-10', null);
+-- A dated event with no term in the year: the roster's VSA count and the drilldown agree.
+insert into public.events (id, date, academic_term_id) values ('40000000-0000-0000-0000-000000000012', '2026-11-20 19:00+00', null);
+insert into public.member_event_attendance values ('30000000-0000-0000-0000-000000000011', '40000000-0000-0000-0000-000000000012', 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$ begin
+ if pg_temp.m('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', '11', 'start_date') <> '2027-01-10'
+   or pg_temp.m('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', '11', 'joined_in_period') <> 'true'
+   or pg_temp.m('20000000-0000-0000-0000-000000000001', null, '11', 'stints') <> '2' then
+  raise exception 'FAIL: the winter Twilight roster should show the Jan 10 return as a new stint';
+ end if;
+ if pg_temp.m('20000000-0000-0000-0000-000000000001', null, '11', 'events_attended')::int
+    <> jsonb_array_length(public.admin_house_member_attendance('30000000-0000-0000-0000-000000000011', 2026)->'events') then
+  raise exception 'FAIL: the roster VSA count and the drilldown disagree';
+ end if;
+ raise notice 'PASS: a member who left and came back shows the stint in the period, and the VSA count matches the drilldown.';
+end $$;

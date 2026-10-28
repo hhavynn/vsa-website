@@ -4,7 +4,7 @@ Status (2026-10-28): **no House Parent login exists, and none should be built un
 
 ## Interim: admin-reviewed share copy (shipped)
 
-Admin → Houses → Overview → **Open roster** → **Prepare a copy for House Parents**. An admin sees exactly which columns are included, confirms, and downloads a CSV of that one House for the chosen period. The admin then shares it privately with that House's own Parents.
+Admin → Houses → Overview → **Open roster** → **Prepare a copy for House Parents**. An admin sees exactly which columns are included, confirms, and downloads a CSV of that one House for the chosen period. It is disabled until the House's profile is public (after the Reveal). The admin then shares it privately with that House's own Parents.
 
 | Column | Meaning |
 |---|---|
