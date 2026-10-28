@@ -11,6 +11,7 @@ import {
   HouseProfileLite,
   PreflightResult,
   buildBatchPreflight,
+  isTimestampRanked,
   publishableRows,
 } from '../../lib/houseAssignmentDraft';
 import type { ExcludedApplicant } from '../../lib/houseAssignmentDraft';
@@ -18,6 +19,7 @@ import type { Json } from '../../types/database';
 import type { MemberYearMembership } from '../../lib/houseMembershipIntervals';
 import { NotFoundError, ValidationError, withErrorHandling } from '../errors';
 import { houseMembershipsWriteRepository } from './houseMembershipWrites';
+import { housePaymentsRepository } from './housePayments';
 
 const INSERT_CHUNK = 200;
 
@@ -35,6 +37,20 @@ export interface CreateHouseBatchInput {
   placement?: {
     capacityConfig: Record<string, number>;
     excludedApplicants: ExcludedApplicant[];
+    /**
+     * Set when the placement belongs to a House payment cycle. The database
+     * refuses a final draft whose payment version is stale or whose cutoff
+     * has not been reached, and keeps these fields fixed after saving.
+     */
+    payment?: {
+      cycleId: string;
+      eligibilityMode: 'provisional' | 'final';
+      snapshotVersion: number;
+      generationReason: 'initial' | 'post_payment_rerun';
+      revisedFromBatchId: string | null;
+      fingerprint: string;
+      summary: Record<string, number>;
+    };
   };
 }
 
@@ -49,6 +65,11 @@ export interface HouseBatchSnapshot {
   profiles: HouseProfileLite[];
   existingMemberships: Map<string, MemberYearMembership[]>;
   preflight: PreflightResult;
+  /**
+   * The server's payment-eligibility blockers (already merged into
+   * preflight.blockers). Null when the payment migration is not applied.
+   */
+  paymentBlockers: string[] | null;
 }
 
 export interface PublishHouseBatchResult {
@@ -125,6 +146,17 @@ export class HouseAssignmentsRepository {
                 assignment_method: 'timestamp_ranked',
                 capacity_config: input.placement.capacityConfig,
                 excluded_applicants: input.placement.excludedApplicants as unknown as Json,
+                ...(input.placement.payment
+                  ? {
+                      payment_cycle_id: input.placement.payment.cycleId,
+                      eligibility_mode: input.placement.payment.eligibilityMode,
+                      payment_snapshot_version: input.placement.payment.snapshotVersion,
+                      generation_reason: input.placement.payment.generationReason,
+                      revised_from_batch_id: input.placement.payment.revisedFromBatchId,
+                      applicant_set_fingerprint: input.placement.payment.fingerprint,
+                      eligibility_summary: input.placement.payment.summary,
+                    }
+                  : {}),
               }
             : {}),
         })
@@ -264,17 +296,22 @@ export class HouseAssignmentsRepository {
   async loadSnapshot(batchId: string, memberNames?: Map<string, string>): Promise<HouseBatchSnapshot> {
     return withErrorHandling(async () => {
       const batch = await this.getBatch(batchId);
-      const [drafts, profiles, existingMemberships] = await Promise.all([
+      const [drafts, profiles, existingMemberships, paymentBlockers] = await Promise.all([
         this.getDrafts(batchId),
         this.getProfiles(batch.academic_year_start),
         houseMembershipsWriteRepository.listMembershipsForYear(batch.academic_year_start),
+        isTimestampRanked(batch) ? housePaymentsRepository.getBatchBlockers(batchId) : Promise.resolve(null),
       ]);
-      const preflight = buildBatchPreflight(batch, drafts, profiles, {
+      const base = buildBatchPreflight(batch, drafts, profiles, {
         effectiveStartDate: batch.effective_start_date,
         existingMemberships,
         memberNames,
       });
-      return { batch, drafts, profiles, existingMemberships, preflight };
+      const gate = (paymentBlockers ?? []).map((message) => ({ code: 'payment_gate' as const, message, rowIds: [] }));
+      const preflight = gate.length > 0
+        ? { ...base, blockers: [...gate, ...base.blockers], canLock: false }
+        : base;
+      return { batch, drafts, profiles, existingMemberships, preflight, paymentBlockers };
     }, 'Failed to run House assignment preflight');
   }
 
@@ -339,6 +376,16 @@ export class HouseAssignmentsRepository {
           `Cannot publish: ${snapshot.preflight.blockers[0].message}`,
           'preflight',
         );
+      }
+
+      // Re-checks payment eligibility under a lock and freezes payments until
+      // the batch is published or reopened. Membership rows from a
+      // payment-gated batch are refused by the database outside that window.
+      if (isTimestampRanked(snapshot.batch)) {
+        const started = await housePaymentsRepository.beginPublish(batchId);
+        if (!started && snapshot.batch.payment_cycle_id) {
+          throw new ValidationError('Payment eligibility could not be verified, so nothing was revealed. Ask a site administrator to check migration 20261028050216.', 'status');
+        }
       }
 
       const existingByMember = snapshot.existingMemberships;

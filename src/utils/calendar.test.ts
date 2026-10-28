@@ -104,7 +104,7 @@ describe('houseEventToCalendarItem', () => {
     } as unknown as Parameters<typeof houseEventToCalendarItem>[0];
 
     const item = houseEventToCalendarItem(houseEvent);
-    expect(item.houses).toEqual([{ name: 'Lotus', color: '#22c55e', pagePath: '/house/lotus' }]);
+    expect(item.houses).toEqual([{ name: 'Lotus', color: '#22c55e', pagePath: '/house/year/2026-2027/lotus' }]);
     expect(matchesCategoryFilter(item, 'house', 'Lotus')).toBe(true);
   });
 
@@ -138,7 +138,8 @@ describe('houseEventToCalendarItem', () => {
     expect(item.houses).toHaveLength(1);
     expect(item.houses[0].name).toBe('Boo');
     expect(item.houses[0].color).toBeTruthy();
-    expect(item.detailPath).toBe('/house/boo');
+    // The event's own year and its card on the host House page, never just today's House.
+    expect(item.detailPath).toBe('/house/year/2026-2027/boo#house-event-h1');
   });
 });
 
@@ -344,5 +345,36 @@ describe('sorting and grouping', () => {
     expect(formatDayGroupLabel('2026-07-02', '2026-07-02')).toMatch(/^Today · /);
     expect(formatDayGroupLabel('2026-07-03', '2026-07-02')).toMatch(/^Tomorrow · /);
     expect(formatDayGroupLabel('2026-07-04', '2026-07-02')).toBe('Sat, Jul 4');
+  });
+});
+
+describe('houseEventToCalendarItem — #632', () => {
+  const base = {
+    id: 'collab-1', house_profile_id: 'hp-tw', academic_year_start: 2025, academic_year_end: 2026,
+    title: 'Fictional Collab Night', slug: null, description: null, event_date: '2026-01-20',
+    start_time: '18:00:00', end_time: '20:00:00', location: 'Price Center', image_url: null, image_thumbnail_url: null,
+    gallery_url: null, recap_url: null, rsvp_url: 'https://forms.example/rsvp', google_calendar_enabled: false,
+    is_published: true, created_at: '', updated_at: '',
+    houses: [
+      { id: 'hp-boo', house: 'Boo', house_key: 'boo', display_name: 'Boo', accent_color: '#ffffff' },
+      { id: 'hp-toad', house: 'Toad', house_key: 'toad', display_name: 'Toad', accent_color: '#ff0000' },
+    ],
+  } as unknown as Parameters<typeof houseEventToCalendarItem>[0];
+
+  it('keeps a collab as one item listed under each host, with year-correct anchored links', () => {
+    const item = houseEventToCalendarItem(base);
+    expect(item.key).toBe('house:collab-1');
+    expect(item.houses.map((house) => house.pagePath)).toEqual(['/house/year/2025-2026/boo', '/house/year/2025-2026/toad']);
+    expect(item.detailPath).toBe('/house/year/2025-2026/boo#house-event-collab-1');
+    expect([matchesCategoryFilter(item, 'house', 'Boo'), matchesCategoryFilter(item, 'house', 'Toad'), matchesCategoryFilter(item, 'house', 'Twilight Sparkle')]).toEqual([true, true, false]);
+    expect(item.points).toBeNull();
+  });
+
+  it('carries the Google Calendar flag and the RSVP link, and falls back to the year page without hosts', () => {
+    const item = houseEventToCalendarItem(base);
+    expect(item.googleCalendarEnabled).toBe(false);
+    expect(item.rsvpUrl).toBe('https://forms.example/rsvp');
+    const noHosts = houseEventToCalendarItem({ ...base, houses: [], house: undefined } as unknown as Parameters<typeof houseEventToCalendarItem>[0]);
+    expect(noHosts.detailPath).toBe('/house/year/2025-2026');
   });
 });

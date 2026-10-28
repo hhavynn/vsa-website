@@ -11,6 +11,9 @@
 - [ ] ci/build
 - [ ] security
 
+## Threat model
+- [ ] New or changed trust boundary: updated `THREAT_MODEL.md` with actual controls and verification, or N/A with rationale
+
 ## Safety / Scope
 - [ ] No unrelated files changed
 - [ ] No secrets committed

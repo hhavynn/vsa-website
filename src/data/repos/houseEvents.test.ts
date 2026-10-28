@@ -82,6 +82,29 @@ describe('HouseEventsRepository — public read surface excludes drafts (#292)',
 });
 
 describe('HouseEventsRepository — behaviour', () => {
+  it('fills hosts the profile embed cannot return from published profiles only, primary first', async () => {
+    supabaseMock.queueResult('house_events', {
+      data: [{
+        id: 'he-1', house_profile_id: 'hp-b', is_published: true,
+        houses: [
+          { house_page_asset_id: 'hp-a', house: null },
+          { house_page_asset_id: 'hp-b', house: null },
+          // An admin's embed can include a not-yet-public profile; never show it.
+          { house_page_asset_id: 'hp-hidden', house: { id: 'hp-hidden', display_name: 'Hidden', is_active: false } },
+        ],
+      }],
+      error: null,
+    });
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: [{ id: 'hp-a', display_name: 'A', is_active: true }, { id: 'hp-b', display_name: 'B', is_active: true }],
+      error: null,
+    });
+
+    const [event] = await houseEventsRepository.getPublicUpcomingPreview(TODAY, null, 4);
+    expect(event.houses?.map((h) => h.id)).toEqual(['hp-b', 'hp-a']);
+    expect(supabaseMock.queriesFor('published_house_page_assets')).toHaveLength(1);
+  });
+
   it('returns an empty list when there are no published events', async () => {
     supabaseMock.queueResult('house_events', { data: [], error: null });
 

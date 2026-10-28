@@ -143,20 +143,6 @@ function YearBlockCard({ block }: { block: YearBlock }) {
   );
 }
 
-interface Standing {
-  medal: string;
-  name: string;
-  points: string;
-  champion?: boolean;
-}
-
-const STANDINGS: Standing[] = [
-  { medal: "🥇", name: "Bowser", points: "247 pts", champion: true },
-  { medal: "🥈", name: "Donkey Kong", points: "215 pts" },
-  { medal: "🥉", name: "Toad", points: "158 pts" },
-  { medal: "👻", name: "Boo", points: "125 pts" },
-];
-
 interface Award {
   emoji: string;
   title: string;
@@ -270,7 +256,7 @@ export function WrappedRecapCard() {
           <div className="grid gap-4">
             <StatPaper value="35" label="events counted" rotate={-1.1} />
             <StatPaper value="15" label="gallery albums" rotate={0.8} />
-            <StatPaper value="247" label="Bowser points" rotate={-0.6} />
+            <StatPaper value="4" label="House communities" rotate={-0.6} />
           </div>
         </div>
 
@@ -301,36 +287,15 @@ export function WrappedRecapCard() {
                 Four houses, one leaderboard, and a race that stayed worth checking all year long.
               </p>
               <p className="mt-4 font-sans text-[15px] font-bold leading-[1.7] text-text-primary">
-                Bowser House finished first in {EDITION}.
+                Official House standings are announced at GBMs, not published on the website.
               </p>
             </div>
 
-            <div className="scrapbook-paper scrapbook-tape-teal p-6" style={{ transform: "rotate(0.8deg)" }}>
-              <span className="scrapbook-sticker scrapbook-sticker-gold">Final Standings</span>
-              <div className="mt-4 grid gap-3">
-                {STANDINGS.map((house) => (
-                  <div
-                    key={house.name}
-                    className="flex items-center gap-3.5 border-b border-dashed border-[var(--border)] pb-3 last:border-0 last:pb-0"
-                  >
-                    <span className="w-7 text-center text-2xl leading-none" aria-hidden>
-                      {house.medal}
-                    </span>
-                    <span
-                      className="flex-1 font-serif text-[22px] font-black leading-[1.1]"
-                      style={{ color: house.champion ? "var(--color-gold-text)" : "var(--text)" }}
-                    >
-                      {house.name}
-                    </span>
-                    <span
-                      className="font-mono text-[13px] font-bold tracking-[0.04em]"
-                      style={{ color: house.champion ? "var(--color-gold-text)" : "var(--text2)" }}
-                    >
-                      {house.points}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="scrapbook-paper scrapbook-tape-teal p-6">
+              <p className="font-serif text-2xl font-bold text-text-primary">Four Houses. One community.</p>
+              <p className="mt-3 font-sans text-sm leading-relaxed text-text-secondary">
+                Catch the official standings announcements at VSA general body meetings.
+              </p>
             </div>
           </div>
         </section>
