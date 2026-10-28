@@ -2,13 +2,26 @@ import { supabase } from '../../lib/supabase';
 import { runBulkWrites } from '../../lib/bulkWrites';
 import { AceFamily, AceFamilyMember } from '../../types';
 import { withErrorHandling } from '../errors';
-import { ImportPlan } from '../../lib/aceFamilyImport';
+import { ImportPlan, pickupEvidenceRows } from '../../lib/aceFamilyImport';
 import { getUploadExtension } from '../../lib/imageUpload';
 import { AceMemberLinkChange, AceMemberLinkRef } from '../../lib/aceMemberLinks';
 import { AceNodeRef } from '../../lib/aceAssignments';
 
 export type AceFamilyFormData = Omit<AceFamily, 'id' | 'created_at' | 'updated_at'>;
-export type AceFamilyMemberFormData = Omit<AceFamilyMember, 'id' | 'created_at' | 'updated_at'>;
+// Pickup years are left out on purpose: they change only through
+// setPickupYear(), the reviewed path.
+export type AceFamilyMemberFormData = Omit<
+  AceFamilyMember,
+  'id' | 'created_at' | 'updated_at' | 'pickup_academic_year_start' | 'pickup_term'
+>;
+
+/** What set_ace_member_pickup_year reports, including the value it replaced. */
+export interface AcePickupYearChange {
+  ace_member_id: string;
+  changed: boolean;
+  previous: { academic_year_start: number | null; term: string | null };
+  current: { academic_year_start: number | null; term: string | null };
+}
 
 export class AceFamiliesRepository {
   async getPublishedFamilies(): Promise<AceFamily[]> {
@@ -302,8 +315,42 @@ export class AceFamiliesRepository {
         }
       }
 
+      // 4. The source's added_term values, as pending evidence only.
+      const evidence = pickupEvidenceRows(plan);
+      if (evidence.length > 0) {
+        const { error: evErr } = await supabase.from('ace_member_pickup_evidence').insert(evidence);
+        if (evErr) {
+          await supabase.from('ace_families').delete().eq('id', family.id);
+          throw evErr;
+        }
+      }
+
       return { family, memberCount: plan.people.length };
     }, 'Failed to import ACE family');
+  }
+
+  /**
+   * Approves, corrects or clears one node's pickup year (admin only). Pass the
+   * evidence row being approved so it is stamped reviewed; its candidate must
+   * equal the values given. Touches no other node column, and re-applying the
+   * current value reports changed: false.
+   */
+  async setPickupYear(
+    nodeId: string,
+    academicYearStart: number | null,
+    term: string | null = null,
+    evidenceId: string | null = null,
+  ): Promise<AcePickupYearChange> {
+    return withErrorHandling(async () => {
+      const { data, error } = await supabase.rpc('set_ace_member_pickup_year', {
+        p_ace_member_id: nodeId,
+        p_academic_year_start: academicYearStart,
+        p_term: term,
+        p_evidence_id: evidenceId,
+      });
+      if (error) throw error;
+      return data as unknown as AcePickupYearChange;
+    }, 'Failed to set ACE pickup year');
   }
 
   async uploadImage(file: File, prefix: 'family' | 'member'): Promise<string> {
