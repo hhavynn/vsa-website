@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PageTitle } from '../../components/common/PageTitle';
+import { Button } from '../../components/ui/Button';
 import { supabase } from '../../lib/supabase';
 import { buildCabinetAnalyticsCsv, buildCabinetAreaInsights, safeCabinetPageLabel } from '../../lib/cabinetAnalyticsInsights';
 
@@ -99,43 +100,41 @@ export default function AdminAnalytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState('30daysAgo');
+  const [loadedPeriod, setLoadedPeriod] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     async function fetchAnalytics() {
       setLoading(true);
       setError(null);
+      setData(null);
+      setLoadedPeriod(null);
       try {
         const { data: result, error: fetchError } = await supabase.functions.invoke('analytics-proxy', {
           body: { startDate: dateRange, endDate: 'today' }
         });
-
-        if (fetchError) {
-          console.error('Edge Function Error:', fetchError);
-          throw new Error(await getAnalyticsErrorMessage(fetchError));
+        if (fetchError) throw new Error(await getAnalyticsErrorMessage(fetchError));
+        if (!isAnalyticsData(result)) throw new Error('Unexpected analytics response format');
+        if (active) {
+          setData(result);
+          setLoadedPeriod(dateRange);
         }
-
-        if (!isAnalyticsData(result)) {
-          throw new Error('Unexpected analytics response format');
-        }
-
-        setData(result);
-      } catch (err: any) {
-        console.error('Analytics Request Failed:', err);
-        setError(err.message || 'Failed to load analytics data.');
+      } catch (err: unknown) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load analytics data.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
-
     fetchAnalytics();
+    return () => { active = false; };
   }, [dateRange]);
 
   const maxTrendValue = data ? Math.max(...data.trend.map(d => d.pageViews), 1) : 1;
   const areaInsights = data ? buildCabinetAreaInsights(data) : [];
 
   function exportCabinetSummary() {
-    if (!data) return;
-    const csv = buildCabinetAnalyticsCsv(data, dateRange);
+    if (!data || loading || error || loadedPeriod !== dateRange) return;
+    const csv = buildCabinetAnalyticsCsv(data, loadedPeriod);
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
@@ -165,7 +164,11 @@ export default function AdminAnalytics() {
         <select
           id="analytics-date-range"
           value={dateRange}
-          onChange={(e) => setDateRange(e.target.value)}
+          onChange={(e) => {
+            setData(null);
+            setLoadedPeriod(null);
+            setDateRange(e.target.value);
+          }}
           className="text-xs border rounded px-2 py-1 bg-transparent font-sans"
           style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
         >
@@ -173,14 +176,15 @@ export default function AdminAnalytics() {
           <option value="30daysAgo">Last 30 Days</option>
           <option value="90daysAgo">Last 90 Days</option>
         </select>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={exportCabinetSummary}
-          disabled={loading || !data}
-          className="rounded-md border border-[var(--color-border)] px-3 py-2 font-sans text-xs font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-300"
+          disabled={loading || !!error || !data || loadedPeriod !== dateRange}
         >
           Export cabinet summary (CSV)
-        </button>
+        </Button>
         </div>
       </div>
 
@@ -205,24 +209,24 @@ export default function AdminAnalytics() {
               <StatCard label="Page Views" value={data.summary.pageViews} detail="Total pages viewed." />
             </div>
 
-            <section aria-labelledby="cabinet-analytics-questions" className="rounded-md border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-              <h2 id="cabinet-analytics-questions" className="font-serif text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+            <section aria-labelledby="cabinet-analytics-questions" className="rounded-md border border-[var(--color-border)] bg-surface p-5">
+              <h2 id="cabinet-analytics-questions" className="font-serif text-xl font-semibold text-text-primary" >
                 What are visitors looking at?
               </h2>
-              <p className="mt-2 max-w-3xl font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              <p className="mt-2 max-w-3xl font-sans text-xs leading-relaxed text-text-secondary" >
                 Visits to these public areas, summed only from the top-page list returned by GA4. Pages not in that list are not counted here; the categories are not a complete breakdown of traffic.
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {areaInsights.map((area) => (
                   <div key={area.key} className="rounded border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-                    <h3 className="font-sans text-xs font-semibold" style={{ color: 'var(--color-text2)' }}>{area.label}</h3>
-                    <p className="mt-2 font-serif text-2xl" style={{ color: 'var(--color-text)' }}>{area.views.toLocaleString()}</p>
-                    <p className="mt-1 font-sans text-[11px]" style={{ color: 'var(--color-text3)' }}>Views in listed top pages</p>
+                    <h3 className="font-sans text-xs font-semibold text-text-secondary" >{area.label}</h3>
+                    <p className="mt-2 font-serif text-2xl text-text-primary" >{area.views.toLocaleString()}</p>
+                    <p className="mt-1 font-sans text-[11px] text-text-muted" >Views in listed top pages</p>
                   </div>
                 ))}
               </div>
-              <h3 className="mt-5 font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>What can we conclude?</h3>
-              <p className="mt-1 font-sans text-xs leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+              <h3 className="mt-5 font-sans text-sm font-semibold text-text-primary" >What can we conclude?</h3>
+              <p className="mt-1 font-sans text-xs leading-relaxed text-text-secondary" >
                 These numbers show directional interest among consenting visitors, not total VSA participation.
                 We cannot calculate application conversions, on-site search failures, event attendance, admin adoption or mobile-versus-desktop usage from this response.
                 Declined analytics consent is never overridden. Compare date ranges cautiously because different windows can contain different campaigns and event schedules.
