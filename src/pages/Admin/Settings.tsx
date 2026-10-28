@@ -8,6 +8,9 @@ import { DEFAULT_SITE_SETTINGS, SITE_SETTINGS_ID } from '../../data/siteSettings
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { sanitizeImageSrc } from '../../utils/sanitizeUrl';
 import { ImageDropzone } from '../../components/features/admin/ImageDropzone';
+import { AdminFormShell } from '../../components/features/admin/ops/AdminFormShell';
+import { isDirty, saveStatus } from '../../lib/adminDirty';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const inputCls = 'mt-1 block w-full rounded border px-3 py-2 text-sm focus:outline-none font-sans';
 const labelCls = 'block text-[11px] font-semibold uppercase tracking-[0.07em]';
@@ -19,6 +22,23 @@ export default function AdminSettings() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const changed = Boolean(logoFile) || isDirty(
+    { logoUrl: settings.logoUrl, logoAlt: settings.logoAlt || DEFAULT_SITE_SETTINGS.logoAlt },
+    { logoUrl, logoAlt },
+  );
+  useUnsavedChangesGuard(changed, loading);
+  const status = saveStatus({ dirty: changed, saving: loading, failed: Boolean(saveError), justSaved });
+
+  function discardEdits() {
+    setLogoUrl(settings.logoUrl);
+    setLogoAlt(settings.logoAlt || DEFAULT_SITE_SETTINGS.logoAlt);
+    setLogoFile(null);
+    setLogoPreview('');
+    setSaveError(null);
+    setJustSaved(false);
+  }
 
   useEffect(() => {
     setLogoUrl(settings.logoUrl);
@@ -53,6 +73,7 @@ export default function AdminSettings() {
     e.preventDefault();
     try {
       setLoading(true);
+      setSaveError(null);
       const oldLogoUrl = logoUrl;
       const finalLogoUrl = logoFile ? await uploadLogo(logoFile) : logoUrl.trim();
       const { error } = await supabase.from('site_settings').upsert(
@@ -70,9 +91,11 @@ export default function AdminSettings() {
       setLogoFile(null);
       setLogoPreview('');
       await refresh();
+      setJustSaved(true);
       toast.success('Settings saved');
     } catch (err) {
       console.error(err);
+      setSaveError('Failed to save settings. Your edits are still here.');
       toast.error('Failed to save settings');
     } finally {
       setLoading(false);
@@ -99,16 +122,21 @@ export default function AdminSettings() {
 
       <div style={{ padding: '24px 28px' }}>
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.6fr)] gap-6">
-          <form
+          <AdminFormShell
             onSubmit={handleSubmit}
-            className="border rounded p-6 space-y-5"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+            status={status}
+            formError={saveError}
+            onDiscard={discardEdits}
+            saveLabel="Save Settings"
+            label="Site branding settings"
+            className="rounded border border-[var(--color-border)] bg-surface p-6"
           >
             <h2 className="font-sans font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Logo</h2>
 
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Logo URL</label>
+              <label htmlFor="site-settings-logo-url" className={labelCls} style={{ color: 'var(--color-text3)' }}>Logo URL</label>
               <input
+                id="site-settings-logo-url"
                 type="url"
                 value={logoUrl}
                 onChange={(e) => { setLogoUrl(e.target.value); setLogoFile(null); setLogoPreview(''); }}
@@ -122,7 +150,7 @@ export default function AdminSettings() {
             </div>
 
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Upload Logo</label>
+              <p className={labelCls} style={{ color: 'var(--color-text3)' }}>Upload Logo</p>
               <ImageDropzone
                 className="mt-1"
                 preset="logo"
@@ -136,8 +164,9 @@ export default function AdminSettings() {
             </div>
 
             <div>
-              <label className={labelCls} style={{ color: 'var(--color-text3)' }}>Alt Text</label>
+              <label htmlFor="site-settings-logo-alt" className={labelCls} style={{ color: 'var(--color-text3)' }}>Alt Text</label>
               <input
+                id="site-settings-logo-alt"
                 type="text"
                 value={logoAlt}
                 onChange={(e) => setLogoAlt(e.target.value)}
@@ -147,17 +176,7 @@ export default function AdminSettings() {
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="font-sans font-medium px-5 py-2 rounded text-sm transition-colors disabled:opacity-50"
-                style={{ background: 'var(--color-text)', color: 'var(--color-bg)', border: 'none', cursor: loading ? 'default' : 'pointer' }}
-              >
-                {loading ? 'Saving...' : 'Save Settings'}
-              </button>
-            </div>
-          </form>
+          </AdminFormShell>
 
           <aside className="border rounded overflow-hidden h-fit" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
             <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
