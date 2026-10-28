@@ -223,7 +223,7 @@ export function Calendar() {
 
   return (
     <>
-      <PageTitle title="Calendar" />
+      <PageTitle />
 
       {/* Hero */}
       <div className="vsa-page-hero">

@@ -87,7 +87,7 @@ export function HouseArchive() {
 
   return (
     <>
-      <PageTitle title="House Archive" />
+      <PageTitle />
       <PublicBreadcrumbs />
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

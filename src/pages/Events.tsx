@@ -385,7 +385,7 @@ export function Events() {
   ) {
     return (
       <>
-        <PageTitle title="Events" />
+        <PageTitle />
         <EventsSkeleton />
       </>
     );
@@ -400,7 +400,7 @@ export function Events() {
   if (isDegraded) {
     return (
       <>
-        <PageTitle title="Events" />
+        <PageTitle />
         <DegradedModeBanner sourceName="events" />
         <div className="vsa-container py-20">
           <ContentUnavailableState
@@ -417,7 +417,7 @@ export function Events() {
   if (upcomingError || termsError || archiveAvailabilityError || pastError) {
     return (
       <>
-        <PageTitle title="Events" />
+        <PageTitle />
         <div className="vsa-container py-20">
           <ContentUnavailableState
             title="Events are temporarily unavailable"
@@ -432,7 +432,7 @@ export function Events() {
 
   return (
     <>
-      <PageTitle title="Events" />
+      <PageTitle />
       {/* Degraded mode check again here in case of partial failure if we still want to show what we have */}
 
       <div className="vsa-page-hero">

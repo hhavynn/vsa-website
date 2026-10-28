@@ -77,7 +77,7 @@ export function WildNCulture() {
 
   return (
     <>
-      <PageTitle title="Wild N' Culture" />
+      <PageTitle />
 
       <div className="program-app">
         <EditorialHero

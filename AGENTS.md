@@ -179,6 +179,7 @@ npm run analyze                                 # Bundle analysis (source-map-ex
 | `src/hooks/useAdmin.ts` | Admin-status lookup used by admin route gating |
 | `src/schemas/index.ts` | All Zod schemas |
 | `src/config/publicFallbackContent.ts` | Static fallback data for degraded mode |
+| `src/routes/publicRouteSeo.ts` | Public route manifest: sitemap + per-route title/description/canonical/share metadata |
 | `tailwind.config.js` | Brand tokens — change colors here, nowhere else |
 | `vercel.json` | Deployment config and SPA fallback routes |
 | `supabase/migrations/` | Source of truth for schema changes |

@@ -35,7 +35,7 @@ export function VCN() {
 
   return (
     <>
-      <PageTitle title="Vietnamese Culture Night" />
+      <PageTitle />
 
       <div className="program-app">
         <EditorialHero

@@ -59,7 +59,7 @@ export default function UVSANetwork() {
   if (isDegraded) {
     return (
       <>
-        <PageTitle title="SoCal VSA Network" />
+        <PageTitle />
         <DegradedModeBanner sourceName="uvsa-network" />
         <div className="vsa-container py-20">
           <ContentUnavailableState
@@ -88,7 +88,7 @@ export default function UVSANetwork() {
 
   return (
     <>
-      <PageTitle title="SoCal VSA Network" />
+      <PageTitle />
 
       <NetworkHero
         settings={settings}

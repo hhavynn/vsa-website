@@ -140,7 +140,7 @@ export function VCNArchive() {
   if (loading) {
     return (
       <>
-        <PageTitle title="VCN Archive" />
+        <PageTitle />
         <VcnArchiveSkeleton />
       </>
     );
@@ -149,7 +149,7 @@ export function VCNArchive() {
   if (isDegraded) {
     return (
       <>
-        <PageTitle title="VCN Archive" />
+        <PageTitle />
         <PublicBreadcrumbs />
         <DegradedModeBanner sourceName="vcn-archive" />
         <div className="vsa-container py-20">
@@ -167,7 +167,7 @@ export function VCNArchive() {
   if (error) {
     return (
       <>
-        <PageTitle title="VCN Archive" />
+        <PageTitle />
         <PageError message="Failed to load VCN archive" />
       </>
     );
@@ -175,7 +175,7 @@ export function VCNArchive() {
 
   return (
     <>
-      <PageTitle title="VCN Archive" />
+      <PageTitle />
       <PublicBreadcrumbs />
       {/* Degraded mode already handled above with full page fallback */}
 

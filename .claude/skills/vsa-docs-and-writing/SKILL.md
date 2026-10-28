@@ -52,7 +52,7 @@ Remaining (fix in a `docs:` PR when convenient; until then trust the "truth" col
 
 ---
 
-## 2. docs/ inventory (26 files, verified 2026-07-06)
+## 2. docs/ inventory (27 files, verified 2026-07-06; `seo-and-sitemap.md` added 2026-10-27)
 
 Legend for Status: **living** = keep current; **snapshot** = dated point-in-time record, do not "update", supersede instead; **stale-candidate** = flagged for review/archive.
 
@@ -81,6 +81,7 @@ Legend for Status: **living** = keep current; **snapshot** = dated point-in-time
 | `public-calendar.md` | `/calendar` page data sources and behavior | Calendar page changes | living |
 | `rls-verification-checklist.md` | RLS verification runbook (`verify-rls-security.mjs`) | Any RLS/grant change | living |
 | `security-headers-and-csp.md` | Vercel security headers policy; CSP rollout plan | `vercel.json` header changes | living |
+| `seo-and-sitemap.md` | Public route manifest, build-time `sitemap.xml`, per-route share metadata and the prerendered route shells | The route manifest, sitemap generation, or the SPA-shell rewrite changes | living |
 | `stitch-prompts.md` | One-off UI-generation prompts for stitch.withgoogle.com | — | **stale-candidate.** Design-exploration artifact, not a document of record; candidate for archive once the UI campaign no longer uses it. |
 | `storage-egress-audit.md` | Which public content is still Supabase Storage-backed (`npm run audit:storage-content`), expected vs abnormal, offline `public/images` measurement, and the external Supabase/Vercel quota-alert checklist | Image columns, buckets, audit script, or dashboard/plan settings change | living (re-date on update) |
 | `supabase-usage-audit.sql` | Egress/usage audit queries (run in Supabase SQL editor) | Storage/egress model changes | living (interpretation guide: `vsa-diagnostics-and-measurement`) |

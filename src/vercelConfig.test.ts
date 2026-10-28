@@ -3,6 +3,7 @@ import path from 'path';
 
 type Header = { key: string; value: string };
 type Config = {
+  buildCommand?: string;
   headers: { source: string; headers: Header[] }[];
   rewrites: { source: string; destination: string }[];
 };
@@ -28,7 +29,7 @@ describe('vercel.json deploy-safety policy', () => {
     expect(headersFor('/static/js/main.abc123.js')['cache-control']).toBeUndefined();
   });
 
-  it.each(['/', '/events', '/admin/members', '/index.html'])('never lets %s go stale across deploys', (requestPath) => {
+  it.each(['/', '/events', '/admin/members', '/index.html', '/spa.html'])('never lets %s go stale across deploys', (requestPath) => {
     const cacheControl = headersFor(requestPath)['cache-control'];
     expect(cacheControl).toBeDefined();
     expect(cacheControl).not.toContain('immutable');
@@ -40,7 +41,14 @@ describe('vercel.json deploy-safety policy', () => {
   });
 
   it.each(['/', '/events', '/house/2025', '/admin/members'])('still serves deep link %s from the SPA shell', (requestPath) => {
-    expect(rewriteFor(requestPath)).toBe('/index.html');
+    // /spa.html is the neutral shell written by scripts/generate-seo-assets.ts.
+    // The prerendered home page (build/index.html) must not answer deep links:
+    // it carries the home page's canonical URL.
+    expect(rewriteFor(requestPath)).toBe('/spa.html');
+  });
+
+  it('builds through npm so the sitemap and prerendered route shells are generated', () => {
+    expect(config.buildCommand).toBe('npm run build');
   });
 
   it.each([

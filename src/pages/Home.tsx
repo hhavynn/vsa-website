@@ -224,7 +224,7 @@ export function Home() {
   const featured = upcomingEvents[0];
   return (
     <>
-      <PageTitle title="Home" />
+      <PageTitle />
       {eventsError && <DegradedModeBanner sourceName="events" />}
 
       <section

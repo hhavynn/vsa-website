@@ -125,7 +125,7 @@ export function Internship() {
 
   return (
     <>
-      <PageTitle title="Intern Program" />
+      <PageTitle />
 
       <div className="program-app">
         <EditorialHero

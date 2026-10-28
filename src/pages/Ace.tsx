@@ -162,7 +162,7 @@ export function Ace() {
 
   return (
     <>
-      <PageTitle title="ACE Program" />
+      <PageTitle />
 
       <div className={`ace-app ${dark ? 'is-dark' : ''}`}>
         {/* Hero */}

@@ -9,6 +9,7 @@ import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
+import { RouteSeoProvider } from '../../lib/seo/RouteSeoContext';
 
 function ScrollManager() {
   const { pathname, search, hash } = useLocation();
@@ -70,7 +71,9 @@ function LayoutShell() {
 export function Layout() {
   return (
     <PublicSearchProvider>
-      <LayoutShell />
+      <RouteSeoProvider>
+        <LayoutShell />
+      </RouteSeoProvider>
     </PublicSearchProvider>
   );
 }

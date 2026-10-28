@@ -84,7 +84,7 @@ export function GetInvolved() {
   const shouldReduceMotion = useReducedMotion();
   return (
     <>
-      <PageTitle title="Get Involved" />
+      <PageTitle />
 
       <div className="vsa-page-hero">
         <div className="vsa-container relative z-10">

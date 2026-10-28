@@ -174,7 +174,7 @@ export default function Gallery() {
   if (isInitialError && isDegraded) {
     return (
       <>
-        <PageTitle title="Gallery" />
+        <PageTitle />
         <DegradedModeBanner sourceName="gallery" />
         <div className="vsa-container py-20">
           <ContentUnavailableState
@@ -192,7 +192,7 @@ export default function Gallery() {
 
   return (
     <>
-      <PageTitle title="Gallery" />
+      <PageTitle />
       {/* Degraded mode banner already handled above with full page fallback */}
 
       <div className="vsa-page-hero">

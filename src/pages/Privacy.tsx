@@ -13,7 +13,7 @@ function NoticeSection({ title, children }: { title: string; children: React.Rea
 export default function Privacy() {
   return (
     <>
-      <PageTitle title="Privacy Notice" />
+      <PageTitle />
       <div className="bg-[var(--color-bg)] px-4 py-14 sm:py-20">
         <article className="mx-auto max-w-3xl">
           <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-brand-600 dark:text-brand-400">

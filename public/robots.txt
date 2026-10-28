@@ -4,3 +4,7 @@ Disallow: /admin
 Disallow: /profile
 Disallow: /points
 Disallow: /feedback
+
+# Canonical, indexable public routes. Generated from src/routes/publicRouteSeo.ts
+# at build time (npm run build → scripts/generate-seo-assets.ts).
+Sitemap: https://www.vsaatucsd.com/sitemap.xml
