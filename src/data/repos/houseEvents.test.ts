@@ -110,3 +110,59 @@ describe('HouseEventsRepository — behaviour', () => {
     });
   });
 });
+
+describe('HouseEventsRepository — public association data minimization (#640)', () => {
+  it.each(Object.keys(PUBLIC_READ_INVOCATIONS))(
+    '%s only embeds published, allowlisted House profile fields',
+    async (methodName) => {
+      await PUBLIC_READ_INVOCATIONS[methodName]();
+
+      const selects = supabaseMock.queriesFor('house_events')
+        .flatMap(({ calls }) => calls)
+        .filter(({ method }) => method === 'select')
+        .map(({ args }) => String(args[0]));
+
+      expect(selects).toHaveLength(1);
+      expect(selects[0]).toContain(
+        'houses:house_event_houses(house:published_house_page_assets(id,house,house_key,display_name,accent_color))'
+      );
+      expect(selects[0]).not.toContain('*');
+      expect(selects[0]).not.toMatch(/internal_notes|source_doc_url|house_parent_body|house_parent_image_url/);
+    }
+  );
+
+  it.each([
+    ['upcoming', () => houseEventsRepository.getPublicUpcomingForHouse(HOUSE_ID, TODAY)],
+    ['past', () => houseEventsRepository.getPublicPastForHouse(HOUSE_ID, TODAY)],
+  ] as const)('%s House event lookup propagates association permission errors', async (_label, query) => {
+    supabaseMock.queueResult('house_event_houses', {
+      data: null,
+      error: postgrestError('permission denied for table house_event_houses', '42501'),
+    });
+
+    await expect(query()).rejects.toMatchObject({ message: 'Insufficient permissions' });
+    expect(supabaseMock.queriesFor('house_events')).toHaveLength(0);
+  });
+
+  it('preserves collaborating House event IDs in the public query', async () => {
+    supabaseMock.queueResult('house_event_houses', {
+      data: [{ house_event_id: 'event-2' }],
+      error: null,
+    });
+
+    await houseEventsRepository.getPublicUpcomingForHouse(HOUSE_ID, TODAY);
+
+    const clauses = supabaseMock.queriesFor('house_events')[0].calls
+      .filter(({ method }) => method === 'or')
+      .map(({ args }) => String(args[0]));
+    expect(clauses).toContain('house_profile_id.eq.house-profile-1,id.in.(event-2)');
+  });
+
+  it('keeps admin-only full House profiles on the admin editor path', async () => {
+    await houseEventsRepository.getAdminEvents(YEAR);
+
+    const select = supabaseMock.queriesFor('house_events')[0].calls
+      .find(({ method }) => method === 'select');
+    expect(String(select?.args[0])).toContain('house:house_page_assets(*)');
+  });
+});
