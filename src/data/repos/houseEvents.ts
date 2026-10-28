@@ -1,10 +1,14 @@
 import { supabase } from '../../lib/supabase';
+import type { Json } from '../../types/database';
 import { HouseEvent, HousePageAsset } from '../../types';
 import { withErrorHandling } from '../errors';
 
 export type HouseEventFormData = Omit<HouseEvent, 'id' | 'created_at' | 'updated_at' | 'house' | 'houses'> & {
   house_ids?: string[];
 };
+
+/** Admin lists read at most this many events per year (#636). */
+export const ADMIN_HOUSE_EVENT_LIMIT = 500;
 
 const PUBLIC_FIELDS = [
   'id',
@@ -178,7 +182,8 @@ export class HouseEventsRepository {
           houses:house_event_houses(house:house_page_assets(*))
         `)
         .order('event_date', { ascending: false })
-        .order('start_time', { ascending: false });
+        .order('start_time', { ascending: false })
+        .limit(ADMIN_HOUSE_EVENT_LIMIT);
 
       if (academicYearStart) query = query.eq('academic_year_start', academicYearStart);
 
@@ -250,6 +255,37 @@ export class HouseEventsRepository {
 
       return updatedEvent;
     }, 'Failed to update house event');
+  }
+
+  /**
+   * Creates or updates an event and its host Houses in one database
+   * transaction (admin_save_house_event): everything changes or nothing does.
+   * A create retried with the same requestId returns the same event; an update
+   * is refused if the event changed after `expectedUpdatedAt`. Returns false
+   * when the database does not have the function yet (migration 20261028080000),
+   * so the caller can fall back to the previous two-step save.
+   */
+  async saveEventAtomic(input: {
+    eventId: string | null;
+    formData: Partial<HouseEventFormData>;
+    requestId: string;
+    expectedUpdatedAt: string | null;
+  }): Promise<HouseEvent | false> {
+    return withErrorHandling(async () => {
+      const { house_ids, academic_year_end: _end, ...fields } = input.formData;
+      const { data, error } = await supabase.rpc('admin_save_house_event', {
+        p_event_id: input.eventId,
+        p_event: fields as unknown as Json,
+        p_host_ids: house_ids ?? [],
+        p_request_id: input.eventId ? null : input.requestId,
+        p_expected_updated_at: input.expectedUpdatedAt,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883') return false;
+        throw error;
+      }
+      return data as unknown as HouseEvent;
+    }, 'Failed to save house event');
   }
 
   async deleteEvent(id: string): Promise<void> {

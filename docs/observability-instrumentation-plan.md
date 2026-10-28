@@ -1,6 +1,6 @@
 # Observability instrumentation plan (Sentry, PostHog)
 
-**Status:** Phase 1 is live in production (2026-10-28, #705). Phase 2 and Phase 3 code is in their own PRs. Every production step (creating projects, setting Vercel variables, deploying) waits for explicit owner approval.
+**Status (2026-10-28):** Sentry error monitoring (Phase 1, #705) and PostHog product analytics (Phase 3a, #713) are live in production. The source-map upload code (Phase 2, #711) is merged but waits for the owner to add `SENTRY_AUTH_TOKEN`. Every production step (creating projects, setting Vercel variables, deploying) needs explicit owner approval.
 
 **Goal:** give the Sentry and PostHog connectors real production data, so debugging can start from observed evidence. Today both are empty because the site was never instrumented, and an empty connector is "no evidence", not "no problem".
 
@@ -95,7 +95,7 @@ Measured on this branch with `npm run build`, gzip:
 
 ## Phase 2: source maps to Sentry, not to the public
 
-**Status:** code in the Phase 2 PR. Inert until `SENTRY_AUTH_TOKEN` is set in Vercel.
+**Status:** merged 2026-10-28 (#711, `dac9b77a`). The production build log shows the step skipping ("SENTRY_AUTH_TOKEN is not set"), so maps are still served until the owner adds the token.
 
 CRA cannot take the Sentry webpack plugin without ejecting, so the upload runs as an npm `postbuild` step. Vercel runs it automatically after `npm run build`.
 
@@ -120,10 +120,18 @@ CRA cannot take the Sentry webpack plugin without ejecting, so the upload runs a
 
 | Variable | Environments | Value |
 | --- | --- | --- |
-| `SENTRY_AUTH_TOKEN` | Production only | A Sentry **organization auth token** (Settings → Developer Settings → Organization Tokens), which can only upload releases and source maps. Mark it Sensitive. The owner creates and pastes it: it is a credential, so an agent never handles it |
+| `SENTRY_AUTH_TOKEN` (the script also accepts `SENTRY_AUTH_TOKENS`, the name the Production variable was created with) | Production only | A Sentry **organization auth token** (Settings → Developer Settings → Organization Tokens), which can only upload releases and source maps. Mark it Sensitive. The owner creates and pastes it: it is a credential, so an agent never handles it |
 | `SENTRY_ORG`, `SENTRY_PROJECT` | Optional | Only needed to override the defaults `havyn` and `vsa-website` |
 
 Previews have no token, so preview deployments still serve their maps. That's harmless, because the repo is public.
+
+**Turning it on (owner only; the token is a credential, so an agent never handles it)**
+
+1. In Sentry, open **Settings → Developer Settings → Organization Tokens** (`https://havyn.sentry.io/settings/auth-tokens/`) and click **Create New Token**. Name it, for example, `vercel-sourcemaps`. Organization tokens come with the fixed `org:ci` scope, which only allows release and source-map uploads. Copy the token now, because Sentry shows it only once.
+2. Add it in Vercel, using either the dashboard or the CLI:
+   - **Dashboard:** project `vsa-website` → **Settings → Environment Variables**. Add `SENTRY_AUTH_TOKEN` with the token as its value, select **Production** only, turn on **Sensitive**, and save.
+   - **CLI:** from the linked main checkout, run `vercel env add SENTRY_AUTH_TOKEN production --sensitive` and paste the token at the prompt. Don't pass it with `--value`, which would leave it in your shell history.
+3. Redeploy production: either merge any PR, or go to **Deployments**, open the latest production deployment, click **⋯ → Redeploy**, and keep the target as Production. The variable only takes effect on a new build.
 
 **Verification**
 
@@ -135,7 +143,10 @@ Previews have no token, so preview deployments still serve their maps. That's ha
 
 ## Phase 3: PostHog alongside GA4 (3a: no Session Replay)
 
-**Status:** code in the Phase 3 PR, stacked on Phase 2. The owner asked for it on 2026-10-28, earlier than the original "after two weeks of Sentry" suggestion. It stays inert until both PostHog variables are set.
+**Status:** live in production since 2026-10-28 (#713, `fcf8bee1`). The owner asked for it earlier than the original "after two weeks of Sentry" suggestion. Production check, aggregates only:
+- PostHog received `$pageview` and `$autocapture` events.
+- No URL carried a query string or `#`, no property contained `@`, and no `$ip` property exists.
+- `/admin` never loaded the SDK.
 
 PostHog runs **alongside** GA4 and doesn't replace it, because GA4 still feeds `/admin/analytics`. Both sit behind the same "Allow analytics" choice. The consent banner now names both.
 
@@ -209,5 +220,5 @@ A same-origin Sentry `tunnel` (which keeps ad-blockers from dropping reports) wo
 | 1 | Merge the Phase 1 PR (SDK inert; bundle grows) | Revert | Done 2026-10-28 (#705, `7aedecf8`) |
 | 2 | Create Sentry project and set its privacy settings | Delete project | Done 2026-10-28 (`havyn/vsa-website`) |
 | 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Done 2026-10-28; smoke test `VSA-WEBSITE-1` verified scrubbing, then resolved |
-| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | PR open |
-| 5 | Phase 3 PR; owner turns on PostHog IP discarding, then sets `REACT_APP_POSTHOG_KEY` / `_HOST` (Production) | Unset the variables | PR open |
+| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | Merged 2026-10-28 (#711); the owner set the token as `SENTRY_AUTH_TOKENS`, which the script accepts since #718 |
+| 5 | Phase 3 PR; owner turns on PostHog IP discarding, then sets `REACT_APP_POSTHOG_KEY` / `_HOST` (Production) | Unset the variables | Done 2026-10-28 (#713); `anonymize_ips` on, console capture off, first events verified |
