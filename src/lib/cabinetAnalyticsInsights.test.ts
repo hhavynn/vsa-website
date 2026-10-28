@@ -9,6 +9,7 @@ const sample: CabinetTrafficSnapshot = {
     { path: '/leaderboard?search=person@example.com', views: 8 },
     { path: '/points', views: 12 },
     { path: '/get-involved', views: 13 },
+    { path: '/intern-program?ref=signup', views: 5 },
     { path: '/gallery', views: 4 },
     { path: '/admin/members?email=student@example.com', views: 999 },
     { path: 'https://other.example/events', views: 400 },
@@ -21,7 +22,7 @@ describe('cabinet analytics: consent-aware aggregate reporting (#288)', () => {
     expect(buildCabinetAreaInsights(sample)).toEqual([
       { key: 'events', label: 'Events and calendar', views: 30 },
       { key: 'tools', label: 'Points and leaderboard', views: 20 },
-      { key: 'programs', label: 'Program discovery', views: 13 },
+      { key: 'programs', label: 'Program discovery', views: 18 },
       { key: 'memories', label: 'Gallery and memories', views: 4 },
     ]);
   });
@@ -29,7 +30,7 @@ describe('cabinet analytics: consent-aware aggregate reporting (#288)', () => {
   it('does not present unsampled views as a site-wide traffic share', () => {
     const grouped = buildCabinetAreaInsights(sample);
     const sum = grouped.reduce((total, area) => total + area.views, 0);
-    expect(sum).toBe(67);
+    expect(sum).toBe(72);
     expect(sum).not.toBe(sample.summary.pageViews);
   });
 
@@ -37,6 +38,7 @@ describe('cabinet analytics: consent-aware aggregate reporting (#288)', () => {
     expect(safeCabinetPageLabel('/events?name=Student+Name')).toBe('/events');
     expect(safeCabinetPageLabel('/events/private-student-id')).toBe('/events/…');
     expect(safeCabinetPageLabel('/admin/members?email=student@example.com')).toBe('Other page');
+    expect(safeCabinetPageLabel('/intern-program?ref=student')).toBe('/intern-program');
     expect(safeCabinetPageLabel('https://other.example/points')).toBe('Other page');
   });
 
