@@ -31,6 +31,7 @@ import { AnalyticsConsentProvider } from '../context/AnalyticsConsentContext';
 import AppRoutes from './index';
 import { supabaseMock } from '../test-utils/supabaseMock';
 import { eventsRepository } from '../data/repos/events';
+import { PUBLIC_ROUTE_DECISIONS } from './publicRouteInventory';
 
 jest.mock('../lib/supabase', () => ({
   get supabase() {
@@ -44,38 +45,9 @@ jest.mock('../lib/supabase', () => ({
  * here — they have their own gating and belong in a separate suite.
  */
 const PUBLIC_ROUTES = [
-  '/',
-  '/events',
-  '/calendar',
-  '/leaderboard',
-  '/cabinet',
-  '/get-involved',
-  '/gallery',
-  '/ace',
-  '/house',
-  '/house/archive',
-  '/house/archive/2025-2026',
-  // Historical House detail: year + house slug together. These are declared as
-  // multi-line <Route> elements in routes/index.tsx and are easy to miss when
-  // eyeballing the file — they resolve HouseDetail through a different path
-  // than /house/:houseSlug does.
-  '/house/archive/2025-2026/dragon',
-  '/house/year/2025-2026',
-  '/house/year/2025-2026/dragon',
-  '/house/dragon',
-  '/house-system',
-  '/intern-program',
-  '/vcn',
-  '/vcn/current',
-  '/vcn/archive',
-  '/wild-n-culture',
-  '/uvsa-network',
-  '/points',
-  '/feedback',
-  '/privacy',
-  '/admin/login',
-  // Redirects to /admin/login; included so the redirect itself is covered.
-  '/signin',
+  ...Object.keys(PUBLIC_ROUTE_DECISIONS).map((routePath) =>
+    routePath.replace(/:yearSlug/g, '2025-2026').replace(/:houseSlug/g, 'dragon')
+  ),
   // The catch-all NotFound page. Public-facing and easy to forget.
   '/definitely-not-a-real-route',
 ];

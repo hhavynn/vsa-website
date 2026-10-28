@@ -78,10 +78,10 @@ describe('admin navigation ↔ router parity', () => {
     ]);
   });
 
-  it('keeps all 31 destinations, each in exactly one group, with unique group ids', () => {
-    expect(ADMIN_NAV_ITEMS).toHaveLength(31);
+  it('keeps all 32 destinations, each in exactly one group, with unique group ids', () => {
+    expect(ADMIN_NAV_ITEMS).toHaveLength(32);
     const grouped = ADMIN_NAV_GROUPS.flatMap((group) => group.items.map((item) => item.to));
-    expect(new Set(grouped).size).toBe(31);
+    expect(new Set(grouped).size).toBe(32);
     const ids = ADMIN_NAV_GROUPS.map((group) => group.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -94,7 +94,7 @@ describe('admin navigation ↔ router parity', () => {
       'Homepage & Programs', 'Gallery', 'Content Calendar', 'VCN Archives', 'Resources Index', 'Ask VSA Knowledge', 'External Events', 'UVSA Schools',
     ]);
     expect(labels('Planning & Health')).toEqual(['Years & Terms', 'New Year Setup', 'Launch Checklist', 'Content Health', 'Analytics', 'Recent Changes']);
-    expect(labels('Settings & Feedback')).toEqual(['Site Settings', 'Feedback', 'Ask VSA Feedback', 'Data Rights']);
+    expect(labels('Settings & Feedback')).toEqual(['Site Settings', 'Feedback', 'Ask VSA Feedback', 'Ask VSA Usage', 'Data Rights']);
   });
 
   it('gives every destination an icon and every group an icon', () => {
