@@ -19,7 +19,18 @@ import { memberIdentityRepository } from '../../../data/repos/memberIdentity';
 import { downloadCsv } from '../../../lib/housePlacementExport';
 import type { HouseImportMember } from '../../../lib/houseAssignmentImport';
 import type { HousePageAsset } from '../../../types';
+import type { HousePaymentCycle } from '../../../lib/housePayments';
 
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
+jest.mock('../../../data/repos/housePayments', () => ({
+  PAYMENTS_UNAVAILABLE: 'House payment eligibility is not available yet.',
+  housePaymentsRepository: {
+    listCycles: jest.fn().mockResolvedValue([]),
+    getBatchBlockers: jest.fn().mockResolvedValue([]),
+    registerApplicants: jest.fn(),
+    getCycle: jest.fn(),
+  },
+}));
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'admin' } }) }));
 jest.mock('../../../data/repos/adminActivity', () => ({ logAdminActivity: jest.fn() }));
@@ -106,6 +117,8 @@ function stat(label: string) {
 }
 
 beforeEach(() => {
+  (housePaymentsRepository.listCycles as jest.Mock).mockResolvedValue([]);
+  (housePaymentsRepository.getBatchBlockers as jest.Mock).mockResolvedValue([]);
   jest.clearAllMocks();
   repo.listBatches.mockResolvedValue([]);
   parentsRepo.listForYear.mockResolvedValue([]);
@@ -339,4 +352,59 @@ it('places the real 2026 form options, recognizing "Pinky Pie (Ingyin & Martin)"
   const rows = await screen.findAllByTestId('placement-result-row');
   expect(rows.map((row) => within(row).getAllByRole('cell')[7].textContent)).toEqual(['Rarity', 'Pinkie Pie', 'Applejack', 'Twilight Sparkle']);
   expect(screen.queryByText(/Pinky Pie \(/, { selector: 'td' })).not.toBeInTheDocument();
+});
+
+describe('payment roster (#656, #657)', () => {
+  const payments = housePaymentsRepository as jest.Mocked<typeof housePaymentsRepository>;
+  const CLEAN = [
+    HEADER,
+    '10/21/2026 21:00:00,Chi Le,555-0100,chi@example.test,Rarity (Parent A),Pinkie Pie (Parent B)',
+    '10/21/2026 20:00:00,An Example,555-0101,an@example.test,Rarity (Parent A),Pinkie Pie (Parent B)',
+    '10/21/2026 20:30:00,Bao Tran,555-0102,bao@example.test,Pinkie Pie (Parent B),Rarity (Parent A)',
+  ].join('\n');
+  const cycle = (id: string, key: string, version = 0) => ({ id, academic_year_start: 2026, application_key: key, status_version: version } as HousePaymentCycle);
+
+  it('saves the first sort to the chosen roster as a provisional draft linked to saved applicants, with no contact data', async () => {
+    payments.listCycles.mockResolvedValue([cycle('cycle-fall', 'house_fall')]);
+    payments.registerApplicants.mockImplementation(async (_cycleId, applicants) => new Map(applicants.map((item, index) => [item.applicant_key, `app-${index}`])));
+    payments.getCycle.mockResolvedValue(cycle('cycle-fall', 'house_fall', 1));
+    repo.createBatch.mockResolvedValue({ id: 'new-batch' } as Awaited<ReturnType<typeof repo.createBatch>>);
+    repo.loadSnapshot.mockResolvedValue({ batch: { id: 'new-batch', academic_year_start: 2026, status: 'draft', effective_start_date: '2026-11-08' }, drafts: [], profiles: [], existingMemberships: new Map(), preflight: { blockers: [], warnings: [] } } as unknown as HouseBatchSnapshot);
+    renderWorkflow();
+    await uploadAndValidate(CLEAN);
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Placements' }));
+    await screen.findAllByTestId('placement-result-row');
+    expect(await screen.findByLabelText('Payment roster')).toHaveValue('cycle-fall');
+    await userEvent.click(screen.getByRole('button', { name: 'Save Private Placement Draft' }));
+    await waitFor(() => expect(repo.createBatch).toHaveBeenCalledTimes(1));
+
+    const [cycleId, registered, source] = payments.registerApplicants.mock.calls[0];
+    expect(cycleId).toBe('cycle-fall');
+    expect(source).toBe('placement_import');
+    expect(registered.map((item) => [item.applicant_key, item.source_name, item.preferences])).toEqual([
+      ['2026-10-22T03:00:00.000Z#3', 'An Example', ['p-rarity', 'p-pinkie']],
+      ['2026-10-22T03:30:00.000Z#4', 'Bao Tran', ['p-pinkie', 'p-rarity']],
+      ['2026-10-22T04:00:00.000Z#2', 'Chi Le', ['p-rarity', 'p-pinkie']],
+    ]);
+    expect(JSON.stringify(registered)).not.toMatch(/@example\.test|555-01/);
+
+    const input = repo.createBatch.mock.calls[0][0];
+    expect(input.placement?.payment).toMatchObject({
+      cycleId: 'cycle-fall', eligibilityMode: 'provisional', snapshotVersion: 1, generationReason: 'initial', revisedFromBatchId: null,
+    });
+    expect(input.rows.map((row) => row.applicant_id)).toEqual(['app-0', 'app-1', 'app-2']);
+    expect(writer.applyMembership).not.toHaveBeenCalled();
+  });
+
+  it('will not save until a roster is chosen when the year has several', async () => {
+    payments.listCycles.mockResolvedValue([cycle('cycle-fall', 'house_fall'), cycle('cycle-winter', 'house_winter')]);
+    renderWorkflow();
+    await uploadAndValidate(CLEAN);
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Placements' }));
+    await screen.findAllByTestId('placement-result-row');
+    const save = screen.getByRole('button', { name: 'Save Private Placement Draft' });
+    await waitFor(() => expect(save).toBeDisabled());
+    await userEvent.selectOptions(screen.getByLabelText('Payment roster'), 'cycle-winter');
+    expect(save).toBeEnabled();
+  });
 });

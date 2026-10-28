@@ -17,6 +17,7 @@ import { memberLookupRepository } from '../../data/repos/memberLookup';
 import { useAcademicTerms } from '../../hooks/useAcademicTerms';
 import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms';
 import { HouseDraftWorkflow } from '../../components/features/admin/HouseDraftWorkflow';
+import { HousePaymentsPanel } from '../../components/features/admin/HousePaymentsPanel';
 import {
   HouseImportMember,
   getMemberName,
@@ -28,7 +29,7 @@ import { HousePageAsset } from '../../types';
 
 type Member = HouseImportMember;
 
-type AdminHouseTab = 'assignments' | 'backfill' | 'images' | 'events';
+type AdminHouseTab = 'assignments' | 'payments' | 'backfill' | 'images' | 'events';
 
 /**
  * The tasks on this page, primary first. The URL carries the choice (`?tab=`) so a
@@ -37,6 +38,7 @@ type AdminHouseTab = 'assignments' | 'backfill' | 'images' | 'events';
  */
 const HOUSE_TABS: ReadonlyArray<{ key: AdminHouseTab; label: string; advanced?: boolean }> = [
   { key: 'assignments', label: 'House Assignments' },
+  { key: 'payments', label: 'Payments' },
   { key: 'images', label: 'Profiles & Images' },
   { key: 'events', label: 'House Events' },
   { key: 'backfill', label: 'Historical Backfill', advanced: true },
@@ -471,6 +473,8 @@ export default function AdminHouses() {
           loadingMembers={loadingMembers}
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
+      ) : activeTab === 'payments' ? (
+        <HousePaymentsPanel selectedYear={selectedYear} houseProfiles={houseProfiles} members={members} />
       ) : activeTab === 'images' ? (
         <>
           <HouseImagesManager
