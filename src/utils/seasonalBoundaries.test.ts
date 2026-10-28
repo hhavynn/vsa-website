@@ -90,6 +90,10 @@ describe('each summer message context is used by its page', () => {
 
   it('does not show obsolete live House standings empty states after the GBM-only embargo', () => {
     expect(uses('components/features/home/ThisWeekInVSA.tsx', 'houseStandings')).toBe(false);
+    const houseSummerCopy = getSummerBreakMessage('house').body;
+    expect(houseSummerCopy).toContain('Official House standings are shared at GBMs');
+    expect(houseSummerCopy).toContain('not live on the website');
+    expect(houseSummerCopy).not.toContain('new standings will come back');
   });
 
   it('every context has its own copy, apart from the House pair and the default', () => {
