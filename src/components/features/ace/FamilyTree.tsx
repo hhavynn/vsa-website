@@ -1,13 +1,17 @@
 import React, { useMemo } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { FamAccent } from './FamCover';
+import type { AcePickupYear } from '../../../lib/acePickupYear';
 
 export interface TreeNode {
   id: string;
   initial: string;
   label: string;
   role: string;
+  /** Display label of the approved pickup year (FA23 or 2021–22). */
   cohort?: string | null;
+  /** Approved pickup year; unknown unless an admin reviewed it. Not generation depth. */
+  pickup?: AcePickupYear;
   parent?: string | null;
   photoUrl?: string | null;
 }

@@ -209,6 +209,12 @@ export function Calendar() {
   const isLoading = vsaQuery.isLoading || houseQuery.isLoading || applicationsQuery.isLoading;
   const errors = [vsaQuery.error, houseQuery.error, applicationsQuery.error].filter(Boolean);
   const allFailed = errors.length === 3;
+  // Name what is missing, so a failed House source never reads as "no House events".
+  const failedSources = [
+    vsaQuery.error ? 'VSA event' : null,
+    houseQuery.error ? 'House event' : null,
+    applicationsQuery.error ? 'application deadline' : null,
+  ].filter(Boolean).join(' and ');
   const supabaseDown = allFailed && errors.some((e) => isSupabaseUnavailable(e));
   const summerMessage = getSummerBreakMessage('events');
   const showSummerEmpty = shouldUseSummerEmptyState(
@@ -274,7 +280,7 @@ export function Calendar() {
         ) : (
           <>
             {errors.length > 0 && (
-              <DegradedModeBanner variant="inline" sourceName="some calendar" className="mb-6" />
+              <DegradedModeBanner variant="inline" sourceName={failedSources} className="mb-6" />
             )}
 
             <ThisWeekStrip items={weekItems} todayStr={todayStr} onSelectItem={openItem} />

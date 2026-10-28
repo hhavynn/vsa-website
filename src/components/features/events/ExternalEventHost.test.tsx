@@ -139,6 +139,41 @@ describe('/events cards for an external event', () => {
     expect(screen.queryByRole('link', { name: /RSVP/ })).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['stale Mario cache in a new-year event', 'Donkey Kong', 2026],
+    ['last-year champion on historical event', 'Bowser', 2025],
+    ['current MLP House in an embargoed event', 'Twilight Sparkle', 2026],
+    ['tied Houses from an old stats payload', 'Rarity', 2026],
+  ])('ignores any injected House lead: %s', (_scenario, house, year) => {
+    const hostileLegacyStats = {
+      totalPoints: 12,
+      memberCount: 3,
+      topHouse: house,
+      topHouseCount: 2,
+    };
+    render(wrap(<PastEventMemoryCard
+      event={{ ...event, date: `${year}-10-25T00:00:00Z` }}
+      terms={[]}
+      index={0}
+      stats={hostileLegacyStats}
+      recap="Photos and friends from the event."
+      linkedAlbum="https://photos.example.test/album"
+    />));
+    expect(screen.getAllByText('UVSA SoCal Fall Social').length).toBeGreaterThan(0);
+    expect(screen.getByText(/3 members attended/)).toBeInTheDocument();
+    expect(screen.getByText(/Photos and friends from the event/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /View photos/ })).toHaveAttribute('href', 'https://photos.example.test/album');
+    expect(screen.queryByText(new RegExp(`${house} led`, 'i'))).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/had the most members attend/i)).not.toBeInTheDocument();
+  });
+
+  it('shows no House or fake ranking for events without published attendance', () => {
+    render(wrap(<PastEventMemoryCard event={event} terms={[]} index={0} />));
+    expect(screen.getAllByText('UVSA SoCal Fall Social').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\bled\b/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/members attended/)).not.toBeInTheDocument();
+  });
+
   it('draws normal events exactly as before', () => {
     render(wrap(<UpcomingEventRow event={{ ...event, event_type: 'gbm' }} />));
     expect(screen.queryByText('Hosted by')).not.toBeInTheDocument();

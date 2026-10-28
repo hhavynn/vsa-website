@@ -8,14 +8,16 @@ import { format, parseISO } from 'date-fns';
 import { useQuery } from 'react-query';
 import { eventsRepository, PublicEventPreview } from '../../../data/repos/events';
 import { type FindMyPointsEntry } from '../../../hooks/useFindMyPoints';
-import { HOUSE_COLORS, HOUSE_LABELS, normalizeHouse } from '../../../constants/houses';
+import { normalizeHouse } from '../../../constants/houses';
+import { formatAcademicYear } from '../../../lib/academicTerms';
+import { houseSlugFromKey } from '../../../utils/houseSlug';
 import { supabase } from '../../../lib/supabase';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { Skeleton } from '../../ui/Skeleton';
-import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
+import { renderSnapshotImage, shareSnapshotImage, type SnapshotData, type SnapshotFormat } from '../../../lib/snapshotImage';
 import { formatRank, isWithinTop } from '../../../utils/leaderboardRanking';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 
@@ -298,13 +300,14 @@ function UpcomingActivity() {
 
 function ShareButton({ data, shareText }: { data: SnapshotData; shareText: string }) {
   const [state, setState] = useState<'idle' | 'working' | 'shared' | 'saved'>('idle');
+  const [format, setFormat] = useState<SnapshotFormat>('story');
   const [failed, setFailed] = useState(false);
   const prepared = useRef<{ key: string; blob: Promise<Blob> } | null>(null);
-  const key = JSON.stringify(data);
+  const key = JSON.stringify({ data, format });
 
   const prepare = () => {
     if (prepared.current?.key !== key) {
-      prepared.current = { key, blob: renderSnapshotImage(data) };
+      prepared.current = { key, blob: renderSnapshotImage(data, format) };
     }
     return prepared.current.blob;
   };
@@ -338,7 +341,10 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
         prepared.current = null;
         blob = await prepare();
       }
-      const outcome = await shareSnapshotImage({ blob, text: shareText, title: 'My VSA Snapshot' });
+      const outcome = await shareSnapshotImage({
+        blob, text: shareText, title: 'My VSA Snapshot',
+        fileName: `my-vsa-snapshot-${format}.png`,
+      });
       if (outcome === 'cancelled') {
         setState('idle');
         return;
@@ -357,7 +363,21 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
   };
 
   return (
-    <button
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+        <span>Image size</span>
+        <select
+          aria-label="Snapshot image size"
+          value={format}
+          onChange={(event) => setFormat(event.target.value as SnapshotFormat)}
+          disabled={state === 'working'}
+          className="min-h-11 rounded-md border border-border bg-surface px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <option value="story">Story · 9:16</option>
+          <option value="square">Feed · 1:1</option>
+        </select>
+      </label>
+      <button
       type="button"
       onClick={handleShare}
       disabled={state === 'working'}
@@ -376,7 +396,8 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
       ) : (
         <>📤 Share snapshot</>
       )}
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -405,10 +426,17 @@ export function MyVSACard({
 }: MyVSACardProps) {
   const { data: attended = [] } = useRecentAttendance(entry.member_id);
   
-  const houseKey = normalizeHouse(entry.house);
-  const houseLabel = houseKey ? HOUSE_LABELS[houseKey] : null;
-  const houseColor = houseKey ? HOUSE_COLORS[houseKey] : null;
-  const houseEmoji = houseKey ? (HOUSE_EMOJI[houseKey] ?? '🏠') : null;
+  const house = entry.house;
+  // All-time shows the member's latest revealed House: date it so an old House never reads as current.
+  const houseLabel = house ? (isAllTime ? `${house.label} · ${formatAcademicYear(house.academicYearStart)}` : house.label) : null;
+  const houseColor = house ? house.accentColor ?? 'var(--brand)' : null;
+  const legacyHouse = normalizeHouse(house?.houseKey ?? house?.label);
+  const houseEmoji = house ? (legacyHouse ? HOUSE_EMOJI[legacyHouse] ?? '🏠' : '🏠') : null;
+  // The share image appends hex alpha (`${color}22`), so it needs a real hex colour.
+  const snapshotHouseColor = house?.accentColor && /^#[0-9a-f]{6}$/i.test(house.accentColor) ? house.accentColor : null;
+  const houseHref = house
+    ? `/house/year/${formatAcademicYear(house.academicYearStart)}/${houseSlugFromKey(house.houseKey || house.label)}`
+    : null;
 
   const subline = [entry.graduation_year, entry.college].filter(Boolean).join(' • ');
   const top10Gap = getTop10Gap(entry, allEntries);
@@ -427,12 +455,12 @@ export function MyVSACard({
       checkIns: entry.events_attended,
       allTimePoints: entry.all_time_points,
       houseLabel,
-      houseColor,
+      houseColor: snapshotHouseColor,
       top10Gap,
       badges,
       avatarUrl,
     }),
-    [entry, subline, isAllTime, yearLabel, houseLabel, houseColor, top10Gap, badges, avatarUrl],
+    [entry, subline, isAllTime, yearLabel, houseLabel, snapshotHouseColor, top10Gap, badges, avatarUrl],
   );
   const shareText = `I'm ranked ${formatRank(entry)} in VSA with ${entry.total_points.toLocaleString()} pts (${yearLabel})! Find yours: ${window.location.origin}/points`;
 
@@ -470,8 +498,8 @@ export function MyVSACard({
               </div>
             </div>
 
-            {houseKey && houseColor && houseLabel && (
-              <Link to={`/house/${houseKey.toLowerCase().replace(/\s+/g, '-')}`} className="group flex items-center gap-2 rounded-full border-2 px-3 py-1.5 transition-all hover:scale-105 active:scale-95" style={{ borderColor: `${houseColor}44`, background: `${houseColor}11` }}>
+            {houseHref && houseColor && houseLabel && (
+              <Link to={houseHref} className="group flex items-center gap-2 rounded-full border-2 px-3 py-1.5 transition-all hover:scale-105 active:scale-95" style={{ borderColor: `${houseColor}44`, background: `${houseColor}11` }}>
                 <span className="text-lg leading-none">{houseEmoji}</span>
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wider" style={{ color: houseColor }}>{houseLabel}</span>
               </Link>

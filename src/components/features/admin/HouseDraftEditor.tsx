@@ -7,7 +7,9 @@
 // silently.
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useQuery, useQueryClient } from 'react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { useOperatingYear } from '../../../hooks/useOperatingYear';
 import { useReviewMarks } from '../../../hooks/useReviewMarks';
@@ -45,6 +47,8 @@ import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HousePaymentGateCard } from './HousePaymentGateCard';
+import { HouseRevealReadinessPanel, useRevealReadiness } from './HouseRevealReadinessPanel';
 import { HousePlacementExportPanel } from './HousePlacementExportPanel';
 import { MemberSearchSelect } from './MemberSearchSelect';
 import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
@@ -78,6 +82,8 @@ export interface HouseDraftEditorProps {
   initialNextStep?: NextStep | null;
   /** A draft row to scroll to and highlight on open (Quick Search link). */
   highlightRowId?: string | null;
+  /** Opens another batch, e.g. a rerun just saved from this one or its original. */
+  onOpenBatch?: (batchId: string) => void;
 }
 
 const selectCls =
@@ -217,6 +223,7 @@ export function HouseDraftEditor({
   onPublished,
   initialNextStep = null,
   highlightRowId = null,
+  onOpenBatch,
 }: HouseDraftEditorProps) {
   const [batch, setBatch] = useState(initialBatch);
   const [drafts, setDrafts] = useState(initialDrafts);
@@ -255,10 +262,34 @@ export function HouseDraftEditor({
     return map;
   }, [profiles]);
 
-  const preflight = useMemo(
+  const basePreflight = useMemo(
     () => buildBatchPreflight(batch, drafts, profiles, { effectiveStartDate: batch.effective_start_date, existingMemberships, memberNames }),
     [batch, drafts, profiles, existingMemberships, memberNames],
   );
+  // The database's own payment gate (#660). It refuses Lock and Reveal again
+  // server-side; showing it here only keeps the buttons honest.
+  const paymentGate = useQuery(
+    ['admin', 'house-batch-payment-blockers', batch.id, batch.status, batch.updated_at, drafts.length],
+    () => housePaymentsRepository.getBatchBlockers(batch.id),
+    { enabled: auto, retry: false, staleTime: 0 },
+  );
+  const preflight = useMemo(() => {
+    const blockers = !auto ? []
+      : paymentGate.isError ? ['Payment eligibility could not be checked.']
+        : paymentGate.isLoading ? ['Checking payment eligibility…']
+          : paymentGate.data ?? [];
+    if (blockers.length === 0) return basePreflight;
+    const gateIssues = blockers.map((message) => ({ code: 'payment_gate' as const, message, rowIds: [] }));
+    return { ...basePreflight, blockers: [...gateIssues, ...basePreflight.blockers], canLock: false };
+  }, [auto, basePreflight, paymentGate.data, paymentGate.isError, paymentGate.isLoading]);
+  const queryClient = useQueryClient();
+  const readiness = useRevealReadiness({
+    batch,
+    drafts,
+    profiles,
+    preflight: basePreflight,
+    paymentBlockers: !auto ? null : paymentGate.isError || paymentGate.isLoading ? undefined : paymentGate.data ?? null,
+  });
   const counts = useMemo(() => computeHouseCounts(drafts, profiles), [drafts, profiles]);
   const balance = useMemo(
     () => suggestBalancing(drafts, profiles, memberNames, (text) => houseIdByText.get(normalizeHouseLookup(text)) ?? null),
@@ -663,6 +694,7 @@ export function HouseDraftEditor({
   }
 
   function reveal() {
+    if (!readiness.canReveal) return Promise.resolve();
     return run(async () => {
       const result = await houseAssignmentsRepository.publishBatch(batch.id, userId);
       await refreshBatch();
@@ -681,6 +713,12 @@ export function HouseDraftEditor({
           ? 'Already revealed.'
           : `Revealed: ${result.applied} membership${result.applied === 1 ? '' : 's'} created${result.skipped ? `, ${result.skipped} already in place` : ''}.`,
       );
+      // Public lookups and House pages in this browser show the new Houses at once.
+      queryClient.invalidateQueries('find-my-points');
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const [first, second] = Array.isArray(query.queryKey) ? query.queryKey : [query.queryKey];
+        return [first, second].some((part) => typeof part === 'string' && part.startsWith('house'));
+      } });
       onPublished();
     }, 'Failed to reveal. Nothing was lost; fix the issue and reveal again.');
   }
@@ -755,6 +793,22 @@ export function HouseDraftEditor({
         </div>
       </div>
 
+      {auto && (
+        <HousePaymentGateCard
+          batch={batch}
+          drafts={drafts}
+          profiles={profiles}
+          userId={userId}
+          blockers={paymentGate.isLoading ? undefined : paymentGate.data}
+          blockersFailed={paymentGate.isError}
+          onOpenBatch={onOpenBatch}
+        />
+      )}
+
+      {batch.status === 'locked' && (
+        <HouseRevealReadinessPanel readiness={readiness} assigned={preflight.assigned} yearLabel={formatAcademicYear(batch.academic_year_start)} />
+      )}
+
       {batch.status === 'locked' && (
         <div className={toneBlock} style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
           <p className="font-semibold" style={{ color: 'var(--color-text)' }}>Locked — still private.</p>
@@ -772,7 +826,7 @@ export function HouseDraftEditor({
               I confirm: reveal these {preflight.assigned} assignments for {formatAcademicYear(batch.academic_year_start)}.
             </span>
           </label>
-          <button type="button" onClick={reveal} disabled={busy || !revealConfirmed || preflight.blockers.length > 0} className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50">
+          <button type="button" onClick={reveal} disabled={busy || !revealConfirmed || preflight.blockers.length > 0 || !readiness.canReveal} className="vsa-btn-primary mt-3 px-5 py-2 text-xs disabled:opacity-50">
             {busy ? 'Revealing…' : 'Reveal House assignments'}
           </button>
         </div>

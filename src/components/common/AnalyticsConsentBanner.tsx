@@ -37,7 +37,8 @@ export function AnalyticsConsentBanner() {
             Analytics choice
           </h2>
           <p className="mt-2 font-sans text-sm leading-6 text-[var(--color-text2)]">
-            VSA can use Google Analytics to understand page visits. It stays off unless you allow it.
+            VSA can use Google Analytics and PostHog to understand page visits and which links and buttons get used.
+            Both stay off unless you allow them.
             Functional browser storage for features such as theme and sign-in is separate.{' '}
             <Link to="/privacy" className="font-semibold text-brand-600 underline underline-offset-2 dark:text-brand-400">
               Read the privacy notice
