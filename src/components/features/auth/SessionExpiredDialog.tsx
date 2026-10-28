@@ -56,8 +56,13 @@ export function SessionExpiredDialog({
   useEffect(() => {
     if (!LoadedSignInForm) return undefined;
     const id = requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      // A deferred form must not steal focus after the user has started
+      // interacting with another control (e.g. the Leave button).
+      if (dialog.contains(document.activeElement) && document.activeElement !== dialog) return;
       const field = email ? 'input[type="password"]' : 'input[type="email"]';
-      dialogRef.current?.querySelector<HTMLInputElement>(field)?.focus();
+      dialog.querySelector<HTMLInputElement>(field)?.focus();
     });
     return () => cancelAnimationFrame(id);
   }, [email, LoadedSignInForm]);
