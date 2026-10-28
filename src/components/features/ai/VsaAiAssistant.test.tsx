@@ -170,3 +170,41 @@ it("labels who is speaking in text, not only by bubble colour and side", async (
   const answerTurn = answer.closest(".max-w-\\[88\\%\\]") as HTMLElement;
   expect(within(answerTurn).getByText("Ask VSA")).toBeInTheDocument();
 });
+
+it("links to real alternatives after rate limits, temporary disablement, and fallback", async () => {
+  backend((_body, index) => {
+    if (index === 0) return response("Give Ask VSA about five minutes, or browse Events.", "rate_limited", 429);
+    if (index === 1) return response("Ask VSA is taking a break right now.", "unavailable", 200);
+    return response("Some live site data is unavailable right now.", "fallback");
+  });
+  await openAssistant();
+  await ask("What's happening this week?");
+  await ask("How do I join?");
+  await ask("What is VCN?");
+
+  expect(screen.getByText(/five minutes/)).toBeInTheDocument();
+  expect(screen.getByText("Taking a break")).toBeInTheDocument();
+  expect(screen.getByText("Not sure yet")).toBeInTheDocument();
+
+  const navs = screen.getAllByRole("navigation", { name: "Other ways to get VSA information" });
+  expect(navs).toHaveLength(3);
+  for (const nav of navs) {
+    expect(within(nav).getByRole("link", { name: "Events" })).toHaveAttribute("href", "/events");
+    expect(within(nav).getByRole("link", { name: "Get Involved" })).toHaveAttribute("href", "/get-involved");
+    expect(within(nav).getByRole("link", { name: "Points" })).toHaveAttribute("href", "/points");
+    expect(within(nav).getByRole("link", { name: "Send feedback" })).toHaveAttribute("href", "/feedback");
+  }
+  expect(requests[2].recentTurns).toEqual([
+    { role: "user", content: "What's happening this week?" },
+    { role: "user", content: "How do I join?" },
+  ]);
+});
+
+it("offers links on network errors while preserving Retry", async () => {
+  backend(() => response("", "error", 503));
+  await openAssistant();
+  await ask("What events are happening?");
+  expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
+  const nav = screen.getByRole("navigation", { name: "Other ways to get VSA information" });
+  expect(within(nav).getByRole("link", { name: "Events" })).toHaveAttribute("href", "/events");
+});

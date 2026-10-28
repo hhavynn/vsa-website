@@ -11,7 +11,18 @@ import { corsHeaders } from "../_shared/cors.ts";
 const FALLBACK_MESSAGE =
   "Some live site data is unavailable right now. Check Instagram or Linktree for the newest updates.";
 
-const RATE_LIMIT_MESSAGE = "You've reached today's Ask VSA limit. Try again later!";
+const UNAVAILABLE_MESSAGE = "Ask VSA is taking a break right now. You can still browse Events, Get Involved, or Points while we're away.";
+
+function publicRateLimitMessage(reason: string): string {
+  if (reason === "session_5_minute_limit") {
+    return "Lots of questions in a short time! Give Ask VSA about five minutes, or browse Events, Get Involved, or Points.";
+  }
+  if (reason === "session_daily_limit") {
+    return "You've used your Ask VSA questions for now. Try again in about a day, or browse Events, Get Involved, or Points.";
+  }
+  // Shared-IP and service budget reasons are never revealed to clients.
+  return "Ask VSA is busy right now. Please try again later, or browse Events, Get Involved, or Points.";
+}
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
@@ -105,7 +116,7 @@ function createAssistantClient() {
 
 type AssistantClient = ReturnType<typeof createAssistantClient>;
 
-type AssistantStatus = "answered" | "fallback" | "rate_limited" | "error";
+type AssistantStatus = "answered" | "fallback" | "rate_limited" | "error" | "unavailable";
 
 interface KnowledgeSnippet {
   id: string;
@@ -556,7 +567,7 @@ serve(async (req) => {
         blockedReason: "disabled",
         currentPage: parsed.currentPage,
       });
-      return jsonResponse(req, { answer: FALLBACK_MESSAGE, sources: [], status: "fallback" });
+      return jsonResponse(req, { answer: UNAVAILABLE_MESSAGE, sources: [], status: "unavailable" });
     }
 
     const admission = await reserveQuota(supabaseClient, sessionIdHash, ipHash);
@@ -574,7 +585,7 @@ serve(async (req) => {
       });
       return jsonResponse(
         req,
-        { answer: RATE_LIMIT_MESSAGE, sources: [], status: "rate_limited" },
+        { answer: publicRateLimitMessage(rateLimitReason), sources: [], status: "rate_limited" },
         429,
       );
     }

@@ -1,8 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { initGA, trackPageView } from '../../lib/analytics';
+import { initGA, isAnalyticsConfigured, setDiagnosticsConsent, trackPageView, trackSafeWebVital } from '../../lib/analytics';
+import reportWebVitals from '../../reportWebVitals';
 import { trackProductPageView } from '../../lib/productAnalytics';
 import { useAnalyticsConsent } from '../../context/AnalyticsConsentContext';
+
+// Register once per tab; consent withdrawal stops dispatch in analytics.ts.
+let vitalsStarted = false;
 
 /**
  * Component that monitors route changes and reports them as GA4 page_view and
@@ -14,10 +18,16 @@ const RouteTracker = () => {
   const { consent } = useAnalyticsConsent();
 
   useEffect(() => {
-    if (consent !== 'granted') return;
+    const granted = consent === 'granted';
+    setDiagnosticsConsent(granted);
+    if (!granted) return;
     initGA();
     trackPageView(location.pathname);
     trackProductPageView(location.pathname);
+    if (!vitalsStarted && isAnalyticsConfigured()) {
+      vitalsStarted = true;
+      reportWebVitals(trackSafeWebVital);
+    }
   }, [consent, location.pathname]);
 
   return null;

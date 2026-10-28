@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
 import { Label } from '../components/ui/Label';
 import { NewMemberChecklist } from '../components/features/onboarding/NewMemberChecklist';
+import { FindYourVsaPath } from '../components/features/onboarding/FindYourVsaPath';
 import { OpenOpportunities } from '../components/features/home/OpenOpportunities';
 
 // Same stagger-reveal shape already used on UVSANetwork/Cabinet/Gallery --
@@ -163,7 +164,11 @@ export function GetInvolved() {
           </div>
         </div>
 
-        <div className="mb-12 border-t pt-8" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-12">
+          <FindYourVsaPath />
+        </div>
+
+        <div id="open-opportunities" className="mb-12 border-t pt-8" style={{ borderColor: 'var(--border)' }}>
           <OpenOpportunities />
         </div>
 
