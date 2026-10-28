@@ -94,10 +94,13 @@ export function CTABlock({
   link,
   fallbackKey,
   fallback,
+  showNextSteps = false,
 }: {
   link: PublicApplicationLink | null;
   fallbackKey: ApplicationKey;
   fallback?: FallbackOverrides;
+  /** Admin's literal public preview stays link-free for inactive forms. */
+  showNextSteps?: boolean;
 }) {
   const title = link?.title || applicationKeyLabel(fallbackKey);
   const defaults = DEFAULT_APPLICATION_MESSAGES[fallbackKey];
@@ -152,7 +155,7 @@ export function CTABlock({
         {title}
       </div>
       <div className="mt-2">{body}</div>
-      {!isActionable && (
+      {showNextSteps && !isActionable && (
         <div className="mt-3 border-t border-[var(--color-border)] pt-3 font-sans text-xs leading-5 text-[var(--color-text2)]">
           {opensAt && <p className="mb-2">Scheduled to open {opensAt}.</p>}
           <p>
@@ -276,7 +279,7 @@ export function ApplicationCTA({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map(({ key, link }) => (
-          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} />
+          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} showNextSteps />
         ))}
       </div>
       {!hasRequestedOpenWindow && otherOpenPrograms.length > 0 && (

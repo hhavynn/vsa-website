@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { ApplicationCTA } from './ApplicationCTA';
 import { supabaseMock } from '../../test-utils/supabaseMock';
 
@@ -33,10 +34,12 @@ function renderCTA() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, cacheTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ApplicationCTA
-        applicationKeys="house_fall"
-        fallback={{ not_open: 'Page fallback: not open.', closed: 'Page fallback: closed.' }}
-      />
+      <MemoryRouter>
+        <ApplicationCTA
+          applicationKeys="house_fall"
+          fallback={{ not_open: 'Page fallback: not open.', closed: 'Page fallback: closed.' }}
+        />
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
