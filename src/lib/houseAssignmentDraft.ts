@@ -138,7 +138,8 @@ export interface PreflightIssue {
     | 'priority_metadata'
     | 'override_reason'
     | 'priority_override'
-    | 'manual_override';
+    | 'manual_override'
+    | 'payment_gate';
   message: string;
   /** Row ids involved, so the UI can jump to them. */
   rowIds: string[];
