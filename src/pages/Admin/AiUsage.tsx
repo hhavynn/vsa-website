@@ -1,28 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from 'react-query';
 import { PageTitle } from '../../components/common/PageTitle';
-import { supabase } from '../../lib/supabase';
-
-/** This is the ENTIRE response contract: no identifiers, messages, or source IDs. */
-export interface AiUsageDay {
-  day: string;
-  answered: number;
-  fallback: number;
-  rate_limited: number;
-  errors: number;
-  other: number;
-}
-
-type ReportDays = 7 | 30 | 90;
-type ReportResult = {
-  data: AiUsageDay[] | null;
-  error: { message: string } | null;
-};
-
-// Keep the generated Database type immutable until the migration has been
-// applied and types are regenerated from a verified staging schema.
-type UsageReportClient = {
-  rpc: (name: 'admin_ai_usage_daily', args: { p_days: ReportDays }) => PromiseLike<ReportResult>;
-};
+import { aiUsageRepository, type AiUsageDay, type ReportDays } from '../../data/repos/aiUsage';
+export type { AiUsageDay } from '../../data/repos/aiUsage';
 
 export function summarizeAiUsage(days: AiUsageDay[]) {
   const totals = { answered: 0, fallback: 0, rate_limited: 0, errors: 0, other: 0 };
@@ -37,30 +17,12 @@ export function summarizeAiUsage(days: AiUsageDay[]) {
 
 export default function AdminAiUsage() {
   const [period, setPeriod] = useState<ReportDays>(30);
-  const [rows, setRows] = useState<AiUsageDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data: rows = [], isLoading: loading, isError: error } = useQuery(
+    ['admin-ai-usage', period],
+    () => aiUsageRepository.getDaily(period),
+    { retry: false, staleTime: 2 * 60 * 1000 },
+  );
   const totals = useMemo(() => summarizeAiUsage(rows), [rows]);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(false);
-    setRows([]);
-    const client = supabase as unknown as UsageReportClient;
-    Promise.resolve(client.rpc('admin_ai_usage_daily', { p_days: period }))
-      .then(({ data, error: readError }) => {
-        if (!active) return;
-        if (readError || !Array.isArray(data)) {
-          setError(true);
-          return;
-        }
-        setRows(data);
-      })
-      .catch(() => { if (active) setError(true); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [period]);
 
   return (
     <div className="flex-1">
