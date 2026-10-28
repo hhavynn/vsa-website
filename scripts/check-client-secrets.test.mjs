@@ -6,6 +6,14 @@ const jwt = (role) => 'eyJhbGciOiJIUzI1NiJ9.' + Buffer.from(JSON.stringify({role
 test('allows documented public variables and an anon JWT', () => {
   assert.deepEqual(inspectText('.env.example', 'REACT_APP_SUPABASE_URL=https://example.invalid\nREACT_APP_SUPABASE_ANON_KEY=' + jwt('anon') + '\nREACT_APP_GA4_MEASUREMENT_ID=G-XXXXXXXXXX'), []);
 });
+test('allows a Sentry DSN, which is a public ingest address, but not a Sentry auth token', () => {
+  assert.deepEqual(inspectEnvironment({ REACT_APP_SENTRY_DSN: 'https://0123abcd@o123.ingest.us.sentry.io/456' }), []);
+  assert.ok(inspectEnvironment({ REACT_APP_SENTRY_AUTH_TOKEN: 'sntrys_example' }).length);
+});
+test('allows a PostHog project key and host, which are public, but not a PostHog personal API key', () => {
+  assert.deepEqual(inspectEnvironment({ REACT_APP_POSTHOG_KEY: 'phc_' + 'a'.repeat(43), REACT_APP_POSTHOG_HOST: 'https://us.i.posthog.com' }), []);
+  assert.ok(inspectText('src/analytics.ts', 'const key = "phx_' + 'b'.repeat(40) + '";').length);
+});
 test('rejects unknown public environment variable assignment and reference', () => {
   assert.equal(inspectText('.env.local', 'REACT_APP_PAYMENT_PRIVATE_KEY=dummy')[0].includes('unreviewed'), true);
   assert.equal(inspectText('src/config.ts', 'process.env.REACT_APP_NEW_TOKEN')[0].includes('unreviewed'), true);
@@ -27,7 +35,7 @@ test('does not flag placeholders or ordinary app strings', () => {
   assert.deepEqual(inspectText('.env.example','REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key_here'), []);
 });
 test('detects other credentials and privileged JWTs in client source without printing them', () => {
-  for (const token of ['AIza' + 'A'.repeat(35), 'sb_secret_' + 'x'.repeat(40), jwt('service_role')]) {
+  for (const token of ['AIza' + 'A'.repeat(35), 'sb_secret_' + 'x'.repeat(40), 'sntrys_' + 'y'.repeat(40), 'sntryu_' + 'z'.repeat(40), jwt('service_role')]) {
     const problems = inspectText('public/config.js', 'const value = "' + token + '";');
     assert.ok(problems.length);
     assert.equal(problems.join('').includes(token), false);
