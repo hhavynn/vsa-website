@@ -2,17 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminSettings from './Settings';
 
-const refresh = jest.fn();
-const upsert = jest.fn();
+const mockRefresh = jest.fn();
+const mockUpsert = jest.fn();
 
 jest.mock('../../context/SiteSettingsContext', () => ({
   useSiteSettings: () => ({
     settings: { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' },
-    refresh,
+    mockRefresh,
   }),
 }));
 jest.mock('../../lib/supabase', () => ({
-  supabase: { from: () => ({ upsert }) },
+  supabase: { from: () => ({ mockUpsert }) },
 }));
 jest.mock('../../components/features/admin/ImageDropzone', () => ({
   ImageDropzone: () => <div data-testid="mock-logo-upload" />,
@@ -24,8 +24,8 @@ jest.mock('react-hot-toast', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  upsert.mockResolvedValue({ error: null });
-  refresh.mockResolvedValue(undefined);
+  mockUpsert.mockResolvedValue({ error: null });
+  mockRefresh.mockResolvedValue(undefined);
 });
 
 describe('Admin Settings shared form shell (#258)', () => {
@@ -41,7 +41,7 @@ describe('Admin Settings shared form shell (#258)', () => {
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
     fireEvent.click(save);
 
-    await waitFor(() => expect(upsert).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockUpsert).toHaveBeenCalledWith(
       expect.objectContaining({ logo_alt: 'Vietnamese Student Association logo' }),
       expect.objectContaining({ onConflict: 'id' }),
     ));
@@ -56,12 +56,12 @@ describe('Admin Settings shared form shell (#258)', () => {
     fireEvent.change(alt, { target: { value: 'Other alt text' } });
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
     expect(alt).toHaveValue('VSA logo');
-    expect(upsert).not.toHaveBeenCalled();
+    expect(mockUpsert).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Save Settings' })).toBeDisabled();
   });
 
   it('preserves edits and announces a failed save', async () => {
-    upsert.mockResolvedValueOnce({ error: { message: 'synthetic rejection' } });
+    mockUpsert.mockResolvedValueOnce({ error: { message: 'synthetic rejection' } });
     render(<MemoryRouter><AdminSettings /></MemoryRouter>);
     const alt = screen.getByRole('textbox', { name: 'Alt Text' });
     await waitFor(() => expect(alt).toHaveValue('VSA logo'));
