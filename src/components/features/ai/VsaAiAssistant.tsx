@@ -533,8 +533,7 @@ export function VsaAiAssistant() {
                             <Link
                               key={`${message.id}-${to}`}
                               to={to}
-                              className="inline-flex min-h-[32px] items-center rounded-full border px-2.5 py-1 font-sans text-[11px] font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)', background: 'var(--color-surface)' }}
+                              className="inline-flex min-h-[32px] items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-sans text-[11px] font-bold text-text-secondary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                             >
                               {label}
                             </Link>
