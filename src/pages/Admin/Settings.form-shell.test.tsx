@@ -4,10 +4,11 @@ import AdminSettings from './Settings';
 
 const mockRefresh = jest.fn();
 const mockUpsert = jest.fn();
+let mockSettings = { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' };
 
 jest.mock('../../context/SiteSettingsContext', () => ({
   useSiteSettings: () => ({
-    settings: { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' },
+    settings: mockSettings,
     refresh: mockRefresh,
   }),
 }));
@@ -23,6 +24,7 @@ jest.mock('react-hot-toast', () => ({
 }));
 
 beforeEach(() => {
+  mockSettings = { logoUrl: 'https://vsaatucsd.com/logo.png', logoAlt: 'VSA logo' };
   jest.clearAllMocks();
   mockUpsert.mockResolvedValue({ error: null });
   mockRefresh.mockResolvedValue(undefined);
@@ -47,6 +49,18 @@ describe('Admin Settings shared form shell (#258)', () => {
     ));
     await waitFor(() => expect(save).toBeDisabled());
     expect(screen.getByText('Saved')).toBeInTheDocument();
+  });
+
+  it('keeps unsaved logo edits across a background server refresh', async () => {
+    const { rerender } = render(<MemoryRouter><AdminSettings /></MemoryRouter>);
+    const alt = screen.getByRole('textbox', { name: 'Alt Text' });
+    await waitFor(() => expect(alt).toHaveValue('VSA logo'));
+    fireEvent.change(alt, { target: { value: 'My in-progress logo description' } });
+
+    mockSettings = { logoUrl: 'https://vsaatucsd.com/new-logo.png', logoAlt: 'Another editor changed this' };
+    rerender(<MemoryRouter><AdminSettings /></MemoryRouter>);
+    expect(alt).toHaveValue('My in-progress logo description');
+    expect(screen.getByRole('button', { name: 'Save Settings' })).toBeEnabled();
   });
 
   it('discards an unsubmitted change without writing to the database', async () => {
