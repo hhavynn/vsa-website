@@ -83,7 +83,7 @@ export function getSummerBreakMessage(context: SummerBreakMessageContext = 'defa
       return {
         badge: 'Summer break',
         title: 'Houses return in fall',
-        body: 'House apps, House Reveal, and new standings will come back with the school year. Check back in fall to see where your House lands.',
+        body: 'House applications, Reveal, and events return with the school year. Official House standings are shared at GBMs, not live on the website.',
       };
     case 'externals':
       return {

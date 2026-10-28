@@ -122,7 +122,7 @@ describe('placement exports', () => {
 describe('exportRowsFromDrafts', () => {
   const draft = (overrides: Partial<HouseAssignmentDraft>): HouseAssignmentDraft => ({
     id: 'd-1',
-    batch_id: 'b-1',
+    batch_id: 'b-1', applicant_id: null,
     created_at: '2026-10-27T00:00:00Z',
     updated_at: '2026-10-27T00:00:00Z',
     source_name: 'An Example',
