@@ -5,6 +5,7 @@ import { EditorialHero, EditorialHeroScript } from '../components/common/Editori
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { RelatedLinks } from '../components/common/RelatedLinks';
 import { programRelatedLinks } from '../lib/relatedLinks';
+import { VCNNativeName } from '../components/features/vcn/VCNNativeName';
 
 const highlights = [
   { title: 'Dance Performances', desc: 'VCN typically features multiple dance performances, from traditional Vietnamese dance to contemporary choreography.' },
@@ -61,7 +62,7 @@ export function VCN() {
             <div className="program-two-grid items-start md:gap-10">
               <div>
                 <p className="program-body">
-                Vietnamese Culture Night (VCN) is VSA at UCSD's large annual culture show. Each year, students come together to celebrate Vietnamese culture through performance and storytelling while inviting the broader community in.
+                Vietnamese Culture Night (VCN), also known as <VCNNativeName />, is VSA at UCSD's large annual culture show. Each year, students come together to celebrate Vietnamese culture through performance and storytelling while inviting the broader community in.
                 </p>
                 <p className="program-body">
                 VCN is fully student-led: from the creative vision to the choreography, props, costumes, and show-day execution, every part of the production is built and performed by UCSD students.

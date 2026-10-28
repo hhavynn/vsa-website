@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
+import { VCNNativeName } from '../components/features/vcn/VCNNativeName';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { useCurrentVcnArchive } from '../hooks/useVcnArchives';
@@ -106,7 +107,7 @@ export function VCNCurrent() {
             title={<>VCN <EditorialHeroScript>{currentVcn.year || 'Coming Soon'}</EditorialHeroScript></>}
             meta={
               <>
-                Current VCN details will be updated when available. Follow{' '}
+                Current VCN details will be updated when available. The show is also called <VCNNativeName />. Follow{' '}
                 <a href="https://www.instagram.com/vsaatucsd/" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400">
                   @vsaatucsd
                 </a>{' '}
@@ -142,6 +143,7 @@ export function VCNCurrent() {
           meta={
             <>
               UCSD VSA · VCN {currentVcn.year}
+              <span className="block pt-1">Vietnamese: <VCNNativeName /></span>
               {currentVcn.date && (
                 <span className="block pt-2 font-mono text-[11px] tracking-[.04em]" style={{ color: 'var(--color-text3)' }}>
                   {currentVcn.date}{currentVcn.time ? ` · ${currentVcn.time}` : ''}

@@ -52,6 +52,10 @@ jobs:
       - name: Run tests
         run: CI=true npm test -- --coverage --watchAll=false
 
+      - name: Test Ask VSA offline evaluation scorer
+        # Fixed synthetic cases and property checks; no network or production Gemini usage.
+        run: npm run test:ask-vsa-eval
+
       - name: Re-run date-boundary tests in other timezones
         # Application windows and summer break are defined in San Diego time and
         # must not shift for a runner or admin elsewhere (#274, #270).
@@ -62,6 +66,11 @@ jobs:
         env:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+
+      - name: Test the Sentry source-map upload script
+        # postbuild skips without SENTRY_AUTH_TOKEN (never set in GitHub), so
+        # the build above kept its maps; this pins the upload/delete branch.
+        run: node --test scripts/sentry-sourcemaps.test.mjs
 
       - name: Check CSP inline-script hashes
         # build/index.html must contain exactly the inline scripts allowlisted in
@@ -138,6 +147,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Install dependencies for the credential guard
+        run: npm ci
+
+      - name: Block accidental client-bundle credentials
+        # High-confidence findings are a release gate; no values printed.
+        run: |
+          node --test scripts/check-client-secrets.test.mjs
+          node scripts/check-client-secrets.mjs
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

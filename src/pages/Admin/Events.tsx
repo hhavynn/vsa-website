@@ -22,6 +22,8 @@ import { BulkRunDialog } from '../../components/features/admin/ops/BulkRunDialog
 import { FilterChips } from '../../components/features/admin/ops/FilterChips';
 import { EventRecapEditor } from '../../components/features/admin/EventRecapEditor';
 import { ExternalEventDetailsFields } from '../../components/features/admin/ExternalEventDetailsFields';
+import { HouseEventsManager } from '../../components/features/admin/HouseEventsManager';
+import { AdminEventsHouseSection } from '../../components/features/admin/AdminEventsHouseSection';
 import { EventPreviewDialog } from '../../components/features/admin/preview/EventPreviewDialog';
 import { PreviewAsPublicButton } from '../../components/features/admin/preview/PublicPreviewDialog';
 import { buildEventPreview } from '../../components/features/admin/preview/eventPreview';
@@ -199,6 +201,10 @@ export default function AdminEvents() {
   // Routine work is managing existing events, so Manage is the landing view; Create is one click away.
   // A `?filter=` or `?event=` deep link also lands on Manage.
   const [activeTab, setActiveTab] = useState<'create' | 'manage'>('manage');
+  // General and External create a regular event below; House opens the shared
+  // House event editor, which writes only house_events (#630).
+  const [createCategory, setCreateCategory] = useState<'general' | 'external' | 'house'>('general');
+  const [houseYear, setHouseYear] = useState<number | null>(() => getAcademicTermMeta(new Date())?.academicYearStart ?? null);
   // Back/Forward or a new deep link can add a filter while the page is mounted.
   useEffect(() => {
     if (statusFilter !== 'all') setActiveTab('manage');
@@ -887,6 +893,39 @@ export default function AdminEvents() {
           {activeTab === 'create' ? (
             <div className="p-6 sm:p-8">
               <h2 className="mb-6 font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Create Event</h2>
+              <fieldset className="mb-6">
+                <legend className={labelCls}>Event category *</legend>
+                <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="Event category">
+                  {([
+                    ['general', 'General VSA Event'],
+                    ['external', 'External Event'],
+                    ['house', 'House Event'],
+                  ] as const).map(([value, label]) => (
+                    <label key={value} className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-sm ${createCategory === value ? 'border-[var(--brand)] text-text-primary' : 'border-[var(--color-border)] text-text-secondary'}`}>
+                      <input
+                        type="radio"
+                        name="create-event-category"
+                        checked={createCategory === value}
+                        onChange={() => {
+                          setCreateCategory(value);
+                          if (value === 'external') setNewEvent((current) => ({ ...current, event_type: 'external_event' }));
+                          if (value === 'general' && isExternalEventType(newEvent.event_type)) setNewEvent((current) => ({ ...current, event_type: EMPTY_EVENT.event_type }));
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              {createCategory === 'house' ? (
+                <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+                  <p className="mb-2 px-4 text-sm sm:px-6 lg:px-8" style={{ color: 'var(--color-text2)' }}>
+                    House events are hosted by one or more Houses and appear on those House pages and the calendar once published. They are saved as House events only (the same records as Admin → Houses → House Events), never as a regular VSA event, and they do not award attendance points.
+                  </p>
+                  <HouseEventsManager selectedYear={houseYear} onYearChange={setHouseYear} />
+                </div>
+              ) : (
+              <>
               <p className="-mt-3 mb-6 text-sm" style={{ color: 'var(--color-text2)' }}>
                 Create the public event listing first, then add recap links after the event has happened.
               </p>
@@ -983,6 +1022,8 @@ export default function AdminEvents() {
                   {createDirty ? 'Unsaved changes' : ''}
                 </p>
               </form>
+              </>
+              )}
             </div>
           ) : (
             <div>
@@ -992,6 +1033,10 @@ export default function AdminEvents() {
                   Edit dates, points, images, public visibility, and recap links. Draft events are kept here until they are ready.
                 </p>
               </div>
+              <AdminEventsHouseSection
+                academicYearStart={houseYear}
+                onOpenEditor={() => { setCreateCategory('house'); setActiveTab('create'); }}
+              />
               {events.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-8" style={{ borderColor: 'var(--color-border)' }}>
                   <FilterChips
