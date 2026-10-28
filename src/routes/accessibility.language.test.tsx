@@ -75,6 +75,14 @@ describe('Vietnamese language markers (#318)', () => {
     expect(screen.getByText('Tình Yêu Thầm Lặng', { selector: '[lang="vi"]' })).toBeInTheDocument();
   });
 
+  it.each(['/vcn', '/vcn/current', '/vcn/archive'])('marks the official Vietnamese show name on %s', async (path) => {
+    renderRoute(path);
+    await waitForRouteToSettle();
+
+    expect(screen.getByText('Đêm Văn Hóa Việt Nam', { selector: '[lang="vi"]' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).not.toHaveAttribute('lang', 'vi');
+  });
+
   it('does not mark the English page wrapper as Vietnamese', async () => {
     renderRoute('/');
     await waitForRouteToSettle();
