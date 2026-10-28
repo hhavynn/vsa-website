@@ -143,3 +143,23 @@ Read-only check, safe against production: `scripts/sql/points-integrity-check.sq
 reports members whose cached totals differ from the ledger, and credits whose
 stored value differs from the event's current points. Never repair a finding by
 writing cached totals; fix the ledger and let the triggers recalculate.
+
+### House points reconciliation (read-only, #622)
+
+`scripts/sql/house-points-reconciliation.sql` measures how one academic year's ledger credits reach the House views, and never writes. Run it against production in a read-only transaction (it rolls back):
+
+```bash
+psql "$DATABASE_URL" -v year=2026 -f scripts/sql/house-points-reconciliation.sql
+```
+
+It prints counts and House names only (no member names, emails or notes). **Expected, not discrepancies:** `credits_member_has_no_house_this_year`, `credits_outside_membership_interval`, `credits_before_house_start` (attendance before a member's effective House start keeps its individual points and earns no House points), `credits_event_without_term_near_year`, `members_transferred_this_year`, `future_dated_memberships`. **Investigate:** `house_member_vs_house_total_mismatch` and `recomputed_vs_view_mismatch` (the two views, or the views and the script's own attribution, disagree), `overlapping_memberships`, `credits_attributed_to_two_houses`, `credits_on_inactive_house_profile`, and `pacific_vs_utc_boundary_credits`.
+
+**Time zone rule.** The views cast each event's instant to a date in the database session's time zone. Production serves them in UTC (server and API roles, checked 2026-10-28), so an event after 4–5 PM Pacific counts as the next calendar day. An evening event the night before a member's effective start date therefore earns that House a point. `pacific_vs_utc_boundary_credits` counts those credits. Changing the rule to Pacific dates would be a protected scoring change needing its own owner-approved PR; this script only reports it.
+
+Offline proof (synthetic people, production view definitions, every category with an exact expected count):
+
+```bash
+bash scripts/test-house-points-reconciliation.sh
+```
+
+Production baseline (read-only, 2026-10-28): 2025–26 has 2,281 credits and **0** `house_memberships` rows, so the views show no 2025–26 House points and the public 2025–26 standings come from the static public overrides. 2026–27 has no memberships yet (no Reveal). Every House view check is 0.

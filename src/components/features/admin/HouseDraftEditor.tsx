@@ -7,7 +7,9 @@
 // silently.
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useQuery } from 'react-query';
 import { houseAssignmentsRepository } from '../../../data/repos/houseAssignments';
+import { housePaymentsRepository } from '../../../data/repos/housePayments';
 import { logAdminActivity } from '../../../data/repos/adminActivity';
 import { useOperatingYear } from '../../../hooks/useOperatingYear';
 import { useReviewMarks } from '../../../hooks/useReviewMarks';
@@ -45,6 +47,7 @@ import type { MemberYearMembership } from '../../../lib/houseMembershipIntervals
 import { formatAcademicYear } from '../../../lib/academicTerms';
 import { formatYearSpan } from '../../../lib/operationalStatus';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HousePaymentGateCard } from './HousePaymentGateCard';
 import { HousePlacementExportPanel } from './HousePlacementExportPanel';
 import { MemberSearchSelect } from './MemberSearchSelect';
 import { HouseRevealPreviewDialog } from './preview/HouseRevealPreviewDialog';
@@ -78,6 +81,8 @@ export interface HouseDraftEditorProps {
   initialNextStep?: NextStep | null;
   /** A draft row to scroll to and highlight on open (Quick Search link). */
   highlightRowId?: string | null;
+  /** Opens another batch, e.g. a rerun just saved from this one or its original. */
+  onOpenBatch?: (batchId: string) => void;
 }
 
 const selectCls =
@@ -217,6 +222,7 @@ export function HouseDraftEditor({
   onPublished,
   initialNextStep = null,
   highlightRowId = null,
+  onOpenBatch,
 }: HouseDraftEditorProps) {
   const [batch, setBatch] = useState(initialBatch);
   const [drafts, setDrafts] = useState(initialDrafts);
@@ -255,10 +261,26 @@ export function HouseDraftEditor({
     return map;
   }, [profiles]);
 
-  const preflight = useMemo(
+  const basePreflight = useMemo(
     () => buildBatchPreflight(batch, drafts, profiles, { effectiveStartDate: batch.effective_start_date, existingMemberships, memberNames }),
     [batch, drafts, profiles, existingMemberships, memberNames],
   );
+  // The database's own payment gate (#660). It refuses Lock and Reveal again
+  // server-side; showing it here only keeps the buttons honest.
+  const paymentGate = useQuery(
+    ['admin', 'house-batch-payment-blockers', batch.id, batch.status, batch.updated_at, drafts.length],
+    () => housePaymentsRepository.getBatchBlockers(batch.id),
+    { enabled: auto, retry: false, staleTime: 0 },
+  );
+  const preflight = useMemo(() => {
+    const blockers = !auto ? []
+      : paymentGate.isError ? ['Payment eligibility could not be checked.']
+        : paymentGate.isLoading ? ['Checking payment eligibility…']
+          : paymentGate.data ?? [];
+    if (blockers.length === 0) return basePreflight;
+    const gateIssues = blockers.map((message) => ({ code: 'payment_gate' as const, message, rowIds: [] }));
+    return { ...basePreflight, blockers: [...gateIssues, ...basePreflight.blockers], canLock: false };
+  }, [auto, basePreflight, paymentGate.data, paymentGate.isError, paymentGate.isLoading]);
   const counts = useMemo(() => computeHouseCounts(drafts, profiles), [drafts, profiles]);
   const balance = useMemo(
     () => suggestBalancing(drafts, profiles, memberNames, (text) => houseIdByText.get(normalizeHouseLookup(text)) ?? null),
@@ -754,6 +776,18 @@ export function HouseDraftEditor({
           )}
         </div>
       </div>
+
+      {auto && (
+        <HousePaymentGateCard
+          batch={batch}
+          drafts={drafts}
+          profiles={profiles}
+          userId={userId}
+          blockers={paymentGate.isLoading ? undefined : paymentGate.data}
+          blockersFailed={paymentGate.isError}
+          onOpenBatch={onOpenBatch}
+        />
+      )}
 
       {batch.status === 'locked' && (
         <div className={toneBlock} style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface2)', color: 'var(--color-text2)' }}>
