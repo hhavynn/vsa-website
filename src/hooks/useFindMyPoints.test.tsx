@@ -100,17 +100,22 @@ describe('useFindMyPoints characterization', () => {
       const { result } = renderHook(() => useFindMyPoints('all'), { wrapper });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(supabaseMock.queries().map((q) => q.table)).toEqual(['public_members']);
+      expect(supabaseMock.queries().map((q) => q.table)).toEqual(['public_house_memberships', 'public_members']);
       const calls = supabaseMock.queriesFor('public_members')[0].calls;
       const columns = String(calls.find((c) => c.method === 'select')?.args[0]).split(',').map((c) => c.trim());
-      expect(columns).toEqual(['id', 'first_name', 'last_name', 'college', 'year', 'house', 'points', 'events_attended']);
+      // members.house is a display cache that can hold last year's House: never read for display.
+      expect(columns).toEqual(['id', 'first_name', 'last_name', 'college', 'year', 'points', 'events_attended']);
       expect(columns).not.toContain('user_id');
       expect(columns).not.toContain('email');
       expect(calls).toContainEqual({ method: 'order', args: ['points', { ascending: false }] });
       expect(supabaseMock.filtersFor('public_members')).toEqual([]);
     });
 
-    it('maps rows: all-time points equal total points, house and names carried through', async () => {
+    it('maps rows: all-time points equal total points; House comes from the Reveal-gated view, not the stale cache', async () => {
+      supabaseMock.queueResult('public_house_memberships', {
+        data: [{ member_id: 'member-aaa', academic_year_start: 2026, effective_start_date: '2026-11-08', effective_end_date: null, house_profile_id: 'hp-twilight', house_key: 'twilight', display_name: 'Twilight Sparkle', accent_color: '#7b5ea7' }],
+        error: null,
+      });
       supabaseMock.queueResult('public_members', { data: [publicRow()], error: null });
 
       const { result } = renderHook(() => useFindMyPoints('all'), { wrapper });
@@ -124,7 +129,7 @@ describe('useFindMyPoints characterization', () => {
           full_name: 'Test Member',
           college: 'Test College',
           graduation_year: '2027',
-          house: 'Bowser',
+          house: { houseProfileId: 'hp-twilight', houseKey: 'twilight', label: 'Twilight Sparkle', accentColor: '#7b5ea7', academicYearStart: 2026 },
           total_points: 30,
           events_attended: 6,
           all_time_points: 30,
@@ -228,12 +233,13 @@ describe('useFindMyPoints characterization', () => {
   });
 
   describe('a past academic year', () => {
-    it('ranks on the yearly total and carries all-time points and House from public_members', async () => {
+    it('ranks on the yearly total; all-time points from public_members, House only from that year\'s public membership', async () => {
       const yearly = jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([
         yearlyRow('member-aaa', 'Aye', 8, 3),
       ]);
+      supabaseMock.queueResult('public_house_memberships', { data: [], error: null });
       supabaseMock.queueResult('public_members', {
-        data: [{ id: 'member-aaa', house: 'Bowser', points: 40 }],
+        data: [{ id: 'member-aaa', points: 40 }],
         error: null,
       });
 
@@ -246,20 +252,22 @@ describe('useFindMyPoints characterization', () => {
         total_points: 8,
         events_attended: 3,
         all_time_points: 40,
-        house: 'Bowser',
+        // No revealed 2024-25 membership: no House, never the cached label.
+        house: null,
         rank: 1,
       });
     });
 
-    it('enriches from public_members with an unfiltered id/house/points select', async () => {
+    it('enriches all-time points from public_members with an unfiltered id/points select, and reads that year\'s public memberships', async () => {
       jest.spyOn(leaderboardRepository, 'getYearlyLeaderboard').mockResolvedValue([yearlyRow('member-aaa', 'Aye', 8, 3)]);
 
       const { result } = renderHook(() => useFindMyPoints(2024), { wrapper });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       const calls = supabaseMock.queriesFor('public_members')[0].calls;
-      expect(calls.find((c) => c.method === 'select')?.args[0]).toBe('id, house, points');
+      expect(calls.find((c) => c.method === 'select')?.args[0]).toBe('id, points');
       expect(supabaseMock.filtersFor('public_members')).toEqual([]);
+      expect(supabaseMock.filtersFor('public_house_memberships')).toContainEqual(['academic_year_start', 2024]);
     });
 
     it('as currently coded, a member missing from public_members shows house null and the yearly total as all-time points', async () => {

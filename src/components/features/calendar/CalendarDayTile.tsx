@@ -23,7 +23,7 @@ function describeDay(dateStr: string, dayItems: CalendarItem[]): string {
   const label = formatDateOnly(dateStr, 'EEEE, MMMM d');
   if (dayItems.length === 0) return `${label}, nothing scheduled`;
   const count = `${dayItems.length} ${dayItems.length === 1 ? 'event' : 'events'}`;
-  return `${label}, ${count}: ${dayItems.map((item) => item.title).join(', ')}`;
+  return `${label}, ${count}: ${dayItems.map((item) => `${item.title} (${item.categoryLabel})`).join(', ')}`;
 }
 
 /** The day-number chip, shared by the phone and desktop tiles. */
@@ -160,7 +160,7 @@ export function CalendarDayTile({ cell, dayItems, isSelected, isPast, onSelectIt
             <button
               type="button"
               onClick={() => onSelectItem(featured)}
-              aria-label={`Open ${[featured.title, timeLabel(featured), featured.location].filter(Boolean).join(', ')}`}
+              aria-label={`Open ${[featured.title, featured.categoryLabel, timeLabel(featured), featured.location].filter(Boolean).join(', ')}`}
               className={cn('group absolute inset-0 flex flex-col text-left', FOCUS_RING, 'focus-visible:ring-inset')}
             >
               <span className={cn('relative min-h-0 flex-1 overflow-hidden', isPast && 'opacity-60')}>
@@ -182,6 +182,9 @@ export function CalendarDayTile({ cell, dayItems, isSelected, isPast, onSelectIt
                 <span className="mt-0.5 block truncate font-mono text-[10px] uppercase tracking-wide text-text-secondary lg:text-[11px]">
                   {timeLabel(featured)}
                   {featured.location && <span className="hidden lg:inline"> · {featured.location}</span>}
+                </span>
+                <span className="block truncate font-mono text-[9px] font-semibold uppercase tracking-wide text-text-secondary" data-testid="calendar-tile-category">
+                  {featured.categoryLabel}
                 </span>
               </span>
             </button>
