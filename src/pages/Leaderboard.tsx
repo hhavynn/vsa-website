@@ -921,7 +921,7 @@ export function Leaderboard() {
                         </span>
                       </div>
                     </div>
-                    <div role="rowgroup">
+                    <div role="rowgroup" className="space-y-3">
               {paginatedData.map((entry) => (
                 <div
                   key={entry.id}
