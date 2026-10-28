@@ -27,7 +27,7 @@
 
 1. **Sentry first, errors only.** No performance tracing, no Session Replay, no feedback widget, no `setUser`. These can be proposed later, each with its own review.
 2. **Sentry is not behind the analytics consent choice.** It sets no cookies or browser storage, carries no identity, and is needed to keep the site working. The privacy notice now says so (conditional on "if error monitoring is configured", the same pattern used for GA). If the owner prefers consent-gating, `initMonitoring()` can move behind `consent === 'granted'`, but most errors would then go unreported.
-3. **PostHog is deferred to Phase 3 and, when added, runs alongside GA4.** It does not replace GA4: GA4 powers `/admin/analytics`, so replacing it means rebuilding that dashboard first. PostHog would sit behind the same "Allow analytics" choice. It is deferred because it needs an event design and a second privacy review (Session Replay above all), while Sentry is useful as soon as it is turned on. Until Phase 3 ships, the PostHog connector stays "no evidence".
+3. **PostHog runs alongside GA4 (Phase 3).** It does not replace GA4: GA4 powers `/admin/analytics`, so replacing it means rebuilding that dashboard first. PostHog sits behind the same "Allow analytics" choice. Session Replay is held back to Phase 3b because it needs its own privacy review. Until Phase 3 is switched on, the PostHog connector stays "no evidence".
 4. **Upload source maps to Sentry and stop serving them publicly** (Phase 2). Stack traces become readable, and the public 14 MB of maps goes away.
 5. **No `vercel.json` change in Phases 1 and 2.** No CSP is sent, so nothing blocks Sentry. The draft CSP in the security headers doc gains the ingest origin, so the future enforced policy is ready.
 
@@ -133,24 +133,64 @@ Previews have no token, so preview deployments still serve their maps. That's ha
 
 **Rollback:** remove `SENTRY_AUTH_TOKEN` and redeploy. The script skips and the maps are served again.
 
-## Phase 3: PostHog alongside GA4 (deferred; separate approval)
+## Phase 3: PostHog alongside GA4 (3a: no Session Replay)
 
-Start only after Sentry has run cleanly for about two weeks and the owner names the questions PostHog should answer (for example, which public pages lead to event sign-ups).
+**Status:** code in the Phase 3 PR, stacked on Phase 2. The owner asked for it on 2026-10-28, earlier than the original "after two weeks of Sentry" suggestion. It stays inert until both PostHog variables are set.
 
-**Variables:** `REACT_APP_POSTHOG_KEY` (project API key `phc_…`, which can only write events, so it is public by design) and `REACT_APP_POSTHOG_HOST` (`https://us.i.posthog.com`; confirm the project's region). Both need guard-allowlist entries and a review like this one.
+PostHog runs **alongside** GA4 and doesn't replace it, because GA4 still feeds `/admin/analytics`. Both sit behind the same "Allow analytics" choice. The consent banner now names both.
 
-**Files:** `src/lib/productAnalytics.ts` (new), `src/context/AnalyticsConsentContext.tsx` (allow/decline drives GA4 and PostHog together), `src/components/common/RouteTracker.tsx`, `src/pages/Privacy.tsx`, `THREAT_MODEL.md`, the client-secret guard, and the draft CSP.
+**Variables** (Vercel Production; both public; both need to be set):
 
-**Privacy defaults.** Option names marked † were not checked against the installed types and must be confirmed in that PR.
+| Variable | Value |
+| --- | --- |
+| `REACT_APP_POSTHOG_KEY` | The project key from PostHog `project-get` → `api_token` (`phc_…`). It can only send events. Personal API keys (`phx_…`) are secrets, and the client-secret guard now flags them |
+| `REACT_APP_POSTHOG_HOST` | `https://us.i.posthog.com` (the project's `api_host`) |
 
-- Load only after `consent === 'granted'`, the same as GA, so nothing is sent before consent. On decline, call `opt_out_capturing()` and `reset()`.
-- `person_profiles: 'never'`, and **never** call `identify()`, `alias()` or `setPersonProperties()` with member data (emails, names, member or user ids). Events stay anonymous.
-- `persistence: 'localStorage'` (no cookies). `capture_pageview: false`, with manual `$pageview` from `RouteTracker` using path only, matching GA's "no query strings" promise. A `before_send`† hook strips query and fragment from `$current_url`, `$referrer` and `$pathname`, and drops every event on `/admin/*` and `/signin`.
-- Autocapture limited to clicks on links and buttons: `autocapture: { dom_event_allowlist: ['click'], element_allowlist: ['a', 'button'] }`, plus `mask_all_text: true`† and `mask_all_element_attributes: true`†.
-- `capture_exceptions: false` (Sentry owns errors), `disable_external_dependency_loading: true` (no replay or survey scripts), and feature flags and surveys disabled. In the PostHog project settings, "Discard client IP data" is **on**.
-- **Session Replay stays off in Phase 3a.** If it is approved later (3b): `session_recording: { maskAllInputs: true, maskTextSelector: '*', blockSelector: 'img' }`, console and network capture off, public routes only (block `/admin`, `/signin`, `/points`), sampled at 10% or less. It needs a privacy-notice update first.
+**Files**
 
-**CSP (when one is enforced):** add `connect-src https://us.i.posthog.com`. Replay (3b) would also need `script-src https://us-assets.i.posthog.com` and `worker-src blob:`.
+| File | Change |
+| --- | --- |
+| `src/lib/productAnalytics.ts` | Lazy-loaded `posthog-js` (1.440.0), `trackProductPageView`, `disableProductAnalytics`, and the `before_send` scrubber (`scrubProductEvent`) |
+| `src/components/common/RouteTracker.tsx` | Sends a path-only `$pageview` next to GA4's, and only when `consent === 'granted'` |
+| `src/context/AnalyticsConsentContext.tsx` | Counts PostHog as configured. Decline turns off GA4 and PostHog: it resets the anonymous ID and opts out, or clears stored `ph_<key>` data if the SDK never loaded on this visit |
+| `src/components/common/AnalyticsConsentBanner.tsx`, `src/pages/Privacy.tsx` | Copy names PostHog and says what it records |
+| Client-secret guard, `.env.example`, `THREAT_MODEL.md`, draft CSP, config catalog, test inventory | As for Phase 1 |
+
+**SDK configuration** (pinned by `src/lib/productAnalytics.test.ts`)
+
+- `defaults: '2026-08-30'`, the newest recommended set in 1.440.0. It also turns on `disable_capture_url_hashes`, so auth tokens in URL fragments are never captured.
+- Identity and storage: `person_profiles: 'never'` and `persistence: 'localStorage'` (no PostHog cookies). There are no `identify()`, `alias()` or `setPersonProperties()` calls.
+- Page views: `capture_pageview: false` and `capture_pageleave: false`. `RouteTracker` sends `$pageview` with `$current_url` = origin + path, without the query string, matching GA4.
+- Autocapture: `{ dom_event_allowlist: ['click'], element_allowlist: ['a', 'button'] }`, with `mask_all_text`, `mask_all_element_attributes` and `mask_personal_data_properties` all on. `rageclick`, dead clicks, heatmaps and performance are off.
+- Everything else off: `capture_exceptions: false` (Sentry owns errors); Session Replay, surveys, web experiments and flags (`advanced_disable_flags`); `disable_external_dependency_loading: true`, so no extra scripts load from PostHog's CDN. `respect_dnt: true`.
+- `before_send`:
+  - Drops every event whose `$pathname` is under `/admin` or `/signin`.
+  - Strips query strings and fragments from `$current_url`, `$referrer` and the `$initial_*` URLs, including inside `$set` / `$set_once`.
+  - Redacts emails and JWT-shaped strings in every other property, nested values included.
+
+**Bundle** (`npm run build`, gzip):
+
+- **Main bundle:** 289.99 kB on the Phase 2 branch. With this PR it is 290.72 kB while inert (+0.73 kB) and 290.82 kB with the variables set.
+- **`posthog-js` chunk:** 108 kB, fetched only after a visitor allows analytics.
+- **A smaller option:** posthog-js also ships an undocumented `module.slim.no-external` build (54 kB). It isn't used because how it loads autocapture isn't documented. Revisit it if the consented-visitor cost matters.
+
+**Owner actions (each needs approval)**
+
+1. PostHog project settings: turn on **Discard client IP data** (`anonymize_ips: true`, currently `false`). Turn off console-log capture (`capture_console_log_opt_in`, currently `true`, which only matters for replay), and leave Session Replay off. The privacy notice says IPs are discarded, so these settings come **before** the variables.
+2. Optionally set Authorized URLs to `https://www.vsaatucsd.com` and `https://vsaatucsd.com`.
+3. Vercel Production: set `REACT_APP_POSTHOG_KEY` and `REACT_APP_POSTHOG_HOST`, then redeploy. They are build-time values.
+
+**Verification:** on production, after allowing analytics:
+- `$pageview` events arrive with a path-only `$current_url` (PostHog connector `read-data-schema`, then a narrow `execute-sql` count).
+- Visiting `/admin` sends nothing.
+- After declining, the `ph_…` localStorage key is gone and no further requests go to `us.i.posthog.com`.
+
+**Phase 3b (not started; needs its own approval and a privacy-notice update):** Session Replay on public routes only, with:
+- `maskAllInputs: true`, `maskTextSelector: '*'` and `blockSelector: 'img'`;
+- network and console capture off, 10% sampling or less;
+- `/admin`, `/signin` and `/points` blocked.
+
+It would also need `script-src https://us-assets.i.posthog.com` and `worker-src blob:` once a CSP is enforced.
 
 ## Headers and CSP summary
 
@@ -170,4 +210,4 @@ A same-origin Sentry `tunnel` (which keeps ad-blockers from dropping reports) wo
 | 2 | Create Sentry project and set its privacy settings | Delete project | Done 2026-10-28 (`havyn/vsa-website`) |
 | 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Done 2026-10-28; smoke test `VSA-WEBSITE-1` verified scrubbing, then resolved |
 | 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | PR open |
-| 5 | Phase 3 PostHog decision | — | Deferred |
+| 5 | Phase 3 PR; owner turns on PostHog IP discarding, then sets `REACT_APP_POSTHOG_KEY` / `_HOST` (Production) | Unset the variables | PR open |

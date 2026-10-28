@@ -10,6 +10,10 @@ test('allows a Sentry DSN, which is a public ingest address, but not a Sentry au
   assert.deepEqual(inspectEnvironment({ REACT_APP_SENTRY_DSN: 'https://0123abcd@o123.ingest.us.sentry.io/456' }), []);
   assert.ok(inspectEnvironment({ REACT_APP_SENTRY_AUTH_TOKEN: 'sntrys_example' }).length);
 });
+test('allows a PostHog project key and host, which are public, but not a PostHog personal API key', () => {
+  assert.deepEqual(inspectEnvironment({ REACT_APP_POSTHOG_KEY: 'phc_' + 'a'.repeat(43), REACT_APP_POSTHOG_HOST: 'https://us.i.posthog.com' }), []);
+  assert.ok(inspectText('src/analytics.ts', 'const key = "phx_' + 'b'.repeat(40) + '";').length);
+});
 test('rejects unknown public environment variable assignment and reference', () => {
   assert.equal(inspectText('.env.local', 'REACT_APP_PAYMENT_PRIVATE_KEY=dummy')[0].includes('unreviewed'), true);
   assert.equal(inspectText('src/config.ts', 'process.env.REACT_APP_NEW_TOKEN')[0].includes('unreviewed'), true);
