@@ -23,7 +23,7 @@ function row(overrides: Partial<HouseAssignmentDraft> = {}): HouseAssignmentDraf
   counter += 1;
   return {
     id: `r${counter}`,
-    batch_id: 'b1',
+    batch_id: 'b1', applicant_id: null,
     source_name: `Person ${counter}`,
     source_house: null,
     member_id: `m${counter}`,

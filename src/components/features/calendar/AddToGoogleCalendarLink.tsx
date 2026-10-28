@@ -21,6 +21,7 @@ interface Props {
  * events/AddToCalendarButton — no dropdown.
  */
 export function AddToGoogleCalendarLink({ item, className = '' }: Props) {
+  if (item.googleCalendarEnabled === false) return null;
   return (
     <a
       href={buildGoogleCalendarUrl(item)}
