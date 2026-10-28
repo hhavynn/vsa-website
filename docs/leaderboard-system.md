@@ -15,7 +15,7 @@ See [the retirement decision and rollout](./member-account-retirement.md).
 | Writers | CSV/Google Form import, Admin Members attendance editor, `smart_merge_members`, Historical Recovery (`admin_recover_import_row`) |
 | Recalculation | Statement triggers `trg_sync_member_points_{insert,update,delete}` → `recalculate_members_points` (locks members, then recalculates); `trg_attendance_points_from_event` stores the event's current points; event edits use `sync_attendance_points_on_event_update` |
 | Readers | `/points`, `/leaderboard`, House standings, member cards/history, Wrapped, Admin Points |
-| Public projections | `member_yearly_points`, `house_member_yearly_points`, House aggregate views, `member_event_history`, `public_members` |
+| Public projections | `member_yearly_points`, `member_event_history`, `public_members`; published House identity is a *single-member* badge RPC (never House scores) |
 | Authentication | Existing/invited approved admins only; students use public lookup without accounts |
 
 The legacy `event_attendance`, `user_points`, and code-storage tables remain
@@ -27,6 +27,36 @@ Do not write or transfer archive totals into the member ledger.
 `pointsModelBoundary.test.ts` exercises every leaderboard repository method and
 guards against archive/RPC dependencies. `memberAccountRetirement.test.ts` guards
 the application against restoring obsolete APIs, components, hooks, or providers.
+
+## House scoring privacy / GBM-only announcements (#692)
+
+The House competition remains computed by the **unchanged** source-of-truth
+attendance ledger, effective-dated House memberships and authoritative House
+views. However, House-wide and member House-contribution scores, ranks, recent
+scored activity, winners and all-time standings are **not public**, including
+older school years. The previous published 2025–26 numeric fallbacks and
+public override constants are intentionally removed from browser JavaScript.
+
+The five private views `house_yearly_points`,
+`house_all_time_points`, `house_recent_activity`,
+`house_member_yearly_points`, and `house_member_all_time_points`
+have anonymous/ordinary-authenticated SELECT privileges revoked by migration
+`20261028073000_embargo_public_house_scores.sql`. Approved admins can obtain
+live aggregate scores through a permission-checked
+`admin_private_house_standings(p_year)` RPC after the migration is deployed.
+This RPC is **not** an automatic public snapshot or House Parent grant.
+The `public_member_house_badge` RPC exposes just one approved published
+House identity, gated on Reveal, not a House point value or member ranking.
+The ordinary individual points leaderboard remains unchanged.
+
+All House competition official standings are announced at GBMs by authorized
+House leadership; the reviewed, private GBM snapshot/export lifecycle is
+separate issue #693. **No public online standings for any year** until explicit
+cabinet approval and a separately reviewed release path.
+
+See [the release and privacy checklist](./house-standings-embargo.md). A PR
+containing this migration is not evidence that it was applied in staging or
+production. Real API/RLS and inference review must pass before merge and rollout.
 
 ## Overview
 
@@ -143,3 +173,25 @@ Read-only check, safe against production: `scripts/sql/points-integrity-check.sq
 reports members whose cached totals differ from the ledger, and credits whose
 stored value differs from the event's current points. Never repair a finding by
 writing cached totals; fix the ledger and let the triggers recalculate.
+
+### House points reconciliation (read-only, #622)
+
+`scripts/sql/house-points-reconciliation.sql` measures how one academic year's ledger credits reach the House views, and never writes. Run it against production in a read-only transaction (it rolls back):
+
+```bash
+psql "$DATABASE_URL" -v year=2026 -f scripts/sql/house-points-reconciliation.sql
+```
+
+It prints counts and House names only (no member names, emails or notes). **Expected, not discrepancies:** `credits_member_has_no_house_this_year`, `credits_outside_membership_interval`, `credits_before_house_start` (attendance before a member's effective House start keeps its individual points and earns no House points), `credits_event_without_term_near_year`, `members_transferred_this_year`, `future_dated_memberships`. **Investigate:** `house_member_vs_house_total_mismatch` and `recomputed_vs_view_mismatch` (the two views, or the views and the script's own attribution, disagree), `overlapping_memberships`, `credits_attributed_to_two_houses`, `credits_on_inactive_house_profile`, and `pacific_vs_utc_boundary_credits`.
+
+**In the admin site:** Admin → Houses → **Points check** runs the same measurement through `admin_house_points_reconciliation(year)` (migration `20261028070000`, read-only, admin-only, UTC pinned; **not yet applied**). Each finding explains whether it is expected by rule or needs investigating and links to the page that fixes it. It never changes points.
+
+**Time zone rule.** The views cast each event's instant to a date in the database session's time zone. Production serves them in UTC (server and API roles, checked 2026-10-28), so an event after 4–5 PM Pacific counts as the next calendar day. An evening event the night before a member's effective start date therefore earns that House a point. `pacific_vs_utc_boundary_credits` counts those credits. Changing the rule to Pacific dates would be a protected scoring change needing its own owner-approved PR; this script only reports it.
+
+Offline proof (synthetic people, production view definitions, every category with an exact expected count):
+
+```bash
+bash scripts/test-house-points-reconciliation.sh
+```
+
+Production baseline (read-only, 2026-10-28): 2025–26 has 2,281 credits and **0** `house_memberships` rows, so the views show no 2025–26 House points and the public 2025–26 standings come from the static public overrides. 2026–27 has no memberships yet (no Reveal). Every House view check is 0.
