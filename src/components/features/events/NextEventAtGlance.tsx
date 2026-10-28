@@ -1,5 +1,5 @@
 import { Event } from '../../../types';
-import { formatEventDay, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
+import { formatEventDay, formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
 import { AddToCalendarButton } from './AddToCalendarButton';
 
 /** Mobile-first summary shown before the archive/filter controls on /events. */
@@ -16,7 +16,7 @@ export function NextEventAtGlance({ event }: { event: Event }) {
       <dl className="mt-2 grid gap-1 font-sans text-xs leading-5 text-[var(--color-text2)]">
         <div className="flex flex-wrap gap-1">
           <dt className="font-semibold">When:</dt>
-          <dd>{formatEventDay(event.date, event.start_time)} · {time}</dd>
+          <dd>{event.end_date ? formatEventDateRange(event.date, event.end_date, event.start_time) : formatEventDay(event.date, event.start_time)} · {time}</dd>
         </div>
         <div className="flex flex-wrap gap-1">
           <dt className="font-semibold">Where:</dt>
