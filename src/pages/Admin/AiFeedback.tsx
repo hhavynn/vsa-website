@@ -163,7 +163,9 @@ export default function AdminAiFeedback() {
                   {!item.resolved_at && (
                     <button
                       onClick={() => handleMarkResolved(item.id)}
-                      className="shrink-0 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+                      disabled={savingNoteId !== null || (noteDrafts[item.id] ?? item.admin_notes ?? '').trim() !== (item.admin_notes ?? '').trim()}
+                      title="Save any pending review note before resolving"
+                      className="shrink-0 disabled:cursor-not-allowed disabled:opacity-50 rounded border px-3 py-1 font-sans text-xs font-semibold transition-colors hover:bg-[var(--color-surface2)]"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
                     >
                       Mark Resolved
@@ -202,6 +204,7 @@ export default function AdminAiFeedback() {
                     onChange={event => setNoteDrafts(current => ({ ...current, [item.id]: event.target.value }))}
                     maxLength={1500}
                     rows={3}
+                    disabled={savingNoteId === item.id}
                     className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-sans text-sm text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                     placeholder="Example: Update the published FAQ about event check-ins."
                   />
