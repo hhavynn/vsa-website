@@ -115,6 +115,17 @@ graphify hook status
 
 The hook updates local `.git/hooks` — it is not committed and must be installed per developer.
 
+## Automatic freshness warning (#308)
+
+Pull requests run `.github/workflows/graphify-freshness.yml`, which compares commits touching `src/` since the latest commit to `graphify-out/manifest.json`. It checks out full Git history, runs isolated synthetic tests, and annotates the PR with a **warning** (never a CI failure) if the graph may be old.
+
+- **0 source-changing commits:** no known Git-history drift.
+- **1–5 commits:** caution; confirm every architectural answer against source.
+- **More than 5 commits:** treat Graphify graph answers as too stale to trust without source verification; schedule a separate graph refresh.
+- Missing graph, manifest or usable Git history: freshness unknown, also a warning.
+
+Local check: `bash scripts/check-graph-freshness.sh`. The check does not run Graphify, change files or push commits. In a separate maintenance branch/commit, refresh with `./scripts/graphify-run . --update` and commit only reviewed `graphify-out/` artifacts (never `cost.json` or `cache/`). The metric is a Git-history proxy, **not** a semantic hash or a claim that every graph entry is current.
+
 ## If Graphify Is Not Installed
 
 Run `./scripts/graphify-run --version` to check. If it exits 127, Graphify is not installed.

@@ -11,14 +11,15 @@ import { QUICK_LINKS, GET_INVOLVED, EXPLORE_LINKS, isRouteActive } from './navCo
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: ReactNode }) {
+function SectionLabel({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <div
+    <h2
+      id={id}
       className="mb-1.5 px-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em]"
       style={{ color: 'var(--color-text3)' }}
     >
       {children}
-    </div>
+    </h2>
   );
 }
 
@@ -217,8 +218,8 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
             <div className="flex-1 overflow-y-auto px-3 py-4">
 
               {/* Quick links */}
-              <section aria-label="Quick links" className="mb-5">
-                <SectionLabel>Quick links</SectionLabel>
+              <section aria-labelledby="drawer-quick-links" className="mb-5">
+                <SectionLabel id="drawer-quick-links">Quick links</SectionLabel>
                 <div className="space-y-0.5">
                   {QUICK_LINKS.map((link) => (
                     <DrawerLink
@@ -235,8 +236,8 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
 
               {/* Get Involved — flat list, same six items and order as the
                   desktop Explore panel's Get Involved group */}
-              <section aria-label="Get Involved programs" className="mb-5">
-                <SectionLabel>Get Involved</SectionLabel>
+              <section aria-labelledby="drawer-get-involved" className="mb-5">
+                <SectionLabel id="drawer-get-involved">Get Involved</SectionLabel>
                 <div className="space-y-0.5">
                   {GET_INVOLVED.map((link) => (
                     <DrawerLink
@@ -253,8 +254,8 @@ export const MobileDrawer = memo(function MobileDrawer({ isOpen, onClose }: Mobi
               </section>
 
               {/* Explore */}
-              <section aria-label="Explore" className="mb-5">
-                <SectionLabel>Explore</SectionLabel>
+              <section aria-labelledby="drawer-explore" className="mb-5">
+                <SectionLabel id="drawer-explore">Explore</SectionLabel>
                 <div className="space-y-0.5">
                   {EXPLORE_LINKS.map((link) => (
                     <DrawerLink

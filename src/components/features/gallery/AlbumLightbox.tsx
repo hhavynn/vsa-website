@@ -1,4 +1,4 @@
-import { type TouchEvent, useCallback, useEffect, useRef } from 'react';
+import { type TouchEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { BottomSheet } from '../../ui/BottomSheet';
@@ -11,6 +11,12 @@ import type { GalleryAlbum } from '../../../data/repos/gallery';
 // (and not a vertical scroll of the sheet).
 const SWIPE_MIN_DISTANCE = 48;
 const SWIPE_AXIS_RATIO = 1.5;
+const MAX_ZOOM = 3;
+
+const pinchDistance = (touches: React.TouchList) => {
+  const a = touches[0], b = touches[1];
+  return a && b ? Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY) : 0;
+};
 
 export function AlbumFallback({ caption }: { caption?: string }) {
   return (
@@ -62,6 +68,11 @@ export function AlbumLightbox({
   const album = albums[index];
   const reduceMotion = useReducedMotion();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const suppressSwipe = useRef(false);
+  const pinch = useRef<{ distance: number; scale: number } | null>(null);
+  const pan = useRef<{ x: number; y: number; startX: number; startY: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   // -1 = went to previous, 1 = went to next; drives the slide-in direction.
   const direction = useRef(0);
 
@@ -103,6 +114,70 @@ export function AlbumLightbox({
       onFetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, nextPageError, onFetchNextPage, index, albums.length]);
+
+  // Never carry zoom/pan into a different album, including history navigation.
+  useEffect(() => {
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+    pinch.current = null;
+    pan.current = null;
+    suppressSwipe.current = false;
+  }, [album?.id]);
+
+  const resetZoom = () => {
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+    pinch.current = null;
+    pan.current = null;
+  };
+
+  const handleImageTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 2) {
+      const distance = pinchDistance(event.touches);
+      if (distance > 0) pinch.current = { distance, scale: zoom };
+      touchStart.current = null;
+      suppressSwipe.current = true;
+      pan.current = null;
+    } else if (event.touches.length === 1 && zoom > 1) {
+      const touch = event.touches[0];
+      pan.current = { x: touch.clientX, y: touch.clientY, startX: offset.x, startY: offset.y };
+      suppressSwipe.current = true;
+    }
+  };
+
+  const handleImageTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (pinch.current && event.touches.length === 2) {
+      const distance = pinchDistance(event.touches);
+      if (distance > 0) {
+        const next = Math.min(MAX_ZOOM, Math.max(1, pinch.current.scale * distance / pinch.current.distance));
+        setZoom(next);
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const maxX = (bounds.width * (next - 1)) / 2;
+        const maxY = (bounds.height * (next - 1)) / 2;
+        // A smaller zoom also shrinks the legal pan extent.
+        setOffset(current => ({
+          x: Math.max(-maxX, Math.min(maxX, current.x)),
+          y: Math.max(-maxY, Math.min(maxY, current.y)),
+        }));
+      }
+      if (event.cancelable) event.preventDefault();
+    } else if (pan.current && event.touches.length === 1 && zoom > 1) {
+      const touch = event.touches[0];
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const maxX = (bounds.width * (zoom - 1)) / 2;
+      const maxY = (bounds.height * (zoom - 1)) / 2;
+      setOffset({
+        x: Math.max(-maxX, Math.min(maxX, pan.current.startX + touch.clientX - pan.current.x)),
+        y: Math.max(-maxY, Math.min(maxY, pan.current.startY + touch.clientY - pan.current.y)),
+      });
+      if (event.cancelable) event.preventDefault();
+    }
+  };
+
+  const handleImageTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length < 2) pinch.current = null;
+    if (event.touches.length === 0) pan.current = null;
+  };
 
   const hasPrev = index > 0;
   const hasNext = index < albums.length - 1 || Boolean(hasNextPage);
@@ -160,6 +235,10 @@ export function AlbumLightbox({
   if (!album) return null;
 
   const handleTouchStart = (event: TouchEvent) => {
+    if (event.touches.length !== 1 || zoom > 1 || suppressSwipe.current) {
+      touchStart.current = null;
+      return;
+    }
     const touch = event.touches[0];
     touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
   };
@@ -167,6 +246,10 @@ export function AlbumLightbox({
   const handleTouchEnd = (event: TouchEvent) => {
     const start = touchStart.current;
     touchStart.current = null;
+    if (suppressSwipe.current || zoom > 1) {
+      suppressSwipe.current = false;
+      return;
+    }
     const touch = event.changedTouches[0];
     if (!start || !touch) return;
     const dx = touch.clientX - start.x;
@@ -208,7 +291,14 @@ export function AlbumLightbox({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="relative mx-4 mt-1 aspect-[3/2] overflow-hidden rounded bg-[var(--surface2)] sm:mx-6 sm:mt-4">
+          <div
+            className="relative mx-4 mt-1 aspect-[3/2] touch-none overflow-hidden rounded bg-[var(--surface2)] sm:mx-6 sm:mt-4"
+            onTouchStart={handleImageTouchStart}
+            onTouchMove={handleImageTouchMove}
+            onTouchEnd={handleImageTouchEnd}
+            onTouchCancel={handleImageTouchEnd}
+            data-testid="album-zoom-area"
+          >
             <OptimizedImage
               src={coverUrl}
               srcWidth={album.cover_image_url ? 1400 : undefined}
@@ -218,9 +308,22 @@ export function AlbumLightbox({
               sizes="(max-width: 639px) 100vw, 720px"
               alt={`Cover photo for ${album.title}`}
               className="absolute inset-0 h-full w-full object-contain"
+              style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: 'center', transition: pinch.current || pan.current ? 'none' : 'transform 120ms ease-out' }}
               fallback={<AlbumFallback caption="Cover photo unavailable" />}
             />
           </div>
+          {coverUrl && (
+            <div className="mx-4 mt-2 flex min-h-11 items-center justify-between gap-2 sm:mx-6">
+              <span className="font-sans text-[11px] text-[var(--text3)]">
+                Pinch to zoom · {Math.round(zoom * 100)}%
+              </span>
+              {zoom > 1 && (
+                <button type="button" onClick={resetZoom} className="min-h-11 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--text)]">
+                  Reset photo zoom
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="px-4 pb-2 pt-4 sm:px-6">
             <div className="mb-2 flex flex-wrap items-center gap-2">

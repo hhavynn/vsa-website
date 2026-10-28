@@ -78,7 +78,6 @@ describe('each summer message context is used by its page', () => {
 
   it.each<[SummerBreakMessageContext, string]>([
     ['homepage', 'components/features/home/ThisWeekInVSA.tsx'],
-    ['houseStandings', 'components/features/home/ThisWeekInVSA.tsx'],
     ['events', 'pages/Events.tsx'],
     ['events', 'pages/Calendar.tsx'],
     ['house', 'pages/House.tsx'],
@@ -87,6 +86,14 @@ describe('each summer message context is used by its page', () => {
     ['points', 'pages/Leaderboard.tsx'],
   ])('%s copy is rendered by %s', (context, file) => {
     expect(uses(file, context)).toBe(true);
+  });
+
+  it('does not show obsolete live House standings empty states after the GBM-only embargo', () => {
+    expect(uses('components/features/home/ThisWeekInVSA.tsx', 'houseStandings')).toBe(false);
+    const houseSummerCopy = getSummerBreakMessage('house').body;
+    expect(houseSummerCopy).toContain('Official House standings are shared at GBMs');
+    expect(houseSummerCopy).toContain('not live on the website');
+    expect(houseSummerCopy).not.toContain('new standings will come back');
   });
 
   it('every context has its own copy, apart from the House pair and the default', () => {

@@ -4,7 +4,6 @@ import {
   FALLBACK_EVENTS,
   FALLBACK_GET_INVOLVED_PROGRAMS,
   FALLBACK_HOUSE_MESSAGE,
-  FALLBACK_HOUSE_STANDINGS_2025_2026,
   FALLBACK_LEADERBOARD,
   FALLBACK_LEGACY_HOUSE_YEARS,
   FALLBACK_POINTS,
@@ -48,15 +47,9 @@ describe('public offline fallback content', () => {
     expect(ace?.description).not.toMatch(/Academic Community and Excellence/);
   });
 
-  it('does not present historical House totals as a live current-year leaderboard', () => {
-    expect(FALLBACK_HOUSE_MESSAGE).toMatch(/historical snapshots, not current results/i);
+  it('does not put House score snapshots in the public bundle', () => {
+    expect(FALLBACK_HOUSE_MESSAGE).toMatch(/announced at GBMs/i);
     expect(FALLBACK_LEADERBOARD.houseMessage).toBe(FALLBACK_HOUSE_MESSAGE);
-    expect(FALLBACK_HOUSE_STANDINGS_2025_2026.map(({ name }) => name)).toEqual([
-      'Bowser',
-      'Donkey Kong',
-      'Toad',
-      'Boo',
-    ]);
     expect(FALLBACK_LEGACY_HOUSE_YEARS.some(({ academicYear }) => academicYear === '2024-2025')).toBe(true);
   });
 

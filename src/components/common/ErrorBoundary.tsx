@@ -2,6 +2,8 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { PageError } from "./PageError";
 import { isChunkLoadError, reloadOnceForChunkError } from "../../utils/chunkLoadRecovery";
+import { reportError } from "../../lib/monitoring";
+import { trackSafeDiagnosticError } from '../../lib/analytics';
 
 interface Props {
   children: ReactNode;
@@ -32,7 +34,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return;
     }
 
+    // Record only an allowlisted category after explicit consent; never the error or stack.
+    trackSafeDiagnosticError(isChunkLoadError(error) ? 'chunk_load' : 'render_failure');
     console.error('Uncaught error:', error, errorInfo);
+    reportError(error, errorInfo.componentStack);
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
