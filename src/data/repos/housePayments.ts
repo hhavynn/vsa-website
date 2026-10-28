@@ -3,7 +3,7 @@
 // reruns, and the audit trail. Status changes go only through the
 // admin_set_house_applicant_payments RPC (one transaction, versioned,
 // idempotent, audited). Nothing here touches members, attendance, points or
-// house_memberships. Authority: 20261028000000_house_payment_eligibility.sql.
+// house_memberships. Authority: 20261028050216_house_payment_eligibility.sql.
 import { supabase } from '../../lib/supabase';
 import type {
   HouseApplicant,
@@ -20,7 +20,7 @@ const MISSING_FUNCTION = new Set(['PGRST202', '42883']);
 const MISSING_TABLE = new Set(['PGRST205', '42P01']);
 
 export const PAYMENTS_UNAVAILABLE =
-  'House payment eligibility is not available yet. Ask a site administrator to apply database migration 20261028000000 and refresh the API schema cache.';
+  'House payment eligibility is not available yet. Ask a site administrator to apply database migration 20261028050216 and refresh the API schema cache.';
 
 function errorCode(error: unknown) {
   return typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';

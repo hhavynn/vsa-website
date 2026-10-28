@@ -43,7 +43,7 @@ Headers are detected: **Application row** (best), Email, Name, Status, Notes. An
 
 `house_applicants` keeps only what a rerun needs: name as typed, submission instant, sheet row, ranked House ids, an optional member link, payment status, evidence category, a short reference/note, and a withdrawal reason. **No email, phone, amount, account number, payment method or receipt.** Exports are admin-only, RFC 4180, formula-safe.
 
-## Server enforcement (`20261028000000_house_payment_eligibility.sql`)
+## Server enforcement (`20261028050216_house_payment_eligibility.sql`)
 
 - New tables: RLS on, all client privileges revoked, admin-only `select`; status and version are not client-writable (column grants); no client `delete`; audit is append-only.
 - `admin_set_house_applicant_payments` (status/withdrawal), `admin_register_house_applicants` (snapshot; refuses a changed application) and `admin_begin_house_batch_publish` are `SECURITY DEFINER`, `search_path = ''`, `is_admin_user` checked, `EXECUTE` revoked from `anon`.
@@ -61,9 +61,9 @@ bash scripts/test-house-payments.sh
 
 ## Deploying
 
-1. Owner approval, then apply `20261028000000_house_payment_eligibility.sql` to production verbatim (manual path; see `vsa-run-and-operate`) and record its version. Production had no House assignment batches when it was written (checked read-only 2026-10-28).
-2. Ship the frontend. Before the migration exists the Payments tab says it is unavailable and placement saves work as before.
-3. Post-apply check: the four new tables have RLS on and no `anon` grants; the three RPCs report `EXECUTE` false for `anon`; the guard trigger functions report `EXECUTE` false for `authenticated`.
+**Status:** applied to production 2026-10-28 as version `20261028050216` (renamed from `20261028000000`; the 12 function bodies were verified identical to this file by md5). Staging first: Supabase branching is unavailable on the Free plan, so it was verified in a disposable `supabase/postgres:17.6.1.006` container (the production image) with production's schema restored from a schema-only dump. Production post-apply checks matched staging: RLS on the 4 new tables, no `anon` grants, `house_payment_requests` with no client privileges, RPCs `SECURITY DEFINER` with `search_path = ''` and `EXECUTE` false for `anon`, guard trigger functions not client-callable. Supabase's security advisor reports only the expected items (an RLS table with no policy for the idempotency table, and the admin RPCs in the "signed-in users can execute" list, like every other admin RPC).
+
+Ship the frontend after the migration. To check again later, run the queries in the post-apply section of PR #696, read-only.
 
 ## Known follow-up
 

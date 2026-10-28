@@ -1,4 +1,4 @@
--- Disposable cluster fixture for 20261028000000_house_payment_eligibility.sql.
+-- Disposable cluster fixture for 20261028050216_house_payment_eligibility.sql.
 \pset tuples_only on
 -- Prerequisites are stubs; the House batch tables, placement columns, override
 -- RPC and payment eligibility objects come from the exact repo migrations.
@@ -31,7 +31,7 @@ set client_min_messages = warning;
 \ir ../../supabase/migrations/20261001213414_create_house_assignment_batches.sql
 \ir ../../supabase/migrations/20261026230757_house_assignment_timestamp_placement.sql
 \ir ../../supabase/migrations/20261027120000_house_placement_override_rpc.sql
-\ir ../../supabase/migrations/20261028000000_house_payment_eligibility.sql
+\ir ../../supabase/migrations/20261028050216_house_payment_eligibility.sql
 set client_min_messages = notice;
 
 insert into auth.users values ('00000000-0000-0000-0000-000000000001'), ('00000000-0000-0000-0000-000000000002');

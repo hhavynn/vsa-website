@@ -1,6 +1,11 @@
 -- House payment eligibility, post-payment reruns and the payment-cleared
 -- Lock/Reveal gate (#656, #657, #658, #659, #660).
 --
+-- Applied to production 2026-10-28 (schema_migrations version 20261028050216)
+-- via apply_migration, after staging verification on the production schema;
+-- renamed from 20261028000000 to match. Only this comment differs from the
+-- applied text (function bodies verified identical by md5).
+--
 -- WHY
 --   CRC sorts House applicants first-come, first-served, then removes people
 --   who never paid the House fee and sorts again. Until now payment lived only

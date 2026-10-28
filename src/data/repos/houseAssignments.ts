@@ -384,7 +384,7 @@ export class HouseAssignmentsRepository {
       if (isTimestampRanked(snapshot.batch)) {
         const started = await housePaymentsRepository.beginPublish(batchId);
         if (!started && snapshot.batch.payment_cycle_id) {
-          throw new ValidationError('Payment eligibility could not be verified, so nothing was revealed. Ask a site administrator to check migration 20261028000000.', 'status');
+          throw new ValidationError('Payment eligibility could not be verified, so nothing was revealed. Ask a site administrator to check migration 20261028050216.', 'status');
         }
       }
 

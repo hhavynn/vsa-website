@@ -2,7 +2,7 @@
 // eligibility (#656), the payment checklist import (#658), the post-payment
 // rerun (#657) and the Draft A → Draft B comparison (#659). Nothing here reads
 // or writes the database; the server enforces the same rules again
-// (20261028000000_house_payment_eligibility.sql). Payment status is placement
+// (20261028050216_house_payment_eligibility.sql). Payment status is placement
 // eligibility only: it never touches members, attendance, points or a published
 // House.
 import { csvCell } from './adminImportReview';

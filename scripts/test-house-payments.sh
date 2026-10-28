@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Offline only: exact House migrations, synthetic records, no TCP listener.
-# Verifies 20261028000000_house_payment_eligibility.sql, including two
+# Verifies 20261028050216_house_payment_eligibility.sql, including two
 # concurrent payment requests that race on one cycle.
 set -euo pipefail
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
