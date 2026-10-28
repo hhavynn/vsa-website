@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { UpcomingItem } from '../../../lib/upcomingEvents';
 import { Event } from '../../../types';
 import { NextEventAtGlance } from './NextEventAtGlance';
 
@@ -30,6 +32,29 @@ describe('NextEventAtGlance (#245)', () => {
   it('shows both dates while a multi-day event remains ongoing', () => {
     render(<NextEventAtGlance event={{ ...event, date: '2026-10-30', end_date: '2026-11-01', start_time: null, end_time: null } as Event} />);
     expect(screen.getByText(/Oct 30 – Nov 1/)).toBeInTheDocument();
+  });
+
+  it('shows the next published House event on phones with its own detail link', () => {
+    const houseItem = {
+      kind: 'house',
+      detailPath: '/house/year/2026-2027/rarity#house-event-synthetic-house-event',
+      event: {
+        id: 'synthetic-house-event',
+        title: 'Fictional House Social',
+        event_date: '2026-11-02',
+        start_time: '18:00:00',
+        end_time: null,
+        location: 'Price Center',
+        is_published: true,
+      },
+    } as Extract<UpcomingItem, { kind: 'house' }>;
+    render(<MemoryRouter><NextEventAtGlance houseItem={houseItem} /></MemoryRouter>);
+    expect(screen.getByText('Fictional House Social')).toBeInTheDocument();
+    expect(screen.getByText(/6 PM/)).toBeInTheDocument();
+    expect(screen.getByText('Price Center')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'House event details' }))
+      .toHaveAttribute('href', houseItem.detailPath);
+    expect(screen.queryByRole('link', { name: /Add to Google Calendar/i })).not.toBeInTheDocument();
   });
 
   it('never invents a time or location when the event does not specify them', () => {
