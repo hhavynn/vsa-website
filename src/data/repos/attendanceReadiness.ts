@@ -45,6 +45,8 @@ export interface ReadinessEvent {
   latest_job: ReadinessJob | null;
   open_review_rows: number;
   reconciled_at: string | null;
+  /** Rows the latest reconciliation run left for an admin to decide. */
+  reconciliation_pending_rows: number;
   attestation: ReadinessAttestation | null;
   house_credits: ReadinessHouseCredit[];
 }

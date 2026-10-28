@@ -15,7 +15,7 @@ import { cn } from '../../../lib/utils';
 
 const QUERY_KEY = ['admin', 'attendance-readiness'];
 const labelCls = 'block font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted';
-const btn = 'min-h-[36px] rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50';
+const btn = 'min-h-[36px] touch:min-h-11 rounded border bg-transparent px-2.5 py-1 text-xs font-semibold border-[var(--color-border)] text-text-primary hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50';
 
 const STATE_TONE: Record<AttendanceState, string> = {
   failed: 'border-red-300 text-red-700 dark:border-red-800 dark:text-red-300',
@@ -151,7 +151,8 @@ export function AttendanceReadinessPanel({ selectedYear }: { selectedYear: numbe
                       {event.credits} credit{event.credits === 1 ? '' : 's'}
                       {event.latest_job ? ` · ${event.jobs} import${event.jobs === 1 ? '' : 's'}, latest ${event.latest_job.status} ${laDate(event.latest_job.completed_at ?? event.latest_job.created_at)}` : ' · no import record'}
                       {event.reconciled_at ? ` · reconciled ${laDate(event.reconciled_at)}` : ''}
-                      {event.attestation ? ` · marked "${STATE_LABEL[event.attestation.status]}" ${laDate(event.attestation.attested_at)}${event.attestation.by_current_user ? ' by you' : ' by an admin'}${event.attestation.note ? `: ${event.attestation.note}` : ''}` : ''}
+                      {event.attestation ? ` · marked "${STATE_LABEL[event.attestation.status]}" ${laDate(event.attestation.attested_at)}${event.attestation.by_current_user ? ' by you' : ' by an admin'}${event.attestation.note ? `: ${event.attestation.note}` : ''}${event.attestation.status === 'no_signin' && event.credits > 0 ? ' (outdated: the event now has credits)' : ''}` : ''}
+                      {event.reconciliation_pending_rows > 0 ? ` · ${event.reconciliation_pending_rows} reconciliation row${event.reconciliation_pending_rows === 1 ? '' : 's'} pending` : ''}
                     </p>
                   )}
                   {event.house_credits.length > 0 && (

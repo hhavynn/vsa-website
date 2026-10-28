@@ -13,7 +13,7 @@ function event(extra: Partial<ReadinessEvent> = {}): ReadinessEvent {
   return {
     id: 'ev', name: 'Fictional GBM', date: '2026-10-20T02:00:00Z', event_type: 'gbm', points: 1, is_published: true,
     academic_term_id: 'term', term_label: 'Fall 2026', credits: 0, scoring_credits: 0, last_credit_at: null, jobs: 0,
-    latest_job: null, open_review_rows: 0, reconciled_at: null, attestation: null, house_credits: [], ...extra,
+    latest_job: null, open_review_rows: 0, reconciled_at: null, reconciliation_pending_rows: 0, attestation: null, house_credits: [], ...extra,
   };
 }
 const job = (extra = {}) => ({ id: 'job', status: 'completed', created_at: '2026-10-21T00:00:00Z', completed_at: '2026-10-21T00:05:00Z', total_rows: 40, review_rows: 0, error_count: 0, ...extra });
@@ -53,9 +53,17 @@ it('ignores a stale "no sign-in" mark once credits exist', () => {
   expect(state(event({ credits: 4, attestation: { status: 'no_signin', note: null, attested_at: '2026-10-22T00:00:00Z', by_current_user: true } }))).toBe('unknown');
 });
 
-it('leaves future events alone', () => {
+it('leaves future events alone, and never hides an event without a date', () => {
   expect(state(event({ date: '2026-11-05T02:00:00Z' }))).toBe('upcoming');
-  expect(state(event({ date: null }))).toBe('upcoming');
+  expect(state(event({ date: null, credits: 4 }))).toBe('unknown');
+});
+
+it('keeps a reconciliation run with pending rows out of Verified', () => {
+  expect(state(event({ credits: 30, reconciled_at: '2026-10-22T00:00:00Z', reconciliation_pending_rows: 2 }))).toBe('needs_review');
+});
+
+it('calls a pre-audit event with no attendance unknown, not pending', () => {
+  expect(state(event({ date: '2026-03-01T02:00:00Z' }))).toBe('unknown');
 });
 
 it('summarizes counts, the last clean import and what is outstanding', () => {

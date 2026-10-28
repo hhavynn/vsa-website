@@ -39,7 +39,10 @@ export interface EventStatus {
 const time = (value: string | null | undefined) => (value ? Date.parse(value) : Number.NEGATIVE_INFINITY);
 
 export function eventStatus(event: ReadinessEvent, now: Date): EventStatus {
-  if (!event.date || Date.parse(event.date) > now.getTime()) {
+  if (!event.date) {
+    return { state: 'unknown', reason: 'The event has no date, so it cannot be placed. Give it a date in Events.' };
+  }
+  if (Date.parse(event.date) > now.getTime()) {
     return { state: 'upcoming', reason: 'Has not happened yet.' };
   }
   const job = event.latest_job;
@@ -50,6 +53,9 @@ export function eventStatus(event: ReadinessEvent, now: Date): EventStatus {
   }
   if (event.open_review_rows > 0) {
     return { state: 'needs_review', reason: `${event.open_review_rows} imported row${event.open_review_rows === 1 ? '' : 's'} still need a member match. Those people have no credit yet.` };
+  }
+  if (event.reconciliation_pending_rows > 0) {
+    return { state: 'needs_review', reason: `The reconciliation run left ${event.reconciliation_pending_rows} row${event.reconciliation_pending_rows === 1 ? '' : 's'} for an admin to decide.` };
   }
   if (event.attestation?.status === 'no_signin' && event.credits === 0) {
     return { state: 'no_signin', reason: 'An admin confirmed this event had no sign-in.' };
@@ -76,6 +82,9 @@ export function eventStatus(event: ReadinessEvent, now: Date): EventStatus {
         ? 'Before import auditing began (May 2026): there is no record of how this attendance was entered.'
         : 'Has attendance but no import record (entered by hand or another way). Verify it against the sheet.',
     };
+  }
+  if (event.date.slice(0, 10) < IMPORT_AUDIT_START) {
+    return { state: 'unknown', reason: 'Before import auditing began (May 2026) and has no attendance: it may have had no sign-in, or its import was lost.' };
   }
   return { state: 'pending_import', reason: 'No attendance recorded yet: import the sign-in sheet, or confirm there was none.' };
 }

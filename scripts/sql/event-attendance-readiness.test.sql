@@ -12,14 +12,14 @@ create function public.is_admin_user(p_id uuid default auth.uid()) returns boole
 
 create table public.academic_terms (id uuid primary key, label text, academic_year_start integer, academic_year_end integer);
 create table public.events (id uuid primary key, name text, date timestamptz, event_type text, points integer, is_published boolean, academic_term_id uuid references public.academic_terms(id));
-create table public.members (id uuid primary key, first_name text);
+create table public.members (id uuid primary key, first_name text, email text);
 create table public.member_event_attendance (id uuid primary key default gen_random_uuid(), member_id uuid, event_id uuid, points_earned integer, imported_at timestamptz default now(), unique (member_id, event_id));
 create table public.house_page_assets (id uuid primary key, house_key text, display_name text, image_url text, accent_color text, is_active boolean);
 create table public.house_memberships (member_id uuid, house_profile_id uuid, academic_year_start integer, effective_start_date date, effective_end_date date);
 create table public.import_jobs (id uuid primary key, event_id uuid, status text, created_at timestamptz, completed_at timestamptz, total_rows integer, review_rows integer, error_count integer);
-create table public.import_job_rows (id uuid primary key, import_job_id uuid, event_id uuid, decision text, attendance_member_id uuid);
+create table public.import_job_rows (id uuid primary key, import_job_id uuid, event_id uuid, decision text, attendance_member_id uuid, matched_member_id uuid, csv_email text, match_details jsonb);
 create table public.import_recovery_actions (id uuid primary key, import_job_row_id uuid, previous_action_id uuid, resulting_status text);
-create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), event_id uuid, created_at timestamptz default now());
+create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), event_id uuid, outcome text default 'already_credited', created_at timestamptz default now());
 
 create view public.house_yearly_points as
  SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (count(*))::integer AS total_points
@@ -42,8 +42,8 @@ insert into public.house_page_assets values
  ('20000000-0000-0000-0000-000000000002', 'rarity', 'Rarity', null, null, true),
  ('20000000-0000-0000-0000-000000000003', 'applejack', 'Applejack', null, null, false);
 insert into public.members values
- ('30000000-0000-0000-0000-000000000001', 'Fictional A'), ('30000000-0000-0000-0000-000000000002', 'Fictional B'),
- ('30000000-0000-0000-0000-000000000003', 'Fictional C'), ('30000000-0000-0000-0000-000000000004', 'Fictional D');
+ ('30000000-0000-0000-0000-000000000001', 'Fictional A', 'a@example.invalid'), ('30000000-0000-0000-0000-000000000002', 'Fictional B', 'b@example.invalid'),
+ ('30000000-0000-0000-0000-000000000003', 'Fictional C', null), ('30000000-0000-0000-0000-000000000004', 'Fictional D', 'd@example.invalid');
 insert into public.house_memberships values
  ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 2026, '2026-10-01', null),
  -- joins mid-quarter: E1 (Oct 10) is before her start and must not count for Rarity.
@@ -60,7 +60,9 @@ insert into public.events values
  ('40000000-0000-0000-0000-000000000006', 'E6 failed', '2026-10-23 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000026'),
  ('40000000-0000-0000-0000-000000000007', 'E7 reconciled', '2026-10-24 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000026'),
  ('40000000-0000-0000-0000-000000000008', 'E8 no sign-in', '2026-10-25 19:00+00', 'other', 0, true, '10000000-0000-0000-0000-000000000026'),
- ('40000000-0000-0000-0000-000000000009', 'E9 last year', '2025-11-20 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000025');
+ ('40000000-0000-0000-0000-000000000009', 'E9 last year', '2025-11-20 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000025'),
+ ('40000000-0000-0000-0000-000000000010', 'E10 re-imported', '2026-10-26 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000026'),
+ ('40000000-0000-0000-0000-000000000011', 'E11 reconciling', '2026-10-27 19:00+00', 'gbm', 1, true, '10000000-0000-0000-0000-000000000026');
 
 insert into public.member_event_attendance (member_id, event_id, points_earned) values
  ('30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 1),
@@ -78,24 +80,39 @@ insert into public.import_jobs values
  ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 'completed', '2026-10-11', '2026-10-11', 3, 0, 0),
  ('50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'completed', '2026-10-21', '2026-10-21', 6, 3, 0),
  ('50000000-0000-0000-0000-000000000006', '40000000-0000-0000-0000-000000000006', 'failed', '2026-10-24', null, 0, 0, 1),
- ('50000000-0000-0000-0000-000000000007', '40000000-0000-0000-0000-000000000007', 'completed', '2026-10-25', '2026-10-25', 2, 0, 0);
+ ('50000000-0000-0000-0000-000000000007', '40000000-0000-0000-0000-000000000007', 'completed', '2026-10-25', '2026-10-25', 2, 0, 0),
+ ('50000000-0000-0000-0000-000000000010', '40000000-0000-0000-0000-000000000010', 'failed', '2026-10-27 01:00', null, 5, 5, 1),
+ ('50000000-0000-0000-0000-000000000011', '40000000-0000-0000-0000-000000000010', 'completed', '2026-10-27 02:00', '2026-10-27 02:05', 5, 0, 0);
 insert into public.import_job_rows values
- -- open: no action yet
- ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null),
+ -- open: no action yet, nobody with that identity credited
+ ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, 'nobody@example.invalid', '{}'),
  -- resolved: recovered
- ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null),
+ ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, null, '{}'),
  -- reopened then dismissed: the latest action (dismissed) wins
- ('60000000-0000-0000-0000-000000000003', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null),
- -- investigating: still open
- ('60000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null),
+ ('60000000-0000-0000-0000-000000000003', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, null, '{}'),
+ -- investigating a wrong match: the row is credited (member set) and still open
+ ('60000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'matched', '30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000003', null, '{}'),
  -- matched rows are never open
- ('60000000-0000-0000-0000-000000000005', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'matched', '30000000-0000-0000-0000-000000000001');
+ ('60000000-0000-0000-0000-000000000005', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'matched', '30000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', null, '{}'),
+ -- recorded elsewhere: a member with the same email already has this event
+ ('60000000-0000-0000-0000-000000000006', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, ' B@Example.invalid ', '{}'),
+ -- recorded elsewhere: the matched member has the attendance
+ ('60000000-0000-0000-0000-000000000007', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, '30000000-0000-0000-0000-000000000001', null, '{}'),
+ -- skipped by the admin, and an invalid row: not actionable
+ ('60000000-0000-0000-0000-000000000008', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, null, '{"final_reason":"skipped_by_admin"}'),
+ ('60000000-0000-0000-0000-000000000009', '50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'review', null, null, null, '{"manual_decision":{"kind":"skip"}}'),
+ -- a failed import's rows: the clean re-import supersedes them
+ ('60000000-0000-0000-0000-000000000010', '50000000-0000-0000-0000-000000000010', '40000000-0000-0000-0000-000000000010', 'review', null, null, 'gone@example.invalid', '{}'),
+ ('60000000-0000-0000-0000-000000000011', '50000000-0000-0000-0000-000000000010', '40000000-0000-0000-0000-000000000010', 'review', null, null, null, '{}');
 insert into public.import_recovery_actions values
  ('70000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', null, 'recovered'),
  ('70000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000003', null, 'investigating'),
  ('70000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000002', 'dismissed'),
  ('70000000-0000-0000-0000-000000000004', '60000000-0000-0000-0000-000000000004', null, 'investigating');
 insert into public.attendance_reconciliation_log (event_id, created_at) values ('40000000-0000-0000-0000-000000000007', '2026-10-26');
+insert into public.attendance_reconciliation_log (event_id, outcome, created_at) values
+ ('40000000-0000-0000-0000-000000000011', 'credit_inserted', '2026-10-28'),
+ ('40000000-0000-0000-0000-000000000011', 'pending_review', '2026-10-28');
 
 grant select on all tables in schema public to authenticated;
 revoke all on public.event_attendance_attestations from authenticated;
@@ -138,16 +155,22 @@ grant select on r, ev to authenticated;
 do $$
 declare e jsonb;
 begin
- if (select count(*) from ev) <> 8 or (select (j->>'total_events')::int from r) <> 8 or (select (j->>'truncated')::boolean from r) then
-  raise exception 'FAIL: expected the 8 events of 2026-27 and no truncation, got %', (select count(*) from ev);
+ if (select count(*) from ev) <> 10 or (select (j->>'total_events')::int from r) <> 10 or (select (j->>'truncated')::boolean from r) then
+  raise exception 'FAIL: expected the 10 events of 2026-27 and no truncation, got %', (select count(*) from ev);
  end if;
  if exists (select 1 from ev where id = '40000000-0000-0000-0000-000000000009') then raise exception 'FAIL: last year''s event leaked into 2026'; end if;
  raise notice 'PASS: the year scope holds and reports its size honestly.';
 
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000002';
- if (e->>'open_review_rows')::int <> 2 then raise exception 'FAIL: open review rows %, expected 2 (no action + investigating)', e->>'open_review_rows'; end if;
+ if (e->>'open_review_rows')::int <> 2 then raise exception 'FAIL: open review rows %, expected 2 (unrecorded + investigating a credited row)', e->>'open_review_rows'; end if;
  if (e->'latest_job'->>'status') <> 'completed' or (e->>'credits')::int <> 3 then raise exception 'FAIL: E2 facts wrong %', e; end if;
- raise notice 'PASS: review rows count as open until their latest recovery action resolves them.';
+ raise notice 'PASS: open review rows: unrecorded or under investigation; not recovered, dismissed, skipped, invalid or recorded under the same identity.';
+ select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000010';
+ if (e->>'open_review_rows')::int <> 0 or e->'latest_job'->>'status' <> 'completed' then raise exception 'FAIL: a failed import''s rows linger after a clean re-import %', e; end if;
+ raise notice 'PASS: a clean re-import supersedes a failed import''s rows.';
+ select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000011';
+ if (e->>'reconciliation_pending_rows')::int <> 1 then raise exception 'FAIL: pending reconciliation rows not reported %', e; end if;
+ raise notice 'PASS: a reconciliation run with pending rows is reported as such.';
 
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000001';
  if e->'house_credits' <> '[{"credits": 1, "display_name": "Twilight Sparkle", "house_profile_id": "20000000-0000-0000-0000-000000000001"}]'::jsonb then
@@ -192,4 +215,13 @@ do $$ begin
   raise exception 'FAIL: term filter';
  end if;
  raise notice 'PASS: the term filter keeps one term only.';
+end $$;
+
+reset role;
+select pg_temp.expect($$update public.event_attendance_attestations set status = 'verified'$$, '42501', 'statements cannot be edited');
+select pg_temp.expect($$delete from public.event_attendance_attestations$$, '42501', 'statements cannot be deleted directly');
+do $$ begin
+ delete from public.events where id = '40000000-0000-0000-0000-000000000008';
+ if exists (select 1 from public.event_attendance_attestations where event_id = '40000000-0000-0000-0000-000000000008') then raise exception 'FAIL: cascade'; end if;
+ raise notice 'PASS: deleting an event still removes its statements.';
 end $$;

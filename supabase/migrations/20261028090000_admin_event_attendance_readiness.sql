@@ -52,6 +52,28 @@ create index if not exists event_attendance_attestations_event_idx
 alter table public.event_attendance_attestations enable row level security;
 revoke all on table public.event_attendance_attestations from public, anon, authenticated;
 
+-- Append-only: a statement is withdrawn by a later 'cleared' row, never edited
+-- or deleted. Deleting the event still removes its rows (the cascade runs one
+-- trigger level down).
+create or replace function public.event_attendance_attestations_append_only()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' or pg_trigger_depth() = 1 then
+    raise exception 'Attendance statements are append-only; record a new statement instead.' using errcode = '42501';
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists event_attendance_attestations_append_only on public.event_attendance_attestations;
+create trigger event_attendance_attestations_append_only
+  before update or delete on public.event_attendance_attestations
+  for each row execute function public.event_attendance_attestations_append_only();
+revoke execute on function public.event_attendance_attestations_append_only() from public, anon, authenticated;
+
 create or replace function public.admin_attest_event_attendance(
   p_event_id uuid,
   p_status text,
@@ -105,6 +127,11 @@ begin
   if auth.uid() is null or not public.is_admin_user(auth.uid()) then
     raise exception 'Only admins can read attendance status.' using errcode = '42501';
   end if;
+  -- Same rule as admin_private_house_standings: private House credits are
+  -- never served to a cacheable GET.
+  if coalesce(current_setting('request.method', true), '') not in ('', 'POST') then
+    raise exception 'Attendance status requires POST' using errcode = '42501';
+  end if;
   if p_year is null or p_year < 2000 or p_year > 2100 then
     raise exception 'Academic year is required.' using errcode = '22023';
   end if;
@@ -139,7 +166,7 @@ begin
            j.event_id, j.id, j.status, j.created_at, j.completed_at, j.total_rows, j.review_rows, j.error_count
     from public.import_jobs j
     where j.event_id in (select id from scoped)
-    order by j.event_id, j.created_at desc
+    order by j.event_id, j.created_at desc, j.id desc
   ),
   job_counts as (
     select j.event_id, count(*)::integer as jobs
@@ -155,18 +182,48 @@ begin
       select 1 from public.import_recovery_actions nx where nx.previous_action_id = ra.id
     )
   ),
-  open_reviews as (
-    select r.event_id, count(*)::integer as open_review_rows
+  -- A review row is open when an admin flagged it (latest action open,
+  -- investigating or needs_info), or when nobody acted on it and it is still
+  -- unrecorded: from a completed import, not skipped or invalid, and with no
+  -- identity-strong evidence that the person was credited another way (the
+  -- matched member, or a member with the same email, has the attendance), as
+  -- in docs/import-history-audit.md. A failed import's rows are not counted:
+  -- the event shows "Import failed" instead.
+  review_rows as (
+    select r.id, r.event_id, r.decision, r.attendance_member_id, r.matched_member_id, r.match_details as md,
+           lower(btrim(coalesce(r.csv_email, ''))) as norm_email, j.status as job_status
     from public.import_job_rows r
-    left join latest_action la on la.import_job_row_id = r.id
+    join public.import_jobs j on j.id = r.import_job_id
     where r.event_id in (select id from scoped)
-      and r.decision = 'review'
-      and r.attendance_member_id is null
-      and (la.resulting_status is null or la.resulting_status in ('open', 'investigating', 'needs_info'))
-    group by r.event_id
+  ),
+  email_attended as (
+    select distinct lower(btrim(m.email)) as norm_email, a.event_id
+    from public.member_event_attendance a
+    join public.members m on m.id = a.member_id
+    where a.event_id in (select id from scoped) and coalesce(btrim(m.email), '') <> ''
+  ),
+  open_reviews as (
+    select b.event_id, count(*)::integer as open_review_rows
+    from review_rows b
+    left join latest_action la on la.import_job_row_id = b.id
+    where la.resulting_status in ('open', 'investigating', 'needs_info')
+       or (la.resulting_status is null
+           and b.job_status = 'completed'
+           and b.decision = 'review'
+           and b.attendance_member_id is null
+           and coalesce(b.md ->> 'final_reason', '') not in ('skipped_by_admin', 'invalid_row_no_name')
+           and coalesce(b.md -> 'manual_decision' ->> 'kind', b.md ->> 'manual_decision', '') <> 'skip'
+           and not exists (
+             select 1 from public.member_event_attendance a
+             where a.member_id = b.matched_member_id and a.event_id = b.event_id)
+           and not exists (
+             select 1 from email_attended ea
+             where b.norm_email <> '' and ea.norm_email = b.norm_email and ea.event_id = b.event_id))
+    group by b.event_id
   ),
   reconciled as (
-    select l.event_id, max(l.created_at) as reconciled_at
+    select l.event_id, max(l.created_at) as reconciled_at,
+           count(*) filter (where l.outcome = 'pending_review')::integer as pending_review_rows
     from public.attendance_reconciliation_log l
     where l.event_id in (select id from scoped)
     group by l.event_id
@@ -212,6 +269,7 @@ begin
       'total_rows', j.total_rows, 'review_rows', j.review_rows, 'error_count', j.error_count) end,
     'open_review_rows', coalesce(o.open_review_rows, 0),
     'reconciled_at', r.reconciled_at,
+    'reconciliation_pending_rows', coalesce(r.pending_review_rows, 0),
     'attestation', case when x.event_id is null or x.status = 'cleared' then null else jsonb_build_object(
       'status', x.status, 'note', x.note, 'attested_at', x.attested_at,
       'by_current_user', x.attested_by = auth.uid()) end,

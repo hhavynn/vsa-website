@@ -27,7 +27,7 @@ const repo = attendanceReadinessRepository as jest.Mocked<typeof attendanceReadi
 const base: ReadinessEvent = {
   id: 'ev', name: 'Fictional GBM', date: '2026-10-20T02:00:00Z', event_type: 'gbm', points: 1, is_published: true,
   academic_term_id: 'term-f26', term_label: 'Fall 2026', credits: 0, scoring_credits: 0, last_credit_at: null, jobs: 0,
-  latest_job: null, open_review_rows: 0, reconciled_at: null, attestation: null, house_credits: [],
+  latest_job: null, open_review_rows: 0, reconciled_at: null, reconciliation_pending_rows: 0, attestation: null, house_credits: [],
 };
 const events: ReadinessEvent[] = [
   { ...base, id: 'pending', name: 'Fictional Pending Mixer' },
