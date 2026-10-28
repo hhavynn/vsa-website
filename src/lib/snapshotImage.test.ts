@@ -1,4 +1,4 @@
-import { drawSnapshot, shareSnapshotImage, type SnapshotData } from './snapshotImage';
+import { drawSnapshot, drawSnapshotForFormat, SNAPSHOT_SIZES, shareSnapshotImage, type SnapshotData } from './snapshotImage';
 
 const data: SnapshotData = {
   name: 'Synthetic Member',
@@ -23,7 +23,7 @@ function stubContext() {
     measureText: (t: string) => ({ width: t.length * 10 }),
     fillText: (t: string) => texts.push(t),
   };
-  for (const fn of ['fillRect', 'beginPath', 'moveTo', 'arcTo', 'closePath', 'stroke', 'fill', 'save', 'restore', 'arc', 'clip', 'setLineDash', 'drawImage']) {
+  for (const fn of ['translate', 'scale', 'fillRect', 'beginPath', 'moveTo', 'arcTo', 'closePath', 'stroke', 'fill', 'save', 'restore', 'arc', 'clip', 'setLineDash', 'drawImage']) {
     ctx[fn] = jest.fn();
   }
   return { ctx: ctx as unknown as CanvasRenderingContext2D, texts };
@@ -53,6 +53,37 @@ describe('drawSnapshot', () => {
   });
 });
 
+describe('story and feed snapshot layouts (#279)', () => {
+  it('exposes the exact Instagram-friendly dimensions without changing the existing classic card', () => {
+    expect(SNAPSHOT_SIZES).toEqual({
+      classic: { width: 1080, height: 1350 },
+      story: { width: 1080, height: 1920 },
+      square: { width: 1080, height: 1080 },
+    });
+  });
+
+  it('centers the full original artwork vertically for a 9:16 Story without clipping the footer', () => {
+    const { ctx, texts } = stubContext();
+    drawSnapshotForFormat(ctx, data, null, 'story');
+    expect(ctx.translate).toHaveBeenCalledWith(0, 285);
+    expect(ctx.scale).toHaveBeenCalledWith(1, 1);
+    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 1080, 1920);
+    expect(texts).toContain('Find yours at vsaatucsd.com/points');
+    expect(texts).toContain('#12');
+  });
+
+  it('uniformly scales the complete snapshot into a square without clipping names or badges', () => {
+    const { ctx, texts } = stubContext();
+    drawSnapshotForFormat(ctx, data, null, 'square');
+    expect(ctx.translate).toHaveBeenCalledWith(108, 0);
+    expect(ctx.scale).toHaveBeenCalledWith(0.8, 0.8);
+    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 1080, 1080);
+    expect(texts).toContain('Synthetic Member');
+    expect(texts).toContain('REGULAR');
+    expect(texts).toContain('Find yours at vsaatucsd.com/points');
+  });
+});
+
 describe('shareSnapshotImage', () => {
   const blob = new Blob(['png'], { type: 'image/png' });
   const input = { blob, text: 'I am ranked #12', title: 'My VSA Snapshot' };
@@ -76,6 +107,14 @@ describe('shareSnapshotImage', () => {
     expect(arg.files).toHaveLength(1);
     expect(arg.files[0]).toMatchObject({ name: 'my-vsa-snapshot.png', type: 'image/png' });
     expect(arg.text).toBe('I am ranked #12');
+  });
+
+  it('uses a clearly labelled format-specific PNG name when the user shares', async () => {
+    const share = jest.fn().mockResolvedValue(undefined);
+    (navigator as any).share = share;
+    (navigator as any).canShare = () => true;
+    await expect(shareSnapshotImage({ ...input, fileName: 'my-vsa-snapshot-story.png' })).resolves.toBe('shared');
+    expect(share.mock.calls[0][0].files[0].name).toBe('my-vsa-snapshot-story.png');
   });
 
   it('treats dismissing the share sheet as a cancel, not an error or a download', async () => {
