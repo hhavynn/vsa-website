@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { VietnameseText } from "../../common/VietnameseText";
 import { CURRENT_WRAPPED_YEAR_LABEL as EDITION } from "../../../data/wrappedEdition";
 
 type Tone = "teal" | "coral" | "gold";
@@ -83,7 +84,7 @@ function StatPaper({ value, label, rotate }: { value: string; label: string; rot
 interface YearBlock {
   emoji: string;
   title: string;
-  heading: string;
+  heading: ReactNode;
   blurb: string;
   tone: Tone;
   rotate: number;
@@ -93,7 +94,7 @@ const YEAR_BLOCKS: YearBlock[] = [
   {
     emoji: "🎭",
     title: "VCN",
-    heading: "Tình Yêu Thầm Lặng",
+    heading: <VietnameseText>Tình Yêu Thầm Lặng</VietnameseText>,
     blurb: "Months of rehearsals and late nights for one night on stage.",
     tone: "teal",
     rotate: -0.9,
@@ -252,9 +253,9 @@ export function WrappedRecapCard() {
         <div className="grid gap-9 lg:grid-cols-[1fr_minmax(0,360px)] lg:items-end">
           <div>
             <span className="scrapbook-sticker scrapbook-sticker-coral">🎁 Year in Review</span>
-            <h1 className="mt-5 font-serif text-[42px] font-black leading-[0.98] tracking-[-0.02em] text-text-primary sm:text-[58px]">
+            <h2 className="mt-5 font-serif text-[42px] font-black leading-[0.98] tracking-[-0.02em] text-text-primary sm:text-[58px]">
               VSA Wrapped {EDITION}
-            </h1>
+            </h2>
             <p className="mt-5 max-w-2xl font-sans text-[18px] font-bold leading-[1.7] text-text-primary">
               A quick look back at {EDITION} — the year, the chaos, and everyone who kept showing up.
             </p>

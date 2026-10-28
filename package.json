@@ -26,7 +26,9 @@
   },
   "scripts": {
     "start": "node scripts/start-dev.cjs",
+    "prebuild": "node scripts/check-client-secrets.mjs --build",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "prebuild:production": "node scripts/check-client-secrets.mjs --build",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",
@@ -53,7 +55,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "react/no-danger": "error"
+    }
   },
   "jest": {
     "transformIgnorePatterns": [
@@ -76,6 +81,7 @@
     ]
   },
   "devDependencies": {
+    "@types/jest-axe": "^3.5.9",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -84,6 +90,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.6.1",
+    "jest-axe": "^11.0.0",
     "postcss": "^8.5.31",
     "prettier": "^3.9.10",
     "react-scripts": "^5.0.1",
