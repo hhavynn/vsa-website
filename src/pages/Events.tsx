@@ -11,6 +11,7 @@ import {
   type EventMemoryStats,
 } from '../components/features/events/PublicEventCards';
 import { HOUSE_COLORS } from '../constants/houses';
+import { NextEventAtGlance } from '../components/features/events/NextEventAtGlance';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
@@ -439,7 +440,8 @@ export function Events() {
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-coral mb-4">Flyer Board</span>
           <h1 className="vsa-page-title">Events</h1>
-          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+          {featured && <NextEventAtGlance event={featured} />}
+          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] hidden sm:block" style={{ color: 'var(--text2)' }}>
             Keep up with GBMs, mixers, cultural programs, and VSA traditions.
           </p>
           {activeTerm && (
@@ -468,10 +470,10 @@ export function Events() {
 
       <div className="vsa-container py-8 lg:py-10">
         {featured && (
-          <>
+          <div id="next-up" className="scroll-mt-24">
             <Label className="mb-5 text-brand-600 dark:text-brand-400">Next Up</Label>
             <FeaturedEventCard event={featured} external={externalListings.get(featured.id)} />
-          </>
+          </div>
         )}
 
         {rest.length > 0 && (
