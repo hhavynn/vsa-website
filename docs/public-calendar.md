@@ -41,6 +41,39 @@ direction as `events/AddToCalendarButton` (no dropdown). Timed items use
 `buildGcalTimedDates` + `ctz=America/Los_Angeles`; date-only items use
 all-day format with an exclusive end date (`buildGcalAllDayDatesFromDateOnly`).
 
+## One-time .ics export (#278, first slice)
+
+The Calendar and Events pages offer **Download VSA events (.ics)** based on the
+already loaded, published, first-party VSA events. This is a **snapshot**, not
+a subscribable `webcal:` address. Editing or canceling events later **does not
+update an imported snapshot**: students must download and re-import to get
+new information, and some calendar apps may keep old entries when importing a
+second time. Keep the single-event Google Calendar buttons for one-offs.
+
+The export serializes an explicit public allowlist: stable synthetic UID
+(`events.id`), event name, dates/times, public location and public description.
+It never serializes unpublished events or other event fields such as check-in
+codes, attendance, payment or internal notes. The UI excludes House events and
+application/deadline markers from this file; those are different public-data
+contracts and **not** part of this export.
+
+The serializer is `src/lib/publicEventIcs.ts`. Timed events are converted from
+San Diego wall-clock to UTC, so daylight-saving transitions do not depend on the
+visitor's browser timezone. Unknown time becomes an all-day event, never an
+invented start clock. Multi-day date-only events use an exclusive end date.
+Fields are escaped to prevent ICS property injection; lines are folded to a
+75-UTF-8-octet limit. Export is generated client-side and requires **no**
+storage bucket, new backend or automatic polling.
+
+### Still required to complete #278
+
+A real auto-refreshing subscription needs a **public, cacheable, unauthenticated**
+`.ics` endpoint (and feed URL) that reads published rows through an allowlisted
+backend projection, never trusts a client-supplied list, and correctly handles
+cancellation/updates. It needs Apple, Google and Outlook subscription verification
+including DST and refresh behavior. **Do not label the snapshot as a subscription**
+or expose `webcal:` without that endpoint.
+
 ## Follow-ups (not in v1)
 
 - UVSA `external_events` on the calendar — excluded because rows carry
