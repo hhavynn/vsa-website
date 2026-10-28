@@ -25,6 +25,7 @@ test('unknown deadlines and point values may not be invented', () => {
   const rule = { id: 'unknown', kind: 'unknown' };
   assert.equal(scoreCase(rule, { status: 'fallback', answer: 'The date has not been announced yet.' }).pass, true);
   assert.equal(scoreCase(rule, { status: 'answered', answer: 'It is not confirmed yet.' }).pass, true);
+  assert.equal(scoreCase(rule, { status: 'answered', answer: 'The Spring House deadline has not been announced yet.' }).pass, true);
   assert.equal(scoreCase(rule, { status: 'answered', answer: 'The deadline is October 14, 2029.' }).pass, false);
   assert.equal(scoreCase(rule, { status: 'answered', answer: 'You will get 5 points.' }).pass, false);
   assert.equal(scoreCase(rule, { status: 'answered', answer: 'We have a date.' }).pass, false);
