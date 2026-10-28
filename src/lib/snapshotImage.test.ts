@@ -111,8 +111,8 @@ describe('shareSnapshotImage', () => {
 
   it('uses a clearly labelled format-specific PNG name when the user shares', async () => {
     const share = jest.fn().mockResolvedValue(undefined);
-    (navigator as any).share = share;
-    (navigator as any).canShare = () => true;
+    Object.defineProperty(navigator, 'share', { configurable: true, writable: true, value: share });
+    Object.defineProperty(navigator, 'canShare', { configurable: true, writable: true, value: () => true });
     await expect(shareSnapshotImage({ ...input, fileName: 'my-vsa-snapshot-story.png' })).resolves.toBe('shared');
     expect(share.mock.calls[0][0].files[0].name).toBe('my-vsa-snapshot-story.png');
   });
