@@ -56,7 +56,7 @@ const PATHS: Path[] = [
     commitment: 'Regular involvement during the internship term; exact responsibilities vary.',
     recruitment: 'Intern applications have their own window, announced by cabinet.',
     href: '/intern-program',
-    keys: ['intern_application', 'cabinet_application'],
+    keys: ['intern_application'],
   },
   {
     id: 'vcn',
@@ -122,7 +122,7 @@ export function FindYourVsaPath() {
           </button>
         ))}
       </div>
-      <div className="mt-5 rounded-lg border p-4 sm:p-5" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }} aria-live="polite" aria-atomic="true">
+      <div className="mt-5 rounded-lg border border-[var(--border)] bg-[var(--surface2)] p-4 sm:p-5" aria-live="polite" aria-atomic="true">
         <h3 className="font-serif text-xl font-bold text-[var(--text)]">{selected.title}</h3>
         <p className="mt-2 font-sans text-sm leading-relaxed text-[var(--text2)]">{selected.description}</p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
