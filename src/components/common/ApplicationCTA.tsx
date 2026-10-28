@@ -31,6 +31,19 @@ interface ApplicationCTAProps {
 
 // Status ordering when more than one row exists for the same key: prefer the
 // actionable one. open > not_open (upcoming) > closed > disabled.
+// Public program pages only. These are never form URLs.
+const PUBLIC_PROGRAM_ROUTES: Record<ApplicationKey, string> = {
+  ace_application: '/ace',
+  house_fall: '/house',
+  house_winter: '/house',
+  house_spring: '/house',
+  intern_application: '/intern-program',
+  cabinet_application: '/cabinet',
+  vcn_stage_ninja_interest: '/vcn',
+  vcn_props_team_interest: '/vcn',
+  wnc_team_form: '/wild-n-culture',
+};
+
 const STATUS_RANK: Record<ApplicationStatus, number> = {
   open: 0,
   not_open: 1,
@@ -81,14 +94,22 @@ export function CTABlock({
   link,
   fallbackKey,
   fallback,
+  showNextSteps = false,
 }: {
   link: PublicApplicationLink | null;
   fallbackKey: ApplicationKey;
   fallback?: FallbackOverrides;
+  /** Admin's literal public preview stays link-free for inactive forms. */
+  showNextSteps?: boolean;
 }) {
   const title = link?.title || applicationKeyLabel(fallbackKey);
   const defaults = DEFAULT_APPLICATION_MESSAGES[fallbackKey];
   const status: ApplicationStatus = link?.status ?? 'disabled';
+  const isActionable = status === 'open' && Boolean(link?.target_url);
+  // Only announce a date actually supplied by an upcoming admin-managed window.
+  const opensAt = status === 'not_open' && !link?.before_open_message
+    ? formatApplicationDateTime(link?.open_at)
+    : '';
 
   let body: React.ReactNode;
   if (status === 'open' && link?.target_url) {
@@ -134,6 +155,22 @@ export function CTABlock({
         {title}
       </div>
       <div className="mt-2">{body}</div>
+      {showNextSteps && !isActionable && (
+        <div className="mt-3 border-t border-[var(--color-border)] pt-3 font-sans text-xs leading-5 text-[var(--color-text2)]">
+          {opensAt && <p className="mb-2">Scheduled to open {opensAt}.</p>}
+          <p>
+            For the next announcement, follow{' '}
+            <a href={FALLBACK_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">
+              VSA on Instagram
+            </a>
+            . In the meantime,{' '}
+            <a href="/get-involved#programs" className="font-semibold underline underline-offset-2">
+              explore VSA programs
+            </a>
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -187,6 +224,11 @@ export function ApplicationCTA({
   }
 
   const rows = keys.map((key) => ({ key, link: pickRowForKey(links, key) }));
+  const hasRequestedOpenWindow = rows.some(({ link }) => link?.status === 'open' && !!link.target_url);
+  const otherOpenPrograms = links
+    .filter((link) => !keys.includes(link.application_key) && link.status === 'open' && !!link.target_url)
+    .filter((link, index, all) => all.findIndex((item) => item.application_key === link.application_key) === index)
+    .slice(0, 3);
 
   if (openOnly) {
     const openRows = rows.filter(
@@ -237,10 +279,27 @@ export function ApplicationCTA({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map(({ key, link }) => (
-          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} />
+          <CTABlock key={key} link={link} fallbackKey={key} fallback={fallback} showNextSteps />
         ))}
       </div>
-      {rows.some(({ link }) => link?.status === 'open' && link.target_url) && (
+      {!hasRequestedOpenWindow && otherOpenPrograms.length > 0 && (
+        <aside className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-4" aria-label="Other open VSA opportunities">
+          <p className="mb-2 font-sans text-sm font-semibold text-[var(--color-text)]">
+            Other VSA opportunities currently listed as open
+          </p>
+          <ul className="flex flex-wrap gap-x-4 gap-y-2">
+            {otherOpenPrograms.map((link) => (
+              <li key={link.application_key}>
+                <a href={PUBLIC_PROGRAM_ROUTES[link.application_key]} className="font-sans text-sm font-semibold text-brand-600 underline underline-offset-2 dark:text-brand-400">
+                  {applicationKeyLabel(link.application_key)}
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 font-sans text-xs text-[var(--color-text2)]">Check each program page for current requirements and details.</p>
+        </aside>
+      )}
+      {hasRequestedOpenWindow && (
         <p className="mt-3 font-sans text-xs leading-5 text-[var(--color-text3)]">
           Application forms open on an external service. Review the form before sharing personal information.{' '}
           <Link to="/privacy" className="font-semibold underline underline-offset-2">

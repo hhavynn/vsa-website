@@ -63,7 +63,9 @@ export function HouseEventCard({
 
   return (
     <article
-      className="scrapbook-paper overflow-hidden transition-all hover:shadow-md"
+      id={`house-event-${event.id}`}
+      tabIndex={-1}
+      className="scrapbook-paper scroll-mt-24 overflow-hidden transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
       style={{ borderColor: `${color}55` }}
     >
       <div className="grid gap-0 sm:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">

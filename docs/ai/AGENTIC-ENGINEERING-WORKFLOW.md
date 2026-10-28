@@ -301,21 +301,40 @@ Authoritative rules are in root `AGENTS.md` ("PR / branch conventions", "Things 
 
 ---
 
-## 16. Autonomy & honesty
+## 16. Autonomy, evidence, and when to stop
 
-**Autonomy:** Once the user has asked for a feature/fix, don't stop after audit/research/brainstorm/plan when safe implementation is possible. Don't repeatedly ask "would you like me to implement this?" Proceed through the whole task. Pause for approval **only** when: a destructive or irreversible action is required, a production mutation is required, secrets are missing, repo governance requires an owner request (see `vsa-change-control` gated/forbidden domains), or two *materially different* interpretations can't be safely resolved. For ordinary ambiguity: assume, record, proceed.
+**Proceed without repeated confirmation** for a scoped fix, tests, ordinary docs and draft PRs. Ask rather than assume when the choice changes **authorization, privacy, public/unpublished content, destructive outcome, or irreversible production state**; missing credentials are a blocker, not permission to work around the boundary. If another chair owns the content (#277), prepare safe scaffolding and report `blocked:external` rather than inventing a reveal. A missing optional Graphify/Repomix binary is **not** a blocker: use targeted source reads and disclose the fallback.
 
-**Honesty / exact evidence:** Never conflate distinct actions. Distinguish, in your report, whether you *queried Graphify*, *ran Repomix*, *read a playbook*, *invoked a native subagent*, *ran tests*, *rendered the UI in a browser*, *wrote a migration*, *applied a migration*, or *deployed to production*. Never bluff a step you didn't run.
+**Evidence contract:** paste the block below into the PR template's **Screenshots / Notes**; do not clone the PR's Verification checklist. Use the exact commands and decisive result lines from your real run (or link an immutable CI run). **Never** claim tests/browser QA/migration application/production verification based on a diff, mock, queued workflow, or another agent's summary. Redact secrets and real member data from logs. If a command fails, include its **actual error** and whether it is pre-existing; if skipped, say **not run** and why.
+
+| Risk tier | Minimum evidence to paste (from §13 and `vsa-validation-and-qa`) | May omit with an explicit reason |
+| --- | --- | --- |
+| **Low — copy/docs** | Changed file(s), reference/static check (`git diff --check`, link check as applicable), exact result | App build, full Jest suite, browser if no UI change |
+| **Medium — UI/feature** | Focused test command + count/result; lint/typecheck if affected; build for runtime changes; 320/390px keyboard/loading/empty/error/browser results or manual-QA blocker | Unrelated full suite, RLS matrix when no backend boundary changed |
+| **High — protected/backend** | Everything relevant above, protected golden tests, anon/non-admin/admin authorization evidence, staging SQL/RLS matrix, adversarial review, rollout/rollback and separate deployed-state proof | Never omit server-side checks without clearly marking the change **blocked/not verified**; never substitute mocks for staging |
+
+```text
+Risk / scope: [low | medium | high]; [files + protected boundaries]
+Commands actually executed: [exact command → PASS count/output or FAIL error]
+Not run / skipped: [each check + why; CI queued is not passed]
+Manual evidence: [browser/assistive tech/viewport and observed behavior, or not run]
+Security / data: [what was accessed or mutated; no production mutation if true]
+Delivery state: implemented → locally verified → CI verified → reviewed → merged → deployed → production verified
+Remaining blocker / owner decision: [specific item, or none]
+```
+
+**Common expensive mistakes (from `vsa-failure-archaeology`):** treating `useAdmin()` as an authorization boundary instead of RLS; re-enabling retired code-based check-in or member accounts while fixing points UI; deleting Supabase Storage originals to save egress; mixing House academic years; and mistaking "test passed against mocks" for deployed-policy evidence. Link the incident before proposing to reverse a settled decision.
 
 ---
 
-## 17. Worked examples (request → behavior)
+## 17. Worked examples (real issues)
 
-- **"build a leaderboard profile feature with badges, make up sick badges too"** → medium/high (leaderboard-adjacent + new public surface). Brief (§2); `vsa-change-control` (is a leaderboard-adjacent change allowed?) + `vsa-architecture-contract` + `vsa-design-system-reference` + `vsa-validation-and-qa`; route through `vsa-points-attendance-guardian` (read-only) to confirm you're not touching points math; Graphify the leaderboard path; Repomix the slice; **privacy review** (does a profile route expose IDs / leak attendance via badges?); decide computed-vs-persisted badges; Impeccable for the UI; validate no leaderboard regression.
-- **"events page looks ass on mobile, make it cleaner"** → medium UI. `vsa-design-system-reference` (+ `vsa-ui-excellence-campaign`); Graphify only if the component tree is unclear; Impeccable + real browser inspection at mobile + intermediate widths; empty/loading/error states; a11y; preserve product identity; **no DB ceremony**.
-- **"let admins schedule house applications every quarter, auto open/close"** → high. `vsa-seasonal-operations` (freeze windows!) + `vsa-change-control` + `vsa-architecture-contract` + `vsa-supabase-security-reference` (if schema changes) + `vsa-applications-forms` playbook + `vsa-house-system`; open/close semantics + timezone reasoning; admin/public states; privacy; stronger tests + adversarial review.
-- **"leaderboard keeps showing stale points, figure it out"** → debugging. `vsa-debugging-playbook` (+ `vsa-failure-archaeology` if it smells old); Graphify the data path; investigate react-query cache/invalidation; targeted source reads; **reproduce before rewriting**; fix; regression test. Don't speculatively rewrite.
-- **"change this button copy from View More to See All Events"** → low. Find the file, edit, quick check. **No** Superpowers ceremony, no Graphify rebuild, no Repomix, no subagents.
+| Real request | Correct scope and evidence | Stop/ask boundary |
+| --- | --- | --- |
+| **#263 (starter):** replace a hardcoded Wrapped year label | Low. Read the current year-label source; change only the rendered label, verify a focused test and `git diff --check`; paste real output, skip unrelated suites with reason. | Do not invent an academic year or silently rewrite Wrapped history. |
+| **#293 (protected):** characterize points and leaderboard | High domain, but tests-only. Read the points guardian playbook; pin existing view-based ranking/tie behavior with synthetic fixtures and focused/full relevant test evidence. | No points calculation, attendance backfill or RLS edits under a "test cleanup" PR. |
+| **#277 (external):** prepare House Reveal content | Blocked on the chair's confirmed theme/reveal assets or approval. Audit existing seasonal gate, prepare private-safe outline, state `blocked:external` plus concrete missing asset/decision. | Do **not** publish guessed Houses, dates, private links or future reveal details. |
+| **Mobile Events:** improve a cramped card | Medium. Use design tokens, test 320/390px and both themes in a browser, plus focus/touch/empty/error checks; give the actual URLs/screenshots and commands. | Do not mark "mobile QA passed" based on a jsdom screenshot or only a green build. |
 
 ---
 
