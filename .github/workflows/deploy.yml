@@ -52,6 +52,10 @@ jobs:
       - name: Run tests
         run: CI=true npm test -- --coverage --watchAll=false
 
+      - name: Test Ask VSA offline evaluation scorer
+        # Fixed synthetic cases and property checks; no network or production Gemini usage.
+        run: npm run test:ask-vsa-eval
+
       - name: Re-run date-boundary tests in other timezones
         # Application windows and summer break are defined in San Diego time and
         # must not shift for a runner or admin elsewhere (#274, #270).
