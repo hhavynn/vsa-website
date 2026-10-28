@@ -588,6 +588,14 @@
       ]
     },
     {
+      "path": "src/data/repos/houseRoster.ts",
+      "tables": [],
+      "rpcs": [
+        "admin_house_member_attendance",
+        "admin_house_roster"
+      ]
+    },
+    {
       "path": "src/data/repos/importJobs.ts",
       "tables": [
         "import_job_rows",
@@ -901,7 +909,8 @@
         "src/data/repos/houseOverview.ts",
         "src/data/repos/houseParents.ts",
         "src/data/repos/housePayments.ts",
-        "src/data/repos/housePointsCheck.ts"
+        "src/data/repos/housePointsCheck.ts",
+        "src/data/repos/houseRoster.ts"
       ],
       "tables": [
         "house_applicants",
@@ -921,8 +930,10 @@
       "rpcs": [
         "admin_apply_house_placement_override",
         "admin_begin_house_batch_publish",
+        "admin_house_member_attendance",
         "admin_house_overview",
         "admin_house_points_reconciliation",
+        "admin_house_roster",
         "admin_link_house_applicant_member",
         "admin_register_house_applicants",
         "admin_save_house_event",

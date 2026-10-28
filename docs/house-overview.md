@@ -22,4 +22,23 @@ A banner uses the Attendance status read (#653) to say whether past point-earnin
 
 `admin_house_overview(p_year, p_term_id)` (migration `20261028075724`, applied to production 2026-10-28; written as `20261028100000` and renamed to its recorded version): admin-only, SECURITY DEFINER (the score views are private to the API since #692), POST-only like `admin_private_house_standings`, STABLE, pinned `search_path`; counts and House names only, no member names or rows. Proof: `bash scripts/test-house-overview.sh` (mid-quarter join, transfer, inactive profile, collab counted once globally, drafts excluded, term window, tie ranks, totals equal the view).
 
-Drilldown into one House's members is #652; a House Parent view is #654.
+## House roster (#652)
+
+**Open roster** on a House card shows that House's members for the period (`?house=<profile id>` in the URL: an id, never a name). Private and admin-only; names only, no contact details.
+
+- Per member: House-credited attendance in the period (only events after their House start date, by the same attribution as the standings), all VSA events attended separately, the last credited date, their dates in this House, whether they joined during the term, and whether they are also in another House this year (a transfer, or an overlap to fix).
+- Dates come from the member's memberships in this House that overlap the period, so someone who left and came back shows the stint in the period (and "separate stints" when there are several). If the House's profile is not public yet, the roster says so: nobody is House-credited, so its zeros do not mean absence.
+- The "VSA events" count and the drilldown use the same events: the period's termed events, plus, for the whole year, dated events with no term in July-to-July. An event with neither a date nor a term cannot be placed in a year and appears in neither.
+- **Events** opens one member's year: every event attended and whether it counted for a House, or why not (before their House start, not in a House that day, profile not public, no points, no term, no date, before the 2025-26 House points start). Crediting uses the event's UTC calendar date, like the standings; when that differs from the Los Angeles date it is shown ("counted as Oct 16, by UTC date").
+- Filters: everyone, attended at least once, no House-credited attendance yet, joined this period, in another House too; plus a name search.
+- **Invitation list**: tick members leadership may invite to an upcoming House event and copy their names. It lives only in your browser tab, resets when you open another House or period, and is never saved; if copying is blocked the names are shown to select. Counts are not a measure of anyone's commitment.
+- Corrections happen in Members, Import and House Assignments, never here.
+
+`admin_house_roster(p_house_profile_id, p_term_id)` and `admin_house_member_attendance(p_member_id, p_year)` (migration `20261028075801`, applied to production 2026-10-28; written as `20261028110000` and renamed to its recorded version): admin-only, SECURITY DEFINER, POST-only, one jsonb array (no 1,000-row cap). Anyone credited for the House in the period is on its roster; an undated term is flagged. Proof: `bash scripts/test-house-roster.sh`.
+
+**Weighted points follow-up:** The original `20261028075801` roster RPC counts attendance rows, not weighted House points. Forward migration `20261028220000_admin_house_roster_weighted_points.sql` adds separate `credited_points = SUM(points_earned)` to the private roster response and retains `credited_attendance` as a distinct event count. The fixture includes a two-point event and reconciles weighted points against the canonical view. The old migration remains byte-identical. Staging role/POST and SQL fixture execution remain unverified.
+
+**Forward-only overlapping-membership correction (#652):** The recorded `20261028075801` migration may already be applied, so its original SQL remains unchanged. `20261028210000_admin_house_member_attendance_overlap.sql` replaces only the admin-only attendance drilldown. When multiple active House memberships cover an event, it returns `overlapping_houses` with all active House names and no misleading single House id; the CRC can investigate the double-credit. The disposable PostgreSQL fixture exercises both migrations and a synthetic overlap. Hosted staging role/POST and result-shape verification are **not yet performed**, and no production SQL was run here.
+
+A House Parent view is #654.
+
