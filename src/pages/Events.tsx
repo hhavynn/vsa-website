@@ -324,53 +324,23 @@ export function Events() {
         });
       });
 
-    // 2. Attendance stats
+    // Aggregate published regular-event attendance without identifying members
+    // or joining the retired members.house cache. House competition rankings
+    // are embargoed until the CRC's private GBM announcements (#692/#704).
     supabase
-      // member_event_history, not the raw ledger: anon lost SELECT on
-      // member_event_attendance in 20260820000001 (#380). The view carries the
-      // same three columns and additionally filters to published events.
       .from('member_event_history')
-      .select('event_id, member_id, points_earned')
+      .select('event_id, points_earned')
       .in('event_id', archivedEventIds)
-      .then(async ({ data: attendanceRows }) => {
-        if (cancelled || !attendanceRows || attendanceRows.length === 0) return;
-
-        const rows = attendanceRows as Array<{ event_id: string; member_id: string; points_earned: number }>;
-        const uniqueMemberIds = Array.from(new Set(rows.map((r) => r.member_id)));
-
-        const { data: memberRows } = await supabase
-          .from('public_members')
-          .select('id, house')
-          .in('id', uniqueMemberIds);
-
-        if (cancelled) return;
-
-        const houseByMember = new Map<string, string | null>();
-        for (const m of (memberRows ?? []) as Array<{ id: string; house: string | null }>) {
-          houseByMember.set(m.id, m.house ?? null);
+      .then(({ data: attendanceRows }) => {
+        if (cancelled || !attendanceRows) return;
+        const totals: Record<string, EventMemoryStats> = {};
+        for (const row of attendanceRows as Array<{ event_id: string; points_earned: number }>) {
+          const stats = totals[row.event_id] ?? { totalPoints: 0, memberCount: 0 };
+          stats.totalPoints += row.points_earned;
+          stats.memberCount += 1;
+          totals[row.event_id] = stats;
         }
-
-        const agg: Record<string, { totalPoints: number; memberCount: number; houseCounts: Record<string, number> }> = {};
-        for (const r of rows) {
-          if (!agg[r.event_id]) agg[r.event_id] = { totalPoints: 0, memberCount: 0, houseCounts: {} };
-          agg[r.event_id].totalPoints += r.points_earned;
-          agg[r.event_id].memberCount++;
-          const house = houseByMember.get(r.member_id);
-          if (house) agg[r.event_id].houseCounts[house] = (agg[r.event_id].houseCounts[house] ?? 0) + 1;
-        }
-
-        const stats: Record<string, EventMemoryStats> = {};
-        for (const [eventId, data] of Object.entries(agg)) {
-          const sorted = Object.entries(data.houseCounts).sort((a, b) => b[1] - a[1]);
-          stats[eventId] = {
-            totalPoints: data.totalPoints,
-            memberCount: data.memberCount,
-            topHouse: sorted[0]?.[0] ?? null,
-            topHouseCount: sorted[0]?.[1] ?? 0,
-          };
-        }
-
-        setMemoryStats((prev) => ({ ...prev, ...stats }));
+        if (!cancelled) setMemoryStats((prev) => ({ ...prev, ...totals }));
       });
 
     return () => { cancelled = true; };
