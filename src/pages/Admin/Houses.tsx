@@ -479,10 +479,10 @@ export default function AdminHouses() {
           loadingMembers={loadingMembers}
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
-      ) : activeTab === 'payments' ? (
-        <HousePaymentsPanel selectedYear={selectedYear} houseProfiles={houseProfiles} members={members} />
       ) : activeTab === 'overview' ? (
         <HouseOverviewPanel selectedYear={selectedYear} />
+      ) : activeTab === 'payments' ? (
+        <HousePaymentsPanel selectedYear={selectedYear} houseProfiles={houseProfiles} members={members} />
       ) : activeTab === 'attendance' ? (
         <AttendanceReadinessPanel selectedYear={selectedYear} />
       ) : activeTab === 'points' ? (

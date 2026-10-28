@@ -16,6 +16,8 @@ export interface RosterMember {
   joined_in_period: boolean;
   other_house_memberships: number;
   credited_attendance: number;
+  /** Sum of awarded points, distinct from attendance/event count. */
+  credited_points?: number;
   last_credited_at: string | null;
   events_attended: number;
 }
@@ -30,7 +32,7 @@ export interface HouseRoster {
 }
 
 export type AttendanceReason =
-  | 'counted' | 'before_house_start' | 'no_house' | 'house_not_public' | 'no_points' | 'no_term' | 'no_date' | 'before_ledger';
+  | 'counted' | 'overlapping_houses' | 'before_house_start' | 'no_house' | 'house_not_public' | 'no_points' | 'no_term' | 'no_date' | 'before_ledger';
 
 export interface MemberAttendanceEvent {
   event_id: string;

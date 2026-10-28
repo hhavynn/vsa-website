@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { sanitizeHref } from '../../../utils/sanitizeUrl';
+import { classifyAssistantLink } from './assistantLinkSafety';
 
 // Ask VSA answers come back from Gemini as lightweight markdown. This renders
 // the subset the model actually emits — paragraphs, bullet/numbered lists,
@@ -98,11 +98,6 @@ export function parseBlocks(content: string): Block[] {
   return blocks;
 }
 
-function isInternalUrl(url: string) {
-  return url.startsWith("/") && !url.startsWith("//");
-}
-
-
 // Drop markers the model left unbalanced (e.g. a truncated "**Note:") so raw
 // asterisks never show up in the bubble.
 function cleanText(text: string) {
@@ -125,13 +120,12 @@ export function renderInline(text: string, keyPrefix = "i"): ReactNode[] {
 
     if (label !== undefined) {
       const children = renderInline(label, `${key}-l`);
-      const encoded = encodeURI(url.trim()).replace(/%25([0-9A-Fa-f]{2})/g, '%$1');
-      const safeUrl = sanitizeHref(encoded);
-      if (safeUrl === '#') {
+      const destination = classifyAssistantLink(url);
+      if (destination.kind === 'text') {
         nodes.push(...children);
-      } else if (isInternalUrl(safeUrl)) {
+      } else if (destination.kind === 'internal') {
         nodes.push(
-          <Link key={key} to={safeUrl} className={LINK_CLASS}>
+          <Link key={key} to={destination.href} className={LINK_CLASS}>
             {children}
           </Link>,
         );
@@ -139,7 +133,7 @@ export function renderInline(text: string, keyPrefix = "i"): ReactNode[] {
         nodes.push(
           <a
             key={key}
-            href={safeUrl}
+            href={destination.href}
             target="_blank"
             rel="noopener noreferrer"
             className={LINK_CLASS}

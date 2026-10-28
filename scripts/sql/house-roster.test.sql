@@ -19,7 +19,7 @@ create table public.house_parents (id uuid primary key default gen_random_uuid()
 create table public.house_events (id uuid primary key, academic_year_start integer, event_date date, is_published boolean);
 create table public.house_event_houses (house_event_id uuid, house_page_asset_id uuid);
 create view public.house_yearly_points as
- SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (count(*))::integer AS total_points,
+ SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (sum(mea.points_earned))::integer AS total_points,
         (count(DISTINCT mea.member_id))::integer AS unique_members, max(e.date) AS latest_activity_at
  FROM member_event_attendance mea JOIN events e ON e.id = mea.event_id JOIN academic_terms t ON t.id = e.academic_term_id
  JOIN house_memberships hm ON hm.member_id = mea.member_id AND hm.academic_year_start = t.academic_year_start AND (e.date)::date >= hm.effective_start_date AND (hm.effective_end_date IS NULL OR (e.date)::date < hm.effective_end_date)
@@ -29,6 +29,8 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028075801_admin_house_roster.sql
+\ir ../../supabase/migrations/20261028210000_admin_house_member_attendance_overlap.sql
+\ir ../../supabase/migrations/20261028220000_admin_house_roster_weighted_points.sql
 set client_min_messages = notice;
 insert into public.members select ('30000000-0000-0000-0000-00000000000'||x)::uuid, 'Fictional', upper(x), x||'@example.invalid' from unnest(array['a','b','c','d','e','f']) x;
 
@@ -59,7 +61,7 @@ insert into public.events (id, date, academic_term_id) values
  ('40000000-0000-0000-0000-000000000003', '2026-11-10 19:00+00', '10000000-0000-0000-0000-000000000001'),
  ('40000000-0000-0000-0000-000000000004', '2027-01-20 19:00+00', '10000000-0000-0000-0000-000000000002');
 insert into public.member_event_attendance values
- ('30000000-0000-0000-0000-00000000000a', '40000000-0000-0000-0000-000000000001', 1),
+ ('30000000-0000-0000-0000-00000000000a', '40000000-0000-0000-0000-000000000001', 2),
  ('30000000-0000-0000-0000-00000000000a', '40000000-0000-0000-0000-000000000002', 1),
  -- B attends before joining (Oct 1) and after (Oct 20): only Oct 20 counts for Rarity.
  ('30000000-0000-0000-0000-00000000000b', '40000000-0000-0000-0000-000000000001', 1),
@@ -136,11 +138,20 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 do $$ declare total int; v int; h uuid; begin
  for h in select id from public.house_page_assets where academic_year_start = 2026 and is_active loop
-  select coalesce(sum((x->>'credited_attendance')::int), 0) into total from jsonb_array_elements(public.admin_house_roster(h)->'members') x;
+  select coalesce(sum((x->>'credited_points')::int), 0) into total from jsonb_array_elements(public.admin_house_roster(h)->'members') x;
   select coalesce((select total_points from public.house_yearly_points where house_profile_id = h), 0) into v;
   if total <> v then raise exception 'FAIL: roster credits % <> view % for %', total, v, h; end if;
  end loop;
  raise notice 'PASS: each House''s roster credits add up to house_yearly_points.';
+end $$;
+
+-- A weighted two-point event still counts as one attendance, but two points.
+do $$ begin
+ if pg_temp.m('20000000-0000-0000-0000-000000000001', null, 'a', 'credited_attendance') <> '2'
+    or pg_temp.m('20000000-0000-0000-0000-000000000001', null, 'a', 'credited_points') <> '3' then
+   raise exception 'FAIL: weighted event credits must be separate from attendance count';
+ end if;
+ raise notice 'PASS: attendance and weighted House points are distinct values.';
 end $$;
 
 create function pg_temp.why(letter text, event_n text) returns text language sql as $$
@@ -203,4 +214,28 @@ do $$ begin
   raise exception 'FAIL: the roster VSA count and the drilldown disagree';
  end if;
  raise notice 'PASS: a member who left and came back shows the stint in the period, and the VSA count matches the drilldown.';
+end $$;
+
+-- An accidental overlapping House assignment must never be silently
+-- attributed only to whichever House sorts first in the drilldown.
+reset role;
+insert into public.members values ('30000000-0000-0000-0000-000000000013', 'Fictional', 'Overlap', 'overlap@example.invalid');
+insert into public.house_memberships (member_id, house_profile_id, academic_year_start, effective_start_date, effective_end_date) values
+ ('30000000-0000-0000-0000-000000000013', '20000000-0000-0000-0000-000000000001', 2026, '2026-09-20', null),
+ ('30000000-0000-0000-0000-000000000013', '20000000-0000-0000-0000-000000000002', 2026, '2026-09-20', null);
+insert into public.member_event_attendance values ('30000000-0000-0000-0000-000000000013', '40000000-0000-0000-0000-000000000002', 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+do $$
+declare e jsonb;
+begin
+ select x into e from jsonb_array_elements(public.admin_house_member_attendance('30000000-0000-0000-0000-000000000013', 2026)->'events') x
+ where x->>'event_id' = '40000000-0000-0000-0000-000000000002';
+ if e is null or e->>'reason' <> 'overlapping_houses'
+    or e->>'house_name' not like '%Twilight%'
+    or e->>'house_name' not like '%Rarity%'
+    or e->>'house_profile_id' is not null then
+   raise exception 'FAIL: overlapping active Houses must both be shown, without a misleading single House id: %', e;
+ end if;
+ raise notice 'PASS: overlapping active Houses are visible for follow-up, not silently picked.';
 end $$;
