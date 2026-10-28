@@ -83,12 +83,16 @@ describe('HouseEventsRepository — public read surface excludes drafts (#292)',
 });
 
 describe('HouseEventsRepository — behaviour', () => {
-  it('returns a linked event only when this House hosts it', async () => {
-    const row = { id: 'ev-1', house_profile_id: 'hp-other', is_published: true, houses: [{ house_page_asset_id: 'hp-other', house: { id: 'hp-other', is_active: true } }] };
+  it('returns a linked event only when this House hosts it using published profiles', async () => {
+    const row = { id: 'ev-1', house_profile_id: 'hp-other', is_published: true, houses: [{ house_page_asset_id: 'hp-other' }] };
     supabaseMock.queueResult('house_events', { data: row, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [{ id: 'hp-other', is_active: true }], error: null });
     await expect(houseEventsRepository.getPublicEventForHouse('ev-1', HOUSE_ID)).resolves.toBeNull();
-    supabaseMock.queueResult('house_events', { data: { ...row, houses: [...row.houses, { house_page_asset_id: HOUSE_ID, house: { id: HOUSE_ID, is_active: true } }] }, error: null });
+
+    supabaseMock.queueResult('house_events', { data: { ...row, houses: [...row.houses, { house_page_asset_id: HOUSE_ID }] }, error: null });
+    supabaseMock.queueResult('published_house_page_assets', { data: [{ id: 'hp-other', is_active: true }, { id: HOUSE_ID, is_active: true }], error: null });
     await expect(houseEventsRepository.getPublicEventForHouse('ev-1', HOUSE_ID)).resolves.toMatchObject({ id: 'ev-1' });
+
     supabaseMock.queueResult('house_events', { data: null, error: null });
     await expect(houseEventsRepository.getPublicEventForHouse('missing', HOUSE_ID)).resolves.toBeNull();
   });
@@ -101,7 +105,7 @@ describe('HouseEventsRepository — behaviour', () => {
           { house_page_asset_id: 'hp-a', house: null },
           { house_page_asset_id: 'hp-b', house: null },
           // An admin's embed can include a not-yet-public profile; never show it.
-          { house_page_asset_id: 'hp-hidden', house: { id: 'hp-hidden', display_name: 'Hidden', is_active: false } },
+          { house_page_asset_id: 'hp-hidden' },
         ],
       }],
       error: null,
@@ -115,6 +119,31 @@ describe('HouseEventsRepository — behaviour', () => {
     expect(event.houses?.map((h) => h.id)).toEqual(['hp-b', 'hp-a']);
     expect(supabaseMock.queriesFor('published_house_page_assets')).toHaveLength(1);
   });
+
+  it.each(Object.keys(PUBLIC_READ_INVOCATIONS))('%s never embeds the private House profile table', async (methodName) => {
+    await PUBLIC_READ_INVOCATIONS[methodName]();
+    const selects = supabaseMock.queriesFor('house_events')
+      .flatMap(({ calls }) => calls)
+      .filter(({ method }) => method === 'select')
+      .map(({ args }) => String(args[0]));
+    expect(selects).toHaveLength(1);
+    expect(selects[0]).toContain('houses:house_event_houses(house_page_asset_id)');
+    expect(selects[0]).not.toContain('house_page_assets(*)');
+  });
+
+  it.each(['getPublicUpcomingForHouse', 'getPublicPastForHouse'] as const)(
+    '%s propagates an association permission error before reading events',
+    async (name) => {
+      supabaseMock.queueResult('house_event_houses', {
+        data: null,
+        error: postgrestError('permission denied for table house_event_houses', '42501'),
+      });
+      await expect(houseEventsRepository[name](HOUSE_ID, TODAY)).rejects.toMatchObject({
+        message: 'Insufficient permissions',
+      });
+      expect(supabaseMock.queriesFor('house_events')).toHaveLength(0);
+    },
+  );
 
   it('returns an empty list when there are no published events', async () => {
     supabaseMock.queueResult('house_events', { data: [], error: null });
