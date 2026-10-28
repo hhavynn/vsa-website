@@ -30,7 +30,7 @@ export interface HouseRoster {
 }
 
 export type AttendanceReason =
-  | 'counted' | 'before_house_start' | 'no_house' | 'house_not_public' | 'no_points' | 'no_term' | 'no_date' | 'before_ledger';
+  | 'counted' | 'overlapping_houses' | 'before_house_start' | 'no_house' | 'house_not_public' | 'no_points' | 'no_term' | 'no_date' | 'before_ledger';
 
 export interface MemberAttendanceEvent {
   event_id: string;
