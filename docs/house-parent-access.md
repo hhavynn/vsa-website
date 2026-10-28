@@ -1,10 +1,10 @@
 # House Parent access (#654): design and the interim share copy
 
-Status (2026-10-28): **no House Parent login exists, and none should be built until CRC/cabinet approve it in writing.** Until then, the only way House Parents see their House's participation is the admin-reviewed **share copy** below. House points and standings stay embargoed (#692); official GBM results are #693.
+Status (2026-10-28): **no House Parent login exists, and none should be built until CRC/cabinet approve it in writing.** The proposed admin-reviewed **share copy** is implemented but disabled by default pending written approval; no member-level attendance exports may be sent until CRC/cabinet confirm the field list. House points and standings stay embargoed (#692); official GBM results are #693.
 
-## Interim: admin-reviewed share copy (shipped)
+## Interim: admin-reviewed share copy (blocked pending approval)
 
-Admin → Houses → Overview → **Open roster** → **Prepare a copy for House Parents**. An admin sees exactly which columns are included, confirms, and downloads a CSV of that one House for the chosen period. It contains **only members publicly revealed in this House today**, using the same Reveal boundary as the public site (published House assignments, `public_house_memberships`); before the Reveal, or for members who transferred out, nothing is included and the button explains why. The admin then shares it privately with that House's own Parents.
+Admin → Houses → Overview → **Open roster** → **Prepare a copy for House Parents**. The UI currently disables this action with an approval notice. After dated CRC/cabinet sign-off and a separately reviewed change to `HOUSE_PARENT_SHARE_APPROVED`, an admin would see the approved columns, confirm, and download a CSV of that one House for the chosen period. It contains **only members publicly revealed in this House today**, using the same Reveal boundary as the public site (published House assignments, `public_house_memberships`); before the Reveal, or for members who transferred out, nothing is included and the button explains why. The admin then shares it privately with that House's own Parents.
 
 | Column | Meaning |
 |---|---|
@@ -13,7 +13,7 @@ Admin → Houses → Overview → **Open roster** → **Prepare a copy for House
 | Attended a House-credited event | Yes / No for the period |
 | Last House-credited event | Date of the latest one |
 
-Never included: email, phone, date of birth, member ids, notes, application answers, any other House, and **any per-member count**. House points are a count of credited attendance (`house_yearly_points.total_points = count(*)`), so per-member counts would add up to the embargoed House score, and Parents of two Houses comparing files would recover the ranking. Cells are formula-safe (`csvCell`), and the file starts with a UTF-8 byte order mark so Vietnamese names open correctly in Excel. This list (`HOUSE_PARENT_SHARE_FIELDS` in `src/lib/houseParentShare.ts`) is **provisional until CRC/cabinet approve it**; change the code and this table together.
+Never included: email, phone, date of birth, member ids, notes, application answers, any other House, and **any per-member count**. House points are the **sum of awarded `points_earned`**, not the number of attendances. Member participation and per-member counts can still reveal sensitive standings or enable inferences when files are compared; they remain excluded until leadership approves appropriate sharing. Cells are formula-safe (`csvCell`), and the file starts with a UTF-8 byte order mark so Vietnamese names open correctly in Excel. This list (`HOUSE_PARENT_SHARE_FIELDS` in `src/lib/houseParentShare.ts`) is **provisional and disabled** until CRC/cabinet record the approval date, approvers, allowed recipients, fields, revocation rules and distribution instructions. Change the code and this table together only after approval.
 
 No new accounts, roles, grants or RLS were added. Nothing here gives a House Parent access to the site.
 
