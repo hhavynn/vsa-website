@@ -19,7 +19,7 @@ create table public.house_memberships (member_id uuid, house_profile_id uuid, ac
 create table public.import_jobs (id uuid primary key, event_id uuid, status text, created_at timestamptz, completed_at timestamptz, total_rows integer, review_rows integer, error_count integer);
 create table public.import_job_rows (id uuid primary key, import_job_id uuid, event_id uuid, decision text, attendance_member_id uuid, matched_member_id uuid, csv_email text, match_details jsonb);
 create table public.import_recovery_actions (id uuid primary key, import_job_row_id uuid, previous_action_id uuid, resulting_status text);
-create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), event_id uuid, outcome text default 'already_credited', created_at timestamptz default now());
+create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), event_id uuid, source_row integer, outcome text default 'already_credited', created_at timestamptz default now());
 
 create view public.house_yearly_points as
  SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (count(*))::integer AS total_points
@@ -31,6 +31,7 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028090000_admin_event_attendance_readiness.sql
+\ir ../../supabase/migrations/20261028120000_attendance_readiness_resolved_reconciliation.sql
 set client_min_messages = notice;
 
 insert into public.academic_terms values
@@ -110,9 +111,12 @@ insert into public.import_recovery_actions values
  ('70000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000002', 'dismissed'),
  ('70000000-0000-0000-0000-000000000004', '60000000-0000-0000-0000-000000000004', null, 'investigating');
 insert into public.attendance_reconciliation_log (event_id, created_at) values ('40000000-0000-0000-0000-000000000007', '2026-10-26');
-insert into public.attendance_reconciliation_log (event_id, outcome, created_at) values
- ('40000000-0000-0000-0000-000000000011', 'credit_inserted', '2026-10-28'),
- ('40000000-0000-0000-0000-000000000011', 'pending_review', '2026-10-28');
+insert into public.attendance_reconciliation_log (event_id, source_row, outcome, created_at) values
+ ('40000000-0000-0000-0000-000000000011', 1, 'credit_inserted', '2026-10-28'),
+ ('40000000-0000-0000-0000-000000000011', 2, 'pending_review', '2026-10-28'),
+ -- row 3 was pending, then resolved by an admin: no longer pending
+ ('40000000-0000-0000-0000-000000000011', 3, 'pending_review', '2026-10-28'),
+ ('40000000-0000-0000-0000-000000000011', 3, 'resolved_by_admin', '2026-10-28 01:00');
 
 grant select on all tables in schema public to authenticated;
 revoke all on public.event_attendance_attestations from authenticated;
@@ -170,7 +174,7 @@ begin
  raise notice 'PASS: a clean re-import supersedes a failed import''s rows.';
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000011';
  if (e->>'reconciliation_pending_rows')::int <> 1 then raise exception 'FAIL: pending reconciliation rows not reported %', e; end if;
- raise notice 'PASS: a reconciliation run with pending rows is reported as such.';
+ raise notice 'PASS: a reconciliation run with pending rows is reported as such, and a row resolved later is not.';
 
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000001';
  if e->'house_credits' <> '[{"credits": 1, "display_name": "Twilight Sparkle", "house_profile_id": "20000000-0000-0000-0000-000000000001"}]'::jsonb then
