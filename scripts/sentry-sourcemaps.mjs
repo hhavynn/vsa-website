@@ -47,10 +47,15 @@ export function uploadSourceMaps({
   log = console.log,
   warn = console.warn,
 } = {}) {
-  const token = env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKENS;
+  // A pasted value can carry a stray space or line break; Sentry rejects those.
+  const token = (env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKENS || '').trim();
   if (!token) {
     log('Sentry source maps: SENTRY_AUTH_TOKEN is not set, so nothing was uploaded and the maps were kept.');
     return 'skipped';
+  }
+  if (/\s/.test(token)) {
+    warn('Sentry source maps: the token contains whitespace inside it (for example a "Bearer " prefix), so nothing was uploaded and the maps were kept. Re-enter just the sntrys_... value.');
+    return 'invalid-token';
   }
 
   const maps = findSourceMaps(buildDir);

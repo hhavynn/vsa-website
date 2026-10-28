@@ -65,6 +65,44 @@ test('accepts the token under SENTRY_AUTH_TOKENS and hands it to sentry-cli, nev
   assert.deepEqual(findSourceMaps(dir), []);
 });
 
+test('trims surrounding whitespace from the token before handing it to sentry-cli', () => {
+  const dir = fakeBuild();
+  const tokens = [];
+  const result = uploadSourceMaps({
+    env: { SENTRY_AUTH_TOKENS: '  sntrys_padded \n' },
+    buildDir: dir,
+    exec: (args, token) => tokens.push(token),
+    ...quiet,
+  });
+  assert.equal(result, 'uploaded');
+  assert.deepEqual(tokens, ['sntrys_padded', 'sntrys_padded']);
+});
+
+test('a token with whitespace inside is not sent, the maps are kept, and the value is never logged', () => {
+  const dir = fakeBuild();
+  const calls = [];
+  const messages = [];
+  const result = uploadSourceMaps({
+    env: { SENTRY_AUTH_TOKENS: 'Bearer sntrys_secretvalue' },
+    buildDir: dir,
+    exec: (args) => calls.push(args),
+    log: (message) => messages.push(message),
+    warn: (message) => messages.push(message),
+  });
+  assert.equal(result, 'invalid-token');
+  assert.deepEqual(calls, []);
+  assert.equal(findSourceMaps(dir).length, 3);
+  assert.equal(messages.join(' ').includes('secretvalue'), false);
+});
+
+test('a whitespace-only token counts as unset', () => {
+  const dir = fakeBuild();
+  const calls = [];
+  const result = uploadSourceMaps({ env: { SENTRY_AUTH_TOKEN: '  \n' }, buildDir: dir, exec: (args) => calls.push(args), ...quiet });
+  assert.equal(result, 'skipped');
+  assert.deepEqual(calls, []);
+});
+
 test('a failed upload keeps the maps and does not throw', () => {
   const dir = fakeBuild();
   const result = uploadSourceMaps({
