@@ -24,6 +24,11 @@ test('blocks unreviewed literal bracket and optional-chained client variables', 
     'process.env?.["REACT_APP_PRIVATE_ACCESS_KEY"]',
     'import.meta.env[`REACT_APP_PRIVATE_ACCESS_KEY`]',
     'process.env?.REACT_APP_PRIVATE_ACCESS_KEY',
+    'process?.env.REACT_APP_PRIVATE_ACCESS_KEY',
+    "process?.env['REACT_APP_PRIVATE_ACCESS_KEY']",
+    'process?.env?.["REACT_APP_PRIVATE_ACCESS_KEY"]',
+    "import.meta?.env['REACT_APP_PRIVATE_ACCESS_KEY']",
+    'import.meta?.env?.REACT_APP_PRIVATE_ACCESS_KEY',
     'import.meta.env . REACT_APP_PRIVATE_ACCESS_KEY',
   ];
   for (const form of forms) {
@@ -32,6 +37,8 @@ test('blocks unreviewed literal bracket and optional-chained client variables', 
   }
   assert.deepEqual(inspectText('src/config.ts', 'process.env["REACT_APP_SUPABASE_ANON_KEY"]'), []);
   assert.deepEqual(inspectText('src/config.ts', "import.meta.env?.['REACT_APP_GA4_MEASUREMENT_ID']"), []);
+  assert.deepEqual(inspectText('src/config.ts', "process?.env?.['REACT_APP_SUPABASE_ANON_KEY']"), []);
+  assert.deepEqual(inspectText('src/config.ts', "import.meta?.env.REACT_APP_GA4_MEASUREMENT_ID"), []);
   assert.deepEqual(inspectText('docs/README.md', 'process.env["REACT_APP_PRIVATE_ACCESS_KEY"]'), []);
 });
 
