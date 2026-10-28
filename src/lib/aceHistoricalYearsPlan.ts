@@ -110,7 +110,7 @@ export function reviewSheetCsv(rows: readonly NodeReconciliation[], sourceVersio
   return `${lines.join('\n')}\n`;
 }
 
-export type ReviewQueue = 'ambiguous_identity' | 'conflicting_years' | 'missing_evidence' | 'chronology' | 'ready_for_review';
+export type ReviewQueue = 'ambiguous_identity' | 'conflicting_years' | 'missing_evidence' | 'chronology' | 'roots' | 'ready_for_review';
 
 /** Which follow-up list a row belongs on. A row can be on several. */
 export function reviewQueues(row: NodeReconciliation): ReviewQueue[] {
@@ -119,12 +119,14 @@ export function reviewQueues(row: NodeReconciliation): ReviewQueue[] {
     row.flags.includes('AMBIGUOUS_IDENTITY') ||
     row.flags.includes('SAME_NAME_IN_FAM') ||
     row.flags.includes('SOURCE_BIG_DIFFERS') ||
+    row.flags.includes('SOURCE_FAM_LABEL_DIFFERS') ||
     row.flags.includes('CANONICAL_MEMBER_ON_SEVERAL_NODES')
   )
     queues.push('ambiguous_identity');
   if (row.confidence_class === 'CONFLICTING_EVIDENCE') queues.push('conflicting_years');
   if (row.flags.includes('CHILD_EARLIER_THAN_BIG') || row.flags.includes('SAME_TERM_AS_BIG')) queues.push('chronology');
   if (row.confidence_class === 'UNKNOWN') queues.push('missing_evidence');
+  if (!row.current_big_node_id) queues.push('roots');
   if (row.confidence_class === 'CONFIRMED_YEAR' || row.confidence_class === 'STRONG_CANDIDATE' || row.confidence_class === 'SUSPECTED_YEAR')
     queues.push('ready_for_review');
   return queues;
@@ -142,6 +144,9 @@ export interface ReviewRow {
   fam_id: string;
   member_name: string;
   current_big_node_id: string;
+  current_big_name: string;
+  existing_pickup_term: string;
+  existing_pickup_academic_year: string;
   confidence_class: string;
   reviewer_decision: string;
   reviewer_confirmed_year: string;
@@ -157,7 +162,16 @@ function unguard(value: string): string {
 export function parseReviewSheet(csvText: string): ReviewRow[] {
   const table = parseCsvTable(csvText);
   if (table.unterminatedQuote) throw new Error(`Review sheet has an unclosed quote starting on line ${table.unterminatedQuoteLine}.`);
-  const required: ReviewColumn[] = ['ace_node_id', 'fam_id', 'member_name', 'current_big_node_id', ...REVIEWER_COLUMNS];
+  const required: ReviewColumn[] = [
+    'ace_node_id',
+    'fam_id',
+    'member_name',
+    'current_big_node_id',
+    'current_big_name',
+    'existing_pickup_term',
+    'existing_pickup_academic_year',
+    ...REVIEWER_COLUMNS,
+  ];
   const missing = required.filter((c) => !table.headers.includes(c));
   if (missing.length > 0) throw new Error(`Review sheet is missing column(s): ${missing.join(', ')}.`);
   return table.rows.map((raw, i) => ({
@@ -166,6 +180,9 @@ export function parseReviewSheet(csvText: string): ReviewRow[] {
     fam_id: unguard(raw.fam_id ?? ''),
     member_name: unguard(raw.member_name ?? ''),
     current_big_node_id: unguard(raw.current_big_node_id ?? ''),
+    current_big_name: unguard(raw.current_big_name ?? ''),
+    existing_pickup_term: unguard(raw.existing_pickup_term ?? ''),
+    existing_pickup_academic_year: unguard(raw.existing_pickup_academic_year ?? ''),
     confidence_class: unguard(raw.confidence_class ?? ''),
     reviewer_decision: unguard(raw.reviewer_decision ?? ''),
     reviewer_confirmed_year: unguard(raw.reviewer_confirmed_year ?? ''),
@@ -188,7 +205,8 @@ export interface PlanUpdate {
   expected_parent_member_id: string | null;
   previous: PickupValues;
   next: PickupValues;
-  confidence_class: string;
+  /** As recorded in the review sheet (reviewer-editable); re-check against a fresh reconcile before applying. */
+  review_sheet_confidence_class: string;
   evidence_category: string;
   overwrites_existing_value: boolean;
   sheet_row: number;
@@ -203,6 +221,8 @@ export interface PlanRejection {
 export interface BackfillPlan {
   mode: 'dry-run';
   columns: readonly PickupColumn[];
+  /** False when planned against a snapshot without #669's columns: previous values are assumed blank and the plan is a preview only. */
+  snapshot_has_pickup_columns: boolean;
   max_academic_year_start: number;
   updates: PlanUpdate[];
   /** Approved rows whose live values already equal the approved values. */
@@ -224,13 +244,27 @@ const EVIDENCE_CATEGORY: Record<string, string> = {
 
 export interface PlanOptions {
   maxAcademicYearStart: number;
+  /**
+   * Allow a snapshot without the pickup columns (before #669). The plan then
+   * assumes every current value is blank, so it is a preview, not idempotent.
+   */
+  allowMissingPickupColumns?: boolean;
 }
+
+/** In reviewer_confirmed_term, removes an existing term while keeping the year. */
+export const CLEAR_TERM = 'CLEAR';
 
 /**
  * Builds the year-only update plan from reviewer-approved rows. Never writes.
  * Repeating it after the plan was applied yields zero updates.
  */
 export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSnapshot, options: PlanOptions): BackfillPlan {
+  const hasColumns = snapshot.hasPickupColumns !== false;
+  if (!hasColumns && !options.allowMissingPickupColumns) {
+    throw new Error(
+      'The live snapshot has no pickup_term / pickup_academic_year_start: the plan cannot see current values. Re-snapshot with those columns (#669), or pass the pre-#669 preview option.'
+    );
+  }
   const live = new Map(snapshot.nodes.map((n) => [n.id, n] as const));
   const rejected: PlanRejection[] = [];
   const updates: PlanUpdate[] = [];
@@ -267,13 +301,29 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
       reject('Big changed since review (live Big kept; re-review)');
       continue;
     }
+    const liveBigName = node.parent_member_id ? live.get(node.parent_member_id)?.name ?? '' : '';
+    if (nameKeys(liveBigName).exact !== nameKeys(row.current_big_name).exact) {
+      reject('the live Big was renamed since review (re-review)');
+      continue;
+    }
     if (nameKeys(node.name).exact !== nameKeys(row.member_name).exact) {
       reject('name differs from the live node (names are never changed by this plan)');
       continue;
     }
-    const year = parseAcademicYear(row.reviewer_confirmed_year);
+    const previous: PickupValues = { pickup_term: node.pickup_term ?? null, pickup_academic_year_start: node.pickup_academic_year_start ?? null };
+    const reviewedYear = row.existing_pickup_academic_year.trim() ? parseAcademicYear(row.existing_pickup_academic_year) : null;
+    const reviewedTerm = row.existing_pickup_term.trim() ? parseTerm(row.existing_pickup_term)?.term ?? row.existing_pickup_term.trim() : null;
+    if (reviewedYear !== previous.pickup_academic_year_start || reviewedTerm !== previous.pickup_term) {
+      reject('the live year/term changed since review (a later correction is never overwritten; re-review)');
+      continue;
+    }
+    const year = parseAcademicYear(row.reviewer_confirmed_year, true);
     if (year === null) {
-      reject(row.reviewer_confirmed_year.trim() ? `reviewer_confirmed_year "${row.reviewer_confirmed_year}" is not an academic year` : 'approved without reviewer_confirmed_year');
+      reject(
+        row.reviewer_confirmed_year.trim()
+          ? `reviewer_confirmed_year "${row.reviewer_confirmed_year}" is not an academic year like 2021–22`
+          : 'approved without reviewer_confirmed_year'
+      );
       continue;
     }
     if (year > options.maxAcademicYearStart) {
@@ -281,7 +331,12 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
       continue;
     }
     let term: string | null = null;
-    if (row.reviewer_confirmed_term.trim()) {
+    const termInput = row.reviewer_confirmed_term.trim();
+    if (termInput.toUpperCase() === CLEAR_TERM) term = null;
+    else if (!termInput) {
+      // A year-only approval keeps a term already recorded for that same year.
+      term = previous.pickup_academic_year_start === year ? previous.pickup_term : null;
+    } else {
       const parsed = parseTerm(row.reviewer_confirmed_term);
       if (!parsed) {
         reject(`reviewer_confirmed_term "${row.reviewer_confirmed_term}" is not a FA/WI/SP term`);
@@ -293,7 +348,6 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
       }
       term = parsed.term;
     }
-    const previous: PickupValues = { pickup_term: node.pickup_term ?? null, pickup_academic_year_start: node.pickup_academic_year_start ?? null };
     const next: PickupValues = { pickup_term: term, pickup_academic_year_start: year };
     if (previous.pickup_term === next.pickup_term && previous.pickup_academic_year_start === next.pickup_academic_year_start) {
       unchanged.push({ ace_node_id: node.id, sheet_row: row.sheetRow });
@@ -305,7 +359,7 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
       expected_parent_member_id: node.parent_member_id,
       previous,
       next,
-      confidence_class: row.confidence_class,
+      review_sheet_confidence_class: row.confidence_class,
       evidence_category: EVIDENCE_CATEGORY[row.confidence_class] ?? 'reviewer_supplied',
       overwrites_existing_value: previous.pickup_term !== null || previous.pickup_academic_year_start !== null,
       sheet_row: row.sheetRow,
@@ -313,7 +367,16 @@ export function buildBackfillPlan(review: readonly ReviewRow[], snapshot: LiveSn
   }
 
   updates.sort((a, b) => a.ace_node_id.localeCompare(b.ace_node_id));
-  return { mode: 'dry-run', columns: PICKUP_COLUMNS, max_academic_year_start: options.maxAcademicYearStart, updates, unchanged, rejected, not_approved: notApproved };
+  return {
+    mode: 'dry-run',
+    columns: PICKUP_COLUMNS,
+    snapshot_has_pickup_columns: hasColumns,
+    max_academic_year_start: options.maxAcademicYearStart,
+    updates,
+    unchanged,
+    rejected,
+    not_approved: notApproved,
+  };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -339,20 +402,27 @@ function sqlYear(value: number | null): string {
  * A review-only SQL preview. It runs in one transaction and ENDS IN ROLLBACK:
  * applying it for real is a separate, owner-approved step through the manual
  * production change path, after #669's columns exist. Each statement sets only
- * the two pickup columns, is guarded on the node's live fam and Big and on the
- * reviewed previous values, and raises with the node id unless exactly one row
- * changes, so a partial or stale apply stops at the exact row.
+ * the two pickup columns and is guarded on the node's live fam and Big and on
+ * the reviewed previous values. A row that does not change exactly once is
+ * recorded, and at the end every such node id is reported together and the
+ * whole transaction is aborted: nothing is half-applied.
  */
 export function planSqlPreview(plan: BackfillPlan): string {
   const lines: string[] = [
     '-- ACE pickup-year backfill PREVIEW (#670). Generated; review-only.',
     `-- ${plan.updates.length} update(s), ${plan.unchanged.length} already applied, ${plan.rejected.length} rejected.`,
     `-- Writes only: ${PICKUP_COLUMNS.join(', ')}. Requires the #669 columns.`,
-    '-- Back up first:',
-    '--   create table <private_backup> as select id, pickup_term, pickup_academic_year_start',
+  ];
+  if (!plan.snapshot_has_pickup_columns) {
+    lines.push('-- WARNING: planned against a snapshot WITHOUT pickup columns; previous values were assumed blank.', '-- Regenerate from a post-#669 snapshot before any real apply.');
+  }
+  lines.push(
+    '-- Back up first, into a schema the API does not expose (never public, which gets anon grants):',
+    '--   create table <private_schema>.ace_pickup_backup_<date> as select id, pickup_term, pickup_academic_year_start',
     '--   from public.ace_family_members where id in (<plan ids>);',
     'begin;',
-  ];
+    'create temporary table ace_pickup_plan_failures (ace_node_id uuid primary key, changed integer not null);'
+  );
   for (const u of plan.updates) {
     const prevTerm = u.previous.pickup_term === null ? 'pickup_term is null' : `pickup_term = ${sqlTerm(u.previous.pickup_term)}`;
     const prevYear =
@@ -372,10 +442,19 @@ export function planSqlPreview(plan: BackfillPlan): string {
       `     and ${prevTerm}`,
       `     and ${prevYear};`,
       '  get diagnostics changed = row_count;',
-      `  if changed <> 1 then raise exception 'ace node ${u.ace_node_id.toLowerCase()}: expected 1 row, changed %', changed; end if;`,
+      `  if changed <> 1 then insert into ace_pickup_plan_failures values (${sqlUuid(u.ace_node_id)}, changed); end if;`,
       'end $$;'
     );
   }
-  lines.push('rollback;', '');
+  lines.push(
+    'do $$',
+    'declare failed text;',
+    'begin',
+    "  select string_agg(ace_node_id::text || ' (' || changed || ' rows)', ', ' order by ace_node_id) into failed from ace_pickup_plan_failures;",
+    "  if failed is not null then raise exception 'ACE pickup plan aborted; these nodes did not match their reviewed state: %', failed; end if;",
+    'end $$;',
+    'rollback;',
+    ''
+  );
   return lines.join('\n');
 }

@@ -30,23 +30,38 @@ export interface ParsedTerm {
  * FA21 → 2021–22; WI22 and SP22 → 2021–22. FA23 (2023–24) and SP23 (2022–23)
  * are different academic years even though they share a calendar year.
  */
+// ACE's records start in the 2010s; two-digit years are read as 20xx and must
+// land in this window, so "SP'99" is rejected instead of becoming 2098.
+export const EARLIEST_ACADEMIC_YEAR = 2005;
+export const LATEST_ACADEMIC_YEAR = 2069;
+
 export function parseTerm(raw: string | null | undefined): ParsedTerm | null {
   const match = /^\s*(FA|WI|SP)\s*'?(\d{2}|\d{4})\s*$/i.exec(raw ?? '');
   if (!match) return null;
   const season = match[1].toUpperCase();
   const digits = match[2];
   const calendarYear = digits.length === 4 ? Number(digits) : 2000 + Number(digits);
+  if (calendarYear < EARLIEST_ACADEMIC_YEAR || calendarYear > LATEST_ACADEMIC_YEAR + 1) return null;
   const academicYearStart = season === 'FA' ? calendarYear : calendarYear - 1;
   return { term: `${season}${String(calendarYear % 100).padStart(2, '0')}`, academicYearStart };
 }
 
-/** "2021", "2021-22", "2021–22", "2021-2022" → 2021. Anything else → null. */
-export function parseAcademicYear(raw: string | number | null | undefined): number | null {
-  if (typeof raw === 'number') return Number.isInteger(raw) && raw >= 1990 && raw <= 2100 ? raw : null;
+function inYearRange(year: number): boolean {
+  return Number.isInteger(year) && year >= EARLIEST_ACADEMIC_YEAR && year <= LATEST_ACADEMIC_YEAR;
+}
+
+/**
+ * "2021-22", "2021–22", "2021-2022" → 2021. A bare "2021" is accepted only
+ * when `requireSpan` is false: a reviewer typing "2022" could mean SP22's
+ * calendar year (2021–22) or 2022–23.
+ */
+export function parseAcademicYear(raw: string | number | null | undefined, requireSpan = false): number | null {
+  if (typeof raw === 'number') return !requireSpan && inYearRange(raw) ? raw : null;
   const match = /^\s*(\d{4})\s*(?:[-–—/]\s*(\d{2}|\d{4}))?\s*$/.exec(raw ?? '');
   if (!match) return null;
   const start = Number(match[1]);
-  if (start < 1990 || start > 2100) return null;
+  if (!inYearRange(start)) return null;
+  if (requireSpan && !match[2]) return null;
   if (match[2]) {
     const end = match[2].length === 2 ? Math.floor(start / 100) * 100 + Number(match[2]) : Number(match[2]);
     if (end !== start + 1) return null;
@@ -197,6 +212,11 @@ export interface LiveNode {
 export interface LiveSnapshot {
   families: LiveFamily[];
   nodes: LiveNode[];
+  /**
+   * True when every node carried both pickup keys (#669). Without them a plan
+   * cannot know current values, so it is neither guarded nor idempotent.
+   */
+  hasPickupColumns?: boolean;
 }
 
 const liveFamilySchema = z.object({ id: z.string().min(1), slug: z.string().min(1), name: z.string() });
@@ -231,9 +251,11 @@ export function parseLiveSnapshot(families: unknown, nodes: unknown): LiveSnapsh
     if (!famIds.has(n.family_id)) throw new Error(`Node ${n.id} belongs to family ${n.family_id}, which is not in the families snapshot.`);
     nodeIds.add(n.id);
   }
+  const hasPickupColumns = (nodes as Record<string, unknown>[]).every((n) => 'pickup_term' in n && 'pickup_academic_year_start' in n);
   return {
     families: fams.data,
     nodes: rows.data.map((n) => ({ ...n, member_id: n.member_id ?? null })),
+    hasPickupColumns,
   };
 }
 
@@ -247,8 +269,9 @@ export interface EvidenceSource {
   /** False when the source could not be read in full; its rows can never confirm a year. */
   extraction_complete: boolean;
   /**
-   * False for a pairing list that looks complete but is not labelled official
-   * or final. Its rows can never confirm a year. Defaults to true.
+   * True only for a pairing list labelled official/final (or otherwise
+   * verified by a person). Anything else, including a missing value, can never
+   * confirm a year.
    */
   authoritative?: boolean;
   location?: string;
@@ -275,11 +298,14 @@ export interface EvidenceBundle {
 }
 
 const evidenceKindSchema = z.enum(['official_pairing', 'repo_added_term', 'master_year_cell']);
+/** Source ids appear in the aggregate summary, so they may not carry free text. */
+export const SOURCE_ID_PATTERN = /^[A-Z0-9_]{1,64}$/;
+const sourceIdSchema = z.string().regex(SOURCE_ID_PATTERN, 'source_id must be A-Z, 0-9 or _');
 const evidenceFileSchema = z.object({
   schema: z.literal('ace-pickup-evidence/v1'),
   sources: z.array(
     z.object({
-      source_id: z.string().min(1),
+      source_id: sourceIdSchema,
       kind: evidenceKindSchema,
       label: z.string(),
       term: z.string().nullable().optional(),
@@ -291,7 +317,7 @@ const evidenceFileSchema = z.object({
   ),
   records: z.array(
     z.object({
-      source_id: z.string().min(1),
+      source_id: sourceIdSchema,
       kind: evidenceKindSchema,
       little: z.string(),
       big: z.string().nullable().optional(),
@@ -331,6 +357,7 @@ export function mergeEvidence(bundles: readonly EvidenceBundle[]): EvidenceBundl
   const seen = new Set<string>();
   for (const b of bundles) {
     for (const s of b.sources) {
+      if (!SOURCE_ID_PATTERN.test(s.source_id)) throw new Error(`Source id ${JSON.stringify(s.source_id)} must be A-Z, 0-9 or _.`);
       if (seen.has(s.source_id)) throw new Error(`Two evidence files declare source ${s.source_id}.`);
       seen.add(s.source_id);
       sources.push(s);
@@ -356,13 +383,25 @@ export type IdentityMatch =
   /** More than one live node fits; never guessed. */
   | 'ambiguous';
 
+export type EvidenceMarker =
+  /** The source's fam label names a different live fam than the matched node's. */
+  | 'fam_label_differs'
+  /** An AAF label reached Moon through the documented archive split. */
+  | 'aaf_to_moon'
+  | 'loose_spelling'
+  | 'legacy'
+  /** A term that is neither FA/WI/SP nor `legacy` ("Fall 2023", "SU22"). */
+  | 'unparseable_term'
+  /** An official row with no Big, matched to a live root. */
+  | 'no_source_big';
+
 export interface MatchedEvidence {
   record: EvidenceRecord;
   source: EvidenceSource;
   identity: IdentityMatch;
   academicYearStart: number | null;
   term: string | null;
-  notes: string[];
+  markers: EvidenceMarker[];
 }
 
 interface IndexedNode {
@@ -423,7 +462,7 @@ function looseCandidates(index: TreeIndex, keys: NameKeys): IndexedNode[] {
 interface MatchOutcome {
   targets: IndexedNode[];
   identity: IdentityMatch;
-  notes: string[];
+  markers: EvidenceMarker[];
 }
 
 function matchPairRecord(index: TreeIndex, record: EvidenceRecord, scope: 'global' | 'fam'): MatchOutcome | null {
@@ -431,31 +470,43 @@ function matchPairRecord(index: TreeIndex, record: EvidenceRecord, scope: 'globa
   const big = record.big && record.big.trim() ? nameKeys(record.big) : null;
   if (!little.exact) return null;
   const fam = resolveFam(record.fam_hint, index.families);
-  const notes: string[] = [];
-  if (fam.via === 'historic_fallback') notes.push('fam label resolved through the documented AAF→Moon archive split');
+  const markers: EvidenceMarker[] = [];
+  if (fam.via === 'historic_fallback') markers.push('aaf_to_moon');
+  if (!big) markers.push('no_source_big');
   const inFam = (e: IndexedNode) => fam.familyIds.includes(e.node.family_id);
   const scoped = (list: IndexedNode[]) => (scope === 'fam' ? list.filter(inFam) : list);
+  const sameNameInLabelledFam = (except: IndexedNode) => (index.byExact.get(little.exact) ?? []).filter((e) => e !== except && inFam(e));
 
   const exactPairs = scoped(index.byExact.get(little.exact) ?? []).filter((e) => bigMatchesExact(e, big));
   if (exactPairs.length === 1) {
-    if (scope === 'global' && fam.familyIds.length > 0 && !inFam(exactPairs[0])) notes.push('source fam label differs from the live fam (kept live)');
-    return { targets: exactPairs, identity: 'exact_pair', notes };
+    const hit = exactPairs[0];
+    if (scope === 'global' && fam.familyIds.length > 0 && !inFam(hit)) {
+      // An obsolete label is fine on its own, but if the labelled fam has its
+      // own node with this name, the row could be about that person instead.
+      const rival = sameNameInLabelledFam(hit);
+      if (rival.length > 0) return { targets: [hit, ...rival], identity: 'ambiguous', markers: [...markers, 'fam_label_differs'] };
+      markers.push('fam_label_differs');
+    }
+    return { targets: exactPairs, identity: 'exact_pair', markers };
   }
   if (exactPairs.length > 1) {
     const narrowed = scope === 'global' ? exactPairs.filter(inFam) : [];
-    if (narrowed.length === 1) return { targets: narrowed, identity: 'exact_pair_fam_narrowed', notes };
-    return { targets: exactPairs, identity: 'ambiguous', notes: [...notes, `${exactPairs.length} live nodes share this Little and Big name`] };
+    if (narrowed.length === 1) return { targets: narrowed, identity: 'exact_pair_fam_narrowed', markers };
+    return { targets: exactPairs, identity: 'ambiguous', markers };
   }
 
   const loosePairs = scoped(looseCandidates(index, little)).filter((e) => bigMatchesLoose(e, big));
-  if (loosePairs.length === 1) return { targets: loosePairs, identity: 'loose_pair', notes: [...notes, 'matched through a looser spelling'] };
-  if (loosePairs.length > 1) return { targets: loosePairs, identity: 'ambiguous', notes: [...notes, `${loosePairs.length} live nodes fit a looser spelling`] };
+  if (loosePairs.length === 1) {
+    if (scope === 'global' && fam.familyIds.length > 0 && !inFam(loosePairs[0])) markers.push('fam_label_differs');
+    return { targets: loosePairs, identity: 'loose_pair', markers: [...markers, 'loose_spelling'] };
+  }
+  if (loosePairs.length > 1) return { targets: loosePairs, identity: 'ambiguous', markers: [...markers, 'loose_spelling'] };
 
   // Little found but under another Big. Never reparent: only report it.
   let sameName = index.byExact.get(little.exact) ?? [];
   if (fam.familyIds.length > 0 || scope === 'fam') sameName = sameName.filter(inFam);
-  if (sameName.length === 1) return { targets: sameName, identity: 'big_differs', notes: [...notes, 'source Big differs from the live Big (kept live)'] };
-  if (sameName.length > 1) return { targets: sameName, identity: 'ambiguous', notes: [...notes, `${sameName.length} same-name live nodes, none under the source Big`] };
+  if (sameName.length === 1) return { targets: sameName, identity: 'big_differs', markers };
+  if (sameName.length > 1) return { targets: sameName, identity: 'ambiguous', markers };
   return null;
 }
 
@@ -464,23 +515,25 @@ function matchNameInFam(index: TreeIndex, record: EvidenceRecord): MatchOutcome 
   if (!little.exact) return null;
   const fam = resolveFam(record.fam_hint, index.families);
   if (fam.familyIds.length === 0) return null;
-  const notes = fam.via === 'historic_fallback' ? ['fam label resolved through the documented AAF→Moon archive split'] : [];
+  const markers: EvidenceMarker[] = fam.via === 'historic_fallback' ? ['aaf_to_moon'] : [];
   const inFam = (e: IndexedNode) => fam.familyIds.includes(e.node.family_id);
   const exact = (index.byExact.get(little.exact) ?? []).filter(inFam);
-  if (exact.length === 1) return { targets: exact, identity: 'name_in_fam', notes };
-  if (exact.length > 1) return { targets: exact, identity: 'ambiguous', notes: [...notes, `${exact.length} same-name nodes in this fam`] };
+  if (exact.length === 1) return { targets: exact, identity: 'name_in_fam', markers };
+  if (exact.length > 1) return { targets: exact, identity: 'ambiguous', markers };
   const loose = looseCandidates(index, little).filter(inFam);
-  if (loose.length === 1) return { targets: loose, identity: 'loose_name_in_fam', notes: [...notes, 'matched through a looser spelling'] };
-  if (loose.length > 1) return { targets: loose, identity: 'ambiguous', notes: [...notes, `${loose.length} nodes fit a looser spelling`] };
+  if (loose.length === 1) return { targets: loose, identity: 'loose_name_in_fam', markers: [...markers, 'loose_spelling'] };
+  if (loose.length > 1) return { targets: loose, identity: 'ambiguous', markers: [...markers, 'loose_spelling'] };
   return null;
 }
 
-function recordYear(record: EvidenceRecord, source: EvidenceSource): { year: number | null; term: string | null; legacy: boolean } {
+function recordYear(record: EvidenceRecord, source: EvidenceSource): { year: number | null; term: string | null; marker: EvidenceMarker | null } {
   const rawTerm = (record.term ?? source.term ?? '').trim();
-  if (/^legacy$/i.test(rawTerm)) return { year: null, term: null, legacy: true };
+  if (/^legacy$/i.test(rawTerm)) return { year: null, term: null, marker: 'legacy' };
   const parsed = parseTerm(rawTerm);
-  if (parsed) return { year: parsed.academicYearStart, term: parsed.term, legacy: false };
-  return { year: record.academic_year_start ?? null, term: null, legacy: false };
+  if (parsed) return { year: parsed.academicYearStart, term: parsed.term, marker: null };
+  const year = record.academic_year_start ?? null;
+  if (year !== null && parseAcademicYear(year) !== null) return { year, term: null, marker: rawTerm ? 'unparseable_term' : null };
+  return { year: null, term: null, marker: 'unparseable_term' };
 }
 
 // ── Classification ──────────────────────────────────────────────────────────
@@ -514,7 +567,11 @@ export type ReviewFlag =
   | 'INCOMPLETE_SOURCE'
   | 'EXISTING_YEAR_DIFFERS'
   | 'MASTER_UNRELIABLE_IN_FAM'
-  | 'UNLABELLED_PAIRING_SOURCE';
+  | 'UNLABELLED_PAIRING_SOURCE'
+  | 'SOURCE_FAM_LABEL_DIFFERS'
+  | 'AAF_TO_MOON'
+  | 'UNPARSEABLE_TERM'
+  | 'OFFICIAL_ROW_WITHOUT_BIG';
 
 export interface NodeReconciliation {
   ace_node_id: string;
@@ -537,6 +594,11 @@ export interface NodeReconciliation {
   conflicting: MatchedEvidence[];
   /** Every year any matched source put forward, for the reviewer. */
   candidate_years: number[];
+  /**
+   * Strength of the evidence behind the recommended year, independent of any
+   * hold: 3 official (confirm-grade), 2 official/repo, 1 Master, 0 none/other.
+   */
+  year_strength: number;
 }
 
 export interface UnmatchedEvidence {
@@ -589,6 +651,10 @@ const FLAG_TEXT: Record<ReviewFlag, string> = {
   EXISTING_YEAR_DIFFERS: 'the live node already has a different year',
   MASTER_UNRELIABLE_IN_FAM: "this fam's Master year rows mostly disagree with its official/repo years",
   UNLABELLED_PAIRING_SOURCE: 'pairing list is not labelled official/final',
+  SOURCE_FAM_LABEL_DIFFERS: 'a source labels this person with another fam (live fam kept)',
+  AAF_TO_MOON: 'AAF-labelled evidence reached Moon through the archive split',
+  UNPARSEABLE_TERM: 'a matched source row has a term that is not FA/WI/SP',
+  OFFICIAL_ROW_WITHOUT_BIG: 'an official row names no Big for this root',
 };
 
 function distinct<T>(values: T[]): T[] {
@@ -635,11 +701,10 @@ export function reconcilePickupYears(snapshot: LiveSnapshot, evidence: EvidenceB
       unmatched.push({ record, reason: 'no_live_node' });
       continue;
     }
-    const { year, term, legacy } = recordYear(record, source);
-    const notes = [...outcome.notes];
-    if (legacy) notes.push('legacy');
+    const { year, term, marker } = recordYear(record, source);
+    const markers = marker ? [...outcome.markers, marker] : outcome.markers;
     for (const target of outcome.targets) {
-      push(matched, target.node.id, { record, source, identity: outcome.identity, academicYearStart: year, term, notes });
+      push(matched, target.node.id, { record, source, identity: outcome.identity, academicYearStart: year, term, markers });
     }
   }
 
@@ -719,12 +784,24 @@ function classifyNode(entry: IndexedNode, evidence: MatchedEvidence[], index: Tr
   const usable = dated.filter((e) => USABLE.includes(e.identity));
   const bigDiffers = dated.filter((e) => e.identity === 'big_differs');
   const ambiguous = dated.filter((e) => e.identity === 'ambiguous');
-  if (evidence.some((e) => e.notes.includes('legacy')) && dated.length === 0) flags.add('LEGACY_TERM_ONLY');
+  const marked = (m: EvidenceMarker) => evidence.some((e) => e.markers.includes(m));
+  if (marked('legacy') && dated.length === 0) flags.add('LEGACY_TERM_ONLY');
+  if (marked('unparseable_term')) flags.add('UNPARSEABLE_TERM');
+  if (marked('fam_label_differs')) flags.add('SOURCE_FAM_LABEL_DIFFERS');
+  if (marked('aaf_to_moon')) flags.add('AAF_TO_MOON');
 
+  // Confirm-grade: an authoritative, fully read official sheet naming this
+  // Little under this live Big. A Big-less row about a root never confirms.
   const confirmed = usable.filter(
-    (e) => e.source.kind === 'official_pairing' && OFFICIAL_IDENTITIES.includes(e.identity) && e.source.extraction_complete && e.source.authoritative !== false
+    (e) =>
+      e.source.kind === 'official_pairing' &&
+      OFFICIAL_IDENTITIES.includes(e.identity) &&
+      e.source.extraction_complete &&
+      e.source.authoritative === true &&
+      !e.markers.includes('no_source_big')
   );
-  if (usable.some((e) => e.source.kind === 'official_pairing' && e.source.authoritative === false)) flags.add('UNLABELLED_PAIRING_SOURCE');
+  if (usable.some((e) => e.source.kind === 'official_pairing' && e.source.authoritative !== true)) flags.add('UNLABELLED_PAIRING_SOURCE');
+  if (usable.some((e) => e.source.kind === 'official_pairing' && e.markers.includes('no_source_big'))) flags.add('OFFICIAL_ROW_WITHOUT_BIG');
   const strong = usable.filter((e) => !confirmed.includes(e) && e.source.kind !== 'master_year_cell');
   const master = usable.filter((e) => e.source.kind === 'master_year_cell');
   if (usable.some((e) => !e.source.extraction_complete)) flags.add('INCOMPLETE_SOURCE');
@@ -754,7 +831,6 @@ function classifyNode(entry: IndexedNode, evidence: MatchedEvidence[], index: Tr
   }
   if (ambiguous.length > 0) {
     flags.add('AMBIGUOUS_IDENTITY');
-    if (usable.length === 0) conflict = true;
     conflicting.push(...ambiguous);
   }
   if (future.length > 0) {
@@ -772,9 +848,18 @@ function classifyNode(entry: IndexedNode, evidence: MatchedEvidence[], index: Tr
     if (terms.length === 1) recommendedTerm = terms[0];
     else if (terms.length > 1) flags.add('TERMS_DISAGREE_SAME_YEAR');
   }
+  // Ambiguous rows can't be attributed, but one that might be about this
+  // person and gives another year still blocks a clean answer.
+  if (ambiguous.length > 0 && (usable.length === 0 || ambiguous.some((e) => e.academicYearStart !== recommendedYear))) conflict = true;
+  const existingYear = node.pickup_academic_year_start ?? null;
+  if (existingYear !== null && recommendedYear !== null && existingYear !== recommendedYear) {
+    flags.add('EXISTING_YEAR_DIFFERS');
+    conflict = true;
+  }
   if (conflict) {
     for (const e of usable) if (e.academicYearStart !== recommendedYear && !conflicting.includes(e)) conflicting.push(e);
   }
+  const yearStrength = recommendedYear === null ? 0 : ranked === confirmed ? 3 : ranked === strong ? 2 : ranked === master ? 1 : 0;
 
   let confidence: ConfidenceClass;
   if (conflict) confidence = 'CONFLICTING_EVIDENCE';
@@ -782,9 +867,6 @@ function classifyNode(entry: IndexedNode, evidence: MatchedEvidence[], index: Tr
   else if (strong.length > 0) confidence = 'STRONG_CANDIDATE';
   else if (master.length > 0) confidence = 'SUSPECTED_YEAR';
   else confidence = 'UNKNOWN';
-
-  const existingYear = node.pickup_academic_year_start ?? null;
-  if (existingYear !== null && recommendedYear !== null && existingYear !== recommendedYear) flags.add('EXISTING_YEAR_DIFFERS');
 
   let identity: IdentityStatus;
   if (usable.some((e) => e.identity.includes('pair'))) identity = 'RESOLVED_BY_LIVE_PAIR';
@@ -813,32 +895,34 @@ function classifyNode(entry: IndexedNode, evidence: MatchedEvidence[], index: Tr
     supporting: usable.filter((e) => !conflicting.includes(e)),
     conflicting,
     candidate_years: distinct(evidence.map((e) => e.academicYearStart).filter(isYear)).sort((a, b) => a - b),
+    year_strength: yearStrength,
   };
 }
 
-const CLASS_RANK: Record<ConfidenceClass, number> = {
-  CONFIRMED_YEAR: 4,
-  STRONG_CANDIDATE: 3,
-  SUSPECTED_YEAR: 2,
-  CONFLICTING_EVIDENCE: 1,
-  UNKNOWN: 0,
-};
+const SEASON_ORDER: Record<string, number> = { FA: 0, WI: 1, SP: 2 };
+
+/** Position in time: academic year, then FA < WI < SP when both terms are known. */
+function termOrder(year: number, term: string | null): [number, number | null] {
+  return [year, term ? SEASON_ORDER[term.slice(0, 2)] ?? null : null];
+}
 
 // A Little cannot be picked up before their Big. When the two disagree, the
-// weaker-classed side is held for review (both, when equally strong). Neither
-// year is inferred from the other.
+// side whose year rests on weaker EVIDENCE is held (both when equal); a row
+// already held for another reason does not shield its Little. Neither year is
+// inferred from the other.
 function applyChronologyChecks(rows: NodeReconciliation[]) {
   const byId = new Map(rows.map((r) => [r.ace_node_id, r] as const));
   const hold = new Set<NodeReconciliation>();
   for (const child of rows) {
     const big = child.current_big_node_id ? byId.get(child.current_big_node_id) : undefined;
     if (!big || child.recommended_pickup_academic_year === null || big.recommended_pickup_academic_year === null) continue;
-    if (child.recommended_pickup_academic_year < big.recommended_pickup_academic_year) {
+    const [cy, ct] = termOrder(child.recommended_pickup_academic_year, child.recommended_pickup_term);
+    const [by, bt] = termOrder(big.recommended_pickup_academic_year, big.recommended_pickup_term);
+    const earlier = cy < by || (cy === by && ct !== null && bt !== null && ct < bt);
+    if (earlier) {
       child.flags.push('CHILD_EARLIER_THAN_BIG');
-      const c = CLASS_RANK[child.confidence_class];
-      const b = CLASS_RANK[big.confidence_class];
-      if (c <= b) hold.add(child);
-      if (b <= c) hold.add(big);
+      if (child.year_strength <= big.year_strength) hold.add(child);
+      if (big.year_strength <= child.year_strength) hold.add(big);
     } else if (child.recommended_pickup_term && child.recommended_pickup_term === big.recommended_pickup_term) {
       child.flags.push('SAME_TERM_AS_BIG');
     }
@@ -876,7 +960,8 @@ function describe(row: NodeReconciliation): string {
 
 export function evidenceLabel(e: MatchedEvidence): string {
   const when = e.term ?? academicYearLabel(e.academicYearStart) ?? '';
-  return `${e.source.source_id} ${e.record.ref} (${when || 'no year'}; ${e.identity})`;
+  const markers = e.markers.length > 0 ? `; ${e.markers.join(', ')}` : '';
+  return `${e.source.source_id} ${e.record.ref} (${when || 'no year'}; ${e.identity}${markers})`;
 }
 
 export interface FamSummary {
@@ -903,7 +988,16 @@ export interface AggregateSummary {
   classes: Record<ConfidenceClass, number>;
   per_fam: FamSummary[];
   flags: Partial<Record<ReviewFlag, number>>;
-  sources: { source_id: string; kind: EvidenceKind; label: string; extraction_complete: boolean; records: number; matched_records: number; unmatched_records: number }[];
+  sources: {
+    source_id: string;
+    kind: EvidenceKind;
+    term: string | null;
+    extraction_complete: boolean;
+    authoritative: boolean;
+    records: number;
+    matched_records: number;
+    unmatched_records: number;
+  }[];
   unmatched_by_reason: Record<UnmatchedEvidence['reason'], number>;
 }
 
@@ -978,8 +1072,9 @@ export function summarize(result: ReconciliationResult, evidence: EvidenceBundle
       return {
         source_id: s.source_id,
         kind: s.kind,
-        label: s.label,
+        term: parseTerm(s.term)?.term ?? null,
         extraction_complete: s.extraction_complete,
+        authoritative: s.authoritative === true,
         records: records.length,
         matched_records: records.length - unmatchedCount,
         unmatched_records: unmatchedCount,

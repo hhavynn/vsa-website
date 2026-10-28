@@ -36,6 +36,9 @@ function review(overrides: Partial<ReviewRow>, sheetRow = 2): ReviewRow {
     fam_id: FAM_ID,
     member_name: 'Lio Fakename',
     current_big_node_id: BIG,
+    current_big_name: 'Bree Sample',
+    existing_pickup_term: '',
+    existing_pickup_academic_year: '',
     confidence_class: 'CONFIRMED_YEAR',
     reviewer_decision: 'approve',
     reviewer_confirmed_year: '2021–22',
@@ -52,7 +55,7 @@ describe('review sheet', () => {
   const result = reconcilePickupYears(
     snap,
     {
-      sources: [{ source_id: 'FA21', kind: 'official_pairing', label: 'FA21', term: 'FA21', extraction_complete: true }],
+      sources: [{ source_id: 'FA21', kind: 'official_pairing', label: 'FA21', term: 'FA21', extraction_complete: true, authoritative: true }],
       records: [{ source_id: 'FA21', kind: 'official_pairing', little: 'Lio Fakename', big: 'Bree Sample', ref: 'Pairings!row 4' }],
     },
     OPTS
@@ -79,7 +82,7 @@ describe('review sheet', () => {
     const little = result.rows.find((r) => r.ace_node_id === LITTLE)!;
     const root = result.rows.find((r) => r.ace_node_id === ROOT)!;
     expect(reviewQueues(little)).toEqual(['ready_for_review']);
-    expect(reviewQueues(root)).toEqual(['missing_evidence']);
+    expect(reviewQueues(root)).toEqual(['missing_evidence', 'roots']);
   });
 
   it('rejects a sheet without the reviewer columns', () => {
@@ -99,7 +102,7 @@ describe('buildBackfillPlan', () => {
         expected_parent_member_id: BIG,
         previous: { pickup_term: null, pickup_academic_year_start: null },
         next: { pickup_term: 'FA21', pickup_academic_year_start: 2021 },
-        confidence_class: 'CONFIRMED_YEAR',
+        review_sheet_confidence_class: 'CONFIRMED_YEAR',
         evidence_category: 'official_pairing',
         overwrites_existing_value: false,
         sheet_row: 2,
@@ -109,7 +112,7 @@ describe('buildBackfillPlan', () => {
   });
 
   it('keeps a year-only approval year-only', () => {
-    const plan = buildBackfillPlan([review({ reviewer_confirmed_term: '', reviewer_confirmed_year: '2019' })], liveNodes(), OPTS);
+    const plan = buildBackfillPlan([review({ reviewer_confirmed_term: '', reviewer_confirmed_year: '2019–20' })], liveNodes(), OPTS);
     expect(plan.updates[0].next).toEqual({ pickup_term: null, pickup_academic_year_start: 2019 });
   });
 
@@ -126,9 +129,11 @@ describe('buildBackfillPlan', () => {
     ['node gone', { ace_node_id: '00000000-0000-4000-8000-000000000099' }, /not in the current published snapshot/],
     ['no year', { reviewer_confirmed_year: '' }, /without reviewer_confirmed_year/],
     ['bad year', { reviewer_confirmed_year: 'sometime' }, /not an academic year/],
+    ['bare year', { reviewer_confirmed_year: '2021' }, /not an academic year like 2021–22/],
+    ['Big renamed', { current_big_name: 'Bree Oldname' }, /renamed since review/],
     ['bad term', { reviewer_confirmed_term: 'Fall' }, /not a FA\/WI\/SP term/],
-    ['FA23 is not 2022–23', { reviewer_confirmed_term: 'FA23', reviewer_confirmed_year: '2022' }, /FA23 is in 2023–24/],
-    ['unrevealed year', { reviewer_confirmed_year: '2026', reviewer_confirmed_term: '' }, /after the latest revealed cycle/],
+    ['FA23 is not 2022–23', { reviewer_confirmed_term: 'FA23', reviewer_confirmed_year: '2022–23' }, /FA23 is in 2023–24/],
+    ['unrevealed year', { reviewer_confirmed_year: '2026–27', reviewer_confirmed_term: '' }, /after the latest revealed cycle/],
     ['unclear approval', { approved_for_backfill: 'maybe' }, /not yes or no/],
   ])('rejects a row when %s, without planning any change', (_label, overrides, reason) => {
     const plan = buildBackfillPlan([review(overrides as Partial<ReviewRow>)], liveNodes(), OPTS);
@@ -143,28 +148,65 @@ describe('buildBackfillPlan', () => {
   });
 
   it('rejects every copy when one node is approved twice', () => {
-    const plan = buildBackfillPlan([review({}, 2), review({ reviewer_confirmed_year: '2022', reviewer_confirmed_term: '' }, 3)], liveNodes(), OPTS);
+    const plan = buildBackfillPlan([review({}, 2), review({ reviewer_confirmed_year: '2022–23', reviewer_confirmed_term: '' }, 3)], liveNodes(), OPTS);
     expect(plan.updates).toHaveLength(0);
     expect(plan.rejected.map((r) => r.sheet_row)).toEqual([2, 3]);
   });
 
   it('changes zero records when the same approved plan is repeated', () => {
     const applied = liveNodes({ [LITTLE]: { pickup_term: 'FA21', pickup_academic_year_start: 2021 } });
-    const plan = buildBackfillPlan([review({})], applied, OPTS);
+    const plan = buildBackfillPlan([review({ existing_pickup_term: 'FA21', existing_pickup_academic_year: '2021–22' })], applied, OPTS);
     expect(plan.updates).toHaveLength(0);
     expect(plan.unchanged).toEqual([{ ace_node_id: LITTLE, sheet_row: 2 }]);
   });
 
-  it('marks a correction of an existing year', () => {
+  it('marks a correction of an existing year that the reviewer saw', () => {
     const existing = liveNodes({ [LITTLE]: { pickup_term: null, pickup_academic_year_start: 2020 } });
-    const plan = buildBackfillPlan([review({})], existing, OPTS);
+    const plan = buildBackfillPlan([review({ existing_pickup_academic_year: '2020–21' })], existing, OPTS);
     expect(plan.updates[0]).toMatchObject({ overwrites_existing_value: true, previous: { pickup_term: null, pickup_academic_year_start: 2020 } });
+  });
+
+  it('never overwrites a year set after the review', () => {
+    const corrected = liveNodes({ [LITTLE]: { pickup_term: 'FA22', pickup_academic_year_start: 2022 } });
+    const plan = buildBackfillPlan([review({})], corrected, OPTS);
+    expect(plan.updates).toHaveLength(0);
+    expect(plan.rejected[0].reason).toMatch(/changed since review/);
+  });
+
+  it('keeps an existing term when a year-only approval repeats its year, and clears it only on request', () => {
+    const existing = liveNodes({ [LITTLE]: { pickup_term: 'FA21', pickup_academic_year_start: 2021 } });
+    const seen = { existing_pickup_term: 'FA21', existing_pickup_academic_year: '2021–22', reviewer_confirmed_term: '' };
+    expect(buildBackfillPlan([review(seen)], existing, OPTS).unchanged).toHaveLength(1);
+    const cleared = buildBackfillPlan([review({ ...seen, reviewer_confirmed_term: 'clear' })], existing, OPTS);
+    expect(cleared.updates[0].next).toEqual({ pickup_term: null, pickup_academic_year_start: 2021 });
+  });
+
+  it('refuses a snapshot without pickup columns unless asked for a preview', () => {
+    const bare = { ...liveNodes(), hasPickupColumns: false };
+    expect(() => buildBackfillPlan([review({})], bare, OPTS)).toThrow(/no pickup_term/);
+    const preview = buildBackfillPlan([review({})], bare, { ...OPTS, allowMissingPickupColumns: true });
+    expect(preview.snapshot_has_pickup_columns).toBe(false);
+    expect(planSqlPreview(preview)).toMatch(/WITHOUT pickup columns/);
   });
 });
 
 describe('planSqlPreview', () => {
   const plan = buildBackfillPlan(
-    [review({}), review({ ace_node_id: ROOT, member_name: 'Rowan Testroot', current_big_node_id: '', reviewer_confirmed_term: '', reviewer_confirmed_year: '2017' }, 3)],
+    [
+      review({}),
+      review(
+        {
+          ace_node_id: ROOT,
+          member_name: 'Rowan Testroot',
+          current_big_node_id: '',
+          current_big_name: '',
+          existing_pickup_academic_year: '2016–17',
+          reviewer_confirmed_term: '',
+          reviewer_confirmed_year: '2017–18',
+        },
+        3
+      ),
+    ],
     liveNodes({ [ROOT]: { pickup_academic_year_start: 2016 } }),
     OPTS
   );
@@ -173,7 +215,13 @@ describe('planSqlPreview', () => {
   it('sets only the pickup columns, guarded on fam, Big and previous values, and rolls back', () => {
     expect(preview.trim().endsWith('rollback;')).toBe(true);
     expect(preview).not.toMatch(/\bcommit\b/i);
-    expect(preview).not.toMatch(/\b(delete|insert|upsert|truncate|drop|alter)\b/i);
+    const executable = preview
+      .split('\n')
+      .filter((line) => !line.startsWith('--'))
+      .join('\n');
+    const withoutScratch = executable.replace(/insert into ace_pickup_plan_failures values[^\n]*/g, '');
+    expect(withoutScratch).not.toMatch(/\b(delete|insert|upsert|truncate|drop|alter|grant|revoke)\b/i);
+    expect(executable.match(/update [\w.]+/g)).toEqual(['update public.ace_family_members', 'update public.ace_family_members']);
     const sets = preview.match(/set [^\n]+/g) ?? [];
     expect(sets).toHaveLength(2);
     for (const set of sets) expect(set).toMatch(/^set pickup_term = (null|'(FA|WI|SP)\d\d'), pickup_academic_year_start = \d{4}$/);
@@ -181,7 +229,9 @@ describe('planSqlPreview', () => {
     expect(preview).toContain(`and parent_member_id = '${BIG}'::uuid`);
     expect(preview).toContain('and parent_member_id is null');
     expect(preview).toContain('and pickup_academic_year_start = 2016;');
-    expect(preview).toMatch(/expected 1 row, changed %/);
+    expect(preview).toMatch(/insert into ace_pickup_plan_failures/);
+    expect(preview).toMatch(/these nodes did not match their reviewed state/);
+    expect(preview).toMatch(/never public/);
     expect(preview).not.toMatch(/Lio|Rowan|Bree/);
   });
 

@@ -16,7 +16,7 @@ Method: [ace-historical-pickup-years.md](ace-historical-pickup-years.md).
   38 names appear in more than one fam (treated as different people).
 - The live site has **no AAF fam**: the AAF archive lineage is published under
   Moon (63 nodes, one root). AAF-labelled evidence therefore reaches Moon, and
-  is noted on every such row.
+  every such row carries `AAF_TO_MOON`.
 - #669's pickup columns do not exist yet, so existing year coverage is 0.
 
 ## Result
@@ -24,13 +24,13 @@ Method: [ace-historical-pickup-years.md](ace-historical-pickup-years.md).
 | Fam | Live nodes | Confirmed | Strong | Suspected | Conflicting | Unknown | Master agrees* |
 |---|---|---|---|---|---|---|---|
 | Bang Mi | 52 | 12 | 27 | 11 | 0 | 2 | – |
-| Cross | 81 | 27 | 22 | 25 | 1 | 6 | – |
+| Cross | 81 | 27 | 21 | 25 | 2 | 6 | – |
 | Down | 139 | 37 | 27 | 0 | 1 | 74 | no Master rows |
-| Moon | 63 | 18 | 11 | 21 | 11 | 2 | 9/18 |
-| NSF | 146 | 50 | 25 | 49 | 16 | 6 | 0/7 |
-| Sunshine | 102 | 30 | 5 | 43 | 23 | 1 | 32/53 |
-| Sweatpants | 107 | 24 | 11 | 37 | 32 | 3 | 22/53 |
-| Underwater | 104 | 23 | 20 | 28 | 31 | 2 | 2/29 |
+| Moon | 63 | 18 | 11 | 20 | 12 | 2 | 9/18 |
+| NSF | 146 | 49 | 25 | 49 | 17 | 6 | 0/7 |
+| Sunshine | 102 | 26 | 5 | 42 | 28 | 1 | 32/53 |
+| Sweatpants | 107 | 24 | 11 | 36 | 33 | 3 | 22/53 |
+| Underwater | 104 | 23 | 20 | 24 | 35 | 2 | 2/29 |
 | (Dead) Bad Decisions | 34 | 4 | 0 | 0 | 0 | 30 | – |
 | (Dead) Cup Noodle | 6 | 0 | 0 | 0 | 0 | 6 | – |
 | (Dead) Cute and Cocky | 20 | 0 | 0 | 0 | 0 | 20 | – |
@@ -39,7 +39,7 @@ Method: [ace-historical-pickup-years.md](ace-historical-pickup-years.md).
 | (Dead) SLOTH | 15 | 3 | 2 | 0 | 1 | 9 | – |
 | (Dead) SNACC | 16 | 1 | 0 | 0 | 0 | 15 | – |
 | (Dead) VWA | 5 | 0 | 0 | 0 | 0 | 5 | – |
-| **Total** | **916** | **231** | **151** | **214** | **116** | **204** | |
+| **Total** | **916** | **226** | **150** | **207** | **129** | **204** | |
 
 \* Nodes dated by an official pairing or repo term that also have a Master
 year row, and how many of those Master rows give the same year. Sweatpants and
@@ -48,26 +48,28 @@ their Master-only rows; NSF's 0/7 is below the 10-row threshold but points the
 same way. Underwater's Master rows run 1–3 years late, consistent with
 generation rows read as years.
 
-- **Confirmed** by term: FA21 45, SP22 5, FA22 45, FA23 65, SP25 2, FA25 66,
-  SP26 3.
+- **Confirmed** by term: FA21 45, SP22 4, FA22 44, FA23 64, SP25 2, FA25 65,
+  SP26 2.
 - **Strong**: 74 rest on the repo's FA24 term alone (no FA24 pairing sheet
   survives), 14 on the unlabelled SP23 list, the rest on looser spellings of an
-  official row or a repo term.
+  official row or a repo term. The research package's own pairing rows are not
+  used to confirm anything; the sheets were re-read in full instead.
 - **Suspected** (Master only, year without term): 2015–16 through 2025–26.
-- **Conflicting** (116): 71 are held only because a Master row disagrees with an
+- **Conflicting** (129): 71 are held only because a Master row disagrees with an
   official/repo year (63 of them have an exact official pairing; 42 are in
   Sweatpants/Underwater), a likely batch for quick review.
-- **Flags across all rows**: 43 `CHILD_EARLIER_THAN_BIG`, 21
-  `SOURCE_BIG_DIFFERS` (a source names a different Big; live kept), 12
-  `AMBIGUOUS_IDENTITY`, 8 `SAME_NAME_IN_FAM`, 5 `FUTURE_OR_UNREVEALED_YEAR`
-  (2026–27 Master rows).
+- **Flags across all rows**: 48 `CHILD_EARLIER_THAN_BIG` (term order is checked
+  within a year), 46 `AAF_TO_MOON`, 21 `SOURCE_BIG_DIFFERS` (a source names a
+  different Big; live kept), 12 `AMBIGUOUS_IDENTITY`, 8 `SAME_NAME_IN_FAM`, 5
+  `FUTURE_OR_UNREVEALED_YEAR` (2026–27 Master rows).
 - **Unknown** (204): 108 are in graveyard fams; 75 rows carry only a `legacy`
-  term (70 in Down, where the Master has no year rows).
+  term (70 in Down, where the Master has no year rows). 21 repo links have no
+  `added_term` at all.
 - Identity: 477 nodes resolved by Little + live Big, 230 by name inside the live
   fam (Master only), 202 matched no source.
-- Review queues: conflicting years 116, missing evidence 204, chronology 47,
-  ambiguous identity 35. The four documented Bang Mi FA23 same-term rows surface
-  as `SAME_TERM_AS_BIG`.
+- Review queues: conflicting years 129, missing evidence 204, chronology 52,
+  ambiguous identity 35, roots 21. The four documented Bang Mi FA23 same-term
+  rows surface as `SAME_TERM_AS_BIG`.
 
 ## Sources inspected
 
@@ -105,8 +107,11 @@ spelled differently there, and Master variant B cells.
   joined automatically, so those official rows sit in the unmatched list for a
   reviewer. Looser matches (middle initials, nicknames) never confirm.
 - **SP23** stays capped at Strong unless an owner confirms that list was final.
-- **Moon / AAF**: Moon rows dated by AAF-labelled evidence are noted; 11 Moon
-  rows conflict, several on the FA23 split boundary.
+- **Moon / AAF**: 46 Moon rows are dated partly by AAF-labelled evidence
+  (`AAF_TO_MOON`); 12 Moon rows conflict, several on the FA23 split boundary.
+- **Twin-named Bigs**: the repo's `big_id_hint` is not used; a repo row is
+  matched by the live Big's name, so it cannot tell two same-name Bigs apart
+  (affects Strong rows only; official rows never rely on it).
 
 ## Depends on #669
 

@@ -29,9 +29,9 @@ function snapshot(nodes: LiveNode[], families: LiveFamily[] = [FAM, FAM2]): Live
   return { families, nodes };
 }
 
-const OFFICIAL_FA21: EvidenceSource = { source_id: 'FA21_OFFICIAL', kind: 'official_pairing', label: 'FA21', term: 'FA21', extraction_complete: true };
-const OFFICIAL_FA23: EvidenceSource = { source_id: 'FA23_OFFICIAL', kind: 'official_pairing', label: 'FA23', term: 'FA23', extraction_complete: true };
-const OFFICIAL_SP22: EvidenceSource = { source_id: 'SP22_OFFICIAL', kind: 'official_pairing', label: 'SP22', term: 'SP22', extraction_complete: true };
+const OFFICIAL_FA21: EvidenceSource = { source_id: 'FA21_OFFICIAL', kind: 'official_pairing', label: 'FA21', term: 'FA21', extraction_complete: true, authoritative: true };
+const OFFICIAL_FA23: EvidenceSource = { source_id: 'FA23_OFFICIAL', kind: 'official_pairing', label: 'FA23', term: 'FA23', extraction_complete: true, authoritative: true };
+const OFFICIAL_SP22: EvidenceSource = { source_id: 'SP22_OFFICIAL', kind: 'official_pairing', label: 'SP22', term: 'SP22', extraction_complete: true, authoritative: true };
 const REPO: EvidenceSource = { source_id: 'REPO_REEF', kind: 'repo_added_term', label: 'repo', extraction_complete: true };
 const MASTER_A: EvidenceSource = { source_id: 'MASTER_A', kind: 'master_year_cell', label: 'Master A', extraction_complete: true };
 const MASTER_B: EvidenceSource = { source_id: 'MASTER_B', kind: 'master_year_cell', label: 'Master B', extraction_complete: true };
@@ -76,7 +76,7 @@ describe('terms and academic years', () => {
     expect(academicYearLabel(parseTerm('SP23')!.academicYearStart)).toBe('2022–23');
   });
 
-  it.each(['legacy', '', 'SU22', 'FA', 'Fall 2021', '2021', 'FA2'])('does not invent a term from %p', (raw) => {
+  it.each(['legacy', '', 'SU22', 'FA', 'Fall 2021', '2021', 'FA2', "SP'99", 'FA99', 'FA1999'])('does not invent a term from %p', (raw) => {
     expect(parseTerm(raw)).toBeNull();
   });
 
@@ -85,6 +85,10 @@ describe('terms and academic years', () => {
     expect(parseAcademicYear('2021-2022')).toBe(2021);
     expect(parseAcademicYear('2021')).toBe(2021);
     expect(parseAcademicYear('2021-23')).toBeNull();
+    expect(parseAcademicYear('2021', true)).toBeNull();
+    expect(parseAcademicYear('2021–22', true)).toBe(2021);
+    expect(parseAcademicYear(16)).toBeNull();
+    expect(parseAcademicYear('15-16')).toBeNull();
     expect(parseAcademicYear('FA21')).toBeNull();
     expect(parseAcademicYear('')).toBeNull();
   });
@@ -122,7 +126,8 @@ describe('reconcilePickupYears', () => {
     const { row } = run(BASE, [official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample', 'COMET FAM')]);
     expect(row('little').confidence_class).toBe('CONFIRMED_YEAR');
     expect(row('little').fam_id).toBe(FAM.id);
-    expect(row('little').supporting[0].notes.join(' ')).toMatch(/fam label differs/);
+    expect(row('little').flags).toContain('SOURCE_FAM_LABEL_DIFFERS');
+    expect(row('little').supporting[0].markers).toContain('fam_label_differs');
   });
 
   it('never moves a Little whose source Big differs from the live Big', () => {
@@ -185,7 +190,8 @@ describe('reconcilePickupYears', () => {
     const nodes = [node('m-root', 'Mira Testroot', null, 'fam-moon'), node('m-pat', 'Pax Sample', 'm-root', 'fam-moon')];
     const { row } = run(nodes, [master(MASTER_A, 'Pax Sample', 2021, 'AAF')], { families: fams });
     expect(row('m-pat').confidence_class).toBe('SUSPECTED_YEAR');
-    expect(row('m-pat').supporting[0].notes.join(' ')).toMatch(/AAF→Moon/);
+    expect(row('m-pat').flags).toContain('AAF_TO_MOON');
+    expect(row('m-pat').supporting[0].markers).toContain('aaf_to_moon');
   });
 
   it('holds a person whose Master variants place them in different years', () => {
@@ -251,7 +257,7 @@ describe('reconcilePickupYears', () => {
   });
 
   it('never confirms from a pairing list that is not labelled official', () => {
-    const unlabelled = { ...OFFICIAL_FA21, authoritative: false };
+    const unlabelled = { ...OFFICIAL_FA21, authoritative: undefined };
     const { row } = run(BASE, [official(unlabelled, 'Lio Fakename', 'Bree Sample')], { sources: [unlabelled] });
     expect(row('little').confidence_class).toBe('STRONG_CANDIDATE');
     expect(row('little').flags).toContain('UNLABELLED_PAIRING_SOURCE');
@@ -290,6 +296,59 @@ describe('reconcilePickupYears', () => {
     expect(row('lone').flags).toContain('MASTER_UNRELIABLE_IN_FAM');
   });
 
+  it('holds an official pair when the labelled fam has its own same-name Little', () => {
+    const nodes = [...BASE, node('c-root', 'Cam Testhead', null, FAM2.id), node('c-lio', 'Lio Fakename', 'c-root', FAM2.id)];
+    const { row } = run(nodes, [official(OFFICIAL_FA23, 'Lio Fakename', 'Bree Sample', 'COMET FAM')]);
+    for (const id of ['little', 'c-lio']) {
+      expect(row(id).confidence_class).toBe('CONFLICTING_EVIDENCE');
+      expect(row(id).flags).toContain('AMBIGUOUS_IDENTITY');
+    }
+  });
+
+  it('never confirms from a Big-less official row about a root', () => {
+    const { row } = run(BASE, [{ ...official(OFFICIAL_FA21, 'Rowan Testroot', ''), big: '' }]);
+    expect(row('root').confidence_class).toBe('STRONG_CANDIDATE');
+    expect(row('root').flags).toContain('OFFICIAL_ROW_WITHOUT_BIG');
+  });
+
+  it('holds a row when ambiguous evidence gives a different year', () => {
+    const nodes = [...BASE, node('c-root', 'Cam Testhead', null, FAM2.id), node('c-bree', 'Bree Sample', 'c-root', FAM2.id), node('c-lio', 'Lio Fakename', 'c-bree', FAM2.id)];
+    const { row } = run(nodes, [official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample'), master(MASTER_A, 'Lio Fakename', 2018)]);
+    expect(row('little').confidence_class).toBe('CONFLICTING_EVIDENCE');
+    expect(row('little').flags).toContain('AMBIGUOUS_IDENTITY');
+  });
+
+  it('holds a confirmed Little who predates a Big whose year is official but itself held', () => {
+    const fa19: EvidenceSource = { source_id: 'FA19_OFFICIAL', kind: 'official_pairing', label: 'FA19', term: 'FA19', extraction_complete: true, authoritative: true };
+    const { row } = run(BASE, [official(OFFICIAL_FA21, 'Bree Sample', 'Rowan Testroot'), master(MASTER_A, 'Bree Sample', 2020), official(fa19, 'Lio Fakename', 'Bree Sample')], {
+      sources: [...ALL_SOURCES, fa19],
+    });
+    expect(row('big').confidence_class).toBe('CONFLICTING_EVIDENCE');
+    expect(row('little').confidence_class).toBe('CONFLICTING_EVIDENCE');
+    expect(row('little').flags).toContain('CHILD_EARLIER_THAN_BIG');
+  });
+
+  it('checks term order within one academic year', () => {
+    const { row } = run(BASE, [official(OFFICIAL_SP22, 'Bree Sample', 'Rowan Testroot'), official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample')]);
+    expect(row('little').flags).toContain('CHILD_EARLIER_THAN_BIG');
+    expect(row('little').confidence_class).toBe('CONFLICTING_EVIDENCE');
+  });
+
+  it('flags matched rows whose term cannot be read', () => {
+    const { row } = run(BASE, [{ ...official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample'), term: 'Fall 2021' }], {
+      sources: [{ ...OFFICIAL_FA21, term: null }],
+    });
+    expect(row('little').confidence_class).toBe('UNKNOWN');
+    expect(row('little').flags).toContain('UNPARSEABLE_TERM');
+  });
+
+  it('holds a row whose existing live year differs from the evidence', () => {
+    const nodes = BASE.map((n) => (n.id === 'little' ? { ...n, pickup_term: 'FA22', pickup_academic_year_start: 2022 } : n));
+    const { row } = run(nodes, [official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample')]);
+    expect(row('little').confidence_class).toBe('CONFLICTING_EVIDENCE');
+    expect(row('little').flags).toContain('EXISTING_YEAR_DIFFERS');
+  });
+
   it('is deterministic and order-independent across repeated runs', () => {
     const records = [official(OFFICIAL_FA21, 'Lio Fakename', 'Bree Sample'), master(MASTER_A, 'Bree Sample', 2020), repo('Bree Sample', 'Rowan Testroot', 'legacy')];
     const first = reconcilePickupYears(snapshot(BASE), bundle(records), { maxAcademicYearStart: 2025 });
@@ -312,7 +371,7 @@ describe('summarize', () => {
     const ev = bundle(records);
     const result = reconcilePickupYears(snapshot(nodes), ev, { maxAcademicYearStart: 2025 });
     const text = JSON.stringify(summarize(result, ev, '2026-01-01'));
-    for (const secret of ['Rowan', 'Bree', 'Lio', 'Kai', 'Lumen', 'little', 'twin', 'member-uuid-1', 'E2022', 'row ']) expect(text).not.toContain(secret);
+    for (const secret of ['Rowan', 'Bree', 'Lio', 'Kai', 'Lumen', 'little', 'twin', 'member-uuid-1', 'E2022', 'row ', 'Master A']) expect(text).not.toContain(secret);
     const summary = summarize(result, ev, '2026-01-01');
     expect(summary.live_nodes).toBe(4);
     expect(summary.classes.CONFIRMED_YEAR).toBe(1);
@@ -328,7 +387,10 @@ describe('input validation', () => {
     expect(() => parseLiveSnapshot(fams, [{ id: 'a', name: 'X' }])).toThrow(/malformed/);
     expect(() => parseLiveSnapshot(fams, [node('a', 'X', null), node('a', 'Y', null)])).toThrow(/repeats node id/);
     expect(() => parseLiveSnapshot(fams, [node('a', 'X', null, 'fam-missing')])).toThrow(/not in the families snapshot/);
-    expect(parseLiveSnapshot(fams, [{ id: 'a', family_id: FAM.id, name: 'X', parent_member_id: null }]).nodes[0].member_id).toBeNull();
+    const bare = parseLiveSnapshot(fams, [{ id: 'a', family_id: FAM.id, name: 'X', parent_member_id: null }]);
+    expect(bare.nodes[0].member_id).toBeNull();
+    expect(bare.hasPickupColumns).toBe(false);
+    expect(parseLiveSnapshot(fams, [{ ...node('a', 'X', null), pickup_term: null, pickup_academic_year_start: null }]).hasPickupColumns).toBe(true);
   });
 
   it('rejects malformed evidence files', () => {
@@ -338,6 +400,7 @@ describe('input validation', () => {
     expect(() => parseEvidenceFile({ ...good, records: [{ ...good.records[0], source_id: 'NOPE' }] })).toThrow(/undeclared source/);
     expect(() => parseEvidenceFile({ ...good, records: [{ ...good.records[0], kind: 'master_year_cell' }] })).toThrow(/but source/);
     expect(() => parseEvidenceFile({ ...good, sources: [OFFICIAL_FA21, OFFICIAL_FA21] })).toThrow(/twice/);
+    expect(() => parseEvidenceFile({ ...good, sources: [{ ...OFFICIAL_FA21, source_id: 'https://example.test/x' }] })).toThrow(/A-Z/);
     expect(() => parseEvidenceFile(null)).toThrow(/malformed/);
   });
 });
@@ -352,7 +415,8 @@ describe('evidence adapters', () => {
         { name: 'Lio Fakename', big: 'Bree Sample', added_term: 'FA22', confidence: 'inferred-high' },
       ],
     };
-    const { sources, records } = evidenceFromRepoFamilies([{ file: 'reef.json', json }]);
+    const { sources, records, blankTerms } = evidenceFromRepoFamilies([{ file: 'reef.json', json: { ...json, members: [...json.members, { name: 'Nia Sample', big: 'Lio Fakename' }] } }]);
+    expect(blankTerms).toBe(1);
     expect(sources[0].source_id).toBe('REPO_REEF');
     expect(records.map((r) => [r.little, r.term])).toEqual([
       ['Bree Sample', 'legacy'],
@@ -368,11 +432,13 @@ describe('evidence adapters', () => {
       master: [
         { variant: 'A', fam: 'reef', tab: 'REEF FAM', row: 6, col: 'E', cell: 'Lio Fakename', year: 2021, simple: true },
         { variant: 'A', fam: 'reef', tab: 'REEF FAM', row: 7, col: 'E', cell: 'Two / People', year: 2021, simple: false },
+        { variant: 'A', fam: 'reef', tab: 'REEF FAM', row: 8, col: 'E', cell: 'Odd Year', year: 16, simple: true },
       ],
     };
-    const { bundle: b, skippedMasterCells } = evidenceFromResearchPackage(pkg);
-    expect(skippedMasterCells).toBe(1);
-    expect(b.sources.map((s) => s.source_id).sort()).toEqual(['PKG_FA21_OFFICIAL', 'PKG_MASTER_A']);
+    const { bundle: b, skippedMasterCells } = evidenceFromResearchPackage({ ...pkg, official: [...pkg.official, { ...pkg.official[0], term: 'Fall 2023', source: 'https://example.test/sheet' }] });
+    expect(skippedMasterCells).toBe(2);
+    expect(b.sources.map((s) => s.source_id).sort()).toEqual(['PKG_FA21_OFFICIAL_1', 'PKG_MASTER_A']);
+    expect(b.sources.find((s) => s.kind === 'official_pairing')?.authoritative).toBe(false);
     expect(b.records.find((r) => r.kind === 'master_year_cell')).toMatchObject({ academic_year_start: 2021, ref: 'REEF FAM!E6' });
     expect(() => evidenceFromResearchPackage({ official: [] })).toThrow(/master/);
     expect(evidenceFromResearchPackage(pkg, ['master']).bundle.sources.map((s) => s.source_id)).toEqual(['PKG_MASTER_A']);

@@ -51,9 +51,12 @@ curl -sf -H "apikey: $REACT_APP_SUPABASE_ANON_KEY" -H "Authorization: Bearer $RE
   -o "$OUT/published_ace_family_members.json"
 ```
 
-Once #669 adds `pickup_term` / `pickup_academic_year_start` to the view, add
-them to the `select`: the plan then compares against the current values and
-repeats become no-ops.
+The plan needs current pickup values. Once #669 adds `pickup_term` /
+`pickup_academic_year_start`, snapshot them too, from the **base table** with an
+admin SQL session if #669's view masks unapproved years (a masked value would
+make every guarded update fail). Without those keys `plan` refuses to run
+unless given `--pre-669-snapshot yes`, which marks the output a preview that
+assumes every current value is blank.
 
 ### 2. Reconcile
 
@@ -63,28 +66,40 @@ npm run ace:years -- reconcile \
   --live-families $R/live/published_ace_families.json \
   --live-members  $R/live/published_ace_family_members.json \
   --repo-families data/ace-families \
-  --research-package <private>/ace_backfill_evidence.json \
+  --research-package <private>/ace_backfill_evidence.json --package-sections master \
   --evidence <private>/official_pairings.json \
   --max-year 2025 --out-dir $R/out
 ```
+
+Evidence files use `ace-pickup-evidence/v1`: `sources[]` (`source_id` of
+A–Z/0–9/_ only, `kind`, `label`, `term`, `extraction_complete`, and
+`authoritative: true` only for a sheet labelled official/final) and `records[]`
+(`source_id`, `kind`, `little`, `big`, `term` or `academic_year_start`,
+`fam_hint`, `ref`). A pairing source without `authoritative: true` can never
+confirm. The research package's own pairing rows are adapted as
+non-authoritative (corroboration only); take only its Master cells
+(`--package-sections master`) when the sheets have been re-read.
 
 `--max-year` is the latest academic year whose pickups are public. A source
 year after it (a 2026–27 Master row before that Reveal) is never proposed.
 
 Outputs (all private except `summary.*`): `review_sheet.csv` (every live node),
 `queue_conflicting_years.csv`, `queue_ambiguous_identity.csv`,
-`queue_chronology.csv`, `queue_missing_evidence.csv`, `unmatched_evidence.csv`
+`queue_chronology.csv`, `queue_roots.csv`, `queue_missing_evidence.csv`, `unmatched_evidence.csv`
 (source rows that reach no live node), `summary.json` / `summary.md`
 (counts only). `scripts/ace-historical-years-workbook.py <out> <file.xlsx>`
-turns a run into a reviewer workbook with one tab per queue.
+turns a run into a reviewer workbook (it also refuses a tracked path). Only its
+"All nodes" tab is editable; queue tabs are protected copies.
 
 ### 3. Review
 
 ACE Chair or Webmaster fills, per row: `reviewer_decision`,
-`reviewer_confirmed_year` (`2021–22` or `2021`), `reviewer_confirmed_term`
-(`FA21`, or blank when only the year is known) and `approved_for_backfill`
-(`yes`). Identity columns are read-only in spirit: the plan rejects a row whose
-name, fam or Big no longer matches the live tree.
+`reviewer_confirmed_year` (`2021–22`; a bare `2021` is rejected because it is
+ambiguous), `reviewer_confirmed_term` (`FA21`; blank when only the year is
+known, which keeps a term already recorded for that same year; `CLEAR` to
+remove one) and `approved_for_backfill` (`yes`). Identity and existing-value
+columns are read-only in spirit: the plan rejects a row whose name, fam, Big,
+Big's name or existing year/term no longer matches the live tree.
 
 ### 4. Plan (dry run)
 
@@ -94,24 +109,28 @@ npm run ace:years -- plan --live-families ... --live-members ... \
 ```
 
 A row is planned only if it is approved, the node is still published, its fam,
-Big and name still match, the year parses and is not after `--max-year`, and
-any term falls inside that year (`FA23` with `2022` is rejected; `SP23` with
-`2022` is fine). One node approved twice rejects every copy. Rows already at
-the approved values are reported as unchanged, so the same plan run after it
-was applied plans **zero** updates.
+Big, Big's name, own name and existing year/term still match what the reviewer
+saw (so a later correction is never overwritten), the year parses and is not
+after `--max-year`, and any term falls inside that year (`FA23` with `2022–23`
+is rejected; `SP23` with `2022–23` is fine). One node approved twice rejects
+every copy. Rows already at the approved values are reported as unchanged, so
+the same plan run after it was applied plans **zero** updates. The plan
+records the sheet's confidence class as written; it is reviewer-editable, so
+re-run `reconcile` before applying to confirm it.
 
 `backfill_preview.sql` sets only `pickup_term` and
 `pickup_academic_year_start`, guards each update on the node's live
-`family_id`, `parent_member_id` and reviewed previous values, raises with the
-node id unless exactly one row changes, and ends in `ROLLBACK`. Applying it for
+`family_id`, `parent_member_id` and reviewed previous values, collects every
+node that did not change exactly once and then aborts with all of their ids
+together, and ends in `ROLLBACK`. Applying it for
 real is a separate owner-approved step (below).
 
 ## Evidence classes
 
 | Class | Meaning |
 |---|---|
-| `CONFIRMED_YEAR` | An official pairing sheet, read in full, names this Little under the **live** Big by exact name, and no other credible source disagrees. |
-| `STRONG_CANDIDATE` | An explicit repo `added_term` on the link that matches the live Little and Big, or an official pairing that matches only through a looser spelling (middle initial, nickname) or comes from a source not read in full. |
+| `CONFIRMED_YEAR` | An authoritative official pairing sheet, read in full, names this Little under the **live** Big by exact name, and no other credible source (or existing live value) disagrees. |
+| `STRONG_CANDIDATE` | An explicit repo `added_term` on the link that matches the live Little and Big, or an official pairing that matches only through a looser spelling, comes from a source not read in full or not labelled official, or names no Big for a root. |
 | `SUSPECTED_YEAR` | Only a Master workbook year row, matched by name inside the live fam. |
 | `CONFLICTING_EVIDENCE` | Credible years disagree, a source names a different Big, the row fits several people, the year is after the latest Reveal, or a Little would predate their Big. Every candidate is kept. |
 | `UNKNOWN` | No usable year. `legacy` terms land here (flag `LEGACY_TERM_ONLY`). |
@@ -132,8 +151,10 @@ creation time; a person's own year does not change when they later take Littles.
   enough to confirm.
 - **Official pairings** match on the Little **and** the live Big together,
   across all fams, so an obsolete fam label (the FA23 sheet's, `GBM`) still
-  confirms the live node and is noted. Several matching pairs are narrowed by the
-  fam label, else held as ambiguous.
+  confirms the live node, flagged `SOURCE_FAM_LABEL_DIFFERS`. If the labelled
+  fam has its own node with that Little's name, the row is ambiguous for both.
+  Several matching pairs are narrowed by the fam label, else held as ambiguous.
+  An ambiguous row that gives a different year holds every candidate node.
 - **Repo `added_term`** matches within the file's fam on Little + live Big.
 - **Master cells** carry no Big: they match a name only inside the live fam, and
   a name shared by two nodes in that fam is never guessed.
@@ -145,8 +166,12 @@ creation time; a person's own year does not change when they later take Littles.
   base slug. **AAF → Moon** only when no AAF fam is live (the documented split);
   with both live, AAF evidence never reaches Moon.
 - Header cells that leak into extracted rows (`LITTLE`, `BIG`) are not people.
-- **Chronology:** a Little earlier than their live Big holds the weaker-classed
-  side (both when equal). The same term as the Big is a warning only.
+- **Chronology:** a Little earlier than their live Big (by year, then FA < WI <
+  SP within a year) holds the side whose year rests on weaker evidence (both when
+  equal), regardless of either row's other holds. The same term as the Big is a
+  warning only.
+- Matched rows whose term is not FA/WI/SP or `legacy` are flagged
+  `UNPARSEABLE_TERM`; years outside 2005–2069 are rejected.
 - **Master calibration:** for each fam, how often its Master rows agree with
   official/repo years on the same nodes. With at least 10 comparisons and under
   50% agreement, Master-only rows get `MASTER_UNRELIABLE_IN_FAM`. This measures;
@@ -159,13 +184,17 @@ production path in `vsa-change-control` / `vsa-run-and-operate`:
 
 1. Re-snapshot (with the pickup columns), re-run `plan` with the reviewed sheet,
    and check the update count against what was approved.
-2. Back up the old values of exactly the planned ids into a private table.
+2. Back up the old values of exactly the planned ids into a table in a schema
+   the API does not expose (a new table in `public` gets anon grants).
 3. Run the preview on staging with `ROLLBACK` replaced by `COMMIT` only after the
    statements run clean; confirm `parent_member_id`, `family_id`, `member_id`,
    `name` and `photo_url` are byte-identical before and after (`md5` of those
    columns over the fam).
 4. Production: same statements, owner-approved, in batches by fam.
 5. Rollback is restoring the two columns from the backup; nothing else changed.
+
+#670 also asks for an admin-only audit of applied changes; that table belongs
+with #669's schema and is not created here.
 
 Later corrections are the same flow with the new reviewed year: the plan marks
 them `overwrites_existing_value` and never touches ancestry.

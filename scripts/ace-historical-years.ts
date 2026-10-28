@@ -21,7 +21,7 @@
  *
  *   npm run ace:years -- plan \
  *     --live-families <...> --live-members <...> \
- *     --review <reviewed review_sheet.csv> \
+ *     --review <reviewed review_sheet.csv> [--pre-669-snapshot yes] \
  *     [--max-year 2025] [--out-dir scripts/reports/ace-historical-years/plan]
  *
  * `plan` is a DRY RUN: it writes backfill_plan.json and a SQL preview that
@@ -98,27 +98,40 @@ function sha256(file: string): string {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 12);
 }
 
-/** Refuses an output directory that git would track, so private rows cannot be committed by accident. */
-function assertPrivateOutDir(dir: string) {
+/**
+ * Refuses any output file git would track, so private rows cannot be committed
+ * by accident. Checked per file (a negated ignore rule can re-include one file
+ * in an ignored folder) and before the folder is created.
+ */
+function assertPrivateOutputs(dir: string, files: readonly string[]) {
   const absolute = path.resolve(dir);
-  fs.mkdirSync(absolute, { recursive: true, mode: 0o700 });
+  let probe = absolute;
+  while (!fs.existsSync(probe)) probe = path.dirname(probe);
   let insideRepo = true;
   try {
-    execFileSync('git', ['-C', absolute, 'rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' });
+    execFileSync('git', ['-C', probe, 'rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' });
   } catch {
     insideRepo = false;
   }
-  if (!insideRepo) return;
-  try {
-    execFileSync('git', ['-C', absolute, 'check-ignore', '-q', '.'], { stdio: 'ignore' });
-  } catch {
-    throw new Error(`--out-dir ${dir} is inside a git checkout and not gitignored. Use scripts/reports/... or a folder outside the repo.`);
+  if (insideRepo) {
+    for (const file of files) {
+      try {
+        execFileSync('git', ['-C', probe, 'check-ignore', '-q', '--no-index', path.join(absolute, file)], { stdio: 'ignore' });
+      } catch {
+        throw new Error(`${path.join(dir, file)} would not be gitignored. Use scripts/reports/... or a folder outside the repo.`);
+      }
+    }
   }
+  fs.mkdirSync(absolute, { recursive: true, mode: 0o700 });
 }
 
 function write(dir: string, name: string, content: string) {
   fs.writeFileSync(path.join(dir, name), content, { mode: 0o600 });
 }
+
+const QUEUES: ReviewQueue[] = ['ambiguous_identity', 'conflicting_years', 'missing_evidence', 'chronology', 'roots'];
+const RECONCILE_OUTPUTS = ['review_sheet.csv', ...QUEUES.map((q) => `queue_${q}.csv`), 'unmatched_evidence.csv', 'summary.json', 'summary.md'];
+const PLAN_OUTPUTS = ['backfill_plan.json', 'backfill_preview.sql'];
 
 function loadSnapshot(one: (n: string) => string) {
   const famFile = one('live-families');
@@ -158,9 +171,12 @@ function summaryMarkdown(summary: AggregateSummary): string {
     '',
     '## Sources',
     '',
-    '| Source | Kind | Complete | Records | Reached a live node | Reached none |',
-    '|---|---|---|---|---|---|',
-    ...summary.sources.map((s) => `| ${s.label} | ${s.kind} | ${s.extraction_complete ? 'yes' : 'NO'} | ${s.records} | ${s.matched_records} | ${s.unmatched_records} |`),
+    '| Source | Kind | Term | Complete | Authoritative | Records | Reached a live node | Reached none |',
+    '|---|---|---|---|---|---|---|---|',
+    ...summary.sources.map(
+      (s) =>
+        `| ${s.source_id} | ${s.kind} | ${s.term ?? '–'} | ${s.extraction_complete ? 'yes' : 'NO'} | ${s.kind === 'official_pairing' ? (s.authoritative ? 'yes' : 'no') : '–'} | ${s.records} | ${s.matched_records} | ${s.unmatched_records} |`
+    ),
     ''
   );
   return lines.join('\n');
@@ -168,7 +184,7 @@ function summaryMarkdown(summary: AggregateSummary): string {
 
 function reconcile(args: ReturnType<typeof parseArgs>) {
   const outDir = args.one('out-dir', 'scripts/reports/ace-historical-years/out');
-  assertPrivateOutDir(outDir);
+  assertPrivateOutputs(outDir, RECONCILE_OUTPUTS);
   const maxYear = parseMaxYear(args.one('max-year', String(DEFAULT_MAX_YEAR)));
   const { snapshot, version } = loadSnapshot(args.one);
 
@@ -182,8 +198,10 @@ function reconcile(args: ReturnType<typeof parseArgs>) {
       .sort()
       .map((f) => ({ file: f, json: readJson(path.join(repoDir, f)) }));
     if (files.length === 0) throw new Error(`No .json files in ${repoDir}`);
-    bundles.push(evidenceFromRepoFamilies(files));
+    const repo = evidenceFromRepoFamilies(files);
+    bundles.push(repo);
     versions.push(`repo:${files.length} files`);
+    console.log(`Repo trees: ${repo.records.length} links with a term; ${repo.blankTerms} link(s) with no added_term (no evidence).`);
   }
   const pkgFile = args.one('research-package', '');
   if (pkgFile) {
@@ -192,10 +210,12 @@ function reconcile(args: ReturnType<typeof parseArgs>) {
       .split(',')
       .map((s) => s.trim());
     for (const s of sections) if (s !== 'official' && s !== 'master') throw new Error(`--package-sections takes official and/or master, not ${s}`);
-    const { bundle, skippedMasterCells } = evidenceFromResearchPackage(readJson(pkgFile), sections as ('official' | 'master')[]);
+    const { bundle, skippedMasterCells, skippedOfficialRows } = evidenceFromResearchPackage(readJson(pkgFile), sections as ('official' | 'master')[]);
     bundles.push(bundle);
     versions.push(`package:${sha256(pkgFile)}`);
-    if (skippedMasterCells > 0) console.log(`Research package: skipped ${skippedMasterCells} multi-name Master cell(s).`);
+    if (skippedMasterCells > 0) console.log(`Research package: skipped ${skippedMasterCells} multi-name or out-of-range Master cell(s).`);
+    if (skippedOfficialRows > 0) console.log(`Research package: skipped ${skippedOfficialRows} pairing row(s) with an unreadable term.`);
+    if (sections.includes('official')) console.log('Research package pairing rows can corroborate but never confirm (not authoritative).');
   }
   for (const file of args.many('evidence')) {
     bundles.push(parseEvidenceFile(readJson(file)));
@@ -211,8 +231,7 @@ function reconcile(args: ReturnType<typeof parseArgs>) {
   const summary = summarize(result, evidence, generated);
 
   write(outDir, 'review_sheet.csv', reviewSheetCsv(result.rows, sourceVersion));
-  const queues: ReviewQueue[] = ['ambiguous_identity', 'conflicting_years', 'missing_evidence', 'chronology'];
-  for (const queue of queues) write(outDir, `queue_${queue}.csv`, reviewSheetForQueue(result, queue, sourceVersion));
+  for (const queue of QUEUES) write(outDir, `queue_${queue}.csv`, reviewSheetForQueue(result, queue, sourceVersion));
   write(
     outDir,
     'unmatched_evidence.csv',
@@ -237,12 +256,14 @@ function reconcile(args: ReturnType<typeof parseArgs>) {
 
 function plan(args: ReturnType<typeof parseArgs>) {
   const outDir = args.one('out-dir', 'scripts/reports/ace-historical-years/plan');
-  assertPrivateOutDir(outDir);
+  assertPrivateOutputs(outDir, PLAN_OUTPUTS);
   const maxYear = parseMaxYear(args.one('max-year', String(DEFAULT_MAX_YEAR)));
   const { snapshot } = loadSnapshot(args.one);
   const reviewFile = args.one('review');
   const review = parseReviewSheet(fs.readFileSync(reviewFile, 'utf8'));
-  const result = buildBackfillPlan(review, snapshot, { maxAcademicYearStart: maxYear });
+  const pre669 = args.one('pre-669-snapshot', 'no') === 'yes';
+  const result = buildBackfillPlan(review, snapshot, { maxAcademicYearStart: maxYear, allowMissingPickupColumns: pre669 });
+  if (!result.snapshot_has_pickup_columns) console.log('PREVIEW ONLY: snapshot has no pickup columns; previous values assumed blank. Not idempotent.');
   write(outDir, 'backfill_plan.json', `${JSON.stringify(result, null, 2)}\n`);
   write(outDir, 'backfill_preview.sql', planSqlPreview(result));
   console.log('DRY RUN: nothing was written to any database.');
