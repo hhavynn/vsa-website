@@ -1,6 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { PageTitle } from '../components/common/PageTitle';
 import { PublicBreadcrumbs } from '../components/common/PublicBreadcrumbs';
 import { HouseDetailSkeleton } from '../components/common/PageSkeletons';
