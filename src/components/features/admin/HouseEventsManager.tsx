@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import { getVerifiedLegacyHouseYears } from '../../../data/legacyHouseArchive';
-import { houseEventsRepository, HouseEventFormData } from '../../../data/repos/houseEvents';
+import { ADMIN_HOUSE_EVENT_LIMIT, houseEventsRepository, HouseEventFormData } from '../../../data/repos/houseEvents';
 import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
+import { ConfirmDialog } from '../../common/ConfirmDialog';
+import { HouseEventsDashboard } from './HouseEventsDashboard';
 import { ImageDropzone } from './ImageDropzone';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { formatAcademicYear, getAcademicTermMeta } from '../../../lib/academicTerms';
 import { formatDateOnly } from '../../../lib/dateOnly';
-import { formatEventTimeRange, isEndAfterStart, timeToInputValue } from '../../../lib/eventTime';
+import { isEndAfterStart, timeToInputValue } from '../../../lib/eventTime';
+import { hostIdsOf } from '../../../lib/houseEventDashboard';
 import { extractSupabasePublicObjectName, getUploadExtension, prepareImageForUpload } from '../../../lib/imageUpload';
 import { supabase } from '../../../lib/supabase';
 import { HouseEvent, HousePageAsset } from '../../../types';
@@ -165,9 +168,11 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   const { assets: houseProfiles } = useAdminHouseAssets(selectedYear);
   const profilesById = useMemo(() => new Map(houseProfiles.map((asset) => [asset.id, asset])), [houseProfiles]);
 
+  const queryClient = useQueryClient();
   const {
     data: events = [],
     isLoading: eventsLoading,
+    isError: eventsError,
     refetch,
   } = useQuery({
     queryKey: ['admin', 'house-events', selectedYear],
@@ -188,20 +193,91 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
 
   // One id per form session, so a retried create cannot make a second event.
   const requestIdRef = useRef<string>(crypto.randomUUID());
+  // What the form held when it was last loaded, to tell unsaved edits apart.
+  const baselineRef = useRef<HouseEventDraft>(draft);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  function resetForm() {
-    setDraft(emptyDraft());
+  // Both entry points (Admin Events and this tab) read the same key.
+  const invalidateEvents = () => queryClient.invalidateQueries(['admin', 'house-events']);
+
+  function loadForm(next: HouseEventDraft, event: HouseEvent | null) {
+    setDraft(next);
+    baselineRef.current = next;
     requestIdRef.current = crypto.randomUUID();
-    setEditingEvent(null);
+    setEditingEvent(event);
     setImageFile(null);
     setImagePreview(null);
   }
 
+  function resetForm() {
+    loadForm(emptyDraft(), null);
+  }
+
+  // Never drop typed changes without asking: run `action` now, or after the
+  // admin confirms discarding them.
+  const [pendingDiscard, setPendingDiscard] = useState<(() => void) | null>(null);
+  function afterDiscard(action: () => void) {
+    const dirty = imageFile !== null || JSON.stringify(draft) !== JSON.stringify(baselineRef.current);
+    if (dirty) setPendingDiscard(() => action);
+    else action();
+  }
+
+  // Deferred so it runs after a closing dialog has restored its own focus.
+  function showForm() {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      formRef.current?.querySelector<HTMLInputElement>('#house-event-title')?.focus({ preventScroll: true });
+    }, 0);
+  }
+
   function editEvent(event: HouseEvent) {
-    setEditingEvent(event);
-    setDraft(draftFromEvent(event));
-    setImageFile(null);
-    setImagePreview(null);
+    afterDiscard(() => {
+      loadForm(draftFromEvent(event), event);
+      showForm();
+    });
+  }
+
+  // A fresh event (new id on save) with the same details, as a draft. The image
+  // is not copied: deleting either event removes its image files.
+  function duplicateEvent(event: HouseEvent) {
+    afterDiscard(() => {
+      loadForm({
+        ...draftFromEvent(event),
+        id: undefined,
+        title: `${event.title} (copy)`,
+        image_url: '',
+        image_thumbnail_url: '',
+        is_published: false,
+      }, null);
+      toast.success('Copied into the form as a new draft. Check the date, then save.');
+      showForm();
+    });
+  }
+
+  // Publishing goes through the atomic save, so the server re-checks the hosts
+  // and refuses a stale version. Unpublishing only hides the event: a plain
+  // update that leaves the hosts alone, so it works even when they need fixing.
+  async function setPublished(event: HouseEvent, publish: boolean) {
+    const hostIds = hostIdsOf(event);
+    if (publish && hostIds.length === 0) throw new Error('Link a host House (Edit) before publishing.');
+    const saved = publish
+      ? await houseEventsRepository.saveEventAtomic({
+        eventId: event.id,
+        formData: { is_published: true, house_ids: hostIds },
+        requestId: crypto.randomUUID(),
+        expectedUpdatedAt: event.updated_at,
+      })
+      : false;
+    const row = saved === false ? await houseEventsRepository.updateEvent(event.id, { is_published: publish }) : saved;
+    // Keep an open edit of the same event in step, or its next save would be
+    // refused as a conflicting change.
+    if (editingEvent?.id === event.id) {
+      setEditingEvent({ ...editingEvent, ...row, houses: editingEvent.houses });
+      setDraft((current) => ({ ...current, is_published: publish }));
+      baselineRef.current = { ...baselineRef.current, is_published: publish };
+    }
+    toast.success(publish ? `“${event.title}” is published.` : `“${event.title}” is a draft again.`);
+    invalidateEvents();
   }
 
   async function uploadImage(file: File, profile: HousePageAsset): Promise<UploadedHouseEventImage> {
@@ -323,7 +399,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
       }
 
       resetForm();
-      refetch();
+      invalidateEvents();
     } catch (err) {
       console.error(err);
       const detail = err instanceof Error && err.message ? err.message : 'Unknown error.';
@@ -333,21 +409,18 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
     }
   }
 
-  async function handleDeleteConfirm() {
-    if (!deletingEvent) return;
+  async function handleDeleteConfirm(target: HouseEvent) {
+    await houseEventsRepository.deleteEvent(target.id);
     try {
-      await houseEventsRepository.deleteEvent(deletingEvent.id);
-      await removeHouseEventImage(deletingEvent.image_url);
-      await removeHouseEventImage(deletingEvent.image_thumbnail_url);
-      toast.success('House event deleted.');
-      if (editingEvent?.id === deletingEvent.id) resetForm();
-      refetch();
+      await removeHouseEventImage(target.image_url);
+      await removeHouseEventImage(target.image_thumbnail_url);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to delete House event.');
-    } finally {
-      setDeletingEvent(null);
+      toast.error('The event was deleted, but its image files could not be removed.');
     }
+    toast.success('House event deleted.');
+    if (editingEvent?.id === target.id) resetForm();
+    invalidateEvents();
   }
 
   function toggleHouse(id: string) {
@@ -360,12 +433,10 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   }
 
   const today = getLosAngelesDateOnly();
-  const upcomingEvents = events.filter((event) => event.event_date >= today);
-  const pastEvents = events.filter((event) => event.event_date < today);
 
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-      <form onSubmit={handleSubmit} className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+      <form ref={formRef} onSubmit={handleSubmit} aria-label="House event form" className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
           {editingEvent ? 'Edit House Event' : 'Create House Event'}
         </h2>
@@ -380,9 +451,10 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
               value={selectedYear ?? ''}
               onChange={(event) => {
                 const nextYear = Number(event.target.value);
-                onYearChange(nextYear);
-                setDraft({ ...emptyDraft(), house_profile_ids: [] });
-                setEditingEvent(null);
+                afterDiscard(() => {
+                  onYearChange(nextYear);
+                  resetForm();
+                });
               }}
               className={inputCls}
             >
@@ -408,6 +480,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
                   <button
                     key={profile.id}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => toggleHouse(profile.id)}
                     className={`flex items-center gap-2 rounded border px-3 py-2 text-left transition-all ${isSelected ? 'shadow-sm' : 'opacity-60'}`}
                     style={{
@@ -527,99 +600,43 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         </div>
       </form>
 
-      <div className="space-y-6">
-        <div className="scrapbook-paper overflow-hidden" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-          <div className="border-b px-5 py-4" style={{ borderColor: 'var(--color-border)' }}>
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Manage House Events</h2>
-            <p className="mt-1 font-sans text-xs" style={{ color: 'var(--color-text3)' }}>
-              {events.length} event{events.length !== 1 ? 's' : ''} for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. Drafts stay in Admin; published events appear on matching public House pages.
-            </p>
-          </div>
-          {eventsLoading ? (
-            <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>Loading House events...</p>
-          ) : events.length === 0 ? (
-            <p className="py-12 text-center text-sm" style={{ color: 'var(--color-text3)' }}>
-              No House events found for {selectedYear ? formatAcademicYear(selectedYear) : 'this year'}. Create one after profiles exist, or leave this empty if the year has no House event programming yet.
-            </p>
-          ) : (
-            <div>
-              {[
-                ['Upcoming', upcomingEvents],
-                ['Past', pastEvents],
-              ].map(([label, groupedEvents]) => (
-                (groupedEvents as HouseEvent[]).length > 0 && (
-                  <div key={label as string}>
-                    <div className="border-y bg-[var(--color-surface2)] px-4 py-2 first:border-t-0" style={{ borderColor: 'var(--color-border)' }}>
-                      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>{label as string}</p>
-                    </div>
-                    <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                      {(groupedEvents as HouseEvent[]).map((event) => {
-                        const eventHouses = event.houses || [];
-                        const primaryHouse = eventHouses[0] || profilesById.get(event.house_profile_id);
-                        const color = getHouseColor(primaryHouse);
-                        const timeLabel = event.start_time && event.end_time ? formatEventTimeRange(event.start_time, event.end_time) : null;
-                        return (
-                          <div key={event.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
-                            {(event.image_thumbnail_url || event.image_url) && (
-                              <img src={event.image_thumbnail_url || event.image_url || ''} alt={event.title} className="h-32 w-full rounded border object-cover sm:h-16 sm:w-16" style={{ borderColor: 'var(--color-border)' }} />
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                {eventHouses.length > 0 ? (
-                                  eventHouses.map((h) => (
-                                    <span key={h.id} className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: getHouseColor(h) }}>
-                                      {getHouseLabel(h)}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-white" style={{ background: color }}>
-                                    {getHouseLabel(primaryHouse)}
-                                  </span>
-                                )}
-                                {!event.is_published && <span className="rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)' }}>Draft</span>}
-                              </div>
-                              <p className="mt-1 truncate font-sans text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{event.title}</p>
-                              <p className="mt-1 font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>
-                                {formatDateOnly(event.event_date, 'MMM d, yyyy')}{timeLabel ? ` / ${timeLabel}` : ''}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <button type="button" onClick={() => editEvent(event)} className="rounded border px-3 py-1.5 text-xs font-medium" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
-                                Edit
-                              </button>
-                              <button type="button" onClick={() => setDeletingEvent(event)} className="rounded border border-red-900/30 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white">
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      <HouseEventsDashboard
+        // A new year starts with no host filter (its Houses are different).
+        key={selectedYear ?? 'none'}
+        selectedYear={selectedYear}
+        events={events}
+        profiles={houseProfiles}
+        today={today}
+        isLoading={eventsLoading}
+        isError={eventsError}
+        truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
+        onRetry={() => refetch()}
+        onEdit={editEvent}
+        onDuplicate={duplicateEvent}
+        onDelete={setDeletingEvent}
+        onSetPublished={setPublished}
+      />
+
+      {pendingDiscard && (
+        <ConfirmDialog
+          open
+          title="Discard unsaved changes?"
+          description="The House event form has changes that are not saved. Discard them to continue, or cancel to keep editing."
+          confirmLabel="Discard changes"
+          onConfirm={() => pendingDiscard()}
+          onClose={() => setPendingDiscard(null)}
+        />
+      )}
 
       {deletingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="scrapbook-paper max-w-md p-6" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
-            <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>Delete House event?</h2>
-            <p className="mt-2 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-              This removes "{deletingEvent.title}" from public House pages.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <button type="button" onClick={handleDeleteConfirm} className="flex-1 rounded bg-red-600 px-4 py-2.5 text-sm font-semibold text-white">
-                Delete
-              </button>
-              <button type="button" onClick={() => setDeletingEvent(null)} className="flex-1 rounded border px-4 py-2.5 text-sm font-semibold" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text2)' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          open
+          title="Delete this House event?"
+          description={<>&ldquo;{deletingEvent.title}&rdquo; ({formatDateOnly(deletingEvent.event_date, 'MMM d, yyyy')}) is removed from every House page and the calendar, with its image. This cannot be undone; Unpublish keeps it as a draft instead.</>}
+          confirmLabel="Delete"
+          onConfirm={() => handleDeleteConfirm(deletingEvent)}
+          onClose={() => setDeletingEvent(null)}
+        />
       )}
     </div>
   );
