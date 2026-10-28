@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../../components/common/PageTitle';
@@ -41,10 +41,17 @@ export default function AdminSettings() {
     setJustSaved(false);
   }
 
+  const seeded = useRef(false);
   useEffect(() => {
-    setLogoUrl(settings.logoUrl);
-    setLogoAlt(settings.logoAlt || DEFAULT_SITE_SETTINGS.logoAlt);
-  }, [settings]);
+    // A settings refetch must not erase edits in progress. On initial load
+    // (including a delayed context hydrate), always adopt the server values.
+    // After that, follow server changes only while the editor is clean.
+    if (!seeded.current || !changed) {
+      setLogoUrl(settings.logoUrl);
+      setLogoAlt(settings.logoAlt || DEFAULT_SITE_SETTINGS.logoAlt);
+    }
+    seeded.current = true;
+  }, [settings, changed]);
 
   async function uploadLogo(file: File): Promise<string> {
     const { file: preparedFile, reduction, wasCompressed } = await prepareImageForUpload(file, 'logo');
