@@ -26,7 +26,9 @@
   },
   "scripts": {
     "start": "node scripts/start-dev.cjs",
+    "prebuild": "node scripts/check-client-secrets.mjs --build",
     "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "prebuild:production": "node scripts/check-client-secrets.mjs --build",
     "build:production": "node ./node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
     "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject",

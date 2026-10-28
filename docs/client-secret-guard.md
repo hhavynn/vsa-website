@@ -1,10 +1,10 @@
 # Client bundle credential guard (#348)
 
-The GitHub `security` job runs `node --test scripts/check-client-secrets.test.mjs` and `node scripts/check-client-secrets.mjs` on pull requests to main. It inspects tracked client source/assets and committed `.env*` files for unreviewed public variables, high-confidence credential signatures and privileged JWTs in the public anon-key slot. Reports include only the file and issue category, never a secret value.
+The GitHub `security` job runs `node --test scripts/check-client-secrets.test.mjs` and `node scripts/check-client-secrets.mjs` on pull requests to main. It inspects tracked source and committed `.env*` files for high-confidence credential signatures, privileged JWTs and unreviewed public variables. The build lifecycle additionally checks the actual process environment and CRA production env files, including local files. Reports include only the file and issue category, never a secret value.
 
 Allowed names are `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_ANON_KEY`, `REACT_APP_GA4_MEASUREMENT_ID`, `REACT_APP_SUPABASE_IMAGE_TRANSFORMS`, and `REACT_APP_ATTENDANCE_IDENTITY_V2`. Supabase's **anon** key is deliberately public. A new public variable must receive a security review before extending the allowlist; private credentials always belong in server secrets.
 
-This narrow tripwire does not replace GitHub secret scanning or push protection. It does not inspect history, generated bundles, or untracked local env files. If it fires, investigate privately, **rotate any exposed credential before removing it**, update its trusted consumers, then remove it from exposed bundles and repository history through the incident process. Never paste a value into a PR/comment/test fixture.
+Public build values must be literal: the build guard rejects dollar signs in them because CRA can expand variables after the guard runs. This narrow tripwire does not inspect history, generated bundles, binary files or test files, and cannot detect every credential. Its build-time mode checks the environment and root production env files; the CI security job separately scans tracked source. It is not proof that a bundle contains no secrets. If it fires, investigate privately, **rotate any exposed credential before removing it**, update its trusted consumers, then remove it from exposed bundles and repository history through the incident process. Never paste a real value into a PR, comment or test fixture.
 
 | Credential | Rotation owner/location | Potential impact |
 | --- | --- | --- |

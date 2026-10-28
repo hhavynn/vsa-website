@@ -139,6 +139,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Install dependencies for the credential guard
+        run: npm ci
+
       - name: Block accidental client-bundle credentials
         # High-confidence findings are a release gate; no values printed.
         run: |
