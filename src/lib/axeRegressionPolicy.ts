@@ -56,13 +56,13 @@ function validateException(entry: AxeException, today: string) {
   }
 }
 
-export function withoutReviewedFalsePositives<T extends AxeViolation>(
-  violations: T[],
+export function withoutReviewedFalsePositives(
+  violations: AxeViolation[],
   route: string,
   theme: AxeTheme,
   exceptions: readonly AxeException[] = AXE_EXCEPTIONS,
   today: string = new Date().toISOString().slice(0, 10),
-): T[] {
+): AxeViolation[] {
   for (const entry of exceptions) validateException(entry, today);
 
   return violations.flatMap((violation) => {
