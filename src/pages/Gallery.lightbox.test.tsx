@@ -154,6 +154,32 @@ describe('Gallery album quick-look', () => {
     expect(within(getDialog()).getByRole('heading', { name: 'Album c' })).toBeInTheDocument();
   });
 
+  it('clamps pan to the smaller bounds when pinching back toward 1x', () => {
+    renderGallery();
+    openCard('Album a');
+    const area = screen.getByTestId('album-zoom-area');
+    const image = within(getDialog()).getByRole('img', { name: 'Cover photo for Album a' });
+    jest.spyOn(area, 'getBoundingClientRect').mockReturnValue({
+      width: 300, height: 200, top: 0, left: 0, right: 300, bottom: 200, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.touchStart(area, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 300, clientY: 0 }] });
+    expect(image.style.transform).toContain('scale(3)');
+    fireEvent.touchEnd(area, { touches: [], changedTouches: [] });
+    fireEvent.touchStart(area, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 800, clientY: 800 }] });
+    expect(image.style.transform).toContain('translate(300px, 200px)');
+    fireEvent.touchEnd(area, { touches: [], changedTouches: [] });
+    fireEvent.touchStart(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 140, clientY: 100 }] });
+    const match = image.style.transform.match(/translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/);
+    expect(match).not.toBeNull();
+    expect(Math.abs(Number(match?.[1]))).toBeLessThanOrEqual(30.01);
+    expect(Math.abs(Number(match?.[2]))).toBeLessThanOrEqual(20.01);
+    expect(image.style.transform).toContain('scale(1.2000000000000002)');
+  });
+
   it('clamps pinch zoom, and resets photo zoom when paging to another album', () => {
     renderGallery();
     openCard('Album a');
