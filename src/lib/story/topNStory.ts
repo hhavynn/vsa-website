@@ -53,6 +53,14 @@ export function buildTopNStoryEntries(
   }));
 }
 
+/** The podium locates entries by numeric rank, so a shared #2 would drop
+ * one person. Only switch to a list for that case; unchanged Top 3 keeps
+ * the original visual design and preset.
+ */
+export function shouldUseTopNList(limit: StoryLimit, entries: readonly TopNStoryEntry[]): boolean {
+  return limit !== 3 || entries.some((entry) => (entry.tiedCount ?? 1) > 1);
+}
+
 export function formatTopNFileName(year: number, limit: StoryLimit, preset: Top3StoryPreset['id'], theme: StoryTheme): string {
   return `vsa-public-leaderboard-top${limit}-${year}-${String(year + 1).slice(-2)}-${preset}-${theme}.png`;
 }
