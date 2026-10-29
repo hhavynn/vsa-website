@@ -12,6 +12,8 @@
 -- unchanged by CREATE OR REPLACE and restated below.
 --
 -- Verify: bash scripts/test-event-attendance-readiness.sh
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029015558)
 
 create or replace function public.admin_event_attendance_readiness(
   p_year integer,

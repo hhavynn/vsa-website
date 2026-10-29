@@ -2,6 +2,8 @@
 -- was already applied, preserve its checksum. Replace only the admin-only
 -- member attendance drilldown to report ALL active overlapping House credits.
 -- No new grants, tables, public exposure, or scoring mutations.
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029015700)
 create or replace function public.admin_house_member_attendance(
   p_member_id uuid,
   p_year integer

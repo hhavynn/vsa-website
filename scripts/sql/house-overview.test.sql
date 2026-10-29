@@ -28,7 +28,7 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028075724_admin_house_overview.sql
-\ir ../../supabase/migrations/20261028200000_admin_house_overview_weighted_reconciliation.sql
+\ir ../../supabase/migrations/20261029015642_admin_house_overview_weighted_reconciliation.sql
 set client_min_messages = notice;
 
 -- Two terms of 2026-27, one of 2025-26.

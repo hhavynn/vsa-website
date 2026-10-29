@@ -3,6 +3,8 @@
 -- Preserve distinct credited attendance (event records) separately from
 -- credited_points (SUM(points_earned), matching house_yearly_points).
 -- This function remains SECURITY DEFINER, POST-only, and admin-authorized.
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029015725)
 create or replace function public.admin_house_roster(
   p_house_profile_id uuid,
   p_term_id uuid default null

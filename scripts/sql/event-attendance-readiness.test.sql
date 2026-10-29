@@ -31,7 +31,7 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028090000_admin_event_attendance_readiness.sql
-\ir ../../supabase/migrations/20261028120000_attendance_readiness_resolved_reconciliation.sql
+\ir ../../supabase/migrations/20261029015558_attendance_readiness_resolved_reconciliation.sql
 set client_min_messages = notice;
 
 insert into public.academic_terms values
