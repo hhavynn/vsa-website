@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { FindMyPoints } from './FindMyPoints';
+import { FindMyPoints, formatPointsLookupRetrievedAt } from './FindMyPoints';
 
 jest.mock('../../../hooks/useAcademicTerms', () => ({
   useAcademicTerms: () => ({ terms: [], loading: false }),
@@ -29,6 +29,9 @@ jest.mock('../../../hooks/useFindMyPoints', () => ({
     }],
     isLoading: false,
     isFetching: false,
+    // 2026-10-28 2 PM Pacific Daylight Time — this is a fetch clock,
+    // not a cabinet attendance-import timestamp.
+    dataUpdatedAt: Date.UTC(2026, 9, 28, 21, 0),
     error: null,
   }),
 }));
@@ -56,6 +59,30 @@ describe('Find My Points live-result announcements (#322)', () => {
     expect(status).toHaveTextContent(/^$/);
     fireEvent.blur(search);
     expect(status).toHaveTextContent(/No matching member found/);
+  });
+
+  it('labels a public results fetch timestamp without falsely claiming an attendance-import update', () => {
+    renderLookup();
+    expect(screen.getByTestId('points-last-fetched')).toHaveTextContent(/Oct 28, 2026/);
+    expect(screen.getByTestId('points-last-fetched')).toHaveTextContent(/PDT/);
+    expect(screen.getByTestId('points-last-fetched')).toHaveTextContent(/not when cabinet last imported attendance/);
+    expect(formatPointsLookupRetrievedAt(0)).toBeNull();
+    expect(formatPointsLookupRetrievedAt(Number.NaN)).toBeNull();
+    expect(formatPointsLookupRetrievedAt(Date.UTC(2026, 11, 28, 21))).toContain('PST');
+  });
+
+  it('lets a no-match visitor compare with All-Time without opening a separate search or exposing contacts', () => {
+    renderLookup();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search by name' }), {
+      target: { value: 'Unknown Visitor' },
+    });
+    expect(screen.getByRole('button', { name: 'Try All-Time results' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try All-Time results' }));
+    expect(screen.getByRole('combobox', { name: 'Select academic year' })).toHaveValue('all');
+    expect(screen.queryByRole('button', { name: 'Try All-Time results' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Request a correction' })).toHaveAttribute(
+      'href', '/feedback?type=event&title=Points%20correction'
+    );
   });
 
   it('explains probable missing points and offers correction and in-page points help', () => {
