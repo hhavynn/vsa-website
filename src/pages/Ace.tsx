@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { useTheme } from '../context/ThemeContext';
 import { useProgramContent } from '../hooks/useProgramContent';
@@ -19,6 +19,7 @@ import { FamSheet } from '../components/features/ace/FamSheet';
 import { FamTabs } from '../components/features/ace/FamTabs';
 import { GhostFamCard } from '../components/features/ace/GhostFamCard';
 import { ACTIVE_FAM_SLOTS } from '../lib/aceFamRoster';
+import { resolvePublishedAceLink, searchPublishedAceNodes } from '../lib/acePublishedSearch';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { VietnameseText } from '../components/common/VietnameseText';
@@ -89,8 +90,10 @@ export function Ace() {
   const dark = theme === 'dark';
 
   const { content: cycleContent } = useProgramContent('ace');
-  const { families } = usePublishedAceFamilies();
-  const { members: allMembers } = useAllPublishedAceFamilyMembers();
+  const { families, loading: familiesLoading, error: familiesError } = usePublishedAceFamilies();
+  const { members: allMembers, loading: membersLoading, error: membersError } = useAllPublishedAceFamilyMembers();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [personQuery, setPersonQuery] = useState('');
 
   const [openFamId, setOpenFamId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number>(-1);
@@ -132,7 +135,64 @@ export function Ace() {
   }, [derivedFams]);
   const graveyardFams = useMemo(() => derivedFams.filter((f) => f.isDead), [derivedFams]);
 
-  const openFam = openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
+  // Search and deep links never consult private drafts, applicant data or the
+  // canonical members table. A wrong/unpublished node ID always fails closed.
+  const requestedFam = searchParams.get('fam');
+  const requestedNode = searchParams.get('node');
+  const linked = useMemo(
+    () => resolvePublishedAceLink(families, allMembers, requestedFam, requestedNode),
+    [families, allMembers, requestedFam, requestedNode],
+  );
+  const linkedFamily = linked.status === 'published'
+    ? derivedFams.find((f) => f.family.id === linked.family.id) ?? null
+    : null;
+  const hasRequestedLink = !!requestedFam || !!requestedNode;
+  const openFam = hasRequestedLink
+    ? linkedFamily
+    : openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
+  const publishedSearch = useMemo(
+    () => searchPublishedAceNodes(families, allMembers, personQuery),
+    [families, allMembers, personQuery],
+  );
+  const aceMembersReady = !familiesLoading && !membersLoading;
+
+  const openPublishedFamily = (id: string) => {
+    if (hasRequestedLink) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('fam');
+      next.delete('node');
+      setSearchParams(next, { replace: true });
+    }
+    setOpenFamId(id);
+  };
+
+  const openSearchResult = (familyId: string, slug: string, nodeId: string) => {
+    setSelectedFamTab(familyId);
+    setOpenFamId(null);
+    const next = new URLSearchParams(searchParams);
+    next.set('fam', slug);
+    next.set('node', nodeId);
+    setSearchParams(next);
+  };
+
+  const closeFamily = () => {
+    setOpenFamId(null);
+    if (hasRequestedLink) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('fam');
+      next.delete('node');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  const updateSelectedNode = (nodeId: string | null) => {
+    if (!openFam) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('fam', openFam.family.slug);
+    if (nodeId) next.set('node', nodeId);
+    else next.delete('node');
+    setSearchParams(next, { replace: true });
+  };
 
   // Cycle CTA: drive from program_content('ace'). Hide if hidden/null.
   const cycleStatusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
@@ -243,6 +303,68 @@ export function Ace() {
           />
         </section>
 
+        {/* Public published-node search. Input remains local; no text is sent to the server. */}
+        <section className="ace-section" aria-labelledby="ace-member-find-heading">
+          <h2 id="ace-member-find-heading" className="ace-eyebrow">Find someone in ACE</h2>
+          <p className="ace-section-foot">
+            Search published ACE family trees by name, including archived fams. Results only show already-public names,
+            their Fam, and approved lineage context. Private requests and unrevealed matches never appear.
+          </p>
+          <label htmlFor="ace-member-search" className="mt-3 block font-sans text-sm font-semibold text-text-primary">
+            Published member name
+          </label>
+          <input
+            id="ace-member-search"
+            type="search"
+            autoComplete="off"
+            value={personQuery}
+            onChange={(event) => setPersonQuery(event.target.value)}
+            placeholder="Search by name"
+            aria-describedby="ace-member-search-status"
+            className="mt-2 w-full rounded border border-border-strong bg-surface2 px-4 py-3 font-sans text-base text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+          />
+          <p id="ace-member-search-status" role="status" className="mt-2 font-sans text-xs text-text-secondary">
+            {familiesError || membersError
+              ? 'Published ACE search is temporarily unavailable.'
+              : !aceMembersReady
+                ? 'Loading published families…'
+                : personQuery.trim().length < 2
+                  ? 'Type at least two letters to search.'
+                  : publishedSearch.total === 0
+                    ? 'No matching published names found.'
+                    : `${publishedSearch.total} published match${publishedSearch.total === 1 ? '' : 'es'} found.${publishedSearch.total > publishedSearch.matches.length ? ` Showing the first ${publishedSearch.matches.length}.` : ''}`}
+          </p>
+          {aceMembersReady && !familiesError && !membersError && personQuery.trim().length >= 2 && publishedSearch.matches.length > 0 && (
+            <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto" aria-label="Published ACE member matches">
+              {publishedSearch.matches.map(({ member, family, bigName, pickupLabel }) => (
+                <li key={member.id}>
+                  <button
+                    type="button"
+                    className="flex min-h-11 w-full flex-col items-start gap-1 rounded border border-border-strong bg-surface px-3 py-3 text-left font-sans transition-colors hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                    aria-label={`Open ${member.name}'s published lineage in ${family.name}`}
+                    onClick={() => openSearchResult(family.id, family.slug, member.id)}
+                  >
+                    <span className="text-sm font-semibold text-text-primary">{member.name}</span>
+                    <span className="text-xs text-text-secondary">
+                      {family.name}{isDeadFam(family.name) ? ' · Archived Fam' : ''}
+                      {bigName ? ` · Big: ${bigName}` : ''}
+                      {pickupLabel ? ` · Picked up: ${pickupLabel}` : ' · Pickup year unverified'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {aceMembersReady && hasRequestedLink && linked.status === 'invalid' && (
+            <div role="alert" className="mt-3 rounded border border-border-strong bg-surface2 p-3 font-sans text-sm text-text-primary">
+              This published ACE member link is unavailable. The node may have been removed or the Fam may not be public.
+              <button type="button" className="ml-2 font-semibold text-brand-600 underline dark:text-brand-400" onClick={closeFamily}>
+                Clear link
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* Fam tabs */}
         <section className="ace-section">
           <div className="ace-eyebrow">ACE Fams</div>
@@ -253,9 +375,9 @@ export function Ace() {
           ) : (
             <FamTabs
               fams={activeFams}
-              selectedId={selectedFamTab ?? activeFams[0].family.id}
+              selectedId={linkedFamily?.family.id ?? selectedFamTab ?? activeFams[0].family.id}
               onSelect={setSelectedFamTab}
-              onOpenSheet={(id) => setOpenFamId(id)}
+              onOpenSheet={openPublishedFamily}
             />
           )}
         </section>
@@ -274,7 +396,7 @@ export function Ace() {
                   accent={f.accent}
                   memberCount={f.members.length}
                   gens={f.gens}
-                  onOpen={() => setOpenFamId(f.family.id)}
+                  onOpen={() => openPublishedFamily(f.family.id)}
                 />
               ))}
             </div>
@@ -341,7 +463,9 @@ export function Ace() {
             accent={openFam.accent}
             viet={openFam.viet}
             dark={dark}
-            onClose={() => setOpenFamId(null)}
+            focusNodeId={linked.status === 'published' ? linked.member?.id ?? null : undefined}
+            onFocusNodeChange={updateSelectedNode}
+            onClose={closeFamily}
           />
         )}
       </div>
