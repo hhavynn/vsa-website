@@ -242,7 +242,7 @@ export default function AdminMembers() {
 
   const filtered = chipMembers
     .filter(m => {
-      if (houseFilter === 'all') return true;
+      if (houseLookupFailed || houseFilter === 'all') return true;
       if (houseFilter === 'unassigned') return !m.current_house;
       return m.current_house === houseFilter;
     })
@@ -476,7 +476,7 @@ export default function AdminMembers() {
         description={loading ? 'Loading members…' : loadError ? 'Could not load members' : `${members.length} total members`}
         actions={
           <>
-            <Button onClick={() => setAddingMember(true)}>Add Member</Button>
+            <Button onClick={() => setAddingMember(true)} disabled={loading || loadError}>Add Member</Button>
             <button
               onClick={() => {
                 const csv = memberRosterCsv(members, houseLookupFailed);
@@ -572,7 +572,8 @@ export default function AdminMembers() {
               />
             </div>
             <select
-              value={houseFilter}
+              value={houseLookupFailed ? 'all' : houseFilter}
+              disabled={houseLookupFailed || loading || loadError}
               onChange={e => setHouseFilter(e.target.value)}
               className="w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-[13px] text-[var(--color-text)] transition focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] sm:w-auto"
               style={{ borderColor: 'var(--color-border)' }}
