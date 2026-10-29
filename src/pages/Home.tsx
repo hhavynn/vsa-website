@@ -18,6 +18,7 @@ import {
 } from "../components/features/home/EditorialSections";
 import { usePresidentsContent } from "../hooks/usePresidentsContent";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { OFFICIAL_LOGO } from "../config/brandAssets";
 import {
   eventsRepository,
   type PublicEventPreview,
@@ -55,9 +56,7 @@ export function Home() {
     [rawUpcomingEvents, now],
   );
 
-  const logoSrc =
-    siteSettings.logoUrl ||
-    `${process.env.PUBLIC_URL || ""}/images/vsa-logo-official.png`;
+  const logoSrc = siteSettings.logoUrl || OFFICIAL_LOGO.src;
 
   return (
     <>

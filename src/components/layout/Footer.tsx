@@ -5,6 +5,7 @@ import { FOOTER_GROUPS, FOOTER_LEGAL_LINKS } from './navigation/footerLinks';
 import { usePublicEditorialRoute } from './publicEditorialTheme';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { getSupabaseImageUrl } from '../../lib/supabaseImages';
+import { OFFICIAL_LOGO } from '../../config/brandAssets';
 
 const socialLinks = [
   {
@@ -32,7 +33,7 @@ const editorialLabel = 'mb-3 font-mono text-[10px] font-semibold uppercase track
 function EditorialFooter() {
   const { isConfigured, openPreferences } = useAnalyticsConsent();
   const { settings } = useSiteSettings();
-  const logoSrc = settings.logoUrl || `${process.env.PUBLIC_URL || ''}/images/vsa-logo-official.png`;
+  const logoSrc = settings.logoUrl || OFFICIAL_LOGO.small.src;
 
   return (
     <footer className="editorial-footer border-t border-ed-line bg-surface2 text-ed-ink">

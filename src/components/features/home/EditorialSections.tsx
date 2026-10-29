@@ -17,6 +17,7 @@ import { FALLBACK_LINKS } from "../../../config/publicFallbackContent";
 import { galleryRepository } from "../../../data/repos/gallery";
 import { type PublicEventPreview } from "../../../data/repos/events";
 import { getAcademicYearStart } from "../../../lib/academicTerms";
+import { OFFICIAL_LOGO } from "../../../config/brandAssets";
 import {
   formatEventDateRange,
   formatEventTime,
@@ -38,6 +39,13 @@ const archivePhotos = {
   cultureNight: "/images/gallery/vietnamese-culture-night-2026_2026-04-18.webp",
 };
 
+// The VCN Polaroid never renders wider than ~350px, so the 720px rendition
+// covers 2x screens and saves ~57KB over the 1200px original.
+const cultureNightThumb = {
+  src: "/images/gallery/vietnamese-culture-night-2026_2026-04-18_thumb.webp",
+  width: 720,
+};
+
 
 export function EditorialHero({
   logoSrc,
@@ -46,6 +54,7 @@ export function EditorialHero({
   logoSrc: string;
   logoAlt: string;
 }) {
+  const isOfficialLogo = logoSrc === OFFICIAL_LOGO.src;
   return (
     <section className="home-editorial-hero home-editorial-grain relative isolate min-h-[640px] overflow-hidden text-white lg:min-h-[max(740px,calc(100svh-60px))]">
       <div aria-hidden="true" className="absolute inset-0 -z-10">
@@ -143,6 +152,8 @@ export function EditorialHero({
           <figure className="home-editorial-polaroid absolute bottom-[2%] right-0 z-20 h-[49%] w-[64%] rotate-[3deg] p-2 pb-8 sm:-right-[2%] sm:h-[50%] sm:w-[52%] sm:pb-10">
             <OptimizedImage
               src={archivePhotos.cultureNight}
+              srcWidth={1200}
+              lowRes={cultureNightThumb}
               width={640}
               height={500}
               sizes="(min-width: 1024px) 350px, (min-width: 640px) 360px, 65vw"
@@ -156,6 +167,8 @@ export function EditorialHero({
           <div className="absolute right-0 top-[2%] z-30 h-[104px] w-[104px] rotate-[2deg] border border-white/60 bg-white/20 p-1.5 shadow-[0_18px_45px_rgba(26,38,86,0.3)] backdrop-blur-md sm:right-[1%] sm:top-[4%] sm:h-[140px] sm:w-[140px] lg:h-[154px] lg:w-[154px]">
             <OptimizedImage
               src={logoSrc}
+              srcWidth={isOfficialLogo ? OFFICIAL_LOGO.width : undefined}
+              lowRes={isOfficialLogo ? OFFICIAL_LOGO.small : null}
               width={200}
               height={200}
               resize="contain"

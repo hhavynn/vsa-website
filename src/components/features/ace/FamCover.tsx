@@ -1,5 +1,5 @@
 import React from 'react';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 
 export type FamAccent = 'teal' | 'coral' | 'gold';
 export type FamPattern = 'sunburst' | 'wave' | 'dots' | 'arches' | 'lantern' | 'leaves';
@@ -27,22 +27,10 @@ interface FamCoverProps {
 }
 
 export function FamCover({ pattern, accent, height = 132, imageUrl, alt }: FamCoverProps) {
-  if (imageUrl) {
-    return (
-      <img
-        className="ace-fam-cover-img"
-        src={getSupabaseImageUrl(imageUrl, { width: 520, height: 180, resize: 'cover', quality: 72 })}
-        alt={alt ?? ''}
-        style={{ height }}
-        loading="lazy"
-        decoding="async"
-      />
-    );
-  }
   const p = PALETTE[accent] ?? PALETTE.teal;
   const w = 600;
   const h = 240;
-  return (
+  const patternCover = (
     <div style={{ position: 'relative', width: '100%', height, overflow: 'hidden', background: p.wash }}>
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{ display: 'block' }} aria-hidden>
         {pattern === 'sunburst' && <Sunburst p={p} />}
@@ -53,6 +41,21 @@ export function FamCover({ pattern, accent, height = 132, imageUrl, alt }: FamCo
         {pattern === 'leaves'   && <Leaves p={p} />}
       </svg>
     </div>
+  );
+
+  // A family photo that fails to load falls back to its pattern cover.
+  return (
+    <OptimizedImage
+      className="ace-fam-cover-img"
+      src={imageUrl}
+      width={520}
+      height={180}
+      resize="cover"
+      quality={72}
+      alt={alt ?? ''}
+      style={{ height }}
+      fallback={patternCover}
+    />
   );
 }
 

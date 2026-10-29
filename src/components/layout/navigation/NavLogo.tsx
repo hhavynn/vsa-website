@@ -3,12 +3,13 @@ import { memo } from 'react';
 import { useSiteSettings } from '../../../context/SiteSettingsContext';
 import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
 import { usePublicEditorialRoute } from '../publicEditorialTheme';
+import { OFFICIAL_LOGO } from '../../../config/brandAssets';
 
 export const NavLogo = memo(function NavLogo() {
   const { settings } = useSiteSettings();
   const editorial = usePublicEditorialRoute();
-  const fallbackLogo = editorial ? '/images/vsa-logo-official.png' : '/images/vsa-logo.jpg';
-  const logoSrc = settings.logoUrl || `${process.env.PUBLIC_URL || ''}${fallbackLogo}`;
+  const fallbackLogo = editorial ? OFFICIAL_LOGO.small.src : `${process.env.PUBLIC_URL || ''}/images/vsa-logo.jpg`;
+  const logoSrc = settings.logoUrl || fallbackLogo;
 
   if (editorial) {
     // Figma .brand: bare official mark + Instrument Serif "VSA at UCSD".
