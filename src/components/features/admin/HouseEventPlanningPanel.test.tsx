@@ -78,12 +78,12 @@ it('uses selected-year Houses only, without carrying earlier House identities fo
 
 it('blocks incomplete House-profile reads and offers an explicit retry', () => {
   const onRetry = jest.fn();
-  const { rerender } = render(<HouseEventPlanningPanel {...base} error onRetry />);
+  const { rerender } = render(<HouseEventPlanningPanel {...base} error onRetry={onRetry} />);
   expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
   expect(screen.getByRole('alert')).toHaveTextContent(/House profile records could not be loaded/);
   fireEvent.click(screen.getByRole('button', { name: 'Retry planning data' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
-  rerender(<HouseEventPlanningPanel {...base} loading onRetry />);
+  rerender(<HouseEventPlanningPanel {...base} loading onRetry={onRetry} />);
   expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
   expect(screen.getByRole('status')).toHaveTextContent(/Loading quarterly event counts/);
 });
