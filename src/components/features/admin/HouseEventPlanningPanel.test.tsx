@@ -75,3 +75,15 @@ it('uses selected-year Houses only, without carrying earlier House identities fo
   expect(within(table).queryByText('Twilight Sparkle')).not.toBeInTheDocument();
   expect(within(table).getByText('Rarity')).toBeInTheDocument();
 });
+
+it('blocks incomplete House-profile reads and offers an explicit retry', () => {
+  const onRetry = jest.fn();
+  const { rerender } = render(<HouseEventPlanningPanel {...base} error onRetry />);
+  expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
+  expect(screen.getByRole('alert')).toHaveTextContent(/House profile records could not be loaded/);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry planning data' }));
+  expect(onRetry).toHaveBeenCalledTimes(1);
+  rerender(<HouseEventPlanningPanel {...base} loading onRetry />);
+  expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
+  expect(screen.getByRole('status')).toHaveTextContent(/Loading quarterly event counts/);
+});
