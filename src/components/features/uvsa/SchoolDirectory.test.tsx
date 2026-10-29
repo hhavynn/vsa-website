@@ -69,6 +69,39 @@ describe("SchoolDirectory", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("provides a labeled native mobile school-system filter using the same counts as desktop", () => {
+    render(<SchoolDirectory heading="Schools" schools={schools} loading={false} />);
+    const picker = screen.getByRole("combobox", { name: "School system" });
+    expect(picker).toHaveValue("All");
+    expect(picker).toHaveClass("min-h-11", "w-full");
+    expect(screen.getByRole("option", { name: "All school systems · 4" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "UC · 2" })).toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: "CSU" } });
+    expect(names()).toEqual(["CSUF"]);
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 school in CSU.");
+    expect(screen.getByRole("button", { name: /^CSU 1$/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("recovers to All when an updated list no longer contains the selected system", () => {
+    const { rerender } = render(<SchoolDirectory heading="Schools" schools={schools} loading={false} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "School system" }), {
+      target: { value: "Private" },
+    });
+    expect(names()).toEqual(["USC"]);
+
+    rerender(
+      <SchoolDirectory
+        heading="Schools"
+        schools={schools.filter((school) => school.system_type !== "Private")}
+        loading={false}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "School system" })).toHaveValue("All");
+    expect(screen.queryByRole("option", { name: /Private/ })).not.toBeInTheDocument();
+    expect(names()).toEqual(["UCSD", "UCI", "CSUF"]);
+    expect(screen.getByRole("status")).toHaveTextContent("Showing 3 schools across all systems.");
+  });
+
   it("renders a skeleton, not cards or filters, while loading", () => {
     const { container } = render(
       <SchoolDirectory heading="Schools" schools={[]} loading />,
