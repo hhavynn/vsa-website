@@ -7,6 +7,7 @@ import { useAcademicTerms } from '../../../hooks/useAcademicTerms';
 import { useAdminHouseAssets } from '../../../hooks/useHouseAssets';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { HouseEventsDashboard } from './HouseEventsDashboard';
+import { HouseEventPlanningPanel } from './HouseEventPlanningPanel';
 import { ImageDropzone } from './ImageDropzone';
 import { HOUSE_COLORS, HOUSE_LABELS, HouseName } from '../../../constants/houses';
 import { formatAcademicYear, getAcademicTermMeta } from '../../../lib/academicTerms';
@@ -165,7 +166,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   const [saving, setSaving] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState<HouseEvent | null>(null);
 
-  const { assets: houseProfiles } = useAdminHouseAssets(selectedYear);
+  const { assets: houseProfiles, loading: profilesLoading, error: profilesError, refetch: refetchProfiles } = useAdminHouseAssets(selectedYear);
   const profilesById = useMemo(() => new Map(houseProfiles.map((asset) => [asset.id, asset])), [houseProfiles]);
 
   const queryClient = useQueryClient();
@@ -436,6 +437,16 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
 
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <HouseEventPlanningPanel
+        selectedYear={selectedYear}
+        events={events}
+        profiles={houseProfiles}
+        today={today}
+        loading={eventsLoading || profilesLoading}
+        error={eventsError || !!profilesError}
+        onRetry={() => { void refetch(); void refetchProfiles(); }}
+        truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
+      />
       <form ref={formRef} onSubmit={handleSubmit} aria-label="House event form" className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <h2 className="font-serif text-xl font-bold" style={{ color: 'var(--color-text)' }}>
           {editingEvent ? 'Edit House Event' : 'Create House Event'}
