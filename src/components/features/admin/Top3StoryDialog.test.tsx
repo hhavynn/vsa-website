@@ -114,7 +114,7 @@ describe('Top3StoryDialog', () => {
     };
     render(<Top3StoryDialog onClose={() => undefined} />);
     expect(await screen.findByRole('status')).toHaveTextContent(/2 tied members at rank 2/);
-    expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
   });
 
 });
