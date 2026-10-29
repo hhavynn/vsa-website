@@ -38,6 +38,29 @@ const PUBLIC_FIELDS = [
   'houses:house_event_houses(house_page_asset_id)',
 ].join(',');
 
+/**
+ * Public House-event host association lookup. Only published profile fields
+ * required to label/route a published House event are requested.
+ * Do NOT select '*' here: the underlying admin HousePageAsset table also has
+ * internal_notes and source_doc_url. The published view is a second boundary,
+ * not permission to expand network payloads as columns evolve.
+ */
+export const PUBLIC_HOUSE_EVENT_HOST_FIELDS = [
+  'id',
+  'academic_year_start',
+  'academic_year_end',
+  'house',
+  'house_key',
+  'display_name',
+  'accent_color',
+  'emoji',
+  'image_url',
+  'image_thumbnail_url',
+  'image_alt',
+  'cover_image_url',
+  'is_active',
+].join(',');
+
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
     return withErrorHandling(async () => {
@@ -334,7 +357,7 @@ export class HouseEventsRepository {
     if (missing.size > 0) {
       const { data: assets, error } = await supabase
         .from('published_house_page_assets')
-        .select('*')
+        .select(PUBLIC_HOUSE_EVENT_HOST_FIELDS)
         .in('id', Array.from(missing));
       if (error) throw error;
       for (const asset of (assets ?? []) as HousePageAsset[]) published.set(asset.id, asset);
