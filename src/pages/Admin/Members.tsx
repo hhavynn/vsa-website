@@ -100,6 +100,7 @@ function initials(first: string, last: string) {
 export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useUrlFilter(MEMBER_FILTER_KEYS);
   const showReviewOnly = filter === 'needs_review';
@@ -162,11 +163,16 @@ export default function AdminMembers() {
   // ── Load ─────────────────────────────────────────────────────────────────────
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('members')
-      .select('id, first_name, last_name, college, year, house, email, points, events_attended, created_at, needs_review')
-      .order('points', { ascending: false });
-    if (error) toast.error('Failed to load members.');
+    setLoadError(false);
+    let data: Omit<Member, 'current_house'>[];
+    try {
+      data = await adminMembersRepository.listAllMembers();
+    } catch (err) {
+      setLoadError(true);
+      toast.error(toUserMessage(err, 'Failed to load the complete member roster. Please retry.'));
+      setLoading(false);
+      return;
+    }
 
     // House for THIS academic year only. Reading members.house here is what
     // made the list keep showing last season's Houses after the year rolled
@@ -189,7 +195,7 @@ export default function AdminMembers() {
     }
     setHouseLookupFailed(houseLookupFailed);
 
-    setMembers(((data ?? []) as Omit<Member, 'current_house'>[]).map(m => ({
+    setMembers(data.map(m => ({
       ...m,
       current_house: houseByMemberId.get(m.id) ?? null,
     })));
@@ -454,7 +460,7 @@ export default function AdminMembers() {
       {/* PAGE HEADER */}
       <AdminPageHeader
         related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}
-        description={`${members.length} total members`}
+        description={loading ? 'Loading members…' : loadError ? 'Could not load members' : `${members.length} total members`}
         actions={
           <>
             <Button onClick={() => setAddingMember(true)}>Add Member</Button>
@@ -470,7 +476,8 @@ export default function AdminMembers() {
                 a.download = 'vsa-members.csv';
                 a.click();
               }}
-              className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+              disabled={loading || loadError}
+              className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
             >
               Export CSV
@@ -494,7 +501,7 @@ export default function AdminMembers() {
         </section>
 
         {/* STAT CARDS */}
-        {!loading && (
+        {!loading && !loadError && (
           <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-6">
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
               <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Total Members</p>
@@ -518,7 +525,7 @@ export default function AdminMembers() {
         )}
 
         {/* REVIEW BANNER */}
-        {needsReviewCount > 0 && !loading && (
+        {needsReviewCount > 0 && !loading && !loadError && (
           <div className={`mb-4 px-4 py-3 rounded-md border flex items-center justify-between gap-4 ${showReviewOnly
               ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
               : 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
@@ -567,7 +574,7 @@ export default function AdminMembers() {
           </div>
         </div>
 
-        {!loading && members.length > 0 && (
+        {!loading && !loadError && members.length > 0 && (
           <div className="mb-4">
             <FilterChips filters={memberFilters} counts={filterCounts} active={filter} onChange={setFilter} label="Filter members" />
           </div>
@@ -576,6 +583,13 @@ export default function AdminMembers() {
         {/* TABLE */}
         {loading ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">Loading…</div>
+        ) : loadError ? (
+          <div role="alert" className="py-20 text-center text-sm text-text-secondary">
+            The full member roster could not be loaded. No incomplete list is being shown.
+            <button type="button" className="ml-2 font-semibold text-brand-600 underline-offset-2 hover:underline dark:text-brand-400" onClick={() => { void load(); }}>
+              Retry loading
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">
             {search || filter !== 'all' || houseFilter !== 'all' ? (
