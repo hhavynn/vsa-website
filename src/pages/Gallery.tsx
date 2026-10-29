@@ -276,6 +276,15 @@ export default function Gallery() {
           </div>
         ) : (
           <>
+            {albums.length > 1 && (
+              <p
+                className="mb-5 flex items-center gap-2 font-sans text-xs text-text-secondary sm:hidden"
+                aria-label="Swipe horizontally to browse photo albums"
+              >
+                <span aria-hidden="true" className="font-mono text-base text-brand-600 dark:text-brand-400">← →</span>
+                Swipe sideways to explore more memories
+              </p>
+            )}
             <motion.div 
               variants={shouldReduceMotion ? undefined : containerVariants}
               initial={shouldReduceMotion ? false : 'hidden'}
@@ -336,7 +345,7 @@ export default function Gallery() {
                           </span>
                         )}
                       </div>
-                      <h2 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
+                      <h2 className="min-w-0 break-words font-sans text-sm font-semibold leading-snug tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
                         {/* The title is the link; its ::after stretches over the whole card, so the
                             accessible name ("<title>. Preview album") contains the visible text. */}
                         <a
@@ -357,7 +366,7 @@ export default function Gallery() {
                       )}
                       {album.event && (
                         <p
-                          className="mt-2 truncate font-mono text-[10px] uppercase tracking-[0.08em]"
+                          className="mt-2 break-words font-mono text-[10px] uppercase leading-relaxed tracking-[0.08em]"
                           style={{ color: 'var(--text3)' }}
                         >
                           Related event / {album.event.name}
