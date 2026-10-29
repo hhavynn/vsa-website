@@ -165,7 +165,7 @@ describe('Gallery discovery page states (Issue #562 & #563)', () => {
     );
 
     // The filter input and controls must remain mounted in the DOM
-    const input = screen.getByPlaceholderText(/Search album titles and descriptions/i);
+    const input = screen.getByRole('textbox', { name: 'Search album titles and descriptions' });
     expect(input).toBeInTheDocument();
     // Wall skeleton renders in the results area
     expect(screen.getByTestId('gallery-wall-skeleton')).toBeInTheDocument();
