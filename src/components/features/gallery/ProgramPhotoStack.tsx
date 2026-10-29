@@ -15,7 +15,7 @@ export function useProgramAlbums(eventTypes: SiteEventType[]) {
     staleTime: 10 * 60 * 1000,
     cacheTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: false,
   });
 }
 
@@ -79,7 +79,9 @@ export function ProgramPhotoStack({
 }) {
   if (isLoading) {
     return (
-      <div aria-hidden="true" className="relative aspect-[7/6] w-full">
+      // Desktop only: beside the title it holds the layout steady; on phones it
+      // would push the page down and then vanish if the program has no album.
+      <div aria-hidden="true" className="relative hidden aspect-[7/6] w-full lg:block">
         <Skeleton className="absolute left-0 top-0 aspect-[4/3] w-[74%] -rotate-[2.5deg]" />
         <Skeleton className="absolute bottom-[8%] right-0 aspect-[4/3] w-[58%] rotate-[3deg]" />
       </div>

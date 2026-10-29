@@ -544,7 +544,7 @@ html.dark .vsa-editorial-shell .program-app .editorial-hero {
    first ~78px of <main>. Whatever opens a page — a breadcrumb, a page
    hero, a program hero, or a bespoke top (.vsa-dock-clear) — starts below
    it. A hero that follows a breadcrumb drops its own clearance so the gap
-   isn't doubled. */
+   isn't doubled (even with a degraded-mode banner between them). */
 @media (max-width: 1023px) {
   .vsa-editorial-shell {
     --vsa-dock-clearance: 92px;
@@ -560,11 +560,11 @@ html.dark .vsa-editorial-shell .program-app .editorial-hero {
     padding-top: calc(var(--vsa-dock-clearance) - 12px);
   }
 
-  .vsa-editorial-shell nav[aria-label="Breadcrumb"] + .vsa-page-hero {
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] ~ .vsa-page-hero {
     padding-top: 40px;
   }
 
-  .vsa-editorial-shell nav[aria-label="Breadcrumb"] + .program-app .editorial-hero-inner {
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] ~ .program-app .editorial-hero-inner {
     padding-top: 32px;
   }
 }

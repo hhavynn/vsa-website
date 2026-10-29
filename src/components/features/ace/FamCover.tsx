@@ -50,6 +50,7 @@ export function FamCover({ pattern, accent, height = 132, imageUrl, alt }: FamCo
       src={imageUrl}
       width={520}
       height={180}
+      widths={[520]}
       resize="cover"
       quality={72}
       alt={alt ?? ''}

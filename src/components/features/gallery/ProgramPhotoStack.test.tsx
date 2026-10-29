@@ -103,8 +103,7 @@ describe('useProgramHeroMedia', () => {
   it('gives the hero no media when the read fails', async () => {
     supabaseMock.setDefault('gallery_events', { data: null, error: { message: 'down', code: '500' } });
     renderProbe();
-    // The hook retries once before settling on the error.
-    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('no-media'), { timeout: 4000 });
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('no-media'));
   });
 
   it('shows the album once it loads', async () => {

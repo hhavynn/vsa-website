@@ -106,7 +106,7 @@ export function PresidentsMessageSection({
                       className="font-serif text-[28px] italic"
                       style={{ color: "var(--text3)" }}
                     >
-                      {presidentInitials(content.names)}
+                      {presidentInitials(content.names) || "VSA"}
                     </span>
                   </div>
                 }

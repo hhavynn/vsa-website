@@ -210,7 +210,7 @@ export function VCNCurrent() {
                       alt={`VCN ${currentVcn.year} poster`}
                       className="h-auto w-full object-cover"
                       fallback={
-                        <p className="p-6 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
+                        <p className="p-6 font-sans text-sm text-[var(--color-text2)]">
                           The poster couldn&rsquo;t be loaded.
                         </p>
                       }

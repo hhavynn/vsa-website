@@ -17,10 +17,19 @@ const slots = [
  * direct children are forced to position: relative) so it never shifts the
  * layout when it appears.
  */
-export function GalleryHeroContactSheet({ albums }: { albums: GalleryAlbum[] }) {
-  const covers = albums
+function contactSheetCovers(albums: GalleryAlbum[]) {
+  return albums
     .filter((album) => album.cover_thumbnail_url || album.cover_image_url)
     .slice(0, slots.length);
+}
+
+/** Whether the sheet will render, so the hero text only narrows when it does. */
+export function hasContactSheetCovers(albums: GalleryAlbum[]): boolean {
+  return contactSheetCovers(albums).length >= 2;
+}
+
+export function GalleryHeroContactSheet({ albums }: { albums: GalleryAlbum[] }) {
+  const covers = contactSheetCovers(albums);
   if (covers.length < 2) return null;
 
   return (
