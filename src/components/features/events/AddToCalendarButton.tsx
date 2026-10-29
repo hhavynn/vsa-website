@@ -43,7 +43,8 @@ export function AddToCalendarButton({ event, variant = 'default' }: Props) {
       href={googleUrl(event)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex max-w-full touch:min-h-11 items-center justify-center gap-1.5 rounded-lg border text-center font-mono text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors duration-150"
+      aria-label={`Add to Google Calendar: ${event.name} (opens in new tab)`}
+      className="inline-flex min-h-11 max-w-full min-w-0 items-center justify-center gap-1.5 rounded-lg border text-center font-mono text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400"
       style={{
         padding: isGhost ? '7px 12px' : '9px 14px',
         borderColor: 'var(--color-border-strong)',
