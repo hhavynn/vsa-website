@@ -257,7 +257,14 @@ describe("approved-avatar view completeness", () => {
       member_id: `member-${String(index).padStart(4, "0")}`,
       avatar_url: `https://example.invalid/photo-${index}.webp`,
     }));
-    supabaseMock.setDefault("public_member_avatars", { data, error: null });
+    // This fixture returns server-sized pages explicitly: the shared mock's
+    // default keyset helper only models the `id` column, not `member_id`.
+    for (let start = 0; start < data.length; start += 500) {
+      supabaseMock.queueResult("public_member_avatars", {
+        data: data.slice(start, start + 500),
+        error: null,
+      });
+    }
     const avatars = await photoRequestsRepository.getPublicMemberAvatars();
     expect(avatars.size).toBe(1101);
     expect(avatars.get("member-1100")).toContain("photo-1100.webp");
