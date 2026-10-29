@@ -78,7 +78,7 @@ describe("SchoolDirectory", () => {
     expect(screen.getByRole("option", { name: "UC · 2" })).toBeInTheDocument();
     fireEvent.change(picker, { target: { value: "CSU" } });
     expect(names()).toEqual(["CSUF"]);
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 1 school in CSU.");
+    expect(screen.getByRole("status")).toHaveTextContent("CSU · 1 result");
     expect(screen.getByRole("button", { name: /^CSU 1$/ })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -99,7 +99,7 @@ describe("SchoolDirectory", () => {
     expect(screen.getByRole("combobox", { name: "School system" })).toHaveValue("All");
     expect(screen.queryByRole("option", { name: /Private/ })).not.toBeInTheDocument();
     expect(names()).toEqual(["UCSD", "UCI", "CSUF"]);
-    expect(screen.getByRole("status")).toHaveTextContent("Showing 3 schools across all systems.");
+    expect(screen.getByRole("status")).toHaveTextContent("All school systems · 3 results");
   });
 
   it("renders a skeleton, not cards or filters, while loading", () => {
