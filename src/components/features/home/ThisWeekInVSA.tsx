@@ -1,4 +1,5 @@
 import { type ComponentType, type CSSProperties, useMemo, useState } from 'react';
+import { SectionHeading } from '../../ui/Editorial';
 import { type IconBaseProps } from 'react-icons';
 import { FiArrowUpRight, FiStar } from 'react-icons/fi';
 import { cn } from '../../../lib/utils';
@@ -36,7 +37,7 @@ function TapeStrip({ color = 'teal', position = 'top' }: { color?: 'teal' | 'cor
     ...(position === 'top-left' ? { left: '18px', transform: 'rotate(-2deg)' } : {}),
     ...(position === 'top-right' ? { right: '18px', transform: 'rotate(2deg)' } : {}),
   };
-  return <span aria-hidden style={style} />;
+  return <span aria-hidden className="scrapbook-tape-strip" style={style} />;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -483,20 +484,18 @@ export function ThisWeekInVSA() {
 
   return (
     <section className="vsa-section scrapbook-board" aria-labelledby="this-week-in-vsa-title">
-      <div className="vsa-container">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="scrapbook-sticker scrapbook-sticker-coral mb-3">Weekly Check-In</span>
-            <h2 id="this-week-in-vsa-title" className="vsa-section-title">
-              This Week
-              <br />
-              <em style={{ color: 'var(--brand)' }}>in VSA.</em>
-            </h2>
-          </div>
-          <p className="max-w-sm font-sans text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
-            Your quick check-in for events, points, Houses, and recent memories.
-          </p>
-        </div>
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-[6vw]">
+        <SectionHeading
+          id="this-week-in-vsa-title"
+          eyebrow="Weekly check-in"
+          title="This Week"
+          accent="in VSA."
+          titleClassName="text-[clamp(3rem,8vw,6.5rem)]"
+          className="mb-4"
+        />
+        <p className="mb-10 max-w-md font-sans text-sm leading-relaxed text-text-secondary">
+          Your quick check-in for events, points, Houses, and recent memories.
+        </p>
 
         <div className="snap-rail-container">
           <div className="snap-rail grid gap-6 md:grid-cols-2 xl:grid-cols-4">

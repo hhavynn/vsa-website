@@ -239,7 +239,7 @@ function ExecutiveRolePanel({
         }}
       >
         {/* Tape strip */}
-        <span style={tapeStyle} aria-hidden />
+        <span className="scrapbook-tape-strip" style={tapeStyle} aria-hidden />
 
         {/* Pin */}
         <span
