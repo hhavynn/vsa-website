@@ -70,7 +70,7 @@ describe('public Calendar mobile agenda readability (#209)', () => {
     mount([one, other], '2026-10-29', jest.fn(), onClearDay);
     const showAll = screen.getByRole('button', { name: 'Show all' });
     expect(showAll).toHaveClass('min-h-11');
-    expect(screen.getByRole('list', { name: /October 29/ })).toHaveTextContent(one.title);
+    expect(screen.getByRole('list', { name: /Oct 29/ })).toHaveTextContent(one.title);
     expect(screen.queryByText('The Next Day')).not.toBeInTheDocument();
     fireEvent.click(showAll);
     expect(onClearDay).toHaveBeenCalledTimes(1);

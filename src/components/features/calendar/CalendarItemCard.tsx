@@ -21,9 +21,8 @@ export function CalendarItemCard({ item, index, onSelect }: Props) {
 
   return (
     <article
-      className={`scrapbook-paper relative grid cursor-pointer gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[84px_minmax(0,1fr)_auto] ${ROTATIONS[index % ROTATIONS.length]}`}
+      className={`scrapbook-paper relative grid gap-4 p-4 transition-transform hover:-translate-y-1 sm:grid-cols-[84px_minmax(0,1fr)_auto] ${ROTATIONS[index % ROTATIONS.length]}`}
       style={{ borderColor: `${color}55` }}
-      onClick={() => onSelect(item)}
     >
       <span className="scrapbook-pin" aria-hidden />
 
@@ -71,13 +70,14 @@ export function CalendarItemCard({ item, index, onSelect }: Props) {
           ))}
         </div>
 
+        {/* The actual button owns the entire card click target, rather than
+            an inaccessible article onClick. Keep the calendar link above
+            its stretched hit area so a calendar save never opens details. */}
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(item);
-          }}
-          className="mt-1.5 block text-left font-sans text-[16px] font-bold leading-snug hover:underline"
+          onClick={() => onSelect(item)}
+          aria-label={`View details for ${item.title}`}
+          className="mt-1.5 block text-left font-sans text-[16px] font-bold leading-snug hover:underline after:absolute after:inset-0 after:z-10 after:rounded-lg after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-brand-600 dark:focus-visible:after:ring-brand-400"
           style={{ color: 'var(--text)' }}
         >
           {item.title}
@@ -103,7 +103,7 @@ export function CalendarItemCard({ item, index, onSelect }: Props) {
             />
           </div>
         )}
-        <AddToGoogleCalendarLink item={item} />
+        <AddToGoogleCalendarLink item={item} className="relative z-20" />
       </div>
     </article>
   );
