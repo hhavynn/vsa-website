@@ -75,6 +75,24 @@ interface FindMyPointsProps {
 
 const CORRECTION_HREF = "/feedback?type=event&title=Points%20correction";
 
+/**
+ * React Query's dataUpdatedAt means when the *visitor fetched* the published
+ * view, NOT the last cabinet attendance-import timestamp. Never claim it is
+ * the authoritative import time. Format in VSA's Pacific time for consistency.
+ */
+export function formatPointsLookupRetrievedAt(dataUpdatedAt: number): string | null {
+  if (!Number.isFinite(dataUpdatedAt) || dataUpdatedAt <= 0) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(dataUpdatedAt));
+}
+
 function StickerBadge({
   children,
   rotation = 0,
@@ -225,6 +243,7 @@ export function FindMyPoints({
     data: entries = [],
     isLoading: entriesLoading,
     isFetching,
+    dataUpdatedAt = 0,
     error,
   } = useFindMyPoints(selectedYear);
 
@@ -291,6 +310,9 @@ export function FindMyPoints({
     !loadingState &&
     !initializing;
   const showEmptyData = !initializing && !loadingState && entries.length === 0;
+  const retrievedAt = !error && !initializing && !loadingState
+    ? formatPointsLookupRetrievedAt(dataUpdatedAt)
+    : null;
 
   // Only announce after an explicit Enter or blur. Announcing a result for
   // every intermediate keystroke is especially disruptive to screen readers.
@@ -449,7 +471,11 @@ export function FindMyPoints({
         ) : trimmedQuery.length === 0 ? (
           <EmptySearchPrompt />
         ) : showNoResults ? (
-          <NoResultsCard query={trimmedQuery} yearLabel={selectedYearLabel} />
+          <NoResultsCard
+            query={trimmedQuery}
+            yearLabel={selectedYearLabel}
+            onSwitchToAllTime={selectedYear === "all" ? undefined : () => handleYearChange("all")}
+          />
         ) : resolvedEntry ? (
           <MyVSACard
             entry={resolvedEntry}
@@ -471,6 +497,12 @@ export function FindMyPoints({
         ) : null}
       </div>
 
+      {retrievedAt && (
+        <p className="mt-4 font-sans text-xs leading-relaxed text-[var(--text3)]" data-testid="points-last-fetched">
+          Public points data retrieved {retrievedAt}. This is when your browser fetched the data,
+          not when cabinet last imported attendance. Recent event check-ins may still be processing.
+        </p>
+      )}
       <TrustNote />
     </section>
   );
@@ -495,9 +527,11 @@ function EmptySearchPrompt() {
 function NoResultsCard({
   query,
   yearLabel,
+  onSwitchToAllTime,
 }: {
   query: string;
   yearLabel: string;
+  onSwitchToAllTime?: () => void;
 }) {
   return (
     <div className="rounded-xl border-2 border-[var(--border)] bg-[var(--surface2)] p-5">
@@ -518,6 +552,15 @@ function NoResultsCard({
         request; this search does not change anyone's points.
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
+        {onSwitchToAllTime && (
+          <button
+            type="button"
+            className="vsa-btn-secondary inline-flex min-h-11 items-center"
+            onClick={onSwitchToAllTime}
+          >
+            Try All-Time results
+          </button>
+        )}
         <Link
           to={CORRECTION_HREF}
           className="vsa-btn-primary inline-flex whitespace-nowrap"
