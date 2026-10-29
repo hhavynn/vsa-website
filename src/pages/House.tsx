@@ -74,7 +74,12 @@ const faqs = [
   { q: 'Do I need to already know people in VSA to join?', a: "Not at all. The program is meant to help members meet new people and feel more connected, especially if you are newer to VSA or looking for a smaller group within the org." },
   { q: 'What kinds of events are part of the program?', a: 'Events vary by house and cycle but may include reveals, bonding socials, study jams, karaoke, movie nights, and inter-House collaborations.' },
   { q: 'What do House Parents do?', a: 'House Parents lead their house throughout the year. They plan socials and bonding activities, communicate with members, encourage participation, and help create a welcoming environment for everyone in the house.' },
-  { q: 'How do House points work?', a: 'House points count qualifying event attendance. One member checking in at one qualifying event = 1 House point.' },
+  { q: 'How do House points work?', a: 'A confirmed check-in at a qualifying VSA event earns one House competition point for an eligible House member. Only attendance credited under the current academic-year rules counts; public standings are announced at GBMs, not updated live online.' },
+  { q: 'Are my personal VSA points the same as House points?', a: 'No. Your individual VSA points follow the events and their point values. House competition points are a separate attendance-based measure: a qualifying event can count once toward an eligible House membership, regardless of the event\'s individual point value.' },
+  { q: 'Do House socials automatically award House points?', a: 'No. House socials are for meeting and bonding with your House. Attending one does not automatically earn competition points; only events confirmed as qualifying under VSA\'s current rules count.' },
+  { q: 'What happens if I join or switch Houses during the year?', a: 'House credit depends on your official effective membership dates. Attendance before your membership started does not retroactively count for your new House, and changing Houses does not transfer earlier credit.' },
+  { q: 'What if I checked in twice or my points look missing?', a: 'Multiple check-ins for the same member at the same event do not award extra House credit. Attendance needs to be verified and imported by VSA before it can count. If a record seems missing, reach out to VSA leadership with the event details.' },
+  { q: 'When can I see the House standings?', a: 'House standings are tracked privately and officially announced at general body meetings (GBMs). The website does not display live House rankings, member House contributions or competition totals.' },
   { q: 'When do sign-ups or applications open?', a: "Sign-up timelines are announced at the start of each year through VSA's official channels. Follow @vsaatucsd on Instagram to stay up to date." },
 ];
 
@@ -665,13 +670,15 @@ export function House() {
                     <button
                       onClick={() => setOpenFaq(openFaq === i ? null : i)}
                       className="program-faq-button"
+                      aria-expanded={openFaq === i}
+                      aria-controls={`house-faq-answer-${i}`}
                     >
                       <span className="program-faq-question">{faq.q}</span>
-                      <span className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
+                      <span aria-hidden="true" className={`program-faq-plus ${openFaq === i ? 'is-open' : ''}`}>+</span>
                     </button>
-                    {openFaq === i && (
-                      <div className="program-faq-answer">{faq.a}</div>
-                    )}
+                    <div id={`house-faq-answer-${i}`} className="program-faq-answer" hidden={openFaq !== i}>
+                      {faq.a}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -741,7 +748,7 @@ export function House() {
                 </Link>
               </div>
               <p className="mb-5 font-sans text-sm" style={{ color: 'var(--color-text2)' }}>
-                Check in at qualifying events to earn points for your House.
+                House socials are about community, not automatic competition points. Only attendance at qualifying VSA events counts toward House points.
               </p>
               {upcomingHouseEvents.length > 0 ? (
                 <div className="grid gap-3 sm:grid-cols-2">
