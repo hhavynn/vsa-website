@@ -23,6 +23,7 @@ interface HouseEventPlanningPanelProps {
   today: string;
   loading: boolean;
   error: boolean;
+  onRetry?: () => void;
   truncated: boolean;
 }
 
@@ -33,6 +34,7 @@ export function HouseEventPlanningPanel({
   today,
   loading,
   error,
+  onRetry,
   truncated,
 }: HouseEventPlanningPanelProps) {
   const summary = useMemo(
@@ -76,7 +78,8 @@ export function HouseEventPlanningPanel({
 
       {error ? (
         <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">
-          House event records could not be loaded. Planning counts are unavailable; retry in Manage House Events below.
+          House event or House profile records could not be loaded. Counts and CSV export are unavailable.
+          {onRetry && <button type="button" onClick={onRetry} className="ml-2 font-semibold underline">Retry planning data</button>}
         </p>
       ) : loading || selectedYear === null ? (
         <p role="status" className="mt-4 text-sm text-text-secondary">
