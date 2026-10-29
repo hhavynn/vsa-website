@@ -218,7 +218,7 @@ it('keeps typed form input when the list fails to load, and offers a retry', asy
   repo.getAdminEvents.mockRejectedValue(new Error('network'));
   renderManager();
   await userEvent.type(within(screen.getByRole('form')).getByLabelText('Title *'), 'Kept text');
-  expect(await screen.findByText(/could not be loaded/)).toBeInTheDocument();
+  expect(await screen.findByText('House events could not be loaded. Anything typed in the form is kept.')).toBeInTheDocument();
   repo.getAdminEvents.mockResolvedValue([event('back')]);
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(repo.getAdminEvents).toHaveBeenCalledTimes(2));
@@ -233,4 +233,23 @@ it('previews a draft as its public card and says the public cannot see it', asyn
   const dialog = screen.getByRole('alertdialog');
   expect(within(dialog).getByText(/the public cannot see it/)).toBeInTheDocument();
   expect(within(dialog).getByText('Fictional draft')).toBeInTheDocument();
+});
+
+
+it('blocks the planning report and retries House profiles when the separate profile query fails', async () => {
+  const refetchProfiles = jest.fn().mockResolvedValue(undefined);
+  useAdminHouseAssets.mockReturnValue({
+    assets: [twilight, rarity],
+    loading: false,
+    error: new Error('profile query denied'),
+    refetch: refetchProfiles,
+  });
+  repo.getAdminEvents.mockResolvedValue([event('scheduled')]);
+  renderManager();
+  expect(await screen.findByText(/House event or House profile records could not be loaded/)).toHaveTextContent(
+    /House event or House profile records could not be loaded/,
+  );
+  expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Retry planning data' }));
+  expect(refetchProfiles).toHaveBeenCalledTimes(1);
 });

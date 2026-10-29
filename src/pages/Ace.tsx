@@ -34,8 +34,8 @@ const ROLES = [
 const STEPS = [
   { n: '01', t: 'Attend VSA Events',     d: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open. Details are announced each cycle.' },
   { n: '02', t: 'Meet the Community',    d: 'Connect with potential Bigs or Littles at VSA events, Welcome Week activities, and ACE-hosted socials and mixers throughout the quarter.' },
-  { n: '03', t: 'Apply When Ready',      d: 'When applications open, Littles share their intro materials and Bigs submit a profile. Application timelines and materials are announced each cycle.' },
-  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Your Big is revealed! You are officially part of a fam, with connections to a multi-generation lineage and events throughout the year.' },
+  { n: '03', t: 'Choose Your Path',       d: 'Use the general ACE application to enter matching, or submit a separate mutual request if you and a Big or Little have agreed to connect. Follow the current cycle requirements for either path.' },
+  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Approved pairings are revealed when ACE leadership is ready. If you are not matched this cycle, you can still participate in the VSA community.' },
 ];
 
 const FAQS = [
@@ -44,7 +44,11 @@ const FAQS = [
   { q: 'What is a Fam?',                          a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
   { q: 'Do requirements change each cycle?',       a: 'Yes. Eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
-  { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
+  { q: 'How do I know when applications open?',    a: 'General applications and mutual requests can have different opening and closing dates. VSA announces each form through official channels; check @vsaatucsd for the current cycle.' },
+  { q: 'What is the difference between a general ACE application and a mutual request?', a: 'The general application is for Bigs and Littles who want help finding a match. A mutual request is a separate form for a Big and Little who already want to connect. You do not need to submit the general application just to submit a mutual request.' },
+  { q: 'Can I submit both forms?', a: 'Yes. A Big can submit a mutual request and also apply through general matching to be considered for additional Littles. A Little can submit both, but may have only one confirmed Big in the cycle. ACE leadership reviews requests and capacity before approval.' },
+  { q: 'Does a mutual request automatically guarantee a match or waive attendance requirements?', a: 'No. Submitting a mutual request is not an automatic confirmation, and eligibility or attendance requirements are still set by ACE leadership for each cycle. Follow the published instructions for the current forms.' },
+  { q: 'What if I am not matched with a Big?', a: 'Some Littles may remain unmatched in a cycle (sometimes called Orphans). This is a recognized outcome, not an error. Individual matching decisions stay private, and you can still join VSA events and meet the community.' },
 ];
 
 interface FamDerived {
@@ -299,11 +303,14 @@ export function Ace() {
 
         {/* ACE Application */}
         <section className="ace-section">
-          <div className="ace-eyebrow">Apply to ACE</div>
+          <div className="ace-eyebrow">General ACE Application</div>
           <ApplicationCTA
             applicationKeys="ace_application"
-            fallback={{ closed: 'ACE applications have closed. Check back next year.' }}
+            fallback={{ closed: 'General ACE applications have closed. Check VSA announcements for the next cycle.' }}
           />
+          <p className="ace-section-foot">
+            Already have a Big or Little in mind? Mutual requests use a separate form and do not require a general ACE application. Check official VSA announcements for that form and its own dates. Submitting either form does not automatically confirm a pairing or waive eligibility requirements.
+          </p>
         </section>
 
         {/* Public published-node search. Input remains local; no text is sent to the server. */}
@@ -439,11 +446,12 @@ export function Ace() {
                   onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
                   type="button"
                   aria-expanded={openFaq === i}
+                  aria-controls={`ace-faq-answer-${i}`}
                 >
                   <span>{f.q}</span>
                   <span className="ace-faq-plus" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
                 </button>
-                {openFaq === i && <div className="ace-faq-a">{f.a}</div>}
+                <div id={`ace-faq-answer-${i}`} className="ace-faq-a" hidden={openFaq !== i}>{f.a}</div>
               </div>
             ))}
           </div>
