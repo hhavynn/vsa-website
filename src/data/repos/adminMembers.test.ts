@@ -230,19 +230,19 @@ describe("admin roster CSV export safety", () => {
       {
         ...rosterRow(1),
         first_name: '=HYPERLINK("https://example.invalid","click")',
-        last_name: 'Nguyễn, "Văn"\\nTran',
+        last_name: 'Nguyễn, "Văn"\nTran',
         email: ' +SUM(1,2)@example.invalid',
         college: 'Sixth',
         year: '3',
         current_house: 'Rarity',
       },
     ], false);
-    expect(csv.startsWith("\\uFEFFFirst Name,")).toBe(true);
+    expect(csv.startsWith("\uFEFFFirst Name,")).toBe(true);
     expect(csv).toContain("'=HYPERLINK");
-    expect(csv).toContain('"Nguyễn, ""Văn""\\nTran"');
+    expect(csv).toContain('"Nguyễn, ""Văn""\nTran"');
     expect(csv).toContain('"\' +SUM(1,2)@example.invalid"');
-    expect(csv).toContain(',Rarity,1,0\\n');
-    expect(csv.endsWith('\\n')).toBe(true);
+    expect(csv).toContain(',Rarity,1,0\n');
+    expect(csv.endsWith('\n')).toBe(true);
   });
 
   it("exports unknown rather than a misleading unassigned House after a denied lookup", () => {
