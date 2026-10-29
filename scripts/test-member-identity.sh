@@ -4,7 +4,7 @@
 # hosted Supabase project. Synthetic people only.
 #
 # Runs every check twice: against the production points trigger (row level,
-# as of 2026-10-25) and with 20261010000000's statement triggers applied.
+# as of 2026-10-25) and with 20261029021759's statement triggers applied.
 set -euo pipefail
 
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
@@ -46,7 +46,7 @@ create role service_role bypassrls;
 SQL
 
 migration="${VSA_IDENTITY_MIGRATION:-$repo_dir/supabase/migrations/20261026075912_member_identity_aliases.sql}"
-points_migration="$repo_dir/supabase/migrations/20261010000000_serialize_member_points_recalculation.sql"
+points_migration="$repo_dir/supabase/migrations/20261029021759_serialize_member_points_recalculation.sql"
 
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
