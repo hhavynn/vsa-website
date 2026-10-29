@@ -74,13 +74,13 @@ export function summarizeHouseEventPlanning(
   let dateNeedsReview = 0;
   let hostNeedsReview = 0;
 
-  for (const event of uniqueEvents.values()) {
+  for (const event of Array.from(uniqueEvents.values())) {
     const quarter = planningQuarterForDate(event.event_date || '', year);
     if (!quarter) dateNeedsReview += 1;
 
     // house_event_houses is authoritative; the legacy primary-host column
     // alone is not proof of a valid association.
-    const hosts = [...new Set(hostIdsOf(event))].filter((id) => houseIds.has(id));
+    const hosts = Array.from(new Set(hostIdsOf(event))).filter((id) => houseIds.has(id));
     if (hosts.length === 0) hostNeedsReview += 1;
     if (!quarter) continue;
 
