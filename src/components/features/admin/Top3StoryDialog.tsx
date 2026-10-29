@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTop3StoryData } from '../../../hooks/useTop3StoryData';
 import { drawTop3Story, type Top3StoryAssets } from '../../../lib/story/drawTop3Story';
 import { drawTopNStory } from '../../../lib/story/drawTopNStory';
-import { STORY_LIMITS, formatTopNFileName, storyPresetForLimit, type StoryLimit } from '../../../lib/story/topNStory';
+import { STORY_LIMITS, formatTopNFileName, shouldUseTopNList, storyPresetForLimit, type StoryLimit } from '../../../lib/story/topNStory';
 import { ensureStoryFonts, loadStoryImage, type StoryTheme } from '../../../lib/story/storyCanvas';
 import {
   TOP3_STORY_PRESETS,
@@ -61,12 +61,8 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
     (ctx: CanvasRenderingContext2D) => {
       if (!assets || academicYearStart === null) return;
       const content = { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE };
-      // Legacy Top 3 podium looks exactly as before when there are no ties.
-      // With equal public ranks, podium .find(rank) drops the second tied
-      // member; use the index-based list instead and display T-ranks.
-      const hasSharedRank = entries.some((entry) => (entry.tiedCount ?? 1) > 1);
-      if (limit === 3 && !hasSharedRank) drawTop3Story(ctx, content, assets);
-      else drawTopNStory(ctx, { ...content, limit }, assets);
+      if (shouldUseTopNList(limit, entries)) drawTopNStory(ctx, { ...content, limit }, assets);
+      else drawTop3Story(ctx, content, assets);
     },
     [assets, academicYearStart, entries, preset, theme, asOfLabel, limit],
   );
