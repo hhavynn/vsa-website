@@ -61,7 +61,11 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
     (ctx: CanvasRenderingContext2D) => {
       if (!assets || academicYearStart === null) return;
       const content = { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE };
-      if (limit === 3) drawTop3Story(ctx, content, assets);
+      // Legacy Top 3 podium looks exactly as before when there are no ties.
+      // With equal public ranks, podium .find(rank) drops the second tied
+      // member; use the index-based list instead and display T-ranks.
+      const hasSharedRank = entries.some((entry) => (entry.tiedCount ?? 1) > 1);
+      if (limit === 3 && !hasSharedRank) drawTop3Story(ctx, content, assets);
       else drawTopNStory(ctx, { ...content, limit }, assets);
     },
     [assets, academicYearStart, entries, preset, theme, asOfLabel, limit],
