@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Gallery from './Gallery';
 import type { GalleryAlbum } from '../data/repos/gallery';
@@ -119,6 +119,41 @@ describe('Gallery discovery page states (Issue #562 & #563)', () => {
     fireEvent.change(yearSelect, { target: { value: '2025' } });
 
     expect(yearSelect.value).toBe('2025');
+  });
+
+  it('keeps older album cards visible before scroll observers fire, even without a cover', () => {
+    // setupTests' IntersectionObserver never signals an intersection. An
+    // inherited initial="hidden" animation would leave clickable cards blank.
+    mockAlbums = Array.from({ length: 24 }, (_, index) =>
+      album(`old-${index + 1}`, {
+        date: index >= 12 ? '2024-10-01' : '2025-10-01',
+        ...(index === 23 ? { cover_image_url: null, cover_thumbnail_url: null } : {}),
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/gallery']}>
+        <Gallery />
+      </MemoryRouter>,
+    );
+
+    const cards = screen.getAllByRole('article');
+    expect(cards).toHaveLength(24);
+    cards.forEach((card) => expect(card).not.toHaveStyle('opacity: 0'));
+
+    // The wall is a plain wrapper with no role, so assert on the cards' parent.
+    // eslint-disable-next-line testing-library/no-node-access -- structural check on the wrapper
+    const wall = cards[0].parentElement;
+    expect(wall).toHaveClass('gallery-memory-wall');
+    expect(wall).not.toHaveStyle('opacity: 0');
+
+    expect(screen.getByRole('link', { name: 'Album old-24. Preview album' })).toBeInTheDocument();
+    // Every valid cover also renders its fallback underneath the image, so
+    // check the cover-less card specifically rather than using getByText('VSA').
+    const coverless = cards[23];
+    expect(within(coverless).queryByRole('img')).not.toBeInTheDocument();
+    // eslint-disable-next-line testing-library/no-node-access -- fallback is a decorative class, not a role
+    expect(coverless.querySelector('.gallery-memory-fallback')).toBeInTheDocument();
   });
 
   it('keeps discovery controls mounted while filter queries are loading', () => {
