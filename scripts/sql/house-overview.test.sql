@@ -18,7 +18,7 @@ create table public.house_parents (id uuid primary key default gen_random_uuid()
 create table public.house_events (id uuid primary key, academic_year_start integer, event_date date, is_published boolean);
 create table public.house_event_houses (house_event_id uuid, house_page_asset_id uuid);
 create view public.house_yearly_points as
- SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (sum(mea.points_earned))::integer AS total_points,
+ SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (count(*))::integer AS total_points,
         (count(DISTINCT mea.member_id))::integer AS unique_members, max(e.date) AS latest_activity_at
  FROM member_event_attendance mea JOIN events e ON e.id = mea.event_id JOIN academic_terms t ON t.id = e.academic_term_id
  JOIN house_memberships hm ON hm.member_id = mea.member_id AND hm.academic_year_start = t.academic_year_start AND (e.date)::date >= hm.effective_start_date AND (hm.effective_end_date IS NULL OR (e.date)::date < hm.effective_end_date)
@@ -29,6 +29,7 @@ create view public.house_yearly_points as
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028075724_admin_house_overview.sql
 \ir ../../supabase/migrations/20261029015642_admin_house_overview_weighted_reconciliation.sql
+\ir ../../supabase/migrations/20261029071310_house_reconciliation_count_not_sum.sql
 set client_min_messages = notice;
 
 -- Two terms of 2026-27, one of 2025-26.
@@ -119,7 +120,8 @@ do $$ begin
  if pg_temp.f('yr','pinkie','credited_attendance') <> '0' or pg_temp.f('yr','pinkie','rank') is not null or pg_temp.f('yr','pinkie','is_active') <> 'false' then raise exception 'FAIL: inactive profile credited or ranked'; end if;
  raise notice 'PASS: credits follow effective membership (mid-quarter joins and transfers) and skip inactive profiles.';
  if exists (select 1 from yr where h->>'is_active' = 'true' and (h->>'matches_view')::boolean is not true) then raise exception 'FAIL: window credits differ from house_yearly_points'; end if;
- if pg_temp.f('yr','twilight','year_total_points') <> '4' or pg_temp.f('yr','twilight','rank') <> '1' or pg_temp.f('yr','rarity','rank') <> '2' or pg_temp.f('yr','applejack','rank') <> '3' then raise exception 'FAIL: standings/rank'; end if;
+ -- One House point per check-in: Twilight has a 2-point event but still totals 3 credits.
+ if pg_temp.f('yr','twilight','year_total_points') <> '3' or pg_temp.f('yr','twilight','year_total_points') <> pg_temp.f('yr','twilight','credited_attendance') or pg_temp.f('yr','twilight','rank') <> '1' or pg_temp.f('yr','rarity','rank') <> '2' or pg_temp.f('yr','applejack','rank') <> '3' then raise exception 'FAIL: standings/rank'; end if;
  raise notice 'PASS: the year totals and ranks come from house_yearly_points and match the window credits.';
  if pg_temp.f('yr','twilight','parents_listed') <> '2' or pg_temp.f('yr','twilight','parents_linked') <> '1' then raise exception 'FAIL: parents'; end if;
  if pg_temp.f('yr','twilight','hosted_events') <> '1' or pg_temp.f('yr','rarity','hosted_events') <> '1' or pg_temp.f('yr','applejack','hosted_events') <> '1' then raise exception 'FAIL: hosted events (draft must not count)'; end if;
