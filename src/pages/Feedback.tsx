@@ -19,16 +19,16 @@ export const FeedbackPage: React.FC = () => {
     <>
       <PageTitle title="Feedback" />
 
-      <div className="border-b" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', padding: '48px 52px 36px' }}>
-        <div className="vsa-container">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
+      <div className="vsa-page-hero">
+        <div className="vsa-container relative z-10">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="scrapbook-sticker scrapbook-sticker-teal">Feedback System</span>
-            <span className="font-mono text-[11px]" style={{ color: 'var(--color-text3)' }}>Est. 2024</span>
+            <span className="font-mono text-[11px] text-[var(--color-text2)]">Est. 2024</span>
           </div>
-          <h1 className="font-serif leading-none tracking-[-0.03em]" style={{ fontSize: 44, color: 'var(--color-text)' }}>
-            Help us <span className="italic" style={{ color: 'var(--brand)' }}>improve</span>
+          <h1 className="vsa-page-title">
+            Help us <em>improve</em>
           </h1>
-          <p className="font-sans text-sm mt-3 max-w-xl leading-relaxed" style={{ color: 'var(--color-text2)' }}>
+          <p className="mt-3 max-w-xl font-sans text-[15px] leading-[1.8] text-[var(--color-text2)]">
             Found a bug? Have a feature request? Or just want to share your thoughts on a recent event? We'd love to hear from you.
           </p>
         </div>

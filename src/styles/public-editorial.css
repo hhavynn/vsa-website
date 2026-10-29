@@ -539,10 +539,33 @@ html.dark .vsa-editorial-shell .program-app .editorial-hero {
   --eh-watermark: rgba(190, 183, 244, 0.09);
 }
 
-/* Below lg the MobileQuickDock floats at top: 68px; clear it like the homepage hero. */
+/* ─── Quick-dock clearance ─────────────────────────────────────────────
+   Below lg the MobileQuickDock floats at top: 68px (to ~130px), over the
+   first ~78px of <main>. Whatever opens a page — a breadcrumb, a page
+   hero, a program hero, or a bespoke top (.vsa-dock-clear) — starts below
+   it. A hero that follows a breadcrumb drops its own clearance so the gap
+   isn't doubled. */
 @media (max-width: 1023px) {
-  .vsa-editorial-shell .vsa-page-hero {
-    padding-top: 92px;
+  .vsa-editorial-shell {
+    --vsa-dock-clearance: 92px;
+  }
+
+  .vsa-editorial-shell .vsa-page-hero,
+  .vsa-editorial-shell .editorial-hero-inner,
+  .vsa-editorial-shell .vsa-dock-clear {
+    padding-top: var(--vsa-dock-clearance);
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] {
+    padding-top: calc(var(--vsa-dock-clearance) - 12px);
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] + .vsa-page-hero {
+    padding-top: 40px;
+  }
+
+  .vsa-editorial-shell nav[aria-label="Breadcrumb"] + .program-app .editorial-hero-inner {
+    padding-top: 32px;
   }
 }
 
