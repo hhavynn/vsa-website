@@ -39,12 +39,12 @@ describe('public Calendar list card focus and separate actions (#313)', () => {
 
   it('does not treat the article as a separate invisible button or open details on calendar-save click', () => {
     const onSelect = jest.fn();
-    const view = render(<CalendarItemCard item={item} index={1} onSelect={onSelect} />);
-    const article = view.container.querySelector('article');
+    render(<CalendarItemCard item={item} index={1} onSelect={onSelect} />);
+    const article = screen.getByRole('article');
     expect(article).toBeInTheDocument();
     expect(article).not.toHaveAttribute('tabindex');
     expect(article).not.toHaveAttribute('role', 'button');
-    fireEvent.click(article!);
+    fireEvent.click(article);
     expect(onSelect).not.toHaveBeenCalled();
     const calendar = screen.getByRole('link', { name: /Add Long Community Night Gathering to Google Calendar/i });
     expect(calendar).toHaveClass('relative', 'z-20');
