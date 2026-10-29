@@ -61,6 +61,39 @@ describe('House selector academic-year rollover (#595)', () => {
     );
   });
 
+  it('offers every verified year in one full-width native mobile picker', () => {
+    renderSelector(2027);
+    const picker = screen.getByRole('combobox', { name: 'Choose House academic year' });
+    expect(picker).toHaveClass('min-h-11', 'w-full', 'sm:hidden');
+    expect(picker).toHaveValue('2027');
+    expect(screen.getByRole('option', { name: /2027-2028.*Current/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /2023-2024.*Archive/i })).toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: '2023' } });
+    expect(screen.getByRole('status', { name: 'Current route' })).toHaveTextContent(
+      '/house/year/2023-2024'
+    );
+  });
+
+  it('routes mobile selection back to the current House page without guessing current membership', () => {
+    renderSelector(2027, 2025);
+    const picker = screen.getByRole('combobox', { name: 'Choose House academic year' });
+    expect(picker).toHaveValue('2025');
+    fireEvent.change(picker, { target: { value: '2027' } });
+    expect(screen.getByRole('status', { name: 'Current route' })).toHaveTextContent('/house');
+  });
+
+  it('does not invent an active mobile year when term metadata is unavailable', () => {
+    renderSelector(null, null);
+    const picker = screen.getByRole('combobox', { name: 'Choose House academic year' });
+    expect(picker).toHaveValue('');
+    expect(screen.getByRole('option', { name: 'Choose a verified year' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Current/ })).not.toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: '2025' } });
+    expect(screen.getByRole('status', { name: 'Current route' })).toHaveTextContent(
+      '/house/year/2025-2026'
+    );
+  });
+
   it('never presents a future year when the active term is an earlier year', () => {
     const options = buildHouseYearOptions(2025);
     expect(options.map((year) => year.startYear)).not.toContain(2026);
