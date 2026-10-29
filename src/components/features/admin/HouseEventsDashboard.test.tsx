@@ -218,7 +218,7 @@ it('keeps typed form input when the list fails to load, and offers a retry', asy
   repo.getAdminEvents.mockRejectedValue(new Error('network'));
   renderManager();
   await userEvent.type(within(screen.getByRole('form')).getByLabelText('Title *'), 'Kept text');
-  expect(await screen.findByText(/could not be loaded/)).toBeInTheDocument();
+  expect(await screen.findByText('House events could not be loaded. Anything typed in the form is kept.')).toBeInTheDocument();
   repo.getAdminEvents.mockResolvedValue([event('back')]);
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(repo.getAdminEvents).toHaveBeenCalledTimes(2));
