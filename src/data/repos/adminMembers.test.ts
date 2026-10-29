@@ -1,4 +1,5 @@
 import { adminMembersRepository } from "./adminMembers";
+import { memberRosterCsv } from "../../lib/memberRosterExport";
 import { postgrestError, supabaseMock } from "../../test-utils/supabaseMock";
 
 jest.mock("../../lib/supabase", () => ({
@@ -220,3 +221,31 @@ describe("full admin roster pagination", () => {
   });
 });
 
+
+
+describe("admin roster CSV export safety", () => {
+  it("quotes commas, quotes and line breaks, defuses spreadsheet formulas, and preserves Unicode", () => {
+    const csv = memberRosterCsv([
+      {
+        ...rosterRow(1),
+        first_name: '=HYPERLINK("https://example.invalid","click")',
+        last_name: 'Nguyễn, "Văn"\\nTran',
+        email: ' +SUM(1,2)@example.invalid',
+        college: 'Sixth',
+        year: '3',
+        current_house: 'Rarity',
+      },
+    ], false);
+    expect(csv.startsWith("\\uFEFFFirst Name,")).toBe(true);
+    expect(csv).toContain("'=HYPERLINK");
+    expect(csv).toContain('"Nguyễn, ""Văn""\\nTran"');
+    expect(csv).toContain('"\' +SUM(1,2)@example.invalid"');
+    expect(csv).toContain(',Rarity,1,0\\n');
+    expect(csv.endsWith('\\n')).toBe(true);
+  });
+
+  it("exports unknown rather than a misleading unassigned House after a denied lookup", () => {
+    const csv = memberRosterCsv([{ ...rosterRow(1), current_house: null }], true);
+    expect(csv).toContain(',unknown,1,0');
+  });
+});
