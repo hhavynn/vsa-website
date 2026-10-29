@@ -130,16 +130,34 @@ export class PhotoRequestsRepository {
     }, 'Failed to fetch your photo requests');
   }
 
-  /** Public flow: approved avatars keyed by member_id, one bulk query. */
+  /**
+   * Public flow: approved avatars keyed by member_id, loaded completely.
+   * The view returns at most one approved URL per member; keyset paging avoids
+   * marking later members as "missing photo" after PostgREST's row limit.
+   */
   async getPublicMemberAvatars(): Promise<Map<string, string>> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('public_member_avatars')
-        .select('member_id, avatar_url');
-      if (error) throw error;
       const avatars = new Map<string, string>();
-      for (const row of data ?? []) {
-        if (row.member_id && row.avatar_url) avatars.set(row.member_id, row.avatar_url);
+      let lastMemberId: string | null = null;
+      for (;;) {
+        let query = supabase
+          .from('public_member_avatars')
+          .select('member_id, avatar_url')
+          .order('member_id', { ascending: true })
+          .limit(500);
+        if (lastMemberId) query = query.gt('member_id', lastMemberId);
+        const { data, error } = await query;
+        if (error) throw error;
+        const rows = (data ?? []) as PublicMemberAvatar[];
+        for (const row of rows) {
+          if (row.member_id && row.avatar_url) avatars.set(row.member_id, row.avatar_url);
+        }
+        if (rows.length < 500) break;
+        const nextId = rows[rows.length - 1].member_id;
+        if (!nextId || (lastMemberId && nextId <= lastMemberId)) {
+          throw new Error('Member avatar pagination cursor did not advance');
+        }
+        lastMemberId = nextId;
       }
       return avatars;
     }, 'Failed to fetch member avatars');
