@@ -75,8 +75,8 @@ describe('Top N member story from the published comparator (#629)', () => {
       .toBe('vsa-public-leaderboard-top5-2026-27-crown-dark.png');
   });
 
-  it('fits 5/10 cards within Instagram-safe drawing space without any collision', () => {
-    for (const n of [5, 10] as const) {
+  it('fits 3/5/10 tied-member list cards within Instagram-safe space without collisions', () => {
+    for (const n of [3, 5, 10] as const) {
       const rects = topNRowBounds(n, n);
       expect(rects).toHaveLength(n);
       expect(rects[0].top).toBeGreaterThanOrEqual(STORY_SAFE_TOP);
