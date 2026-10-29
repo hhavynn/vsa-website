@@ -121,6 +121,34 @@ describe('Gallery discovery page states (Issue #562 & #563)', () => {
     expect(yearSelect.value).toBe('2025');
   });
 
+  it('keeps older album cards visible before scroll observers fire, even without a cover', () => {
+    // setupTests' IntersectionObserver never signals an intersection. An
+    // inherited initial="hidden" animation would leave clickable cards blank.
+    mockAlbums = Array.from({ length: 24 }, (_, index) =>
+      album(`old-${index + 1}`, {
+        date: index >= 12 ? '2024-10-01' : '2025-10-01',
+        ...(index === 23 ? { cover_image_url: null, cover_thumbnail_url: null } : {}),
+      }),
+    );
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/gallery']}>
+        <Gallery />
+      </MemoryRouter>,
+    );
+
+    const wall = container.querySelector('.gallery-memory-wall');
+    expect(wall).toBeInTheDocument();
+    expect(wall).not.toHaveStyle('opacity: 0');
+
+    const cards = container.querySelectorAll('.gallery-memory-card');
+    expect(cards).toHaveLength(24);
+    cards.forEach((card) => expect(card).not.toHaveStyle('opacity: 0'));
+
+    expect(screen.getByRole('link', { name: 'Album old-24. Preview album' })).toBeInTheDocument();
+    expect(screen.getByText('VSA')).toBeInTheDocument();
+  });
+
   it('keeps discovery controls mounted while filter queries are loading', () => {
     mockIsLoading = true;
     render(
