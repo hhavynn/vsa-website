@@ -73,8 +73,8 @@ export function ClosingSoonApplications() {
 
   const shown = notices.slice(0, MAX_NOTICES);
   return (
-    <section aria-label="Applications closing soon" className="mx-auto max-w-[1400px] px-5 py-3 sm:px-[6vw] sm:py-4">
-      <div className="rounded-sm border px-4 py-2 sm:px-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
+    <section aria-label="Applications closing soon" className="vsa-container py-3 sm:py-4">
+      <div className="rounded-lg border px-4 py-2 sm:px-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
           {shown.map(({ row, dueAt, daysUntilClose, headline, url }) => (
             <li key={row.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'var(--color-border)' }}>
@@ -96,8 +96,8 @@ export function ClosingSoonApplications() {
                 aria-describedby={`closing-soon-${row.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-sm px-4 py-2 font-sans text-sm font-semibold transition-opacity duration-150 hover:opacity-90"
-                style={{ background: 'var(--brand)', color: 'var(--color-on-brand)' }}
+                className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 font-sans text-sm font-semibold transition-opacity duration-150 hover:opacity-90"
+                style={{ background: 'var(--brand)', color: '#f8fbfb' }}
               >
                 {row.button_label}
                 <span aria-hidden>→</span>
