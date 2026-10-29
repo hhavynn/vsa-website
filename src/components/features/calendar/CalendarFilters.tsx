@@ -1,5 +1,6 @@
 import type { CalendarHouseTag } from '../../../utils/calendar';
 import { CalendarCategoryFilter } from '../../../utils/calendar';
+import { cn } from '../../../lib/utils';
 
 export interface CalendarFilterOption {
   key: CalendarCategoryFilter;
@@ -60,7 +61,7 @@ export function CalendarFilters({
             type="button"
             onClick={() => onPointsOnlyChange(!pointsOnly)}
             aria-pressed={pointsOnly}
-            className={`vsa-filter-btn mt-2 min-h-11 w-full ${pointsOnly ? 'active' : ''}`}
+            className={cn('vsa-filter-btn mt-2 min-h-11 w-full', pointsOnly && 'active')}
           >
             ⭐ Points eligible
           </button>
@@ -74,7 +75,7 @@ export function CalendarFilters({
             key={option.key}
             onClick={() => changeCategory(option.key)}
             aria-pressed={activeFilter === option.key}
-            className={`vsa-filter-btn px-3 py-1.5 ${activeFilter === option.key ? 'active' : ''}`}
+            className={cn('vsa-filter-btn px-3 py-1.5', activeFilter === option.key && 'active')}
           >
             {option.label}
           </button>
@@ -84,7 +85,7 @@ export function CalendarFilters({
             type="button"
             onClick={() => onPointsOnlyChange(!pointsOnly)}
             aria-pressed={pointsOnly}
-            className={`vsa-filter-btn px-3 py-1.5 ${pointsOnly ? 'active' : ''}`}
+            className={cn('vsa-filter-btn px-3 py-1.5', pointsOnly && 'active')}
           >
             ⭐ Points eligible
           </button>
@@ -114,7 +115,7 @@ export function CalendarFilters({
               type="button"
               onClick={() => onHouseChange(null)}
               aria-pressed={activeHouse === null}
-              className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === null ? 'active' : ''}`}
+              className={cn('vsa-filter-btn px-3 py-1.5', activeHouse === null && 'active')}
             >
               All houses
             </button>
@@ -124,7 +125,7 @@ export function CalendarFilters({
                 key={house.name}
                 onClick={() => onHouseChange(activeHouse === house.name ? null : house.name)}
                 aria-pressed={activeHouse === house.name}
-                className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === house.name ? 'active' : ''}`}
+                className={cn('vsa-filter-btn px-3 py-1.5', activeHouse === house.name && 'active')}
               >
                 <span
                   className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
