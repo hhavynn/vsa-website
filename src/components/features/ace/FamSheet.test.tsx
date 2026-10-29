@@ -231,3 +231,76 @@ describe('FamSheet lineage spotlight', () => {
     ).toBeInTheDocument();
   });
 });
+
+
+describe('FamSheet published node deep links (#666)', () => {
+  beforeEach(() => {
+    supabaseMock.reset();
+    supabaseMock.setDefault('public_member_avatars', { data: [], error: null });
+  });
+
+  it('opens a validated linked node selected and traces the existing ancestor path', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <FamSheet
+          family={family}
+          members={members}
+          accent="teal"
+          viet={null}
+          dark={false}
+          focusNodeId="node-lynna"
+          onClose={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Lynna On', { selector: '.ace-rail-name' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Lineage of Lynna On' });
+    expect(within(nav).getAllByRole('listitem').map((el) => el.textContent)).toEqual([
+      'Big Person', 'Lynna On',
+    ]);
+    expect(screen.getByRole('button', { name: 'Lynna On, Little' })).toHaveClass('is-lineage');
+    expect(screen.getByRole('button', { name: 'Copy member link' })).toBeInTheDocument();
+  });
+
+  it('updates focused node through the callback when navigating to a different published Big', async () => {
+    const onFocusNodeChange = jest.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <FamSheet
+          family={family}
+          members={members}
+          accent="teal"
+          viet={null}
+          dark={false}
+          focusNodeId="node-lynna"
+          onFocusNodeChange={onFocusNodeChange}
+          onClose={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Big Person, Big' }));
+    expect(onFocusNodeChange).toHaveBeenCalledWith('node-big');
+    expect(screen.getByText('Big Person', { selector: '.ace-rail-name' })).toBeInTheDocument();
+  });
+
+  it('does not focus a nonexistent node supplied through a link', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <FamSheet
+          family={family}
+          members={members}
+          accent="teal"
+          viet={null}
+          dark={false}
+          focusNodeId="removed-node"
+          onClose={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText(/Tap a member to trace their lineage/)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /^Lineage of/ })).not.toBeInTheDocument();
+  });
+});

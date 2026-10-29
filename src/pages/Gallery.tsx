@@ -22,21 +22,6 @@ import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
 import { FALLBACK_GALLERY, FALLBACK_LINKS } from '../config/publicFallbackContent';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
 const albumPatterns = [
   { rotate: '-1.4deg', offset: '0px', height: '236px', span: 4, tape: 'var(--tape-gold)', tapeX: '48%', tapeRotate: '-2deg' },
   { rotate: '1.1deg', offset: '22px', height: '292px', span: 4, tape: 'var(--tape-teal)', tapeX: '56%', tapeRotate: '1.5deg' },
@@ -276,13 +261,16 @@ export default function Gallery() {
           </div>
         ) : (
           <>
-            <motion.div 
-              variants={shouldReduceMotion ? undefined : containerVariants}
-              initial={shouldReduceMotion ? false : 'hidden'}
-              whileInView={shouldReduceMotion ? undefined : 'show'}
-              viewport={{ once: true, margin: '-20px' }}
-              className="gallery-memory-wall"
-            >
+            {albums.length > 1 && (
+              <p
+                className="mb-5 flex items-center gap-2 font-sans text-xs text-text-secondary sm:hidden"
+                aria-label="Swipe horizontally to browse photo albums"
+              >
+                <span aria-hidden="true" className="font-mono text-base text-brand-600 dark:text-brand-400">← →</span>
+                Swipe sideways to explore more memories
+              </p>
+            )}
+            <div className="gallery-memory-wall">
               {albums.map((album, index) => {
                 // Cards render the 720px thumbnail only. Offering the 1400px cover in a srcset
                 // would make hi-DPI phones download the larger file: more egress than before.
@@ -291,7 +279,6 @@ export default function Gallery() {
                 return (
                   <motion.article
                     key={album.id}
-                    variants={shouldReduceMotion ? undefined : itemVariants}
                     className="gallery-memory-card group block min-w-[82vw] snap-start transition-all hover:!rotate-0 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none sm:min-w-0"
                     style={getAlbumStyle(index)}
                     whileHover={shouldReduceMotion ? undefined : { y: -4 }}
@@ -336,7 +323,7 @@ export default function Gallery() {
                           </span>
                         )}
                       </div>
-                      <h2 className="truncate font-sans text-sm font-semibold tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
+                      <h2 className="min-w-0 break-words font-sans text-sm font-semibold leading-snug tracking-[-0.01em]" style={{ color: 'var(--text)' }}>
                         {/* The title is the link; its ::after stretches over the whole card, so the
                             accessible name ("<title>. Preview album") contains the visible text. */}
                         <a
@@ -357,7 +344,7 @@ export default function Gallery() {
                       )}
                       {album.event && (
                         <p
-                          className="mt-2 truncate font-mono text-[10px] uppercase tracking-[0.08em]"
+                          className="mt-2 break-words font-mono text-[10px] uppercase leading-relaxed tracking-[0.08em]"
                           style={{ color: 'var(--text3)' }}
                         >
                           Related event / {album.event.name}
@@ -373,7 +360,7 @@ export default function Gallery() {
                   </motion.article>
                 );
               })}
-            </motion.div>
+            </div>
 
             {openAlbumIndex >= 0 && (
               <AlbumLightbox

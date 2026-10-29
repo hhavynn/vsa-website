@@ -64,6 +64,9 @@
 --
 -- Rollback: scripts/sql/points-recalculation-rollback.sql (one transaction,
 -- restores the row trigger; tested by scripts/test-points-concurrency.sh).
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029021759);
+-- applied without this file's begin;/commit; lines, since apply_migration is transactional
 
 begin;
 

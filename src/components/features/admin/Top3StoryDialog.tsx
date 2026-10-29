@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTop3StoryData } from '../../../hooks/useTop3StoryData';
 import { drawTop3Story, type Top3StoryAssets } from '../../../lib/story/drawTop3Story';
+import { drawTopNStory } from '../../../lib/story/drawTopNStory';
+import { STORY_LIMITS, formatTopNFileName, shouldUseTopNList, storyPresetForLimit, type StoryLimit } from '../../../lib/story/topNStory';
 import { ensureStoryFonts, loadStoryImage, type StoryTheme } from '../../../lib/story/storyCanvas';
 import {
   TOP3_STORY_PRESETS,
@@ -19,11 +21,13 @@ const THEMES: { id: StoryTheme; label: string }[] = [
 ];
 
 export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
-  const { academicYearStart, entries, loading, error } = useTop3StoryData();
+  const [limit, setLimit] = useState<StoryLimit>(3);
+  const { academicYearStart, entries, loading, error, excludedBoundaryTie = 0, excludedRank = null } = useTop3StoryData(limit);
   const [presetId, setPresetId] = useState<Top3StoryPreset['id']>('current');
   const [theme, setTheme] = useState<StoryTheme>('dark');
   const [assets, setAssets] = useState<Top3StoryAssets | null>(null);
-  const preset = TOP3_STORY_PRESETS.find((p) => p.id === presetId) ?? TOP3_STORY_PRESETS[0];
+  const originalPreset = TOP3_STORY_PRESETS.find((p) => p.id === presetId) ?? TOP3_STORY_PRESETS[0];
+  const preset = storyPresetForLimit(originalPreset, limit);
 
   const avatarKey = entries.map((entry) => `${entry.memberId}:${entry.avatarUrl ?? ''}`).join('|');
 
@@ -56,28 +60,30 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       if (!assets || academicYearStart === null) return;
-      drawTop3Story(
-        ctx,
-        { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE },
-        assets,
-      );
+      const content = { entries, preset, theme, yearLabel: formatStoryYearLabel(academicYearStart), asOfLabel, handle: INSTAGRAM_HANDLE };
+      if (shouldUseTopNList(limit, entries)) drawTopNStory(ctx, { ...content, limit }, assets);
+      else drawTop3Story(ctx, content, assets);
     },
-    [assets, academicYearStart, entries, preset, theme, asOfLabel],
+    [assets, academicYearStart, entries, preset, theme, asOfLabel, limit],
   );
 
   const status = error
     ? 'Could not load the leaderboard. Close and try again.'
     : loading || !assets
       ? 'Building your story…'
-      : academicYearStart === null || entries.length === 0
-        ? 'No leaderboard points recorded for this year yet.'
+      : academicYearStart === null
+        ? 'No leaderboard year available.'
+        : entries.length === 0 && excludedBoundaryTie > 0
+          ? 'The leaderboard has a boundary tie too large for this story. Choose another Top N size.'
+          : entries.length === 0
+            ? 'No leaderboard points recorded for this year yet.'
         : null;
 
   const yearLabel = academicYearStart !== null ? formatStoryYearLabel(academicYearStart) : null;
 
   return (
     <StoryStudio
-      title="Top 3 Story"
+      title={`Top ${limit} Story`}
       description={
         yearLabel
           ? `Current public leaderboard (${yearLabel}) — same names, points, photos, and Houses members see.`
@@ -85,10 +91,38 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
       }
       draw={status ? null : draw}
       status={status}
-      fileName={academicYearStart !== null ? formatStoryFileName(academicYearStart, preset.id, theme) : 'vsa-top3-story.png'}
+      fileName={academicYearStart !== null
+        ? limit === 3 ? formatStoryFileName(academicYearStart, preset.id, theme) : formatTopNFileName(academicYearStart, limit, preset.id, theme)
+        : `vsa-top${limit}-story.png`}
       tone={theme}
       onClose={onClose}
     >
+      <fieldset>
+        <legend className="mb-2 font-sans text-2xs font-semibold uppercase tracking-label text-[var(--color-text2)]">
+          Leaderboard size
+        </legend>
+        <div className="grid grid-cols-3 gap-2">
+          {STORY_LIMITS.map((size) => (
+            <label key={size} className={cn(
+              'flex min-h-11 cursor-pointer items-center justify-center rounded border px-2 py-2 font-sans text-sm font-semibold focus-within:ring-2 focus-within:ring-brand-600',
+              limit === size
+                ? 'border-brand-600 bg-brand-600/10 text-text-primary'
+                : 'border-border-strong text-text-secondary',
+            )}>
+              <input type="radio" className="sr-only" name="story-limit" checked={limit === size} onChange={() => setLimit(size)} />
+              Top {size}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {excludedBoundaryTie > 0 && !loading && !error && (
+        <p role="status" className="rounded border border-amber-600/50 bg-amber-500/10 p-3 font-sans text-xs text-text-primary">
+          {excludedBoundaryTie} tied member{excludedBoundaryTie === 1 ? '' : 's'} at rank {excludedRank ?? '?'} cross the Top {limit} cutoff.
+          The whole tied group is excluded rather than splitting an equal ranking. Choose a larger size to include them.
+        </p>
+      )}
+
       <fieldset>
         <legend className="mb-2 font-sans text-2xs font-semibold uppercase tracking-label text-[var(--color-text2)]">
           Look
@@ -173,7 +207,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
             {entries.map((entry) => (
               <li key={entry.memberId} className="flex items-center justify-between gap-3 px-3 py-2 font-sans text-sm">
                 <span className="min-w-0 truncate text-[var(--color-text)]">
-                  <span className="mr-2 font-mono text-xs text-[var(--color-text2)]">#{entry.rank}</span>
+                  <span className="mr-2 font-mono text-xs text-[var(--color-text2)]">{(entry.tiedCount ?? 1) > 1 ? 'T' : '#'}{entry.rank}</span>
                   {entry.name}
                 </span>
                 <span className="shrink-0 font-semibold text-[var(--color-text)]">{entry.pointsLabel} pts</span>
@@ -181,7 +215,7 @@ export function Top3StoryDialog({ onClose }: { onClose: () => void }) {
             ))}
           </ol>
           <p className="mt-2 font-sans text-2xs text-[var(--color-text2)]">
-            Members without an approved photo show their initials, as on the leaderboard.
+            Public leaderboard cohort only. Members without an approved photo show their initials, as on the leaderboard.
           </p>
         </div>
       )}

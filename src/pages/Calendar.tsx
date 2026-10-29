@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import { motion, useReducedMotion } from 'framer-motion';
 import { PageTitle } from '../components/common/PageTitle';
+import { DownloadEventCalendarButton } from '../components/features/events/DownloadEventCalendarButton';
 import { Label } from '../components/ui/Label';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
 import { ContentUnavailableState } from '../components/common/ContentUnavailableState';
@@ -244,6 +245,12 @@ export function Calendar() {
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em]" style={{ color: 'var(--text3)' }}>
               {upcomingThisMonth} {upcomingThisMonth === 1 ? 'thing' : 'things'} left this month
             </p>
+          )}
+
+          {!vsaQuery.isLoading && !vsaQuery.isError && (vsaQuery.data?.length ?? 0) > 0 && (
+            <div className="mt-5">
+              <DownloadEventCalendarButton events={vsaQuery.data ?? []} />
+            </div>
           )}
 
           {items.length > 0 && (

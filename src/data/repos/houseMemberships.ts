@@ -11,6 +11,7 @@ interface HouseProfileRef {
 }
 
 interface HouseMembershipRow {
+  id: string;
   member_id: string;
   house_page_assets: HouseProfileRef | HouseProfileRef[] | null;
 }
@@ -130,20 +131,40 @@ export class HouseMembershipsRepository {
     onDate: string,
   ): Promise<Map<string, string>> {
     return withErrorHandling(async () => {
-      const { data, error } = await supabase
-        .from('house_memberships')
-        .select('member_id, house_page_assets(display_name, house_key)')
-        .eq('academic_year_start', academicYearStart)
-        .lte('effective_start_date', onDate)
-        .or(`effective_end_date.is.null,effective_end_date.gt.${onDate}`);
-
-      if (error) throw error;
-
       const labels = new Map<string, string>();
-      for (const row of (data ?? []) as HouseMembershipRow[]) {
-        const label = readHouseLabel(row.house_page_assets);
-        if (label) labels.set(row.member_id, label);
+      let lastId: string | null = null;
+
+      for (;;) {
+        // The admin member directory can exceed PostgREST's single-query row
+        // limit. Read ALL current-year intervals before reporting unassigned.
+        let query = supabase
+          .from('house_memberships')
+          .select('id, member_id, house_page_assets(display_name, house_key)')
+          .eq('academic_year_start', academicYearStart)
+          .lte('effective_start_date', onDate)
+          .or(`effective_end_date.is.null,effective_end_date.gt.${onDate}`)
+          .order('id', { ascending: true })
+          .limit(500);
+
+        if (lastId) query = query.gt('id', lastId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const rows = (data ?? []) as HouseMembershipRow[];
+        for (const row of rows) {
+          const label = readHouseLabel(row.house_page_assets);
+          if (label) labels.set(row.member_id, label);
+        }
+        if (rows.length < 500) break;
+
+        const nextId = rows[rows.length - 1].id;
+        if (!nextId || (lastId && nextId <= lastId)) {
+          throw new Error('House membership pagination cursor did not advance');
+        }
+        lastId = nextId;
       }
+
       return labels;
     }, 'Failed to fetch House memberships');
   }

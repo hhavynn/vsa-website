@@ -3,14 +3,19 @@ import { NavigationShell } from './navigation/NavigationShell';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { BackToTop } from './BackToTop';
 import { MobileQuickDock } from './navigation/MobileQuickDock';
-import { Suspense, useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import Footer from './Footer';
 import { PageLoader } from '../common/PageLoader';
-import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
 import { EDITORIAL_SHELL_CLASS, isPublicEditorialRoute, useEditorialBodyScope } from './publicEditorialTheme';
 import '../../styles/public-editorial.css';
+
+// Optional assistant is isolated from the initial public route bundle.
+const VsaAiAssistant = lazy(() => import('../features/ai/VsaAiAssistant').then(m => ({
+  default: m.VsaAiAssistant,
+})));
 
 function ScrollManager() {
   const { pathname, search, hash, state } = useLocation();
@@ -72,7 +77,11 @@ function LayoutShell() {
       <Footer />
       <BackToTop />
       <MobileQuickDock />
-      <VsaAiAssistant />
+      <ErrorBoundary fallback={<span role="status" className="sr-only">Ask VSA is temporarily unavailable.</span>}>
+        <Suspense fallback={null}>
+          <VsaAiAssistant />
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

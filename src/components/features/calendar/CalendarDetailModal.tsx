@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { CalendarItem, compareCalendarItems, formatDayGroupLabel } from '../../../utils/calendar';
 import { formatEventDateRange, formatEventTime, formatEventTimeRange } from '../../../lib/eventTime';
-import { getSupabaseImageUrl } from '../../../lib/supabaseImages';
+import { OptimizedImage } from '../../common/OptimizedImage';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { AddToGoogleCalendarLink } from './AddToGoogleCalendarLink';
 import { sanitizeHref } from '../../../utils/sanitizeUrl';
@@ -27,11 +27,19 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
     <>
       {image && (
         <div className="scrapbook-photo -rotate-1 overflow-hidden">
-          <img
-            src={getSupabaseImageUrl(image, { width: 800 }) || image}
+          <OptimizedImage
+            src={image}
             alt=""
+            width={800}
+            height={450}
+            sizes="(min-width: 640px) 520px, calc(100vw - 40px)"
+            widths={[360, 520, 800]}
             className="max-h-56 w-full object-cover"
-            loading="lazy"
+            fallback={
+              <div className="flex min-h-28 items-center justify-center bg-[var(--surface2)] px-4 text-center font-sans text-xs text-[var(--text3)]">
+                Event image unavailable
+              </div>
+            }
           />
         </div>
       )}
@@ -85,7 +93,7 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
       )}
 
       {item.source === 'house' && (
-        <div className="mt-3 space-y-1 font-sans text-[13px]" style={{ color: 'var(--text2)' }}>
+        <div className="mt-3 space-y-1 font-sans text-[13px] text-text-secondary">
           {item.houses.length > 0 && <p>Hosted by {item.houses.map((house) => house.name).join(' + ')}.</p>}
           <p>House event: it does not award VSA attendance points.</p>
         </div>
@@ -109,8 +117,7 @@ function ItemDetail({ item, onClose }: { item: CalendarItem; onClose: () => void
             href={sanitizeHref(item.rsvpUrl)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider"
-            style={{ color: 'var(--brand)' }}
+            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400"
           >
             RSVP ↗<span className="sr-only"> (opens in new tab)</span>
           </a>

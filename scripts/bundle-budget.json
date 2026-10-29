@@ -1,0 +1,8 @@
+{
+  "kind": "vsa-website bundle budget",
+  "metric": "gzip size of build/static/js/main.*.js, the entry chunk loaded by every anonymous visitor's first paint",
+  "check": "node scripts/check-bundle-budget.mjs (after npm run build)",
+  "issue": "https://github.com/hhavynn/vsa-website/issues/300",
+  "mainJsGzipBytes": 221000,
+  "budgetRationale": "Recorded after the #300 lazy-boundary work measured the entry chunk at 215,913 B gzip (was 289,050 B on the same instrument, -25.5%). The ~2.4% headroom absorbs zlib version differences between machines and CI. Raise this value only when eager code must grow, and record why in the PR."
+}

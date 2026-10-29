@@ -99,6 +99,45 @@ describe('HouseMembershipsRepository — only the membership in effect today', (
     expect(labels.has('m1')).toBe(false);
   });
 
+  it('reads more than 1,000 admin House rows instead of silently marking members unassigned', async () => {
+    const data = Array.from({ length: 1205 }, (_, index) => ({
+      id: `membership-${String(index).padStart(4, '0')}`,
+      member_id: `member-${index}`,
+      house_page_assets: { display_name: 'Rarity', house_key: 'rarity' },
+    }));
+    supabaseMock.setDefault('house_memberships', { data, error: null });
+
+    const labels = await houseMembershipsRepository.getHouseLabelsByMemberId(YEAR, TODAY);
+    expect(labels.size).toBe(1205);
+    expect(labels.get('member-1204')).toBe('Rarity');
+    const queries = supabaseMock.queriesFor('house_memberships');
+    expect(queries).toHaveLength(3);
+    expect(queries[1].calls).toContainEqual({
+      method: 'gt', args: ['id', 'membership-0499'],
+    });
+    expect(queries[2].calls).toContainEqual({
+      method: 'gt', args: ['id', 'membership-0999'],
+    });
+  });
+
+  it('rejects all current-year House labels if a later batch is denied', async () => {
+    supabaseMock.queueResult('house_memberships', {
+      data: Array.from({ length: 500 }, (_, index) => ({
+        id: `membership-${String(index).padStart(4, '0')}`,
+        member_id: `member-${index}`,
+        house_page_assets: { display_name: 'Rarity' },
+      })),
+      error: null,
+    });
+    supabaseMock.queueResult('house_memberships', {
+      data: null, error: postgrestError('permission denied', '42501'),
+    });
+
+    await expect(houseMembershipsRepository.getHouseLabelsByMemberId(YEAR, TODAY))
+      .rejects.toBeInstanceOf(DatabaseError);
+    expect(supabaseMock.queriesFor('house_memberships')).toHaveLength(2);
+  });
+
   it('throws rather than returning an empty map when the lookup fails', async () => {
     // Failing open here would mark every member Unassigned, which for House
     // data is indistinguishable from the correct pre-House-Reveal state.

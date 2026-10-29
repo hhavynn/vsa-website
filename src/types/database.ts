@@ -4296,6 +4296,18 @@ export type Database = {
         Args: { p_year: number };
         Returns: Json;
       };
+      admin_house_roster: {
+        Args: { p_house_profile_id: string; p_term_id?: string | null };
+        Returns: Json;
+      };
+      admin_house_member_attendance: {
+        Args: { p_member_id: string; p_year: number };
+        Returns: Json;
+      };
+      admin_house_overview: {
+        Args: { p_year: number; p_term_id?: string | null };
+        Returns: Json;
+      };
       admin_event_attendance_readiness: {
         Args: { p_year: number; p_term_id?: string | null };
         Returns: Json;

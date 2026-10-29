@@ -2,7 +2,7 @@
 // read from house_memberships. `members.house` is a legacy display cache that
 // still holds last season's value and is an input to the Admin -> Houses
 // backfill; it is deliberately left untouched.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
@@ -26,6 +26,7 @@ import { adminMembersRepository } from '../../data/repos/adminMembers';
 import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 import { photoRequestsRepository } from '../../data/repos/photoRequests';
 import { toUserMessage } from '../../data/errors';
+import { memberRosterCsv } from '../../lib/memberRosterExport';
 import { MEMBER_AVATARS_QUERY_KEY, useMemberAvatars } from '../../hooks/useMemberAvatars';
 import { BulkActionBar, FilterChips, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
@@ -53,7 +54,7 @@ interface Member {
   points: number;
   events_attended: number;
   created_at: string;
-  needs_review?: boolean;
+  needs_review?: boolean | null;
 }
 
 function toCollegeKey(s: string): string {
@@ -100,6 +101,8 @@ function initials(first: string, last: string) {
 export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const loadRequest = useRef(0);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useUrlFilter(MEMBER_FILTER_KEYS);
   const showReviewOnly = filter === 'needs_review';
@@ -161,12 +164,22 @@ export default function AdminMembers() {
 
   // ── Load ─────────────────────────────────────────────────────────────────────
   async function load() {
+    // Updates can trigger another refresh before the previous one finishes.
+    // Only the newest request may replace the roster or its error state.
+    const request = ++loadRequest.current;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('members')
-      .select('id, first_name, last_name, college, year, house, email, points, events_attended, created_at, needs_review')
-      .order('points', { ascending: false });
-    if (error) toast.error('Failed to load members.');
+    setLoadError(false);
+    let data: Omit<Member, 'current_house'>[];
+    try {
+      data = await adminMembersRepository.listAllMembers();
+    } catch (err) {
+      if (request !== loadRequest.current) return;
+      setLoadError(true);
+      toast.error(toUserMessage(err, 'Failed to load the complete member roster. Please retry.'));
+      setLoading(false);
+      return;
+    }
+    if (request !== loadRequest.current) return;
 
     // House for THIS academic year only. Reading members.house here is what
     // made the list keep showing last season's Houses after the year rolled
@@ -187,16 +200,22 @@ export default function AdminMembers() {
       houseLookupFailed = true;
       toast.error('Could not load current-year House memberships. House is shown as unknown.');
     }
+    if (request !== loadRequest.current) return;
     setHouseLookupFailed(houseLookupFailed);
 
-    setMembers(((data ?? []) as Omit<Member, 'current_house'>[]).map(m => ({
+    setMembers(data.map(m => ({
       ...m,
       current_house: houseByMemberId.get(m.id) ?? null,
     })));
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load();
+    return () => { loadRequest.current += 1; };
+    // This read is intentionally mount-only; mutations explicitly invoke load().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Filtered + sorted ────────────────────────────────────────────────────────
   const memberFacts: Array<MemberRowFacts & { member: Member }> = useMemo(
@@ -223,7 +242,7 @@ export default function AdminMembers() {
 
   const filtered = chipMembers
     .filter(m => {
-      if (houseFilter === 'all') return true;
+      if (houseLookupFailed || houseFilter === 'all') return true;
       if (houseFilter === 'unassigned') return !m.current_house;
       return m.current_house === houseFilter;
     })
@@ -454,23 +473,23 @@ export default function AdminMembers() {
       {/* PAGE HEADER */}
       <AdminPageHeader
         related={['/admin/merge-suggestions', '/admin/import', '/admin/points', '/admin/photo-requests']}
-        description={`${members.length} total members`}
+        description={loading ? 'Loading members…' : loadError ? 'Could not load members' : `${members.length} total members`}
         actions={
           <>
-            <Button onClick={() => setAddingMember(true)}>Add Member</Button>
+            <Button onClick={() => setAddingMember(true)} disabled={loading || loadError}>Add Member</Button>
             <button
               onClick={() => {
-                const rows = [
-                  ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-                  ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
-                ];
-                const csv = rows.map(r => r.join(',')).join('\n');
+                const csv = memberRosterCsv(members, houseLookupFailed);
+                const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                a.href = url;
                 a.download = 'vsa-members.csv';
                 a.click();
+                // The browser needs the object URL until the download starts.
+                window.setTimeout(() => URL.revokeObjectURL(url), 1000);
               }}
-              className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)]"
+              disabled={loading || loadError}
+              className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ color: 'var(--color-text2)', borderColor: 'var(--color-border)', cursor: 'pointer' }}
             >
               Export CSV
@@ -494,7 +513,7 @@ export default function AdminMembers() {
         </section>
 
         {/* STAT CARDS */}
-        {!loading && (
+        {!loading && !loadError && (
           <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-6">
             <div className="scrapbook-note flex flex-col justify-center px-4 py-4 sm:px-5">
               <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--color-text3)' }}>Total Members</p>
@@ -518,7 +537,7 @@ export default function AdminMembers() {
         )}
 
         {/* REVIEW BANNER */}
-        {needsReviewCount > 0 && !loading && (
+        {needsReviewCount > 0 && !loading && !loadError && (
           <div className={`mb-4 px-4 py-3 rounded-md border flex items-center justify-between gap-4 ${showReviewOnly
               ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
               : 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
@@ -553,7 +572,8 @@ export default function AdminMembers() {
               />
             </div>
             <select
-              value={houseFilter}
+              value={houseLookupFailed ? 'all' : houseFilter}
+              disabled={houseLookupFailed || loading || loadError}
               onChange={e => setHouseFilter(e.target.value)}
               className="w-full rounded border bg-[var(--color-surface2)] px-3 py-2 text-[13px] text-[var(--color-text)] transition focus:border-[var(--brand)] focus:outline-none focus:ring-1 focus:ring-[var(--brand)] sm:w-auto"
               style={{ borderColor: 'var(--color-border)' }}
@@ -567,7 +587,7 @@ export default function AdminMembers() {
           </div>
         </div>
 
-        {!loading && members.length > 0 && (
+        {!loading && !loadError && members.length > 0 && (
           <div className="mb-4">
             <FilterChips filters={memberFilters} counts={filterCounts} active={filter} onChange={setFilter} label="Filter members" />
           </div>
@@ -576,6 +596,13 @@ export default function AdminMembers() {
         {/* TABLE */}
         {loading ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">Loading…</div>
+        ) : loadError ? (
+          <div role="alert" className="py-20 text-center text-sm text-text-secondary">
+            The full member roster could not be loaded. No incomplete list is being shown.
+            <button type="button" className="ml-2 font-semibold text-brand-600 underline-offset-2 hover:underline dark:text-brand-400" onClick={() => { void load(); }}>
+              Retry loading
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center text-sm text-[var(--color-text3)]">
             {search || filter !== 'all' || houseFilter !== 'all' ? (

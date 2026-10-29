@@ -17,7 +17,7 @@ import { Avatar } from '../avatar/Avatar';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { Skeleton } from '../../ui/Skeleton';
-import { renderSnapshotImage, shareSnapshotImage, type SnapshotData } from '../../../lib/snapshotImage';
+import { renderSnapshotImage, shareSnapshotImage, type SnapshotData, type SnapshotFormat } from '../../../lib/snapshotImage';
 import { formatRank, isWithinTop } from '../../../utils/leaderboardRanking';
 import { getLosAngelesDateOnly } from '../../../utils/losAngelesDate';
 
@@ -300,13 +300,14 @@ function UpcomingActivity() {
 
 function ShareButton({ data, shareText }: { data: SnapshotData; shareText: string }) {
   const [state, setState] = useState<'idle' | 'working' | 'shared' | 'saved'>('idle');
+  const [format, setFormat] = useState<SnapshotFormat>('story');
   const [failed, setFailed] = useState(false);
   const prepared = useRef<{ key: string; blob: Promise<Blob> } | null>(null);
-  const key = JSON.stringify(data);
+  const key = JSON.stringify({ data, format });
 
   const prepare = () => {
     if (prepared.current?.key !== key) {
-      prepared.current = { key, blob: renderSnapshotImage(data) };
+      prepared.current = { key, blob: renderSnapshotImage(data, format) };
     }
     return prepared.current.blob;
   };
@@ -340,7 +341,10 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
         prepared.current = null;
         blob = await prepare();
       }
-      const outcome = await shareSnapshotImage({ blob, text: shareText, title: 'My VSA Snapshot' });
+      const outcome = await shareSnapshotImage({
+        blob, text: shareText, title: 'My VSA Snapshot',
+        fileName: `my-vsa-snapshot-${format}.png`,
+      });
       if (outcome === 'cancelled') {
         setState('idle');
         return;
@@ -359,7 +363,21 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
   };
 
   return (
-    <button
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+        <span>Image size</span>
+        <select
+          aria-label="Snapshot image size"
+          value={format}
+          onChange={(event) => setFormat(event.target.value as SnapshotFormat)}
+          disabled={state === 'working'}
+          className="min-h-11 rounded-md border border-border bg-surface px-2 py-1 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          <option value="story">Story · 9:16</option>
+          <option value="square">Feed · 1:1</option>
+        </select>
+      </label>
+      <button
       type="button"
       onClick={handleShare}
       disabled={state === 'working'}
@@ -378,7 +396,8 @@ function ShareButton({ data, shareText }: { data: SnapshotData; shareText: strin
       ) : (
         <>📤 Share snapshot</>
       )}
-    </button>
+      </button>
+    </div>
   );
 }
 

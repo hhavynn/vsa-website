@@ -102,15 +102,15 @@ export function GalleryFilters({
               type="text"
               value={localSearch}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setLocalSearch(e.target.value)}
-              placeholder="Search album titles and descriptions..."
-              className="min-h-[44px] w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-10 font-sans text-sm text-[var(--text)] placeholder:text-[var(--text3)] transition-colors focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600 dark:focus:border-brand-400 dark:focus:ring-brand-400"
+              placeholder="Search memories..."
+              className="min-h-[44px] w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-12 font-sans text-sm text-[var(--text)] placeholder:text-[var(--text3)] transition-colors focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600 dark:focus:border-brand-400 dark:focus:ring-brand-400"
             />
             {localSearch && (
               <button
                 type="button"
                 onClick={handleClearSearch}
                 aria-label="Clear search"
-                className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[var(--text3)] hover:text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-brand-600"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text3)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600"
               >
                 <CloseIcon className="h-4 w-4" />
               </button>
@@ -147,7 +147,7 @@ export function GalleryFilters({
           <button
             type="button"
             onClick={onReset}
-            className="text-brand-600 underline underline-offset-2 hover:text-brand-700 dark:text-brand-400"
+            className="inline-flex min-h-11 items-center rounded px-2 text-brand-600 underline underline-offset-2 hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:text-brand-400"
           >
             Clear filters
           </button>

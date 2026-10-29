@@ -80,7 +80,9 @@ it('reads published House events without a bogus year filter and merges them in 
   renderAt('/events');
   const collab = await screen.findByRole('link', { name: /House event.*Rarity.*Applejack.*Fictional Pony Picnic.*Wed, Oct 21, 2026/ });
   expect(collab).toHaveAttribute('href', '/house/year/2026-2027/rarity#house-event-he-collab');
-  expect(screen.getAllByText('Fictional Pony Picnic')).toHaveLength(1);
+  // The mobile glance intentionally repeats the featured event title; verify the real House card and glance separately.
+  expect(within(collab).getByText('Fictional Pony Picnic')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Next upcoming event' })).toHaveTextContent('Fictional Pony Picnic');
 
   // The Oct 21 House event is Next Up, ahead of the Oct 23 GBM; the Oct 25 one follows it.
   const text = document.body.textContent ?? '';
@@ -100,7 +102,7 @@ it('keeps the House filter and host in the URL', async () => {
 
   fireEvent.change(await screen.findByLabelText('Hosted by'), { target: { value: 'rarity' } });
   expect(screen.getByTestId('location')).toHaveTextContent('?type=house&host=rarity');
-  expect(screen.getByText('Fictional Pony Picnic')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /House event.*Fictional Pony Picnic/ })).toBeInTheDocument();
   expect(screen.queryByText('Fictional Apple Bake')).not.toBeInTheDocument();
 });
 
@@ -123,7 +125,7 @@ it('names every host for logged-out visitors, whose profile embed comes back emp
 it('ignores an unknown host instead of hiding every event', async () => {
   renderAt('/events?type=house&host=not-a-house');
   expect(await screen.findByText('Fictional Apple Bake')).toBeInTheDocument();
-  expect(screen.getByText('Fictional Pony Picnic')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /House event.*Fictional Pony Picnic/ })).toBeInTheDocument();
   expect(screen.getByLabelText('Hosted by')).toHaveValue('');
 });
 
@@ -139,7 +141,7 @@ it('opens straight onto a shared House filter link', async () => {
   renderAt('/events?type=house&host=applejack');
   expect(await screen.findByText('Fictional Apple Bake')).toBeInTheDocument();
   // The collab is hosted by Applejack too, so it stays.
-  expect(screen.getByText('Fictional Pony Picnic')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /House event.*Fictional Pony Picnic/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'House Events' })).toHaveAttribute('aria-pressed', 'true');
 });
 

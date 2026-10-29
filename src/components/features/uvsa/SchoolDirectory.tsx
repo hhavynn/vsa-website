@@ -24,9 +24,15 @@ export function SchoolDirectory({
 }) {
   const [filter, setFilter] = useState<SchoolFilter>("All");
   const counts = useMemo(() => countSchoolsBySystem(schools), [schools]);
+  const availableFilters = SCHOOL_FILTERS.filter(
+    (option) => option === "All" || counts[option] > 0,
+  );
+  // When the live school list changes and removes a category, keep the
+  // directory usable rather than showing a false "no schools" result.
+  const activeFilter = availableFilters.includes(filter) ? filter : "All";
   const visible = useMemo(
-    () => filterSchoolsBySystem(schools, filter),
-    [schools, filter],
+    () => filterSchoolsBySystem(schools, activeFilter),
+    [schools, activeFilter],
   );
 
   return (
@@ -44,33 +50,60 @@ export function SchoolDirectory({
         </h2>
 
         {!loading && schools.length > 0 && (
-          <div
-            role="group"
-            aria-label="Filter schools by system"
-            className="flex flex-wrap gap-2"
-          >
-            {SCHOOL_FILTERS.filter(
-              (option) => option === "All" || counts[option] > 0,
-            ).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setFilter(option)}
-                aria-pressed={filter === option}
-                className={cn(
-                  "chip-check inline-flex touch:min-h-11 min-h-[36px] items-center rounded-full border px-3.5 py-1.5 font-sans text-xs font-semibold transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400",
-                  filter === option
-                    ? "border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-[#050810]"
-                    : "border-[var(--color-border)] bg-surface text-text-secondary hover:bg-surface2 hover:text-text-primary",
-                )}
+          <>
+            <div className="w-full sm:hidden">
+              <label
+                htmlFor="school-system-mobile-filter"
+                className="mb-1 block font-sans text-xs font-semibold text-text-secondary"
               >
-                {option} <span className="font-normal">{counts[option]}</span>
-              </button>
-            ))}
-          </div>
+                School system
+              </label>
+              <select
+                id="school-system-mobile-filter"
+                className="min-h-11 w-full max-w-full rounded-lg border border-[var(--color-border)] bg-surface px-3 py-2 font-sans text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400"
+                value={activeFilter}
+                onChange={(event) => setFilter(event.target.value as SchoolFilter)}
+              >
+                {availableFilters.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "All" ? "All school systems" : option} · {counts[option]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div
+              role="group"
+              aria-label="Filter schools by system"
+              className="hidden flex-wrap gap-2 sm:flex"
+            >
+              {availableFilters.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setFilter(option)}
+                  aria-pressed={activeFilter === option}
+                  className={cn(
+                    "chip-check inline-flex touch:min-h-11 min-h-[36px] items-center rounded-full border px-3.5 py-1.5 font-sans text-xs font-semibold transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400",
+                    activeFilter === option
+                      ? "border-brand-600 bg-brand-600 text-white dark:border-brand-400 dark:bg-brand-400 dark:text-[#050810]"
+                      : "border-[var(--color-border)] bg-surface text-text-secondary hover:bg-surface2 hover:text-text-primary",
+                  )}
+                >
+                  {option} <span className="font-normal">{counts[option]}</span>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
+
+      {!loading && schools.length > 0 && (
+        <p role="status" aria-live="polite" className="font-sans text-xs text-text-secondary">
+          {activeFilter === "All" ? "All school systems" : activeFilter} ·
+          {" "}{visible.length} {visible.length === 1 ? "result" : "results"}
+        </p>
+      )}
 
       {loading ? (
         <div className={GRID} aria-hidden>

@@ -19,6 +19,7 @@ import { formatAcademicYear, getAcademicTermMeta } from '../../lib/academicTerms
 import { HouseDraftWorkflow } from '../../components/features/admin/HouseDraftWorkflow';
 import { HousePaymentsPanel } from '../../components/features/admin/HousePaymentsPanel';
 import { AttendanceReadinessPanel } from '../../components/features/admin/AttendanceReadinessPanel';
+import { HouseOverviewPanel } from '../../components/features/admin/HouseOverviewPanel';
 import { HousePointsCheckPanel } from '../../components/features/admin/HousePointsCheckPanel';
 import {
   HouseImportMember,
@@ -31,7 +32,7 @@ import { HousePageAsset } from '../../types';
 
 type Member = HouseImportMember;
 
-type AdminHouseTab = 'assignments' | 'payments' | 'points' | 'attendance' | 'backfill' | 'images' | 'events';
+type AdminHouseTab = 'assignments' | 'overview' | 'payments' | 'points' | 'attendance' | 'backfill' | 'images' | 'events';
 
 /**
  * The tasks on this page, primary first. The URL carries the choice (`?tab=`) so a
@@ -40,6 +41,7 @@ type AdminHouseTab = 'assignments' | 'payments' | 'points' | 'attendance' | 'bac
  */
 const HOUSE_TABS: ReadonlyArray<{ key: AdminHouseTab; label: string; advanced?: boolean }> = [
   { key: 'assignments', label: 'House Assignments' },
+  { key: 'overview', label: 'Overview' },
   { key: 'payments', label: 'Payments' },
   { key: 'images', label: 'Profiles & Images' },
   { key: 'attendance', label: 'Attendance status' },
@@ -477,6 +479,8 @@ export default function AdminHouses() {
           loadingMembers={loadingMembers}
           onMembershipsPublished={() => { loadMembers(); loadHouseProfiles(selectedYear); }}
         />
+      ) : activeTab === 'overview' ? (
+        <HouseOverviewPanel selectedYear={selectedYear} />
       ) : activeTab === 'payments' ? (
         <HousePaymentsPanel selectedYear={selectedYear} houseProfiles={houseProfiles} members={members} />
       ) : activeTab === 'attendance' ? (

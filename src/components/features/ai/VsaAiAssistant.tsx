@@ -1,33 +1,12 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { FALLBACK_ASK_VSA } from '../../../config/publicFallbackContent';
 import { aiFeedbackRepository } from '../../../data/repos/aiFeedback';
 import { AssistantMessageContent } from './formatAssistantMessage';
-
-type Role = 'user' | 'assistant';
-type AssistantStatus = 'answered' | 'fallback' | 'rate_limited' | 'error';
-
-interface SourceChip {
-  title: string;
-  source_url: string | null;
-  category: string;
-}
-
-interface ChatMessage {
-  id: string;
-  role: Role;
-  content: string;
-  sources?: SourceChip[];
-  status?: AssistantStatus;
-  feedbackSubmitted?: boolean;
-}
-
-interface AssistantResponse {
-  answer: string;
-  sources?: SourceChip[];
-  status: AssistantStatus;
-}
+import { AiSourceChips } from './AiSourceChips';
+import { AiAssistantLauncher } from './AiAssistantLauncher';
+import { ChatSparkIcon, CloseIcon } from './AiAssistantIcons';
+import { AssistantStatus, ChatMessage, MAX_INPUT_LENGTH, useVsaAiConversation } from './useVsaAiConversation';
 
 const STARTER_QUESTIONS = [
   'What events are coming up?',
@@ -38,50 +17,6 @@ const STARTER_QUESTIONS = [
   'Who is on cabinet?',
   'What is VCN?'
 ];
-
-const MAX_MESSAGES = 12;
-const MAX_INPUT_LENGTH = 500;
-const SESSION_STORAGE_KEY = 'vsa-ai-assistant-session';
-
-function createMessageId() {
-  if (typeof crypto !== 'undefined') {
-    if ('randomUUID' in crypto) return crypto.randomUUID();
-    const bytes = new Uint8Array(16);
-    (crypto as Crypto).getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
-  return `${Date.now()}-${String(Math.random()).slice(2)}`;
-}
-
-function getSessionId() {
-  if (typeof window === 'undefined') return createMessageId();
-
-  const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (existing) return existing;
-
-  const next = createMessageId();
-  window.localStorage.setItem(SESSION_STORAGE_KEY, next);
-  return next;
-}
-
-function ChatSparkIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M5.5 7.25A4.25 4.25 0 0 1 9.75 3h4.5a4.25 4.25 0 0 1 4.25 4.25v4.1a4.25 4.25 0 0 1-4.25 4.25h-3.8l-4.1 3.15a.7.7 0 0 1-1.12-.56V15.1a4.23 4.23 0 0 1-1.48-3.2V7.25Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M17.8 3.25l.52 1.2 1.18.52-1.18.52-.52 1.18-.52-1.18-1.2-.52 1.2-.52.52-1.2ZM9.1 8.15h5.2M9.1 11.1h3.65"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function SendIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -97,19 +32,6 @@ function SendIcon({ className = 'h-4 w-4' }: { className?: string }) {
   );
 }
 
-function CloseIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="m5.25 5.25 9.5 9.5M14.75 5.25l-9.5 9.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function InfoDotIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -117,19 +39,6 @@ function InfoDotIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
         d="M10 17.25a7.25 7.25 0 1 0 0-14.5 7.25 7.25 0 0 0 0 14.5ZM10 9.25v4M10 6.55v.05"
         stroke="currentColor"
         strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SourceIcon({ className = 'h-3 w-3' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path
-        d="M6.3 10.55 4.95 11.9a3.1 3.1 0 0 0 4.38 4.38l2.1-2.1a3.1 3.1 0 0 0 0-4.38M13.7 9.45l1.35-1.35a3.1 3.1 0 0 0-4.38-4.38l-2.1 2.1a3.1 3.1 0 0 0 0 4.38"
-        stroke="currentColor"
-        strokeWidth="1.7"
         strokeLinecap="round"
       />
     </svg>
@@ -151,7 +60,7 @@ function assistantToneClasses(status?: AssistantStatus) {
   if (status === 'error') {
     return 'border-rose-300/70 bg-rose-50 text-rose-950 shadow-[0_6px_20px_rgba(225,29,72,0.08)] dark:border-rose-500/40 dark:bg-rose-950/30 dark:text-rose-100';
   }
-  if (status === 'fallback') {
+  if (status === 'fallback' || status === 'unavailable') {
     return 'border-sky-200 bg-sky-50 text-sky-950 shadow-[0_6px_20px_rgba(14,165,233,0.08)] dark:border-sky-500/40 dark:bg-sky-950/30 dark:text-sky-100';
   }
   return 'border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text2)] shadow-[0_6px_20px_rgba(15,23,42,0.06)]';
@@ -161,10 +70,8 @@ export function VsaAiAssistant() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [sessionId, setSessionId] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { messages, setMessages, input, setInput, loading, sendMessage, handleRetry, handleSubmit } =
+    useVsaAiConversation(location.pathname);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const assistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -177,10 +84,6 @@ export function VsaAiAssistant() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
-
-  useEffect(() => {
-    setSessionId(getSessionId());
-  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -218,99 +121,6 @@ export function VsaAiAssistant() {
   }, [loading, messages]);
 
   if (isAdminRoute) return null;
-
-  async function sendMessage(rawMessage: string, history: ChatMessage[] = messages) {
-    const nextMessage = rawMessage.trim().slice(0, MAX_INPUT_LENGTH);
-    if (!nextMessage || loading || !sessionId) return;
-
-    setInput('');
-
-    const userMessage: ChatMessage = {
-      id: createMessageId(),
-      role: 'user',
-      content: nextMessage,
-    };
-
-    const recentTurns = history
-      .filter((message) => message.status !== 'error' && message.status !== 'rate_limited')
-      .slice(-4)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, MAX_INPUT_LENGTH),
-      }));
-
-    setMessages([...history, userMessage].slice(-MAX_MESSAGES));
-    setLoading(true);
-
-    try {
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error(FALLBACK_ASK_VSA.message);
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/vsa-ai-assistant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-          message: nextMessage,
-          sessionId,
-          recentTurns,
-          currentPage: location.pathname,
-        }),
-      });
-
-      const data = (await response.json().catch(() => null)) as AssistantResponse | null;
-
-      if (!response.ok && response.status !== 429) {
-        throw new Error(`Ask VSA request failed (HTTP ${response.status})`);
-      }
-
-      const assistantMessage: ChatMessage = {
-        id: createMessageId(),
-        role: 'assistant',
-        content:
-          data?.answer ||
-          (response.status === 429
-            ? "You've reached today's Ask VSA limit. Try again later!"
-            : FALLBACK_ASK_VSA.message),
-        sources: data?.sources ?? [],
-        status: data?.status ?? (response.status === 429 ? 'rate_limited' : 'error'),
-      };
-
-      setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
-    } catch (error) {
-      console.error('Ask VSA request failed:', error);
-      const assistantMessage: ChatMessage = {
-        id: createMessageId(),
-        role: 'assistant',
-        content: FALLBACK_ASK_VSA.message,
-        status: 'error',
-      };
-      setMessages((current) => [...current, assistantMessage].slice(-MAX_MESSAGES));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRetry(messageIndex: number) {
-    const userMessageIndex = messages
-      .slice(0, messageIndex)
-      .map((message) => message.role)
-      .lastIndexOf('user');
-    if (userMessageIndex < 0) return;
-
-    await sendMessage(messages[userMessageIndex].content, messages.slice(0, userMessageIndex));
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    sendMessage(input);
-  }
 
   function minimizeAssistant() {
     setIsOpen(false);
@@ -498,6 +308,9 @@ export function VsaAiAssistant() {
                         {message.role === 'assistant' && message.status === 'error' && (
                           <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Quick break</p>
                         )}
+                        {message.role === 'assistant' && message.status === 'unavailable' && (
+                          <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Taking a break</p>
+                        )}
                         {message.role === 'assistant' && isFallbackMessage(message) && (
                           <p className="mb-1 font-sans text-[11px] font-bold uppercase tracking-[0.08em]">Not sure yet</p>
                         )}
@@ -519,46 +332,26 @@ export function VsaAiAssistant() {
                           </button>
                         </div>
                       )}
-                      {message.role === 'assistant' && isFallbackMessage(message) && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {['Events', 'Get Involved', 'Applications'].map((label) => (
-                            <span
-                              key={`${message.id}-${label}`}
-                              className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
-                              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
+                      {message.role === 'assistant' && (isFallbackMessage(message) || message.status === 'rate_limited' || message.status === 'error' || message.status === 'unavailable') && (
+                        <nav aria-label="Other ways to get VSA information" className="mt-2 flex flex-wrap gap-1.5">
+                          {[
+                            { label: 'Events', to: '/events' },
+                            { label: 'Get Involved', to: '/get-involved' },
+                            { label: 'Points', to: '/points' },
+                            { label: 'Send feedback', to: '/feedback' },
+                          ].map(({ label, to }) => (
+                            <Link
+                              key={`${message.id}-${to}`}
+                              to={to}
+                              className="inline-flex min-h-[32px] items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-sans text-[11px] font-bold text-text-secondary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                             >
                               {label}
-                            </span>
+                            </Link>
                           ))}
-                        </div>
+                        </nav>
                       )}
                       {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {message.sources.slice(0, 4).map((source) => {
-                            const label = source.title.length > 28 ? `${source.title.slice(0, 25)}...` : source.title;
-                            return source.source_url ? (
-                              <a
-                                key={`${message.id}-${source.title}`}
-                                href={source.source_url}
-                                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold transition-colors hover:border-brand-600 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
-                                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
-                                aria-label={`Source: ${source.title}`}
-                              >
-                                <SourceIcon />
-                                {label}
-                              </a>
-                            ) : (
-                              <span
-                                key={`${message.id}-${source.title}`}
-                                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-sans text-[10px] font-bold"
-                                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text3)', background: 'var(--color-surface)' }}
-                              >
-                                <SourceIcon />
-                                {label}
-                              </span>
-                            );
-                          })}
-                        </div>
+                        <AiSourceChips messageId={message.id} sources={message.sources} />
                       )}
                       
                       {/* Feedback UI */}
@@ -689,51 +482,16 @@ export function VsaAiAssistant() {
         )}
       </AnimatePresence>
 
-      {isMinimized ? (
-        <motion.button
-          ref={minimizedButtonRef}
-          whileHover={shouldReduceMotion ? undefined : { y: -2 }}
-          whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
-          type="button"
-          onClick={restoreAssistant}
-          className="inline-flex h-10 w-10 touch:h-11 touch:w-11 items-center justify-center rounded-full border bg-brand-600 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950"
-          style={{ borderColor: 'var(--color-border)' }}
-          aria-label="Restore Ask VSA"
-        >
-          <ChatSparkIcon className="h-4 w-4" />
-        </motion.button>
-      ) : (
-        <div className="relative">
-          <motion.button
-            ref={launcherRef}
-            whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.02 }}
-            whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-            type="button"
-            onClick={() => setIsOpen((open) => !open)}
-            className="group relative inline-flex h-14 items-center gap-2 rounded-full border bg-brand-600 px-4 font-sans text-sm font-bold text-white shadow-[0_12px_30px_rgba(79,70,229,0.35)] transition-colors active:scale-[0.97] hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] dark:bg-brand-400 dark:text-zinc-950 dark:hover:bg-brand-300"
-            style={{ borderColor: 'var(--color-border)' }}
-            aria-expanded={isOpen}
-            aria-controls="vsa-ai-assistant-panel"
-            aria-label={isOpen ? 'Ask VSA (close assistant)' : 'Ask VSA (open assistant)'}
-          >
-            <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--color-bg)] bg-amber-300 shadow-sm" />
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 dark:bg-zinc-950/10">
-              <ChatSparkIcon className="h-5 w-5" />
-            </span>
-            <span className="hidden sm:inline">Ask VSA</span>
-            <span className="sm:hidden">Ask</span>
-          </motion.button>
-          <button
-            type="button"
-            onClick={minimizeAssistant}
-            className="touch-hit absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface)] text-[var(--color-text2)] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 sm:hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-            aria-label="Minimize Ask VSA"
-          >
-            <CloseIcon className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      <AiAssistantLauncher
+        isMinimized={isMinimized}
+        isOpen={isOpen}
+        shouldReduceMotion={shouldReduceMotion}
+        launcherRef={launcherRef}
+        minimizedButtonRef={minimizedButtonRef}
+        onRestore={restoreAssistant}
+        onToggle={() => setIsOpen((open) => !open)}
+        onMinimize={minimizeAssistant}
+      />
     </div>
   );
 }

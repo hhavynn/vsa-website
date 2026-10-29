@@ -1,6 +1,6 @@
 # Observability instrumentation plan (Sentry, PostHog)
 
-**Status (2026-10-28):** Sentry error monitoring (Phase 1, #705) and PostHog product analytics (Phase 3a, #713) are live in production. The source-map upload code (Phase 2, #711) is merged but waits for the owner to add `SENTRY_AUTH_TOKEN`. Every production step (creating projects, setting Vercel variables, deploying) needs explicit owner approval.
+**Status (2026-10-28):** all three phases are live in production. Sentry error monitoring (Phase 1, #705). Source maps upload to Sentry and are no longer served publicly (Phase 2: #711, #718, #726). PostHog product analytics (Phase 3a, #713). Session Replay (Phase 3b) is not started. Every production step (creating projects, setting Vercel variables, deploying) needs explicit owner approval.
 
 **Goal:** give the Sentry and PostHog connectors real production data, so debugging can start from observed evidence. Today both are empty because the site was never instrumented, and an empty connector is "no evidence", not "no problem".
 
@@ -95,7 +95,10 @@ Measured on this branch with `npm run build`, gzip:
 
 ## Phase 2: source maps to Sentry, not to the public
 
-**Status:** merged 2026-10-28 (#711, `dac9b77a`). The production build log shows the step skipping ("SENTRY_AUTH_TOKEN is not set"), so maps are still served until the owner adds the token.
+**Status:** live since 2026-10-28.
+- **Code:** #711 added the step. #718 made it accept the `SENTRY_AUTH_TOKENS` name. #726 trims surrounding whitespace and skips the upload, with a warning, if the token has whitespace inside it.
+- **Two failed attempts:** the first real upload failed because the stored value contained a space (Sentry 401). After #726, the next build caught the space inside the value and skipped. The owner then re-entered the token.
+- **Result:** production deployment `dpl_Be2StkCK` logged "uploaded, then removed 84 .map files". The live `main.*.js.map` and CSS map return `404`, and the JS bundle carries Sentry debug IDs.
 
 CRA cannot take the Sentry webpack plugin without ejecting, so the upload runs as an npm `postbuild` step. Vercel runs it automatically after `npm run build`.
 
@@ -220,5 +223,5 @@ A same-origin Sentry `tunnel` (which keeps ad-blockers from dropping reports) wo
 | 1 | Merge the Phase 1 PR (SDK inert; bundle grows) | Revert | Done 2026-10-28 (#705, `7aedecf8`) |
 | 2 | Create Sentry project and set its privacy settings | Delete project | Done 2026-10-28 (`havyn/vsa-website`) |
 | 3 | Set `REACT_APP_SENTRY_DSN` (Production) and redeploy | Unset and redeploy | Done 2026-10-28; smoke test `VSA-WEBSITE-1` verified scrubbing, then resolved |
-| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | Merged 2026-10-28 (#711); the owner set the token as `SENTRY_AUTH_TOKENS`, which the script accepts since #718 |
+| 4 | Phase 2 PR, then the owner sets `SENTRY_AUTH_TOKEN` (Production) | Unset the token | Done 2026-10-28 (#711, #718, #726). The token is stored as `SENTRY_AUTH_TOKENS`. Production uploaded and removed 84 maps, and the `.map` URLs return `404` |
 | 5 | Phase 3 PR; owner turns on PostHog IP discarding, then sets `REACT_APP_POSTHOG_KEY` / `_HOST` (Production) | Unset the variables | Done 2026-10-28 (#713); `anonymize_ips` on, console capture off, first events verified |

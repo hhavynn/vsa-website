@@ -19,7 +19,7 @@ create table public.house_memberships (member_id uuid, house_profile_id uuid, ac
 create table public.import_jobs (id uuid primary key, event_id uuid, status text, created_at timestamptz, completed_at timestamptz, total_rows integer, review_rows integer, error_count integer);
 create table public.import_job_rows (id uuid primary key, import_job_id uuid, event_id uuid, decision text, attendance_member_id uuid, matched_member_id uuid, csv_email text, match_details jsonb);
 create table public.import_recovery_actions (id uuid primary key, import_job_row_id uuid, previous_action_id uuid, resulting_status text);
-create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), event_id uuid, outcome text default 'already_credited', created_at timestamptz default now());
+create table public.attendance_reconciliation_log (id uuid primary key default gen_random_uuid(), run_id text not null, event_id uuid, source_row integer, outcome text default 'already_credited', created_at timestamptz default now());
 
 create view public.house_yearly_points as
  SELECT hp.house_key AS house, hp.id AS house_profile_id, hp.display_name, t.academic_year_start, (count(*))::integer AS total_points
@@ -31,6 +31,7 @@ create view public.house_yearly_points as
 
 set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028090000_admin_event_attendance_readiness.sql
+\ir ../../supabase/migrations/20261029015558_attendance_readiness_resolved_reconciliation.sql
 set client_min_messages = notice;
 
 insert into public.academic_terms values
@@ -109,10 +110,20 @@ insert into public.import_recovery_actions values
  ('70000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000003', null, 'investigating'),
  ('70000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000002', 'dismissed'),
  ('70000000-0000-0000-0000-000000000004', '60000000-0000-0000-0000-000000000004', null, 'investigating');
-insert into public.attendance_reconciliation_log (event_id, created_at) values ('40000000-0000-0000-0000-000000000007', '2026-10-26');
-insert into public.attendance_reconciliation_log (event_id, outcome, created_at) values
- ('40000000-0000-0000-0000-000000000011', 'credit_inserted', '2026-10-28'),
- ('40000000-0000-0000-0000-000000000011', 'pending_review', '2026-10-28');
+insert into public.attendance_reconciliation_log (run_id, event_id, created_at)
+values ('run-e7', '40000000-0000-0000-0000-000000000007', '2026-10-26');
+insert into public.attendance_reconciliation_log (run_id, event_id, source_row, outcome, created_at) values
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', 1, 'credit_inserted', '2026-10-28'),
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', 2, 'pending_review', '2026-10-28'),
+ -- row 3 was pending then resolved within the same source run.
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', 3, 'pending_review', '2026-10-28'),
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', 3, 'resolved_by_admin', '2026-10-28 01:00'),
+ -- row 4 in a later, independently ordered sheet belongs to a different person.
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', 4, 'pending_review', '2026-10-28'),
+ ('run-e11-b', '40000000-0000-0000-0000-000000000011', 4, 'already_credited', '2026-10-28 02:00'),
+ -- NULL source rows are event-level actions and must not clear open identities.
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', null, 'pending_review', '2026-10-28'),
+ ('run-e11-a', '40000000-0000-0000-0000-000000000011', null, 'credit_removed', '2026-10-28 03:00');
 
 grant select on all tables in schema public to authenticated;
 revoke all on public.event_attendance_attestations from authenticated;
@@ -169,8 +180,8 @@ begin
  if (e->>'open_review_rows')::int <> 0 or e->'latest_job'->>'status' <> 'completed' then raise exception 'FAIL: a failed import''s rows linger after a clean re-import %', e; end if;
  raise notice 'PASS: a clean re-import supersedes a failed import''s rows.';
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000011';
- if (e->>'reconciliation_pending_rows')::int <> 1 then raise exception 'FAIL: pending reconciliation rows not reported %', e; end if;
- raise notice 'PASS: a reconciliation run with pending rows is reported as such.';
+ if (e->>'reconciliation_pending_rows')::int <> 3 then raise exception 'FAIL: pending reconciliation rows (same-run resolution vs cross-run collision and NULL) not reported %', e; end if;
+ raise notice 'PASS: same-run resolution clears only that row; cross-run collisions and NULL event-level actions leave pending rows open.';
 
  select ev.e into e from ev where id = '40000000-0000-0000-0000-000000000001';
  if e->'house_credits' <> '[{"credits": 1, "display_name": "Twilight Sparkle", "house_profile_id": "20000000-0000-0000-0000-000000000001"}]'::jsonb then

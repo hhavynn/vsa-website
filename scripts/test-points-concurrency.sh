@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Offline only: deterministic concurrency tests for migration
-# 20261010000000_serialize_member_points_recalculation.sql on a disposable local
+# 20261029021759_serialize_member_points_recalculation.sql on a disposable local
 # cluster with no TCP listener. Never touches a hosted Supabase project.
 # Synthetic people only.
 #
@@ -59,7 +59,7 @@ psql_args=(-X -v ON_ERROR_STOP=1 -h "$runtime_dir" -p 55442 -U points_operator)
 q() { rtk psql "${psql_args[@]}" -d "$1" -qtA -c "set client_min_messages = warning" -c "$2"; }
 
 recovery_migration="$repo_dir/supabase/migrations/20261009000026_historical_attendance_recovery.sql"
-migration="$repo_dir/supabase/migrations/20261010000000_serialize_member_points_recalculation.sql"
+migration="$repo_dir/supabase/migrations/20261029021759_serialize_member_points_recalculation.sql"
 
 rtk psql "${psql_args[@]}" -d postgres -q <<'SQL'
 create role anon;

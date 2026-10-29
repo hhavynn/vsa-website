@@ -9,6 +9,25 @@ export type AdminMemberSummary = Pick<
   "id" | "first_name" | "last_name" | "points" | "events_attended"
 >;
 
+/** Admin-only projection for the complete Members directory (no public exposure). */
+export type AdminMemberListRow = Pick<
+  MemberRow,
+  | "id"
+  | "first_name"
+  | "last_name"
+  | "college"
+  | "year"
+  | "house"
+  | "email"
+  | "points"
+  | "events_attended"
+  | "created_at"
+  | "needs_review"
+>;
+
+// Below the PostgREST default max rows (commonly 1,000).
+const ADMIN_MEMBER_BATCH_SIZE = 500;
+
 export interface AdminAttendanceEvent {
   id: string;
   name: string;
@@ -31,6 +50,44 @@ export interface AdminYearlyTotal {
 }
 
 export class AdminMembersRepository {
+  /**
+   * Fetch the complete admin roster, not merely Supabase's first 1,000 rows.
+   * ID keyset pagination is deterministic even when points totals change
+   * during the read; UI sorting, search, filters and exports happen afterward.
+   * A failed later page rejects the whole operation rather than showing a
+   * plausible-but-incomplete list.
+   */
+  async listAllMembers(): Promise<AdminMemberListRow[]> {
+    return withErrorHandling(async () => {
+      const members: AdminMemberListRow[] = [];
+      let lastId: string | null = null;
+
+      for (;;) {
+        let query = supabase
+          .from("members")
+          .select("id, first_name, last_name, college, year, house, email, points, events_attended, created_at, needs_review")
+          .order("id", { ascending: true })
+          .limit(ADMIN_MEMBER_BATCH_SIZE);
+
+        if (lastId) query = query.gt("id", lastId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const page = (data ?? []) as AdminMemberListRow[];
+        if (page.length === 0) break;
+        members.push(...page);
+        if (page.length < ADMIN_MEMBER_BATCH_SIZE) break;
+
+        const nextId = page[page.length - 1].id;
+        if (lastId && nextId <= lastId) throw new Error("Member pagination cursor did not advance");
+        lastId = nextId;
+      }
+
+      return members;
+    }, "Failed to load complete member roster");
+  }
+
   async createMember(input: AdminMemberInput): Promise<AdminMemberSummary> {
     return withErrorHandling(async () => {
       const result = AdminMemberSchema.safeParse(input);

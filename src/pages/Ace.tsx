@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { useTheme } from '../context/ThemeContext';
 import { useProgramContent } from '../hooks/useProgramContent';
@@ -19,6 +19,7 @@ import { FamSheet } from '../components/features/ace/FamSheet';
 import { FamTabs } from '../components/features/ace/FamTabs';
 import { GhostFamCard } from '../components/features/ace/GhostFamCard';
 import { ACTIVE_FAM_SLOTS } from '../lib/aceFamRoster';
+import { resolvePublishedAceLink, searchPublishedAceNodes } from '../lib/acePublishedSearch';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
 import { VietnameseText } from '../components/common/VietnameseText';
@@ -33,8 +34,8 @@ const ROLES = [
 const STEPS = [
   { n: '01', t: 'Attend VSA Events',     d: 'Get involved in VSA early. Both Bigs and Littles are expected to meet participation requirements before applications open. Details are announced each cycle.' },
   { n: '02', t: 'Meet the Community',    d: 'Connect with potential Bigs or Littles at VSA events, Welcome Week activities, and ACE-hosted socials and mixers throughout the quarter.' },
-  { n: '03', t: 'Apply When Ready',      d: 'When applications open, Littles share their intro materials and Bigs submit a profile. Application timelines and materials are announced each cycle.' },
-  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Your Big is revealed! You are officially part of a fam, with connections to a multi-generation lineage and events throughout the year.' },
+  { n: '03', t: 'Choose Your Path',       d: 'Use the general ACE application to enter matching, or submit a separate mutual request if you and a Big or Little have agreed to connect. Follow the current cycle requirements for either path.' },
+  { n: '04', t: 'ACE Reveal & Fam Life', d: 'Approved pairings are revealed when ACE leadership is ready. If you are not matched this cycle, you can still participate in the VSA community.' },
 ];
 
 const FAQS = [
@@ -43,7 +44,11 @@ const FAQS = [
   { q: 'What is a Fam?',                          a: 'A Fam is the family line created through the Big/Little system. When a Big picks up a Little, and that Little later picks up their own Little, the line grows into a multi-generation family tree.' },
   { q: 'How do I meet potential Bigs or Littles?', a: 'Attend VSA events and ACE socials throughout the quarter. Welcome Week and early-quarter mixers are a great time to meet people. Following VSA on Instagram is the best way to stay up to date.' },
   { q: 'Do requirements change each cycle?',       a: 'Yes. Eligibility requirements, event attendance expectations, and application materials may vary from cycle to cycle. Always refer to current VSA announcements for the latest details.' },
-  { q: 'How do I know when applications open?',    a: 'Application dates are announced through VSA’s Instagram and other official channels at the start of each ACE cycle. Follow @vsaatucsd to stay informed.' },
+  { q: 'How do I know when applications open?',    a: 'General applications and mutual requests can have different opening and closing dates. VSA announces each form through official channels; check @vsaatucsd for the current cycle.' },
+  { q: 'What is the difference between a general ACE application and a mutual request?', a: 'The general application is for Bigs and Littles who want help finding a match. A mutual request is a separate form for a Big and Little who already want to connect. You do not need to submit the general application just to submit a mutual request.' },
+  { q: 'Can I submit both forms?', a: 'Yes. A Big can submit a mutual request and also apply through general matching to be considered for additional Littles. A Little can submit both, but may have only one confirmed Big in the cycle. ACE leadership reviews requests and capacity before approval.' },
+  { q: 'Does a mutual request automatically guarantee a match or waive attendance requirements?', a: 'No. Submitting a mutual request is not an automatic confirmation, and eligibility or attendance requirements are still set by ACE leadership for each cycle. Follow the published instructions for the current forms.' },
+  { q: 'What if I am not matched with a Big?', a: 'Some Littles may remain unmatched in a cycle (sometimes called Orphans). This is a recognized outcome, not an error. Individual matching decisions stay private, and you can still join VSA events and meet the community.' },
 ];
 
 interface FamDerived {
@@ -89,8 +94,10 @@ export function Ace() {
   const dark = theme === 'dark';
 
   const { content: cycleContent } = useProgramContent('ace');
-  const { families } = usePublishedAceFamilies();
-  const { members: allMembers } = useAllPublishedAceFamilyMembers();
+  const { families, loading: familiesLoading, error: familiesError } = usePublishedAceFamilies();
+  const { members: allMembers, loading: membersLoading, error: membersError } = useAllPublishedAceFamilyMembers();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [personQuery, setPersonQuery] = useState('');
 
   const [openFamId, setOpenFamId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number>(-1);
@@ -132,7 +139,67 @@ export function Ace() {
   }, [derivedFams]);
   const graveyardFams = useMemo(() => derivedFams.filter((f) => f.isDead), [derivedFams]);
 
-  const openFam = openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
+  // Search and deep links never consult private drafts, applicant data or the
+  // canonical members table. A wrong/unpublished node ID always fails closed.
+  const requestedFam = searchParams.get('fam');
+  const requestedNode = searchParams.get('node');
+  const linked = useMemo(
+    () => resolvePublishedAceLink(families, allMembers, requestedFam, requestedNode),
+    [families, allMembers, requestedFam, requestedNode],
+  );
+  const linkedFamily = linked.status === 'published'
+    ? derivedFams.find((f) => f.family.id === linked.family.id) ?? null
+    : null;
+  const hasRequestedLink = !!requestedFam || !!requestedNode;
+  const openFam = hasRequestedLink
+    ? linkedFamily
+    : openFamId ? derivedFams.find((f) => f.family.id === openFamId) ?? null : null;
+  const publishedSearch = useMemo(
+    () => searchPublishedAceNodes(families, allMembers, personQuery),
+    [families, allMembers, personQuery],
+  );
+  // Failure is not an authoritative empty/removed result. React Query's
+  // strict published-view reads surface outages instead of swallowing them.
+  const aceReadUnavailable = !!familiesError || !!membersError;
+  const aceMembersReady = !familiesLoading && !membersLoading && !aceReadUnavailable;
+
+  const openPublishedFamily = (id: string) => {
+    if (hasRequestedLink) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('fam');
+      next.delete('node');
+      setSearchParams(next, { replace: true, state: { keepScroll: true } });
+    }
+    setOpenFamId(id);
+  };
+
+  const openSearchResult = (familyId: string, slug: string, nodeId: string) => {
+    setSelectedFamTab(familyId);
+    setOpenFamId(null);
+    const next = new URLSearchParams(searchParams);
+    next.set('fam', slug);
+    next.set('node', nodeId);
+    setSearchParams(next, { state: { keepScroll: true } });
+  };
+
+  const closeFamily = () => {
+    setOpenFamId(null);
+    if (hasRequestedLink) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('fam');
+      next.delete('node');
+      setSearchParams(next, { replace: true, state: { keepScroll: true } });
+    }
+  };
+
+  const updateSelectedNode = (nodeId: string | null) => {
+    if (!openFam) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('fam', openFam.family.slug);
+    if (nodeId) next.set('node', nodeId);
+    else next.delete('node');
+    setSearchParams(next, { replace: true, state: { keepScroll: true } });
+  };
 
   // Cycle CTA: drive from program_content('ace'). Hide if hidden/null.
   const cycleStatusLabel = cycleContent ? PROGRAM_STATUS_LABELS[cycleContent.status] : '';
@@ -236,11 +303,81 @@ export function Ace() {
 
         {/* ACE Application */}
         <section className="ace-section">
-          <div className="ace-eyebrow">Apply to ACE</div>
+          <div className="ace-eyebrow">General ACE Application</div>
           <ApplicationCTA
             applicationKeys="ace_application"
-            fallback={{ closed: 'ACE applications have closed. Check back next year.' }}
+            fallback={{ closed: 'General ACE applications have closed. Check VSA announcements for the next cycle.' }}
           />
+          <p className="ace-section-foot">
+            Already have a Big or Little in mind? Mutual requests use a separate form and do not require a general ACE application. Check official VSA announcements for that form and its own dates. Submitting either form does not automatically confirm a pairing or waive eligibility requirements.
+          </p>
+        </section>
+
+        {/* Public published-node search. Input remains local; no text is sent to the server. */}
+        <section className="ace-section" aria-labelledby="ace-member-find-heading">
+          <h2 id="ace-member-find-heading" className="ace-eyebrow">Find someone in ACE</h2>
+          <p className="ace-section-foot">
+            Search published ACE family trees by name, including archived fams. Results only show already-public names,
+            their Fam, and approved lineage context. Private requests and unrevealed matches never appear.
+          </p>
+          <label htmlFor="ace-member-search" className="mt-3 block font-sans text-sm font-semibold text-text-primary">
+            Published member name
+          </label>
+          <input
+            id="ace-member-search"
+            type="search"
+            autoComplete="off"
+            value={personQuery}
+            onChange={(event) => setPersonQuery(event.target.value)}
+            placeholder="Search by name"
+            aria-describedby="ace-member-search-status"
+            className="mt-2 w-full rounded border border-border-strong bg-surface2 px-4 py-3 font-sans text-base text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+          />
+          <p id="ace-member-search-status" role="status" className="mt-2 font-sans text-xs text-text-secondary">
+            {aceReadUnavailable
+              ? 'Published ACE search is temporarily unavailable. Please try again later.'
+              : !aceMembersReady
+                ? 'Loading published families…'
+                : personQuery.trim().length < 2
+                  ? 'Type at least two letters to search.'
+                  : publishedSearch.total === 0
+                    ? 'No matching published names found.'
+                    : `${publishedSearch.total} published match${publishedSearch.total === 1 ? '' : 'es'} found.${publishedSearch.total > publishedSearch.matches.length ? ` Showing the first ${publishedSearch.matches.length}.` : ''}`}
+          </p>
+          {aceMembersReady && !familiesError && !membersError && personQuery.trim().length >= 2 && publishedSearch.matches.length > 0 && (
+            <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto" aria-label="Published ACE member matches">
+              {publishedSearch.matches.map(({ member, family, bigName, pickupLabel }) => (
+                <li key={member.id}>
+                  <button
+                    type="button"
+                    className="flex min-h-11 w-full flex-col items-start gap-1 rounded border border-border-strong bg-surface px-3 py-3 text-left font-sans transition-colors hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
+                    aria-label={`Open ${member.name}'s published lineage in ${family.name}`}
+                    onClick={() => openSearchResult(family.id, family.slug, member.id)}
+                  >
+                    <span className="text-sm font-semibold text-text-primary">{member.name}</span>
+                    <span className="text-xs text-text-secondary">
+                      {family.name}{isDeadFam(family.name) ? ' · Archived Fam' : ''}
+                      {bigName ? ` · Big: ${bigName}` : ''}
+                      {pickupLabel ? ` · Picked up: ${pickupLabel}` : ' · Pickup year unverified'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {hasRequestedLink && aceReadUnavailable && (
+            <p role="alert" className="mt-3 rounded border border-border-strong bg-surface2 p-3 font-sans text-sm text-text-primary">
+              This ACE link cannot be checked right now. Published family data is temporarily unavailable.
+            </p>
+          )}
+          {aceMembersReady && hasRequestedLink && linked.status === 'invalid' && (
+            <div role="alert" className="mt-3 rounded border border-border-strong bg-surface2 p-3 font-sans text-sm text-text-primary">
+              This published ACE member link is unavailable. The node may have been removed or the Fam may not be public.
+              <button type="button" className="ml-2 font-semibold text-brand-600 underline dark:text-brand-400" onClick={closeFamily}>
+                Clear link
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Fam tabs */}
@@ -253,9 +390,9 @@ export function Ace() {
           ) : (
             <FamTabs
               fams={activeFams}
-              selectedId={selectedFamTab ?? activeFams[0].family.id}
+              selectedId={linkedFamily?.family.id ?? selectedFamTab ?? activeFams[0].family.id}
               onSelect={setSelectedFamTab}
-              onOpenSheet={(id) => setOpenFamId(id)}
+              onOpenSheet={openPublishedFamily}
             />
           )}
         </section>
@@ -274,7 +411,7 @@ export function Ace() {
                   accent={f.accent}
                   memberCount={f.members.length}
                   gens={f.gens}
-                  onOpen={() => setOpenFamId(f.family.id)}
+                  onOpen={() => openPublishedFamily(f.family.id)}
                 />
               ))}
             </div>
@@ -309,11 +446,12 @@ export function Ace() {
                   onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
                   type="button"
                   aria-expanded={openFaq === i}
+                  aria-controls={`ace-faq-answer-${i}`}
                 >
                   <span>{f.q}</span>
                   <span className="ace-faq-plus" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
                 </button>
-                {openFaq === i && <div className="ace-faq-a">{f.a}</div>}
+                <div id={`ace-faq-answer-${i}`} className="ace-faq-a" hidden={openFaq !== i}>{f.a}</div>
               </div>
             ))}
           </div>
@@ -341,7 +479,9 @@ export function Ace() {
             accent={openFam.accent}
             viet={openFam.viet}
             dark={dark}
-            onClose={() => setOpenFamId(null)}
+            focusNodeId={linked.status === 'published' ? linked.member?.id ?? null : undefined}
+            onFocusNodeChange={updateSelectedNode}
+            onClose={closeFamily}
           />
         )}
       </div>

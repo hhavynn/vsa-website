@@ -22,6 +22,7 @@ import { FamAccent } from './FamCover';
 import { PhotoRequestSection } from '../avatar/PhotoRequestSection';
 import { useMemberAvatars } from '../../../hooks/useMemberAvatars';
 import { resolveMemberPhoto } from '../../../lib/memberPhotos';
+import { publishedAceNodePath } from '../../../lib/acePublishedSearch';
 
 interface FamSheetProps {
   family: AceFamily;
@@ -30,6 +31,10 @@ interface FamSheetProps {
   viet: string | null;
   dark: boolean;
   onClose: () => void;
+  /** Published tree node ID from a validated /ace deep link. */
+  focusNodeId?: string | null;
+  /** Synchronize manual tree selection with the shareable URL. */
+  onFocusNodeChange?: (id: string | null) => void;
 }
 
 function firstInitial(name: string): string {
@@ -564,8 +569,11 @@ function usePannableTree(resetKey: string) {
   };
 }
 
-export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSheetProps) {
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+export function FamSheet({ family, members, accent, viet, dark, onClose, focusNodeId, onFocusNodeChange }: FamSheetProps) {
+  const [selectedNode, setSelectedNode] = useState<string | null>(
+    () => focusNodeId && members.some((m) => m.id === focusNodeId) ? focusNodeId : null,
+  );
+  const [copyStatus, setCopyStatus] = useState('');
   const displayName = getDisplayFamName(family.name);
   const deadFam = isDeadFam(family.name);
   const iconUrl = getFamIconUrl(family.slug);
@@ -581,8 +589,8 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
   const timeline = lineageTimeline(lineage.length, reduceMotion);
 
   useEffect(() => {
-    setSelectedNode(null);
-  }, [family.id]);
+    setSelectedNode(focusNodeId && members.some((m) => m.id === focusNodeId) ? focusNodeId : null);
+  }, [family.id, focusNodeId, members]);
 
   // Frame the whole lineage once the rail has opened (or right away when it
   // already is), so a tap deep in the tree still shows the light's journey.
@@ -602,19 +610,25 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
     if (list) list.scrollLeft = list.scrollWidth;
   }, []);
 
+  const focusNode = useCallback((id: string | null) => {
+    setSelectedNode(id);
+    setCopyStatus('');
+    onFocusNodeChange?.(id);
+  }, [onFocusNodeChange]);
+
   const toggleNode = useCallback((id: string) => {
-    setSelectedNode((current) => (current === id ? null : id));
-  }, []);
+    focusNode(selectedNode === id ? null : id);
+  }, [focusNode, selectedNode]);
 
   const clearSelection = useCallback(() => {
     const cleared = selectedNode;
-    setSelectedNode(null);
+    focusNode(null);
     if (!cleared) return;
     // The Clear button unmounts with the rail; hand focus back to the node.
     const node = Array.from(pan.canvasRef.current?.querySelectorAll<SVGGElement>('[data-node-id]') ?? [])
       .find((el) => el.dataset.nodeId === cleared);
     node?.focus();
-  }, [pan.canvasRef, selectedNode]);
+  }, [pan.canvasRef, selectedNode, focusNode]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -641,6 +655,18 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
     ? resolveMemberPhoto(memberAvatars, selectedMember.member_id, selectedMember.photo_url)
     : null;
   const selectedHasSharedAvatar = !!selectedMember?.member_id && memberAvatars.has(selectedMember.member_id);
+
+  const copyNodeLink = useCallback(async () => {
+    if (!selectedMember) return;
+    const url = new URL(publishedAceNodePath(family, selectedMember), window.location.origin).href;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(url);
+      setCopyStatus('Member link copied.');
+    } catch {
+      setCopyStatus('Could not access the clipboard. Copy the URL from your browser address bar.');
+    }
+  }, [family, selectedMember]);
 
   const genCount = useMemo(() => {
     if (treeNodes.length === 0) return 0;
@@ -797,7 +823,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
                               <button
                                 type="button"
                                 className="ace-rail-lineage-name"
-                                onClick={() => setSelectedNode(id)}
+                                onClick={() => focusNode(id)}
                               >
                                 {step.name}
                               </button>
@@ -824,6 +850,10 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
                 </div>
                 <div className="ace-rail-info">
                   <div className="ace-rail-name">{selectedMember.name}</div>
+                  <button type="button" className="ace-rail-chip" onClick={copyNodeLink}>
+                    Copy member link
+                  </button>
+                  <span role="status" className="ace-rail-empty">{copyStatus}</span>
                   {selectedMember.role_label && (
                     <div className="ace-rail-role">{selectedMember.role_label}</div>
                   )}
@@ -847,7 +877,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
                 {selectedBig && (
                   <div>
                     <div className="ace-rail-rel-h">Big</div>
-                    <button className="ace-rail-chip" onClick={() => setSelectedNode(selectedBig.id)}>
+                    <button className="ace-rail-chip" onClick={() => focusNode(selectedBig.id)}>
                       <span className={`ace-rail-chip-dot ace-rail-chip-dot-${accent}`}>
                         {firstInitial(selectedBig.name)}
                       </span>
@@ -861,7 +891,7 @@ export function FamSheet({ family, members, accent, viet, dark, onClose }: FamSh
                     <div className="ace-rail-rel-h">Littles ({selectedLittles.length})</div>
                     <div className="ace-rail-chips">
                       {selectedLittles.map((l) => (
-                        <button key={l.id} className="ace-rail-chip" onClick={() => setSelectedNode(l.id)}>
+                        <button key={l.id} className="ace-rail-chip" onClick={() => focusNode(l.id)}>
                           <span className={`ace-rail-chip-dot ace-rail-chip-dot-${accent}${isLittle(l) ? ' is-little' : ''}`}>
                             {firstInitial(l.name)}
                           </span>

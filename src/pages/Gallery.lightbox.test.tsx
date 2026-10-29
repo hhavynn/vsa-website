@@ -128,6 +128,77 @@ describe('Gallery album quick-look', () => {
     expect(within(getDialog()).getByRole('button', { name: 'Previous album' })).toBeDisabled();
   });
 
+  it('pinch-zooms the cover, supports panning, and suppresses album swipes while zoomed', () => {
+    renderGallery();
+    openCard('Album b');
+    const image = within(getDialog()).getByRole('img', { name: 'Cover photo for Album b' });
+    const zoomArea = screen.getByTestId('album-zoom-area');
+    const surface = screen.getByTestId('album-swipe-area');
+
+    fireEvent.touchStart(zoomArea, {
+      touches: [{ clientX: 40, clientY: 70 }, { clientX: 140, clientY: 70 }],
+    });
+    fireEvent.touchMove(zoomArea, {
+      touches: [{ clientX: 10, clientY: 70 }, { clientX: 210, clientY: 70 }],
+    });
+    expect(image).toHaveStyle({ transform: 'translate(0px, 0px) scale(2)' });
+    expect(within(getDialog()).getByRole('button', { name: 'Reset photo zoom' })).toBeInTheDocument();
+
+    fireEvent.touchEnd(zoomArea, { touches: [], changedTouches: [{ clientX: 10, clientY: 70 }] });
+    swipe(surface, [260, 300], [100, 300]);
+    expect(within(getDialog()).getByRole('heading', { name: 'Album b' })).toBeInTheDocument();
+
+    fireEvent.click(within(getDialog()).getByRole('button', { name: 'Reset photo zoom' }));
+    expect(image).toHaveStyle({ transform: 'translate(0px, 0px) scale(1)' });
+    swipe(surface, [260, 300], [100, 300]);
+    expect(within(getDialog()).getByRole('heading', { name: 'Album c' })).toBeInTheDocument();
+  });
+
+  it('clamps pan to the smaller bounds when pinching back toward 1x', () => {
+    renderGallery();
+    openCard('Album a');
+    const area = screen.getByTestId('album-zoom-area');
+    const image = within(getDialog()).getByRole('img', { name: 'Cover photo for Album a' });
+    jest.spyOn(area, 'getBoundingClientRect').mockReturnValue({
+      width: 300, height: 200, top: 0, left: 0, right: 300, bottom: 200, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.touchStart(area, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 0, clientY: 0 }, { clientX: 300, clientY: 0 }] });
+    expect(image.style.transform).toContain('scale(3)');
+    fireEvent.touchEnd(area, { touches: [], changedTouches: [] });
+    fireEvent.touchStart(area, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 800, clientY: 800 }] });
+    expect(image.style.transform).toContain('translate(300px, 200px)');
+    fireEvent.touchEnd(area, { touches: [], changedTouches: [] });
+    fireEvent.touchStart(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(area, { touches: [{ clientX: 100, clientY: 100 }, { clientX: 140, clientY: 100 }] });
+    const match = image.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+    expect(match).not.toBeNull();
+    expect(Math.abs(Number(match?.[1]))).toBeLessThanOrEqual(30.01);
+    expect(Math.abs(Number(match?.[2]))).toBeLessThanOrEqual(20.01);
+    expect(Number(image.style.transform.match(/scale\(([-\d.]+)\)/)?.[1])).toBeCloseTo(1.2);
+  });
+
+  it('clamps pinch zoom, and resets photo zoom when paging to another album', () => {
+    renderGallery();
+    openCard('Album a');
+    const zoomArea = screen.getByTestId('album-zoom-area');
+    fireEvent.touchStart(zoomArea, {
+      touches: [{ clientX: 0, clientY: 0 }, { clientX: 100, clientY: 0 }],
+    });
+    fireEvent.touchMove(zoomArea, {
+      touches: [{ clientX: 0, clientY: 0 }, { clientX: 900, clientY: 0 }],
+    });
+    const firstImage = within(getDialog()).getByRole('img', { name: 'Cover photo for Album a' });
+    expect(firstImage.style.transform).toContain('scale(3)');
+
+    fireEvent.click(within(getDialog()).getByRole('button', { name: 'Next album' }));
+    const next = within(getDialog()).getByRole('img', { name: 'Cover photo for Album b' });
+    expect(next.style.transform).toContain('scale(1)');
+    expect(within(getDialog()).queryByRole('button', { name: 'Reset photo zoom' })).not.toBeInTheDocument();
+  });
+
   it('pages with the arrow keys and closes on Escape', async () => {
     renderGallery();
     openCard('Album a');
@@ -295,7 +366,7 @@ describe('Gallery album quick-look', () => {
     // Filter controls still hold their query parameters
     const yearSelect = screen.getByLabelText(/Filter by academic year/i) as HTMLSelectElement;
     expect(yearSelect.value).toBe('2025');
-    const searchInput = screen.getByPlaceholderText(/Search album titles and descriptions/i) as HTMLInputElement;
+    const searchInput = screen.getByRole('textbox', { name: 'Search album titles and descriptions' }) as HTMLInputElement;
     expect(searchInput.value).toBe('gbm');
   });
 
