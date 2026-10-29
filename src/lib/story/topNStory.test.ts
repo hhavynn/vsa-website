@@ -5,6 +5,7 @@ import {
   buildTopNStoryEntries,
   formatTopNFileName,
   selectTopNMembers,
+  shouldUseTopNList,
   storyPresetForLimit,
 } from './topNStory';
 import { TOP3_STORY_PRESETS } from './top3Story';
@@ -50,6 +51,21 @@ describe('Top N member story from the published comparator (#629)', () => {
     expect(selectTopNMembers(Array.from({ length: 11 }, (_, i) => member(String(i), 5)), 10)).toMatchObject({
       excludedBoundaryTie: 11, excludedRank: 1, selected: [],
     });
+  });
+
+  it('uses the unchanged Top 3 podium only when all three selected ranks are unique', () => {
+    const sameRank = selectTopNMembers([
+      member('A', 100), member('B', 90), member('C', 90),
+    ], 3);
+    expect(sameRank.selected.map((m) => m.rank)).toEqual([1, 2, 2]);
+    const tiedEntries = buildTopNStoryEntries(sameRank, { avatars: new Map() });
+    expect(tiedEntries).toHaveLength(3);
+    expect(shouldUseTopNList(3, tiedEntries)).toBe(true);
+    const noTies = buildTopNStoryEntries(selectTopNMembers([
+      member('A', 100), member('B', 90), member('C', 80),
+    ], 3), { avatars: new Map() });
+    expect(shouldUseTopNList(3, noTies)).toBe(false);
+    expect(shouldUseTopNList(5, noTies)).toBe(true);
   });
 
   it('formats approved avatar and House badges without any private member fields', () => {
