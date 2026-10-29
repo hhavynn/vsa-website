@@ -8,21 +8,20 @@ module.exports = {
     extend: {
       // ─── Brand tokens ─────────────────────────────────────────────────────
       colors: {
-        // Keep the original VSA teal in admin; the public editorial shell
-        // supplies blue/periwinkle RGB channels from the Figma concept.
-        // CSS channels preserve Tailwind opacity utilities (brand-600/20, etc).
+        // VSA Teal — primary accent, drawn from the logo's sky palette.
+        // 600 = light-mode primary (#176e63), 400 = dark-mode primary (#3bbdb5).
         brand: {
-          50:  'rgb(var(--vsa-brand-50, 238 248 247) / <alpha-value>)',
-          100: 'rgb(var(--vsa-brand-100, 210 239 236) / <alpha-value>)',
-          200: 'rgb(var(--vsa-brand-200, 166 222 218) / <alpha-value>)',
-          300: 'rgb(var(--vsa-brand-300, 108 202 194) / <alpha-value>)',
-          400: 'rgb(var(--vsa-brand-400, 59 189 181) / <alpha-value>)',
-          500: 'rgb(var(--vsa-brand-500, 32 125 114) / <alpha-value>)',
-          600: 'rgb(var(--vsa-brand-600, 23 110 99) / <alpha-value>)',
-          700: 'rgb(var(--vsa-brand-700, 20 90 82) / <alpha-value>)',
-          800: 'rgb(var(--vsa-brand-800, 16 75 69) / <alpha-value>)',
-          900: 'rgb(var(--vsa-brand-900, 13 60 56) / <alpha-value>)',
-          950: 'rgb(var(--vsa-brand-950, 10 40 40) / <alpha-value>)',
+          50:  '#eef8f7',
+          100: '#d2efec',
+          200: '#a6deda',
+          300: '#6ccac2',
+          400: '#3bbdb5',  // dark mode primary
+          500: '#207d72',
+          600: '#176e63',  // light mode primary CTA
+          700: '#145a52',  // hover
+          800: '#104b45',
+          900: '#0d3c38',
+          950: '#0a2828',
         },
         // Coral accent — lantern red-orange from the logo.
         coral: {
@@ -44,32 +43,13 @@ module.exports = {
         'text-primary':  'var(--color-text)',
         'text-secondary':'var(--color-text2)',
         'text-muted':    'var(--color-text3)',
-        // Figma editorial palette (public shell). Fallbacks keep admin readable
-        // if a class leaks outside .vsa-editorial-shell.
-        ed: {
-          ink:    'var(--ed-ink, #28354d)',
-          paper:  'var(--ed-paper, #faf9f5)',
-          line:   'var(--ed-line, rgba(40, 53, 77, 0.22))',
-          muted:  'var(--ed-muted, #4f5a74)',
-          accent: 'var(--ed-accent, #6c628d)',
-          'on-ink': 'var(--ed-on-ink, #ffffff)',
-        },
-        // Fixed Figma swatches for surfaces that stay light in both themes
-        // (homepage About band, hero CTA, gallery accent on the blue band).
-        figma: {
-          ink:    '#28354d',
-          accent: '#6c628d',
-          pink:   '#f0ccd9',
-        },
       },
 
       // ─── Typography ───────────────────────────────────────────────────────
       fontFamily: {
         sans:  ['"DM Sans"', 'system-ui', 'sans-serif'],
-        serif: ['var(--vsa-serif-font, "DM Serif Display")', 'Georgia', 'serif'],
+        serif: ['"DM Serif Display"', 'Georgia', 'serif'],
         mono:  ['"JetBrains Mono"', 'ui-monospace', 'Menlo', 'Consolas', 'monospace'],
-        // Figma editorial display face (loaded in public/index.html).
-        display: ['"Instrument Serif"', 'Georgia', 'serif'],
       },
 
       // ─── Type scale ───────────────────────────────────────────────────────
