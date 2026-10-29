@@ -3,9 +3,9 @@ import { CalendarFilters, type CalendarFilterOption } from './CalendarFilters';
 
 const options: CalendarFilterOption[] = [
   { key: 'all', label: 'All' },
-  { key: 'gbm', label: 'GBMs' },
+  { key: 'vsa', label: 'VSA events' },
   { key: 'house', label: 'House events' },
-  { key: 'application', label: 'Application deadlines' },
+  { key: 'applications', label: 'Application deadlines' },
 ];
 
 const base = {
@@ -40,8 +40,8 @@ describe('CalendarFilters public mobile controls (#209)', () => {
     expect(host).toHaveValue('Twilight');
     fireEvent.change(host, { target: { value: 'Rarity' } });
     expect(onHouseChange).toHaveBeenCalledWith('Rarity');
-    fireEvent.change(screen.getByRole('combobox', { name: 'Show calendar' }), { target: { value: 'gbm' } });
-    expect(onFilterChange).toHaveBeenCalledWith('gbm');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Show calendar' }), { target: { value: 'vsa' } });
+    expect(onFilterChange).toHaveBeenCalledWith('vsa');
     expect(onHouseChange).toHaveBeenLastCalledWith(null);
   });
 
@@ -59,7 +59,7 @@ describe('CalendarFilters public mobile controls (#209)', () => {
   });
 
   it('does not invent points-eligible or House-host options when they are absent', () => {
-    render(<CalendarFilters {...base} activeFilter="gbm" houseOptions={[]} showPointsToggle={false} />);
+    render(<CalendarFilters {...base} activeFilter="vsa" houseOptions={[]} showPointsToggle={false} />);
     expect(screen.queryByRole('combobox', { name: 'House host' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Points eligible/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Filter by house' })).not.toBeInTheDocument();
