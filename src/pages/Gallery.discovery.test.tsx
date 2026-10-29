@@ -146,7 +146,10 @@ describe('Gallery discovery page states (Issue #562 & #563)', () => {
     cards.forEach((card) => expect(card).not.toHaveStyle('opacity: 0'));
 
     expect(screen.getByRole('link', { name: 'Album old-24. Preview album' })).toBeInTheDocument();
-    expect(screen.getByText('VSA')).toBeInTheDocument();
+    // Every valid cover also renders its fallback underneath the image, so
+    // check the cover-less card specifically rather than using getByText('VSA').
+    expect(cards[23].querySelector('img')).toBeNull();
+    expect(cards[23].querySelector('.gallery-memory-fallback')).toBeInTheDocument();
   });
 
   it('keeps discovery controls mounted while filter queries are loading', () => {
