@@ -16,6 +16,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { AlbumFallback, AlbumLightbox } from '../components/features/gallery/AlbumLightbox';
 import { GalleryFilters } from '../components/features/gallery/GalleryFilters';
 import { GalleryLoadMore } from '../components/features/gallery/GalleryLoadMore';
+import { GalleryHeroContactSheet } from '../components/features/gallery/GalleryHeroContactSheet';
 
 import { isSupabaseUnavailable } from '../utils/isSupabaseUnavailable';
 import { DegradedModeBanner } from '../components/common/DegradedModeBanner';
@@ -184,11 +185,12 @@ export default function Gallery() {
         <div className="vsa-container relative z-10">
           <span className="scrapbook-sticker scrapbook-sticker-gold mb-4">Memory Wall</span>
           <h1 className="vsa-page-title">Gallery</h1>
-          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8]" style={{ color: 'var(--text2)' }}>
+          <p className="mt-3 max-w-2xl font-sans text-[15px] leading-[1.8] lg:max-w-[min(42rem,calc(100%-min(40vw,520px)-3rem))]" style={{ color: 'var(--text2)' }}>
             {isFiltered
               ? 'Showing memory wall matches from GBMs, retreats, cultural programs, and VSA traditions.'
               : `${totalCount} albums from GBMs, retreats, cultural programs, and VSA traditions.`}
           </p>
+          {!isFiltered && <GalleryHeroContactSheet albums={albums} />}
         </div>
       </div>
 

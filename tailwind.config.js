@@ -60,6 +60,8 @@ module.exports = {
           ink:    '#28354d',
           accent: '#6c628d',
           pink:   '#f0ccd9',
+          // Photo mat inside a Polaroid while its image loads or after it fails.
+          mist:   '#e7e9f6',
         },
       },
 

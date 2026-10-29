@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/common/PageTitle';
 import { EditorialHero, EditorialHeroScript } from '../components/common/EditorialHero';
+import { useProgramHeroMedia } from '../components/features/gallery/ProgramPhotoStack';
+import type { SiteEventType } from '../types/database';
 import { RelatedLinks } from '../components/common/RelatedLinks';
 import { programRelatedLinks } from '../lib/relatedLinks';
 import { ApplicationCTA } from '../components/common/ApplicationCTA';
@@ -68,8 +70,11 @@ const faqs = [
   { q: "Can anyone attend?", a: "Yes - WNC is open to everyone. You don't need to be a VSA member or affiliated with a participating school to come and enjoy the show." },
 ];
 
+const WNC_EVENT_TYPES: SiteEventType[] = ['wildn_culture'];
+
 export function WildNCulture() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const heroMedia = useProgramHeroMedia(WNC_EVENT_TYPES, "Wild N' Culture photo albums");
   const { content: eventContent } = useProgramContent('wnc');
   const dynamicEventVisible = !!eventContent && !isProgramContentHidden(eventContent);
   const eventMeta = eventContent ? getProgramMetaParts(eventContent) : [];
@@ -85,6 +90,7 @@ export function WildNCulture() {
           title={<>Wild N' <EditorialHeroScript>Culture</EditorialHeroScript></>}
           meta="Annual intercollegiate comedy competition · VSA at UCSD"
           watermark="wnc"
+          media={heroMedia}
           actions={(dynamicEventVisible || (!eventContent && WNC_CONFIG.eventActive)) ? (
             <>
               {dynamicEventVisible && eventStatusLabel && (
