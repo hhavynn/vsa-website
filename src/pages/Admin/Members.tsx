@@ -2,7 +2,7 @@
 // read from house_memberships. `members.house` is a legacy display cache that
 // still holds last season's value and is an input to the Admin -> Houses
 // backfill; it is deliberately left untouched.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
@@ -26,6 +26,7 @@ import { adminMembersRepository } from '../../data/repos/adminMembers';
 import { houseMembershipsRepository } from '../../data/repos/houseMemberships';
 import { photoRequestsRepository } from '../../data/repos/photoRequests';
 import { toUserMessage } from '../../data/errors';
+import { memberRosterCsv } from '../../lib/memberRosterExport';
 import { MEMBER_AVATARS_QUERY_KEY, useMemberAvatars } from '../../hooks/useMemberAvatars';
 import { BulkActionBar, FilterChips, RowCheckbox, bulkBtnCls } from '../../components/features/admin/ops';
 import { logAdminActivity } from '../../data/repos/adminActivity';
@@ -101,6 +102,7 @@ export default function AdminMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const loadRequest = useRef(0);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useUrlFilter(MEMBER_FILTER_KEYS);
   const showReviewOnly = filter === 'needs_review';
@@ -162,17 +164,22 @@ export default function AdminMembers() {
 
   // ── Load ─────────────────────────────────────────────────────────────────────
   async function load() {
+    // Updates can trigger another refresh before the previous one finishes.
+    // Only the newest request may replace the roster or its error state.
+    const request = ++loadRequest.current;
     setLoading(true);
     setLoadError(false);
     let data: Omit<Member, 'current_house'>[];
     try {
       data = await adminMembersRepository.listAllMembers();
     } catch (err) {
+      if (request !== loadRequest.current) return;
       setLoadError(true);
       toast.error(toUserMessage(err, 'Failed to load the complete member roster. Please retry.'));
       setLoading(false);
       return;
     }
+    if (request !== loadRequest.current) return;
 
     // House for THIS academic year only. Reading members.house here is what
     // made the list keep showing last season's Houses after the year rolled
@@ -193,6 +200,7 @@ export default function AdminMembers() {
       houseLookupFailed = true;
       toast.error('Could not load current-year House memberships. House is shown as unknown.');
     }
+    if (request !== loadRequest.current) return;
     setHouseLookupFailed(houseLookupFailed);
 
     setMembers(data.map(m => ({
@@ -202,7 +210,12 @@ export default function AdminMembers() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load();
+    return () => { loadRequest.current += 1; };
+    // This read is intentionally mount-only; mutations explicitly invoke load().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Filtered + sorted ────────────────────────────────────────────────────────
   const memberFacts: Array<MemberRowFacts & { member: Member }> = useMemo(
@@ -466,15 +479,14 @@ export default function AdminMembers() {
             <Button onClick={() => setAddingMember(true)}>Add Member</Button>
             <button
               onClick={() => {
-                const rows = [
-                  ['First Name', 'Last Name', 'Email', 'Year', 'College', 'House', 'Points', 'Events'],
-                  ...members.map(m => [m.first_name, m.last_name, m.email ?? '', m.year ?? '', m.college ?? '', houseLookupFailed ? 'unknown' : (m.current_house ?? ''), m.points, m.events_attended]),
-                ];
-                const csv = rows.map(r => r.join(',')).join('\n');
+                const csv = memberRosterCsv(members, houseLookupFailed);
+                const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                a.href = url;
                 a.download = 'vsa-members.csv';
                 a.click();
+                // The browser needs the object URL until the download starts.
+                window.setTimeout(() => URL.revokeObjectURL(url), 1000);
               }}
               disabled={loading || loadError}
               className="rounded border bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--color-surface2)] disabled:cursor-not-allowed disabled:opacity-50"
