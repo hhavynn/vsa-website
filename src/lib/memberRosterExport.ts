@@ -1,7 +1,10 @@
 import type { AdminMemberListRow } from '../data/repos/adminMembers';
 import { csvCell } from './adminImportReview';
 
-type ExportMember = AdminMemberListRow & { current_house: string | null };
+type ExportMember = Pick<
+  AdminMemberListRow,
+  'first_name' | 'last_name' | 'email' | 'year' | 'college' | 'points' | 'events_attended'
+> & { current_house: string | null };
 
 /**
  * Admin-only export of the fully loaded roster. All cells use the shared
