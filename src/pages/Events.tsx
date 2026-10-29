@@ -13,6 +13,7 @@ import {
 } from '../components/features/events/PublicEventCards';
 import { HOUSE_COLORS } from '../constants/houses';
 import { NextEventAtGlance } from '../components/features/events/NextEventAtGlance';
+import { PublicEventTypeFilter, PUBLIC_EVENT_FILTERS, type EventFilterKey } from '../components/features/events/PublicEventTypeFilter';
 import { houseAssetsRepository } from '../data/repos/houseAssets';
 import { houseEventsRepository } from '../data/repos/houseEvents';
 import { getAcademicTermMeta } from '../lib/academicTerms';
@@ -53,19 +54,7 @@ import { readableInk } from '../lib/readableInk';
 // Upper bound on archive pages fetched to reach a deep-linked event.
 const MAX_PAGES_FOR_EVENT_LINK = 10;
 
-type FilterKey = 'all' | 'house' | Event['event_type'];
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'house', label: 'House Events' },
-  { key: 'gbm', label: 'GBM' },
-  { key: 'mixer', label: 'Mixer' },
-  { key: 'vcn', label: 'VCN' },
-  { key: 'winter_retreat', label: 'Retreat' },
-  { key: 'wildn_culture', label: "Wild n' Culture" },
-  { key: 'external_event', label: 'External' },
-  { key: 'other', label: 'Other' },
-];
+// Public filter definitions live with the responsive UI so phone and desktop stay in sync.
 
 type ArchiveTermOption = AcademicTerm | { id: 'unassigned'; label: 'Unassigned Dates' };
 
@@ -138,9 +127,9 @@ export function Events() {
   // "related event" link). An unknown term falls back to the latest archive.
   const [searchParams, setSearchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
-  const activeFilter: FilterKey = FILTERS.some((filter) => filter.key === typeParam) ? (typeParam as FilterKey) : 'all';
+  const activeFilter: EventFilterKey = PUBLIC_EVENT_FILTERS.some((filter) => filter.key === typeParam) ? (typeParam as EventFilterKey) : 'all';
   const hostParam = activeFilter === 'house' ? searchParams.get('host') : null;
-  const updateFilterParams = (type: FilterKey, host: string | null = null) => {
+  const updateFilterParams = (type: EventFilterKey, host: string | null = null) => {
     const next = new URLSearchParams(searchParams);
     if (type === 'all') next.delete('type');
     else next.set('type', type);
@@ -150,7 +139,7 @@ export function Events() {
     if (next.toString() === searchParams.toString()) return;
     setSearchParams(next, { state: { keepScroll: true } });
   };
-  const setActiveFilter = (type: FilterKey) => updateFilterParams(type);
+  const setActiveFilter = (type: EventFilterKey) => updateFilterParams(type);
   const [selectedArchiveTermId, setSelectedArchiveTermId] = useState<string | null>(
     () => searchParams.get('term')
   );
@@ -482,19 +471,7 @@ export function Events() {
           )}
 
           {(unfilteredUpcomingEvents.length > 0 || houseItems.length > 0) && (
-            <div className="vsa-filter-bar" role="group" aria-label="Filter events by type">
-              {FILTERS.map((filter) => (
-                <button
-                  type="button"
-                  key={filter.key}
-                  onClick={() => setActiveFilter(filter.key)}
-                  aria-pressed={activeFilter === filter.key}
-                  className={`vsa-filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
+            <PublicEventTypeFilter value={activeFilter} onChange={setActiveFilter} />
           )}
           {activeFilter === 'house' && hostOptions.length > 1 && (
             <div className="mt-3">
@@ -642,7 +619,7 @@ export function Events() {
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
               >
                 <p className="font-sans text-sm" style={{ color: 'var(--color-text3)' }}>
-                  No {activeFilter === 'all' || activeFilter === 'house' ? '' : `${FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
+                  No {activeFilter === 'all' || activeFilter === 'house' ? '' : `${PUBLIC_EVENT_FILTERS.find((filter) => filter.key === activeFilter)?.label ?? ''} `}
                   events found for {selectedArchiveTerm?.label ?? 'this term'}.
                 </p>
                 {latestArchiveTerm && (
