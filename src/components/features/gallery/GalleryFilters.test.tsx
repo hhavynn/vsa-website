@@ -39,7 +39,7 @@ describe('GalleryFilters (Issue #562)', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText(/Search album titles and descriptions/i);
+    const input = screen.getByRole('textbox', { name: 'Search album titles and descriptions' });
     fireEvent.change(input, { target: { value: 'retreat' } });
 
     await waitFor(() => {
@@ -65,6 +65,41 @@ describe('GalleryFilters (Issue #562)', () => {
     fireEvent.click(clearBtn);
 
     expect(onSearchChange).toHaveBeenCalledWith('');
+  });
+
+  it('keeps the full accessible search label while using a shorter phone-friendly placeholder', () => {
+    render(
+      <GalleryFilters
+        years={[2026]}
+        selectedYear={null}
+        onYearChange={jest.fn()}
+        searchQuery=""
+        onSearchChange={jest.fn()}
+        onReset={jest.fn()}
+        isFiltered={false}
+      />
+    );
+    const search = screen.getByRole('textbox', { name: 'Search album titles and descriptions' });
+    expect(search).toHaveAttribute('placeholder', 'Search memories...');
+    expect(search).toHaveClass('pr-12');
+    expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+  });
+
+  it('gives both clearing actions at least a 44px touch target', () => {
+    render(
+      <GalleryFilters
+        years={[2026]}
+        selectedYear={2026}
+        onYearChange={jest.fn()}
+        searchQuery="night"
+        onSearchChange={jest.fn()}
+        onReset={jest.fn()}
+        isFiltered={true}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Clear search' })).toHaveClass('h-11', 'w-11');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toHaveClass('min-h-11');
+    expect(screen.getByRole('button', { name: 'Reset' })).toHaveClass('min-h-[44px]');
   });
 
   it('renders Reset button and matching count when filtered', () => {
