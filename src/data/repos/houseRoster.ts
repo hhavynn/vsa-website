@@ -15,9 +15,8 @@ export interface RosterMember {
   stints: number;
   joined_in_period: boolean;
   other_house_memberships: number;
+  /** House-credited check-ins; each is one House point, whatever the event's own points_earned. */
   credited_attendance: number;
-  /** Sum of awarded points, distinct from attendance/event count. */
-  credited_points?: number;
   last_credited_at: string | null;
   events_attended: number;
 }
