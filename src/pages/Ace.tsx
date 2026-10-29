@@ -154,14 +154,17 @@ export function Ace() {
     () => searchPublishedAceNodes(families, allMembers, personQuery),
     [families, allMembers, personQuery],
   );
-  const aceMembersReady = !familiesLoading && !membersLoading;
+  // Failure is not an authoritative empty/removed result. React Query's
+  // strict published-view reads surface outages instead of swallowing them.
+  const aceReadUnavailable = !!familiesError || !!membersError;
+  const aceMembersReady = !familiesLoading && !membersLoading && !aceReadUnavailable;
 
   const openPublishedFamily = (id: string) => {
     if (hasRequestedLink) {
       const next = new URLSearchParams(searchParams);
       next.delete('fam');
       next.delete('node');
-      setSearchParams(next, { replace: true });
+      setSearchParams(next, { replace: true, state: { keepScroll: true } });
     }
     setOpenFamId(id);
   };
@@ -172,7 +175,7 @@ export function Ace() {
     const next = new URLSearchParams(searchParams);
     next.set('fam', slug);
     next.set('node', nodeId);
-    setSearchParams(next);
+    setSearchParams(next, { state: { keepScroll: true } });
   };
 
   const closeFamily = () => {
@@ -181,7 +184,7 @@ export function Ace() {
       const next = new URLSearchParams(searchParams);
       next.delete('fam');
       next.delete('node');
-      setSearchParams(next, { replace: true });
+      setSearchParams(next, { replace: true, state: { keepScroll: true } });
     }
   };
 
@@ -191,7 +194,7 @@ export function Ace() {
     next.set('fam', openFam.family.slug);
     if (nodeId) next.set('node', nodeId);
     else next.delete('node');
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, state: { keepScroll: true } });
   };
 
   // Cycle CTA: drive from program_content('ace'). Hide if hidden/null.
@@ -324,8 +327,8 @@ export function Ace() {
             className="mt-2 w-full rounded border border-border-strong bg-surface2 px-4 py-3 font-sans text-base text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
           />
           <p id="ace-member-search-status" role="status" className="mt-2 font-sans text-xs text-text-secondary">
-            {familiesError || membersError
-              ? 'Published ACE search is temporarily unavailable.'
+            {aceReadUnavailable
+              ? 'Published ACE search is temporarily unavailable. Please try again later.'
               : !aceMembersReady
                 ? 'Loading published families…'
                 : personQuery.trim().length < 2
@@ -354,6 +357,11 @@ export function Ace() {
                 </li>
               ))}
             </ul>
+          )}
+          {hasRequestedLink && aceReadUnavailable && (
+            <p role="alert" className="mt-3 rounded border border-border-strong bg-surface2 p-3 font-sans text-sm text-text-primary">
+              This ACE link cannot be checked right now. Published family data is temporarily unavailable.
+            </p>
           )}
           {aceMembersReady && hasRequestedLink && linked.status === 'invalid' && (
             <div role="alert" className="mt-3 rounded border border-border-strong bg-surface2 p-3 font-sans text-sm text-text-primary">
