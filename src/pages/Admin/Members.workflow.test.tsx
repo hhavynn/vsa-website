@@ -135,3 +135,42 @@ describe('discarding unsaved edits', () => {
     expect(screen.queryByRole('heading', { name: 'Edit Member' })).not.toBeInTheDocument();
   });
 });
+
+
+it('finds Matthew Van beyond Supabase\'s first 1,000 members', async () => {
+  const largeRoster = Array.from({ length: 1004 }, (_, index) =>
+    member(`member-${String(index).padStart(4, '0')}`, 'Other'),
+  );
+  largeRoster.push(member('member-1004', 'Matthew', { last_name: 'Van' }));
+  supabaseMock.setDefault('members', { data: largeRoster, error: null });
+
+  renderMembers();
+
+  expect(await screen.findByText('1005')).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText('Search members...'), {
+    target: { value: 'Matthew Van' },
+  });
+  expect(await screen.findByText('Matthew Van')).toBeInTheDocument();
+  expect(supabaseMock.queriesFor('members')).toHaveLength(3);
+});
+
+it('does not report zero members or export a partial list if a later page fails', async () => {
+  supabaseMock.queueResult('members', {
+    data: Array.from({ length: 500 }, (_, index) =>
+      member(`member-${String(index).padStart(4, '0')}`, 'Other'),
+    ),
+    error: null,
+  });
+  supabaseMock.queueResult('members', {
+    data: null,
+    error: { message: 'The second batch failed', code: '42501' },
+  });
+
+  renderMembers();
+
+  expect(await screen.findByText(/The full member roster could not be loaded/)).toBeInTheDocument();
+  expect(screen.queryByText(/No members yet/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Retry loading' })).toBeInTheDocument();
+});
+
