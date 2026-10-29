@@ -24,7 +24,7 @@ export interface AcePickupYearChange {
 }
 
 export class AceFamiliesRepository {
-  async getPublishedFamilies(): Promise<AceFamily[]> {
+  async getPublishedFamilies(options?: { strict?: boolean }): Promise<AceFamily[]> {
     try {
       const { data, error } = await supabase
         .from('published_ace_families')
@@ -32,28 +32,32 @@ export class AceFamiliesRepository {
         .order('display_order', { ascending: true })
         .order('name', { ascending: true });
       if (error) {
+        if (options?.strict) throw error;
         console.warn('Using fallback published ace families:', error.message);
         return [];
       }
       return (data ?? []).map((row) => ({ ...(row as AceFamily), is_published: true }));
     } catch (error) {
+      if (options?.strict) throw error;
       console.warn('Using fallback published ace families:', error);
       return [];
     }
   }
 
-  async getAllPublishedMembers(): Promise<AceFamilyMember[]> {
+  async getAllPublishedMembers(options?: { strict?: boolean }): Promise<AceFamilyMember[]> {
     try {
       const { data, error } = await supabase
         .from('published_ace_family_members')
         .select('*')
         .order('name', { ascending: true });
       if (error) {
+        if (options?.strict) throw error;
         console.warn('Using fallback published ace members (all):', error.message);
         return [];
       }
       return (data ?? []).map((row) => ({ ...(row as AceFamilyMember), is_published: true }));
     } catch (error) {
+      if (options?.strict) throw error;
       console.warn('Using fallback published ace members (all):', error);
       return [];
     }

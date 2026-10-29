@@ -11,7 +11,7 @@ export function usePublishedAceFamilies(academicYearStart?: number | null) {
     refetch,
   } = useQuery<AceFamily[]>({
     queryKey: ['ace-families', 'published', academicYearStart ?? null],
-    queryFn: () => aceFamiliesRepository.getPublishedFamilies(),
+    queryFn: () => aceFamiliesRepository.getPublishedFamilies({ strict: true }),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
   });
@@ -27,7 +27,7 @@ export function useAllPublishedAceFamilyMembers() {
     refetch,
   } = useQuery<AceFamilyMember[]>({
     queryKey: ['ace-family-members', 'published', 'all'],
-    queryFn: () => aceFamiliesRepository.getAllPublishedMembers(),
+    queryFn: () => aceFamiliesRepository.getAllPublishedMembers({ strict: true }),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
   });
