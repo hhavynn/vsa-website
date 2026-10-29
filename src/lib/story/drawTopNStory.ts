@@ -26,10 +26,10 @@ export interface StoryRowBounds {
 }
 
 /** Fixed geometry in the 1080×1920 safe area, for both preview and PNG. */
-export function topNRowBounds(limit: 5 | 10, count: number): StoryRowBounds[] {
-  const top = limit === 10 ? 610 : 640;
-  const height = limit === 10 ? 88 : 145;
-  const gap = limit === 10 ? 9 : 16;
+export function topNRowBounds(limit: StoryLimit, count: number): StoryRowBounds[] {
+  const top = limit === 10 ? 610 : limit === 5 ? 640 : 620;
+  const height = limit === 10 ? 88 : limit === 5 ? 145 : 216;
+  const gap = limit === 10 ? 9 : limit === 5 ? 16 : 26;
   return Array.from({ length: Math.min(Math.max(count, 0), limit) }, (_, i) => {
     const y = top + i * (height + gap);
     return { top: y, height, bottom: y + height };
@@ -41,7 +41,7 @@ function row(
   entry: TopNStoryEntry,
   assets: Top3StoryAssets,
   bounds: StoryRowBounds,
-  limit: 5 | 10,
+  limit: StoryLimit,
   theme: StoryTheme,
 ) {
   const p = STORY_PALETTES[theme];
@@ -106,7 +106,8 @@ function row(
 
 export function drawTopNStory(ctx: CanvasRenderingContext2D, content: TopNStoryContent, assets: Top3StoryAssets) {
   const { limit, theme, entries } = content;
-  if (limit === 3) throw new Error('The existing Top 3 layout must use drawTop3Story');
+  // A tie inside Top 3 uses the ranked-list template so every member of
+  // the shared rank is shown. The original podium remains for no-tie Top 3.
   const p = STORY_PALETTES[theme];
   ctx.clearRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
   drawStoryBackdrop(ctx, p);
