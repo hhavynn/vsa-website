@@ -73,7 +73,7 @@ export function ClosingSoonApplications() {
 
   const shown = notices.slice(0, MAX_NOTICES);
   return (
-    <section aria-label="Applications closing soon" className="mx-auto max-w-[1400px] px-5 py-3 sm:px-[6vw] sm:py-4 xl:px-0">
+    <section aria-label="Applications closing soon" className="mx-auto max-w-[1400px] px-5 py-3 sm:px-[6vw] sm:py-4">
       <div className="rounded-sm border px-4 py-2 sm:px-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
         <ul className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
           {shown.map(({ row, dueAt, daysUntilClose, headline, url }) => (

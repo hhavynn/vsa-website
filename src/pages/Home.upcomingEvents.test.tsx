@@ -170,8 +170,39 @@ describe('Home.tsx Upcoming Events section', () => {
     });
     expect(albumLink).toHaveAttribute('href', 'https://photos.google.com/share/public-album-1');
     expect(albumLink).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(galleryRepository.getAlbums).toHaveBeenCalledWith({ limit: 5 });
+    expect(galleryRepository.getAlbums).toHaveBeenCalledWith({ limit: 12 });
     expect(screen.queryByText('La Jolla S’mores')).not.toBeInTheDocument();
+  });
+
+  it('skips albums without a cover before capping at five, so the collage never has a gap', async () => {
+    jest.spyOn(eventsRepository, 'getPublicUpcomingPreview').mockResolvedValue([]);
+    const album = (n: number, cover: string | null) => ({
+      id: `album-${n}`,
+      title: `Album ${n}`,
+      date: '2026-10-01',
+      description: null,
+      google_photos_url: `https://photos.google.com/share/album-${n}`,
+      cover_image_url: cover,
+      cover_thumbnail_url: null,
+      event_id: null,
+      event: null,
+    });
+    jest.spyOn(galleryRepository, 'getAlbums').mockResolvedValue([
+      album(1, null),
+      album(2, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(3, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(4, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(5, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(6, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+      album(7, '/images/gallery/fall-26-gbm-1_2026-09-30.webp'),
+    ]);
+
+    renderHome(queryClient);
+
+    expect(await screen.findByRole('link', { name: 'Open Album 6 photo album' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Album 1 photo album' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open Album 7 photo album' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /photo album$/ })).toHaveLength(5);
   });
 
   it('disappears an event in real-time when the homepage remains open past its scheduled end', async () => {

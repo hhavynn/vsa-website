@@ -484,7 +484,7 @@ export function ThisWeekInVSA() {
 
   return (
     <section className="vsa-section scrapbook-board" aria-labelledby="this-week-in-vsa-title">
-      <div className="mx-auto max-w-[1400px] px-5 sm:px-[6vw] xl:px-0">
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-[6vw]">
         <SectionHeading
           id="this-week-in-vsa-title"
           eyebrow="Weekly check-in"

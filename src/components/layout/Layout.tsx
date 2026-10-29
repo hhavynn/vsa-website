@@ -9,7 +9,7 @@ import { PageLoader } from '../common/PageLoader';
 import { VsaAiAssistant } from '../features/ai/VsaAiAssistant';
 import { keepHashTargetInView } from '../../utils/hashScroll';
 import { PublicSearchProvider } from '../features/search/PublicSearchProvider';
-import { isPublicEditorialRoute } from './publicEditorialTheme';
+import { EDITORIAL_SHELL_CLASS, isPublicEditorialRoute, useEditorialBodyScope } from './publicEditorialTheme';
 import '../../styles/public-editorial.css';
 
 function ScrollManager() {
@@ -40,9 +40,11 @@ function ScrollManager() {
 function LayoutShell() {
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
+  const editorial = isPublicEditorialRoute(location.pathname);
+  useEditorialBodyScope(editorial);
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans${isPublicEditorialRoute(location.pathname) ? ' vsa-editorial-shell' : ''}`} style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+    <div className={`min-h-screen flex flex-col font-sans${editorial ? ` ${EDITORIAL_SHELL_CLASS}` : ''}`} style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
       <ScrollManager />
       <header>
         <NavigationShell />

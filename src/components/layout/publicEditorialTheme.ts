@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /** Keep the Figma-inspired public palette out of sign-in and admin workflows. */
@@ -10,6 +11,22 @@ export function isPublicEditorialRoute(pathname: string): boolean {
 /** Shell chrome (nav, footer) switches to the editorial treatment on public routes. */
 export function usePublicEditorialRoute(): boolean {
   return isPublicEditorialRoute(useLocation().pathname);
+}
+
+export const EDITORIAL_SHELL_CLASS = 'vsa-editorial-shell';
+
+/**
+ * The mobile menu, search dialog and bottom sheets portal to document.body,
+ * outside Layout's wrapper, so the editorial tokens must also be in scope on
+ * body or those overlays would keep the old teal palette over the new page.
+ * Removed on admin/sign-in routes and on unmount.
+ */
+export function useEditorialBodyScope(enabled: boolean): void {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    document.body.classList.add(EDITORIAL_SHELL_CLASS);
+    return () => document.body.classList.remove(EDITORIAL_SHELL_CLASS);
+  }, [enabled]);
 }
 
 /** Desktop nav link styles shared by NavLinks and the Explore trigger. */

@@ -16,11 +16,18 @@ import {
 import { FALLBACK_LINKS } from "../../../config/publicFallbackContent";
 import { galleryRepository } from "../../../data/repos/gallery";
 import { type PublicEventPreview } from "../../../data/repos/events";
+import { getAcademicYearStart } from "../../../lib/academicTerms";
 import {
   formatEventDateRange,
   formatEventTime,
   formatEventTimeRange,
 } from "../../../lib/eventTime";
+
+/** "2026—27", derived from the calendar so it rolls over without a code edit. */
+function academicYearCaption(date = new Date()): string {
+  const start = getAcademicYearStart(date);
+  return `${start}—${String(start + 1).slice(-2)}`;
+}
 
 const CalendarIcon = FiCalendar as ComponentType<IconBaseProps>;
 const ClockIcon = FiClock as ComponentType<IconBaseProps>;
@@ -92,8 +99,8 @@ export function EditorialHero({
             <br />
             <em className="relative font-normal">Community.</em>
           </h1>
-          <p aria-hidden="true" className="ml-auto mt-3 w-max font-mono text-[10px] font-semibold tracking-[0.18em] sm:mr-[12%] lg:mr-[14%]">
-            2026—27
+          <p aria-hidden="true" className="ml-auto mt-8 w-max font-mono text-[10px] font-semibold tracking-[0.18em] sm:mr-[12%] lg:mr-[14%]">
+            {academicYearCaption()}
           </p>
           <p className="mb-7 mt-8 max-w-[20rem] text-[15px] leading-[1.7] sm:mt-12 sm:max-w-[27rem] sm:text-[17px] lg:ml-[5.5rem]">
             A Vietnamese cultural and social community at UC San Diego since
@@ -164,7 +171,7 @@ export function EditorialHero({
         aria-hidden="true"
         className="absolute right-[4vw] top-8 hidden text-right font-mono text-[10px] leading-[1.6] tracking-[0.1em] sm:block"
       >
-        2026—27
+        {academicYearCaption()}
         <br />
         San Diego, CA
       </p>
@@ -472,6 +479,9 @@ const galleryMobileTilt = [
   "rotate-2",
 ];
 
+const GALLERY_ALBUM_COUNT = 5;
+const GALLERY_FETCH_LIMIT = 12;
+
 export function EditorialGallery() {
   const {
     data: albums = [],
@@ -479,14 +489,16 @@ export function EditorialGallery() {
     isError,
   } = useQuery({
     queryKey: ["home", "recent-public-gallery-albums"],
-    queryFn: () => galleryRepository.getAlbums({ limit: 5 }),
+    queryFn: () => galleryRepository.getAlbums({ limit: GALLERY_FETCH_LIMIT }),
     staleTime: 5 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     retry: 1,
   });
-  const visibleAlbums = albums.filter(
-    (album) => album.cover_thumbnail_url || album.cover_image_url,
-  );
+  // Cap after dropping cover-less albums so one missing cover never leaves a
+  // gap in the five-photo collage or an empty state.
+  const visibleAlbums = albums
+    .filter((album) => album.cover_thumbnail_url || album.cover_image_url)
+    .slice(0, GALLERY_ALBUM_COUNT);
 
   return (
     <section

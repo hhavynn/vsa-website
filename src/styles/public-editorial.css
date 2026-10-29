@@ -7,6 +7,15 @@
 
 .home-editorial-hero {
   background:
+    /* Scrim behind the white text column: the pale blue highlight on the left
+       left small white text near 2:1; this keeps it readable without muting
+       the photos on the right. */
+    linear-gradient(
+      90deg,
+      rgba(20, 34, 96, 0.58) 0%,
+      rgba(20, 34, 96, 0.4) 38%,
+      transparent 62%
+    ),
     radial-gradient(
       circle at 15% 24%,
       rgba(193, 221, 255, 0.9),
