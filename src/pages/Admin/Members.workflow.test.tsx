@@ -146,7 +146,7 @@ it('finds Matthew Van beyond Supabase\'s first 1,000 members', async () => {
 
   renderMembers();
 
-  expect(await screen.findByText('1005')).toBeInTheDocument();
+  expect(await screen.findByText('1005 total members')).toBeInTheDocument();
   fireEvent.change(screen.getByPlaceholderText('Search members...'), {
     target: { value: 'Matthew Van' },
   });
