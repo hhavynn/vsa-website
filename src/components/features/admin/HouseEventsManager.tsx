@@ -166,7 +166,7 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
   const [saving, setSaving] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState<HouseEvent | null>(null);
 
-  const { assets: houseProfiles } = useAdminHouseAssets(selectedYear);
+  const { assets: houseProfiles, loading: profilesLoading, error: profilesError, refetch: refetchProfiles } = useAdminHouseAssets(selectedYear);
   const profilesById = useMemo(() => new Map(houseProfiles.map((asset) => [asset.id, asset])), [houseProfiles]);
 
   const queryClient = useQueryClient();
@@ -442,8 +442,9 @@ export function HouseEventsManager({ selectedYear, onYearChange }: HouseEventsMa
         events={events}
         profiles={houseProfiles}
         today={today}
-        loading={eventsLoading}
-        error={eventsError}
+        loading={eventsLoading || profilesLoading}
+        error={eventsError || !!profilesError}
+        onRetry={() => { void refetch(); void refetchProfiles(); }}
         truncated={events.length >= ADMIN_HOUSE_EVENT_LIMIT}
       />
       <form ref={formRef} onSubmit={handleSubmit} aria-label="House event form" className="scrapbook-paper p-6 sm:p-8" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}>
