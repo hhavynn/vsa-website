@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Gallery from './Gallery';
 import type { GalleryAlbum } from '../data/repos/gallery';
@@ -131,25 +131,29 @@ describe('Gallery discovery page states (Issue #562 & #563)', () => {
       }),
     );
 
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/gallery']}>
         <Gallery />
       </MemoryRouter>,
     );
 
-    const wall = container.querySelector('.gallery-memory-wall');
-    expect(wall).toBeInTheDocument();
-    expect(wall).not.toHaveStyle('opacity: 0');
-
-    const cards = container.querySelectorAll('.gallery-memory-card');
+    const cards = screen.getAllByRole('article');
     expect(cards).toHaveLength(24);
     cards.forEach((card) => expect(card).not.toHaveStyle('opacity: 0'));
+
+    // The wall is a plain wrapper with no role, so assert on the cards' parent.
+    // eslint-disable-next-line testing-library/no-node-access -- structural check on the wrapper
+    const wall = cards[0].parentElement;
+    expect(wall).toHaveClass('gallery-memory-wall');
+    expect(wall).not.toHaveStyle('opacity: 0');
 
     expect(screen.getByRole('link', { name: 'Album old-24. Preview album' })).toBeInTheDocument();
     // Every valid cover also renders its fallback underneath the image, so
     // check the cover-less card specifically rather than using getByText('VSA').
-    expect(cards[23].querySelector('img')).toBeNull();
-    expect(cards[23].querySelector('.gallery-memory-fallback')).toBeInTheDocument();
+    const coverless = cards[23];
+    expect(within(coverless).queryByRole('img')).not.toBeInTheDocument();
+    // eslint-disable-next-line testing-library/no-node-access -- fallback is a decorative class, not a role
+    expect(coverless.querySelector('.gallery-memory-fallback')).toBeInTheDocument();
   });
 
   it('keeps discovery controls mounted while filter queries are loading', () => {
