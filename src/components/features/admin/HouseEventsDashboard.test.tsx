@@ -234,3 +234,22 @@ it('previews a draft as its public card and says the public cannot see it', asyn
   expect(within(dialog).getByText(/the public cannot see it/)).toBeInTheDocument();
   expect(within(dialog).getByText('Fictional draft')).toBeInTheDocument();
 });
+
+
+it('blocks the planning report and retries House profiles when the separate profile query fails', async () => {
+  const refetchProfiles = jest.fn().mockResolvedValue(undefined);
+  useAdminHouseAssets.mockReturnValue({
+    assets: [twilight, rarity],
+    loading: false,
+    error: new Error('profile query denied'),
+    refetch: refetchProfiles,
+  });
+  repo.getAdminEvents.mockResolvedValue([event('scheduled')]);
+  renderManager();
+  expect(await screen.findByText(/House event or House profile records could not be loaded/)).toHaveTextContent(
+    /House event or House profile records could not be loaded/,
+  );
+  expect(screen.getByRole('button', { name: 'Export aggregate CSV' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Retry planning data' }));
+  expect(refetchProfiles).toHaveBeenCalledTimes(1);
+});
