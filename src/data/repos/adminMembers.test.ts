@@ -1,5 +1,6 @@
 import { adminMembersRepository } from "./adminMembers";
 import { memberRosterCsv } from "../../lib/memberRosterExport";
+import { photoRequestsRepository } from "./photoRequests";
 import { postgrestError, supabaseMock } from "../../test-utils/supabaseMock";
 
 jest.mock("../../lib/supabase", () => ({
@@ -247,5 +248,35 @@ describe("admin roster CSV export safety", () => {
   it("exports unknown rather than a misleading unassigned House after a denied lookup", () => {
     const csv = memberRosterCsv([{ ...rosterRow(1), current_house: null }], true);
     expect(csv).toContain(',unknown,1,0');
+  });
+});
+
+describe("approved-avatar view completeness", () => {
+  it("loads approved avatars beyond 1,000 without treating them as missing", async () => {
+    const data = Array.from({ length: 1101 }, (_, index) => ({
+      member_id: `member-${String(index).padStart(4, "0")}`,
+      avatar_url: `https://example.invalid/photo-${index}.webp`,
+    }));
+    supabaseMock.setDefault("public_member_avatars", { data, error: null });
+    const avatars = await photoRequestsRepository.getPublicMemberAvatars();
+    expect(avatars.size).toBe(1101);
+    expect(avatars.get("member-1100")).toContain("photo-1100.webp");
+    const queries = supabaseMock.queriesFor("public_member_avatars");
+    expect(queries).toHaveLength(3);
+    expect(queries[1].calls).toContainEqual({ method: "gt", args: ["member_id", "member-0499"] });
+  });
+
+  it("does not return partial approved-avatar status when a later page fails", async () => {
+    supabaseMock.queueResult("public_member_avatars", {
+      data: Array.from({ length: 500 }, (_, index) => ({
+        member_id: `member-${String(index).padStart(4, "0")}`,
+        avatar_url: "https://example.invalid/avatar.webp",
+      })),
+      error: null,
+    });
+    supabaseMock.queueResult("public_member_avatars", {
+      data: null, error: postgrestError("denied", "42501"),
+    });
+    await expect(photoRequestsRepository.getPublicMemberAvatars()).rejects.toMatchObject({ code: "42501" });
   });
 });
