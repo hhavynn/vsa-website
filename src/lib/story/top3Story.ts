@@ -22,7 +22,7 @@ export interface StoryHouse {
 }
 
 export interface Top3StoryEntry {
-  rank: 1 | 2 | 3;
+  rank: number; // 1–3 in the legacy Top 3 renderer; true competition rank in Top N.
   memberId: string;
   name: string;
   points: number;
