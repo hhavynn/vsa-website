@@ -55,4 +55,4 @@ The six rows left open after the main run were decided by the owner and are logg
 
 ## Not applied
 
-`20261010000000_serialize_member_points_recalculation.sql` is still unapplied. This run wrote one transaction at a time, so the per-row production trigger kept cached totals exact (0 drift checked after every event). The migration changes how credits are valued for merged members and has an open owner decision (23 VCN credits); applying it is a separate step.
+This run wrote one transaction at a time, so the per-row production trigger of the time kept cached totals exact (0 drift checked after every event). The statement-level fix, `20261029021759_serialize_member_points_recalculation.sql` (written as `20261010000000`), was applied to production on 2026-10-28. It stores a credit at its event's points, so the 23 Spring 2026 VCN credits stored at 1 (event at 5) become 5 only if a merge rewrites them; they belong to the 2025-26 year and do not affect 2026-27 points.

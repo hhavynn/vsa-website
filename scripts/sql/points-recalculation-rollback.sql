@@ -1,4 +1,4 @@
--- Rollback for 20261010000000_serialize_member_points_recalculation.sql.
+-- Rollback for 20261029021759_serialize_member_points_recalculation.sql.
 -- Run only if the new triggers must come off. One transaction: the old row
 -- trigger is created before the new ones are dropped, so no attendance write
 -- ever runs without a recalculation trigger.
