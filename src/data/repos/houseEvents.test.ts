@@ -120,6 +120,57 @@ describe('HouseEventsRepository — behaviour', () => {
     expect(supabaseMock.queriesFor('published_house_page_assets')).toHaveLength(1);
   });
 
+  it.each(Object.keys(PUBLIC_READ_INVOCATIONS))('%s allowlists published House profile columns without internal notes or private source documents', async (name) => {
+    // Force a published host fallback by returning the joined ID only.
+    if (name === 'getPublicUpcomingForHouse' || name === 'getPublicPastForHouse') {
+      supabaseMock.queueResult('house_event_houses', { data: [{ house_event_id: 'event-1' }], error: null });
+    }
+    supabaseMock.queueResult('house_events', {
+      data: [{ id: 'event-1', house_profile_id: HOUSE_ID, is_published: true, houses: [{ house_page_asset_id: HOUSE_ID }] }],
+      error: null,
+    });
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: [{ id: HOUSE_ID, house: 'example', house_key: 'example', display_name: 'Example House', is_active: true }],
+      error: null,
+    });
+    // For maybeSingle() reads the response is an object rather than an array.
+    if (name === 'getPublicEventForHouse') {
+      // The check below inspects the generated query, not the response shape.
+      // Skip this synthetic payload path and use a direct full single read.
+      supabaseMock.reset();
+      supabaseMock.queueResult('house_events', {
+        data: { id: 'event-1', house_profile_id: HOUSE_ID, is_published: true, houses: [{ house_page_asset_id: HOUSE_ID }] },
+        error: null,
+      });
+      supabaseMock.queueResult('published_house_page_assets', {
+        data: [{ id: HOUSE_ID, is_active: true }],
+        error: null,
+      });
+    }
+    await PUBLIC_READ_INVOCATIONS[name]();
+    const queries = supabaseMock.queriesFor('published_house_page_assets');
+    expect(queries).toHaveLength(1);
+    const projection = String(queries[0].calls.find((call) => call.method === 'select')?.args[0]);
+    expect(projection).toContain('display_name');
+    expect(projection).toContain('house_key');
+    expect(projection).not.toContain('*');
+    expect(projection).not.toContain('internal_notes');
+    expect(projection).not.toContain('source_doc_url');
+    expect(projection).not.toContain('house_parent_body');
+  });
+
+  it('does not disguise published House-profile lookup failure as an unhosted event', async () => {
+    supabaseMock.queueResult('house_events', {
+      data: [{ id: 'event-1', house_profile_id: HOUSE_ID, is_published: true, houses: [{ house_page_asset_id: HOUSE_ID }] }],
+      error: null,
+    });
+    supabaseMock.queueResult('published_house_page_assets', {
+      data: null, error: postgrestError('permission denied for published House profiles', '42501'),
+    });
+    await expect(houseEventsRepository.getPublicUpcomingPreview(TODAY, YEAR))
+      .rejects.toMatchObject({ message: 'Insufficient permissions' });
+  });
+
   it.each(Object.keys(PUBLIC_READ_INVOCATIONS))('%s never embeds the private House profile table', async (methodName) => {
     await PUBLIC_READ_INVOCATIONS[methodName]();
     const selects = supabaseMock.queriesFor('house_events')
