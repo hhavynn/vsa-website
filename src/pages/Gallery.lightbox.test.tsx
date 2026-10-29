@@ -366,7 +366,7 @@ describe('Gallery album quick-look', () => {
     // Filter controls still hold their query parameters
     const yearSelect = screen.getByLabelText(/Filter by academic year/i) as HTMLSelectElement;
     expect(yearSelect.value).toBe('2025');
-    const searchInput = screen.getByPlaceholderText(/Search album titles and descriptions/i) as HTMLInputElement;
+    const searchInput = screen.getByRole('textbox', { name: 'Search album titles and descriptions' }) as HTMLInputElement;
     expect(searchInput.value).toBe('gbm');
   });
 
