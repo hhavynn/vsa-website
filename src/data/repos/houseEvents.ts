@@ -45,21 +45,7 @@ const PUBLIC_FIELDS = [
  * internal_notes and source_doc_url. The published view is a second boundary,
  * not permission to expand network payloads as columns evolve.
  */
-export const PUBLIC_HOUSE_EVENT_HOST_FIELDS = [
-  'id',
-  'academic_year_start',
-  'academic_year_end',
-  'house',
-  'house_key',
-  'display_name',
-  'accent_color',
-  'emoji',
-  'image_url',
-  'image_thumbnail_url',
-  'image_alt',
-  'cover_image_url',
-  'is_active',
-].join(',');
+export const PUBLIC_HOUSE_EVENT_HOST_FIELDS = 'id,academic_year_start,academic_year_end,house,house_key,display_name,accent_color,emoji,image_url,image_thumbnail_url,image_alt,cover_image_url,is_active' as const;;
 
 export class HouseEventsRepository {
   async getPublicUpcomingForHouse(houseProfileId: string, today: string, limit = 12): Promise<HouseEvent[]> {
