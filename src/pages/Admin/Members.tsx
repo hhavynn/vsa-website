@@ -53,7 +53,7 @@ interface Member {
   points: number;
   events_attended: number;
   created_at: string;
-  needs_review?: boolean;
+  needs_review?: boolean | null;
 }
 
 function toCollegeKey(s: string): string {
