@@ -100,8 +100,8 @@ export function SchoolDirectory({
 
       {!loading && schools.length > 0 && (
         <p role="status" aria-live="polite" className="font-sans text-xs text-text-secondary">
-          Showing {visible.length} {visible.length === 1 ? "school" : "schools"}
-          {activeFilter === "All" ? " across all systems" : ` in ${activeFilter}`}.
+          {activeFilter === "All" ? "All school systems" : activeFilter} ·
+          {" "}{visible.length} {visible.length === 1 ? "result" : "results"}
         </p>
       )}
 
