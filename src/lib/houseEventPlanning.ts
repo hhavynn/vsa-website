@@ -100,7 +100,7 @@ function csvValue(value: string | number): string {
   const text = String(value);
   // Prevent Excel/Sheets formula execution if an admin-supplied House label
   // starts with a spreadsheet formula prefix.
-  const escaped = /^[\s]*[=+@\-]/.test(text) && typeof value === 'string' ? `'${text}` : text;
+  const escaped = /^\s*[=+@-]/.test(text) && typeof value === 'string' ? `'${text}` : text;
   return `"${escaped.replace(/"/g, '""')}"`;
 }
 
