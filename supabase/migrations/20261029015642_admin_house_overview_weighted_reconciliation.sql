@@ -41,6 +41,8 @@
 -- DEPLOY
 --   Additive, one function. Apply before the Overview tab; until then the tab
 --   says the overview is not available. Verify: bash scripts/test-house-overview.sh
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029015642)
 
 create or replace function public.admin_house_overview(
   p_year integer,

@@ -1,6 +1,9 @@
 -- #240: a count-only administrator report for Ask VSA usage.
 -- No raw logs, identifiers, retrieved knowledge IDs, message text or IP hashes
 -- reach an authenticated client. Apply manually after staging RLS/role QA.
+--
+-- Applied to production 2026-10-28 (schema_migrations version 20261029015612);
+-- applied without this file's begin;/commit; lines, since apply_migration is transactional
 begin;
 
 create function public.admin_ai_usage_daily(p_days integer default 30)

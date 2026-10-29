@@ -46,7 +46,7 @@ describe('Ask VSA admin aggregate usage report (#240)', () => {
   });
 
   it('keeps the SQL RPC strictly admin-gated and count-only (static migration contract)', () => {
-    const sql = fs.readFileSync(path.resolve(__dirname, '../../../supabase/migrations/20261028133000_admin_ai_usage_aggregates.sql'), 'utf8');
+    const sql = fs.readFileSync(path.resolve(__dirname, '../../../supabase/migrations/20261029015612_admin_ai_usage_aggregates.sql'), 'utf8');
     expect(sql).toMatch(/security definer set search_path = ''/i);
     expect(sql).toMatch(/public\.is_admin_user\(auth\.uid\(\)\)/);
     expect(sql).toMatch(/auth\.role\(\) is distinct from 'authenticated'/);
