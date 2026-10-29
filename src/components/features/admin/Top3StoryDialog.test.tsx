@@ -84,4 +84,37 @@ describe('Top3StoryDialog', () => {
     expect(await screen.findByText('No leaderboard points recorded for this year yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeDisabled();
   });
+  it('offers Top 5 and Top 10 without removing the default Top 3 preset', async () => {
+    mockData = {
+      academicYearStart: 2026,
+      entries: [entry(1, 'Fictional An', 1200), entry(2, 'Fictional Bao', 900)],
+      loading: false,
+      error: null,
+    };
+    render(<Top3StoryDialog onClose={() => undefined} />);
+    expect(screen.getByRole('heading', { name: 'Top 3 Story' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Top 3' })).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: 'Top 5' }));
+    expect(screen.getByRole('heading', { name: 'Top 5 Story' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Top 5' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Current Top 3/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Top 10' }));
+    expect(screen.getByRole('heading', { name: 'Top 10 Story' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled());
+  });
+
+  it('warns about a cutoff tie instead of silently splitting equally ranked members', async () => {
+    mockData = {
+      academicYearStart: 2026,
+      entries: [entry(1, 'Fictional An', 1200)],
+      loading: false,
+      error: null,
+      excludedBoundaryTie: 2,
+      excludedRank: 2,
+    };
+    render(<Top3StoryDialog onClose={() => undefined} />);
+    expect(await screen.findByRole('status')).toHaveTextContent(/2 tied members at rank 2/);
+    expect(screen.getByRole('button', { name: 'Download Story Image' })).toBeEnabled();
+  });
+
 });
