@@ -1,5 +1,6 @@
 import type { CalendarHouseTag } from '../../../utils/calendar';
 import { CalendarCategoryFilter } from '../../../utils/calendar';
+import { cn } from '../../../lib/utils';
 
 export interface CalendarFilterOption {
   key: CalendarCategoryFilter;
@@ -31,30 +32,60 @@ export function CalendarFilters({
   onPointsOnlyChange,
   showPointsToggle,
 }: Props) {
+  const changeCategory = (category: CalendarCategoryFilter) => {
+    onFilterChange(category);
+    // A House-host selection cannot silently keep excluding other categories.
+    if (category !== 'house') onHouseChange(null);
+  };
+
   return (
     <div>
-      <div className="vsa-filter-bar mt-0 gap-1.5 sm:gap-2" role="group" aria-label="Filter calendar by category">
-        {options.map((option) => (
-          <button
-            type="button"
-            key={option.key}
-            onClick={() => {
-              onFilterChange(option.key);
-              if (option.key !== 'house') onHouseChange(null);
-            }}
-            aria-pressed={activeFilter === option.key}
-            className={`vsa-filter-btn px-3 py-1.5 ${activeFilter === option.key ? 'active' : ''}`}
-          >
-            {option.label}
-          </button>
-        ))}
-
+      {/* The native selector fits one-handed phones without wrapping a dozen chips.
+          The desktop buttons remain unchanged; both drive exactly the same state. */}
+      <div className="sm:hidden">
+        <label htmlFor="calendar-mobile-category" className="mb-1 block font-sans text-xs font-semibold text-text-secondary">
+          Show calendar
+        </label>
+        <select
+          id="calendar-mobile-category"
+          value={activeFilter}
+          onChange={(event) => changeCategory(event.target.value as CalendarCategoryFilter)}
+          className="scrapbook-select min-h-11 w-full max-w-full"
+        >
+          {options.map((option) => (
+            <option key={option.key} value={option.key}>{option.label}</option>
+          ))}
+        </select>
         {showPointsToggle && (
           <button
             type="button"
             onClick={() => onPointsOnlyChange(!pointsOnly)}
             aria-pressed={pointsOnly}
-            className={`vsa-filter-btn px-3 py-1.5 ${pointsOnly ? 'active' : ''}`}
+            className={cn('vsa-filter-btn mt-2 min-h-11 w-full', pointsOnly && 'active')}
+          >
+            ⭐ Points eligible
+          </button>
+        )}
+      </div>
+
+      <div className="vsa-filter-bar mt-0 hidden gap-1.5 sm:flex sm:gap-2" role="group" aria-label="Filter calendar by category">
+        {options.map((option) => (
+          <button
+            type="button"
+            key={option.key}
+            onClick={() => changeCategory(option.key)}
+            aria-pressed={activeFilter === option.key}
+            className={cn('vsa-filter-btn px-3 py-1.5', activeFilter === option.key && 'active')}
+          >
+            {option.label}
+          </button>
+        ))}
+        {showPointsToggle && (
+          <button
+            type="button"
+            onClick={() => onPointsOnlyChange(!pointsOnly)}
+            aria-pressed={pointsOnly}
+            className={cn('vsa-filter-btn px-3 py-1.5', pointsOnly && 'active')}
           >
             ⭐ Points eligible
           </button>
@@ -62,32 +93,50 @@ export function CalendarFilters({
       </div>
 
       {activeFilter === 'house' && houseOptions.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Filter by house">
-          <button
-            type="button"
-            onClick={() => onHouseChange(null)}
-            aria-pressed={activeHouse === null}
-            className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === null ? 'active' : ''}`}
-          >
-            All houses
-          </button>
-          {houseOptions.map((house) => (
+        <>
+          <div className="mt-3 sm:hidden">
+            <label htmlFor="calendar-mobile-house" className="mb-1 block font-sans text-xs font-semibold text-text-secondary">
+              House host
+            </label>
+            <select
+              id="calendar-mobile-house"
+              value={activeHouse ?? ''}
+              onChange={(event) => onHouseChange(event.target.value || null)}
+              className="scrapbook-select min-h-11 w-full max-w-full"
+            >
+              <option value="">All houses</option>
+              {houseOptions.map((house) => (
+                <option key={house.name} value={house.name}>{house.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-2 hidden flex-wrap gap-2 sm:flex" role="group" aria-label="Filter by house">
             <button
               type="button"
-              key={house.name}
-              onClick={() => onHouseChange(activeHouse === house.name ? null : house.name)}
-              aria-pressed={activeHouse === house.name}
-              className={`vsa-filter-btn px-3 py-1.5 ${activeHouse === house.name ? 'active' : ''}`}
+              onClick={() => onHouseChange(null)}
+              aria-pressed={activeHouse === null}
+              className={cn('vsa-filter-btn px-3 py-1.5', activeHouse === null && 'active')}
             >
-              <span
-                className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                style={{ background: house.color }}
-                aria-hidden
-              />
-              {house.name}
+              All houses
             </button>
-          ))}
-        </div>
+            {houseOptions.map((house) => (
+              <button
+                type="button"
+                key={house.name}
+                onClick={() => onHouseChange(activeHouse === house.name ? null : house.name)}
+                aria-pressed={activeHouse === house.name}
+                className={cn('vsa-filter-btn px-3 py-1.5', activeHouse === house.name && 'active')}
+              >
+                <span
+                  className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                  style={{ background: house.color }}
+                  aria-hidden
+                />
+                {house.name}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
