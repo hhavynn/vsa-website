@@ -14,6 +14,7 @@ const ROTATIONS = ['scrapbook-rotate-sm-left', 'scrapbook-rotate-sm-right', ''];
 /** Horizontally scrollable "This Week" highlight strip of scrapbook cards. */
 export function ThisWeekStrip({ items, todayStr, onSelectItem }: Props) {
   if (items.length === 0) return null;
+  const visibleItems = items.slice(0, 10);
 
   return (
     <section aria-label="Happening this week">
@@ -26,15 +27,29 @@ export function ThisWeekStrip({ items, todayStr, onSelectItem }: Props) {
         </span>
       </div>
 
-      <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-4 pt-2">
-        {items.slice(0, 10).map((item, index) => {
+      {items.length > 1 && (
+        <p className="mb-2 font-sans text-xs text-text-secondary sm:hidden">
+          Swipe sideways to explore this week's events
+        </p>
+      )}
+      {items.length > visibleItems.length && (
+        <p className="mb-2 font-sans text-xs text-text-secondary" role="status">
+          Showing the first {visibleItems.length} of {items.length} events. More are available in the full calendar below.
+        </p>
+      )}
+      <div
+        role="region"
+        aria-label="This week's event highlights"
+        className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-4 pt-2"
+      >
+        {visibleItems.map((item, index) => {
           const color = getItemColor(item);
           return (
             <button
               type="button"
               key={item.key}
               onClick={() => onSelectItem(item)}
-              className={`scrapbook-photo scrapbook-hover-tilt w-[210px] shrink-0 snap-start p-3 text-left transition-transform ${ROTATIONS[index % ROTATIONS.length]}`}
+              className={`scrapbook-photo scrapbook-hover-tilt min-h-11 w-[210px] shrink-0 snap-start p-3 text-left transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600 dark:focus-visible:ring-brand-400 motion-reduce:transform-none motion-reduce:transition-none ${ROTATIONS[index % ROTATIONS.length]}`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color }}>
