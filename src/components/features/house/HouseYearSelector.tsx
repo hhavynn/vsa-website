@@ -42,6 +42,16 @@ export function HouseYearSelector({ activeStartYear, currentYear, className = ''
   const options = buildHouseYearOptions(currentYear);
   const primaryYearOptions = options.slice(0, 3);
   const moreYears = options.slice(3);
+  const activeYearIsAvailable = options.some((option) => option.startYear === activeStartYear);
+  // One verified source for both controls. No guess about unreleased Houses,
+  // current-year memberships or official standings.
+  const selectedOption = activeYearIsAvailable
+    ? String(activeStartYear)
+    : '';
+  const navigateToYear = (value: string) => {
+    const selected = options.find((option) => String(option.startYear) === value);
+    if (selected) navigate(selected.route);
+  };
 
   return (
     <div
@@ -56,7 +66,23 @@ export function HouseYearSelector({ activeStartYear, currentYear, className = ''
         Year
       </span>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Native full-year picker on phones: no horizontal chip scrolling,
+          and every verified archive year is one touch target away. */}
+      <select
+        aria-label="Choose House academic year"
+        className="min-h-11 min-w-0 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-sans text-sm font-semibold text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] sm:hidden"
+        value={selectedOption}
+        onChange={(event) => navigateToYear(event.target.value)}
+      >
+        {!activeYearIsAvailable && <option value="" disabled>Choose a verified year</option>}
+        {options.map((option) => (
+          <option key={option.startYear} value={option.startYear}>
+            {option.label} · {option.badge}
+          </option>
+        ))}
+      </select>
+
+      <div className="hidden flex-wrap items-center gap-2 sm:flex">
         {primaryYearOptions.map((opt) => {
           const isActive = activeStartYear === opt.startYear;
           return (
@@ -92,11 +118,7 @@ export function HouseYearSelector({ activeStartYear, currentYear, className = ''
             <select
               className="appearance-none touch:min-h-11 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1 font-mono text-[11px] font-bold uppercase tracking-wide text-[var(--color-text2)] transition-colors hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
               value={activeStartYear && !primaryYearOptions.some(o => o.startYear === activeStartYear) ? activeStartYear : ""}
-              onChange={(e) => {
-                if (e.target.value) {
-                  navigate(`/house/year/${e.target.value}-${parseInt(e.target.value) + 1}`);
-                }
-              }}
+              onChange={(e) => navigateToYear(e.target.value)}
               aria-label="More years"
             >
               <option value="" disabled>More Years</option>
