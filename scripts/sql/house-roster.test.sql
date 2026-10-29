@@ -31,7 +31,7 @@ set client_min_messages = warning;
 \ir ../../supabase/migrations/20261028075801_admin_house_roster.sql
 \ir ../../supabase/migrations/20261029015700_admin_house_member_attendance_overlap.sql
 \ir ../../supabase/migrations/20261029015725_admin_house_roster_weighted_points.sql
-\ir ../../supabase/migrations/20261029080000_house_reconciliation_count_not_sum.sql
+\ir ../../supabase/migrations/20261029071310_house_reconciliation_count_not_sum.sql
 set client_min_messages = notice;
 insert into public.members select ('30000000-0000-0000-0000-00000000000'||x)::uuid, 'Fictional', upper(x), x||'@example.invalid' from unnest(array['a','b','c','d','e','f']) x;
 
