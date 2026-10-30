@@ -18,7 +18,7 @@ export interface AceParticipationRow {
 export function isAceEventAttendanceVerified(event: ReadinessEvent, now = new Date()): boolean {
   // Reuse #653's source-lifecycle authority: a newer import, failed/in-flight
   // job, recent credit, unresolved row or future event invalidates verification.
-  return eventStatus(event, now).state === 'verified';
+  return event.is_published === true && !!event.academic_term_id && eventStatus(event, now).state === 'verified';
 }
 
 
