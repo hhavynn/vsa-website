@@ -59,6 +59,7 @@ export const ACTIVITY_ACTIONS = {
   aceCycleLocked: 'ace.cycle_locked',
   aceCycleUnlocked: 'ace.cycle_unlocked',
   aceCyclePublished: 'ace.cycle_published',
+  aceEligibilitySaved: 'ace.eligibility_saved',
   houseAssignmentChanged: 'house.assignment_changed',
   houseBulkChanged: 'house.bulk_changed',
   houseImportAdded: 'house.import_added',

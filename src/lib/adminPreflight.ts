@@ -7,6 +7,7 @@
 // It never promotes a warning to a blocker: readiness depends only on the
 // blockers the domain itself reported.
 import type { AssignmentPreflight, AssignmentIssue } from './aceAssignments';
+import { unreachableMinimums, type AceEligibilityPolicy, type AceEligibilityResult, type AceEligibilityRow } from './aceEligibility';
 import type { PreflightResult, PreflightIssue as HouseIssue } from './houseAssignmentDraft';
 import type { RosterPreflight, RosterIssue } from './cabinetRoster';
 import type { InternPreflight, InternPreflightIssue } from './internCohort';
@@ -88,6 +89,100 @@ export function aceIssues(preflight: AssignmentPreflight): UnifiedIssue[] {
     count: issue.draftIds.length,
     fix: ACE_ISSUE[issue.code]?.fix,
   }));
+}
+
+export interface AceEligibilityCheck {
+  policy: AceEligibilityPolicy | null;
+  result: AceEligibilityResult | null;
+  error: string | null;
+}
+
+const listNames = (rows: readonly AceEligibilityRow[], detail: (row: AceEligibilityRow) => string) =>
+  rows.map((row) => `${row.name} (${detail(row)})`).join(', ');
+
+/**
+ * Attendance minimums are WARNINGS before Lock and Publish, never blockers:
+ * the ACE Chair keeps the final say (mutual requests, approved exceptions).
+ * Short people are named so the Chair sees exactly who they are overriding.
+ */
+export function aceEligibilityIssues({ policy, result, error }: AceEligibilityCheck): UnifiedIssue[] {
+  if (error) {
+    return [{ id: 'ace-eligibility:error', level: 'warning', title: 'Attendance minimums could not be checked', detail: error, count: 0 }];
+  }
+  if (!policy) {
+    return [{
+      id: 'ace-eligibility:no-policy',
+      level: 'warning',
+      title: 'Attendance minimums are not saved for this cycle',
+      detail: 'Save the qualifying events and minimums under Eligibility to see who meets them.',
+      count: 0,
+    }];
+  }
+  if (!result) return [];
+  const issues: UnifiedIssue[] = [];
+  const countable = result.verifiedEventIds.length + result.unverifiedEventIds.length;
+  const unreachable = unreachableMinimums(policy, countable);
+  if (unreachable.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:unreachable',
+      level: 'warning',
+      title: `Only ${pluralize(countable, 'qualifying event')} counted, fewer than the ${unreachable.map((role) => (role === 'little' ? `Little minimum (${policy.littleMin})` : `Big minimum (${policy.bigMin})`)).join(' and ')}`,
+      detail: 'Nobody can meet that minimum yet, so everyone linked shows as short. Add qualifying events or lower the minimum.',
+      count: 0,
+    });
+  }
+  const shortDetail = (row: AceEligibilityRow) => `${row.attended} of ${row.required}`;
+  const shortLittles = result.littles.filter((row) => row.status === 'short');
+  if (shortLittles.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:short-littles',
+      level: 'warning',
+      title: `${pluralize(shortLittles.length, 'Little')} below the ${policy.littleMin}-event minimum`,
+      detail: listNames(shortLittles, shortDetail),
+      count: shortLittles.length,
+    });
+  }
+  const shortBigs = result.bigs.filter((row) => row.status === 'short');
+  if (shortBigs.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:short-bigs',
+      level: 'warning',
+      title: `${pluralize(shortBigs.length, 'Big')} below the ${policy.bigMin}-event minimum`,
+      detail: listNames(shortBigs, shortDetail),
+      count: shortBigs.length,
+    });
+  }
+  const everyone = [...result.littles, ...result.bigs];
+  const unknown = everyone.filter((row) => row.status === 'unknown');
+  if (unknown.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:unknown',
+      level: 'warning',
+      title: `${pluralize(unknown.length, 'person', 'people')} cannot be checked until imports are verified`,
+      detail: `${pluralize(result.unverifiedEventIds.length, 'selected event')} still ${result.unverifiedEventIds.length === 1 ? 'has' : 'have'} incomplete import evidence (Houses → Attendance status). ${listNames(unknown, shortDetail)}`,
+      count: unknown.length,
+    });
+  }
+  const review = everyone.filter((row) => row.status === 'needs-identity-review');
+  if (review.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:identity',
+      level: 'warning',
+      title: `${pluralize(review.length, 'person', 'people')} need identity review before attendance can be checked`,
+      detail: listNames(review, (row) => (row.role === 'little' ? 'Little' : 'Big')),
+      count: review.length,
+    });
+  }
+  if (result.rejectedEvents.length > 0) {
+    issues.push({
+      id: 'ace-eligibility:rejected-events',
+      level: 'warning',
+      title: `${pluralize(result.rejectedEvents.length, 'saved qualifying event')} no longer ${result.rejectedEvents.length === 1 ? 'counts' : 'count'}`,
+      detail: result.rejectedEvents.map((event) => `${event.name ?? 'Removed event'}: ${event.reason}`).join('; '),
+      count: 0,
+    });
+  }
+  return issues;
 }
 
 // ─── Houses ──────────────────────────────────────────────────────────────────
