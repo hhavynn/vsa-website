@@ -1,5 +1,6 @@
 import type { PublishedAceLittle } from '../data/repos/aceAssignments';
 import type { ReadinessEvent } from '../data/repos/attendanceReadiness';
+import { eventStatus } from './attendanceReadiness';
 
 export type AceParticipationStatus='complete'|'incomplete'|'needs-review'|'unknown';
 export interface AceParticipationRow {
@@ -14,10 +15,12 @@ export interface AceParticipationRow {
 }
 
 /** Unprocessed event/import rows make eligibility Unknown, not a confident failure. */
-export function isAceEventAttendanceVerified(event: ReadinessEvent): boolean {
-  return event.open_review_rows===0 && event.reconciliation_pending_rows===0 &&
-    !!event.reconciled_at && event.is_published && !!event.academic_term_id;
+export function isAceEventAttendanceVerified(event: ReadinessEvent, now = new Date()): boolean {
+  // Reuse #653's source-lifecycle authority: a newer import, failed/in-flight
+  // job, recent credit, unresolved row or future event invalidates verification.
+  return eventStatus(event, now).state === 'verified';
 }
+
 
 export function reviewAceParticipation(
   roster: readonly PublishedAceLittle[],
